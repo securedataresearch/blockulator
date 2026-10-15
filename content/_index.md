@@ -5,7 +5,7 @@ template = "home.html"
 
 [extra]
 headline = "128-bit fixed point for the EVM."
-sub = "FP127 is a signed 127.128 fixed-point library: one int256, 38 decimal digits, 38 operations, deployed on Sepolia and usable inline from Solidity. This site measures it against ABDK, Solady and PRBMath, one step at a time, and shows the method."
+sub = "FP127 is a signed 127.128 fixed-point library: one int256, 38 decimal digits, 49 operations, deployed on Sepolia and usable inline from Solidity. This site measures it against ABDK, Solady and PRBMath, one step at a time, and shows the method."
 cta_primary_text = "The measurements"
 cta_primary_href = "/demo/"
 cta_secondary_text = "The library"

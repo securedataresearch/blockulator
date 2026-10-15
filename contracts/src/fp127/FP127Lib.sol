@@ -886,53 +886,23 @@ library FP127Lib {
             _r := fp127_sqrt(_x)
         }
     }
-    /// @notice x^y = 2^(y * log2(x)) for x >= 0.
+    /// @notice x^y = 2^(y * log2(x)) for x >= 0, with the product y * log2(x)
+    ///         formed at 2^-192 so the exponent keeps its guard bits.
     /// @dev Special cases in Huff order: y == 0 gives 1 (including 0^0); x == 0
     ///      gives 0; x == 1 gives 1; x < 0 reverts with OutOfRange. Exact
     ///      shortcuts for y in {1, 2, 3, 4, 1/2, 1/4, -1} and for x in {2, 10}
     ///      are kept because they are both cheaper and more accurate than the
-    ///      general path, and because the Huff had them.
+    ///      general path, and because the Huff had them. The general path (v4)
+    ///      takes log2 unrounded at 2^-192 and multiplies by y there; the
+    ///      domain is decided first by the checked 128-bit product, as exp10
+    ///      does, so an absurd y reverts with Overflow and the guard product
+    ///      cannot wrap. Through v3 the product was formed at 128 bits, which
+    ///      cost about seven bits on (1 + r)^n with a per-second r.
     function pow(int256 _x, int256 _y) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
                 let m := sar(255, x)
                 r := sub(xor(x, m), m)
-            }
-
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
-            function rev(sel) {
-                mstore(0x00, shl(224, sel))
-                revert(0x00, 0x04)
-            }
-
-            function fp127_div(a, b) -> r {
-                if iszero(b) { rev(0x23d359a3) }
-                let ng := xor(slt(a, 0), slt(b, 0))
-                let ua := absw(a)
-                let ub := absw(b)
-                if iszero(lt(shr(128, ua), ub)) { rev(0x35278d12) }
-                let q := divu(ua, ub)
-                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
-                r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
 
             function mulg(a, b) -> r {
@@ -990,10 +960,46 @@ library FP127Lib {
                 r := shr(sh, add(v, shl(sub(sh, 1), 1)))
             }
 
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
             function exp2checked(t) -> r {
                 if iszero(slt(t, 0x7f000000000000000000000000000000000000000000000000)) { rev(0x35278d12) }
                 if slt(t, sub(0, 0x80000000000000000000000000000000000000000000000000)) { r := 0 leave }
                 r := exp2core(t)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function fp127_div(a, b) -> r {
+                if iszero(b) { rev(0x23d359a3) }
+                let ng := xor(slt(a, 0), slt(b, 0))
+                let ua := absw(a)
+                let ub := absw(b)
+                if iszero(lt(shr(128, ua), ub)) { rev(0x35278d12) }
+                let q := divu(ua, ub)
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+                r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
 
             function fp127_mul(a, b) -> r {
@@ -1019,6 +1025,41 @@ library FP127Lib {
                 r := exp2core(shl(64, x))
             }
 
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function mulraw(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(128, p1), shr(128, p0))
+            }
+
+            function fp127_sqrt(x) -> r {
+                if slt(x, 0) { rev(0x7db3aba7) }
+                if iszero(x) { r := 0 leave }
+                let e := add(128, msb(x))
+                let y := shl(shr(1, e), 1)
+                if and(e, 1) { y := mulraw(y, 0x16a09e667f3bcc908b2fb1366ea957d3e) }
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                r := shr(1, add(y, divu(x, y)))
+            }
+
             function log2poly(f) -> r {
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
                 r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
@@ -1036,17 +1077,6 @@ library FP127Lib {
                 r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
                 r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
                 r := mulg(r, f)
-            }
-
-            function msb(x) -> r {
-                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
-                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
-                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
-                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
-                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
-                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
-                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
-                if iszero(lt(x, 0x2)) { r := add(r, 1) }
             }
 
             function log2g(x) -> r {
@@ -1092,36 +1122,6 @@ library FP127Lib {
                 q := sar(64, add(r, 0x8000000000000000))
             }
 
-            function fp127_log2(x) -> r {
-                if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
-                if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
-                r := round64(log2g(x))
-            }
-
-            function mulraw(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(128, p1), shr(128, p0))
-            }
-
-            function fp127_sqrt(x) -> r {
-                if slt(x, 0) { rev(0x7db3aba7) }
-                if iszero(x) { r := 0 leave }
-                let e := add(128, msb(x))
-                let y := shl(shr(1, e), 1)
-                if and(e, 1) { y := mulraw(y, 0x16a09e667f3bcc908b2fb1366ea957d3e) }
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                r := shr(1, add(y, divu(x, y)))
-            }
-
             function fp127_pow(x, y) -> r {
                 if iszero(y) { r := 0x100000000000000000000000000000000 leave }
                 if iszero(x) { r := 0 leave }
@@ -1139,11 +1139,264 @@ library FP127Lib {
                     switch x
                     case 0x200000000000000000000000000000000 { r := fp127_exp2(y) }
                     case 0xa00000000000000000000000000000000 { r := fp127_exp10(y) }
-                    default { r := fp127_exp2(fp127_mul(y, fp127_log2(x))) }
+                    default {
+                        let l := log2g(x)
+                        let yl := fp127_mul(y, round64(l))
+                        if iszero(slt(yl, 0x7f00000000000000000000000000000000)) { rev(0x35278d12) }
+                        if slt(yl, sub(0, 0x8000000000000000000000000000000000)) { r := 0 leave }
+                        // |y| < 2^63 keeps the guard product exact; beyond that y alone
+                        // decides the magnitude and the guard bits of log2 cannot matter
+                        let t := shl(64, mulg(y, l))
+                        if lt(absw(y), 0x800000000000000000000000000000000000000000000000) { t := mulg(shl(64, y), l) }
+                        r := exp2checked(t)
+                    }
                 }
             }
 
             _r := fp127_pow(_x, _y)
+        }
+    }
+    /// @notice x^floor(n) for an integer exponent, by binary exponentiation on
+    ///         a 256-bit mantissa with a separate binary exponent, rounded to
+    ///         nearest once at the end: within one ULP for every n, exact
+    ///         whenever the true value is representable. Negative n inverts
+    ///         the final mantissa, so x^-n is as accurate as x^n.
+    /// @dev Maker's rpow and PRBMath's powu square at the format's own
+    ///      precision and floor on every step, so each squaring loses a bit of
+    ///      the fraction; here |x| is written as m 2^(e-255) with m in
+    ///      [2^255, 2^256), every product keeps the top 256 bits of the 512-bit
+    ///      result (relative error 2^-255 a step, at most 254 steps), and the
+    ///      word is formed from (m, e) with one rounding. 0^0 = 1.
+    function powu(int256 _x, int256 _n) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function mant(a, b) -> m, c {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                c := shr(255, p1)
+                m := p1
+                if iszero(c) { m := or(shl(1, p1), shr(255, p0)) }
+            }
+
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function fp127_powu(x, n) -> r {
+                let one := 0x100000000000000000000000000000000
+                let k := sar(128, n)
+                if iszero(k) { r := one leave }
+                let recip := slt(k, 0)
+                k := absw(k)
+                if iszero(x) {
+                    if recip { rev(0x23d359a3) }
+                    r := 0
+                    leave
+                }
+                let sgn := and(slt(x, 0), and(k, 1))
+                let ux := absw(x)
+                let s := msb(ux)
+                let m := shl(sub(255, s), ux)
+                let e := sub(s, 128)
+                let am := 0x8000000000000000000000000000000000000000000000000000000000000000
+                let ae := 0
+                for {} 1 {} {
+                    if and(k, 1) {
+                        let pm, pk := mant(am, m)
+                        am := pm
+                        ae := add(add(ae, e), pk)
+                    }
+                    k := shr(1, k)
+                    if iszero(k) { break }
+                    let qm, qc := mant(m, m)
+                    m := qm
+                    e := add(add(e, e), qc)
+                }
+                if recip {
+                    // 1 / (am 2^(ae-255)) = (2^511 / am) 2^(-ae-256): the reciprocal
+                    // mantissa by two 2^128 stages of long division
+                    switch eq(am, 0x8000000000000000000000000000000000000000000000000000000000000000)
+                    case 1 { ae := sub(0, ae) }
+                    default {
+                        let qh := divu(0x8000000000000000000000000000000000000000000000000000000000000000, am)
+                        let ql := divu(sub(0, mul(qh, am)), am)
+                        am := or(shl(128, qh), ql)
+                        ae := sub(sub(0, ae), 1)
+                    }
+                }
+                // raw = am 2^(ae - 127), rounded to nearest
+                if sgt(ae, 126) { rev(0x35278d12) }
+                let sh := sub(127, ae)
+                switch gt(sh, 256)
+                case 1 { r := 0 }
+                default {
+                    r := add(shr(sh, am), and(shr(sub(sh, 1), am), 1))
+                    if gt(r, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) { rev(0x35278d12) }
+                }
+                if sgn { r := sub(0, r) }
+            }
+
+            _r := fp127_powu(_x, _n)
+        }
+    }
+    /// @notice (1 + rate)^floor(n): n periods of compounding at rate, through
+    ///         powu, so a per-second rate over years keeps every bit the format
+    ///         holds. 1 + rate is exact in 127.128 (the sum of two grid values),
+    ///         so nothing is lost before the exponentiation; on an 18-decimal
+    ///         grid the rate itself would have been the first loss.
+    function compound(int256 _rate, int256 _n) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function fp127_add(a, b) -> r {
+                r := add(a, b)
+                if xor(slt(r, a), slt(b, 0)) { rev(0x35278d12) }
+            }
+
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function mant(a, b) -> m, c {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                c := shr(255, p1)
+                m := p1
+                if iszero(c) { m := or(shl(1, p1), shr(255, p0)) }
+            }
+
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function fp127_powu(x, n) -> r {
+                let one := 0x100000000000000000000000000000000
+                let k := sar(128, n)
+                if iszero(k) { r := one leave }
+                let recip := slt(k, 0)
+                k := absw(k)
+                if iszero(x) {
+                    if recip { rev(0x23d359a3) }
+                    r := 0
+                    leave
+                }
+                let sgn := and(slt(x, 0), and(k, 1))
+                let ux := absw(x)
+                let s := msb(ux)
+                let m := shl(sub(255, s), ux)
+                let e := sub(s, 128)
+                let am := 0x8000000000000000000000000000000000000000000000000000000000000000
+                let ae := 0
+                for {} 1 {} {
+                    if and(k, 1) {
+                        let pm, pk := mant(am, m)
+                        am := pm
+                        ae := add(add(ae, e), pk)
+                    }
+                    k := shr(1, k)
+                    if iszero(k) { break }
+                    let qm, qc := mant(m, m)
+                    m := qm
+                    e := add(add(e, e), qc)
+                }
+                if recip {
+                    // 1 / (am 2^(ae-255)) = (2^511 / am) 2^(-ae-256): the reciprocal
+                    // mantissa by two 2^128 stages of long division
+                    switch eq(am, 0x8000000000000000000000000000000000000000000000000000000000000000)
+                    case 1 { ae := sub(0, ae) }
+                    default {
+                        let qh := divu(0x8000000000000000000000000000000000000000000000000000000000000000, am)
+                        let ql := divu(sub(0, mul(qh, am)), am)
+                        am := or(shl(128, qh), ql)
+                        ae := sub(sub(0, ae), 1)
+                    }
+                }
+                // raw = am 2^(ae - 127), rounded to nearest
+                if sgt(ae, 126) { rev(0x35278d12) }
+                let sh := sub(127, ae)
+                switch gt(sh, 256)
+                case 1 { r := 0 }
+                default {
+                    r := add(shr(sh, am), and(shr(sub(sh, 1), am), 1))
+                    if gt(r, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) { rev(0x35278d12) }
+                }
+                if sgn { r := sub(0, r) }
+            }
+
+            function fp127_compound(rate, n) -> r {
+                r := fp127_powu(fp127_add(0x100000000000000000000000000000000, rate), n)
+            }
+
+            _r := fp127_compound(_rate, _n)
         }
     }
     /// @notice Cube root, defined for all x: cbrt(-x) = -cbrt(x).
@@ -1167,37 +1420,6 @@ library FP127Lib {
                 r := absw(x)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
-            function fp127_div(a, b) -> r {
-                if iszero(b) { rev(0x23d359a3) }
-                let ng := xor(slt(a, 0), slt(b, 0))
-                let ua := absw(a)
-                let ub := absw(b)
-                if iszero(lt(shr(128, ua), ub)) { rev(0x35278d12) }
-                let q := divu(ua, ub)
-                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
-                r := sub(xor(q, sub(0, ng)), sub(0, ng))
-            }
-
             function mulg(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -1259,6 +1481,37 @@ library FP127Lib {
                 r := exp2core(t)
             }
 
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function fp127_div(a, b) -> r {
+                if iszero(b) { rev(0x23d359a3) }
+                let ng := xor(slt(a, 0), slt(b, 0))
+                let ua := absw(a)
+                let ub := absw(b)
+                if iszero(lt(shr(128, ua), ub)) { rev(0x35278d12) }
+                let q := divu(ua, ub)
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+                r := sub(xor(q, sub(0, ng)), sub(0, ng))
+            }
+
             function fp127_mul(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -1282,6 +1535,41 @@ library FP127Lib {
                 r := exp2core(shl(64, x))
             }
 
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function mulraw(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(128, p1), shr(128, p0))
+            }
+
+            function fp127_sqrt(x) -> r {
+                if slt(x, 0) { rev(0x7db3aba7) }
+                if iszero(x) { r := 0 leave }
+                let e := add(128, msb(x))
+                let y := shl(shr(1, e), 1)
+                if and(e, 1) { y := mulraw(y, 0x16a09e667f3bcc908b2fb1366ea957d3e) }
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                y := shr(1, add(y, divu(x, y)))
+                r := shr(1, add(y, divu(x, y)))
+            }
+
             function log2poly(f) -> r {
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
                 r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
@@ -1299,17 +1587,6 @@ library FP127Lib {
                 r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
                 r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
                 r := mulg(r, f)
-            }
-
-            function msb(x) -> r {
-                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
-                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
-                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
-                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
-                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
-                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
-                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
-                if iszero(lt(x, 0x2)) { r := add(r, 1) }
             }
 
             function log2g(x) -> r {
@@ -1355,36 +1632,6 @@ library FP127Lib {
                 q := sar(64, add(r, 0x8000000000000000))
             }
 
-            function fp127_log2(x) -> r {
-                if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
-                if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
-                r := round64(log2g(x))
-            }
-
-            function mulraw(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(128, p1), shr(128, p0))
-            }
-
-            function fp127_sqrt(x) -> r {
-                if slt(x, 0) { rev(0x7db3aba7) }
-                if iszero(x) { r := 0 leave }
-                let e := add(128, msb(x))
-                let y := shl(shr(1, e), 1)
-                if and(e, 1) { y := mulraw(y, 0x16a09e667f3bcc908b2fb1366ea957d3e) }
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                r := shr(1, add(y, divu(x, y)))
-            }
-
             function fp127_pow(x, y) -> r {
                 if iszero(y) { r := 0x100000000000000000000000000000000 leave }
                 if iszero(x) { r := 0 leave }
@@ -1402,7 +1649,17 @@ library FP127Lib {
                     switch x
                     case 0x200000000000000000000000000000000 { r := fp127_exp2(y) }
                     case 0xa00000000000000000000000000000000 { r := fp127_exp10(y) }
-                    default { r := fp127_exp2(fp127_mul(y, fp127_log2(x))) }
+                    default {
+                        let l := log2g(x)
+                        let yl := fp127_mul(y, round64(l))
+                        if iszero(slt(yl, 0x7f00000000000000000000000000000000)) { rev(0x35278d12) }
+                        if slt(yl, sub(0, 0x8000000000000000000000000000000000)) { r := 0 leave }
+                        // |y| < 2^63 keeps the guard product exact; beyond that y alone
+                        // decides the magnitude and the guard bits of log2 cannot matter
+                        let t := shl(64, mulg(y, l))
+                        if lt(absw(y), 0x800000000000000000000000000000000000000000000000) { t := mulg(shl(64, y), l) }
+                        r := exp2checked(t)
+                    }
                 }
             }
 
@@ -2530,6 +2787,1140 @@ library FP127Lib {
             }
 
             _r := fp127_lambertWm1(_x)
+        }
+    }
+    /// @notice ln(1 + x). The sum 1 + x is exact in 127.128, so this is ln of
+    ///         an exact argument, rounded once; it exists because on an
+    ///         18-decimal grid the sum is where a small x loses its digits.
+    function log1p(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function fp127_add(a, b) -> r {
+                r := add(a, b)
+                if xor(slt(r, a), slt(b, 0)) { rev(0x35278d12) }
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
+            }
+
+            function log2poly(f) -> r {
+                r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
+                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                r := mulg(r, f)
+            }
+
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function log2g(x) -> r {
+                let m := msb(x)
+                if iszero(and(x, sub(x, 1))) { r := shl(192, sub(m, 128)) leave }
+                let s := sub(m, 128)
+                let mm := shr(s, x)
+                if slt(s, 0) { mm := shl(sub(0, s), x) }
+                mm := shl(64, mm)
+                let acc := 0
+                if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
+                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    acc := add(acc, 0x800000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
+                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    acc := add(acc, 0x400000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
+                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    acc := add(acc, 0x200000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
+                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    acc := add(acc, 0x100000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
+                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    acc := add(acc, 0x80000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
+                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    acc := add(acc, 0x40000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
+                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    acc := add(acc, 0x20000000000000000000000000000000000000000000000)
+                }
+                r := add(shl(192, s), add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000))))
+            }
+
+            function round64(r) -> q {
+                q := sar(64, add(r, 0x8000000000000000))
+            }
+
+            function fp127_ln(x) -> r {
+                if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
+                if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
+                r := round64(mulg(log2g(x), 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e))
+            }
+
+            function fp127_log1p(x) -> r {
+                if iszero(sgt(x, sub(0, 0x100000000000000000000000000000000))) { rev(0x7db3aba7) }
+                r := fp127_ln(fp127_add(0x100000000000000000000000000000000, x))
+            }
+
+            _r := fp127_log1p(_x)
+        }
+    }
+    /// @notice e^x - 1, with the one subtracted before rounding so a small x
+    ///         keeps its relative precision: a 27-term series at 2^-192 for
+    ///         |x| <= 1/16, the exp kernel at 2^-192 for |x| < 1, exp(x) - 1
+    ///         beyond, where the subtraction cannot cancel.
+    function expm1(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
+            }
+
+            function exp2frac(f) -> r {
+                r := 0x1b5a5019cfe1d4f099ea512721
+                r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
+                r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
+                r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
+                r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
+                r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+                r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+                r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+                r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+                r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+                r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
+                r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+                r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+                r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+                r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+                r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+                r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+                r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+                r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+                r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+                r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+                r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+                r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+                r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+                r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+            }
+
+            function exp2g(t) -> v {
+                if slt(t, 0) {
+                    let at := sub(0, t)
+                    let k := shr(192, at)
+                    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                    if iszero(f) { v := shr(k, 0x1000000000000000000000000000000000000000000000000) leave }
+                    v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)))
+                    leave
+                }
+                v := shl(shr(192, t), exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function expm1s(x) -> v {
+                let xs := shl(64, x)
+                v := 0x1000000000000000000000000000000000000000000000000
+                for { let k := 27 } gt(k, 1) { k := sub(k, 1) } {
+                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(mulg(xs, v), k))
+                }
+                v := mulg(xs, v)
+            }
+
+            function expm1g(x) -> v {
+                if iszero(gt(absw(x), 0x10000000000000000000000000000000)) { v := expm1s(x) leave }
+                v := sub(exp2g(mulg(shl(64, x), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1)), 0x1000000000000000000000000000000000000000000000000)
+            }
+
+            function exp2core(t) -> r {
+                if iszero(t) { r := 0x100000000000000000000000000000000 leave }
+                if slt(t, 0) {
+                    let at := sub(0, t)
+                    let k := shr(192, at)
+                    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                    if iszero(f) { r := shr(k, 0x100000000000000000000000000000000) leave }
+                    let sh := add(65, k)
+                    r := shr(sh, add(exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)), shl(sub(sh, 1), 1)))
+                    leave
+                }
+                let k := shr(192, t)
+                let v := exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff))
+                if iszero(lt(k, 64)) { r := shl(sub(k, 64), v) leave }
+                let sh := sub(64, k)
+                r := shr(sh, add(v, shl(sub(sh, 1), 1)))
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function fp127_exp(x) -> r {
+                if iszero(x) { r := 0x100000000000000000000000000000000 leave }
+                if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+                if slt(x, sub(0, 0x5800000000000000000000000000000000)) { r := 0 leave }
+                r := exp2core(mulg(shl(64, x), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+            }
+
+            function round64(r) -> q {
+                q := sar(64, add(r, 0x8000000000000000))
+            }
+
+            function fp127_expm1(x) -> r {
+                if iszero(x) { r := 0 leave }
+                if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+                if slt(x, sub(0, 0x5800000000000000000000000000000000)) { r := sub(0, 0x100000000000000000000000000000000) leave }
+                if lt(absw(x), 0x100000000000000000000000000000000) { r := round64(expm1g(x)) leave }
+                r := sub(fp127_exp(x), 0x100000000000000000000000000000000)
+            }
+
+            _r := fp127_expm1(_x)
+        }
+    }
+    /// @notice sinh(x). For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...))
+    ///         at 2^-192, 20 terms, rounded once; beyond, (e^x - e^-x) / 2 from
+    ///         the rounded exponentials, where the difference cannot cancel.
+    function sinh(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
+            }
+
+            function exp2frac(f) -> r {
+                r := 0x1b5a5019cfe1d4f099ea512721
+                r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
+                r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
+                r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
+                r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
+                r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+                r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+                r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+                r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+                r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+                r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
+                r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+                r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+                r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+                r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+                r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+                r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+                r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+                r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+                r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+                r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+                r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+                r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+                r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+                r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+            }
+
+            function exp2core(t) -> r {
+                if iszero(t) { r := 0x100000000000000000000000000000000 leave }
+                if slt(t, 0) {
+                    let at := sub(0, t)
+                    let k := shr(192, at)
+                    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                    if iszero(f) { r := shr(k, 0x100000000000000000000000000000000) leave }
+                    let sh := add(65, k)
+                    r := shr(sh, add(exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)), shl(sub(sh, 1), 1)))
+                    leave
+                }
+                let k := shr(192, t)
+                let v := exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff))
+                if iszero(lt(k, 64)) { r := shl(sub(k, 64), v) leave }
+                let sh := sub(64, k)
+                r := shr(sh, add(v, shl(sub(sh, 1), 1)))
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function fp127_exp(x) -> r {
+                if iszero(x) { r := 0x100000000000000000000000000000000 leave }
+                if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+                if slt(x, sub(0, 0x5800000000000000000000000000000000)) { r := 0 leave }
+                r := exp2core(mulg(shl(64, x), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+            }
+
+            function round64(r) -> q {
+                q := sar(64, add(r, 0x8000000000000000))
+            }
+
+            function fp127_sinh(x) -> r {
+                if iszero(x) { r := 0 leave }
+                let ax := absw(x)
+                if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+                if lt(ax, 0x100000000000000000000000000000000) {
+                    let xs := shl(64, x)
+                    let x2 := mulg(xs, xs)
+                    let v := 0x1000000000000000000000000000000000000000000000000
+                    for { let k := 20 } k { k := sub(k, 1) } {
+                        let k2 := shl(1, k)
+                        v := add(0x1000000000000000000000000000000000000000000000000, div(mulg(x2, v), mul(k2, add(k2, 1))))
+                    }
+                    r := round64(mulg(xs, v))
+                    leave
+                }
+                r := sar(1, sub(fp127_exp(x), fp127_exp(sub(0, x))))
+            }
+
+            _r := fp127_sinh(_x)
+        }
+    }
+    /// @notice cosh(x) = (e^x + e^-x) / 2 from the rounded exponentials; both
+    ///         terms are positive, so nothing cancels. cosh(0) is exactly one.
+    function cosh(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
+            }
+
+            function exp2frac(f) -> r {
+                r := 0x1b5a5019cfe1d4f099ea512721
+                r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
+                r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
+                r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
+                r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
+                r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+                r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+                r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+                r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+                r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+                r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
+                r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+                r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+                r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+                r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+                r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+                r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+                r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+                r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+                r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+                r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+                r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+                r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+                r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+                r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+            }
+
+            function exp2core(t) -> r {
+                if iszero(t) { r := 0x100000000000000000000000000000000 leave }
+                if slt(t, 0) {
+                    let at := sub(0, t)
+                    let k := shr(192, at)
+                    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                    if iszero(f) { r := shr(k, 0x100000000000000000000000000000000) leave }
+                    let sh := add(65, k)
+                    r := shr(sh, add(exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)), shl(sub(sh, 1), 1)))
+                    leave
+                }
+                let k := shr(192, t)
+                let v := exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff))
+                if iszero(lt(k, 64)) { r := shl(sub(k, 64), v) leave }
+                let sh := sub(64, k)
+                r := shr(sh, add(v, shl(sub(sh, 1), 1)))
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function fp127_exp(x) -> r {
+                if iszero(x) { r := 0x100000000000000000000000000000000 leave }
+                if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+                if slt(x, sub(0, 0x5800000000000000000000000000000000)) { r := 0 leave }
+                r := exp2core(mulg(shl(64, x), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+            }
+
+            function fp127_cosh(x) -> r {
+                let ax := absw(x)
+                if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+                r := sar(1, add(fp127_exp(ax), fp127_exp(sub(0, ax))))
+            }
+
+            _r := fp127_cosh(_x)
+        }
+    }
+    /// @notice tanh(x). For |x| < 1/4, u / (u + 2) with u = e^(2x) - 1 at
+    ///         2^-192; up to |x| < 44, 1 - 2 / (e^(2x) + 1); beyond, exactly
+    ///         +-1, which the format cannot distinguish from the truth.
+    function tanh(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function divg(a, b) -> r {
+                let qh := divu(a, b)
+                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
+                r := add(shl(64, qh), shr(64, ql))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
+            }
+
+            function exp2frac(f) -> r {
+                r := 0x1b5a5019cfe1d4f099ea512721
+                r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
+                r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
+                r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
+                r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
+                r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+                r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+                r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+                r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+                r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+                r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
+                r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+                r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+                r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+                r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+                r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+                r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+                r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+                r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+                r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+                r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+                r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+                r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+                r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+                r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+            }
+
+            function exp2g(t) -> v {
+                if slt(t, 0) {
+                    let at := sub(0, t)
+                    let k := shr(192, at)
+                    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                    if iszero(f) { v := shr(k, 0x1000000000000000000000000000000000000000000000000) leave }
+                    v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)))
+                    leave
+                }
+                v := shl(shr(192, t), exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function expm1s(x) -> v {
+                let xs := shl(64, x)
+                v := 0x1000000000000000000000000000000000000000000000000
+                for { let k := 27 } gt(k, 1) { k := sub(k, 1) } {
+                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(mulg(xs, v), k))
+                }
+                v := mulg(xs, v)
+            }
+
+            function expm1g(x) -> v {
+                if iszero(gt(absw(x), 0x10000000000000000000000000000000)) { v := expm1s(x) leave }
+                v := sub(exp2g(mulg(shl(64, x), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1)), 0x1000000000000000000000000000000000000000000000000)
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function fp127_div(a, b) -> r {
+                if iszero(b) { rev(0x23d359a3) }
+                let ng := xor(slt(a, 0), slt(b, 0))
+                let ua := absw(a)
+                let ub := absw(b)
+                if iszero(lt(shr(128, ua), ub)) { rev(0x35278d12) }
+                let q := divu(ua, ub)
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+                r := sub(xor(q, sub(0, ng)), sub(0, ng))
+            }
+
+            function exp2core(t) -> r {
+                if iszero(t) { r := 0x100000000000000000000000000000000 leave }
+                if slt(t, 0) {
+                    let at := sub(0, t)
+                    let k := shr(192, at)
+                    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                    if iszero(f) { r := shr(k, 0x100000000000000000000000000000000) leave }
+                    let sh := add(65, k)
+                    r := shr(sh, add(exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)), shl(sub(sh, 1), 1)))
+                    leave
+                }
+                let k := shr(192, t)
+                let v := exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff))
+                if iszero(lt(k, 64)) { r := shl(sub(k, 64), v) leave }
+                let sh := sub(64, k)
+                r := shr(sh, add(v, shl(sub(sh, 1), 1)))
+            }
+
+            function fp127_exp(x) -> r {
+                if iszero(x) { r := 0x100000000000000000000000000000000 leave }
+                if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+                if slt(x, sub(0, 0x5800000000000000000000000000000000)) { r := 0 leave }
+                r := exp2core(mulg(shl(64, x), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+            }
+
+            function round64(r) -> q {
+                q := sar(64, add(r, 0x8000000000000000))
+            }
+
+            function fp127_tanh(x) -> r {
+                if iszero(x) { r := 0 leave }
+                let one := 0x100000000000000000000000000000000
+                let ax := absw(x)
+                switch lt(ax, 0x40000000000000000000000000000000)
+                case 1 {
+                    let u := expm1g(shl(1, ax))
+                    r := round64(divg(u, add(u, 0x2000000000000000000000000000000000000000000000000)))
+                }
+                default {
+                    r := one
+                    if lt(ax, 0x2c00000000000000000000000000000000) {
+                        r := sub(one, fp127_div(0x200000000000000000000000000000000, add(fp127_exp(shl(1, ax)), one)))
+                    }
+                }
+                if slt(x, 0) { r := sub(0, r) }
+            }
+
+            _r := fp127_tanh(_x)
+        }
+    }
+    /// @notice atanh(x) = (ln(1 + x) - ln(1 - x)) / 2, both logarithms taken
+    ///         unrounded at 2^-192 and the difference scaled and rounded once.
+    ///         Both arguments are exact in 127.128.
+    function atanh(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
+            }
+
+            function log2poly(f) -> r {
+                r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
+                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                r := mulg(r, f)
+            }
+
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function log2g(x) -> r {
+                let m := msb(x)
+                if iszero(and(x, sub(x, 1))) { r := shl(192, sub(m, 128)) leave }
+                let s := sub(m, 128)
+                let mm := shr(s, x)
+                if slt(s, 0) { mm := shl(sub(0, s), x) }
+                mm := shl(64, mm)
+                let acc := 0
+                if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
+                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    acc := add(acc, 0x800000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
+                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    acc := add(acc, 0x400000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
+                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    acc := add(acc, 0x200000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
+                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    acc := add(acc, 0x100000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
+                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    acc := add(acc, 0x80000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
+                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    acc := add(acc, 0x40000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
+                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    acc := add(acc, 0x20000000000000000000000000000000000000000000000)
+                }
+                r := add(shl(192, s), add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000))))
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function round64(r) -> q {
+                q := sar(64, add(r, 0x8000000000000000))
+            }
+
+            function fp127_atanh(x) -> r {
+                let one := 0x100000000000000000000000000000000
+                if iszero(lt(absw(x), one)) { rev(0x7db3aba7) }
+                if iszero(x) { r := 0 leave }
+                r := round64(mulg(sub(log2g(add(one, x)), log2g(sub(one, x))), 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b17))
+            }
+
+            _r := fp127_atanh(_x)
+        }
+    }
+    /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
+    ///         1 - erfc(x) by the continued fraction, both at 2^-192 and rounded
+    ///         once; +-1 exactly from |x| >= 10, where 1 - erf is below one ULP.
+    function erf(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function divg(a, b) -> r {
+                let qh := divu(a, b)
+                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
+                r := add(shl(64, qh), shr(64, ql))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
+            }
+
+            function exp2frac(f) -> r {
+                r := 0x1b5a5019cfe1d4f099ea512721
+                r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
+                r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
+                r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
+                r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
+                r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+                r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+                r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+                r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+                r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+                r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
+                r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+                r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+                r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+                r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+                r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+                r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+                r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+                r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+                r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+                r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+                r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+                r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+                r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+                r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+            }
+
+            function exp2g(t) -> v {
+                if slt(t, 0) {
+                    let at := sub(0, t)
+                    let k := shr(192, at)
+                    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                    if iszero(f) { v := shr(k, 0x1000000000000000000000000000000000000000000000000) leave }
+                    v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)))
+                    leave
+                }
+                v := shl(shr(192, t), exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function expg(xg) -> v {
+                v := exp2g(mulg(xg, 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+            }
+
+            function erfcf(xg) -> v {
+                let x2 := mulg(xg, xg)
+                let n := add(div(1700, shr(192, x2)), 10)
+                let am := 0x1000000000000000000000000000000000000000000000000
+                let an := xg
+                let bm := 0
+                let bn := 0x1000000000000000000000000000000000000000000000000
+                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
+                    let a2 := add(mulg(xg, an), shr(1, mul(k, am)))
+                    let b2 := add(mulg(xg, bn), shr(1, mul(k, bm)))
+                    am := an
+                    an := a2
+                    bm := bn
+                    bn := b2
+                    if gt(an, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                }
+                v := divg(mulg(expg(sub(0, x2)), bn), mulg(an, 0x1c5bf891b4ef6aa79c3b0520d5db9383fe3921546f63b252e))
+            }
+
+            function erfs(xg) -> v {
+                let x2 := mulg(xg, xg)
+                let d := shl(1, x2)
+                let term := 0x1000000000000000000000000000000000000000000000000
+                let s := term
+                for { let k := 1 } term { k := add(k, 1) } {
+                    term := div(mulg(term, d), add(shl(1, k), 1))
+                    s := add(s, term)
+                }
+                v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
+            }
+
+            function round64(r) -> q {
+                q := sar(64, add(r, 0x8000000000000000))
+            }
+
+            function fp127_erf(x) -> r {
+                if iszero(x) { r := 0 leave }
+                let one := 0x100000000000000000000000000000000
+                let ax := absw(x)
+                switch lt(ax, 0xa00000000000000000000000000000000)
+                case 1 {
+                    let xg := shl(64, ax)
+                    switch gt(ax, 0x400000000000000000000000000000000)
+                    case 0 { r := round64(erfs(xg)) }
+                    default { r := round64(sub(0x1000000000000000000000000000000000000000000000000, erfcf(xg))) }
+                }
+                default { r := one }
+                if slt(x, 0) { r := sub(0, r) }
+            }
+
+            _r := fp127_erf(_x)
+        }
+    }
+    /// @notice The complementary error function 1 - erf(x), computed directly
+    ///         for x > 4 so the tail keeps its digits down to the format's
+    ///         floor (erfc(9.3) is one ULP; zero beyond); 2 - erfc(-x) for x < 0.
+    function erfc(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function divg(a, b) -> r {
+                let qh := divu(a, b)
+                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
+                r := add(shl(64, qh), shr(64, ql))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
+            }
+
+            function exp2frac(f) -> r {
+                r := 0x1b5a5019cfe1d4f099ea512721
+                r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
+                r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
+                r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
+                r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
+                r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+                r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+                r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+                r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+                r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+                r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
+                r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+                r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+                r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+                r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+                r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+                r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+                r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+                r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+                r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+                r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+                r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+                r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+                r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+                r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+            }
+
+            function exp2g(t) -> v {
+                if slt(t, 0) {
+                    let at := sub(0, t)
+                    let k := shr(192, at)
+                    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                    if iszero(f) { v := shr(k, 0x1000000000000000000000000000000000000000000000000) leave }
+                    v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)))
+                    leave
+                }
+                v := shl(shr(192, t), exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function expg(xg) -> v {
+                v := exp2g(mulg(xg, 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+            }
+
+            function erfcf(xg) -> v {
+                let x2 := mulg(xg, xg)
+                let n := add(div(1700, shr(192, x2)), 10)
+                let am := 0x1000000000000000000000000000000000000000000000000
+                let an := xg
+                let bm := 0
+                let bn := 0x1000000000000000000000000000000000000000000000000
+                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
+                    let a2 := add(mulg(xg, an), shr(1, mul(k, am)))
+                    let b2 := add(mulg(xg, bn), shr(1, mul(k, bm)))
+                    am := an
+                    an := a2
+                    bm := bn
+                    bn := b2
+                    if gt(an, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                }
+                v := divg(mulg(expg(sub(0, x2)), bn), mulg(an, 0x1c5bf891b4ef6aa79c3b0520d5db9383fe3921546f63b252e))
+            }
+
+            function erfs(xg) -> v {
+                let x2 := mulg(xg, xg)
+                let d := shl(1, x2)
+                let term := 0x1000000000000000000000000000000000000000000000000
+                let s := term
+                for { let k := 1 } term { k := add(k, 1) } {
+                    term := div(mulg(term, d), add(shl(1, k), 1))
+                    s := add(s, term)
+                }
+                v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
+            }
+
+            function round64(r) -> q {
+                q := sar(64, add(r, 0x8000000000000000))
+            }
+
+            function fp127_erfc(x) -> r {
+                let one := 0x100000000000000000000000000000000
+                if iszero(x) { r := one leave }
+                let ax := absw(x)
+                let v := 0
+                if lt(ax, 0xa00000000000000000000000000000000) {
+                    let xg := shl(64, ax)
+                    switch gt(ax, 0x400000000000000000000000000000000)
+                    case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(xg)) }
+                    default { v := erfcf(xg) }
+                }
+                if slt(x, 0) { v := sub(0x2000000000000000000000000000000000000000000000000, v) }
+                r := round64(v)
+            }
+
+            _r := fp127_erfc(_x)
+        }
+    }
+    /// @notice The standard normal distribution function
+    ///         Phi(x) = erfc(-x / sqrt2) / 2, the argument scaled at 2^-192. The
+    ///         tail keeps its digits to the format's floor: Phi(-13) is about
+    ///         two ULPs, Phi(-14) rounds to zero, and Phi(x) is exactly one from
+    ///         x = 14. This is the N(d) of Black-Scholes; on an 18-decimal grid
+    ///         it is zero from about d = -8.3.
+    function normCdf(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function divg(a, b) -> r {
+                let qh := divu(a, b)
+                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
+                r := add(shl(64, qh), shr(64, ql))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
+            }
+
+            function exp2frac(f) -> r {
+                r := 0x1b5a5019cfe1d4f099ea512721
+                r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
+                r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
+                r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
+                r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
+                r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+                r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+                r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+                r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+                r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+                r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
+                r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+                r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+                r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+                r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+                r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+                r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+                r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+                r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+                r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+                r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+                r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+                r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+                r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+                r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+            }
+
+            function exp2g(t) -> v {
+                if slt(t, 0) {
+                    let at := sub(0, t)
+                    let k := shr(192, at)
+                    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                    if iszero(f) { v := shr(k, 0x1000000000000000000000000000000000000000000000000) leave }
+                    v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)))
+                    leave
+                }
+                v := shl(shr(192, t), exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function expg(xg) -> v {
+                v := exp2g(mulg(xg, 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+            }
+
+            function erfcf(xg) -> v {
+                let x2 := mulg(xg, xg)
+                let n := add(div(1700, shr(192, x2)), 10)
+                let am := 0x1000000000000000000000000000000000000000000000000
+                let an := xg
+                let bm := 0
+                let bn := 0x1000000000000000000000000000000000000000000000000
+                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
+                    let a2 := add(mulg(xg, an), shr(1, mul(k, am)))
+                    let b2 := add(mulg(xg, bn), shr(1, mul(k, bm)))
+                    am := an
+                    an := a2
+                    bm := bn
+                    bn := b2
+                    if gt(an, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                }
+                v := divg(mulg(expg(sub(0, x2)), bn), mulg(an, 0x1c5bf891b4ef6aa79c3b0520d5db9383fe3921546f63b252e))
+            }
+
+            function erfs(xg) -> v {
+                let x2 := mulg(xg, xg)
+                let d := shl(1, x2)
+                let term := 0x1000000000000000000000000000000000000000000000000
+                let s := term
+                for { let k := 1 } term { k := add(k, 1) } {
+                    term := div(mulg(term, d), add(shl(1, k), 1))
+                    s := add(s, term)
+                }
+                v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
+            }
+
+            function round64(r) -> q {
+                q := sar(64, add(r, 0x8000000000000000))
+            }
+
+            function fp127_normCdf(x) -> r {
+                if iszero(x) { r := 0x80000000000000000000000000000000 leave }
+                let one := 0x100000000000000000000000000000000
+                let ax := absw(x)
+                let v := 0
+                if lt(ax, 0xe00000000000000000000000000000000) {
+                    let yg := mulg(shl(64, ax), 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    switch gt(yg, 0x4000000000000000000000000000000000000000000000000)
+                    case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(yg)) }
+                    default { v := erfcf(yg) }
+                }
+                switch slt(x, 0)
+                case 1 { r := round64(shr(1, v)) }
+                default { r := round64(sub(0x1000000000000000000000000000000000000000000000000, shr(1, v))) }
+            }
+
+            _r := fp127_normCdf(_x)
         }
     }
 }

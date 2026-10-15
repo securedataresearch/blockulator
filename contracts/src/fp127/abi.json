@@ -326,6 +326,54 @@
   },
   {
     "type": "function",
+    "name": "powu",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "n",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "compound",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "rate",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "n",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
     "name": "cbrt",
     "stateMutability": "pure",
     "inputs": [
@@ -805,6 +853,177 @@
   {
     "type": "function",
     "name": "lambertWm1",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "log1p",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "expm1",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "sinh",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "cosh",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "tanh",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "atanh",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "erf",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "erfc",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "normCdf",
     "stateMutability": "pure",
     "inputs": [
       {

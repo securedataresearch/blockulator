@@ -18,13 +18,14 @@ contract Precision is FP127Harness {
     /// Where the per-op stats are written; empty disables the write.
     function _out() internal pure virtual returns (string memory) { return "docs/fp127/precision.json"; }
 
-    function _ops() internal pure returns (string[38] memory o) {
+    function _ops() internal pure returns (string[49] memory o) {
         o = [
             "add", "sub", "mul", "div", "fromFixed18", "toFixed18",
             "exp", "exp2", "exp10", "ln", "log2", "log10", "log2Up",
             "sqrt", "cbrt", "pow", "inv", "abs", "neg", "sign", "min", "max", "clamp", "avg",
             "zeroFloorSub", "dist", "lerp", "floor", "ceil", "frac", "round", "gcd", "factorial",
-            "hypot", "gavg", "lambertW0", "lambertWm1", "pi"
+            "hypot", "gavg", "lambertW0", "lambertWm1", "pi",
+            "powu", "compound", "log1p", "expm1", "sinh", "cosh", "tanh", "atanh", "erf", "erfc", "normCdf"
         ];
     }
 
@@ -38,6 +39,13 @@ contract Precision is FP127Harness {
         if (h == keccak256("ln") || h == keccak256("log2") || h == keccak256("log10")) return 200;
         if (h == keccak256("pow") || h == keccak256("cbrt") || h == keccak256("lambertW0")
             || h == keccak256("lambertWm1") || h == keccak256("pi")) return 115;
+        // v4: the exp kernel's 2^-145 bounds expm1, sinh, cosh, tanh and the
+        // erf family; log1p and atanh ride the log kernel; powu and compound
+        // round a 256-bit mantissa once and are within one ULP
+        if (h == keccak256("expm1") || h == keccak256("sinh") || h == keccak256("cosh") || h == keccak256("tanh")
+            || h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")) return 140;
+        if (h == keccak256("log1p") || h == keccak256("atanh")) return 200;
+        if (h == keccak256("powu") || h == keccak256("compound")) return 120;
         return 256;
     }
 
@@ -152,7 +160,7 @@ contract Precision is FP127Harness {
     }
 
     function test_precision_all() public virtual {
-        string[38] memory ops = _ops();
+        string[49] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));

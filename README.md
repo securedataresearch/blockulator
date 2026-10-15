@@ -14,10 +14,12 @@ that are proven to agree bit for bit:
 - an **inline library** (`FP127Lib.sol`) with the same bodies in
   `memory-safe` assembly blocks, for contracts that want no external call.
 
-38 operations: `add`, `sub`, `mul`, `div`, `exp`, `exp2`, `exp10`, `ln`,
-`log2`, `log10`, `sqrt`, `cbrt`, `pow`, `lambertW0`, `lambertWm1`, `pi` by
-Ramanujan's series, and the usual rounding, comparison and conversion ops. Every argument and result
-is an `int256` holding `value * 2^128`.
+49 operations: `add`, `sub`, `mul`, `div`, `exp`, `exp2`, `exp10`, `ln`,
+`log2`, `log10`, `sqrt`, `cbrt`, `pow`, `powu`, `compound`, `log1p`, `expm1`,
+`sinh`, `cosh`, `tanh`, `atanh`, `erf`, `erfc`, `normCdf`, `lambertW0`,
+`lambertWm1`, `pi` by Ramanujan's series, and the usual rounding, comparison
+and conversion ops. Every argument and result is an `int256` holding
+`value * 2^128`.
 
 - 128 fractional bits, about 38 decimal digits, against 18 for WAD libraries
 - Integer and rounding ops bit-exact; `ln`, `log2`, `log10` within one ULP;

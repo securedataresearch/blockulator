@@ -15,7 +15,8 @@ ORDER = [
     "exp", "exp2", "exp10", "ln", "log2", "log10", "log2Up",
     "sqrt", "cbrt", "pow", "inv", "abs", "neg", "sign", "min", "max", "clamp", "avg",
     "zeroFloorSub", "dist", "lerp", "floor", "ceil", "frac", "round", "gcd", "factorial",
-    "hypot", "gavg", "lambertW0", "lambertWm1",
+    "hypot", "gavg", "lambertW0", "lambertWm1", "pi",
+    "powu", "compound", "log1p", "expm1", "sinh", "cosh", "tanh", "atanh", "erf", "erfc", "normCdf",
 ]
 
 

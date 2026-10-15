@@ -60,6 +60,17 @@ contract LibUser {
     function gcd(int256 a, int256 b) external pure returns (int256) { return FP127Lib.gcd(a, b); }
     function clamp(int256 a, int256 b, int256 c) external pure returns (int256) { return FP127Lib.clamp(a, b, c); }
     function lerp(int256 a, int256 b, int256 c) external pure returns (int256) { return FP127Lib.lerp(a, b, c); }
+    function powu(int256 a, int256 b) external pure returns (int256) { return FP127Lib.powu(a, b); }
+    function compound(int256 a, int256 b) external pure returns (int256) { return FP127Lib.compound(a, b); }
+    function log1p(int256 x) external pure returns (int256) { return FP127Lib.log1p(x); }
+    function expm1(int256 x) external pure returns (int256) { return FP127Lib.expm1(x); }
+    function sinh(int256 x) external pure returns (int256) { return FP127Lib.sinh(x); }
+    function cosh(int256 x) external pure returns (int256) { return FP127Lib.cosh(x); }
+    function tanh(int256 x) external pure returns (int256) { return FP127Lib.tanh(x); }
+    function atanh(int256 x) external pure returns (int256) { return FP127Lib.atanh(x); }
+    function erf(int256 x) external pure returns (int256) { return FP127Lib.erf(x); }
+    function erfc(int256 x) external pure returns (int256) { return FP127Lib.erfc(x); }
+    function normCdf(int256 x) external pure returns (int256) { return FP127Lib.normCdf(x); }
 }
 
 /// @notice Independent reference arithmetic built on Solady's fullMulDiv so
