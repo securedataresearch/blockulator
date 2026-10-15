@@ -132,6 +132,25 @@ contract Ladder is Test {
     function test_ladder_compoundAnnual() public view { _scenario(Scenario.COMPOUND_ANNUAL); }
     function test_ladder_accrualPerSecond() public view { _scenario(Scenario.ACCRUAL_PER_SECOND); }
     function test_ladder_accrualContinuous() public view { _scenario(Scenario.ACCRUAL_CONTINUOUS); }
+    function test_ladder_deepTailOption() public view { _scenario(Scenario.DEEP_TAIL_OPTION); }
+    function test_ladder_decay() public view { _scenario(Scenario.DECAY); }
+
+    /// The generic normCdf through Solady's primitives agrees with FP127's op
+    /// near the money (the price at N = 0 of the reference input).
+    function test_generic_normCdf_near_money() public view {
+        int256[] memory w = new int256[](6);
+        w[0] = 100e18; w[1] = 100e18; w[2] = 0.2e18; w[3] = 0.5e18; w[4] = 0.05e18; w[5] = 0.000173e18;
+        (bool okS, int256 rawS,,,) = runner.run(Scenario.DEEP_TAIL_OPTION, Form.SOLADY, 0, w);
+        int256[] memory f = new int256[](6);
+        for (uint256 i; i < 6; i++) f[i] = (w[i] << 128) / 1e18;
+        (bool okF, int256 rawF,,,) = runner.run(Scenario.DEEP_TAIL_OPTION, Form.FP127LIB, 0, f);
+        assertTrue(okS && okF);
+        int256 fp18 = rawF * 1e18 / (int256(1) << 128);
+        // Black-Scholes at the money, 20% vol, six months, 5%: 6.8887...; WAD agrees to ~1e-16
+        assertGt(fp18, 6.8e18); assertLt(fp18, 6.95e18);
+        int256 diff = fp18 > rawS ? fp18 - rawS : rawS - fp18;
+        assertLt(diff, 1e4, "generic normCdf through WAD within 1e-14 of FP127's");
+    }
 
     function test_runner_catches_reverts() public view {
         int256[] memory p = new int256[](1);

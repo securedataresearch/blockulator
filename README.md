@@ -28,7 +28,7 @@ and conversion ops. Every argument and result is an `int256` holding
   or `OutOfRange()`
 - Gas ladder against ABDKMath64x64, Solady and PRBMath for every op
   ([`docs/benchmarks/gas.md`](docs/benchmarks/gas.md))
-- Terminal precision: eleven iterated scenarios, N from 1 to 10,000, every
+- Terminal precision: thirteen iterated scenarios, N from 1 to 10,000, every
   cell against exact arithmetic and re-runnable on chain through
   `LadderRunner` ([`docs/benchmarks/ladder.md`](docs/benchmarks/ladder.md),
   [record](contracts/deployments/Ladder.md))

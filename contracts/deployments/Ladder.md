@@ -11,7 +11,7 @@ re-runs every cell of every input through the live runner and records the
 largest N the public RPC completes.
 
 Version 5 (ten adapters calling FP127 v4; ABDKMathQuad, Balancer, Aave,
-Morpho and Maker added as forms 5 to 9; two accrual scenarios) is prepared
+Morpho and Maker added as forms 5 to 9; four scenarios added) is prepared
 and not yet deployed: salt `"FP127 ladder v5"`
 (`0x4650313237206c61646465722076350000000000000000000000000000000000`),
 predicted by `make predict-ladder` from the artifacts:
@@ -77,7 +77,8 @@ cast call 0x798C37A3E5B421D480AC850258466b5598A1A555 \
 Scenario ids are the `index` field in `scripts/ladder/scenarios.json`
 (0 compound, 1 compound-pow, 2 bonding-sqrt, 3 roundtrip, 4 amortise,
 5 geo-mean, 6 black-scholes-chain, 7 cumulative-product, 8 compound-annual,
-9 accrual-per-second, 10 accrual-continuous; the last two from v5);
+9 accrual-per-second, 10 accrual-continuous, 11 deep-tail-option, 12 decay;
+the last four from v5);
 forms are 0 fp127, 1 fp127lib, 2 abdk, 3 solady, 4 prb, and from v5
 5 quad, 6 balancer, 7 aave, 8 morpho, 9 maker. `p` is the input's `fp127`,
 `abdk`, `wad`, `quad` or `ray` array from `scripts/ladder/inputs.json` (forms
