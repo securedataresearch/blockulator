@@ -1,9 +1,10 @@
 # The War on Dust is Nearly Over
 
-A 20-minute whiteboard talk. Draft 8, 2026-10-15. Two goals, one ruler, the ends of
-the ruler, and the ruler after it. Every number is a cell in `docs/benchmarks/ladder.json`
+A 20-minute whiteboard talk. Draft 9, 2026-10-15. Two goals, one ruler, the ends of
+the ruler, and the second ruler. Every number is a cell in `docs/benchmarks/ladder.json`
 (scenario, input, N in brackets), `docs/benchmarks/edges.json` (op and probe),
-`docs/benchmarks/pi.md`, `docs/benchmarks/gas.json`, or exact arithmetic. "Board:" lines
+`docs/benchmarks/pi.md`, `docs/benchmarks/gas.json`, `docs/benchmarks/gas256.json`, or exact
+arithmetic. "Board:" lines
 are what gets written; the prose is what gets said.
 
 ---
@@ -13,12 +14,12 @@ are what gets written; the prose is what gets said.
 1. Dust (1 min)
 2. Two goals (1.5 min)
 3. One word, four rulers (2.5 min)
-4. Goal one, kept: the slope (3 min)
+4. Goal one, kept: the slope (3.5 min)
 5. The ends of the ruler (5 min)
-6. What the money runs on (3 min)
+6. What the money runs on (2.5 min)
 7. The fourth recipe (2 min)
 8. Cost (1 min)
-9. Nearly over (1 min)
+9. The second ruler (1.5 min)
 
 ---
 
@@ -35,8 +36,9 @@ That's dust. Rounding, repeated every block, piling up in a corner nobody can sw
 Board: the title.
 
 Last year I showed you a library and said the math was finished. This year I measured
-it against everything the money actually runs on, and I want to tell you where it won,
-where it lost, and why the war is nearly over rather than over.
+it against everything the money actually runs on. I want to tell you where it won,
+where it lost, and what I built because of where it lost. That's why the war is nearly
+over and not over.
 
 ## 2. Two goals
 
@@ -45,12 +47,12 @@ Board:
     1. every answer as exact as the ruler allows      iterate, round once
     2. as much number as one word can hold           where the point goes
 
-Two goals, and they're different goals. The first is about the recipe: a guess and a
-correction, and one rounding at the end instead of one at every step. The second is about
-the container: a 256-bit word, and what you spend the bits on.
+Two goals, and they pull in different directions. The first is about the recipe: a
+guess and a correction, and one rounding at the end instead of one at every step. The
+second is about the container: one 256-bit word, and what you spend its bits on.
 
-I'll show you the first goal is kept. Then I'll show you the second one has walls, and
-that the measurement tells us where the next wall is.
+The first goal is kept, and I can prove it. The second has walls, and the measurement
+says exactly where. Then I'll show you the ruler that has no walls.
 
 ## 3. One word, four rulers
 
@@ -75,10 +77,10 @@ Board:
     fixed point:  absolute precision     a ruler with marks every 2^-128
     float:        relative precision     a ruler that rescales to the value
 
-Hold that distinction. The whole talk is in it. A fixed point is as good as its grid
+Hold that distinction; the whole talk is in it. A fixed point is as good as its grid
 where the values are, and no good at all past the ends. A float is as good as its
-mantissa everywhere, and no better anywhere. FP127 has 128 bits of fraction; Quad has
-113 bits of mantissa. Where the money lives, between a millionth and a trillion, we have
+mantissa everywhere, and no better anywhere. FP127 has 128 bits of fraction, Quad 113
+bits of mantissa. Where the money lives, between a millionth and a trillion, we have
 more. Past the ends, they do.
 
 ## 4. Goal one, kept: the slope
@@ -86,13 +88,27 @@ more. Past the ends, they do.
 Board: `b = b × (1 + r)`, `b₀ = 10000`, `r = 0.1 / 365`
 
 The most common calculation in DeFi. Ten thousand dollars at ten percent, daily, one
-multiply a day. Write the rate out.
+multiply a day. Write the rate out, because the rate is where it starts.
 
 Board:
 
     r exact   = 0.000273972602739726027397260273972602739726...
     r on WAD  = 0.000273972602739726          cut off 2.7 × 10⁻²⁰
     r on 2^128 = 0.000273972602739726027397260273972602739726   cut off 1.4 × 10⁻³⁹
+
+Now do day one on the board, on WAD. Multiply exactly what the ruler was given.
+
+Board:
+
+    b₁ = 10000 × 1.000273972602739726
+       = 10002.739726027397260000          ← on the ruler
+    truth 10002.739726027397260273972...
+    short by 274 units
+
+[compound, reference, N = 1] The multiply did nothing wrong. It multiplied the rate
+it was given, and the rate was short by 2.7 × 10⁻²⁰, times ten thousand dollars, is
+274 units. Day two is 548. Day ten, 2,751. It's a straight line, 274 a day, because the
+same shortfall is paid out of the balance every day.
 
 Board, the balances after a year, digits correct:
 
@@ -102,37 +118,40 @@ Board, the balances after a year, digits correct:
     FP127    36            and 40 against its own rounded rate
 
 [compound, reference, N = 365] Sixteen digits of eleven thousand dollars is a thousandth
-of a cent, and across a million accounts it's where the dust comes from. The FP127
-answer is forty digits if you start the exact arithmetic from the rate it was actually
-given: every digit lost all year was day zero's rounding. The multiplications lost
-nothing.
+of a cent. Across a million accounts, that's the dust. Now the FP127 line: thirty-six
+digits against the exact answer, and forty if you start the exact arithmetic from the
+rate it was actually given. Every digit lost all year was day zero's rounding. The
+three hundred and sixty-five multiplications lost nothing.
 
-And look at Quad: thirty-one. It started at thirty-three on day one and gave up two.
+And look at Quad. Thirty-one. It started at thirty-three on day one and gave up two.
 A float rounds to its mantissa at every operation, and the roundings walk. The fixed
-point rounded once, at the rate, and then every product was exact. That's goal one.
+point rounded once, at the rate, and every product after that was exact. That's goal
+one: iterate, and round once.
 
 Board: `guess → correct → guess → correct`
 
-The transcendentals keep it the same way. Last year `exp` and `ln` floored every step;
-`exp(ln(x))` came back eight units low every call, and after ten thousand calls it was
-sixty-five thousand units low. Two lines fixed it: compute at 192 bits, round to nearest
-once. Now the round trip returns the same word at every N. [roundtrip, reference, N =
-10,000: FP127 38 digits; Quad 29]
+The transcendentals keep it the same way, and I had to learn that. Last year `exp` and
+`ln` floored every step, because the original floored and I ported it faithfully.
+`exp(ln(x))` came back eight units low on every call, and after ten thousand calls it
+was sixty-five thousand units low. A log that is right to the last unit by being a
+little low, fed back into itself, is a slope. Two lines fixed it: compute at 192 bits,
+round to nearest once. Now the round trip returns the same word at every N. [roundtrip,
+reference, N = 10,000: FP127 38 digits; Quad 29]
 
 Board, the same recipe through four rulers:
 
     Ramanujan's series for pi, five terms, each library's own sqrt, mul, div
     FP127 36   Quad 33   ABDK 17   Solady 16   PRBMath 16   Balancer 16
 
-[pi.md] Same integers, same recipe. The ruler decides. That's the slope story and it's
-the gentle one: no villain, no cleverness, just where the point goes and whether you
-round once.
+[pi.md] Same integers, same recipe. The ruler decides. That's the slope story, and
+it's the gentle one: no villain, no cleverness, just where the point goes and whether
+you round once.
 
 ## 5. The ends of the ruler
 
 Now the part that changed what I think.
 
-I built a second table. Not N steps of one thing; one call of each thing, at the end of
+I built a second table. Not N steps of one thing: one call of each thing, at the end of
 its domain. Where a logarithm is within a per-second rate of one. Where an exponential
 is minus forty. Where a probability is below one in 10¹⁸. Each library, in its own
 representation, one call, against two hundred digits of truth. Each cell either has
@@ -176,11 +195,11 @@ it's one digit. Nothing you build on it has more digits than it does.
 and on ours it has eighteen digits, because the grid is at 10⁻³⁹.
 
 Now the two rows I wrote for myself. exp(−89) is zero on FP127's grid, and exp(89)
-reverts, because 2¹²⁷ is 1.7 × 10³⁸ and e⁸⁹ is 4.5 × 10³⁸. And here's one I didn't
-expect: Uniswap chose its tick range so that price spans exactly 2⁻¹²⁸ to 2¹²⁸.
-1.0001^887272 is 3.4026 × 10³⁸. 2¹²⁸ is 3.4028 × 10³⁸. An unsigned 128.128 word would
-hold Uniswap's last tick; our signed 127.128 does not, by the one bit the sign took.
-The ends of our ruler are real.
+reverts, because 2¹²⁷ is 1.7 × 10³⁸ and e⁸⁹ is 4.5 × 10³⁸. And one I didn't expect.
+Uniswap chose its tick range so that price spans exactly 2⁻¹²⁸ to 2¹²⁸. 1.0001^887272
+is 3.4026 × 10³⁸. 2¹²⁸ is 3.4028 × 10³⁸. An unsigned 128.128 word holds Uniswap's last
+tick; our signed 127.128 does not, by the one bit the sign took. The ends of our ruler
+are real, and one of them is a bit I chose.
 
 Board:
 
@@ -189,10 +208,10 @@ Board:
     outside them:   zero or revert, like everyone else
 
 And then the Quad column. Twenty-nine to thirty-four, every row, no zero, no revert. Not
-because it's cleverer. Because its point moves. Where our 1e-30 is 3.4 × 10⁸ grid steps,
-eight digits, Quad's is 1.0 × 2⁻¹⁰⁰ with 113 bits of mantissa, thirty-four digits. The
-float has no walls. It also has fewer digits in the middle, rounds at every op, and uses
-half the word. That is the trade, and now it's measured.
+because it's cleverer. Because its point moves. Our 10⁻³⁰ is 3.4 × 10⁸ grid steps, eight
+digits; Quad's is 1.0 × 2⁻¹⁰⁰ with 113 bits of mantissa, thirty-four digits. The float
+has no walls. It also has fewer digits in the middle, rounds at every op, and leaves
+half the word idle. That's the trade, and now it's measured. Hold on to the idle half.
 
 ## 6. What the money runs on
 
@@ -203,8 +222,9 @@ Board:
     Maker     rpow(1 + r, n)          squaring, rounds half-up every step, RAY
     Uniswap   1.0001^tick             Q64.96, range 2^±128
 
-These are the accrual formulas of the four protocols most of the money sits in, run
-through the same ladder, judged against the model each one says it approximates.
+These are the accrual formulas of the four protocols most of the money sits in. They're
+public, they're good, and I ran them through the same ladder, each judged against the
+model it says it approximates.
 
 Board:
 
@@ -215,13 +235,13 @@ Board:
 [accrual-continuous, reference, N = 365 and 10,000; compound, reference, N = 10,000]
 
 Aave's own comment says the expansion "slightly underpays liquidity providers and
-undercharges borrowers". It's right: the error is x⁴/24, invisible when the market is
-touched every block, six digits at a year idle, everything at twenty-seven. Morpho has
-the same three terms and one more loss before them: the rate per second in eighteen
+undercharges borrowers". It's right, and the error is x⁴/24: invisible when the market
+is touched every block, six digits at a year idle, gone at twenty-seven. Morpho has the
+same three terms and one more loss before them: the rate per second in eighteen
 decimals, 1,585,489,599 wei at five percent, ten digits before any arithmetic. Maker's
-rpow is the honest one of the three: exact squaring, half-up rounding, twenty-three
-digits of twenty-seven after ten thousand days. None of these are mistakes. Each is
-right for the interval it was built for. The table just says where the interval ends.
+rpow is the plain one: exact squaring, half-up rounding, twenty-three digits of
+twenty-seven after ten thousand days. None of these are mistakes. Each is right for the
+interval it was built for. The table only says where the interval ends.
 
 ## 7. The fourth recipe
 
@@ -247,56 +267,71 @@ Board:
     spot walks to d₁ = −12:   WAD zero        FP127 3     Quad 27
 
 [deep-tail-option, slow-walk and reference, N = 10,000] At minus seven, an 18-decimal
-N(d) has four digits left. At minus twelve, it's zero, and so is the option. And at
+N(d) has four digits left. At minus twelve it's zero, and so is the option. And at
 minus twelve FP127 has three, because N(−12) is 1.8 × 10⁻³³, a handful of grid steps.
-That's the wall again, from the other side. Quad has twenty-seven.
+That's the wall again, from the other side. Quad has twenty-seven. Remember the three.
 
 ## 8. Cost
 
 Board:
 
-    gas, inline       FP127    Quad     Solady
-    mul                 531    1,036      321
-    add                 289    1,252      502
-    ln                1,035    1,927      731
-    exp               5,366    6,072      547
-    pow               6,654   23,879    1,605
-    compound(r, n)    4,573       —        —
-    normCdf          23,487       —        —
+    gas, inline       FP127    Quad    FP256    Solady
+    mul                 531    1,036    1,366      321
+    add                 289    1,252    1,440      502
+    sqrt              3,632    1,205    2,794      622
+    ln                1,035    1,927    4,878      731
+    exp               5,366    6,072    6,159      547
+    pow               6,654   23,879    9,505    1,605
+    compound(r, n)    4,573       —        —        —
+    normCdf          23,487       —        —        —
 
-[gas.json] Multiply costs what a multiply costs. The float pays for its moving point on
-every add, because two exponents have to be aligned before anything happens, and pays
-four times on pow. Every function here is a view: off chain it's an eth_call and costs
-nothing. If you multiply once and settle, keep using WAD. If the output feeds the next
-input, this is what the gas buys.
+[gas.json, gas256.json] Multiply costs what a multiply costs. A float pays for its
+moving point on every add, because two exponents have to be aligned before anything
+happens. Every function here is a view: off chain it's an eth_call and costs nothing.
+If you multiply once and settle, keep using WAD. If the output feeds the next input,
+this is what the gas buys. The fourth column is the next section.
 
-## 9. Nearly over
+## 9. The second ruler
 
 Board, the two goals again:
 
     1. every answer as exact as the ruler allows      kept: iterate, round once
     2. as much number as one word can hold           kept in the middle; walls at the ends
 
-Goal one is finished. Every op in the library sits on its grid, and you can check any
-cell of either table on chain with one call.
+Goal one is finished. Every op sits on its grid, and you can check any cell of either
+table on chain with one call.
 
-Goal two is finished for the middle of the number line, which is where the money is.
-But I measured the ends now, and the ends say something specific. A fixed point spends
-127 bits on a range nobody uses and still has walls. A float with half the word has no
-walls and four fewer digits. The other half of that word is idle.
+Goal two was finished for the middle of the number line, where the money is. But the
+ends say something specific. A fixed point spends 127 bits on a range nobody uses and
+still has walls. A float with half the word has no walls and four fewer digits. The
+other half of that word was idle. So I filled it.
 
 Board:
 
-    [ s | ~20 exp | ~235 mantissa ]      70 digits, no walls, one word
+    [ s | 19 exp | 236 mantissa ]      FP256: 71 digits, 10^±78,900, one word
 
-That's the next ruler. Seventy digits at any magnitude, and every kernel in FP127 is
-already a mantissa engine; the integer power routine computes exactly this pair, a
-256-bit mantissa and an exponent, before it rounds back to the grid. What a float costs
-is an add that aligns exponents. That's the last piece.
+Every kernel in FP127 was already a mantissa engine; the integer power routine computes
+exactly this pair, a 256-bit mantissa and an exponent, before it rounds back to the
+grid. The float costs an add that aligns exponents. That was the last piece, and it's
+on chain.
 
-So: put the point where the values are, iterate, round once. That ended the dust in
-the middle. The ends are measured, and the ruler that covers them is the same code
-with a moving point. The war on dust is nearly over.
+Board, the same tables, one more column:
+
+    compound, 10,000 days      FP127 34    Quad 29    FP256 67
+    the option at d₁ = −12     FP127  3    Quad 27    FP256 40
+    1e-10 × 1e-10              FP127 18    Quad 34    FP256 71
+    exp(−89), exp(89)          zero, revert           43, 43
+    pi, six terms              FP127 36    Quad 33    FP256 47
+
+[compound and deep-tail-option, reference, N = 10,000; edges; pi.md] No zero, no revert,
+no range, anywhere on the edges. Seventy-one digits where the arithmetic is exact. And
+forty-three where the exponential or the logarithm is involved, because release one
+borrowed FP127's kernels, which were fitted for a 128-bit answer. That's the "nearly".
+The kernels get refitted for the wide word, and then it's over.
+
+So: put the point where the values are, iterate, round once. That ended the dust in the
+middle. Measure the ends, and build the ruler that has none. The war on dust is nearly
+over, and the rest is a polynomial.
 
 Thank you.
 
@@ -326,3 +361,9 @@ Thank you.
 | erf recipe | series to 4, ~125 terms; fraction depth 1700/⌊x²⌋ + 10; 145 bits | erf_model.py |
 | gas | mul 531/1,036/321; add 289/1,252/502; ln 1,035/1,927/731; exp 5,366/6,072/547; pow 6,654/23,879/1,605; compound 4,573; normCdf 23,487 | gas.json (lib / quad / solady medians) |
 | binary128 | 1 + 15 + 112 bits, 113-bit significand, ~34 digits | IEEE 754 |
+| FP256 | 1 + 19 + 236 bits, 237-bit significand, ~71 digits, 10^±78,900; 0x628b8dfC82954983a9E8E22056ffc767B4a26077 | contracts/src/fp256/README.md, FP256.md |
+| FP256 on the ladder | compound N = 10,000: 67; option walk d₁ = −12: 40; per-second accrual: 43 | ladder: compound, deep-tail-option, accrual-per-second, reference |
+| FP256 on the edges | 1e-10 × 1e-10: 71; exp(±89): 43; ln(1+1e-9): 58; no zero/revert/range | edges |
+| FP256 pi | 39 at five terms, 47 at six | pi.md |
+| FP256 gas | mul 1,366; add 1,440; sqrt 2,794; ln 4,878; exp 6,159; pow 9,505 | gas256.json (lib medians) |
+| FP256 kernels | exp ≥ 146 bits, ln ≥ 149, pow ≥ 123 in release one; the 2^-250 kernel is #78 | docs/fp256/precision.md |
