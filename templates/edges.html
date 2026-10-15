@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} · {{ config.title }}{% endblock title %}
+{% block description %}{{ page.description }}{% endblock description %}
+{% block hero %}{% set hero_slim = true %}{% set hero_title = page.title %}{% set hero_sub = page.description %}{% include "hero.html" %}{% endblock hero %}
+{% block content %}
+{%- set d = load_data(path="static/data/edges.json") -%}
+{%- set forms = ["fp127", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"] -%}
+{%- set formIndex = {"fp127": 0, "abdk": 2, "solady": 3, "prb": 4, "quad": 5, "balancer": 6, "aave": 7, "morpho": 8, "maker": 9} -%}
+{%- set short = {"fp127": "FP127", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
+<article class="prose doc wide">
+{{ page.content | safe }}
+
+<details class="method" id="method">
+<summary>How this was measured</summary>
+<dl>
+{%- for k, v in d.methodology %}
+<dt>{{ k }}</dt><dd>{{ v }}</dd>
+{%- endfor %}
+<dt>versions</dt><dd>Generated {{ d.generated }}; {% for k, v in d.versions %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.</dd>
+</dl>
+</details>
+
+<nav class="tabs" id="scenario-tabs" aria-label="Op">
+{%- for op in d.ops %}<a href="#{{ op.id }}" data-tab="{{ op.id }}"{% if loop.first %} class="on"{% endif %}>{{ op.label }}</a>{% endfor %}
+</nav>
+{%- for op in d.ops %}
+<section class="scenario" id="{{ op.id }}" data-index="{{ op.index }}"{% if not loop.first %} hidden{% endif %}>
+<h2>{{ op.label }}</h2>
+<p>{{ op.why }}</p>
+<div class="scroll">
+<table class="edges">
+<thead><tr><th>probe</th><th>truth</th>{% for f in forms %}<th class="num">{{ short[f] }}</th>{% endfor %}</tr></thead>
+<tbody>
+{%- for p in op.probes %}
+<tr>
+<td class="mono">{{ op.id }}({{ p.args | join(sep=", ") }}){% if p.why %}<br><span class="meta">{{ p.why }}</span>{% endif %}</td>
+<td class="val truth">{% if p.truth %}{{ p.truth | truncate(length=24) }}{% else %}undefined{% endif %}</td>
+{%- for f in forms %}{% set c = p.cells[f] %}
+<td class="num val">
+{%- if c is undefined %}—
+{%- elif c.range %}<span class="rev">range</span>
+{%- elif c.reverted %}{% if c.unsupported %}<span class="meta">n/a</span>{% else %}<span class="rev">revert</span> <span class="meta">{{ c.reasonName }}</span>{% endif %}
+{%- elif c.undefined %}<span class="meta">value</span>
+{%- elif c.zero %}<span class="rev">zero</span>
+{%- else %}<span class="ok" title="{{ c.value }}">{% if c.exact %}exact{% else %}{{ c.digits }}{% endif %}</span>{% if c.errUlps %} <span class="meta">{{ c.errUlps }} ULP</span>{% endif %}
+{%- endif %}
+{%- if c is defined and not c.range %}<br><button class="verify" data-kind="edge" data-op="{{ op.index }}" data-probe="{{ p.id }}" data-form="{{ formIndex[f] }}" data-raw="{{ c.raw | default(value='') }}" data-reason="{{ c.reason | default(value='') }}"{% if d.liveRunner is undefined %} disabled title="The edge runner is not deployed yet"{% endif %}>verify</button>{% endif %}
+</td>
+{%- endfor %}
+</tr>
+{%- endfor %}
+</tbody>
+</table>
+</div>
+</section>
+{%- endfor %}
+<p class="note">Cells show correct significant digits against the exact value (hover for the value), or <span class="rev">zero</span>, <span class="rev">revert</span>, <span class="rev">range</span>, n/a as defined above. Verify calls <code>run(op, form, args)</code> on {% if d.liveRunner is defined %}<a href="https://repo.sourcify.dev/11155111/{{ d.liveRunner }}">{{ d.liveRunner }}</a>{% else %}the edge runner{% endif %} through the public Sepolia RPC with the probe's encoded arguments and compares the raw word with the committed cell. {{ d.liveNote | default(value="") }} The whole dataset is <a href="/data/edges.json">edges.json</a>; the generator is <code>make edges</code>.</p>
+</article>
+<script type="module" src="/js/islands/verify.js"></script>
+{% endblock content %}
