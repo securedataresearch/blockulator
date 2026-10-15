@@ -1,4 +1,4 @@
-.PHONY: pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
@@ -22,6 +22,9 @@ help:
 	@echo "  make ladder           - Terminal-precision ladder: every scenario x input x library x N -> docs/benchmarks/ladder.json + ladder.md"
 	@echo "  make ladder-check     - Fail if ladder.json is stale (gas within 2%)"
 	@echo "  make ladder-selftest  - Unit checks of the ladder's metric definitions"
+	@echo "  make gen-edges        - Generate scripts/ladder/edge-inputs.json from edges.json"
+	@echo "  make edges            - Edges dataset: every probe x library, one call each -> docs/benchmarks/edges.json + edges.md"
+	@echo "  make edges-check      - Fail if edges.json is stale"
 	@echo "  make predict-ladder   - CREATE2 addresses of the ladder adapters and runner"
 	@echo "  make site             - Build the Zola site into public/ (pinned Zola is downloaded if none is installed)"
 	@echo "  make site-check       - zola check, the symlinked data test, and deno task test"
@@ -58,15 +61,27 @@ gen-inputs-check:
 ladder-selftest:
 	@$(PY) scripts/ladder/ladder.py --selftest
 
+gen-edges:
+	@$(PY) scripts/ladder/gen_edges.py
+
+gen-edges-check:
+	@$(PY) scripts/ladder/gen_edges.py --check
+
+edges: build
+	@forge test --match-contract Edges -vv | $(PY) scripts/ladder/edges.py
+
+edges-check: build gen-edges-check
+	@forge test --match-contract Edges -vv | $(PY) scripts/ladder/edges.py --check
+
 test: gen-check vectors-check
 	@forge test --match-path "test/fp127/*"
 	@forge test --match-path "test/ladder/*" -q
 
 ladder: build
-	@forge test --match-path "test/ladder/*" -vv | $(PY) scripts/ladder/ladder.py
+	@forge test --match-contract Ladder -vv | $(PY) scripts/ladder/ladder.py
 
 ladder-check: build ladder-selftest
-	@forge test --match-path "test/ladder/*" -vv | $(PY) scripts/ladder/ladder.py --check
+	@forge test --match-contract Ladder -vv | $(PY) scripts/ladder/ladder.py --check
 
 precision-report:
 	@$(PY) scripts/fp127/precision_report.py
@@ -140,7 +155,11 @@ verify-ladder-sepolia: build
 	ENC=$$(cast abi-encode "f(address[10])" $$ARGS); \
 	echo "== LadderRunner $$A"; \
 	forge verify-contract --chain sepolia --verifier sourcify --watch --constructor-args $$ENC $$A contracts/src/ladder/LadderRunner.sol:LadderRunner || true; \
-	test -z "$$ETHERSCAN_API_KEY" || forge verify-contract --chain sepolia --verifier etherscan --watch --constructor-args $$ENC $$A contracts/src/ladder/LadderRunner.sol:LadderRunner || true
+	test -z "$$ETHERSCAN_API_KEY" || forge verify-contract --chain sepolia --verifier etherscan --watch --constructor-args $$ENC $$A contracts/src/ladder/LadderRunner.sol:LadderRunner || true; \
+	E=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['EdgeRunner']['address'])"); \
+	echo "== EdgeRunner $$E"; \
+	forge verify-contract --chain sepolia --verifier sourcify --watch --constructor-args $$ENC $$E contracts/src/ladder/EdgeRunner.sol:EdgeRunner || true; \
+	test -z "$$ETHERSCAN_API_KEY" || forge verify-contract --chain sepolia --verifier etherscan --watch --constructor-args $$ENC $$E contracts/src/ladder/EdgeRunner.sol:EdgeRunner || true
 
 # ---- site ------------------------------------------------------------------
 

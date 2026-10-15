@@ -11,27 +11,29 @@ re-runs every cell of every input through the live runner and records the
 largest N the public RPC completes.
 
 Version 5 (ten adapters calling FP127 v4; ABDKMathQuad, Balancer, Aave,
-Morpho and Maker added as forms 5 to 9; four scenarios added) is prepared
+Morpho and Maker added as forms 5 to 9; four scenarios added; EdgeRunner for the one-shot edges) is prepared
 and not yet deployed: salt `"FP127 ladder v5"`
 (`0x4650313237206c61646465722076350000000000000000000000000000000000`),
 predicted by `make predict-ladder` from the artifacts:
 
 | contract | predicted address |
 |---|---|
-| `LadderFP127` | `0x3d081d43718fCc84D580ADe2813049f8F797347B` |
-| `LadderFP127Lib` | `0xf7e9664fe8e0A60EA5F83cf8e34Dd3A232Cd5c06` |
-| `LadderABDK` | `0xbF64D2E3d934A2155db21207FC3F6Cb01F72AEdb` |
-| `LadderSolady` | `0x1b71c4e4A12531dD42263631991eE5b472c2B697` |
-| `LadderPRB` | `0xD78E4Fa72645BAeBef1A25E34aCc360862364c08` |
-| `LadderQuad` | `0x02715fba28Ee4432d04882424cc3F3FB2d181cdE` |
-| `LadderBalancer` | `0xe9e394859D6D81C3F1eB77377b72F153A921a3c6` |
-| `LadderAave` | `0x9296c923De10572f04e60E4956897a285b8e2843` |
-| `LadderMorpho` | `0xCB62d25bd8B69cB60316B40D7d67dbb5020Eca8d` |
-| `LadderMaker` | `0xC171cf2efDf2e9d1b01d433f752BDC5B5Eab79b7` |
-| `LadderRunner` | `0xE8d7FF4Dd1a962476847Cf30c04B5A97F32474c9` |
+| `LadderFP127` | `0x475eEAc191aeD253Ab3d440E5B8536B82fA16E8b` |
+| `LadderFP127Lib` | `0xf0789DdF81b7B44d5edd09769a2A04968d72F46D` |
+| `LadderABDK` | `0x5b37249FEd1A7d60ba792eC29FB37B126d645eC8` |
+| `LadderSolady` | `0x6803373dC64b71435F6ee17AfFC95330A1AcfFf3` |
+| `LadderPRB` | `0xAAaCe42c07C67be246232dB6488FC456DB595657` |
+| `LadderQuad` | `0x6A5633de4cd14c669be37f4D5e7A8f9CEece8674` |
+| `LadderBalancer` | `0xb9fD0678E1D2De5B95A2b6Db9B4b830cE885Da86` |
+| `LadderAave` | `0xbDc5E6af1810e09A552F3de733e8ff11808686Ac` |
+| `LadderMorpho` | `0xa28477dF3573BF42954d6e55ED4e110627AF5551` |
+| `LadderMaker` | `0xBBdA80841B71EfE95C09982eFBf32C83E88a8d4c` |
+| `LadderRunner` | `0x943E7D93386B33df8CcD4823DBf5C38aFffeF7b2` |
+| `EdgeRunner` | `0x4A32B0f99FC1e888bB9e5cb85399aDd7890B0957` |
 
-`LadderRunner` v5 is constructed with the ten adapter addresses as one
-`address[10]` in form-id order; `LadderFP127` staticcalls FP127 v4 at
+`LadderRunner` v5 and `EdgeRunner` (the edges dataset, docs/benchmarks/edges.md:
+`run(op, form, args)` evaluates one op once) are constructed with the ten
+adapter addresses as one `address[10]` in form-id order; `LadderFP127` staticcalls FP127 v4 at
 `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`, which is deployed first. Until
 then the site's verify buttons call version 4 below, which answers the
 nine original scenarios for forms 0 to 4.
@@ -66,6 +68,19 @@ the parameters compiled in) remain on Sepolia and still answer for the v1
 dataset, which is in the repository history up to the ladder-inputs merge.
 
 ## Calling it
+
+An edge (one op once) through `EdgeRunner`:
+
+```
+cast call <EdgeRunner> "run(uint8,uint8,int256[])(bool,int256,bytes4,uint256)" \
+  <op> <form> "[<arg0>,...]" --rpc-url https://ethereum-sepolia-rpc.publicnode.com
+```
+
+Op ids are the `index` field in `scripts/ladder/edges.json` (0 ln, 1 exp,
+2 sqrt, 3 pow, 4 mul, 5 div, 6 lambertW0, 7 lambertWm1, 8 log1p, 9 expm1,
+10 compound, 11 powu, 12 erf, 13 erfc, 14 normCdf); the arguments are the
+probe's array for the form's scale in `scripts/ladder/edge-inputs.json`,
+an integer exponent unscaled. A ladder cell through `LadderRunner`:
 
 ```
 cast call 0x798C37A3E5B421D480AC850258466b5598A1A555 \

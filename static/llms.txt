@@ -46,7 +46,7 @@
 
 ## The precision claim, as data
 
-- /data/ladder.json: nine iterated scenarios (daily compounding, an
+- /data/ladder.json: thirteen iterated scenarios (daily compounding, an
   amortising loan, exp(ln(x)) round trips, ...), 64 inputs in all, through
   FP127, FP127Lib, ABDKMath64x64, Solady and PRBMath for N in 1..10000.
   Every cell carries the decoded value, correct significant digits against
@@ -67,7 +67,14 @@
 
 ## Pages
 
-- /demo/ the ladder, /why/ the mechanism, /library/ address, ABI and
+- /data/edges.json: 139 one-shot probes at the ends of each domain (ln near
+  one, exp at both ends, tiny roots and products, per-second rates to a
+  power, both Lambert branches, erf/erfc/normCdf) through nine libraries,
+  each cell with its digits or how the library had no answer (zero below
+  its floor, revert, out of range, unsupported); /edges/ renders it and
+  verifies cells through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
+  with the arguments from /data/edge-inputs.json.
+- /demo/ the ladder, /edges/ the cliffs, /why/ the mechanism, /library/ address, ABI and
   the op table, /compare/ gas and precision per op, /writeup/ the story.
 
 ## Documentation

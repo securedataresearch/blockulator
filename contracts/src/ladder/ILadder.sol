@@ -42,6 +42,26 @@ library Form {
     uint8 constant COUNT = 10;
 }
 
+/// @notice One-shot op ids for the edges dataset (scripts/ladder/edges.json).
+library Op {
+    uint8 constant LN = 0;
+    uint8 constant EXP = 1;
+    uint8 constant SQRT = 2;
+    uint8 constant POW = 3;
+    uint8 constant MUL = 4;
+    uint8 constant DIV = 5;
+    uint8 constant W0 = 6;
+    uint8 constant WM1 = 7;
+    uint8 constant LOG1P = 8;
+    uint8 constant EXPM1 = 9;
+    uint8 constant COMPOUND = 10;
+    uint8 constant POWU = 11;
+    uint8 constant ERF = 12;
+    uint8 constant ERFC = 13;
+    uint8 constant NORMCDF = 14;
+    uint8 constant COUNT = 15;
+}
+
 /// @notice One adapter per library. `run` executes a scenario for n steps in
 ///         the library's native representation and returns the raw result in
 ///         that representation, plus the gas the scenario function consumed
@@ -52,6 +72,10 @@ library Form {
 ///         propagate; the runner catches them.
 interface ILadderAdapter {
     function run(uint8 scenario, uint32 n, int256[] calldata p) external view returns (int256 raw, uint256 gasUsed);
+    /// One op once, for the edges dataset: `args` in the representation, an
+    /// integer exponent unscaled. Unsupported(op) where the library has no
+    /// way to compute it.
+    function op(uint8 op_, int256[] calldata args) external view returns (int256 raw, uint256 gasUsed);
 }
 
 /// @notice Raised by an adapter when `p` has the wrong length for the scenario.
@@ -59,5 +83,6 @@ error BadParamCount(uint8 scenario, uint256 got);
 /// @notice Raised by an adapter whose representation cannot hold p[i].
 error ParamOutOfRange(uint256 i);
 /// @notice Raised by an adapter whose library has no model for the scenario
-///         (the accrual libraries answer only the accrual scenarios).
+///         (the accrual libraries answer only the accrual scenarios), or no
+///         way to compute an edges op.
 error Unsupported(uint8 scenario);

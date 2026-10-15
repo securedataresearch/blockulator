@@ -26,4 +26,9 @@ contract LadderABDK is LadderBase {
     function _ln(int256 x) internal view override returns (int256) { return A.ln(int128(x)); }
     function _sqrt(int256 x) internal view override returns (int256) { return A.sqrt(int128(x)); }
     function _pow(int256 x, int256 y) internal view override returns (int256) { return A.exp(A.mul(int128(y), A.ln(int128(x)))); }
+    /// pow(x, uint): ABDK's exponentiation by squaring.
+    function _powu(int256 x, int256 n) internal view override returns (int256) {
+        if (n < 0) return A.div(int128(int256(1) << 64), A.pow(int128(x), uint256(-n)));
+        return A.pow(int128(x), uint256(n));
+    }
 }

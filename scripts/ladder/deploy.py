@@ -5,9 +5,9 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Eleven contracts, salt "FP127 ladder v5": the ten adapters (no constructor
-arguments) and LadderRunner (constructor = the ten adapter addresses as one
-array, so its init code depends on them). Each transaction is sent with the node's
+Twelve contracts, salt "FP127 ladder v5": the ten adapters (no constructor
+arguments), LadderRunner and EdgeRunner (constructor = the ten adapter
+addresses as one array, so their init code depends on them). Each transaction is sent with the node's
 own gas estimate plus 25%, because Sepolia's code-deposit pricing is not
 what forge's local EVM models (see contracts/deployments/FP127.md).
 
@@ -62,8 +62,9 @@ def plan() -> list[dict]:
         out.append({"name": name, "init": init, "address": create2(init), "args": []})
     addrs = [c["address"] for c in out]
     args = bytes.fromhex(cast("abi-encode", f"f(address[{len(addrs)}])", "[" + ",".join(addrs) + "]")[2:])
-    init = init_code("LadderRunner", args)
-    out.append({"name": "LadderRunner", "init": init, "address": create2(init), "args": addrs})
+    for runner in ("LadderRunner", "EdgeRunner"):
+        init = init_code(runner, args)
+        out.append({"name": runner, "init": init, "address": create2(init), "args": addrs})
     return out
 
 

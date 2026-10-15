@@ -32,6 +32,9 @@ and conversion ops. Every argument and result is an `int256` holding
   cell against exact arithmetic and re-runnable on chain through
   `LadderRunner` ([`docs/benchmarks/ladder.md`](docs/benchmarks/ladder.md),
   [record](contracts/deployments/Ladder.md))
+- The edges: 139 one-shot probes at the ends of each library's domain, where
+  a result goes to zero, reverts or runs out of digits, re-runnable through
+  `EdgeRunner` ([`docs/benchmarks/edges.md`](docs/benchmarks/edges.md))
 
 **Site:** the [demo](https://blockulator.com/demo/) is the argument, the
 [why](https://blockulator.com/why/) page is the mechanism, the

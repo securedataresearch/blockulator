@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {ILadderAdapter, Scenario, BadParamCount, ParamOutOfRange, Unsupported} from "./ILadder.sol";
+import {ILadderAdapter, Scenario, Op, BadParamCount, ParamOutOfRange, Unsupported} from "./ILadder.sol";
 import {FixedPointMathLib} from "../../../lib/solady/src/utils/FixedPointMathLib.sol";
 
 /// @title LadderMaker
@@ -32,6 +32,17 @@ contract LadderMaker is ILadderAdapter {
         if (p[1] < 0) revert ParamOutOfRange(1);
         uint256 g0 = gasleft();
         raw = _accrue(uint256(p[0]), uint256(p[1]), perSecond ? uint256(n) * 86400 : uint256(n));
+        gasUsed = g0 - gasleft();
+    }
+    /// rpow answers the integer powers; nothing else is Maker's.
+    function op(uint8 op_, int256[] calldata a) external view returns (int256 raw, uint256 gasUsed) {
+        if (!(op_ == Op.POWU || op_ == Op.COMPOUND)) revert Unsupported(op_);
+        if (a.length != 2) revert BadParamCount(op_, a.length);
+        if (a[0] < 0) revert ParamOutOfRange(0);
+        if (a[1] < 0) revert Unsupported(op_);
+        uint256 g0 = gasleft();
+        uint256 base = op_ == Op.COMPOUND ? RAY + uint256(a[0]) : uint256(a[0]);
+        raw = int256(FixedPointMathLib.rpow(base, uint256(a[1]), RAY));
         gasUsed = g0 - gasleft();
     }
 }
