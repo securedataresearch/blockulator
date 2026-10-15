@@ -23,4 +23,6 @@ contract LadderFP127 is LadderBase {
     function _pow(int256 x, int256 y) internal view override returns (int256) { return F.pow(x, y); }
     /// compound: (1 + rs)^steps as one exact integer power, not exp(steps ln(1 + rs)).
     function _accrue(int256 b, int256 rs, uint256 steps) internal view override returns (int256) { return _mul(b, F.compound(rs, int256(steps) << 128)); }
+    function _pi() internal view override returns (int256) { return F.pi(int256(5) << 128); }
+    function _normCdf(int256 x) internal view override returns (int256) { return F.normCdf(x); }
 }

@@ -1,6 +1,6 @@
 # Terminal precision ladder
 
-Generated 2026-10-15 by `make ladder`. Versions: fp127 279ec8a, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
+Generated 2026-10-15 by `make ladder`. Versions: fp127 ad82667, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
 
 Each scenario is run for several inputs; the first table is the reference input in full (`digits / digitsFormat / gas per step`, where digits is against the exact truth and digitsFormat against the truth from the parameters as the library received them), the second is the summary over all inputs (`median (min–max)` digits, capped at 40). Full values, both truths, signed errors and raw words are in ladder.json; the method is in the Methodology section at the end.
 
@@ -334,16 +334,16 @@ Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, 
 
 | N | truth | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | `0.2474873734152916` | 37 / 37 / 14,510 | 37 / 37 / 8,487 | 18 / 18 / 11,765 | 17 / 17 / 3,862 | 17 / 17 / 7,005 | 34 / 34 / 13,202 | 17 / 17 / 7,754 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
-| 2 | `0.4956818182587876` | 37 / 37 / 13,283 | 37 / 37 / 9,086 | 17 / 17 / 10,636 | 18 / 18 / 2,953 | 16 / 16 / 8,442 | 32 / 32 / 19,674 | 17 / 17 / 6,424 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
-| 5 | `1.244506874463792` | 37 / 37 / 12,547 | 37 / 37 / 9,445 | 17 / 17 / 9,959 | 17 / 17 / 2,408 | 15 / 15 / 9,436 | 32 / 32 / 23,404 | 16 / 16 / 5,626 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
-| 10 | `2.506683467804941` | 36 / 37 / 12,302 | 36 / 37 / 9,565 | 17 / 17 / 9,733 | 17 / 17 / 2,226 | 15 / 15 / 9,738 | 31 / 31 / 24,536 | 16 / 16 / 5,360 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
-| 20 | `5.084010514032979` | 36 / 37 / 12,179 | 36 / 37 / 9,625 | 17 / 17 / 9,620 | 17 / 17 / 2,135 | 15 / 15 / 9,909 | 31 / 31 / 25,031 | 16 / 16 / 5,227 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
-| 50 | `13.23914876467473` | 36 / 37 / 12,107 | 36 / 37 / 9,661 | 17 / 17 / 9,553 | 17 / 17 / 2,081 | 15 / 15 / 10,056 | 31 / 31 / 25,226 | 16 / 16 / 5,147 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
-| 100 | `28.23736439326609` | 36 / 37 / 12,156 | 36 / 37 / 9,762 | 17 / 17 / 9,530 | 17 / 17 / 2,063 | 15 / 15 / 10,102 | 30 / 30 / 25,211 | 16 / 16 / 5,120 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
-| 365 | `136.7454508837998` | 36 / 37 / 12,276 | 36 / 37 / 9,929 | 17 / 17 / 9,514 | 17 / 17 / 2,049 | 15 / 15 / 10,139 | 30 / 30 / 25,051 | 16 / 16 / 5,101 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
-| 1000 | `589.4747739528645` | 36 / 37 / 12,414 | 36 / 37 / 10,073 | 17 / 18 / 9,510 | 18 / 18 / 2,046 | 15 / 15 / 10,175 | 30 / 30 / 24,847 | 17 / 17 / 5,096 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
-| 10000 | `29787.55928753143` | 36 / 39 / 13,116 | 36 / 39 / 10,415 | 18 / 19 / 9,508 | 17 / 17 / 2,045 | 16 / 16 / 10,227 | 30 / 30 / 24,432 | 17 / 17 / 5,343 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 1 | `0.2474873734152916` | 37 / 37 / 14,510 | 37 / 37 / 8,487 | 18 / 18 / 11,765 | 17 / 17 / 3,862 | 17 / 17 / 7,018 | 34 / 34 / 13,202 | 17 / 17 / 7,748 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 2 | `0.4956818182587876` | 37 / 37 / 13,283 | 37 / 37 / 9,086 | 17 / 17 / 10,636 | 18 / 18 / 2,953 | 16 / 16 / 8,448 | 32 / 32 / 19,674 | 17 / 17 / 6,418 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 5 | `1.244506874463792` | 37 / 37 / 12,547 | 37 / 37 / 9,445 | 17 / 17 / 9,959 | 17 / 17 / 2,408 | 15 / 15 / 9,438 | 32 / 32 / 23,404 | 16 / 16 / 5,620 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 10 | `2.506683467804941` | 36 / 37 / 12,302 | 36 / 37 / 9,565 | 17 / 17 / 9,733 | 17 / 17 / 2,226 | 15 / 15 / 9,739 | 31 / 31 / 24,536 | 16 / 16 / 5,354 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 20 | `5.084010514032979` | 36 / 37 / 12,179 | 36 / 37 / 9,625 | 17 / 17 / 9,620 | 17 / 17 / 2,135 | 15 / 15 / 9,909 | 31 / 31 / 25,031 | 16 / 16 / 5,221 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 50 | `13.23914876467473` | 36 / 37 / 12,107 | 36 / 37 / 9,661 | 17 / 17 / 9,553 | 17 / 17 / 2,081 | 15 / 15 / 10,056 | 31 / 31 / 25,226 | 16 / 16 / 5,141 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 100 | `28.23736439326609` | 36 / 37 / 12,156 | 36 / 37 / 9,762 | 17 / 17 / 9,530 | 17 / 17 / 2,063 | 15 / 15 / 10,102 | 30 / 30 / 25,211 | 16 / 16 / 5,114 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 365 | `136.7454508837998` | 36 / 37 / 12,276 | 36 / 37 / 9,929 | 17 / 17 / 9,514 | 17 / 17 / 2,049 | 15 / 15 / 10,139 | 30 / 30 / 25,051 | 16 / 16 / 5,095 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 1000 | `589.4747739528645` | 36 / 37 / 12,414 | 36 / 37 / 10,073 | 17 / 18 / 9,510 | 18 / 18 / 2,046 | 15 / 15 / 10,175 | 30 / 30 / 24,847 | 17 / 17 / 5,090 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 10000 | `29787.55928753143` | 36 / 39 / 13,116 | 36 / 39 / 10,415 | 18 / 19 / 9,508 | 17 / 17 / 2,045 | 16 / 16 / 10,227 | 30 / 30 / 24,432 | 17 / 17 / 5,337 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 
 ### All inputs (8): digits, median (min–max)
 
@@ -587,9 +587,115 @@ Inputs: **reference** principal = 10000, rateAnnual = 0.05 ($10,000 at 5% APR, t
 | 1000 | 38 (38–38) | 38 (38–38) | 19 (18–19) | 17.5 (17–18) | 17 (17–17) | 33 (33–34) | 17.5 (17–18) | 4 (1–7) | 4 (1–7) | — (6 revert) |
 | 10000 | 38 (38–38) | 38 (38–38) | 19 (19–19) | 17.5 (17–18) | 17 (17–18) | 33 (32–33) | 17 (17–18) | 1 (0–3) | 1 (0–3) | — (6 revert) |
 
+## deep-tail-option: An option walking out of the money
+
+Step: `S = S (1 - tick); then C = S N(d1) - K e^(-rT) N(d2)`. Result: the Black-Scholes call price after N down-ticks of the spot.
+
+Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. FP127 has normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives.
+
+Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, tick = 0.000173 (at the money, 20% vol, six months; d1 reaches -12 at N = 10,000); **slow-walk** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, tick = 0.0001 (a slower walk: d1 reaches -7 at N = 10,000, where an 18-decimal N(d) has a few digits left); **fast-walk** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, tick = 0.0005 (a faster walk: d1 passes -12 near N = 3,500; beyond it the price is below every grid); **low-vol** spot = 100, strike = 100, sigma = 0.05, T = 0.5, r = 0.05, tick = 0.00005 (5% vol: d moves four times faster per tick); **high-vol** spot = 100, strike = 100, sigma = 0.8, T = 0.5, r = 0.05, tick = 0.0007 (80% vol: a long way to the tail); **short-dated** spot = 100, strike = 100, sigma = 0.2, T = 0.01, r = 0.05, tick = 0.00003 (ten days to expiry: sigma sqrt(T) is 0.02 and the tail comes fast)
+
+### Reference input: reference
+
+| N | truth | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | `6.878391866103811` | 37 / 37 / 53,156 | 37 / 37 / 44,695 | 18 / 18 / 81,990 | 16 / 16 / 57,773 | 16 / 16 / 113,073 | 32 / 32 / 288,700 | 16 / 16 / 100,448 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 2 | `6.868065132714932` | 37 / 38 / 27,370 | 37 / 38 / 22,536 | 18 / 17 / 41,137 | 17 / 17 / 29,005 | 16 / 16 / 56,833 | 32 / 32 / 144,817 | 17 / 17 / 50,478 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 5 | `6.837144794797698` | 37 / 39 / 11,850 | 37 / 39 / 9,190 | 18 / 18 / 16,606 | 16 / 16 / 11,744 | 16 / 16 / 23,099 | 32 / 32 / 58,510 | 16 / 16 / 20,496 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 10 | `6.785810396029252` | 36 / 38 / 6,716 | 36 / 38 / 4,784 | 18 / 18 / 8,451 | 16 / 16 / 5,990 | 16 / 16 / 11,847 | 31 / 31 / 29,350 | 16 / 16 / 10,502 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 20 | `6.683889366360745` | 36 / 38 / 4,150 | 36 / 38 / 2,581 | 17 / 17 / 4,366 | 16 / 16 / 3,069 | 16 / 16 / 6,140 | 31 / 31 / 14,944 | 16 / 16 / 5,431 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 50 | `6.384100145151291` | 36 / 38 / 2,592 | 36 / 38 / 1,239 | 17 / 18 / 1,895 | 16 / 16 / 1,351 | 16 / 16 / 2,776 | 31 / 31 / 6,499 | 16 / 16 / 2,448 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 100 | `5.904291981569546` | 35 / 37 / 2,072 | 35 / 37 / 791 | 16 / 17 / 1,069 | 16 / 16 / 777 | 16 / 16 / 1,655 | 30 / 30 / 3,568 | 16 / 16 / 1,450 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 365 | `3.76450175108814` | 35 / 37 / 1,727 | 35 / 37 / 501 | 16 / 17 / 517 | 16 / 16 / 400 | 16 / 16 / 914 | 30 / 30 / 1,787 | 16 / 16 / 790 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 1000 | `0.9741872197637135` | 34 / 36 / 1,644 | 34 / 36 / 430 | 15 / 16 / 387 | 15 / 15 / 310 | 15 / 15 / 738 | 29 / 29 / 1,358 | 15 / 15 / 633 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 10000 | `4.263958353856216e-34` | 3 / 3 / 1,609 | 3 / 3 / 384 | 0 / 0 / 314 | 0 / 0 / 258 | 0 / 0 / 641 | 27 / 27 / 1,086 | reverts `0xd4794efd` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+
+### All inputs (6): digits, median (min–max)
+
+| N | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 37 (36–38) | 37 (36–38) | 18 (17–18) | 16 (16–16) | 16 (16–17) | 32 (31–32) | 16 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 2 | 37 (36–38) | 37 (36–38) | 17.5 (17–18) | 16 (16–17) | 16 (16–16) | 32 (31–32) | 16 (16–17) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 5 | 37 (36–38) | 37 (36–38) | 17.5 (17–18) | 16 (16–17) | 16 (16–16) | 32 (31–32) | 16 (15–17) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 10 | 36 (36–38) | 36 (36–38) | 17 (17–18) | 16 (15–17) | 16 (15–16) | 31 (31–32) | 16 (15–17) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 20 | 36 (35–38) | 36 (35–38) | 17 (16–17) | 16 (15–16) | 16 (16–16) | 31 (30–32) | 16 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 50 | 36 (35–38) | 36 (35–38) | 16.5 (16–18) | 16 (16–16) | 16 (16–17) | 31 (30–31) | 16 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 100 | 35 (35–38) | 35 (35–38) | 16 (15–19) | 16 (16–16) | 16 (16–19) | 30 (30–31) | 16 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 365 | 34.5 (34–37) | 34.5 (34–37) | 15.5 (15–17) | 16 (15–16) | 16 (15–16) | 30 (29–30) | 15.5 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 1000 | 34 (33–36) | 34 (33–36) | 14.5 (12–17) | 15 (11–15) | 15 (10–15) | 29 (27–30) | 15 (10–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 10000 | 0.5 (0–25) | 0.5 (0–25) | 0 (0–6) | 0 (0–4) | 0 (0–4) | 27 (26–28) | 4 (4–4), 5 revert | — (6 revert) | — (6 revert) | — (6 revert) |
+
+### All inputs: digitsFormat (arithmetic alone), median (min–max)
+
+| N | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 37 (36–38) | 37 (36–38) | 18 (17–18) | 16 (16–16) | 16 (16–17) | 32 (31–32) | 16 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 2 | 38 (36–38) | 38 (36–38) | 17.5 (17–18) | 16 (16–17) | 16 (16–16) | 32 (31–32) | 16 (16–17) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 5 | 37.5 (37–39) | 37.5 (37–39) | 17.5 (17–18) | 16 (16–17) | 16 (16–16) | 32 (31–32) | 16 (15–17) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 10 | 37.5 (37–38) | 37.5 (37–38) | 18 (16–18) | 16 (15–17) | 16 (15–16) | 31 (31–32) | 16 (15–17) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 20 | 37.5 (37–38) | 37.5 (37–38) | 17.5 (16–18) | 16 (15–16) | 16 (16–16) | 31 (30–32) | 16 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 50 | 37 (37–39) | 37 (37–39) | 17.5 (17–18) | 16 (16–16) | 16 (16–17) | 31 (30–31) | 16 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 100 | 37 (36–38) | 37 (36–38) | 17 (17–18) | 16 (16–16) | 16 (16–19) | 30 (30–31) | 16 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 365 | 37 (36–37) | 37 (36–37) | 17 (16–17) | 16 (15–16) | 16 (15–16) | 30 (29–30) | 15.5 (15–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 1000 | 35.5 (34–37) | 35.5 (34–37) | 16 (12–17) | 15 (11–15) | 15 (10–15) | 29 (27–30) | 15 (10–16) | — (6 revert) | — (6 revert) | — (6 revert) |
+| 10000 | 0.5 (0–25) | 0.5 (0–25) | 0 (0–6) | 0 (0–4) | 0 (0–4) | 27 (26–28) | 4 (4–4), 5 revert | — (6 revert) | — (6 revert) | — (6 revert) |
+
+## decay: Decay, the share released
+
+Step: `D = D e^(-eps); result 1 - D`. Result: the share released after N steps of decay.
+
+Vesting, TWAP weights and exponential moving averages multiply by e^(-dt/tau) every step. The factor is a hair below one, and on an 18-decimal grid e^(-eps) rounds to a grid point whose distance from one is wrong by up to 1e-18 relative, every step: at eps = 1e-12 that is six digits of the released share, at 1e-15 three, at 1e-18 nothing is released at all.
+
+Inputs: **reference** eps = 0.000001 (one millionth a step: a one-second step against a twelve-day time constant); **nano** eps = 0.000000001 (1e-9 a step: a one-second step against a thirty-year time constant); **pico** eps = 0.000000000001 (1e-12 a step: the factor is within WAD's last six digits of one); **femto** eps = 0.000000000000001 (1e-15 a step: three digits of the factor's distance from one survive on WAD); **atto** eps = 0.00000000000000001 (1e-17 a step: below WAD's grid, e^(-eps) is one and nothing decays)
+
+### Reference input: reference
+
+| N | truth | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | `9.999995000001667e-7` | 32 / 33 / 7,915 | 32 / 33 / 6,666 | 13 / 13 / 4,980 | 12 / 12 / 1,836 | 12 / 12 / 4,050 | 28 / 28 / 11,076 | 12 / 12 / 2,697 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 2 | `1.999998000001333e-6` | 32 / 33 / 7,505 | 32 / 33 / 6,245 | 13 / 13 / 4,528 | 12 / 12 / 1,434 | 12 / 12 / 3,648 | 28 / 28 / 9,667 | 12 / 12 / 2,295 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 5 | `4.999987500020833e-6` | 33 / 34 / 7,259 | 33 / 34 / 5,993 | 13 / 13 / 4,257 | 12 / 12 / 1,192 | 12 / 12 / 3,406 | 28 / 28 / 8,814 | 12 / 12 / 2,053 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 10 | `9.999950000166666e-6` | 33 / 34 / 7,178 | 33 / 34 / 5,909 | 13 / 13 / 4,167 | 12 / 12 / 1,112 | 12 / 12 / 3,326 | 28 / 28 / 8,524 | 12 / 12 / 1,973 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 20 | `1.999980000133333e-5` | 33 / 33 / 7,137 | 33 / 33 / 5,867 | 13 / 13 / 4,122 | 12 / 12 / 1,072 | 12 / 12 / 3,286 | 28 / 28 / 8,384 | 12 / 12 / 1,933 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 50 | `4.999875002083307e-5` | 33 / 33 / 7,112 | 33 / 33 / 5,841 | 13 / 13 / 4,095 | 12 / 12 / 1,048 | 12 / 12 / 3,262 | 28 / 28 / 8,301 | 12 / 12 / 1,909 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 100 | `9.99950001666625e-5` | 33 / 33 / 7,105 | 33 / 33 / 5,833 | 13 / 13 / 4,086 | 12 / 12 / 1,040 | 12 / 12 / 3,254 | 28 / 28 / 8,273 | 12 / 12 / 1,901 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 365 | `0.0003649333956037813` | 33 / 33 / 7,101 | 33 / 33 / 5,827 | 13 / 13 / 4,079 | 11 / 11 / 1,034 | 12 / 12 / 3,248 | 28 / 28 / 8,252 | 11 / 11 / 1,895 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 1000 | `0.0009995001666250083` | 33 / 33 / 7,104 | 33 / 33 / 5,825 | 13 / 13 / 4,077 | 11 / 11 / 1,032 | 12 / 12 / 3,246 | 28 / 28 / 8,247 | 11 / 11 / 1,893 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+| 10000 | `0.009950166250831946` | 33 / 33 / 7,174 | 33 / 33 / 5,825 | 13 / 13 / 4,077 | 11 / 11 / 1,032 | 12 / 12 / 3,246 | 28 / 28 / 8,245 | 11 / 11 / 1,893 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
+
+### All inputs (5): digits, median (min–max)
+
+| N | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 26 (21–32) | 26 (21–32) | 7 (2–13) | 12 (9–17) | 6 (1–12) | 22 (17–28) | 12 (9–17) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 2 | 26 (21–32) | 26 (21–32) | 7 (2–13) | 14 (11–18) | 6 (1–18) | 22 (17–28) | 14 (11–18) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 5 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 12 (9–16) | 6 (1–12) | 22 (17–28) | 12 (9–16) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 10 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 12 (9–16) | 6 (1–12) | 22 (16–28) | 12 (9–16) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 20 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 12 (9–15) | 6 (1–12) | 22 (16–28) | 12 (9–15) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 50 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 12 (9–15) | 6 (1–12) | 22 (16–28) | 12 (9–15) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 100 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 12 (9–15) | 6 (1–12) | 22 (16–28) | 12 (9–15) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 365 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 11 (9–14) | 6 (1–12) | 22 (16–28) | 11 (9–14) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 1000 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 11 (9–14) | 6 (1–12) | 22 (16–28) | 11 (9–14) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 10000 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 11 (8–13) | 6 (1–12) | 21 (16–28) | 11 (8–13) | — (5 revert) | — (5 revert) | — (5 revert) |
+
+### All inputs: digitsFormat (arithmetic alone), median (min–max)
+
+| N | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 12 (9–17) | 6 (1–12) | 22 (17–28) | 12 (9–17) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 2 | 26 (22–33) | 26 (22–33) | 7 (2–13) | 12 (9–16) | 6 (1–12) | 22 (17–28) | 12 (9–16) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 5 | 27 (21–34) | 27 (21–34) | 7 (2–13) | 12 (8–16) | 6 (1–12) | 22 (17–28) | 12 (8–16) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 10 | 27 (21–34) | 27 (21–34) | 7 (2–13) | 12 (8–16) | 6 (1–12) | 22 (16–28) | 12 (8–16) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 20 | 27 (21–33) | 27 (21–33) | 7 (2–13) | 12 (8–15) | 6 (1–12) | 22 (16–28) | 12 (8–15) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 50 | 28 (21–33) | 28 (21–33) | 7 (2–13) | 12 (8–15) | 6 (1–12) | 22 (16–28) | 12 (8–15) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 100 | 28 (21–33) | 28 (21–33) | 7 (2–13) | 12 (8–15) | 6 (1–12) | 22 (16–28) | 12 (8–15) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 365 | 29 (21–33) | 29 (21–33) | 7 (2–13) | 11 (8–14) | 6 (1–12) | 22 (16–28) | 11 (8–14) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 1000 | 28 (21–33) | 28 (21–33) | 7 (2–13) | 11 (8–14) | 6 (1–12) | 22 (16–28) | 11 (8–14) | — (5 revert) | — (5 revert) | — (5 revert) |
+| 10000 | 28 (21–33) | 28 (21–33) | 7 (2–13) | 11 (8–13) | 6 (1–12) | 21 (16–28) | 11 (8–13) | — (5 revert) | — (5 revert) | — (5 revert) |
+
 ## Methodology
 
-**truth.** For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 200 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.
+**truth.** For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 200 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual, the option walk and the decay); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.
 
 **rounding.** Each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units, or the nearest binary128 value for ABDKMathQuad; scripts/ladder/inputs.json). truthFormat is the exact loop started from those floored parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic.
 

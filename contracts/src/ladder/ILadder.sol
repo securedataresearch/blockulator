@@ -20,7 +20,9 @@ library Scenario {
     uint8 constant COMPOUND_ANNUAL = 8;
     uint8 constant ACCRUAL_PER_SECOND = 9;
     uint8 constant ACCRUAL_CONTINUOUS = 10;
-    uint8 constant COUNT = 11;
+    uint8 constant DEEP_TAIL_OPTION = 11;
+    uint8 constant DECAY = 12;
+    uint8 constant COUNT = 13;
 }
 
 /// @notice Library (form) ids, in the order of LadderRunner's constructor.

@@ -1334,6 +1334,266 @@
      "why": "a hundred-million-unit pool"
     }
    ]
+  },
+  {
+   "id": "deep-tail-option",
+   "index": 11,
+   "demo": true,
+   "title": "An option walking out of the money",
+   "step": "S = S (1 - tick); then C = S N(d1) - K e^(-rT) N(d2)",
+   "result": "the Black-Scholes call price after N down-ticks of the spot",
+   "why": "Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. FP127 has normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives.",
+   "order": [
+    "spot",
+    "strike",
+    "sigma",
+    "T",
+    "r",
+    "tick"
+   ],
+   "ops": {
+    "fp127": [
+     "mul",
+     "sqrt",
+     "ln",
+     "div",
+     "add",
+     "exp",
+     "sub",
+     "normCdf"
+    ],
+    "fp127lib": [
+     "mul",
+     "sqrt",
+     "ln",
+     "div",
+     "add",
+     "exp",
+     "sub",
+     "normCdf"
+    ],
+    "abdk": [
+     "mul",
+     "sqrt",
+     "ln",
+     "div",
+     "add",
+     "exp",
+     "sub",
+     "normCdf by the series/fraction through these"
+    ],
+    "solady": [
+     "sMulWad",
+     "sqrtWad",
+     "lnWad",
+     "sDivWad",
+     "expWad",
+     "normCdf by the series/fraction through these"
+    ],
+    "prb": [
+     "mul",
+     "sqrt",
+     "ln",
+     "div",
+     "exp",
+     "normCdf by the series/fraction through these"
+    ],
+    "quad": [
+     "mul",
+     "sqrt",
+     "ln",
+     "div",
+     "add",
+     "exp",
+     "sub",
+     "normCdf by the series/fraction through these"
+    ],
+    "balancer": [
+     "mulDown",
+     "pow(x, 1/2)",
+     "ln",
+     "divDown",
+     "exp",
+     "normCdf by the series/fraction through these"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
+    ]
+   },
+   "inputs": [
+    {
+     "name": "reference",
+     "reference": true,
+     "params": {
+      "spot": "100",
+      "strike": "100",
+      "sigma": "0.2",
+      "T": "0.5",
+      "r": "0.05",
+      "tick": "0.000173"
+     },
+     "why": "at the money, 20% vol, six months; d1 reaches -12 at N = 10,000"
+    },
+    {
+     "name": "slow-walk",
+     "params": {
+      "spot": "100",
+      "strike": "100",
+      "sigma": "0.2",
+      "T": "0.5",
+      "r": "0.05",
+      "tick": "0.0001"
+     },
+     "why": "a slower walk: d1 reaches -7 at N = 10,000, where an 18-decimal N(d) has a few digits left"
+    },
+    {
+     "name": "fast-walk",
+     "params": {
+      "spot": "100",
+      "strike": "100",
+      "sigma": "0.2",
+      "T": "0.5",
+      "r": "0.05",
+      "tick": "0.0005"
+     },
+     "why": "a faster walk: d1 passes -12 near N = 3,500; beyond it the price is below every grid"
+    },
+    {
+     "name": "low-vol",
+     "params": {
+      "spot": "100",
+      "strike": "100",
+      "sigma": "0.05",
+      "T": "0.5",
+      "r": "0.05",
+      "tick": "0.00005"
+     },
+     "why": "5% vol: d moves four times faster per tick"
+    },
+    {
+     "name": "high-vol",
+     "params": {
+      "spot": "100",
+      "strike": "100",
+      "sigma": "0.8",
+      "T": "0.5",
+      "r": "0.05",
+      "tick": "0.0007"
+     },
+     "why": "80% vol: a long way to the tail"
+    },
+    {
+     "name": "short-dated",
+     "params": {
+      "spot": "100",
+      "strike": "100",
+      "sigma": "0.2",
+      "T": "0.01",
+      "r": "0.05",
+      "tick": "0.00003"
+     },
+     "why": "ten days to expiry: sigma sqrt(T) is 0.02 and the tail comes fast"
+    }
+   ]
+  },
+  {
+   "id": "decay",
+   "index": 12,
+   "demo": true,
+   "title": "Decay, the share released",
+   "step": "D = D e^(-eps); result 1 - D",
+   "result": "the share released after N steps of decay",
+   "why": "Vesting, TWAP weights and exponential moving averages multiply by e^(-dt/tau) every step. The factor is a hair below one, and on an 18-decimal grid e^(-eps) rounds to a grid point whose distance from one is wrong by up to 1e-18 relative, every step: at eps = 1e-12 that is six digits of the released share, at 1e-15 three, at 1e-18 nothing is released at all.",
+   "order": [
+    "eps"
+   ],
+   "ops": {
+    "fp127": [
+     "exp",
+     "mul",
+     "sub"
+    ],
+    "fp127lib": [
+     "exp",
+     "mul",
+     "sub"
+    ],
+    "abdk": [
+     "exp",
+     "mul",
+     "sub"
+    ],
+    "solady": [
+     "expWad",
+     "sMulWad"
+    ],
+    "prb": [
+     "exp",
+     "mul"
+    ],
+    "quad": [
+     "exp",
+     "mul",
+     "sub"
+    ],
+    "balancer": [
+     "exp",
+     "mulDown"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
+    ]
+   },
+   "inputs": [
+    {
+     "name": "reference",
+     "reference": true,
+     "params": {
+      "eps": "0.000001"
+     },
+     "why": "one millionth a step: a one-second step against a twelve-day time constant"
+    },
+    {
+     "name": "nano",
+     "params": {
+      "eps": "0.000000001"
+     },
+     "why": "1e-9 a step: a one-second step against a thirty-year time constant"
+    },
+    {
+     "name": "pico",
+     "params": {
+      "eps": "0.000000000001"
+     },
+     "why": "1e-12 a step: the factor is within WAD's last six digits of one"
+    },
+    {
+     "name": "femto",
+     "params": {
+      "eps": "0.000000000000001"
+     },
+     "why": "1e-15 a step: three digits of the factor's distance from one survive on WAD"
+    },
+    {
+     "name": "atto",
+     "params": {
+      "eps": "0.00000000000000001"
+     },
+     "why": "1e-17 a step: below WAD's grid, e^(-eps) is one and nothing decays"
+    }
+   ]
   }
  ],
  "_doc": "Scenarios of the terminal-precision ladder. order = the parameter order in the calldata array p the adapters receive (derived values included); inputs = the parameter sets run, the first flagged reference; ops = the library calls each adapter's loop makes, documentation that scripts/ladder/ladder.py copies into the dataset."
