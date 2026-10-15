@@ -3,8 +3,9 @@ pragma solidity ^0.8.24;
 
 // @notice The FP127 Yul object's CREATE2 address (contracts/deployments/FP127.md).
 //         Tests etch the artifact's runtime here, so the same adapter code runs
-//         in the harness and on Sepolia.
-address constant FP127_ADDRESS = 0xe43F720861074497db2e974E5c4554E4A3b341B9;
+//         in the harness and on Sepolia. Version 4; the adapters that call it
+//         are deployed after it.
+address constant FP127_ADDRESS = 0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1;
 
 /// @notice Scenario ids. Mirrors "index" in scripts/ladder/scenarios.json.
 library Scenario {
@@ -17,17 +18,26 @@ library Scenario {
     uint8 constant BLACK_SCHOLES_CHAIN = 6;
     uint8 constant CUMULATIVE_PRODUCT = 7;
     uint8 constant COMPOUND_ANNUAL = 8;
-    uint8 constant COUNT = 9;
+    uint8 constant ACCRUAL_PER_SECOND = 9;
+    uint8 constant ACCRUAL_CONTINUOUS = 10;
+    uint8 constant COUNT = 11;
 }
 
 /// @notice Library (form) ids, in the order of LadderRunner's constructor.
+///         Ids 0 to 4 are the v4 runner's and keep their numbers; 5 to 9 were
+///         added with the v5 runner.
 library Form {
     uint8 constant FP127 = 0;
     uint8 constant FP127LIB = 1;
     uint8 constant ABDK = 2;
     uint8 constant SOLADY = 3;
     uint8 constant PRB = 4;
-    uint8 constant COUNT = 5;
+    uint8 constant QUAD = 5;
+    uint8 constant BALANCER = 6;
+    uint8 constant AAVE = 7;
+    uint8 constant MORPHO = 8;
+    uint8 constant MAKER = 9;
+    uint8 constant COUNT = 10;
 }
 
 /// @notice One adapter per library. `run` executes a scenario for n steps in
@@ -46,3 +56,6 @@ interface ILadderAdapter {
 error BadParamCount(uint8 scenario, uint256 got);
 /// @notice Raised by an adapter whose representation cannot hold p[i].
 error ParamOutOfRange(uint256 i);
+/// @notice Raised by an adapter whose library has no model for the scenario
+///         (the accrual libraries answer only the accrual scenarios).
+error Unsupported(uint8 scenario);

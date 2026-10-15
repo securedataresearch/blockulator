@@ -5,7 +5,7 @@
 import { encodeRun, decodeRun } from './digits.js';
 
 const RPC = 'https://ethereum-sepolia-rpc.publicnode.com';
-const SCALE_OF_FORM = ['fp127', 'fp127', 'abdk', 'wad', 'wad'];
+const SCALE_OF_FORM = ['fp127', 'fp127', 'abdk', 'wad', 'wad', 'quad', 'wad', 'ray', 'wad', 'ray'];
 
 const tabs = document.querySelectorAll('#scenario-tabs a');
 const sections = document.querySelectorAll('section.scenario');

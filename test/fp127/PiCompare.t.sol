@@ -7,6 +7,8 @@ import {FixedPointMathLib as S} from "../../lib/solady/src/utils/FixedPointMathL
 import {ABDKMath64x64 as A} from "../../lib/abdk-libraries-solidity/ABDKMath64x64.sol";
 import {SD59x18, sd} from "../../lib/prb-math/src/SD59x18.sol";
 import * as M from "../../lib/prb-math/src/sd59x18/Math.sol";
+import {ABDKMathQuad as Q} from "../../lib/abdk-libraries-solidity/ABDKMathQuad.sol";
+import {LogExpMath} from "../../contracts/src/ladder/vendor/balancer/LogExpMath.sol";
 
 /// @title PiCompare
 /// @notice Ramanujan's 1914 series for 1/pi, the same recipe through each
@@ -44,6 +46,23 @@ contract PiCompare is Test {
     function abdkSqrt(int256 x) internal pure returns (int256) { return A.sqrt(int128(x)); }
     function abdkMul(int256 a, int256 b) internal pure returns (int256) { return A.mul(int128(a), int128(b)); }
     function abdkDiv(int256 a, int256 b) internal pure returns (int256) { return A.div(int128(a), int128(b)); }
+    function balSqrt(int256 x) internal pure returns (int256) { return int256(LogExpMath.pow(uint256(x), 5e17)); }
+    function balMul(int256 a, int256 b) internal pure returns (int256) { return a * b / 1e18; }
+    function balDiv(int256 a, int256 b) internal pure returns (int256) { return a * 1e18 / b; }
+
+    /// Quad has no grid: the series is run on bytes16 directly, the integer
+    /// term ratios through fromUInt, and the bit pattern is logged.
+    function _seriesQuad(uint256 terms) internal pure returns (int256) {
+        bytes16 c = Q.fromUInt(1);
+        bytes16 s = Q.fromUInt(0);
+        for (uint256 k; k < terms; k++) {
+            s = Q.add(s, Q.mul(c, Q.fromUInt(1103 + 26390 * k)));
+            uint256 k4 = 4 * k;
+            c = Q.div(Q.mul(c, Q.fromUInt((k4 + 1) * (k4 + 2) * (k4 + 3) * (k4 + 4))), Q.fromUInt((k + 1) ** 4 * 24591257856));
+        }
+        bytes16 invpi = Q.div(Q.mul(Q.mul(Q.fromUInt(2), Q.sqrt(Q.fromUInt(2))), s), Q.fromUInt(9801));
+        return int256(uint256(uint128(Q.div(Q.fromUInt(1), invpi))));
+    }
 
     function _log(string memory form, uint256 terms, int256 raw, string memory scale, uint256 gas) internal pure {
         console.log(string.concat("PICMP|", form, "|", vm.toString(terms), "|", vm.toString(raw), "|", scale, "|", vm.toString(gas)));
@@ -55,6 +74,8 @@ contract PiCompare is Test {
             g0 = gasleft(); r = _series(t, 1e18, solSqrt, solMul, solDiv); _log("solady", t, r, "10**18", g0 - gasleft());
             g0 = gasleft(); r = _series(t, 1e18, prbSqrt, prbMul, prbDiv); _log("prb", t, r, "10**18", g0 - gasleft());
             g0 = gasleft(); r = _series(t, int256(1) << 64, abdkSqrt, abdkMul, abdkDiv); _log("abdk", t, r, "2**64", g0 - gasleft());
+            g0 = gasleft(); r = _series(t, 1e18, balSqrt, balMul, balDiv); _log("balancer", t, r, "10**18", g0 - gasleft());
+            g0 = gasleft(); r = _seriesQuad(t); _log("quad", t, r, "binary128", g0 - gasleft());
         }
         // the library op itself, for reference
         for (uint256 t = 1; t <= 6; t++) {

@@ -20,13 +20,24 @@ contract LadderRunner {
     address public immutable abdk;
     address public immutable solady;
     address public immutable prb;
+    address public immutable quad;
+    address public immutable balancer;
+    address public immutable aave;
+    address public immutable morpho;
+    address public immutable maker;
 
-    constructor(address fp127_, address fp127lib_, address abdk_, address solady_, address prb_) {
-        fp127 = fp127_;
-        fp127lib = fp127lib_;
-        abdk = abdk_;
-        solady = solady_;
-        prb = prb_;
+    /// The adapters in form-id order (ILadder.sol `Form`).
+    constructor(address[10] memory adapters) {
+        fp127 = adapters[0];
+        fp127lib = adapters[1];
+        abdk = adapters[2];
+        solady = adapters[3];
+        prb = adapters[4];
+        quad = adapters[5];
+        balancer = adapters[6];
+        aave = adapters[7];
+        morpho = adapters[8];
+        maker = adapters[9];
     }
 
     function adapter(uint8 form) public view returns (address) {
@@ -35,6 +46,11 @@ contract LadderRunner {
         if (form == Form.ABDK) return abdk;
         if (form == Form.SOLADY) return solady;
         if (form == Form.PRB) return prb;
+        if (form == Form.QUAD) return quad;
+        if (form == Form.BALANCER) return balancer;
+        if (form == Form.AAVE) return aave;
+        if (form == Form.MORPHO) return morpho;
+        if (form == Form.MAKER) return maker;
         revert UnknownForm(form);
     }
 

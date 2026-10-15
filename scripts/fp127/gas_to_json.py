@@ -5,7 +5,7 @@ and docs/benchmarks/gas.md.
     forge test --match-contract GasLadder -vv | uv run scripts/fp127/gas_to_json.py
 
 Line format:  GAS|<op>|<inputIndex>|<input hex>|<form>|<gas or NA>
-Forms:        huff yul caller lib abdk solady prb
+Forms:        huff yul caller lib abdk solady prb quad balancer
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 OUT_JSON = ROOT / "docs" / "benchmarks" / "gas.json"
 OUT_MD = ROOT / "docs" / "benchmarks" / "gas.md"
-FORMS = ["huff", "yul", "caller", "lib", "abdk", "solady", "prb"]
+FORMS = ["huff", "yul", "caller", "lib", "abdk", "solady", "prb", "quad", "balancer"]
 FORM_LABEL = {
     "huff": "Huff (Sepolia, staticcall)",
     "yul": "Yul object (staticcall)",
@@ -28,6 +28,8 @@ FORM_LABEL = {
     "abdk": "ABDKMath64x64",
     "solady": "Solady",
     "prb": "PRBMath SD59x18",
+    "quad": "ABDKMathQuad",
+    "balancer": "Balancer LogExpMath",
 }
 
 
@@ -45,6 +47,10 @@ def versions() -> dict[str, str]:
         "solady": tag("lib/solady"),
         "prb-math": tag("lib/prb-math"),
         "abdk": tag("lib/abdk-libraries-solidity"),
+        "balancer": "balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored)",
+        "aave": "aave-v3-origin@8305565ae342 (MathUtils, transcribed)",
+        "morpho": "morpho-blue@8e26ca6a8dbc (MathLib, transcribed)",
+        "maker": "dss pot.sol rpow via solady " + tag("lib/solady"),
         "forge": subprocess.run(["forge", "--version"], capture_output=True, text=True).stdout.split("\n")[0].strip(),
     }
 

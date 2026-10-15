@@ -9,6 +9,11 @@ import {LadderFP127Lib} from "../../contracts/src/ladder/LadderFP127Lib.sol";
 import {LadderABDK} from "../../contracts/src/ladder/LadderABDK.sol";
 import {LadderSolady} from "../../contracts/src/ladder/LadderSolady.sol";
 import {LadderPRB} from "../../contracts/src/ladder/LadderPRB.sol";
+import {LadderQuad} from "../../contracts/src/ladder/LadderQuad.sol";
+import {LadderBalancer} from "../../contracts/src/ladder/LadderBalancer.sol";
+import {LadderAave} from "../../contracts/src/ladder/LadderAave.sol";
+import {LadderMorpho} from "../../contracts/src/ladder/LadderMorpho.sol";
+import {LadderMaker} from "../../contracts/src/ladder/LadderMaker.sol";
 
 /// @title Ladder
 /// @notice Produces the terminal-precision dataset: every scenario, for every
@@ -24,7 +29,7 @@ import {LadderPRB} from "../../contracts/src/ladder/LadderPRB.sol";
 /// so the "fp127" form exercises the deployed bytecode exactly as Sepolia does.
 contract Ladder is Test {
     string constant INPUTS = "scripts/ladder/inputs.json";
-    string[5] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb"];
+    string[10] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"];
 
     LadderRunner runner;
     string json;
@@ -33,36 +38,51 @@ contract Ladder is Test {
     function setUp() public {
         bytes memory runtime = vm.parseJsonBytes(vm.readFile("out/FP127.yul/FP127.json"), ".deployedBytecode.object");
         vm.etch(FP127_ADDRESS, runtime);
-        runner = new LadderRunner(
+        runner = new LadderRunner([
             address(new LadderFP127()),
             address(new LadderFP127Lib()),
             address(new LadderABDK()),
             address(new LadderSolady()),
-            address(new LadderPRB())
-        );
+            address(new LadderPRB()),
+            address(new LadderQuad()),
+            address(new LadderBalancer()),
+            address(new LadderAave()),
+            address(new LadderMorpho()),
+            address(new LadderMaker())
+        ]);
         json = vm.readFile(INPUTS);
         ladder = vm.parseJsonUintArray(json, ".ladder");
     }
 
+    /// The inputs.json key holding a form's floored parameters (the scale).
     function _scaleKey(uint8 f) internal pure returns (string memory) {
         if (f == Form.FP127 || f == Form.FP127LIB) return "fp127";
         if (f == Form.ABDK) return "abdk";
+        if (f == Form.QUAD) return "quad";
+        if (f == Form.AAVE || f == Form.MAKER) return "ray";
         return "wad";
     }
 
-    function _params(uint256 cell, uint8 f) internal view returns (int256[] memory p) {
-        string[] memory s = vm.parseJsonStringArray(json, string.concat(".cells[", vm.toString(cell), "].", _scaleKey(f)));
+    function _params(uint256 cell, string memory key) internal view returns (int256[] memory p) {
+        string[] memory s = vm.parseJsonStringArray(json, string.concat(".cells[", vm.toString(cell), "].", key));
         p = new int256[](s.length);
         for (uint256 i; i < s.length; i++) p[i] = vm.parseInt(s[i]);
     }
 
-    struct Inp { string id; string input; int256[] fp; int256[] abdk; int256[] wad; }
+    struct Inp { string id; string input; int256[] fp; int256[] abdk; int256[] wad; int256[] quad; int256[] ray; }
+
+    function _of(Inp memory x, uint8 f) internal pure returns (int256[] memory) {
+        if (f == Form.FP127 || f == Form.FP127LIB) return x.fp;
+        if (f == Form.ABDK) return x.abdk;
+        if (f == Form.QUAD) return x.quad;
+        if (f == Form.AAVE || f == Form.MAKER) return x.ray;
+        return x.wad;
+    }
 
     function _cell(Inp memory x, uint8 s, uint8 f, uint32 n) internal view returns (bool ok, int256 raw) {
-        int256[] memory p = f == Form.ABDK ? x.abdk : (f == Form.SOLADY || f == Form.PRB ? x.wad : x.fp);
         bytes4 reason;
         uint256 gas;
-        (ok, raw, reason,, gas) = runner.run(s, f, n, p);
+        (ok, raw, reason,, gas) = runner.run(s, f, n, _of(x, f));
         console.log(string.concat(
             "LADDER|", x.id, "|", x.input, "|", FORMS[f], "|", vm.toString(n), "|", ok ? "1" : "0", "|",
             vm.toString(raw), "|", vm.toString(reason), "|", vm.toString(gas)
@@ -78,9 +98,7 @@ contract Ladder is Test {
             (bool ok1, int256 r1) = _cell(x, s, Form.FP127LIB, n);
             assertEq(ok0, ok1, string.concat(x.id, "/", x.input, ": fp127/fp127lib ok differ"));
             assertEq(r0, r1, string.concat(x.id, "/", x.input, ": fp127/fp127lib raw differ"));
-            _cell(x, s, Form.ABDK, n);
-            _cell(x, s, Form.SOLADY, n);
-            _cell(x, s, Form.PRB, n);
+            for (uint8 f = Form.ABDK; f < Form.COUNT; f++) _cell(x, s, f, n);
         }
     }
 
@@ -93,9 +111,11 @@ contract Ladder is Test {
             Inp memory x = Inp({
                 id: vm.parseJsonString(json, string.concat(base, ".id")),
                 input: vm.parseJsonString(json, string.concat(base, ".input")),
-                fp: _params(c, Form.FP127),
-                abdk: _params(c, Form.ABDK),
-                wad: _params(c, Form.SOLADY)
+                fp: _params(c, "fp127"),
+                abdk: _params(c, "abdk"),
+                wad: _params(c, "wad"),
+                quad: _params(c, "quad"),
+                ray: _params(c, "ray")
             });
             _input(x, s);
         }
@@ -110,6 +130,8 @@ contract Ladder is Test {
     function test_ladder_blackScholesChain() public view { _scenario(Scenario.BLACK_SCHOLES_CHAIN); }
     function test_ladder_cumulativeProduct() public view { _scenario(Scenario.CUMULATIVE_PRODUCT); }
     function test_ladder_compoundAnnual() public view { _scenario(Scenario.COMPOUND_ANNUAL); }
+    function test_ladder_accrualPerSecond() public view { _scenario(Scenario.ACCRUAL_PER_SECOND); }
+    function test_ladder_accrualContinuous() public view { _scenario(Scenario.ACCRUAL_CONTINUOUS); }
 
     function test_runner_catches_reverts() public view {
         int256[] memory p = new int256[](1);
@@ -136,9 +158,34 @@ contract Ladder is Test {
         assertEq(reason, bytes4(keccak256("ParamOutOfRange(uint256)")));
     }
 
+    /// The accrual libraries report Unsupported for the scenarios outside
+    /// their model, and the runner records it like any revert.
+    function test_accrual_forms_unsupported() public view {
+        int256[] memory p = new int256[](2);
+        p[0] = 1e27;
+        p[1] = 1e25;
+        for (uint8 f = Form.AAVE; f <= Form.MAKER; f++) {
+            (bool ok,, bytes4 reason,,) = runner.run(Scenario.ROUNDTRIP, f, 1, p);
+            assertFalse(ok);
+            assertEq(reason, bytes4(keccak256("Unsupported(uint8)")));
+        }
+        (bool okM, int256 rawM,,,) = runner.run(Scenario.COMPOUND, Form.MAKER, 1, p);
+        assertTrue(okM);
+        assertEq(rawM, 1.01e27);
+    }
+
+    /// Quad: a NaN result is a revert, not a number.
+    function test_quad_nan_is_revert() public view {
+        int256[] memory p = new int256[](1);
+        p[0] = int256(uint256(0xbfff0000000000000000000000000000)); // -1 in binary128
+        (bool ok,, bytes4 reason,,) = runner.run(Scenario.ROUNDTRIP, Form.QUAD, 1, p);
+        assertFalse(ok);
+        assertEq(reason, bytes4(keccak256("QuadNotFinite()")));
+    }
+
     function test_runner_unknown_form() public {
         int256[] memory p = new int256[](0);
-        vm.expectRevert(abi.encodeWithSignature("UnknownForm(uint8)", uint8(9)));
-        runner.run(0, 9, 1, p);
+        vm.expectRevert(abi.encodeWithSignature("UnknownForm(uint8)", uint8(255)));
+        runner.run(0, 255, 1, p);
     }
 }

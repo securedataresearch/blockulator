@@ -8,13 +8,16 @@ import {ABDKMath64x64} from "../../lib/abdk-libraries-solidity/ABDKMath64x64.sol
 import {FixedPointMathLib} from "../../lib/solady/src/utils/FixedPointMathLib.sol";
 import {SD59x18, sd} from "../../lib/prb-math/src/SD59x18.sol";
 import * as PRB from "../../lib/prb-math/src/sd59x18/Math.sol";
+import {ABDKMathQuad as Q} from "../../lib/abdk-libraries-solidity/ABDKMathQuad.sol";
+import {LogExpMath} from "../../contracts/src/ladder/vendor/balancer/LogExpMath.sol";
 
 /// @title GasLadder
 /// @notice Gas for every op across an input ladder, for every form:
 ///         huff (Sepolia bytecode, staticcall), yul (object, staticcall),
 ///         caller (FP127Caller, two hops), lib (FP127Lib, internal), and the
-///         competitor libraries abdk / solady / prb as internal calls on the
-///         same inputs converted once to their representation.
+///         competitor libraries abdk / solady / prb / quad / balancer as
+///         internal calls on the same inputs converted once to their
+///         representation.
 ///
 /// Prints GAS|op|idx|input|form|gas (NA when the form reverted or lacks the
 /// op). scripts/fp127/gas_to_json.py turns the lines into gas.json.
@@ -33,6 +36,9 @@ contract GasLadder is FP127Harness {
     // ---- conversions --------------------------------------------------
 
     function _wad(int256 x) internal pure returns (int256) { return FP127Lib.toFixed18(x); }
+
+    /// 127.128 -> binary128 (ABDKMathQuad's own conversion, to nearest).
+    function _quad(int256 x) internal pure returns (bytes16) { return Q.from128x128(x); }
 
     /// 127.128 -> 64.64; NA when it does not fit int128.
     function _abdk(int256 x) internal pure returns (int128, bool) {
@@ -163,6 +169,46 @@ contract GasLadder is FP127Harness {
         revert("na");
     }
 
+    function cQuad1(string calldata op, bytes16 x) external pure returns (bytes16 r) {
+        bytes32 h = keccak256(bytes(op));
+        if (h == keccak256("exp")) return Q.exp(x);
+        if (h == keccak256("exp2")) return Q.pow_2(x);
+        if (h == keccak256("ln")) return Q.ln(x);
+        if (h == keccak256("log2")) return Q.log_2(x);
+        if (h == keccak256("sqrt")) return Q.sqrt(x);
+        if (h == keccak256("inv")) return Q.div(Q.fromUInt(1), x);
+        if (h == keccak256("abs")) return Q.abs(x);
+        if (h == keccak256("neg")) return Q.neg(x);
+        revert("na");
+    }
+
+    function cQuad2(string calldata op, bytes16 a, bytes16 b) external pure returns (bytes16 r) {
+        bytes32 h = keccak256(bytes(op));
+        if (h == keccak256("mul")) return Q.mul(a, b);
+        if (h == keccak256("div")) return Q.div(a, b);
+        if (h == keccak256("add")) return Q.add(a, b);
+        if (h == keccak256("sub")) return Q.sub(a, b);
+        if (h == keccak256("pow")) return Q.exp(Q.mul(b, Q.ln(a)));
+        revert("na");
+    }
+
+    function cBal1(string calldata op, int256 x) external pure returns (int256 r) {
+        bytes32 h = keccak256(bytes(op));
+        if (h == keccak256("exp")) return LogExpMath.exp(x);
+        if (h == keccak256("ln")) return LogExpMath.ln(x);
+        if (h == keccak256("sqrt")) return int256(LogExpMath.pow(uint256(x), 5e17));
+        if (h == keccak256("cbrt")) return int256(LogExpMath.pow(uint256(x), 333333333333333333));
+        revert("na");
+    }
+
+    function cBal2(string calldata op, int256 a, int256 b) external pure returns (int256 r) {
+        bytes32 h = keccak256(bytes(op));
+        if (h == keccak256("pow")) return int256(LogExpMath.pow(uint256(a), uint256(b)));
+        if (h == keccak256("mul")) return a * b / 1e18;
+        if (h == keccak256("div")) return a * 1e18 / b;
+        revert("na");
+    }
+
     /// Gas of the external self-call minus the gas of an empty self-call,
     /// so competitor numbers approximate an internal call like FP127Lib.
     function cNoop(string calldata) external pure returns (int256) { return 0; }
@@ -184,6 +230,10 @@ contract GasLadder is FP127Harness {
         _emit(op, idx, label, "solady", g == NA ? NA : g - int256(base));
         g = _selfTry(abi.encodeWithSelector(this.cPrb1.selector, op, _wad(x)));
         _emit(op, idx, label, "prb", g == NA ? NA : g - int256(base));
+        g = _selfTry(abi.encodeWithSelector(this.cQuad1.selector, op, _quad(x)));
+        _emit(op, idx, label, "quad", g == NA ? NA : g - int256(base));
+        g = _selfTry(abi.encodeWithSelector(this.cBal1.selector, op, _wad(x)));
+        _emit(op, idx, label, "balancer", g == NA ? NA : g - int256(base));
     }
 
     function _comp2(string memory op, uint256 idx, string memory label, int256 a, int256 b) internal view {
@@ -196,6 +246,10 @@ contract GasLadder is FP127Harness {
         _emit(op, idx, label, "solady", g == NA ? NA : g - int256(base));
         g = _selfTry(abi.encodeWithSelector(this.cPrb2.selector, op, _wad(a), _wad(b)));
         _emit(op, idx, label, "prb", g == NA ? NA : g - int256(base));
+        g = _selfTry(abi.encodeWithSelector(this.cQuad2.selector, op, _quad(a), _quad(b)));
+        _emit(op, idx, label, "quad", g == NA ? NA : g - int256(base));
+        g = _selfTry(abi.encodeWithSelector(this.cBal2.selector, op, _wad(a), _wad(b)));
+        _emit(op, idx, label, "balancer", g == NA ? NA : g - int256(base));
     }
 
     // ---- FP127Lib internal timing per op ------------------------------

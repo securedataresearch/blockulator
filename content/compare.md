@@ -1,6 +1,6 @@
 +++
 title = "Compare"
-description = "Gas and single-op precision for FP127 against ABDKMath64x64, Solady and PRBMath."
+description = "Gas and single-op precision for FP127 against ABDKMath64x64, ABDKMathQuad, Solady, PRBMath and Balancer."
 +++
 
 The [ladder](/demo/) is the argument: precision over N steps, which is how protocols use a math library. This page is the per-op view behind it, measured by the same Foundry suites that CI runs on every commit.

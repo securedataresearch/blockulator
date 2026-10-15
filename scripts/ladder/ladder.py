@@ -40,7 +40,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "fp127"))
 sys.path.insert(0, str(ROOT / "scripts" / "ladder"))
 from gas_to_json import versions  # noqa: E402
-from gen_inputs import resolve, floor_scaled, SCALES as INPUT_SCALES  # noqa: E402
+from gen_inputs import resolve, to_scaled, from_scaled, SCALES as INPUT_SCALES  # noqa: E402
 
 SPEC = ROOT / "scripts" / "ladder" / "scenarios.json"
 OUT_JSON = ROOT / "docs" / "benchmarks" / "ladder.json"
@@ -48,21 +48,31 @@ OUT_MD = ROOT / "docs" / "benchmarks" / "ladder.md"
 DIGITS_CAP = 60
 CHART_CAP = 40   # summaries cap digits here so an exact WAD cell does not distort max
 SIG = 42         # significant digits kept for value/truth strings
-SCALE_OF_FORM = {"fp127": "fp127", "fp127lib": "fp127", "abdk": "abdk", "solady": "wad", "prb": "wad"}
+SCALE_OF_FORM = {"fp127": "fp127", "fp127lib": "fp127", "abdk": "abdk", "solady": "wad", "prb": "wad",
+                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray"}
 SCALE_INT = {k: v[1] for k, v in INPUT_SCALES.items()}
 SCALE_NAME = {k: v[0] for k, v in INPUT_SCALES.items()}
 REASONS = {
-    "0x35278d12": "Overflow()", "0x23d5ec63": "DivisionByZero()", "0x7db3aba7": "OutOfRange()",
+    "0x35278d12": "Overflow()", "0x23d359a3": "DivisionByZero()", "0x7db3aba7": "OutOfRange()",
     "0x00000000": "bare revert (require without a reason, or out of gas)",
     "0xedcd4dd4": "Solady ExpOverflow()", "0x120b5b43": "PRBMath_SD59x18_Mul_Overflow",
+    "0x4e487b71": "Panic (checked arithmetic overflow or division by zero)",
+    "0x49f7642b": "Solady RPowOverflow() (Maker's rpow)",
+    "0x7964b44f": "ParamOutOfRange(uint256): the value does not fit the representation",
+    "0x7bb9ae15": "Unsupported(uint8): the library has no model for this scenario",
+    "0xa28f5c6b": "Quad NaN or infinity",
+    "0x34d81929": "Balancer: negative base or exponent",
+    "0x022701e0": "Balancer BaseOutOfBounds()", "0xd8317311": "Balancer ExponentOutOfBounds()",
+    "0xa2f9f7e3": "Balancer ProductOutOfBounds()", "0xd4794efd": "Balancer InvalidExponent()", "0xb4120f14": "Balancer OutOfBounds()",
 }
+PARAM_OUT_OF_RANGE = "0x7964b44f"
 
 METHODOLOGY = {
-    "truth": "For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 200 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.",
-    "rounding": "Each library receives the parameters floored into its own representation (2^-128, 2^-64 or 10^-18 units; scripts/ladder/inputs.json). truthFormat is the exact loop started from those floored parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic.",
+    "truth": "For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 200 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.",
+    "rounding": "Each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units, or the nearest binary128 value for ABDKMathQuad; scripts/ladder/inputs.json). truthFormat is the exact loop started from those floored parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic.",
     "digits": "digits = floor(-log10 |v - t| / |t|), the number of correct leading significant digits by relative error, capped at 60, which is reported as exact. It is not a string comparison: a value can be correct to 36 digits while its 37th printed digit happens to agree with the truth, or while a carry makes the printed prefix differ earlier.",
     "agree": "agree is the count of leading significant digits of the printed value (42 significant digits) that are literally equal to the printed truth. The demo page colours the rest of the value with it. It is a reading aid, not a measurement: a carry across 0.999… / 1.000… gives 0.",
-    "gas": "gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the FP127 object, so the call into the adapter and the ABI decoding are excluded. The FP127 (deployed) form includes one staticcall per op; FP127Lib and the other libraries are internal calls. gasPerStep = gasTotal / N. Reverted cells carry no gas.",
+    "gas": "gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the FP127 object, so the call into the adapter and the ABI decoding are excluded. The FP127 (deployed) form includes one staticcall per op; FP127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe and report Unsupported elsewhere, which the tables show as a revert. gasPerStep = gasTotal / N. Reverted cells carry no gas.",
     "live": "LadderRunner.run(scenario, form, n, p) on Sepolia executes any cell with one eth_call and returns (ok, raw, reason, gasPerStep, gasTotal). The demo's verify button sends the cell's floored parameters p and compares the returned raw word with the committed one bit for bit (or the revert selector for a reverted cell). liveMaxN is the largest N per form the public RPC completed within its gas limit, measured by scripts/ladder/livecap.py.",
     "reproduce": "make ladder regenerates ladder.json and ladder.md from the Foundry harness (test/ladder/Ladder.t.sol) and this script; make ladder-check fails CI when the committed dataset differs. Versions of every library and of forge are recorded in the dataset.",
 }
@@ -78,6 +88,12 @@ def truths(sid: str, p: dict, ns: list[int]) -> dict[int, mpf]:
     if sid in ("compound", "compound-annual", "compound-pow"):
         for n in ns:
             out[n] = p["principal"] * (1 + p["rate"]) ** n
+    elif sid == "accrual-per-second":
+        for n in ns:
+            out[n] = p["principal"] * (1 + p["rateSec"]) ** (n * 86400)
+    elif sid == "accrual-continuous":
+        for n in ns:
+            out[n] = p["principal"] * exp(p["rateAnnual"] * mpf(n) / 365)
     elif sid == "roundtrip":
         for n in ns:
             out[n] = p["x0"]
@@ -119,9 +135,10 @@ def truths(sid: str, p: dict, ns: list[int]) -> dict[int, mpf]:
     return out
 
 
-def floored_params(p: dict, scale: int) -> dict:
-    """The parameters as the library received them: floor(x * scale) / scale, exact."""
-    return {k: mpf(floor_scaled(v, scale)) / scale for k, v in p.items()}
+def floored_params(p: dict, scale) -> dict:
+    """The parameters as the library received them: floor(x * scale) / scale, exact
+    (the nearest binary128 value for the quad scale)."""
+    return {k: from_scaled(to_scaled(v, scale), scale) for k, v in p.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -165,8 +182,8 @@ def signed(x) -> str:
     return nstr(x, 6) if x != 0 else "0"
 
 
-def metrics(raw: int, scale: int, t, tf) -> dict:
-    v = mpf(raw) / scale
+def metrics(raw: int, scale, t, tf) -> dict:
+    v = from_scaled(raw, scale)
     value = nstr(v, SIG)
     truth_s = nstr(t, SIG)
     d = digits_of(v, t)
@@ -176,7 +193,7 @@ def metrics(raw: int, scale: int, t, tf) -> dict:
         "digitsFormat": digits_of(v, tf),
         "exact": d >= DIGITS_CAP,
         "agree": agree_count(value, truth_s),
-        "errUlps": signed((v - t) * scale),
+        "errUlps": signed((v - t) * scale) if scale else None,
         "relErr": signed((v - t) / t) if t != 0 else None,
     }
 
@@ -238,7 +255,7 @@ def build(cells: dict) -> dict:
                     acc = per_form_digits[form][n]
                     if not c["ok"]:
                         col[str(n)] = {"reverted": True, "reason": c["reason"], "reasonName": REASONS.get(c["reason"], "unknown selector"), "gas": None}
-                        if c["reason"] == "0x" + "ParamOutOfRange":
+                        if c["reason"] == PARAM_OUT_OF_RANGE:
                             acc["unrep"] += 1
                         else:
                             acc["rev"] += 1

@@ -5,9 +5,9 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Six contracts, salt "FP127 ladder v4": the five adapters (no constructor
-arguments) and LadderRunner (constructor = the five adapter addresses, so
-its init code depends on them). Each transaction is sent with the node's
+Eleven contracts, salt "FP127 ladder v5": the ten adapters (no constructor
+arguments) and LadderRunner (constructor = the ten adapter addresses as one
+array, so its init code depends on them). Each transaction is sent with the node's
 own gas estimate plus 25%, because Sepolia's code-deposit pricing is not
 what forge's local EVM models (see contracts/deployments/FP127.md).
 
@@ -26,10 +26,11 @@ from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
 PROXY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
-SALT_ASCII = "FP127 ladder v4"
+SALT_ASCII = "FP127 ladder v5"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
-ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB"]
+ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
+            "LadderQuad", "LadderBalancer", "LadderAave", "LadderMorpho", "LadderMaker"]
 RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"
 
 
@@ -60,7 +61,7 @@ def plan() -> list[dict]:
         init = init_code(name)
         out.append({"name": name, "init": init, "address": create2(init), "args": []})
     addrs = [c["address"] for c in out]
-    args = bytes.fromhex(cast("abi-encode", "f(address,address,address,address,address)", *addrs)[2:])
+    args = bytes.fromhex(cast("abi-encode", f"f(address[{len(addrs)}])", "[" + ",".join(addrs) + "]")[2:])
     init = init_code("LadderRunner", args)
     out.append({"name": "LadderRunner", "init": init, "address": create2(init), "args": addrs})
     return out
@@ -102,7 +103,7 @@ def cmd_deploy(rpc: str) -> int:
 
 def cmd_record(rpc: str) -> int:
     rec = {"chainId": 11155111, "network": "sepolia", "proxy": PROXY, "salt": SALT, "saltAscii": SALT_ASCII,
-           "fp127": "0xe43F720861074497db2e974E5c4554E4A3b341B9", "contracts": {}}
+           "fp127": "0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1", "contracts": {}}
     for c in plan():
         code = cast("code", c["address"], "--rpc-url", rpc)
         rec["contracts"][c["name"]] = {

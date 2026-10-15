@@ -36,6 +36,31 @@
    "id": "prb",
    "label": "PRBMath SD59x18",
    "scale": "10**18"
+  },
+  {
+   "id": "quad",
+   "label": "ABDKMathQuad (binary128)",
+   "scale": "binary128"
+  },
+  {
+   "id": "balancer",
+   "label": "Balancer LogExpMath",
+   "scale": "10**18"
+  },
+  {
+   "id": "aave",
+   "label": "Aave v3 MathUtils (RAY)",
+   "scale": "10**27"
+  },
+  {
+   "id": "morpho",
+   "label": "Morpho Blue MathLib",
+   "scale": "10**18"
+  },
+  {
+   "id": "maker",
+   "label": "Maker rpow (RAY)",
+   "scale": "10**27"
   }
  ],
  "scenarios": [
@@ -149,6 +174,22 @@
     ],
     "prb": [
      "mul"
+    ],
+    "quad": [
+     "mul"
+    ],
+    "balancer": [
+     "mulDown"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "rpow",
+     "rmul"
     ]
    }
   },
@@ -268,6 +309,23 @@
     "prb": [
      "pow",
      "mul"
+    ],
+    "quad": [
+     "exp(y ln x)",
+     "mul"
+    ],
+    "balancer": [
+     "pow",
+     "mulDown"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
     ]
    }
   },
@@ -362,6 +420,23 @@
     "prb": [
      "sqrt",
      "add"
+    ],
+    "quad": [
+     "sqrt",
+     "add"
+    ],
+    "balancer": [
+     "pow(x, 1/2)",
+     "add"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
     ]
    }
   },
@@ -469,6 +544,23 @@
     "prb": [
      "ln",
      "exp"
+    ],
+    "quad": [
+     "ln",
+     "exp"
+    ],
+    "balancer": [
+     "ln",
+     "exp"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
     ]
    }
   },
@@ -583,6 +675,23 @@
     "prb": [
      "mul",
      "sub"
+    ],
+    "quad": [
+     "mul",
+     "sub"
+    ],
+    "balancer": [
+     "mulDown",
+     "sub"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
     ]
    }
   },
@@ -633,6 +742,27 @@
      "ln",
      "add",
      "exp"
+    ],
+    "quad": [
+     "div",
+     "ln",
+     "add",
+     "exp"
+    ],
+    "balancer": [
+     "divDown",
+     "ln",
+     "add",
+     "exp"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
     ]
    }
   },
@@ -786,6 +916,29 @@
      "add",
      "sqrt",
      "mul"
+    ],
+    "quad": [
+     "div",
+     "ln",
+     "add",
+     "sqrt",
+     "mul"
+    ],
+    "balancer": [
+     "divDown",
+     "ln",
+     "add",
+     "pow(x, 1/2)",
+     "mulDown"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
     ]
    }
   },
@@ -853,6 +1006,21 @@
     ],
     "prb": [
      "mul"
+    ],
+    "quad": [
+     "mul"
+    ],
+    "balancer": [
+     "mulDown"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
     ]
    }
   },
@@ -926,8 +1094,246 @@
     ],
     "prb": [
      "mul"
+    ],
+    "quad": [
+     "mul"
+    ],
+    "balancer": [
+     "mulDown"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "rpow",
+     "rmul"
     ]
    }
+  },
+  {
+   "id": "accrual-per-second",
+   "index": 9,
+   "demo": true,
+   "title": "Per-second accrual",
+   "step": "b = b0 * (1 + r/31536000)^(N * 86400)",
+   "result": "balance after N days of per-second compounding",
+   "why": "How Maker's jug and pot accrue: the rate per second, compounded every second, N days at a time. The rate is 1.6e-9 at 5% APR, which an 18-decimal grid holds to ten digits before any arithmetic; FP127 computes the power as one exact integer power (compound), the WAD and 64.64 libraries as exp(n ln(1 + r)), Maker as rpow.",
+   "order": [
+    "principal",
+    "rateSec"
+   ],
+   "ops": {
+    "fp127": [
+     "compound",
+     "mul"
+    ],
+    "fp127lib": [
+     "compound",
+     "mul"
+    ],
+    "abdk": [
+     "ln",
+     "mul",
+     "exp"
+    ],
+    "solady": [
+     "powWad",
+     "sMulWad"
+    ],
+    "prb": [
+     "pow",
+     "mul"
+    ],
+    "quad": [
+     "ln",
+     "mul",
+     "exp"
+    ],
+    "balancer": [
+     "pow",
+     "mulDown"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "rpow",
+     "rmul"
+    ]
+   },
+   "inputs": [
+    {
+     "name": "reference",
+     "reference": true,
+     "params": {
+      "principal": "10000",
+      "rateSec": "0.05/31536000"
+     },
+     "why": "$10,000 at 5% APR, the lending protocol's steady state"
+    },
+    {
+     "name": "one-pct",
+     "params": {
+      "principal": "10000",
+      "rateSec": "0.01/31536000"
+     },
+     "why": "a slow rate: 1% APR is 3.2e-10 a second"
+    },
+    {
+     "name": "twenty-pct",
+     "params": {
+      "principal": "10000",
+      "rateSec": "0.2/31536000"
+     },
+     "why": "20% APR"
+    },
+    {
+     "name": "fifty-pct",
+     "params": {
+      "principal": "10000",
+      "rateSec": "0.5/31536000"
+     },
+     "why": "50% APR, where the three-term expansions strain"
+    },
+    {
+     "name": "unit",
+     "params": {
+      "principal": "1",
+      "rateSec": "0.05/31536000"
+     },
+     "why": "one unit, the fraction carries everything"
+    },
+    {
+     "name": "huge",
+     "params": {
+      "principal": "100000000",
+      "rateSec": "0.05/31536000"
+     },
+     "why": "a hundred-million-unit pool"
+    }
+   ]
+  },
+  {
+   "id": "accrual-continuous",
+   "index": 10,
+   "demo": true,
+   "title": "Continuous accrual",
+   "step": "b = b0 * e^(r * N / 365)",
+   "result": "balance after N days of continuous accrual",
+   "why": "How Aave and Morpho accrue: the ideal is e^(rate * time), and both ship a three-term expansion of it (1 + x + x^2/2 + x^3/6), which Aave notes 'slightly underpays liquidity providers and undercharges borrowers'. Every library is judged against the exponential it approximates. The step here is one accrual spanning N days, which is what a market that nobody touched for N days computes on its next interaction; the expansion's error is x^4/24 with x = rate * years, so it is invisible at daily updates and the whole story at a year or more. Morpho holds the rate per second in WAD (1,585,489,599 wei at 5% APR), ten significant digits before any arithmetic; both digit counts show that loss, since the format truth is built from the annual rate the other libraries receive.",
+   "order": [
+    "principal",
+    "rateAnnual",
+    "rateSec"
+   ],
+   "derived": {
+    "rateSec": "rateAnnual / 31536000"
+   },
+   "ops": {
+    "fp127": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "fp127lib": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "abdk": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "solady": [
+     "sMulWad",
+     "sDivWad",
+     "expWad"
+    ],
+    "prb": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "quad": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "balancer": [
+     "mulDown",
+     "divDown",
+     "exp"
+    ],
+    "aave": [
+     "calculateCompoundedInterest",
+     "rayMul"
+    ],
+    "morpho": [
+     "wTaylorCompounded",
+     "wMulDown"
+    ],
+    "maker": [
+     "unsupported"
+    ]
+   },
+   "inputs": [
+    {
+     "name": "reference",
+     "reference": true,
+     "params": {
+      "principal": "10000",
+      "rateAnnual": "0.05"
+     },
+     "why": "$10,000 at 5% APR, the lending protocol's steady state"
+    },
+    {
+     "name": "one-pct",
+     "params": {
+      "principal": "10000",
+      "rateAnnual": "0.01"
+     },
+     "why": "a slow rate: 1% APR is 3.2e-10 a second"
+    },
+    {
+     "name": "twenty-pct",
+     "params": {
+      "principal": "10000",
+      "rateAnnual": "0.2"
+     },
+     "why": "20% APR"
+    },
+    {
+     "name": "fifty-pct",
+     "params": {
+      "principal": "10000",
+      "rateAnnual": "0.5"
+     },
+     "why": "50% APR, where the three-term expansions strain"
+    },
+    {
+     "name": "unit",
+     "params": {
+      "principal": "1",
+      "rateAnnual": "0.05"
+     },
+     "why": "one unit, the fraction carries everything"
+    },
+    {
+     "name": "huge",
+     "params": {
+      "principal": "100000000",
+      "rateAnnual": "0.05"
+     },
+     "why": "a hundred-million-unit pool"
+    }
+   ]
   }
  ],
  "_doc": "Scenarios of the terminal-precision ladder. order = the parameter order in the calldata array p the adapters receive (derived values included); inputs = the parameter sets run, the first flagged reference; ops = the library calls each adapter's loop makes, documentation that scripts/ladder/ladder.py copies into the dataset."
