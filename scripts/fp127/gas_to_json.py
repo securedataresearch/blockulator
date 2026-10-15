@@ -17,9 +17,10 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT_JSON = ROOT / "docs" / "benchmarks" / "gas.json"
-OUT_MD = ROOT / "docs" / "benchmarks" / "gas.md"
-FORMS = ["huff", "yul", "caller", "lib", "abdk", "solady", "prb", "quad", "balancer"]
+LIB = "fp256" if "--lib" in sys.argv and sys.argv[sys.argv.index("--lib") + 1] == "fp256" else "fp127"
+OUT_JSON = ROOT / "docs" / "benchmarks" / ("gas256.json" if LIB == "fp256" else "gas.json")
+OUT_MD = ROOT / "docs" / "benchmarks" / ("gas256.md" if LIB == "fp256" else "gas.md")
+FORMS = ["yul", "lib", "fp127lib", "quad"] if LIB == "fp256" else ["huff", "yul", "caller", "lib", "abdk", "solady", "prb", "quad", "balancer"]
 FORM_LABEL = {
     "huff": "Huff (Sepolia, staticcall)",
     "yul": "Yul object (staticcall)",
@@ -30,6 +31,7 @@ FORM_LABEL = {
     "prb": "PRBMath SD59x18",
     "quad": "ABDKMathQuad",
     "balancer": "Balancer LogExpMath",
+    "fp127lib": "FP127Lib (inline), the same op",
 }
 
 
@@ -89,7 +91,8 @@ def main() -> int:
 
     doc = {
         "generated": date.today().isoformat(),
-        "description": "Gas per op across an input ladder. First four forms are FP127; the first two and the third include the external call. Competitors are measured as internal library calls like FP127Lib. null = reverted or unsupported. summary holds min/median/max per form, null where there is no measurement.",
+        "description": ("Gas per FP256 op across an input ladder: the object (staticcall), the inline library, the same op in FP127Lib on the same value where it fits, and ABDKMathQuad. null = reverted or unsupported. summary holds min/median/max per form." if LIB == "fp256" else
+                        "Gas per op across an input ladder. First four forms are FP127; the first two and the third include the external call. Competitors are measured as internal library calls like FP127Lib. null = reverted or unsupported. summary holds min/median/max per form, null where there is no measurement."),
         "versions": versions(),
         "forms": FORMS,
         "formLabels": FORM_LABEL,
@@ -99,7 +102,7 @@ def main() -> int:
     OUT_JSON.write_text(json.dumps(doc, indent=1) + "\n")
 
     lines = [
-        "# FP127 gas ladder",
+        f"# {'FP256' if LIB == 'fp256' else 'FP127'} gas ladder",
         "",
         f"Generated {doc['generated']} by `make bench`. Versions: " + ", ".join(f"{k} {v}" for k, v in doc["versions"].items()) + ".",
         "",

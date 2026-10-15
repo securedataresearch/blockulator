@@ -32,6 +32,9 @@ and conversion ops. Every argument and result is an `int256` holding
   cell against exact arithmetic and re-runnable on chain through
   `LadderRunner` ([`docs/benchmarks/ladder.md`](docs/benchmarks/ladder.md),
   [record](contracts/deployments/Ladder.md))
+- FP256, the second ruler: a 256-bit binary float (sign, 19-bit exponent,
+  236-bit fraction; about 71 digits at any magnitude) on FP127's kernels,
+  release one ([`contracts/src/fp256/README.md`](contracts/src/fp256/README.md))
 - The edges: 139 one-shot probes at the ends of each library's domain, where
   a result goes to zero, reverts or runs out of digits, re-runnable through
   `EdgeRunner` ([`docs/benchmarks/edges.md`](docs/benchmarks/edges.md))

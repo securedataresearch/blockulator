@@ -1,4 +1,4 @@
-.PHONY: build-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
@@ -111,7 +111,7 @@ size: build
 	@$(PY) python -c "import json;d=json.load(open('out/FP127.yul/FP127.json'));b=d['deployedBytecode']['object'];print('FP127 runtime:', (len(b)-2)//2, 'bytes of 24576')"
 
 bench: build
-	@forge test --match-contract GasLadder -vv | $(PY) scripts/fp127/gas_to_json.py
+	@forge test --match-contract "^GasLadder$$" -vv | $(PY) scripts/fp127/gas_to_json.py
 
 pi-compare: build
 	@forge test --match-contract PiCompare -vv | $(PY) scripts/fp127/pi_compare.py
@@ -155,6 +155,38 @@ verify-sepolia: build
 
 smoke-sepolia: build
 	@forge test --match-contract Deployed --fork-url $(SEPOLIA_RPC) -vv
+
+# ---- FP256 (the second ruler): same procedure, its own artifact, salt and record
+
+DEPLOY_SCRIPT256 := script/DeployFP256.s.sol
+SALT256 := 0x4650323536207631000000000000000000000000000000000000000000000000
+
+predict-fp256: build
+	@forge script $(DEPLOY_SCRIPT256) --sig "predict()" --rpc-url $(SEPOLIA_RPC) 2>&1 | grep -E "deployer|salt|hash|keccak|bytes|address|deployed"
+
+deploy-fp256-sepolia: build
+	@test -n "$$DEPLOYER_KEY" || (echo "DEPLOYER_KEY is not set" && exit 1)
+	@FP_LIB=fp256 $(PY) scripts/fp127/stdjson.py check
+	@set -e; \
+	ADDR=$$(forge script $(DEPLOY_SCRIPT256) --sig "predict()" --rpc-url $(SEPOLIA_RPC) 2>&1 | grep -E '^\s+address' | awk '{print $$2}'); \
+	echo "address $$ADDR"; \
+	if [ "$$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC))" != "0x" ]; then echo "already deployed"; exit 0; fi; \
+	INIT=$$($(PY) python -c "import json;print(json.load(open('out/FP256.yul/FP256.json'))['bytecode']['object'][2:])"); \
+	cast send $(CREATE2_PROXY) "$(SALT256)$$INIT" --rpc-url $(SEPOLIA_RPC) --private-key "$$DEPLOYER_KEY" --gas-limit $(DEPLOY_GAS) --json \
+		| tee contracts/deployments/FP256.sepolia.receipt.json \
+		| $(PY) python -c "import json,sys;r=json.load(sys.stdin);print('status',r['status'],'tx',r['transactionHash'],'block',int(r['blockNumber'],16),'gasUsed',int(r['gasUsed'],16))"; \
+	echo "code at $$ADDR: $$(( ($$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC) | wc -c) - 3) / 2 )) bytes"
+
+verify-fp256-sepolia: build
+	@FP_LIB=fp256 $(PY) scripts/fp127/stdjson.py check
+	@FP_LIB=fp256 $(PY) scripts/fp127/stdjson.py onchain $(SEPOLIA_RPC) $$($(PY) python -c "import json;print(json.load(open('contracts/deployments/FP256.json'))['address'])")
+	@FP_LIB=fp256 $(PY) scripts/fp127/verify.py 11155111 $$($(PY) python -c "import json;print(json.load(open('contracts/deployments/FP256.json'))['address'])")
+
+smoke-fp256-sepolia: build
+	@forge test --match-contract Deployed256 --fork-url $(SEPOLIA_RPC) -vv
+
+bench-fp256: build
+	@forge test --match-contract "^GasLadder256$$" -vv | $(PY) scripts/fp127/gas_to_json.py --lib fp256
 
 predict-ladder: build
 	@$(PY) scripts/ladder/deploy.py predict $(SEPOLIA_RPC)

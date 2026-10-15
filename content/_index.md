@@ -61,6 +61,13 @@ site = "/library/"
 color = "sapphire"
 
 [[extra.pages]]
+name = "Float"
+tag = "FP256, the second ruler: 71 digits at any magnitude, one word"
+href = "/float/"
+site = "/float/"
+color = "sapphire"
+
+[[extra.pages]]
 name = "Compare"
 tag = "gas and single-op precision against ABDK, Solady, PRBMath"
 href = "/compare/"

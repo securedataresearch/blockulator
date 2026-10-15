@@ -54,6 +54,9 @@ jobs:
       - name: Gas ladder
         run: make bench && cat docs/benchmarks/gas.md
 
+      - name: FP256 gas ladder
+        run: make bench-fp256
+
       - name: Terminal-precision ladder is current
         run: make ladder-check
 

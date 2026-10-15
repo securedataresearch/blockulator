@@ -45,6 +45,12 @@ committed copies match the code at that commit.
 - [`gas.md`](gas.md) / [`gas.json`](gas.json): gas for every FP127 op across
   an input ladder, for the Huff baseline, the Yul object, `FP127Caller`,
   `FP127Lib` and the five competitor libraries. `make bench`.
+- [`gas256.md`](gas256.md) / [`gas256.json`](gas256.json): gas for every FP256
+  op (object, inline, the same op in FP127Lib on the same value, and
+  ABDKMathQuad). `make bench-fp256`.
+- [`../fp256/precision.md`](../fp256/precision.md) / [`../fp256/precision.json`](../fp256/precision.json):
+  correct bits of every FP256 op on the decoded values. `make test` then
+  `make precision-report-fp256`.
 - [`../fp127/precision.md`](../fp127/precision.md) / [`../fp127/precision.json`](../fp127/precision.json):
   correct bits of every op against mpmath over the committed vectors.
   `make test` then `make precision-report`.
