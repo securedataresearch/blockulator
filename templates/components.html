@@ -1,5 +1,5 @@
-{% component deployment() -%}
-{%- set d = load_data(path="static/data/fp127.json") -%}
+{% component deployment(lib: string = "fp127") -%}
+{%- set d = load_data(path="static/data/" ~ (lib == "fp256" and "fp256/fp256.json" or "fp127.json")) -%}
 <dl class="kv">
   <dt>network</dt><dd>{{ d.network }} (chain id {{ d.chainId }})</dd>
   <dt>address</dt><dd>{{ d.address }} <button class="copy" data-copy="{{ d.address }}">copy</button></dd>
@@ -10,14 +10,15 @@
   <dt>compiler</dt><dd>{{ d.compiler.language }}, solc {{ d.compiler.solc }}, optimizer {{ d.compiler.runs }} runs, {{ d.compiler.evmVersion }}</dd>
   <dt>deployed</dt><dd><a href="{{ d.explorerTx }}">block {{ d.block }}</a>, source commit {{ d.sourceCommit }}</dd>
   <dt>verified</dt><dd><a href="{{ d.verification.sourcifyRepo }}">Sourcify</a>, <a href="{{ d.verification.blockscout }}">Blockscout</a>. Etherscan has no Yul path.</dd>
-  <dt>record</dt><dd><a href="/contracts/deployments/FP127.md">FP127.md</a>, <a href="/data/fp127.json">fp127.json</a></dd>
+  <dt>record</dt><dd>{% if lib == "fp256" %}<a href="/contracts/deployments/FP256.md">FP256.md</a>, <a href="/data/fp256/fp256.json">fp256.json</a>{% else %}<a href="/contracts/deployments/FP127.md">FP127.md</a>, <a href="/data/fp127.json">fp127.json</a>{% endif %}</dd>
 </dl>
 {%- endcomponent %}
 
-{% component optable() -%}
-{%- set ops = load_data(path="static/data/ops.json") -%}
-{%- set prec = load_data(path="static/data/precision.json") -%}
-{%- set gas = load_data(path="static/data/gas.json") -%}
+{% component optable(lib: string = "fp127") -%}
+{%- set pre = lib == "fp256" and "static/data/fp256/" or "static/data/" -%}
+{%- set ops = load_data(path=pre ~ "ops.json") -%}
+{%- set prec = load_data(path=pre ~ "precision.json") -%}
+{%- set gas = load_data(path=pre ~ "gas.json") -%}
 <div class="scroll">
 <table class="optable">
 <thead><tr><th>op</th><th>what</th><th>domain</th><th>reverts</th><th class="num">bits<br>min / mean</th><th class="num">gas<br>object</th><th class="num">gas<br>inline</th></tr></thead>
@@ -42,7 +43,11 @@
 </tbody>
 </table>
 </div>
+{%- if lib == "fp256" %}
+<p class="note">Bits are relative correct bits on the decoded values against exact rationals and mpmath at 300 decimal places over the committed vectors; "exact" is bit-identical. Gas is the median over each op's input ladder: "object" includes the <code>staticcall</code> to the deployed FP256, "inline" is <code>FP256Lib</code>. Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>.</p>
+{%- else %}
 <p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. Gas is the median over each op's input ladder: "object" includes the <code>staticcall</code> to the deployed FP127, "inline" is <code>FP127Lib</code>. Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>. <code>lerp</code> and <code>clamp</code> are not on the gas ladder.</p>
+{%- endif %}
 {%- endcomponent %}
 
 {% component gastable(repo: string) -%}

@@ -75,6 +75,14 @@
   verifies cells through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
   at 0x4A32B0f99FC1e888bB9e5cb85399aDd7890B0957 (selector 0xf833b7d5) with
   the arguments from /data/edge-inputs.json.
+- FP256 (/float/): a 256-bit binary float, release one: sign bit 255, a
+  19-bit biased exponent (bias 262143) in bits 254..236, a 236-bit fraction
+  with an implicit one; about 71 digits at any magnitude; no NaN, infinity
+  or subnormals (invalid words revert OutOfRange); ops add, sub, mul, div,
+  sqrt, exp, ln, pow, neg, abs, sign, cmp, lt, eq, fromUint, fromFP127,
+  toFP127, fromFixed18, toFixed18. Ops table /data/fp256/ops.json, ABI
+  /data/fp256/abi.json, record /data/fp256/fp256.json (address pending
+  deployment).
 - /demo/ the ladder, /edges/ the cliffs, /why/ the mechanism, /library/ address, ABI and
   the op table, /compare/ gas and precision per op, /writeup/ the story.
 
