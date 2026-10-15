@@ -9,8 +9,9 @@ ends: [blockulator.com](https://blockulator.com).
   digits than any other library on the EVM, including the floats.
 - **FP256** is a 256-bit binary float: one `int256` holding a sign, a 19-bit
   exponent and a 236-bit fraction, about 71 digits at any magnitude from
-  10^−78,900 to 10^78,900, no NaN, no infinity, no walls. Release one has 19
-  ops on FP127's kernels.
+  10^−78,900 to 10^78,900, no NaN, no infinity, no walls. Nineteen ops, each
+  rounded once from kernels at 2^−254 (release two; the Sepolia deployment
+  below is release one until the next deploy).
 
 Both are one Yul source each that generates two forms, proven to agree bit
 for bit on the full `int256` domain: a **deployed object** at a CREATE2

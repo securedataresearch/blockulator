@@ -24,11 +24,12 @@ contract Precision256 is FP256Harness {
     /// Minimum relative correct bits per op. 256 means bit-exact.
     function _floorBits(string memory op) internal pure returns (uint256) {
         bytes32 h = keccak256(bytes(op));
-        // release one: exp and pow ride FP127's exp2 kernel (2^-145), ln its log2 kernel
-        // (about 2^-153 absolute on the mantissa's log)
-        if (h == keccak256("exp")) return 140;
-        if (h == keccak256("pow")) return 115;
-        if (h == keccak256("ln")) return 145;
+        // release two: the 2^-254 kernels round exp and ln correctly (one ULP at most
+        // against the oracle); pow loses log2 of y log2 x on top
+
+        if (h == keccak256("exp")) return 236;
+        if (h == keccak256("pow")) return 230;
+        if (h == keccak256("ln")) return 236;
         return 256;
     }
 

@@ -71,7 +71,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "e^x = 2^(x log2 e), the product at 2^-192 and 2^f from FP127's kernel: about 145 correct bits. Below 2^-118 the series 1 + x (1 + x/2) at full precision; below 2^-237 exactly one; zero below about -181,700.",
+      "notice": "e^x = 2^(x log2 e): the 512-bit product of the significand and log2 e in two words (2^-508), split into the integer part and a fraction at 2^-254, then the 2^f kernel and one rounding: correctly rounded at every committed vector. Below 2^-118 the series 1 + x (1 + x/2) at full precision; below 2^-237 exactly one; zero below about -181,700.",
       "domain": "x < 2^18",
       "reverts": "Overflow() when e^x does not fit (x above about 181,705); OutOfRange() for a word that is not a number"
     },
@@ -82,7 +82,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "ln(x) = (E - bias) ln 2 + ln(M / 2^236): the exponent exactly, the mantissa through FP127's log2 kernel at 2^-192, one rounding. The kernel's polynomial is good to about 2^-153 absolute, so ln carries about 150 correct bits in general and 190 where the exponent dominates (powers of two are exact to 2^-192). Within 2^-24 of one, d = x - 1 is exact and ln(1 + d) = d * series(d), so the relative precision holds all the way down.",
+      "notice": "ln(x) = (E - bias + log2(M / 2^236)) ln 2: the exponent exactly, the mantissa through the log2 kernel at 2^-254, the sum scaled to fill a word, one product with ln 2 and one rounding: correctly rounded at every committed vector. Within 2^-8 of one, d = x - 1 is exact and ln(1 + d) = d * series(d) at 2^-254, so the relative precision holds all the way down.",
       "domain": "x > 0",
       "reverts": "OutOfRange() for x <= 0 or a word that is not a number"
     },
@@ -94,7 +94,7 @@
         "x",
         "y"
       ],
-      "notice": "x^y = 2^(y log2 x), with log2 x as a number from the exponent and FP127's kernel, the product rounded once, then 2^t. 0^0 = 1. Shortcuts for y in {1, 2, 1/2, -1}. The float product means a huge y against an x near one is handled by the format.",
+      "notice": "x^y = 2^(y log2 x): log2 x as a scaled word from the kernel (or the near-one series), its exact 512-bit product with y's significand split into the integer part and a fraction at 2^-254, then the 2^f kernel and one rounding. The kernel's 2^-250 on log2 x bounds the result at about 250 - log2|t| bits for t = y log2 x. 0^0 = 1. Shortcuts for y in {1, 2, 1/2, -1}.",
       "domain": "x >= 0",
       "reverts": "OutOfRange() for x < 0; DivisionByZero() for 0^y with y < 0; Overflow() when the result does not fit"
     },

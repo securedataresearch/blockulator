@@ -35,11 +35,11 @@
     "worstInput": ""
   },
   "exp": {
-    "meanBits": 200,
-    "minBits": 146,
+    "meanBits": 256,
+    "minBits": 256,
     "n": 637,
     "reverts": 5,
-    "worstInput": "0xc000450000000000000000000000000000000000000000000000000000000000"
+    "worstInput": ""
   },
   "fromFP127": {
     "meanBits": 256,
@@ -63,11 +63,11 @@
     "worstInput": ""
   },
   "ln": {
-    "meanBits": 191,
-    "minBits": 149,
+    "meanBits": 256,
+    "minBits": 256,
     "n": 2104,
     "reverts": 96,
-    "worstInput": "0x3fffef42aea8f299eabfe4614042a75f9db89af6cbd84858bb4a7b65df935c84"
+    "worstInput": ""
   },
   "lt": {
     "meanBits": 256,
@@ -91,11 +91,11 @@
     "worstInput": ""
   },
   "pow": {
-    "meanBits": 181,
-    "minBits": 123,
+    "meanBits": 256,
+    "minBits": 256,
     "n": 234,
     "reverts": 166,
-    "worstInput": "0x3fffeffffde7210be9424e5929670196d8f4f93bc0a06e9ff0cbaf965b20b806,0xc001cdf8af224afa784110e48f573a99cdbee7be9cc6400f84125153c9c2064f"
+    "worstInput": ""
   },
   "sign": {
     "meanBits": 256,

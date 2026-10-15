@@ -19,7 +19,7 @@ contract Behaviour256 is FP256Harness {
         assertEq(obj.mul(TWO, TWO), obj.fromUint(4));
         assertEq(obj.sub(TWO, ONE), ONE);
         assertEq(obj.sub(ONE, ONE), 0, "x - x is +0");
-        assertGe(_bits(obj.ln(TWO), LN2), 188, "ln 2 to the kernel's 2^-192");
+        assertGe(_bits(obj.ln(TWO), LN2), 236, "ln 2 to the grid");
         assertEq(obj.ln(ONE), 0);
         assertEq(obj.exp(0), ONE);
         assertEq(obj.sqrt(obj.fromUint(4)), TWO);
@@ -92,13 +92,14 @@ contract Behaviour256 is FP256Harness {
         int256 tiny = _mk(false, -200, uint256(1) << 236);       // 2^-200
         assertEq(obj.exp(tiny), obj.add(ONE, tiny), "exp(2^-200) = 1 + 2^-200 on the grid");
         int256 x = obj.add(ONE, tiny);
-        assertLe(_ulps(obj.ln(x), tiny), 1, "ln(1 + 2^-200) = 2^-200 - 2^-401");
+        // ln(1 + d) = d - d^2/2 + d^3/3 - ...: at d = 2^-200 the third term is below the grid
+        assertEq(obj.ln(x), obj.sub(tiny, _mk(false, -401, uint256(1) << 236)), "ln(1 + 2^-200) = 2^-200 - 2^-401");
         int256 below = _mk(false, -240, uint256(1) << 236);
         assertEq(obj.exp(below), ONE, "exp below 2^-237 is exactly one");
         int256 d = _mk(false, -30, uint256(1) << 236);           // 2^-30, inside the band
         int256 l = obj.ln(obj.add(ONE, d));
         // ln(1 + d) = d - d^2/2 + ...: the second term is 2^-61, so the result is below d by about that
         assertEq(obj.lt(l, d), 1);
-        assertGe(_bits(obj.exp(l), obj.add(ONE, d)), 140, "round trip inside the band");
+        assertGe(_bits(obj.exp(l), obj.add(ONE, d)), 235, "round trip inside the band");
     }
 }
