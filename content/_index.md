@@ -27,7 +27,7 @@ text = "WAD spends 60 bits of the word on the fraction and the rest on overflow 
 [[extra.steps]]
 label = "the ladder"
 title = "Measured over N steps."
-text = "Thirteen scenarios, 87 inputs, nine libraries, N from 1 to 10,000, every cell against 200-digit arithmetic, twice: from the exact inputs and from the inputs as each format rounds them."
+text = "Thirteen scenarios, 87 inputs, ten libraries, N from 1 to 10,000, every cell against 200-digit arithmetic, twice: from the exact inputs and from the inputs as each format rounds them."
 
 [[extra.steps]]
 label = "two forms"
@@ -82,4 +82,4 @@ site = "/writeup/"
 color = "emerald"
 +++
 
-The common EVM math libraries store a value to about 18 decimal places. That is enough for one multiplication and not for a loop: a lending protocol accrues every block, and after N steps the rounding has been applied N times. The [ladder](/demo/) runs thirteen such loops through ABDKMath64x64, ABDKMathQuad, Solady, PRBMath, Balancer, Aave, Morpho, Maker and FP127 for 87 inputs, against exact arithmetic, and counts the digits that survive at each N. It also separates what the number format costs from what the arithmetic costs, and every cell can be re-run on Sepolia.
+The common EVM math libraries store a value to about 18 decimal places. That is enough for one multiplication and not for a loop: a lending protocol accrues every block, and after N steps the rounding has been applied N times. The [ladder](/demo/) runs thirteen such loops through ABDKMath64x64, ABDKMathQuad, Solady, PRBMath, Balancer, Aave, Morpho, Maker, FP127 and FP256 for 87 inputs, against exact arithmetic, and counts the digits that survive at each N. It also separates what the number format costs from what the arithmetic costs, and every cell can be re-run on Sepolia.

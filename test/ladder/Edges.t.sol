@@ -14,6 +14,7 @@ import {LadderBalancer} from "../../contracts/src/ladder/LadderBalancer.sol";
 import {LadderAave} from "../../contracts/src/ladder/LadderAave.sol";
 import {LadderMorpho} from "../../contracts/src/ladder/LadderMorpho.sol";
 import {LadderMaker} from "../../contracts/src/ladder/LadderMaker.sol";
+import {LadderFP256} from "../../contracts/src/ladder/LadderFP256.sol";
 
 /// @title Edges
 /// @notice Produces the edges dataset: every probe of scripts/ladder/edge-inputs.json
@@ -24,8 +25,8 @@ import {LadderMaker} from "../../contracts/src/ladder/LadderMaker.sol";
 ///         computes the truth and writes docs/benchmarks/edges.json.
 contract Edges is Test {
     string constant INPUTS = "scripts/ladder/edge-inputs.json";
-    string[10] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"];
-    string[10] SCALE = ["fp127", "fp127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray"];
+    string[11] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256"];
+    string[11] SCALE = ["fp127", "fp127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray", "fp256"];
 
     EdgeRunner runner;
     string json;
@@ -43,7 +44,8 @@ contract Edges is Test {
             address(new LadderBalancer()),
             address(new LadderAave()),
             address(new LadderMorpho()),
-            address(new LadderMaker())
+            address(new LadderMaker()),
+            address(new LadderFP256())
         ]);
         json = vm.readFile(INPUTS);
     }

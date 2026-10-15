@@ -14,6 +14,7 @@ import {LadderBalancer} from "../../contracts/src/ladder/LadderBalancer.sol";
 import {LadderAave} from "../../contracts/src/ladder/LadderAave.sol";
 import {LadderMorpho} from "../../contracts/src/ladder/LadderMorpho.sol";
 import {LadderMaker} from "../../contracts/src/ladder/LadderMaker.sol";
+import {LadderFP256} from "../../contracts/src/ladder/LadderFP256.sol";
 
 /// @title Ladder
 /// @notice Produces the terminal-precision dataset: every scenario, for every
@@ -29,7 +30,7 @@ import {LadderMaker} from "../../contracts/src/ladder/LadderMaker.sol";
 /// so the "fp127" form exercises the deployed bytecode exactly as Sepolia does.
 contract Ladder is Test {
     string constant INPUTS = "scripts/ladder/inputs.json";
-    string[10] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"];
+    string[11] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256"];
 
     LadderRunner runner;
     string json;
@@ -48,7 +49,8 @@ contract Ladder is Test {
             address(new LadderBalancer()),
             address(new LadderAave()),
             address(new LadderMorpho()),
-            address(new LadderMaker())
+            address(new LadderMaker()),
+            address(new LadderFP256())
         ]);
         json = vm.readFile(INPUTS);
         ladder = vm.parseJsonUintArray(json, ".ladder");
@@ -59,6 +61,7 @@ contract Ladder is Test {
         if (f == Form.FP127 || f == Form.FP127LIB) return "fp127";
         if (f == Form.ABDK) return "abdk";
         if (f == Form.QUAD) return "quad";
+        if (f == Form.FP256) return "fp256";
         if (f == Form.AAVE || f == Form.MAKER) return "ray";
         return "wad";
     }
@@ -69,12 +72,13 @@ contract Ladder is Test {
         for (uint256 i; i < s.length; i++) p[i] = vm.parseInt(s[i]);
     }
 
-    struct Inp { string id; string input; int256[] fp; int256[] abdk; int256[] wad; int256[] quad; int256[] ray; }
+    struct Inp { string id; string input; int256[] fp; int256[] abdk; int256[] wad; int256[] quad; int256[] ray; int256[] fp256; }
 
     function _of(Inp memory x, uint8 f) internal pure returns (int256[] memory) {
         if (f == Form.FP127 || f == Form.FP127LIB) return x.fp;
         if (f == Form.ABDK) return x.abdk;
         if (f == Form.QUAD) return x.quad;
+        if (f == Form.FP256) return x.fp256;
         if (f == Form.AAVE || f == Form.MAKER) return x.ray;
         return x.wad;
     }
@@ -115,7 +119,8 @@ contract Ladder is Test {
                 abdk: _params(c, "abdk"),
                 wad: _params(c, "wad"),
                 quad: _params(c, "quad"),
-                ray: _params(c, "ray")
+                ray: _params(c, "ray"),
+                fp256: _params(c, "fp256")
             });
             _input(x, s);
         }

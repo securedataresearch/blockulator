@@ -9,6 +9,7 @@ import {SD59x18, sd} from "../../lib/prb-math/src/SD59x18.sol";
 import * as M from "../../lib/prb-math/src/sd59x18/Math.sol";
 import {ABDKMathQuad as Q} from "../../lib/abdk-libraries-solidity/ABDKMathQuad.sol";
 import {LogExpMath} from "../../contracts/src/ladder/vendor/balancer/LogExpMath.sol";
+import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
 
 /// @title PiCompare
 /// @notice Ramanujan's 1914 series for 1/pi, the same recipe through each
@@ -50,6 +51,19 @@ contract PiCompare is Test {
     function balMul(int256 a, int256 b) internal pure returns (int256) { return a * b / 1e18; }
     function balDiv(int256 a, int256 b) internal pure returns (int256) { return a * 1e18 / b; }
 
+    /// FP256 has no grid either: the series through its own ops.
+    function _seriesFP256(uint256 terms) internal pure returns (int256) {
+        int256 c = FP256Lib.ONE;
+        int256 s = 0;
+        for (uint256 k; k < terms; k++) {
+            s = FP256Lib.add(s, FP256Lib.mul(c, FP256Lib.fromUint(1103 + 26390 * k)));
+            uint256 k4 = 4 * k;
+            c = FP256Lib.div(FP256Lib.mul(c, FP256Lib.fromUint((k4 + 1) * (k4 + 2) * (k4 + 3) * (k4 + 4))), FP256Lib.fromUint((k + 1) ** 4 * 24591257856));
+        }
+        int256 invpi = FP256Lib.div(FP256Lib.mul(FP256Lib.mul(FP256Lib.fromUint(2), FP256Lib.sqrt(FP256Lib.fromUint(2))), s), FP256Lib.fromUint(9801));
+        return FP256Lib.div(FP256Lib.ONE, invpi);
+    }
+
     /// Quad has no grid: the series is run on bytes16 directly, the integer
     /// term ratios through fromUInt, and the bit pattern is logged.
     function _seriesQuad(uint256 terms) internal pure returns (int256) {
@@ -76,6 +90,7 @@ contract PiCompare is Test {
             g0 = gasleft(); r = _series(t, int256(1) << 64, abdkSqrt, abdkMul, abdkDiv); _log("abdk", t, r, "2**64", g0 - gasleft());
             g0 = gasleft(); r = _series(t, 1e18, balSqrt, balMul, balDiv); _log("balancer", t, r, "10**18", g0 - gasleft());
             g0 = gasleft(); r = _seriesQuad(t); _log("quad", t, r, "binary128", g0 - gasleft());
+            g0 = gasleft(); r = _seriesFP256(t); _log("fp256", t, r, "fp256", g0 - gasleft());
         }
         // the library op itself, for reference
         for (uint256 t = 1; t <= 6; t++) {

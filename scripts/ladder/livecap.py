@@ -24,9 +24,9 @@ LADDER = ROOT / "docs" / "benchmarks" / "ladder.json"
 RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"
 INPUTS = ROOT / "scripts" / "ladder" / "inputs.json"
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
-FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"]
+FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256"]
 SCALE_OF_FORM = {"fp127": "fp127", "fp127lib": "fp127", "abdk": "abdk", "solady": "wad", "prb": "wad",
-                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray"}
+                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "fp256": "fp256"}
 SIG = "run(uint8,uint8,uint32,int256[])(bool,int256,bytes4,uint256,uint256)"
 SELECTOR = "0x281dbbfe"
 

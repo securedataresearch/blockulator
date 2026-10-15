@@ -6,6 +6,10 @@ pragma solidity ^0.8.24;
 //         in the harness and on Sepolia. Version 4; the adapters that call it
 //         are deployed after it.
 address constant FP127_ADDRESS = 0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1;
+// @notice The FP256 Yul object's CREATE2 address (contracts/deployments/FP256.md);
+//         the FP256 adapter is inline (FP256Lib) and does not call it, so the
+//         ladder does not depend on its deployment.
+address constant FP256_ADDRESS = 0x628b8dfC82954983a9E8E22056ffc767B4a26077;
 
 /// @notice Scenario ids. Mirrors "index" in scripts/ladder/scenarios.json.
 library Scenario {
@@ -27,7 +31,7 @@ library Scenario {
 
 /// @notice Library (form) ids, in the order of LadderRunner's constructor.
 ///         Ids 0 to 4 are the v4 runner's and keep their numbers; 5 to 9 were
-///         added with the v5 runner.
+///         added with the v5 runner, 10 (FP256, the float) with v6.
 library Form {
     uint8 constant FP127 = 0;
     uint8 constant FP127LIB = 1;
@@ -39,7 +43,8 @@ library Form {
     uint8 constant AAVE = 7;
     uint8 constant MORPHO = 8;
     uint8 constant MAKER = 9;
-    uint8 constant COUNT = 10;
+    uint8 constant FP256 = 10;
+    uint8 constant COUNT = 11;
 }
 
 /// @notice One-shot op ids for the edges dataset (scripts/ladder/edges.json).

@@ -4,8 +4,8 @@
 {% block hero %}{% set hero_slim = true %}{% set hero_title = page.title %}{% set hero_sub = page.description %}{% include "hero.html" %}{% endblock hero %}
 {% block content %}
 {%- set d = load_data(path="static/data/ladder.json") -%}
-{%- set forms = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"] -%}
-{%- set short = {"fp127": "FP127", "fp127lib": "FP127Lib", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
+{%- set forms = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256"] -%}
+{%- set short = {"fp127": "FP127", "fp127lib": "FP127Lib", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "fp256": "FP256"} -%}
 <article class="prose doc wide">
 {{ page.content | safe }}
 
@@ -43,7 +43,7 @@
 <figure class="figure chart" data-key="digitsFormat" hidden role="img" aria-label="Median correct digits against N per library, with the range over all inputs as a band, against the format-rounded truth.">
 {{ <ladderband summary={sc.summary} key="digitsFormat" ladder={d.ladder} log10={d.ladderLog10} cap={d.chartCap} /> }}
 </figure>
-<figcaption class="note">Line: median correct digits over the inputs; band: the range; capped at {{ d.chartCap }} on the axis. FP127Lib coincides with FP127 and is not drawn. A missing point means every input reverted at that N. FP127 emerald, Solady gold, ABDK sapphire, PRBMath red, Quad violet, Balancer teal, Aave orange, Morpho plum, Maker slate, labelled at the line end; Aave, Morpho and Maker appear only on the accrual scenarios their models describe. Hover a point for the numbers.</figcaption>
+<figcaption class="note">Line: median correct digits over the inputs; band: the range; capped at {{ d.chartCap }} on the axis. FP127Lib coincides with FP127 and is not drawn. A missing point means every input reverted at that N. FP127 emerald, Solady gold, ABDK sapphire, PRBMath red, Quad violet, Balancer teal, Aave orange, Morpho plum, Maker slate, FP256 black, labelled at the line end; Aave, Morpho and Maker appear only on the accrual scenarios their models describe. Hover a point for the numbers.</figcaption>
 </div>
 
 <div class="scroll">
@@ -90,7 +90,7 @@
 <td class="val">
 {%- if c.reverted %}<span class="rev">reverts</span> <span class="meta">{{ c.reasonName }} {{ c.reason }}</span>
 {%- else %}{{ <cell value={c.value} digits={c.agree} /> }}<br><span class="meta">{% if c.exact %}exact{% else %}{{ c.digits }} digits{% endif %} · {% if c.digitsFormat >= d.digitsCap %}exact{% else %}{{ c.digitsFormat }}{% endif %} vs format · {{ c.errUlps }} ULP · {{ c.gasPerStep }} gas/step</span>{% endif %}
-<br><button class="verify" data-scenario="{{ si }}" data-input="{{ ref.name }}" data-form="{{ fi }}" data-n="{{ n }}" data-raw="{{ c.raw | default(value='') }}" data-reason="{{ c.reason | default(value='') }}"{% if sc.liveMaxN is undefined or sc.liveMaxN[f] is undefined %} disabled title="The v5 runner is not deployed yet"{% elif n > sc.liveMaxN[f] %} disabled title="Above the public RPC's gas limit; run it from your own node"{% endif %}>verify on Sepolia</button>
+<br><button class="verify" data-scenario="{{ si }}" data-input="{{ ref.name }}" data-form="{{ fi }}" data-n="{{ n }}" data-raw="{{ c.raw | default(value='') }}" data-reason="{{ c.reason | default(value='') }}"{% if sc.liveMaxN is undefined or sc.liveMaxN[f] is undefined %} disabled title="The v6 runner is not deployed yet"{% elif n > sc.liveMaxN[f] %} disabled title="Above the public RPC's gas limit; run it from your own node"{% endif %}>verify on Sepolia</button>
 </td>
 {%- endfor %}
 </tr>

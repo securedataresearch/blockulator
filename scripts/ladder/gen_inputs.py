@@ -32,7 +32,30 @@ SCALES = {
     # binary128 is not a grid: the value is encoded to nearest as the bit
     # pattern of a bytes16 (scale None marks it; see quad_encode)
     "quad": ("binary128", None, (0, 2 ** 128 - 1)),
+    # FP256, the 256-bit float: the word from scripts/fp256/oracle.py
+    "fp256": ("fp256", "fp256", (-(2 ** 255), 2 ** 255 - 1)),
 }
+
+import sys as _sys
+_sys.path.insert(0, str(ROOT / "scripts" / "fp256"))
+import oracle as _fp256  # noqa: E402
+from fractions import Fraction as _Fraction  # noqa: E402
+
+
+def fp256_encode(v) -> int:
+    """The FP256 word nearest to an mpf value (exact rational of its binary form)."""
+    if v == 0:
+        return 0
+    m, e = mp.frexp(abs(v))
+    T = int(mp.floor(m * mpf(2) ** 238))
+    w = _fp256.encode_tm(1 if v < 0 else 0, int(e) - 1, T)
+    # as a signed int256 (the harness parses the column with vm.parseInt)
+    return w - 2 ** 256 if w >= 2 ** 255 else w
+
+
+def fp256_decode(w: int):
+    q = _fp256.decode(w)
+    return mpf(q.numerator) / q.denominator
 
 
 def quad_encode(v) -> int:
@@ -71,13 +94,21 @@ def quad_decode(u: int):
 
 
 def to_scaled(x, scale) -> int:
-    """x into a representation: floor(x * scale) on a grid, nearest for binary128."""
-    return quad_encode(x) if scale is None else int(mp.floor(x * scale))
+    """x into a representation: floor(x * scale) on a grid, nearest for the floats."""
+    if scale is None:
+        return quad_encode(x)
+    if scale == "fp256":
+        return fp256_encode(x)
+    return int(mp.floor(x * scale))
 
 
 def from_scaled(raw: int, scale):
     """The exact value a representation holds."""
-    return quad_decode(raw) if scale is None else mpf(raw) / scale
+    if scale is None:
+        return quad_decode(raw)
+    if scale == "fp256":
+        return fp256_decode(raw)
+    return mpf(raw) / scale
 
 
 def value(expr: str):
@@ -119,7 +150,7 @@ def build(spec: dict) -> dict:
             for name, (_, scale, (lo, hi)) in SCALES.items():
                 ints = [to_scaled(p[k], scale) for k in scn["order"]]
                 cell[name] = [str(i) for i in ints]
-                unrep[name] = any(i < lo or i > hi for i in ints)
+                unrep[name] = any(i < lo or i > hi for i in ints) if scale != "fp256" else False
             cell["unrepresentable"] = unrep
             cells.append(cell)
     return {

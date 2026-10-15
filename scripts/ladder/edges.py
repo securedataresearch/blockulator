@@ -29,7 +29,7 @@ from gen_inputs import SCALES, from_scaled  # noqa: E402
 from gen_edges import ev, probe_id  # noqa: E402
 from ladder import metrics, REASONS, PARAM_OUT_OF_RANGE, SCALE_OF_FORM, DIGITS_CAP, SIG  # noqa: E402
 
-mp.dps = 200
+mp.dps = 300
 SPEC = ROOT / "scripts" / "ladder" / "edges.json"
 INPUTS = ROOT / "scripts" / "ladder" / "edge-inputs.json"
 OUT_JSON = ROOT / "docs" / "benchmarks" / "edges.json"
@@ -38,10 +38,10 @@ UNSUPPORTED = "0x7bb9ae15"
 
 METHODOLOGY = {
     "truth": "Every probe is one op evaluated once. The truth is mpmath at 200 decimal digits from the exact arguments; truthFormat is the same op from the arguments as the representation holds them (floored on a grid, nearest for binary128), so digitsFormat measures the op alone and digits what a caller sees.",
-    "digits": "digits = floor(-log10 |v - t| / |t|), capped at 60 (reported as exact); errUlps is the signed error in units of the representation's last place (none for binary128).",
+    "digits": "digits = floor(-log10 |v - t| / |t|), capped at 100 (reported as exact); errUlps is the signed error in units of the representation's last place (none for the floats).",
     "zero": "A cell is marked zero when the library returned 0 and the truth is not 0: the result fell below the representation's floor. On an 18-decimal grid that is anything below 1e-18; on FP127's, below 2^-128.",
     "reverted": "A revert is recorded with its selector and name. Unsupported means the library has no way to compute the op (the accrual libraries have no general ops; only FP127 has the secondary Lambert branch; the libraries without erf, erfc or normCdf run the same series and continued fraction through their own ops instead, so those cells are not Unsupported).",
-    "range": "RANGE means the argument does not fit the representation at all (above 2^127 for FP127, 2^63 for 64.64, 2^128 as a bit pattern for binary128) and nothing was called.",
+    "range": "RANGE means the argument does not fit the representation at all (above 2^127 for FP127, 2^63 for 64.64, 2^128 as a bit pattern for binary128; FP256 holds every probe) and nothing was called.",
     "gas": "gas is measured inside the adapter around the op, after the adapter and the FP127 object are warm. The FP127 (deployed) form includes the staticcall; the others are internal calls.",
     "live": "EdgeRunner.run(op, form, args) on Sepolia evaluates any cell with one eth_call and returns (ok, raw, reason, gas); the edges page's verify button sends the probe's encoded arguments and compares the raw word bit for bit.",
     "reproduce": "make edges regenerates edges.json and edges.md from test/ladder/Edges.t.sol and this script; make edges-check fails CI when the committed dataset differs.",
@@ -94,7 +94,7 @@ def parse_lines(stream) -> dict:
 def build(cells: dict) -> dict:
     spec = json.loads(SPEC.read_text())
     inputs = {c["id"]: c for c in json.loads(INPUTS.read_text())["cells"]}
-    forms = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"]
+    forms = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256"]
     ops_out = []
     for op in spec["ops"]:
         probes_out = []

@@ -82,10 +82,10 @@ gen-edges-check:
 	@$(PY) scripts/ladder/gen_edges.py --check
 
 edges: build
-	@forge test --match-contract Edges -vv | $(PY) scripts/ladder/edges.py
+	@forge test --match-contract "^Edges$$" -vv | $(PY) scripts/ladder/edges.py
 
 edges-check: build gen-edges-check
-	@forge test --match-contract Edges -vv | $(PY) scripts/ladder/edges.py --check
+	@forge test --match-contract "^Edges$$" -vv | $(PY) scripts/ladder/edges.py --check
 
 test: gen-check vectors-check
 	@forge test --match-path "test/fp127/*"
@@ -96,10 +96,10 @@ size-fp256: build
 	@$(PY) python -c "import json;b=json.load(open('out/FP256.yul/FP256.json'))['deployedBytecode']['object'];print('FP256 runtime:', (len(b)-2)//2, 'bytes of 24576')"
 
 ladder: build
-	@forge test --match-contract Ladder -vv | $(PY) scripts/ladder/ladder.py
+	@forge test --match-contract "^Ladder$$" -vv | $(PY) scripts/ladder/ladder.py
 
 ladder-check: build ladder-selftest
-	@forge test --match-contract Ladder -vv | $(PY) scripts/ladder/ladder.py --check
+	@forge test --match-contract "^Ladder$$" -vv | $(PY) scripts/ladder/ladder.py --check
 
 precision-report:
 	@$(PY) scripts/fp127/precision_report.py
@@ -197,7 +197,7 @@ deploy-ladder-sepolia: build
 	@$(PY) scripts/ladder/deploy.py record $(SEPOLIA_RPC)
 
 verify-ladder-sepolia: build
-	@set -e; for c in LadderFP127 LadderFP127Lib LadderABDK LadderSolady LadderPRB LadderQuad LadderBalancer LadderAave LadderMorpho LadderMaker; do \
+	@set -e; for c in LadderFP127 LadderFP127Lib LadderABDK LadderSolady LadderPRB LadderQuad LadderBalancer LadderAave LadderMorpho LadderMaker LadderFP256; do \
 		A=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['$$c']['address'])"); \
 		echo "== $$c $$A"; \
 		forge verify-contract --chain sepolia --verifier sourcify --watch $$A contracts/src/ladder/$$c.sol:$$c || true; \
@@ -205,7 +205,7 @@ verify-ladder-sepolia: build
 	done; \
 	A=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderRunner']['address'])"); \
 	ARGS=$$($(PY) python -c "import json;d=json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderRunner']['constructorArgs'];print('[' + ','.join(d) + ']')"); \
-	ENC=$$(cast abi-encode "f(address[10])" $$ARGS); \
+	ENC=$$(cast abi-encode "f(address[11])" $$ARGS); \
 	echo "== LadderRunner $$A"; \
 	forge verify-contract --chain sepolia --verifier sourcify --watch --constructor-args $$ENC $$A contracts/src/ladder/LadderRunner.sol:LadderRunner || true; \
 	test -z "$$ETHERSCAN_API_KEY" || forge verify-contract --chain sepolia --verifier etherscan --watch --constructor-args $$ENC $$A contracts/src/ladder/LadderRunner.sol:LadderRunner || true; \

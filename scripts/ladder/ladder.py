@@ -35,7 +35,7 @@ from pathlib import Path
 
 from mpmath import mp, mpf, log, exp, sqrt, ncdf, nstr, floor as mfloor_
 
-mp.dps = 200
+mp.dps = 300
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "fp127"))
 sys.path.insert(0, str(ROOT / "scripts" / "ladder"))
@@ -45,11 +45,11 @@ from gen_inputs import resolve, to_scaled, from_scaled, SCALES as INPUT_SCALES  
 SPEC = ROOT / "scripts" / "ladder" / "scenarios.json"
 OUT_JSON = ROOT / "docs" / "benchmarks" / "ladder.json"
 OUT_MD = ROOT / "docs" / "benchmarks" / "ladder.md"
-DIGITS_CAP = 60
-CHART_CAP = 40   # summaries cap digits here so an exact WAD cell does not distort max
+DIGITS_CAP = 100
+CHART_CAP = 80   # summaries cap digits here so an exact WAD cell does not distort max
 SIG = 42         # significant digits kept for value/truth strings
 SCALE_OF_FORM = {"fp127": "fp127", "fp127lib": "fp127", "abdk": "abdk", "solady": "wad", "prb": "wad",
-                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray"}
+                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "fp256": "fp256"}
 SCALE_INT = {k: v[1] for k, v in INPUT_SCALES.items()}
 SCALE_NAME = {k: v[0] for k, v in INPUT_SCALES.items()}
 REASONS = {
@@ -68,9 +68,9 @@ REASONS = {
 PARAM_OUT_OF_RANGE = "0x7964b44f"
 
 METHODOLOGY = {
-    "truth": "For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 200 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual, the option walk and the decay); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.",
-    "rounding": "Each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units, or the nearest binary128 value for ABDKMathQuad; scripts/ladder/inputs.json). truthFormat is the exact loop started from those floored parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic.",
-    "digits": "digits = floor(-log10 |v - t| / |t|), the number of correct leading significant digits by relative error, capped at 60, which is reported as exact. It is not a string comparison: a value can be correct to 36 digits while its 37th printed digit happens to agree with the truth, or while a carry makes the printed prefix differ earlier.",
+    "truth": "For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 300 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual, the option walk and the decay); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.",
+    "rounding": "Each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units, or the nearest float for ABDKMathQuad and FP256; scripts/ladder/inputs.json). truthFormat is the exact loop started from those floored parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic.",
+    "digits": "digits = floor(-log10 |v - t| / |t|), the number of correct leading significant digits by relative error, capped at 100, which is reported as exact. It is not a string comparison: a value can be correct to 36 digits while its 37th printed digit happens to agree with the truth, or while a carry makes the printed prefix differ earlier.",
     "agree": "agree is the count of leading significant digits of the printed value (42 significant digits) that are literally equal to the printed truth. The demo page colours the rest of the value with it. It is a reading aid, not a measurement: a carry across 0.999… / 1.000… gives 0.",
     "gas": "gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the FP127 object, so the call into the adapter and the ABI decoding are excluded. The FP127 (deployed) form includes one staticcall per op; FP127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe and report Unsupported elsewhere, which the tables show as a revert. gasPerStep = gasTotal / N. Reverted cells carry no gas.",
     "live": "LadderRunner.run(scenario, form, n, p) on Sepolia executes any cell with one eth_call and returns (ok, raw, reason, gasPerStep, gasTotal). The demo's verify button sends the cell's floored parameters p and compares the returned raw word with the committed one bit for bit (or the revert selector for a reverted cell). liveMaxN is the largest N per form the public RPC completed within its gas limit, measured by scripts/ladder/livecap.py.",
@@ -204,7 +204,7 @@ def metrics(raw: int, scale, t, tf) -> dict:
         "digitsFormat": digits_of(v, tf),
         "exact": d >= DIGITS_CAP,
         "agree": agree_count(value, truth_s),
-        "errUlps": signed((v - t) * scale) if scale else None,
+        "errUlps": signed((v - t) * scale) if scale and scale != "fp256" else None,
         "relErr": signed((v - t) / t) if t != 0 else None,
     }
 
