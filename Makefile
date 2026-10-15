@@ -1,4 +1,4 @@
-.PHONY: gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
@@ -42,12 +42,20 @@ gen:
 
 gen-check:
 	@$(PY) scripts/fp127/gen.py --check
+	@test ! -f contracts/src/fp256/FP256.yul.src || $(PY) scripts/fp127/gen.py --lib fp256 --check
+
+gen-fp256:
+	@$(PY) scripts/fp127/gen.py --lib fp256
 
 vectors:
 	@$(PY) scripts/fp127/oracle.py vectors
 
 vectors-check:
 	@$(PY) scripts/fp127/oracle.py check
+	@test ! -f scripts/fp256/vector_spec.json || $(PY) scripts/fp256/oracle.py check
+
+vectors-fp256:
+	@$(PY) scripts/fp256/oracle.py vectors
 
 build: gen-check gen-inputs-check
 	@forge build
@@ -75,7 +83,11 @@ edges-check: build gen-edges-check
 
 test: gen-check vectors-check
 	@forge test --match-path "test/fp127/*"
+	@forge test --match-path "test/fp256/*"
 	@forge test --match-path "test/ladder/*" -q
+
+size-fp256: build
+	@$(PY) python -c "import json;b=json.load(open('out/FP256.yul/FP256.json'))['deployedBytecode']['object'];print('FP256 runtime:', (len(b)-2)//2, 'bytes of 24576')"
 
 ladder: build
 	@forge test --match-contract Ladder -vv | $(PY) scripts/ladder/ladder.py
@@ -85,6 +97,9 @@ ladder-check: build ladder-selftest
 
 precision-report:
 	@$(PY) scripts/fp127/precision_report.py
+
+precision-report-fp256:
+	@$(PY) scripts/fp127/precision_report.py --lib fp256
 
 size: build
 	@$(PY) python -c "import json;d=json.load(open('out/FP127.yul/FP127.json'));b=d['deployedBytecode']['object'];print('FP127 runtime:', (len(b)-2)//2, 'bytes of 24576')"

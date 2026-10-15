@@ -1,0 +1,135 @@
+{
+  "abs": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1346,
+    "reverts": 3,
+    "worstInput": ""
+  },
+  "add": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 497,
+    "reverts": 3,
+    "worstInput": ""
+  },
+  "cmp": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 295,
+    "reverts": 5,
+    "worstInput": ""
+  },
+  "div": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 496,
+    "reverts": 4,
+    "worstInput": ""
+  },
+  "eq": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 200,
+    "reverts": 0,
+    "worstInput": ""
+  },
+  "exp": {
+    "meanBits": 200,
+    "minBits": 146,
+    "n": 637,
+    "reverts": 5,
+    "worstInput": "0xc000450000000000000000000000000000000000000000000000000000000000"
+  },
+  "fromFP127": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 11,
+    "reverts": 0,
+    "worstInput": ""
+  },
+  "fromFixed18": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 13,
+    "reverts": 0,
+    "worstInput": ""
+  },
+  "fromUint": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 10,
+    "reverts": 0,
+    "worstInput": ""
+  },
+  "ln": {
+    "meanBits": 191,
+    "minBits": 149,
+    "n": 2104,
+    "reverts": 96,
+    "worstInput": "0x3fffef42aea8f299eabfe4614042a75f9db89af6cbd84858bb4a7b65df935c84"
+  },
+  "lt": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 297,
+    "reverts": 3,
+    "worstInput": ""
+  },
+  "mul": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 495,
+    "reverts": 5,
+    "worstInput": ""
+  },
+  "neg": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1346,
+    "reverts": 3,
+    "worstInput": ""
+  },
+  "pow": {
+    "meanBits": 181,
+    "minBits": 123,
+    "n": 234,
+    "reverts": 166,
+    "worstInput": "0x3fffeffffde7210be9424e5929670196d8f4f93bc0a06e9ff0cbaf965b20b806,0xc001cdf8af224afa784110e48f573a99cdbee7be9cc6400f84125153c9c2064f"
+  },
+  "sign": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1346,
+    "reverts": 3,
+    "worstInput": ""
+  },
+  "sqrt": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 673,
+    "reverts": 676,
+    "worstInput": ""
+  },
+  "sub": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 499,
+    "reverts": 1,
+    "worstInput": ""
+  },
+  "toFP127": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 969,
+    "reverts": 380,
+    "worstInput": ""
+  },
+  "toFixed18": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1107,
+    "reverts": 242,
+    "worstInput": ""
+  }
+}

@@ -27,6 +27,8 @@ fs_permissions = [
   { access = "read", path = "contracts/deployments" },
   { access = "read", path = "out" },
   { access = "read", path = "test/fp127/vectors" },
+  { access = "read", path = "test/fp256/vectors" },
+  { access = "read-write", path = "docs/fp256" },
   { access = "read-write", path = "docs/fp127" },
   { access = "read", path = "scripts" },
   { access = "read-write", path = "docs/benchmarks" }

@@ -44,6 +44,13 @@ jobs:
           uv run scripts/fp127/precision_report.py
           git diff --exit-code docs/fp127/precision.json docs/fp127/precision.md
 
+      - name: FP256 tests and precision report
+        run: |
+          FOUNDRY_FUZZ_RUNS=2000 forge test --match-path "test/fp256/*" -vv | grep -E "PREC|Suite result|tests passed"
+          uv run scripts/fp127/precision_report.py --lib fp256
+          git diff --exit-code docs/fp256/precision.json docs/fp256/precision.md
+          make size-fp256
+
       - name: Gas ladder
         run: make bench && cat docs/benchmarks/gas.md
 

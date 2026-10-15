@@ -1,0 +1,667 @@
+// FP256: 256-bit binary floating point for the EVM.
+//
+// This file is the single source of truth. scripts/fp127/gen.py --lib fp256
+// reads it and emits FP256.yul (the deployable object), FP256Lib.sol (the
+// inline library), IFP256.sol, abi.json and ops.json. The rules of
+// FP127.yul.src apply unchanged: top-level functions only, no calldata or
+// storage builtins, scratch memory only at 0x00 and 0x20, no identifier
+// starting with an underscore, no recursion, every revert through rev(sel).
+//
+// Layout: one int256 bit pattern.
+//   bit 255        sign s
+//   bits 254..236  biased exponent E, 19 bits, bias 0x3ffff = 262143, valid 1..0x7ffff
+//   bits 235..0    fraction F; the significand is M = 2^236 | F, 237 bits
+//   value = (-1)^s * M * 2^(E - bias - 236)
+// Zero is the all-zero word and the only word with E = 0; any other word
+// with E = 0 is not a number and reverts OutOfRange. There is no NaN, no
+// infinity, no subnormal and no negative zero: every valid word is a finite
+// number with a unique representation, so equality is bit equality and the
+// positive words order as unsigned integers. Range: 2^-262142 to just under
+// 2^262145, about 10^(+-78900); 237 significant bits, about 71 digits.
+//
+// Rounding: half up on the magnitude (ties away from zero), once per op.
+// Every rounding site is normround: D = floor(exact) on a grid at least as
+// fine as half an ULP of the result, then the first discarded bit is added.
+// Overflow (E above 0x7ffff after rounding) reverts; underflow (E below 1)
+// rounds to zero.
+//
+// Release one: add, sub, mul, div, sqrt and the conversions are exact to
+// the 237-bit grid. exp, ln and pow reuse FP127's 2^-192 kernels and carry
+// about 145 (exp) and 150 (ln) correct bits, with series bands near zero and
+// near one so small arguments keep their relative precision. A kernel at
+// 2^-250 with 512-bit products is release two.
+
+/// @error Overflow() 0x35278d12
+/// @error DivisionByZero() 0x23d359a3
+/// @error OutOfRange() 0x7db3aba7
+
+// ---------------------------------------------------------------------------
+// Helpers shared with FP127.yul.src (verbatim)
+// ---------------------------------------------------------------------------
+
+/// Revert with a 4-byte custom error selector. Uses scratch space only.
+function rev(sel) {
+    mstore(0x00, shl(224, sel))
+    revert(0x00, 0x04)
+}
+
+/// |x| as an unsigned word. absw(-2^255) = 2^255, which is a valid uint.
+function absw(x) -> r {
+    let m := sar(255, x)
+    r := sub(xor(x, m), m)
+}
+
+/// Index of the most significant set bit of x > 0, 0..255. Verbatim port of
+/// the Huff binary search.
+function msb(x) -> r {
+    if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+    if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+    if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+    if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+    if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+    if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+    if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+    if iszero(lt(x, 0x2)) { r := add(r, 1) }
+}
+
+/// Unchecked floor(a * b / 2^192) on signed words: the kernel multiply of the
+/// transcendentals, which keep 64 guard bits below the format's 2^-128. The
+/// 512-bit product is formed as in mulraw and bits 192..447 are kept.
+function mulg(a, b) -> r {
+    let p0 := mul(a, b)
+    let mm := mulmod(a, b, not(0))
+    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    p1 := sub(p1, mul(slt(a, 0), b))
+    p1 := sub(p1, mul(slt(b, 0), a))
+    r := or(shl(64, p1), shr(192, p0))
+}
+
+/// Unsigned floor(a * 2^128 / b) for b != 0, requires (a >> 128) < b.
+/// Remco Bloemen's mulDiv specialised to a constant multiplier of 2^128.
+/// Verbatim port of FP127_DIV_UNSIGNED in arithmetic.huff.
+function divu(a, b) -> q {
+    let prod0 := shl(128, a)
+    let prod1 := shr(128, a)
+    let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+    prod1 := sub(prod1, gt(remainder, prod0))
+    prod0 := sub(prod0, remainder)
+    let twos := and(sub(0, b), b)
+    b := div(b, twos)
+    prod0 := div(prod0, twos)
+    prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+    let iv := xor(mul(3, b), 2)
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    q := mul(prod0, iv)
+}
+
+/// 2^f for f in [0, 1) given at 2^-192, result at 2^-192 in [1, 2). Degree-24
+/// Chebyshev-fitted polynomial (max error 2^-145, guard_model.py) evaluated
+/// by Horner's rule; every step floors at 2^-192 via mulg.
+function exp2frac(f) -> r {
+    r := 0x1b5a5019cfe1d4f099ea512721
+    r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
+    r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
+    r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
+    r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
+    r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+    r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+    r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+    r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+    r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+    r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
+    r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+    r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+    r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+    r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+    r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+    r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+    r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+    r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+    r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+    r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+    r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+    r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+    r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+    r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+}
+
+/// f * P(f) = log2(1 + f) for f in [0, 2^(1/128) - 1) at 2^-192. P is a
+/// degree-14 Chebyshev-fitted polynomial for log2(1 + f) / f (max error
+/// 2^-145, guard_model.py), Horner with floor at every step via mulg.
+function log2poly(f) -> r {
+    r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
+    r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+    r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+    r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+    r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+    r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+    r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+    r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+    r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+    r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+    r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+    r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+    r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+    r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+    r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+    r := mulg(r, f)
+}
+
+/// log2(mm) for a mantissa mm in [1, 2) at 2^-192, result at 2^-192,
+/// unrounded: seven range-reduction stages by 2^(1/2^k) and the polynomial
+/// on the residual. The body of FP127's log2g after its normalisation.
+function log2m(mm) -> r {
+    let acc := 0
+    if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
+        mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+        acc := add(acc, 0x800000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
+        mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+        acc := add(acc, 0x400000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
+        mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+        acc := add(acc, 0x200000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
+        mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+        acc := add(acc, 0x100000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
+        mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+        acc := add(acc, 0x80000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
+        mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+        acc := add(acc, 0x40000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
+        mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+        acc := add(acc, 0x20000000000000000000000000000000000000000000000)
+    }
+    r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
+}
+
+// ---------------------------------------------------------------------------
+// The word
+// ---------------------------------------------------------------------------
+
+/// Sign, biased exponent and the 237-bit significand with its hidden bit.
+/// Zero gives (0, 0, 0); any other word with exponent 0 reverts OutOfRange.
+function unpack(x) -> s, e, m {
+    s := shr(255, x)
+    e := and(shr(236, x), 0x7ffff)
+    m := and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+    if iszero(e) {
+        if or(s, m) { rev(0x7db3aba7) }
+        leave
+    }
+    m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
+}
+
+/// The word for (s, e, m), e a signed word. Reverts Overflow above the
+/// largest exponent; returns zero below the smallest (the sign is dropped).
+function pack(s, e, m) -> r {
+    if sgt(e, 0x7ffff) { rev(0x35278d12) }
+    if slt(e, 1) { r := 0 leave }
+    r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
+}
+
+/// Normalise and round: value = D * 2^(e - bias - 254) for D > 0, so bit
+/// 254 of D is the hidden-bit slot for exponent e. D must be floor(exact)
+/// on a grid at least as fine as half an ULP; then adding the first
+/// discarded bit is exactly half up. A carry into 2^237 bumps the exponent.
+function normround(s, e, D) -> r {
+    let n := msb(D)
+    e := add(e, sub(n, 254))
+    D := shl(sub(255, n), D)
+    let m := add(shr(19, D), and(shr(18, D), 1))
+    if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
+        m := 0x100000000000000000000000000000000000000000000000000000000000
+        e := add(e, 1)
+    }
+    r := pack(s, e, m)
+}
+
+/// Reverts OutOfRange for a word that is not a number (exponent 0, not zero).
+function check(x) {
+    if and(iszero(and(x, 0x7ffff00000000000000000000000000000000000000000000000000000000000)), iszero(iszero(x))) { rev(0x7db3aba7) }
+}
+
+/// A monotone signed key for comparisons: positive words order as unsigned
+/// integers, negative ones are the mirror.
+function key(x) -> k {
+    check(x)
+    k := x
+    if slt(x, 0) { k := sub(0, and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) }
+}
+
+// ---------------------------------------------------------------------------
+// Arithmetic
+// ---------------------------------------------------------------------------
+
+/// a + b, or a - b when flip is 1. The larger magnitude is aligned at 2^18
+/// above the significand (18 guard bits), the smaller shifted under it; the
+/// difference subtracts a sticky bit for the shifted-out part so the
+/// result is floor(exact) on the 2^18 grid, which normround rounds once.
+function addsub(a, b, flip) -> r {
+    let sa, ea, ma := unpack(a)
+    let sb, eb, mb := unpack(b)
+    sb := xor(sb, flip)
+    if iszero(eb) { r := a leave }
+    if iszero(ea) { r := or(shl(255, sb), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) leave }
+    if lt(and(a, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) {
+        let t := sa sa := sb sb := t
+        t := ea ea := eb eb := t
+        t := ma ma := mb mb := t
+    }
+    let d := sub(ea, eb)
+    ma := shl(18, ma)
+    mb := shl(18, mb)
+    switch eq(sa, sb)
+    case 1 { ma := add(ma, shr(d, mb)) }
+    default {
+        ma := sub(sub(ma, shr(d, mb)), iszero(iszero(and(mb, sub(shl(d, 1), 1)))))
+        if iszero(ma) { r := 0 leave }
+    }
+    r := normround(sa, ea, ma)
+}
+
+/// @export add(int256 a, int256 b) returns (int256 r)
+/// @domain any two numbers
+/// @reverts Overflow() when the sum does not fit; OutOfRange() for a word that is not a number
+/// @notice a + b, rounded once (half up on the magnitude). The result is
+///         exact whenever it is representable; a - a is +0.
+function fp256_add(a, b) -> r {
+    r := addsub(a, b, 0)
+}
+
+/// @export sub(int256 a, int256 b) returns (int256 r)
+/// @domain any two numbers
+/// @reverts Overflow() when the difference does not fit; OutOfRange() for a word that is not a number
+/// @notice a - b, rounded once. Exact whenever representable (Sterbenz:
+///         always for b/2 <= a <= 2b).
+function fp256_sub(a, b) -> r {
+    r := addsub(a, b, 1)
+}
+
+/// @export mul(int256 a, int256 b) returns (int256 r)
+/// @domain any two numbers
+/// @reverts Overflow() when the product does not fit; OutOfRange() for a word that is not a number
+/// @notice a * b: the 474-bit product of the significands, rounded once.
+function fp256_mul(a, b) -> r {
+    let sa, ea, ma := unpack(a)
+    let sb, eb, mb := unpack(b)
+    if or(iszero(ea), iszero(eb)) { r := 0 leave }
+    let p0 := mul(ma, mb)
+    let mm := mulmod(ma, mb, not(0))
+    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
+}
+
+/// @export div(int256 a, int256 b) returns (int256 r)
+/// @domain b != 0
+/// @reverts DivisionByZero() for b == 0; Overflow() when the quotient does not fit; OutOfRange() for a word that is not a number
+/// @notice a / b: floor(ma 2^255 / mb) by two exact 2^128 stages, rounded once.
+function fp256_div(a, b) -> r {
+    let sa, ea, ma := unpack(a)
+    let sb, eb, mb := unpack(b)
+    if iszero(eb) { rev(0x23d359a3) }
+    if iszero(ea) { r := 0 leave }
+    let qh := divu(ma, mb)
+    let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
+    r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+}
+
+/// floor(sqrt(n)) for n < 2^254 by Newton from above, seven steps from
+/// 2^127, then one correction.
+function isqrt(n) -> y {
+    y := 0x80000000000000000000000000000000
+    y := shr(1, add(y, div(n, y)))
+    y := shr(1, add(y, div(n, y)))
+    y := shr(1, add(y, div(n, y)))
+    y := shr(1, add(y, div(n, y)))
+    y := shr(1, add(y, div(n, y)))
+    y := shr(1, add(y, div(n, y)))
+    y := shr(1, add(y, div(n, y)))
+    if gt(y, div(n, y)) { y := sub(y, 1) }
+}
+
+/// 1 if y^2 > n 2^256, by the 512-bit square.
+function gtsq(y, n) -> t {
+    let p0 := mul(y, y)
+    let mm := mulmod(y, y, not(0))
+    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    t := or(gt(p1, n), and(eq(p1, n), iszero(iszero(p0))))
+}
+
+/// @export sqrt(int256 x) returns (int256 r)
+/// @domain x >= 0
+/// @reverts OutOfRange() for x < 0 or a word that is not a number
+/// @notice sqrt(x): the significand shifted to an even exponent, its
+///         integer square root at 2^136 (Newton: a 256-bit seed, one
+///         2^128 stage, one 2^256 stage, corrected by squaring), rounded
+///         once. Never overflows or underflows.
+function fp256_sqrt(x) -> r {
+    let s, e, m := unpack(x)
+    if s { rev(0x7db3aba7) }
+    if iszero(e) { r := 0 leave }
+    let u := sub(e, 0x3ffff)
+    let odd := and(u, 1)
+    let n := shl(add(16, odd), m)
+    let y := isqrt(n)
+    y := shr(1, add(shl(128, y), divu(n, y)))
+    let qh := divu(n, y)
+    y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+    if gtsq(y, n) { y := sub(y, 1) }
+    if gtsq(y, n) { y := sub(y, 1) }
+    r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
+}
+
+// ---------------------------------------------------------------------------
+// Exponentials and logarithms, on FP127's 2^-192 kernels
+// ---------------------------------------------------------------------------
+
+/// A number with unbiased exponent u (u <= 18) as a signed 2^-192 fixed word.
+function tofixed192(s, u, m) -> t {
+    switch slt(u, 44)
+    case 1 { t := shr(sub(44, u), m) }
+    default { t := shl(sub(u, 44), m) }
+    if s { t := sub(0, t) }
+}
+
+/// A signed 2^-192 fixed word as a number, rounded once.
+function fromfixed192(l) -> r {
+    if iszero(l) { r := 0 leave }
+    r := normround(slt(l, 0), 0x4003d, absw(l))
+}
+
+/// 2^t for t at 2^-192: the integer part goes to the exponent, 2^f comes
+/// from the kernel at 2^-192 and is placed under the hidden bit exactly.
+function exp2fixed(t) -> r {
+    let f := and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+    let v := 0x1000000000000000000000000000000000000000000000000
+    if f { v := exp2frac(f) }
+    r := normround(0, add(sar(192, t), 0x3ffff), shl(62, v))
+}
+
+/// @export exp(int256 x) returns (int256 r)
+/// @domain x < 2^18
+/// @reverts Overflow() when e^x does not fit (x above about 181,705); OutOfRange() for a word that is not a number
+/// @notice e^x = 2^(x log2 e), the product at 2^-192 and 2^f from FP127's
+///         kernel: about 145 correct bits. Below 2^-118 the series
+///         1 + x (1 + x/2) at full precision; below 2^-237 exactly one;
+///         zero below about -181,700.
+function fp256_exp(x) -> r {
+    let s, e, m := unpack(x)
+    if iszero(e) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+    let u := sub(e, 0x3ffff)
+    if iszero(slt(u, 18)) {
+        if s { r := 0 leave }
+        rev(0x35278d12)
+    }
+    if slt(u, sub(0, 237)) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+    if slt(u, sub(0, 118)) {
+        let one := 0x3ffff00000000000000000000000000000000000000000000000000000000000
+        r := fp256_add(one, fp256_mul(x, fp256_add(one, sub(x, 0x100000000000000000000000000000000000000000000000000000000000))))
+        leave
+    }
+    r := exp2fixed(mulg(tofixed192(s, u, m), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+}
+
+/// ln(1 + d) / d: the series sum_{k>=0} (-d)^k / (k + 1) at 2^-192 for
+/// |d| < 2^-8, Horner in 26 terms (truncation below 2^-216).
+function ln1pseries(df) -> p {
+    p := 0xfffffffffffffffff62762762762762762762762762762762762762762762762
+    p := add(mulg(df, p), 0xa3d70a3d70a3d70a3d70a3d70a3d70a3d70a3d70a3d70a4)
+    p := add(mulg(df, p), 0xfffffffffffffffff55555555555555555555555555555555555555555555555)
+    p := add(mulg(df, p), 0xb21642c8590b21642c8590b21642c8590b21642c8590b21)
+    p := add(mulg(df, p), 0xfffffffffffffffff45d1745d1745d1745d1745d1745d1745d1745d1745d1746)
+    p := add(mulg(df, p), 0xc30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c3)
+    p := add(mulg(df, p), 0xfffffffffffffffff33333333333333333333333333333333333333333333333)
+    p := add(mulg(df, p), 0xd79435e50d79435e50d79435e50d79435e50d79435e50d8)
+    p := add(mulg(df, p), 0xfffffffffffffffff1c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c)
+    p := add(mulg(df, p), 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f)
+    p := add(mulg(df, p), 0xfffffffffffffffff00000000000000000000000000000000000000000000000)
+    p := add(mulg(df, p), 0x111111111111111111111111111111111111111111111111)
+    p := add(mulg(df, p), 0xffffffffffffffffedb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db)
+    p := add(mulg(df, p), 0x13b13b13b13b13b13b13b13b13b13b13b13b13b13b13b13b)
+    p := add(mulg(df, p), 0xffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab)
+    p := add(mulg(df, p), 0x1745d1745d1745d1745d1745d1745d1745d1745d1745d174)
+    p := add(mulg(df, p), 0xffffffffffffffffe66666666666666666666666666666666666666666666666)
+    p := add(mulg(df, p), 0x1c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c7)
+    p := add(mulg(df, p), 0xffffffffffffffffe00000000000000000000000000000000000000000000000)
+    p := add(mulg(df, p), 0x249249249249249249249249249249249249249249249249)
+    p := add(mulg(df, p), 0xffffffffffffffffd55555555555555555555555555555555555555555555555)
+    p := add(mulg(df, p), 0x333333333333333333333333333333333333333333333333)
+    p := add(mulg(df, p), 0xffffffffffffffffc00000000000000000000000000000000000000000000000)
+    p := add(mulg(df, p), 0x555555555555555555555555555555555555555555555555)
+    p := add(mulg(df, p), 0xffffffffffffffff800000000000000000000000000000000000000000000000)
+    p := add(mulg(df, p), 0x1000000000000000000000000000000000000000000000000)
+}
+
+/// @export ln(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts OutOfRange() for x <= 0 or a word that is not a number
+/// @notice ln(x) = (E - bias) ln 2 + ln(M / 2^236): the exponent exactly,
+///         the mantissa through FP127's log2 kernel at 2^-192, one
+///         rounding. The kernel's polynomial is good to about 2^-153
+///         absolute, so ln carries about 150 correct bits in general and
+///         190 where the exponent dominates (powers of two are exact to
+///         2^-192). Within 2^-24 of one, d = x - 1 is exact and
+///         ln(1 + d) = d * series(d), so the relative precision holds all
+///         the way down.
+function fp256_ln(x) -> r {
+    let s, e, m := unpack(x)
+    if or(s, iszero(e)) { rev(0x7db3aba7) }
+    if eq(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000) { r := 0 leave }
+    if or(eq(e, 0x3ffff), eq(e, 0x3fffe)) {
+        let d := fp256_sub(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000)
+        let sd, ed, md := unpack(d)
+        if lt(ed, 0x3fff7) {
+            r := fp256_mul(d, fromfixed192(ln1pseries(tofixed192(sd, sub(ed, 0x3ffff), md))))
+            leave
+        }
+    }
+    let lg := add(shl(192, sub(e, 0x3ffff)), log2m(shr(44, m)))
+    r := fromfixed192(mulg(lg, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e))
+}
+
+/// 2^t for a number t.
+function exp2f(t) -> r {
+    let s, e, m := unpack(t)
+    if iszero(e) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+    let u := sub(e, 0x3ffff)
+    if iszero(slt(u, 19)) {
+        if s { r := 0 leave }
+        rev(0x35278d12)
+    }
+    if slt(u, sub(0, 118)) {
+        r := fp256_exp(fp256_mul(t, 0x3fffe62e42fefa39ef35793c7673007e5ed5e81e6864ce5316c5b141a2eb7175))
+        leave
+    }
+    r := exp2fixed(tofixed192(s, u, m))
+}
+
+/// @export pow(int256 x, int256 y) returns (int256 r)
+/// @domain x >= 0
+/// @reverts OutOfRange() for x < 0; DivisionByZero() for 0^y with y < 0; Overflow() when the result does not fit
+/// @notice x^y = 2^(y log2 x), with log2 x as a number from the exponent and
+///         FP127's kernel, the product rounded once, then 2^t. 0^0 = 1.
+///         Shortcuts for y in {1, 2, 1/2, -1}. The float product means a
+///         huge y against an x near one is handled by the format.
+function fp256_pow(x, y) -> r {
+    if iszero(y) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+    let sx, ex, mx := unpack(x)
+    check(y)
+    if iszero(ex) {
+        if slt(y, 0) { rev(0x23d359a3) }
+        r := 0
+        leave
+    }
+    if eq(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000) { r := x leave }
+    if sx { rev(0x7db3aba7) }
+    switch y
+    case 0x3ffff00000000000000000000000000000000000000000000000000000000000 { r := x }
+    case 0x4000000000000000000000000000000000000000000000000000000000000000 { r := fp256_mul(x, x) }
+    case 0x3fffe00000000000000000000000000000000000000000000000000000000000 { r := fp256_sqrt(x) }
+    case 0xbffff00000000000000000000000000000000000000000000000000000000000 { r := fp256_div(0x3ffff00000000000000000000000000000000000000000000000000000000000, x) }
+    default {
+        let lg := fromfixed192(add(shl(192, sub(ex, 0x3ffff)), log2m(shr(44, mx))))
+        r := exp2f(fp256_mul(y, lg))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Sign and comparison
+// ---------------------------------------------------------------------------
+
+/// @export neg(int256 x) returns (int256 r)
+/// @domain any number
+/// @reverts OutOfRange() for a word that is not a number
+/// @notice -x: the sign bit flipped; -0 is 0.
+function fp256_neg(x) -> r {
+    check(x)
+    r := x
+    if x { r := xor(x, 0x8000000000000000000000000000000000000000000000000000000000000000) }
+}
+
+/// @export abs(int256 x) returns (int256 r)
+/// @domain any number
+/// @reverts OutOfRange() for a word that is not a number
+/// @notice |x|: the sign bit cleared.
+function fp256_abs(x) -> r {
+    check(x)
+    r := and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+}
+
+/// @export sign(int256 x) returns (int256 r)
+/// @domain any number
+/// @reverts OutOfRange() for a word that is not a number
+/// @notice -1, 0 or 1 as numbers.
+function fp256_sign(x) -> r {
+    check(x)
+    r := 0
+    if x { r := or(0x3ffff00000000000000000000000000000000000000000000000000000000000, and(x, 0x8000000000000000000000000000000000000000000000000000000000000000)) }
+}
+
+/// @export cmp(int256 a, int256 b) returns (int256 r)
+/// @domain any two numbers
+/// @reverts OutOfRange() for a word that is not a number
+/// @notice -1, 0 or 1 as plain integers: the order of a and b.
+function fp256_cmp(a, b) -> r {
+    let ka := key(a)
+    let kb := key(b)
+    r := sub(sgt(ka, kb), slt(ka, kb))
+}
+
+/// @export lt(int256 a, int256 b) returns (int256 r)
+/// @domain any two numbers
+/// @reverts OutOfRange() for a word that is not a number
+/// @notice 1 if a < b, else 0, as a plain integer.
+function fp256_lt(a, b) -> r {
+    r := slt(key(a), key(b))
+}
+
+/// @export eq(int256 a, int256 b) returns (int256 r)
+/// @domain any two numbers
+/// @reverts OutOfRange() for a word that is not a number
+/// @notice 1 if a == b, else 0. Representations are unique, so this is bit
+///         equality.
+function fp256_eq(a, b) -> r {
+    check(a)
+    check(b)
+    r := eq(a, b)
+}
+
+// ---------------------------------------------------------------------------
+// Conversions
+// ---------------------------------------------------------------------------
+
+/// @export fromUint(uint256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice The number x, exact below 2^237, rounded once above.
+function fp256_fromUint(x) -> r {
+    if iszero(x) { r := 0 leave }
+    r := normround(0, 0x400fd, x)
+}
+
+/// @export fromFP127(int256 x) returns (int256 r)
+/// @domain any 127.128 word
+/// @reverts never
+/// @notice The number x / 2^128: exact whenever |x| has at most 237
+///         significant bits (every |x| below 2^237, and larger ones with
+///         trailing zeros), rounded once otherwise.
+function fp256_fromFP127(x) -> r {
+    if iszero(x) { r := 0 leave }
+    r := normround(slt(x, 0), 0x4007d, absw(x))
+}
+
+/// @export toFP127(int256 x) returns (int256 r)
+/// @domain |x| < 2^127
+/// @reverts Overflow() at or above 2^127 (-2^127 is allowed); OutOfRange() for a word that is not a number
+/// @notice The 127.128 word nearest to x, half up on the magnitude: zero
+///         below 2^-129, one raw unit from there to 2^-128.
+function fp256_toFP127(x) -> r {
+    let s, e, m := unpack(x)
+    if iszero(e) { r := 0 leave }
+    let sh := sub(e, 0x4006b)
+    switch slt(sh, 0)
+    case 1 {
+        let k := sub(0, sh)
+        if gt(k, 255) { r := 0 leave }
+        r := shr(k, add(m, shl(sub(k, 1), 1)))
+    }
+    default {
+        // 2^127 does not fit; -2^127 (the only 237-bit significand at that
+        // exponent that does) is FP127's MIN and is allowed
+        if gt(sh, 19) { rev(0x35278d12) }
+        if eq(sh, 19) { if iszero(and(s, eq(m, 0x100000000000000000000000000000000000000000000000000000000000))) { rev(0x35278d12) } }
+        r := shl(sh, m)
+    }
+    if gt(r, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, s)) { rev(0x35278d12) }
+    if s { r := sub(0, r) }
+}
+
+/// @export fromFixed18(int256 x) returns (int256 r)
+/// @domain any 18-decimal word
+/// @reverts never
+/// @notice The number x / 10^18: the integer as a number (exact below
+///         2^237), divided by 10^18 with one rounding.
+function fp256_fromFixed18(x) -> r {
+    if iszero(x) { r := 0 leave }
+    r := fp256_div(normround(slt(x, 0), 0x400fd, absw(x)), 0x4003abc16d674ec8000000000000000000000000000000000000000000000000)
+}
+
+/// @export toFixed18(int256 x) returns (int256 r)
+/// @domain |x| 10^18 < 2^255
+/// @reverts Overflow() when x 10^18 does not fit int256; OutOfRange() for a word that is not a number
+/// @notice The 18-decimal word nearest to x, half up on the magnitude, from
+///         the exact 512-bit product M 10^18.
+function fp256_toFixed18(x) -> r {
+    let s, e, m := unpack(x)
+    if iszero(e) { r := 0 leave }
+    let k := sub(0x400eb, e)
+    if iszero(sgt(k, 0)) { rev(0x35278d12) }
+    if sgt(k, 297) { r := 0 leave }
+    let p0 := mul(m, 1000000000000000000)
+    let mm := mulmod(m, 1000000000000000000, not(0))
+    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    let t := 0
+    switch lt(k, 257)
+    case 1 {
+        if shr(sub(k, 1), p1) { rev(0x35278d12) }
+        t := or(shl(sub(257, k), p1), shr(sub(k, 1), p0))
+    }
+    default { t := shr(sub(k, 257), p1) }
+    r := add(shr(1, t), and(t, 1))
+    if gt(r, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, s)) { rev(0x35278d12) }
+    if s { r := sub(0, r) }
+}

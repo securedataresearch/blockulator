@@ -1,0 +1,226 @@
+{
+  "errors": {
+    "Overflow()": "0x35278d12",
+    "DivisionByZero()": "0x23d359a3",
+    "OutOfRange()": "0x7db3aba7"
+  },
+  "ops": [
+    {
+      "name": "add",
+      "signature": "add(int256,int256)",
+      "selector": "0xa5f3c23b",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "a + b, rounded once (half up on the magnitude). The result is exact whenever it is representable; a - a is +0.",
+      "domain": "any two numbers",
+      "reverts": "Overflow() when the sum does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "sub",
+      "signature": "sub(int256,int256)",
+      "selector": "0xadefc37b",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "a - b, rounded once. Exact whenever representable (Sterbenz: always for b/2 <= a <= 2b).",
+      "domain": "any two numbers",
+      "reverts": "Overflow() when the difference does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "mul",
+      "signature": "mul(int256,int256)",
+      "selector": "0xbbe93d91",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "a * b: the 474-bit product of the significands, rounded once.",
+      "domain": "any two numbers",
+      "reverts": "Overflow() when the product does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "div",
+      "signature": "div(int256,int256)",
+      "selector": "0x43509138",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "a / b: floor(ma 2^255 / mb) by two exact 2^128 stages, rounded once.",
+      "domain": "b != 0",
+      "reverts": "DivisionByZero() for b == 0; Overflow() when the quotient does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "sqrt",
+      "signature": "sqrt(int256)",
+      "selector": "0x665df460",
+      "inputs": [
+        "x"
+      ],
+      "notice": "sqrt(x): the significand shifted to an even exponent, its integer square root at 2^136 (Newton: a 256-bit seed, one 2^128 stage, one 2^256 stage, corrected by squaring), rounded once. Never overflows or underflows.",
+      "domain": "x >= 0",
+      "reverts": "OutOfRange() for x < 0 or a word that is not a number"
+    },
+    {
+      "name": "exp",
+      "signature": "exp(int256)",
+      "selector": "0xe46751e3",
+      "inputs": [
+        "x"
+      ],
+      "notice": "e^x = 2^(x log2 e), the product at 2^-192 and 2^f from FP127's kernel: about 145 correct bits. Below 2^-118 the series 1 + x (1 + x/2) at full precision; below 2^-237 exactly one; zero below about -181,700.",
+      "domain": "x < 2^18",
+      "reverts": "Overflow() when e^x does not fit (x above about 181,705); OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "ln",
+      "signature": "ln(int256)",
+      "selector": "0x8e6f2353",
+      "inputs": [
+        "x"
+      ],
+      "notice": "ln(x) = (E - bias) ln 2 + ln(M / 2^236): the exponent exactly, the mantissa through FP127's log2 kernel at 2^-192, one rounding. The kernel's polynomial is good to about 2^-153 absolute, so ln carries about 150 correct bits in general and 190 where the exponent dominates (powers of two are exact to 2^-192). Within 2^-24 of one, d = x - 1 is exact and ln(1 + d) = d * series(d), so the relative precision holds all the way down.",
+      "domain": "x > 0",
+      "reverts": "OutOfRange() for x <= 0 or a word that is not a number"
+    },
+    {
+      "name": "pow",
+      "signature": "pow(int256,int256)",
+      "selector": "0x92b0c5b2",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x^y = 2^(y log2 x), with log2 x as a number from the exponent and FP127's kernel, the product rounded once, then 2^t. 0^0 = 1. Shortcuts for y in {1, 2, 1/2, -1}. The float product means a huge y against an x near one is handled by the format.",
+      "domain": "x >= 0",
+      "reverts": "OutOfRange() for x < 0; DivisionByZero() for 0^y with y < 0; Overflow() when the result does not fit"
+    },
+    {
+      "name": "neg",
+      "signature": "neg(int256)",
+      "selector": "0x54a53dc1",
+      "inputs": [
+        "x"
+      ],
+      "notice": "-x: the sign bit flipped; -0 is 0.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "abs",
+      "signature": "abs(int256)",
+      "selector": "0x1b5ac4b5",
+      "inputs": [
+        "x"
+      ],
+      "notice": "|x|: the sign bit cleared.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "sign",
+      "signature": "sign(int256)",
+      "selector": "0xae610b48",
+      "inputs": [
+        "x"
+      ],
+      "notice": "-1, 0 or 1 as numbers.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "cmp",
+      "signature": "cmp(int256,int256)",
+      "selector": "0xc688366a",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "-1, 0 or 1 as plain integers: the order of a and b.",
+      "domain": "any two numbers",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "lt",
+      "signature": "lt(int256,int256)",
+      "selector": "0x30880038",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "1 if a < b, else 0, as a plain integer.",
+      "domain": "any two numbers",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "eq",
+      "signature": "eq(int256,int256)",
+      "selector": "0xaa2c45bf",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "1 if a == b, else 0. Representations are unique, so this is bit equality.",
+      "domain": "any two numbers",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "fromUint",
+      "signature": "fromUint(uint256)",
+      "selector": "0xe3814b19",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The number x, exact below 2^237, rounded once above.",
+      "domain": "any x",
+      "reverts": "never"
+    },
+    {
+      "name": "fromFP127",
+      "signature": "fromFP127(int256)",
+      "selector": "0x736c53c3",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The number x / 2^128: exact whenever |x| has at most 237 significant bits (every |x| below 2^237, and larger ones with trailing zeros), rounded once otherwise.",
+      "domain": "any 127.128 word",
+      "reverts": "never"
+    },
+    {
+      "name": "toFP127",
+      "signature": "toFP127(int256)",
+      "selector": "0x7c90b7f9",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The 127.128 word nearest to x, half up on the magnitude: zero below 2^-129, one raw unit from there to 2^-128.",
+      "domain": "|x| < 2^127",
+      "reverts": "Overflow() at or above 2^127 (-2^127 is allowed); OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "fromFixed18",
+      "signature": "fromFixed18(int256)",
+      "selector": "0x9aea0a13",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The number x / 10^18: the integer as a number (exact below 2^237), divided by 10^18 with one rounding.",
+      "domain": "any 18-decimal word",
+      "reverts": "never"
+    },
+    {
+      "name": "toFixed18",
+      "signature": "toFixed18(int256)",
+      "selector": "0xa2745c74",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The 18-decimal word nearest to x, half up on the magnitude, from the exact 512-bit product M 10^18.",
+      "domain": "|x| 10^18 < 2^255",
+      "reverts": "Overflow() when x 10^18 does not fit int256; OutOfRange() for a word that is not a number"
+    }
+  ]
+}
