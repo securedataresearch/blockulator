@@ -1,4 +1,4 @@
-.PHONY: precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: build-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
@@ -59,6 +59,12 @@ vectors-fp256:
 
 build: gen-check gen-inputs-check
 	@forge build
+	@$(MAKE) -s build-fp256
+
+# FP256.yul is compiled by solc directly (Foundry 1.8 batches Yul sources,
+# and Yul mode takes one file); the artifact has the Foundry shape.
+build-fp256:
+	@test ! -f contracts/src/fp256/FP256.yul || FP_LIB=fp256 $(PY) scripts/fp127/stdjson.py artifact
 
 gen-inputs:
 	@$(PY) scripts/ladder/gen_inputs.py

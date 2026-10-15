@@ -7,7 +7,9 @@ cache_path = "cache"
 
 # Only Solidity and Yul under contracts/src are compiled. Vyper sources and
 # archived Huff live beside them and are skipped.
-skip = ["contracts/src/**/*.vy", "contracts/src/tools/**", "contracts/src/games/**",
+# FP256.yul is compiled by scripts/fp127/stdjson.py (make build-fp256): Foundry
+# 1.8 hands every Yul source to one solc call, and Yul mode takes exactly one.
+skip = ["contracts/src/**/*.vy", "contracts/src/fp256/FP256.yul", "contracts/src/tools/**", "contracts/src/games/**",
         "contracts/src/market/**", "contracts/src/content/**",
         "contracts/src/identity/**", "contracts/src/interfaces/**"]
 

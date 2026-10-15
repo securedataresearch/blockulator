@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Standard-JSON input for the FP127 Yul object, and the bytecode proofs
-built on it.
+"""Standard-JSON input for the FP127 (or, with FP_LIB=fp256, the FP256) Yul
+object, and the bytecode proofs built on it.
 
     uv run scripts/fp127/stdjson.py emit              # print the standard-json input
     uv run scripts/fp127/stdjson.py check             # compile it with solc, compare to the Foundry artifact
     uv run scripts/fp127/stdjson.py onchain <rpc> <address>   # compare the live runtime to the artifact
+    FP_LIB=fp256 uv run scripts/fp127/stdjson.py artifact     # compile FP256.yul with solc and write out/FP256.yul/FP256.json
 
 The input uses language "Yul" and the settings from foundry.toml (solc
 0.8.24, optimizer on, 200 runs, shanghai). `check` is the proof that this
@@ -23,10 +24,12 @@ from pathlib import Path
 from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "contracts" / "src" / "fp127" / "FP127.yul"
-ARTIFACT = ROOT / "out" / "FP127.yul" / "FP127.json"
-SOURCE_UNIT = "contracts/src/fp127/FP127.yul"
-CONTRACT = "FP127"
+# FP_LIB=fp256 selects the second library; the proofs are otherwise identical
+LIB = os.environ.get("FP_LIB", "fp127")
+CONTRACT = {"fp127": "FP127", "fp256": "FP256"}[LIB]
+SOURCE = ROOT / "contracts" / "src" / LIB / f"{CONTRACT}.yul"
+ARTIFACT = ROOT / "out" / f"{CONTRACT}.yul" / f"{CONTRACT}.json"
+SOURCE_UNIT = f"contracts/src/{LIB}/{CONTRACT}.yul"
 SOLC_VERSION = "0.8.24"
 SOLC_LONG = "v0.8.24+commit.e11b9ed9"
 EVM_VERSION = "shanghai"
@@ -79,6 +82,22 @@ def compile_std(inp: dict) -> tuple[str, str]:
     return evm["bytecode"]["object"], evm["deployedBytecode"]["object"]
 
 
+def cmd_artifact() -> int:
+    """Compile with solc and write the Foundry-shaped artifact. FP256.yul is
+    kept out of forge's own build (foundry.toml `skip`): Foundry 1.8 batches
+    every Yul source into one solc call, and Yul mode takes exactly one."""
+    init_s, rt_s = compile_std(std_input())
+    ARTIFACT.parent.mkdir(parents=True, exist_ok=True)
+    ARTIFACT.write_text(json.dumps({
+        "abi": [],
+        "bytecode": {"object": "0x" + init_s},
+        "deployedBytecode": {"object": "0x" + rt_s},
+        "_doc": f"written by scripts/fp127/stdjson.py artifact (FP_LIB={LIB}) from {SOURCE_UNIT} with solc {SOLC_LONG}",
+    }, indent=1) + "\n")
+    print(f"wrote {ARTIFACT.relative_to(ROOT)}: init {len(init_s)//2} bytes, runtime {len(rt_s)//2} bytes, keccak {keccak_hex(rt_s)}")
+    return 0
+
+
 def cmd_check() -> int:
     init_a, rt_a = artifact()
     init_s, rt_s = compile_std(std_input())
@@ -106,6 +125,8 @@ def main(argv: list[str]) -> int:
         return 0
     if argv[0] == "check":
         return cmd_check()
+    if argv[0] == "artifact":
+        return cmd_artifact()
     if argv[0] == "onchain" and len(argv) == 3:
         return cmd_onchain(argv[1], argv[2])
     print(__doc__)
