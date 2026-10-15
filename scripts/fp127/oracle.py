@@ -322,6 +322,89 @@ def op_lambertWm1(x):
     return mfloor(w)
 
 
+# ---------------------------------------------------------------------------
+# v4: integer powers, near one, hyperbolic, the error function
+# ---------------------------------------------------------------------------
+
+def op_powu(x, n):
+    """x^floor(n): exact rational when the exponent is small, mpmath beyond.
+    The Yul rounds to nearest; the oracle floors, as for every other op."""
+    k = n >> 128
+    if k == 0:
+        return ONE
+    if x == 0:
+        if k < 0:
+            raise Revert("DivisionByZero")
+        return 0
+    neg = x < 0 and (k & 1) == 1
+    ax = abs(x)
+    # decide the magnitude first so an absurd exponent never materialises
+    mag = k * mp.log(to_mpf(ax), 2)
+    if mag > 256:
+        raise Revert("Overflow")
+    if mag < -130:
+        return 0
+    v = mp.power(to_mpf(ax), k)
+    r = floor_raw(v)
+    if r >= TWO255:
+        raise Revert("Overflow")
+    return -r if neg else r
+
+
+def op_compound(rate, n):
+    return op_powu(op_add(ONE, rate), n)
+
+
+def op_log1p(x):
+    if x <= -ONE:
+        raise Revert("OutOfRange")
+    return op_ln(op_add(ONE, x))
+
+
+def op_expm1(x):
+    if x == 0:
+        return 0
+    if x > 88 * ONE:
+        raise Revert("Overflow")
+    if x < -88 * ONE:
+        return -ONE
+    return mfloor(mp.expm1(to_mpf(x)))
+
+
+def op_sinh(x):
+    if abs(x) > 88 * ONE:
+        raise Revert("Overflow")
+    return mfloor(mp.sinh(to_mpf(x)))
+
+
+def op_cosh(x):
+    if abs(x) > 88 * ONE:
+        raise Revert("Overflow")
+    return mfloor(mp.cosh(to_mpf(x)))
+
+
+def op_tanh(x):
+    return mfloor(mp.tanh(to_mpf(x)))
+
+
+def op_atanh(x):
+    if abs(x) >= ONE:
+        raise Revert("OutOfRange")
+    return mfloor(mp.atanh(to_mpf(x)))
+
+
+def op_erf(x):
+    return mfloor(mp.erf(to_mpf(x)))
+
+
+def op_erfc(x):
+    return mfloor(mp.erfc(to_mpf(x)))
+
+
+def op_normCdf(x):
+    return mfloor(mp.ncdf(to_mpf(x)))
+
+
 OPS = {name[3:]: fn for name, fn in globals().items() if name.startswith("op_")}
 OPS_LOWER = {k.lower(): k for k in OPS}
 

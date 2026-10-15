@@ -90,11 +90,11 @@ fetch-baseline:
 
 DEPLOY_SCRIPT := script/DeployFP127.s.sol
 CREATE2_PROXY := 0x4e59b44847b379578588920cA78FbF26c0B4956C
-SALT := 0x4650313237207633000000000000000000000000000000000000000000000000
+SALT := 0x4650313237207634000000000000000000000000000000000000000000000000
 # Sepolia (Amsterdam fork) charges about 1,550 gas per byte of deposited code,
 # not 200: the node estimates ~10.45M gas for this deployment where forge
 # 1.7.1's local EVM says 1.46M, so the transaction is sent with an explicit limit.
-DEPLOY_GAS ?= 16000000
+DEPLOY_GAS ?= 20000000
 
 predict: build
 	@forge script $(DEPLOY_SCRIPT) --sig "predict()" --rpc-url $(SEPOLIA_RPC) 2>&1 | grep -E "deployer|salt|hash|keccak|bytes|address|deployed"

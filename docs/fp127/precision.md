@@ -21,7 +21,7 @@ Bits are relative correct bits of the 127.128 result: msb(|truth|) - msb(|truth 
 | log2Up | 299 | 4 | exact | exact |  |
 | sqrt | 298 | 3 | exact | exact |  |
 | cbrt | 96 | 1 | 123 | 152 | `0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
-| pow | 369 | 31 | 122 | 226 | `0x00000000000000000000000000000001028f5c28f5c28f5c28f5c28f5c28f5c2`, `0x0000000000000000000000000000016d00000000000000000000000000000000` |
+| pow | 369 | 31 | 124 | 235 | `0x0000000000000000000000000000003039d390f03ddfbfbc409fbb600262981a`, `0x0000000000000000000000000000001400000000000000000000000000000000` |
 | inv | 62 | 3 | exact | exact |  |
 | abs | 96 | 1 | exact | exact |  |
 | neg | 96 | 1 | exact | exact |  |
@@ -43,3 +43,15 @@ Bits are relative correct bits of the 127.128 result: msb(|truth|) - msb(|truth 
 | gavg | 166 | 34 | exact | exact |  |
 | lambertW0 | 108 | 3 | 65 | 249 | `0xffffffffffffffffffffffffffffffffa1d2a7274c4320e54521387d6fab06f4` |
 | lambertWm1 | 66 | 6 | 67 | 243 | `0xffffffffffffffffffffffffffffffffa1d2a7274c4320e54521387d6fab06f3` |
+| pi | 8 | 7 | 122 | 139 | `0x0000000000000000000000000000000300000000000000000000000000000000` |
+| powu | 302 | 98 | exact | exact | `0x000000000000000000000000000000015cbd69af9ce95a8ff0778c77c7993941`, `0x0000000000000000000000000000008000000000000000000000000000000000` |
+| compound | 143 | 57 | exact | exact | `0xffffffffffffffffffffffffffffffff99b1728cae9854967465fd34ac880ac1`, `0x0000000000000000000000000000000a00000000000000000000000000000000` |
+| log1p | 561 | 18 | exact | exact | `0x0000000000000000000000000000000000000000000000000000000000000001` |
+| expm1 | 577 | 2 | 146 | 254 | `0x00000000000000000000000000000016a09e667f3bcc908b2fb1366ea957d3e3` |
+| sinh | 575 | 4 | 146 | 253 | `0x00000000000000000000000000000016a09e667f3bcc908b2fb1366ea957d3e3` |
+| cosh | 575 | 4 | 146 | 253 | `0x00000000000000000000000000000016a09e667f3bcc908b2fb1366ea957d3e3` |
+| tanh | 579 | 0 | exact | exact | `0x0000000000000000000000000000000000000000000000000000000000000001` |
+| atanh | 534 | 5 | exact | exact | `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
+| erf | 571 | 0 | exact | exact | `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
+| erfc | 571 | 0 | exact | exact | `0x0000000000000000000000000000000000000000000000000000000000000001` |
+| normCdf | 571 | 0 | exact | exact | `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |

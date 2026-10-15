@@ -74,13 +74,37 @@ interface IFP127 {
     ///      guess 2^floor((128 + msb)/2), times sqrt(2) when the exponent is
     ///      odd, then seven Newton steps. Verbatim port of FP127_SQRT.
     function sqrt(int256 x) external pure returns (int256 r);
-    /// @notice x^y = 2^(y * log2(x)) for x >= 0.
+    /// @notice x^y = 2^(y * log2(x)) for x >= 0, with the product y * log2(x)
+    ///         formed at 2^-192 so the exponent keeps its guard bits.
     /// @dev Special cases in Huff order: y == 0 gives 1 (including 0^0); x == 0
     ///      gives 0; x == 1 gives 1; x < 0 reverts with OutOfRange. Exact
     ///      shortcuts for y in {1, 2, 3, 4, 1/2, 1/4, -1} and for x in {2, 10}
     ///      are kept because they are both cheaper and more accurate than the
-    ///      general path, and because the Huff had them.
+    ///      general path, and because the Huff had them. The general path (v4)
+    ///      takes log2 unrounded at 2^-192 and multiplies by y there; the
+    ///      domain is decided first by the checked 128-bit product, as exp10
+    ///      does, so an absurd y reverts with Overflow and the guard product
+    ///      cannot wrap. Through v3 the product was formed at 128 bits, which
+    ///      cost about seven bits on (1 + r)^n with a per-second r.
     function pow(int256 x, int256 y) external pure returns (int256 r);
+    /// @notice x^floor(n) for an integer exponent, by binary exponentiation on
+    ///         a 256-bit mantissa with a separate binary exponent, rounded to
+    ///         nearest once at the end: within one ULP for every n, exact
+    ///         whenever the true value is representable. Negative n inverts
+    ///         the final mantissa, so x^-n is as accurate as x^n.
+    /// @dev Maker's rpow and PRBMath's powu square at the format's own
+    ///      precision and floor on every step, so each squaring loses a bit of
+    ///      the fraction; here |x| is written as m 2^(e-255) with m in
+    ///      [2^255, 2^256), every product keeps the top 256 bits of the 512-bit
+    ///      result (relative error 2^-255 a step, at most 254 steps), and the
+    ///      word is formed from (m, e) with one rounding. 0^0 = 1.
+    function powu(int256 x, int256 n) external pure returns (int256 r);
+    /// @notice (1 + rate)^floor(n): n periods of compounding at rate, through
+    ///         powu, so a per-second rate over years keeps every bit the format
+    ///         holds. 1 + rate is exact in 127.128 (the sum of two grid values),
+    ///         so nothing is lost before the exponentiation; on an 18-decimal
+    ///         grid the rate itself would have been the first loss.
+    function compound(int256 rate, int256 n) external pure returns (int256 r);
     /// @notice Cube root, defined for all x: cbrt(-x) = -cbrt(x).
     /// @dev Shortcuts for 8, 27, 64. Otherwise pow(|x|, 1/3) with the sign
     ///      restored, exactly as the Huff did (the negative path goes straight
@@ -171,4 +195,43 @@ interface IFP127 {
     ///      of input moves W by 2^-63. The archived Huff lambertwm1 was never
     ///      functional and is not the reference for this routine.
     function lambertWm1(int256 x) external pure returns (int256 r);
+    /// @notice ln(1 + x). The sum 1 + x is exact in 127.128, so this is ln of
+    ///         an exact argument, rounded once; it exists because on an
+    ///         18-decimal grid the sum is where a small x loses its digits.
+    function log1p(int256 x) external pure returns (int256 r);
+    /// @notice e^x - 1, with the one subtracted before rounding so a small x
+    ///         keeps its relative precision: a 27-term series at 2^-192 for
+    ///         |x| <= 1/16, the exp kernel at 2^-192 for |x| < 1, exp(x) - 1
+    ///         beyond, where the subtraction cannot cancel.
+    function expm1(int256 x) external pure returns (int256 r);
+    /// @notice sinh(x). For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...))
+    ///         at 2^-192, 20 terms, rounded once; beyond, (e^x - e^-x) / 2 from
+    ///         the rounded exponentials, where the difference cannot cancel.
+    function sinh(int256 x) external pure returns (int256 r);
+    /// @notice cosh(x) = (e^x + e^-x) / 2 from the rounded exponentials; both
+    ///         terms are positive, so nothing cancels. cosh(0) is exactly one.
+    function cosh(int256 x) external pure returns (int256 r);
+    /// @notice tanh(x). For |x| < 1/4, u / (u + 2) with u = e^(2x) - 1 at
+    ///         2^-192; up to |x| < 44, 1 - 2 / (e^(2x) + 1); beyond, exactly
+    ///         +-1, which the format cannot distinguish from the truth.
+    function tanh(int256 x) external pure returns (int256 r);
+    /// @notice atanh(x) = (ln(1 + x) - ln(1 - x)) / 2, both logarithms taken
+    ///         unrounded at 2^-192 and the difference scaled and rounded once.
+    ///         Both arguments are exact in 127.128.
+    function atanh(int256 x) external pure returns (int256 r);
+    /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
+    ///         1 - erfc(x) by the continued fraction, both at 2^-192 and rounded
+    ///         once; +-1 exactly from |x| >= 10, where 1 - erf is below one ULP.
+    function erf(int256 x) external pure returns (int256 r);
+    /// @notice The complementary error function 1 - erf(x), computed directly
+    ///         for x > 4 so the tail keeps its digits down to the format's
+    ///         floor (erfc(9.3) is one ULP; zero beyond); 2 - erfc(-x) for x < 0.
+    function erfc(int256 x) external pure returns (int256 r);
+    /// @notice The standard normal distribution function
+    ///         Phi(x) = erfc(-x / sqrt2) / 2, the argument scaled at 2^-192. The
+    ///         tail keeps its digits to the format's floor: Phi(-13) is about
+    ///         two ULPs, Phi(-14) rounds to zero, and Phi(x) is exactly one from
+    ///         x = 14. This is the N(d) of Black-Scholes; on an 18-decimal grid
+    ///         it is zero from about d = -8.3.
+    function normCdf(int256 x) external pure returns (int256 r);
 }

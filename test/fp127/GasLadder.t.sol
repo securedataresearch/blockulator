@@ -237,6 +237,15 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("lambertW0")) return FP127Lib.lambertW0(x);
         if (h == keccak256("lambertWm1")) return FP127Lib.lambertWm1(x);
         if (h == keccak256("pi")) return FP127Lib.pi(x);
+        if (h == keccak256("log1p")) return FP127Lib.log1p(x);
+        if (h == keccak256("expm1")) return FP127Lib.expm1(x);
+        if (h == keccak256("sinh")) return FP127Lib.sinh(x);
+        if (h == keccak256("cosh")) return FP127Lib.cosh(x);
+        if (h == keccak256("tanh")) return FP127Lib.tanh(x);
+        if (h == keccak256("atanh")) return FP127Lib.atanh(x);
+        if (h == keccak256("erf")) return FP127Lib.erf(x);
+        if (h == keccak256("erfc")) return FP127Lib.erfc(x);
+        if (h == keccak256("normCdf")) return FP127Lib.normCdf(x);
         if (h == keccak256("fromFixed18")) return FP127Lib.fromFixed18(x);
         if (h == keccak256("toFixed18")) return FP127Lib.toFixed18(x);
         revert("na");
@@ -249,6 +258,8 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("mul")) return FP127Lib.mul(a, b);
         if (h == keccak256("div")) return FP127Lib.div(a, b);
         if (h == keccak256("pow")) return FP127Lib.pow(a, b);
+        if (h == keccak256("powu")) return FP127Lib.powu(a, b);
+        if (h == keccak256("compound")) return FP127Lib.compound(a, b);
         if (h == keccak256("min")) return FP127Lib.min(a, b);
         if (h == keccak256("max")) return FP127Lib.max(a, b);
         if (h == keccak256("avg")) return FP127Lib.avg(a, b);
@@ -345,5 +356,33 @@ contract GasLadder is FP127Harness {
         _run1("lambertWm1", [-int256(0x5e2d58d8b3bcdf1abadec7829054f90d) + 1, -ONE / 3, -ONE / 4, -ONE / 10, -ONE / 1000, -(ONE >> 40), -1], true);
         _run1("factorial", [int256(0), ONE, 5 * ONE, 10 * ONE, 20 * ONE, 30 * ONE, 33 * ONE], false);
         _run1("pi", [ONE, 2 * ONE, 3 * ONE, 4 * ONE, 5 * ONE, 6 * ONE, 7 * ONE], false);
+    }
+
+    // v4 ops. The per-second rate is 5% APR / 31,536,000; the Black-Scholes
+    // tails are where an 18-decimal N(d) is zero.
+    int256 constant R_SEC = 539514153540300709448526457749; // floor(0.05 / 31536000 * 2^128)
+
+    function test_ladder_v4_powers() public view {
+        _run2("powu", [2 * ONE, ONE + ONE / 100, ONE + R_SEC, ONE / 2, PI, 3 * ONE],
+                      [10 * ONE, 365 * ONE, 31536000 * ONE, 100 * ONE, 7 * ONE, -5 * ONE], false);
+        _run2("compound", [ONE / 10, ONE / 3650, R_SEC, ONE / 2, -ONE / 100, ONE / 100],
+                          [10 * ONE, 365 * ONE, 31536000 * ONE, 100 * ONE, 365 * ONE, 315360000 * ONE], false);
+    }
+
+    function test_ladder_v4_near_one() public view {
+        int256[7] memory xs = [R_SEC, ONE >> 60, -(ONE >> 40), ONE / 1000, -ONE / 100, ONE / 2, 5 * ONE];
+        _run1("log1p", xs, false);
+        _run1("expm1", xs, false);
+        _run1("sinh", xs, false);
+        _run1("cosh", xs, false);
+        _run1("tanh", xs, false);
+        _run1("atanh", [R_SEC, ONE >> 60, -(ONE >> 40), ONE / 1000, -ONE / 100, ONE / 2, ONE - 1], false);
+    }
+
+    function test_ladder_v4_erf() public view {
+        int256[7] memory xs = [ONE / 100, ONE / 2, ONE, 2 * ONE, 4 * ONE, 6 * ONE, 9 * ONE];
+        _run1("erf", xs, false);
+        _run1("erfc", xs, false);
+        _run1("normCdf", [-13 * ONE, -9 * ONE, -5 * ONE, -ONE, 0, ONE, 5 * ONE], false);
     }
 }

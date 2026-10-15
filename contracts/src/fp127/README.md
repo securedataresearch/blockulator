@@ -34,8 +34,9 @@ The same Yul function bodies are emitted twice.
 **Deployed object.** `FP127.yul` wraps the bodies in a `switch` on the
 4-byte selector. It is deployed with CREATE2 through the deterministic
 proxy at `0x4e59b44847b379578588920cA78FbF26c0B4956C` with salt
-`"FP127 v2"`, which puts it at `0xe43F720861074497db2e974E5c4554E4A3b341B9` on
-every chain it is deployed to (Sepolia today; record and verification
+`"FP127 v3"`, which puts it at `0xe43F720861074497db2e974E5c4554E4A3b341B9` on
+every chain it is deployed to (version 4, salt `"FP127 v4"`, lands at
+`0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` once deployed) (Sepolia today; record and verification
 recipe in [`contracts/deployments/FP127.md`](../../deployments/FP127.md)).
 Every contract that `staticcall`s it runs identical bytecode.
 `FP127Caller.sol` is the minimal Solidity wrapper for that path; it bubbles
@@ -99,7 +100,9 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `log2Up(x)` | ceil(log2 x), exact for powers of two | `OutOfRange` |
 | `sqrt(x)` | x ≥ 0 | `OutOfRange` |
 | `cbrt(x)` | all x, odd | `Overflow` only at −2^255 |
-| `pow(x, y)` | x^y for x ≥ 0; 0^0 = 1; exact for y ∈ {1,2,3,4,½,¼,−1} and x ∈ {2,10} | `OutOfRange` for x < 0 |
+| `pow(x, y)` | x^y for x ≥ 0; 0^0 = 1; exact for y ∈ {1,2,3,4,½,¼,−1} and x ∈ {2,10}; the exponent product at 2^-192 | `OutOfRange` for x < 0, `Overflow` |
+| `powu(x, n)` | x^floor(n) for any integer n, binary exponentiation on a 256-bit mantissa, one rounding; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
+| `compound(r, n)` | (1 + r)^floor(n) through `powu` | `Overflow`, `DivisionByZero` |
 | `inv(x)` | 1/x | `DivisionByZero`, `Overflow` |
 | `abs`, `neg` | | `Overflow` at −2^255 |
 | `sign`, `min`, `max`, `clamp`, `avg`, `floor`, `frac` | exact, never revert | |
@@ -110,6 +113,13 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `lambertW0(x)` | W(x) for x ≥ −1/e | `OutOfRange` |
 | `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0 | `OutOfRange` |
 | `pi(terms)` | Ramanujan's 1914 series, floor(terms) terms, 1 ≤ terms ≤ 7; five terms reach the floor | `OutOfRange` |
+| `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
+| `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −88 | `Overflow` above 88 |
+| `sinh`, `cosh` | \|x\| ≤ 88; the odd series at 2^-192 for sinh below 1 | `Overflow` |
+| `tanh(x)` | all x; ±1 exactly from \|x\| = 44 | never |
+| `atanh(x)` | \|x\| < 1, both logs unrounded at 2^-192 | `OutOfRange` |
+| `erf(x)`, `erfc(x)` | all x; series to 4, continued fraction beyond, at 2^-192; erfc(9.3) is one ULP, zero beyond | never |
+| `normCdf(x)` | Φ(x) = erfc(−x/√2)/2, the N(d) of Black-Scholes; Φ(−13) is two ULPs, Φ(−14) is zero, Φ(14) is one | never |
 
 Rounding directions of the arithmetic are inherited from the Huff and
 preserved exactly: `mul` floors because it is the middle 256 bits of the
@@ -128,6 +138,24 @@ log2(1+f)/f) are Chebyshev fits with error below 2^-145, from
 `scripts/fp127/generators/guard_model.py`, which also models the kernels
 in exact integer arithmetic and measures them.
 
+Version 4 (2026-10-15) adds eleven ops and moves `pow`'s exponent product
+to 2^-192 as well: `log2(x)` is taken unrounded and multiplied by `y` at
+the guard scale, so `(1 + r)^n` with a per-second `r` keeps the bits that
+a 128-bit product lost. `powu` and `compound` do not use the exponential
+at all: |x| is written as a 256-bit mantissa with a binary exponent,
+squared and multiplied keeping the top 256 bits of every 512-bit product,
+and the word is formed once at the end, so an integer power is within one
+ULP for any exponent and exact whenever the value is representable, where
+Maker's `rpow` and PRBMath's `powu` floor on every squaring. `expm1`,
+`sinh`, `tanh` and `atanh` subtract before they round (series at 2^-192
+near zero, the kernels above), so a result near zero keeps its relative
+precision; `log1p` is `ln` of an exact sum. `erf` uses the all-positive
+series (2/√π) e^(−x²) x Σ (2x²)^k/(2k+1)!! to x = 4 and the continued
+fraction e^(−x²)/(√π K) beyond, both at 2^-192 with e^(−x²) unrounded, so
+the tail keeps its digits down to the format's floor; `normCdf` is
+erfc(−x/√2)/2. The term counts, the regime split and the fraction depth
+1700/⌊x²⌋ + 10 come from `scripts/fp127/generators/erf_model.py`.
+
 ## Precision
 
 `make test` runs every op over the committed mpmath vectors in
@@ -139,7 +167,11 @@ the rest, with the same rounding and domain as the Yul) and writes
 [`docs/fp127/precision.md`](../../../docs/fp127/precision.md). Every
 integer op is bit-exact, and so are `ln`, `log2` and `log10` to within one
 ULP of the rounded truth at every tested input; `exp`, `exp2` and `exp10`
-hold 146 bits or better (their polynomials' limit), `pow` and `cbrt` 122. The one place precision is structurally
+hold 146 bits or better (their polynomials' limit), `pow` and `cbrt` 122.
+The version 4 ops sit at the same limits: `powu`, `compound`, `erf`,
+`erfc` and `normCdf` are within two ULP of the truth at every vector,
+`expm1`, `sinh`, `cosh`, `tanh` hold 140 bits or better and `log1p`,
+`atanh` ride the log kernel's one ULP. The one place precision is structurally
 lower is Lambert W at the branch point −1/e, where the function has infinite
 slope and one ULP of input resolution limits any answer to about 63 bits.
 
@@ -152,7 +184,11 @@ Huff baseline, the Yul object, `FP127Caller`, `FP127Lib`, and ABDK, Solady
 and PRBMath side by side. The Yul object costs about the same as the Huff
 through a `staticcall`; the inline library removes the call overhead.
 Lambert W is the one op that got dearer, buying 126+ bits where the Huff had
-50 to 100.
+50 to 100. Of the version 4 ops, `powu` and `compound` cost 2,200 to 10,500
+gas (one squaring step per bit of the exponent), the near-one and
+hyperbolic ops 5,000 to 10,000, and the error function family is the
+honest expensive one: 1,000 to 35,000 gas depending on where x falls,
+the continued fraction near x = 4 being the dearest.
 
 ## What changed from the Huff
 

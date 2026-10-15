@@ -108,6 +108,17 @@ contract EquivalenceOps is FP127Harness {
     function testFuzz_objEqLib_gcd(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP127.gcd, (a, b)), "gcd"); }
     function testFuzz_objEqLib_factorial(int256 n) public view { _objLib(abi.encodeCall(IFP127.factorial, (n)), "factorial"); }
     function testFuzz_objEqLib_pi(int256 n) public view { _objLib(abi.encodeCall(IFP127.pi, (n)), "pi"); }
+    function testFuzz_objEqLib_powu(int256 x, int256 n) public view { _objLib(abi.encodeCall(IFP127.powu, (x, n)), "powu"); }
+    function testFuzz_objEqLib_compound(int256 r, int256 n) public view { _objLib(abi.encodeCall(IFP127.compound, (r, n)), "compound"); }
+    function testFuzz_objEqLib_log1p(int256 x) public view { _objLib(abi.encodeCall(IFP127.log1p, (x)), "log1p"); }
+    function testFuzz_objEqLib_expm1(int256 x) public view { _objLib(abi.encodeCall(IFP127.expm1, (x)), "expm1"); }
+    function testFuzz_objEqLib_sinh(int256 x) public view { _objLib(abi.encodeCall(IFP127.sinh, (x)), "sinh"); }
+    function testFuzz_objEqLib_cosh(int256 x) public view { _objLib(abi.encodeCall(IFP127.cosh, (x)), "cosh"); }
+    function testFuzz_objEqLib_tanh(int256 x) public view { _objLib(abi.encodeCall(IFP127.tanh, (x)), "tanh"); }
+    function testFuzz_objEqLib_atanh(int256 x) public view { _objLib(abi.encodeCall(IFP127.atanh, (x)), "atanh"); }
+    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP127.erf, (x)), "erf"); }
+    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP127.erfc, (x)), "erfc"); }
+    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP127.normCdf, (x)), "normCdf"); }
     function testFuzz_objEqLib_lambertW0(int256 x) public view {
         x = bound(x, -int256(0x5e2d58d8b3bcdf1abadec7829054f90d), int256(1) << 200);
         _objLib(abi.encodeCall(IFP127.lambertW0, (x)), "lambertW0");
