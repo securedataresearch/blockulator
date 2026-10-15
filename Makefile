@@ -111,7 +111,7 @@ size: build
 	@$(PY) python -c "import json;d=json.load(open('out/FP127.yul/FP127.json'));b=d['deployedBytecode']['object'];print('FP127 runtime:', (len(b)-2)//2, 'bytes of 24576')"
 
 bench: build
-	@forge test --match-contract GasLadder -vv | $(PY) scripts/fp127/gas_to_json.py
+	@forge test --match-contract "^GasLadder$$" -vv | $(PY) scripts/fp127/gas_to_json.py
 
 pi-compare: build
 	@forge test --match-contract PiCompare -vv | $(PY) scripts/fp127/pi_compare.py
@@ -186,7 +186,7 @@ smoke-fp256-sepolia: build
 	@forge test --match-contract Deployed256 --fork-url $(SEPOLIA_RPC) -vv
 
 bench-fp256: build
-	@forge test --match-contract GasLadder256 -vv | $(PY) scripts/fp127/gas_to_json.py --lib fp256
+	@forge test --match-contract "^GasLadder256$$" -vv | $(PY) scripts/fp127/gas_to_json.py --lib fp256
 
 predict-ladder: build
 	@$(PY) scripts/ladder/deploy.py predict $(SEPOLIA_RPC)
