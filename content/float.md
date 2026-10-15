@@ -1,6 +1,6 @@
 +++
 title = "Float"
-description = "FP256: 256-bit binary floating point for the EVM. One word, 71 digits at any magnitude, no walls; built on FP127's kernels."
+description = "FP256: 256-bit binary floating point for the EVM. One word, 71 digits at any magnitude, no walls, every op rounded once from kernels at 2^-254."
 +++
 
 FP127 is a fixed point: 38 digits between 2^−128 and 2^127, and nothing outside. The [edges](/edges/) measured where that ends. FP256 is the second ruler: a binary float that fills the whole word, so the digits travel with the value.
@@ -39,9 +39,9 @@ int256 balanceWad = FP256Lib.toFixed18(FP256Lib.mul(FP256Lib.fromFixed18(princip
 
 `fromFP127` and `toFP127` bridge to FP127 (exact in both directions whenever the value fits), `fromFixed18` and `toFixed18` to WAD.
 
-## Release one
+## Release two
 
-The arithmetic, the root, the comparisons and the conversions are exact to the 237-bit grid at every committed vector. `exp`, `ln` and `pow` reuse FP127's kernels, which compute at 2^−192 with polynomials fitted for a 128-bit result: `exp` holds 146 bits or better, `ln` 149, `pow` 123, with series bands near zero and near one so small arguments keep their relative precision. Release two is a kernel at 2^−250 with 512-bit products, for 236-bit transcendentals.
+The arithmetic, the root, the comparisons and the conversions are exact to the 237-bit grid at every committed vector, and so are `exp`, `ln` and `pow`. Release one borrowed FP127's kernels, which compute at 2^−192 with polynomials fitted for a 128-bit result, and held 146, 149 and 123 bits. Release two's kernels compute at 2^−254 with 512-bit products: 2^f from a 16-entry table and a degree-26 polynomial, log2 from twelve reduction stages and a degree-17 polynomial, each within 2^−250 before the one rounding, so the rounded word is the correct one at every vector. The series bands near zero and near one stay, at the same scale, so small arguments keep their relative precision.
 
 ## The ops
 

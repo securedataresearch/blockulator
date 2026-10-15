@@ -54,9 +54,9 @@ rounds to zero with the sign dropped.
 | `mul` | the 474-bit product of the significands, one rounding | `Overflow`, `OutOfRange` |
 | `div` | floor(ma·2^255 / mb) by two exact 2^128 stages, one rounding | `DivisionByZero`, `Overflow`, `OutOfRange` |
 | `sqrt` | the integer root of the significand at 2^136 (Newton, corrected by squaring), one rounding; never overflows | `OutOfRange` for x < 0 |
-| `exp` | 2^(x log2 e), the product at 2^−192, 2^f from FP127's kernel: about 145 bits; the series 1 + x(1 + x/2) below 2^−118; exactly one below 2^−237 | `Overflow` above about 181,705; zero below −181,700 |
-| `ln` | (E − bias) ln 2 + ln(M/2^236) through FP127's log2 kernel at 2^−192: about 150 bits (190 near a power of two); within 2^−8 of one, d = x − 1 exact and a 26-term series | `OutOfRange` for x ≤ 0 |
-| `pow` | 2^(y log2 x) with log2 x as a number, the product rounded once, then 2^t; shortcuts for y ∈ {1, 2, ½, −1}; 0^0 = 1 | `OutOfRange` for x < 0, `DivisionByZero` for 0^negative, `Overflow` |
+| `exp` | 2^(x log2 e): the 512-bit product of the significand and log2 e in two words, split into the integer part and a fraction at 2^−254, 2^f from a 16-entry table and a degree-26 polynomial, one rounding; the series 1 + x(1 + x/2) below 2^−118; exactly one below 2^−237 | `Overflow` above about 181,705; zero below −181,700 |
+| `ln` | (E − bias + log2(M/2^236)) ln 2: the exponent exactly, the mantissa through twelve reduction stages and a degree-17 polynomial at 2^−254, the sum scaled to fill a word, one product with ln 2 and one rounding; within 2^−8 of one, d = x − 1 exact and a 32-term series at 2^−254 | `OutOfRange` for x ≤ 0 |
+| `pow` | 2^(y log2 x): log2 x as a scaled word from the kernel (or the near-one series), its exact 512-bit product with y's significand split into the integer part and a fraction at 2^−254, then 2^f and one rounding; shortcuts for y ∈ {1, 2, ½, −1}; 0^0 = 1 | `OutOfRange` for x < 0, `DivisionByZero` for 0^negative, `Overflow` |
 | `neg`, `abs`, `sign` | bit operations; −0 is 0 | `OutOfRange` |
 | `cmp`, `lt`, `eq` | through a monotone key (negatives mirrored); `eq` is bit equality; results are plain integers | `OutOfRange` |
 | `fromUint(x)` | exact below 2^237, one rounding above | never |
@@ -73,10 +73,15 @@ rationals for the arithmetic and the conversions, so those references are
 bit-exact, and mpmath at 300 digits for `exp`, `ln` and `pow`) and writes
 `docs/fp256/precision.json`; `make precision-report-fp256` renders
 `docs/fp256/precision.md`. The arithmetic ops, `sqrt`, the comparisons and
-the conversions are bit-exact at every vector. `exp` holds 146 bits or
-better, `ln` 149, `pow` 123: release one rides FP127's 2^−192 kernels,
-whose polynomials were fitted for a 128-bit result. A kernel at 2^−250
-with 512-bit products, for 236-bit transcendentals, is release two.
+the conversions are bit-exact at every vector, and so are `exp`, `ln`
+and `pow`: release two's kernels compute at 2^−254 with 512-bit products
+(`scripts/fp256/generators/kernel254.py` fits them, models every op in
+exact integers and reports the bits before rounding: 2^f within 2^−253,
+log2 within 2^−250 absolute), so the one rounding at the end is the
+correct one at every committed vector. The test floors are 236 bits for
+`exp` and `ln` (one ULP) and 230 for `pow`, whose argument y log2 x
+carries the kernel's 2^−250 scaled by its own size. Release one rode
+FP127's 2^−192 kernels and held 146, 149 and 123 bits.
 
 ## What changed from FP127's conventions
 

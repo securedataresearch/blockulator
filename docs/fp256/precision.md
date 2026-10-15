@@ -11,9 +11,9 @@ Bits are relative correct bits of the result on the decoded values: the signific
 | mul | 495 | 5 | exact | exact |  |
 | div | 496 | 4 | exact | exact |  |
 | sqrt | 673 | 676 | exact | exact |  |
-| exp | 637 | 5 | 146 | 200 | `0xc000450000000000000000000000000000000000000000000000000000000000` |
-| ln | 2104 | 96 | 149 | 191 | `0x3fffef42aea8f299eabfe4614042a75f9db89af6cbd84858bb4a7b65df935c84` |
-| pow | 234 | 166 | 123 | 181 | `0x3fffeffffde7210be9424e5929670196d8f4f93bc0a06e9ff0cbaf965b20b806`, `0xc001cdf8af224afa784110e48f573a99cdbee7be9cc6400f84125153c9c2064f` |
+| exp | 637 | 5 | exact | exact |  |
+| ln | 2104 | 96 | exact | exact |  |
+| pow | 234 | 166 | exact | exact |  |
 | neg | 1346 | 3 | exact | exact |  |
 | abs | 1346 | 3 | exact | exact |  |
 | sign | 1346 | 3 | exact | exact |  |

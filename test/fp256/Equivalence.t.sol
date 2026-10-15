@@ -102,8 +102,8 @@ contract Equivalence256 is FP256Harness {
 
     function testFuzz_prop_exp_ln(int256 w) public view {
         int256 x = _mk(false, int256(bound(uint256(w) & 0xffff, 0, 400)) - 200, uint256(w) & ((uint256(1) << 236) - 1));
-        // ln then exp: the kernels bound this at about 140 bits in release one
-        assertGe(_bits(obj.exp(obj.ln(x)), x), 138, "exp(ln x)");
+        // ln then exp: two roundings, the second scaled by |ln x| (up to 139 here)
+        assertGe(_bits(obj.exp(obj.ln(x)), x), 228, "exp(ln x)");
     }
 
     function testFuzz_prop_compare(int256 wa, int256 wb) public view {

@@ -25,18 +25,22 @@
 // Overflow (E above 0x7ffff after rounding) reverts; underflow (E below 1)
 // rounds to zero.
 //
-// Release one: add, sub, mul, div, sqrt and the conversions are exact to
-// the 237-bit grid. exp, ln and pow reuse FP127's 2^-192 kernels and carry
-// about 145 (exp) and 150 (ln) correct bits, with series bands near zero and
-// near one so small arguments keep their relative precision. A kernel at
-// 2^-250 with 512-bit products is release two.
+// Release two: add, sub, mul, div, sqrt and the conversions are exact to
+// the 237-bit grid. exp, ln and pow run on kernels at 2^-254 with 512-bit
+// products (scripts/fp256/generators/kernel254.py): 2^f from a 16-entry
+// table and a degree-26 polynomial, log2 from twelve reduction stages and
+// a degree-17 polynomial, each below 2^-250, so exp and ln are correctly
+// rounded at every committed vector and pow loses only log2|y log2 x|
+// bits. ln within 2^-8 of one and exp below 2^-118 use short series so
+// small arguments keep their relative precision.
 
 /// @error Overflow() 0x35278d12
 /// @error DivisionByZero() 0x23d359a3
 /// @error OutOfRange() 0x7db3aba7
 
 // ---------------------------------------------------------------------------
-// Helpers shared with FP127.yul.src (verbatim)
+// Helpers: rev, absw, msb and divu verbatim from FP127.yul.src; the 512-bit
+// products and the kernels are FP256's own
 // ---------------------------------------------------------------------------
 
 /// Revert with a 4-byte custom error selector. Uses scratch space only.
@@ -64,16 +68,34 @@ function msb(x) -> r {
     if iszero(lt(x, 0x2)) { r := add(r, 1) }
 }
 
-/// Unchecked floor(a * b / 2^192) on signed words: the kernel multiply of the
-/// transcendentals, which keep 64 guard bits below the format's 2^-128. The
-/// 512-bit product is formed as in mulraw and bits 192..447 are kept.
-function mulg(a, b) -> r {
-    let p0 := mul(a, b)
+/// The 512-bit product of two unsigned words as (hi, lo).
+function mul512(a, b) -> p1, p0 {
+    p0 := mul(a, b)
     let mm := mulmod(a, b, not(0))
-    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    p1 := sub(sub(mm, p0), lt(mm, p0))
+}
+
+/// Unchecked floor(a * b / 2^254) on unsigned words: the kernel multiply,
+/// which keeps 18 guard bits below the format's 2^-236.
+function mulwu(a, b) -> r {
+    let p1, p0 := mul512(a, b)
+    r := or(shl(2, p1), shr(254, p0))
+}
+
+/// floor(a * b / 2^254) on signed words: the unsigned product with the
+/// two's-complement corrections, as mulraw in FP127.
+function mulw(a, b) -> r {
+    let p1, p0 := mul512(a, b)
     p1 := sub(p1, mul(slt(a, 0), b))
     p1 := sub(p1, mul(slt(b, 0), a))
-    r := or(shl(64, p1), shr(192, p0))
+    r := or(shl(2, p1), shr(254, p0))
+}
+
+/// The 512-bit (p1, p0) shifted right by n, as a word; zero for n >= 512.
+function shr512(p1, p0, n) -> r {
+    switch lt(n, 256)
+    case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
+    default { r := shr(sub(n, 256), p1) }
 }
 
 /// Unsigned floor(a * 2^128 / b) for b != 0, requires (a >> 128) < b.
@@ -99,94 +121,182 @@ function divu(a, b) -> q {
     q := mul(prod0, iv)
 }
 
-/// 2^f for f in [0, 1) given at 2^-192, result at 2^-192 in [1, 2). Degree-24
-/// Chebyshev-fitted polynomial (max error 2^-145, guard_model.py) evaluated
-/// by Horner's rule; every step floors at 2^-192 via mulg.
+/// 2^f for f in [0, 1) at 2^-254, result at 2^-254 in [1, 2): f = j/16 + r,
+/// 2^(j/16) from a 16-entry table and 2^r from a degree-26 Chebyshev fit on
+/// [0, 1/16) (max error 2^-262, kernel254.py), Horner with a floor at 2^-254
+/// at every step. Unsigned throughout.
 function exp2frac(f) -> r {
-    r := 0x1b5a5019cfe1d4f099ea512721
-    r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
-    r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
-    r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
-    r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
-    r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
-    r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
-    r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
-    r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
-    r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
-    r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
-    r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
-    r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
-    r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
-    r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
-    r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
-    r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
-    r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
-    r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
-    r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
-    r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
-    r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
-    r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
-    r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
-    r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+    let x := and(f, 0x3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+    r := 0xef15a4451ca23d12b30dfe18d411fa4ddfad5e
+    r := add(mulwu(r, x), 0x2245d31ff476d0c9b30c9334de63851af8c5d488)
+    r := add(mulwu(r, x), 0x4d46b4130787134f2a100f94c77c56ed31416a76b)
+    r := add(mulwu(r, x), 0xa73a8ad71927f01c2b655223d08c7d886ad653d9e1)
+    r := add(mulwu(r, x), 0x15acfad3732e67e3eb833ad1df1d51e455b9162ed161)
+    r := add(mulwu(r, x), 0x2aff8af07c0e85ac8a653c0ab487083b0cd9bd8c95642)
+    r := add(mulwu(r, x), 0x516b312d4144dcab4ef2cf7c79f553111a7f01bb0a7930)
+    r := add(mulwu(r, x), 0x92d3f65c1ae326d005819c8f5f4c0a9d81dcba6dad8512a)
+    r := add(mulwu(r, x), 0xfb8bb5eda1b4aeb99d7afbdec0f0b415b75127ab7911e36e)
+    r := add(mulwu(r, x), 0x198444b41c25a7d561d83a8cbe3d8980ac15c25e1cccecd1ce)
+    r := add(mulwu(r, x), 0x271d135cf3f1672471fc9dbc5618b80e2afe40ac27fc02788b8)
+    r := add(mulwu(r, x), 0x386dd087608043ccf62afe3524ff2ac6e0ed7fb23e766921b288)
+    r := add(mulwu(r, x), 0x4c52593561e2a5cfc50d89572bb8d9d9451308dba591d37ed4920)
+    r := add(mulwu(r, x), 0x605864c59b43e58a06b0c03dc6c670b3c410cc09a7f09024860f8d)
+    r := add(mulwu(r, x), 0x70ef5943f0a6178ad5a1f85e8bb9873c1c3a1b6f4210f27c95f2660)
+    r := add(mulwu(r, x), 0x7a32b1cd46ec9303d5e65791c85276e3d9cc30260527257f7d671652)
+    r := add(mulwu(r, x), 0x7933d4562e3b27dbf687654b9da67150304513747d41a3490ca9e84db)
+    r := add(mulwu(r, x), 0x6d494f4e579f0f6929c39693fe4228c65c6554dbdc44060f48666bac2f)
+    r := add(mulwu(r, x), 0x58b0088e97208ff63ff981b69df12c370d07b883d5efb0e18af5cb30c31)
+    r := add(mulwu(r, x), 0x3ff97f8b11618d0d62a3990fb1cd256708a9744087f72b707591e866cc73)
+    r := add(mulwu(r, x), 0x2861225f0d8f0ede9615130d64683e7d98a7fe6623dd82a4e1a6d15a077c0)
+    r := add(mulwu(r, x), 0x15d87fe78a673110717f69a514bec330576ca696e71970e466df389c1f9ecb)
+    r := add(mulwu(r, x), 0x9d955b7dd273b94e65df05a9f756283923c7529f31c88eb4cdb84c8e6d5e2f)
+    r := add(mulwu(r, x), 0x38d611ae09417f16674ec576657a5bdd3d711d113680443a3a98cc56eadaba4)
+    r := add(mulwu(r, x), 0xf5fdeffc162c754378b583764b9afe551d13a8e186734ea615f49ddd89cc7c5)
+    r := add(mulwu(r, x), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)
+    r := add(mulwu(r, x), 0x4000000000000000000000000000000000000000000000000000000000000000)
+    switch shr(250, f)
+    case 1 { r := mulwu(r, 0x42d561b3e6243d8a62e4adc610aa60d90a45022cf3ac28a8aea159b1578f742d) }
+    case 2 { r := mulwu(r, 0x45cae0f1f545eb737df23143ac529e480d5427fdf5d61a4fc8f09af74251fb9a) }
+    case 3 { r := mulwu(r, 0x48e1e9b9d588e19b07eb6c70572d64ec0ca159a40b7da79378901e57b2dfdcdd) }
+    case 4 { r := mulwu(r, 0x4c1bf828c6dc54b7a356918c17217b7b2f09cd0d8a7d40bc6bc5b2e5f7d3ddb8) }
+    case 5 { r := mulwu(r, 0x4f7a993048d088d6d0488f84f5dcfee8b2e0ae091099f15110fcbbff3e3fd08c) }
+    case 6 { r := mulwu(r, 0x52ff6b54d8a89c750e5ebfb10b88380d8ee8b856715e7e0b92c4e4c5414869f8) }
+    case 7 { r := mulwu(r, 0x56ac1f752150a56324c054647acd176235f204a0381a7ef6d8b2f8a0c19d33ed) }
+    case 8 { r := mulwu(r, 0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8b) }
+    case 9 { r := mulwu(r, 0x5e8451cfac061b5f54408fdb3687d7bd0ad9a5de5814c7a086cd25f011f67019) }
+    case 10 { r := mulwu(r, 0x62b39508aa836d6e9f156864b26ecf9bb587c9cccc128d1b63b4300372736049) }
+    case 11 { r := mulwu(r, 0x6712460a8fc24071f11ac1c7caf96376b7943085c61b242d15de9cc579ae03d0) }
+    case 12 { r := mulwu(r, 0x6ba27e656b4eb57a1cd345dcc8169fef0eb99d7a9102c58b5ae09d6d073bc14d) }
+    case 13 { r := mulwu(r, 0x70666f76154a7088832c4a8246e999e51125928d998490010e5cce9f8ff94c51) }
+    case 14 { r := mulwu(r, 0x75606373ee921c976816bad9b8372a7d627d567021dbfc8e0bec68f46518c405) }
+    case 15 { r := mulwu(r, 0x7a92be8a924366163dce863d76cc07e1b7a8818433bb84fadeec01949b255150) }
 }
 
-/// f * P(f) = log2(1 + f) for f in [0, 2^(1/128) - 1) at 2^-192. P is a
-/// degree-14 Chebyshev-fitted polynomial for log2(1 + f) / f (max error
-/// 2^-145, guard_model.py), Horner with floor at every step via mulg.
+/// f * P(f) = log2(1 + f) for f in [0, 2^(1/4096) - 1) at 2^-254. P is a
+/// degree-17 Chebyshev fit of log2(1 + f) / f (max error 2^-262), Horner with
+/// a floor at 2^-254 at every step; the coefficients alternate in sign.
 function log2poly(f) -> r {
-    r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-    r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-    r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-    r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-    r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-    r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-    r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-    r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-    r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-    r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-    r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-    r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-    r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-    r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-    r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-    r := mulg(r, f)
+    r := 0xfae0b8675497d903f5e4542ac3ac8663083462bdeaccf9dfa001a45ff5546ea4
+    r := add(mulw(r, f), 0x56e6ad0426b074a78f4695774d29dbbeb179d4d39005acd056f3e8e39322bcf)
+    r := add(mulw(r, f), 0xfa3aae26be852b5debd632905047f581fb7a76542a44f3db53dc746a1ee25cb9)
+    r := add(mulw(r, f), 0x627cec5a5334e620480f50409f14445c6bd87524c5bf6b71cc734050c24f117)
+    r := add(mulw(r, f), 0xf967a275614849b98209eb79f293c5dde48b35893c6e6b99cfb19171116df250)
+    r := add(mulw(r, f), 0x71a3d5a34c5d807383166248359d08e9e6a6cb6384e8e859f65e05ebf921953)
+    r := add(mulw(r, f), 0xf84e3d88f17f00a2d80fad799e2dc58ef76103db31157909de119f3d462b9170)
+    r := add(mulw(r, f), 0x864d424ca0116942b91d16680a2d5c0c11744f6cfa34e5797be9f7d971d833f)
+    r := add(mulw(r, f), 0xf6c449d7883200c369ac6675945867b028e9563704b8a68381f3cc6c431afa2e)
+    r := add(mulw(r, f), 0xa42589ebe01547c354071b63eba837883254261f73033c62bb1d97e0ee4fc66)
+    r := add(mulw(r, f), 0xf4755c4d6a3e80f444178012f96e2c17714ca49aee0222f21141a545623568d0)
+    r := add(mulw(r, f), 0xd30bb153d6f6c9fb22e490ee2efcd9c10cf642cef6810d6d6b6291ad3e3d7ec)
+    r := add(mulw(r, f), 0xf09c7b11e2fe0145b01f556ea1e83ac9ec636071ed9114aae3bb34557f978f73)
+    r := add(mulw(r, f), 0x12776c50ef9bfe792ca73314d74fb9741788bf77495755d1fc8f9a730dc08318)
+    r := add(mulw(r, f), 0xe8eab89ad47d01e8882f0025f2dc582ee29510aae452d4b4ee9d2c0c8de61dc3)
+    r := add(mulw(r, f), 0x1ec709dc3a03fd749fc15522bc2f8a6c27393f1c24e6e4641730d911aa9e7e7c)
+    r := add(mulw(r, f), 0xd1d57135a8fa03d1105e004be5b8b05dc52a2155c8a5a969dd36ba64cb97bfd3)
+    r := add(mulw(r, f), 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09924)
+    r := mulw(r, f)
 }
 
-/// log2(mm) for a mantissa mm in [1, 2) at 2^-192, result at 2^-192,
-/// unrounded: seven range-reduction stages by 2^(1/2^k) and the polynomial
-/// on the residual. The body of FP127's log2g after its normalisation.
+/// log2(mm) for a mantissa mm in [1, 2) at 2^-254, result at 2^-254 in [0, 1),
+/// unrounded: 12 range-reduction stages by 2^(1/2^k) and the polynomial on
+/// the residual. Absolute error below 2^-250 (kernel254.py).
 function log2m(mm) -> r {
     let acc := 0
-    if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-        mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
-        acc := add(acc, 0x800000000000000000000000000000000000000000000000)
+    if iszero(gt(0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8b, mm)) {
+        mm := mulwu(mm, 0x2d413cccfe779921165f626cdd52afa7c75bd82ea24eea133b45eb2160cce645)
+        acc := add(acc, 0x2000000000000000000000000000000000000000000000000000000000000000)
     }
-    if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-        mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
-        acc := add(acc, 0x400000000000000000000000000000000000000000000000)
+    if iszero(gt(0x4c1bf828c6dc54b7a356918c17217b7b2f09cd0d8a7d40bc6bc5b2e5f7d3ddb8, mm)) {
+        mm := mulwu(mm, 0x35d13f32b5a75abd0e69a2ee640b4ff7875ccebd488162c5ad704eb6839de0a6)
+        acc := add(acc, 0x1000000000000000000000000000000000000000000000000000000000000000)
     }
-    if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-        mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
-        acc := add(acc, 0x200000000000000000000000000000000000000000000000)
+    if iszero(gt(0x45cae0f1f545eb737df23143ac529e480d5427fdf5d61a4fc8f09af74251fb9a, mm)) {
+        mm := mulwu(mm, 0x3ab031b9f7490e4bb40b5d6cdc1b953eb13eab3810edfe4705f6347a328c6203)
+        acc := add(acc, 0x800000000000000000000000000000000000000000000000000000000000000)
     }
-    if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-        mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
-        acc := add(acc, 0x100000000000000000000000000000000000000000000000)
+    if iszero(gt(0x42d561b3e6243d8a62e4adc610aa60d90a45022cf3ac28a8aea159b1578f742d, mm)) {
+        mm := mulwu(mm, 0x3d495f454921b30b1ee7431ebb6603f0dbd440c219ddc27d6f7600ca4d92a8a8)
+        acc := add(acc, 0x400000000000000000000000000000000000000000000000000000000000000)
     }
-    if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-        mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
-        acc := add(acc, 0x80000000000000000000000000000000000000000000000)
+    if iszero(gt(0x4166c34c5615d0eb9f1523ada32905ff94f8d257df7d2ebe128178a8339bc50c, mm)) {
+        mm := mulwu(mm, 0x3ea0ecb6dc8a80ce9f096ec50c575ff32001bf886a57453712112ca6fd2bc63a)
+        acc := add(acc, 0x200000000000000000000000000000000000000000000000000000000000000)
     }
-    if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-        mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
-        acc := add(acc, 0x40000000000000000000000000000000000000000000000)
+    if iszero(gt(0x40b268f9de0183b9bdf2b293de8a6f7a4f5c28b2af172e26e8403ad60f900726, mm)) {
+        mm := mulwu(mm, 0x3f4f83033d21b05d214fce964c783b80c186deeca16981e46748a16d9d53b758)
+        acc := add(acc, 0x100000000000000000000000000000000000000000000000000000000000000)
     }
-    if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-        mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
-        acc := add(acc, 0x20000000000000000000000000000000000000000000000)
+    if iszero(gt(0x4058f6a7ecccd5b61299ab8cdb737e9000fb0130d82f890101e1aad65d26fa7d, mm)) {
+        mm := mulwu(mm, 0x3fa784571ee3e212eb74966579e74bc25a4d3b15af8349510e9d48bb600e949f)
+        acc := add(acc, 0x80000000000000000000000000000000000000000000000000000000000000)
     }
-    r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
+    if iszero(gt(0x402c6be96af2fb584a6ac4fb04772551156e061fc325d07acee3808c8aa5c7cd, mm)) {
+        mm := mulwu(mm, 0x3fd3b2d65447b2294c06e885fbc6375f0bd02615e55b51d7f6c5c51d1c0335cc)
+        acc := add(acc, 0x40000000000000000000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x4016321b687027a87fc674a533cbd9e71a2fc17ad8fd71071e858c6034bae0b1, mm)) {
+        mm := mulwu(mm, 0x3fe9d59487236bb467ce86d23ee5316240c1edd208bf54566423ff662221bc13)
+        acc := add(acc, 0x20000000000000000000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x400b18178ba33b141b486ff22688e804201b0290b576b9f824dc7b8ee5524a11, mm)) {
+        mm := mulwu(mm, 0x3ff4e9d4703df842f4ee7e2b804bef81a3ad7b351f76ca25dc72d54b267f0a74)
+        acc := add(acc, 0x10000000000000000000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x40058bce410147e84a2f2a71570c79781b774c4557f81b103b661bffcac2670b, mm)) {
+        mm := mulwu(mm, 0x3ffa74acbdf6c9d5777c74a28de290e31bc14bd8ba0f98e48b94c35526e2b018)
+        acc := add(acc, 0x8000000000000000000000000000000000000000000000000000000000000)
+    }
+    if iszero(gt(0x4002c5d7bff71dae8e38c59c72a4e5c99a518c38bd42e8cc4a2d9e530905beaa, mm)) {
+        mm := mulwu(mm, 0x3ffd3a46ffc6e30f620ce383afca12937a074726c06dee1d9b0c021666c08c48)
+        acc := add(acc, 0x4000000000000000000000000000000000000000000000000000000000000)
+    }
+    r := add(acc, log2poly(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)))
 }
+
+/// ln(1 + d) / d: the series sum_{k>=0} (-d)^k / (k + 1) at 2^-254 for
+/// |d| < 2^-8, Horner in 32 terms (truncation below 2^-261), in
+/// two halves so the Yul pipeline's stack stays shallow.
+function ln1pseries(df) -> p {
+    p := ln1ptail(df)
+    p := add(0xfc00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+    p := add(0x444444444444444444444444444444444444444444444444444444444444444, mulw(df, p))
+    p := add(0xfb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6e, mulw(df, p))
+    p := add(0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec, mulw(df, p))
+    p := add(0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+    p := add(0x5d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1, mulw(df, p))
+    p := add(0xf99999999999999999999999999999999999999999999999999999999999999a, mulw(df, p))
+    p := add(0x71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c, mulw(df, p))
+    p := add(0xf800000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+    p := add(0x924924924924924924924924924924924924924924924924924924924924925, mulw(df, p))
+    p := add(0xf555555555555555555555555555555555555555555555555555555555555555, mulw(df, p))
+    p := add(0xccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccd, mulw(df, p))
+    p := add(0xf000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+    p := add(0x1555555555555555555555555555555555555555555555555555555555555555, mulw(df, p))
+    p := add(0xe000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+    p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+}
+
+/// The upper 16 terms of ln1pseries.
+function ln1ptail(df) -> p {
+    p := 0xfe00000000000000000000000000000000000000000000000000000000000000
+    p := add(0x210842108421084210842108421084210842108421084210842108421084211, mulw(df, p))
+    p := add(0xfdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddde, mulw(df, p))
+    p := add(0x234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c, mulw(df, p))
+    p := add(0xfdb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db7, mulw(df, p))
+    p := add(0x25ed097b425ed097b425ed097b425ed097b425ed097b425ed097b425ed097b4, mulw(df, p))
+    p := add(0xfd89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d8a, mulw(df, p))
+    p := add(0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f, mulw(df, p))
+    p := add(0xfd55555555555555555555555555555555555555555555555555555555555555, mulw(df, p))
+    p := add(0x2c8590b21642c8590b21642c8590b21642c8590b21642c8590b21642c8590b2, mulw(df, p))
+    p := add(0xfd1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d17, mulw(df, p))
+    p := add(0x30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c, mulw(df, p))
+    p := add(0xfccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccd, mulw(df, p))
+    p := add(0x35e50d79435e50d79435e50d79435e50d79435e50d79435e50d79435e50d794, mulw(df, p))
+    p := add(0xfc71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c72, mulw(df, p))
+    p := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, mulw(df, p))
+}
+
+
 
 // ---------------------------------------------------------------------------
 // The word
@@ -365,39 +475,43 @@ function fp256_sqrt(x) -> r {
 }
 
 // ---------------------------------------------------------------------------
-// Exponentials and logarithms, on FP127's 2^-192 kernels
+// Exponentials and logarithms, on the 2^-254 kernels
 // ---------------------------------------------------------------------------
 
-/// A number with unbiased exponent u (u <= 18) as a signed 2^-192 fixed word.
-function tofixed192(s, u, m) -> t {
-    switch slt(u, 44)
-    case 1 { t := shr(sub(44, u), m) }
-    default { t := shl(sub(u, 44), m) }
+/// A number with unbiased exponent u <= -9 as a signed 2^-254 fixed word
+/// (exact: the significand only moves right when u < -18).
+function tofixed254(s, u, m) -> t {
+    switch slt(u, sub(0, 18))
+    case 1 { t := shr(sub(sub(0, 18), u), m) }
+    default { t := shl(add(u, 18), m) }
     if s { t := sub(0, t) }
 }
 
-/// A signed 2^-192 fixed word as a number, rounded once.
-function fromfixed192(l) -> r {
-    if iszero(l) { r := 0 leave }
-    r := normround(slt(l, 0), 0x4003d, absw(l))
-}
-
-/// 2^t for t at 2^-192: the integer part goes to the exponent, 2^f comes
-/// from the kernel at 2^-192 and is placed under the hidden bit exactly.
-function exp2fixed(t) -> r {
-    let f := and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
-    let v := 0x1000000000000000000000000000000000000000000000000
+/// 2^(k + f) for an integer k below 2^19 and f in [0, 1) at 2^-254, or
+/// 2^-(k + f) when s is set: the integer part goes to the exponent, 2^f
+/// comes from the kernel and sits under the hidden bit, one rounding.
+function exp2kf(s, k, f) -> r {
+    if s {
+        k := sub(0, k)
+        if f {
+            k := sub(k, 1)
+            f := sub(0x4000000000000000000000000000000000000000000000000000000000000000, f)
+        }
+    }
+    let v := 0x4000000000000000000000000000000000000000000000000000000000000000
     if f { v := exp2frac(f) }
-    r := normround(0, add(sar(192, t), 0x3ffff), shl(62, v))
+    r := normround(0, add(k, 0x3ffff), v)
 }
 
 /// @export exp(int256 x) returns (int256 r)
 /// @domain x < 2^18
 /// @reverts Overflow() when e^x does not fit (x above about 181,705); OutOfRange() for a word that is not a number
-/// @notice e^x = 2^(x log2 e), the product at 2^-192 and 2^f from FP127's
-///         kernel: about 145 correct bits. Below 2^-118 the series
-///         1 + x (1 + x/2) at full precision; below 2^-237 exactly one;
-///         zero below about -181,700.
+/// @notice e^x = 2^(x log2 e): the 512-bit product of the significand and
+///         log2 e in two words (2^-508), split into the integer part and a
+///         fraction at 2^-254, then the 2^f kernel and one rounding:
+///         correctly rounded at every committed vector. Below 2^-118 the
+///         series 1 + x (1 + x/2) at full precision; below 2^-237 exactly
+///         one; zero below about -181,700.
 function fp256_exp(x) -> r {
     let s, e, m := unpack(x)
     if iszero(e) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
@@ -412,51 +526,41 @@ function fp256_exp(x) -> r {
         r := fp256_add(one, fp256_mul(x, fp256_add(one, sub(x, 0x100000000000000000000000000000000000000000000000000000000000))))
         leave
     }
-    r := exp2fixed(mulg(tofixed192(s, u, m), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+    let p1, p0 := mul512(m, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
+    let lo := mulwu(m, 0x3bc3887eeaa2ed9ac49b25eeb82d7c167d52173cc1895213f897f5e06a7be736)
+    p0 := add(p0, lo)
+    p1 := add(p1, lt(p0, lo))
+    let sh := sub(236, u)
+    let f := and(shr512(p1, p0, sh), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+    let k := shr512(p1, p0, add(sh, 254))
+    if iszero(lt(k, 0x80000)) {
+        if s { r := 0 leave }
+        rev(0x35278d12)
+    }
+    r := exp2kf(s, k, f)
 }
 
-/// ln(1 + d) / d: the series sum_{k>=0} (-d)^k / (k + 1) at 2^-192 for
-/// |d| < 2^-8, Horner in 26 terms (truncation below 2^-216).
-function ln1pseries(df) -> p {
-    p := 0xfffffffffffffffff62762762762762762762762762762762762762762762762
-    p := add(mulg(df, p), 0xa3d70a3d70a3d70a3d70a3d70a3d70a3d70a3d70a3d70a4)
-    p := add(mulg(df, p), 0xfffffffffffffffff55555555555555555555555555555555555555555555555)
-    p := add(mulg(df, p), 0xb21642c8590b21642c8590b21642c8590b21642c8590b21)
-    p := add(mulg(df, p), 0xfffffffffffffffff45d1745d1745d1745d1745d1745d1745d1745d1745d1746)
-    p := add(mulg(df, p), 0xc30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c3)
-    p := add(mulg(df, p), 0xfffffffffffffffff33333333333333333333333333333333333333333333333)
-    p := add(mulg(df, p), 0xd79435e50d79435e50d79435e50d79435e50d79435e50d8)
-    p := add(mulg(df, p), 0xfffffffffffffffff1c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c)
-    p := add(mulg(df, p), 0xf0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f)
-    p := add(mulg(df, p), 0xfffffffffffffffff00000000000000000000000000000000000000000000000)
-    p := add(mulg(df, p), 0x111111111111111111111111111111111111111111111111)
-    p := add(mulg(df, p), 0xffffffffffffffffedb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db)
-    p := add(mulg(df, p), 0x13b13b13b13b13b13b13b13b13b13b13b13b13b13b13b13b)
-    p := add(mulg(df, p), 0xffffffffffffffffeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab)
-    p := add(mulg(df, p), 0x1745d1745d1745d1745d1745d1745d1745d1745d1745d174)
-    p := add(mulg(df, p), 0xffffffffffffffffe66666666666666666666666666666666666666666666666)
-    p := add(mulg(df, p), 0x1c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c7)
-    p := add(mulg(df, p), 0xffffffffffffffffe00000000000000000000000000000000000000000000000)
-    p := add(mulg(df, p), 0x249249249249249249249249249249249249249249249249)
-    p := add(mulg(df, p), 0xffffffffffffffffd55555555555555555555555555555555555555555555555)
-    p := add(mulg(df, p), 0x333333333333333333333333333333333333333333333333)
-    p := add(mulg(df, p), 0xffffffffffffffffc00000000000000000000000000000000000000000000000)
-    p := add(mulg(df, p), 0x555555555555555555555555555555555555555555555555)
-    p := add(mulg(df, p), 0xffffffffffffffff800000000000000000000000000000000000000000000000)
-    p := add(mulg(df, p), 0x1000000000000000000000000000000000000000000000000)
+/// log2 of a positive number (e, m) off the near-one band as a signed word
+/// Lm and a scale Ls: log2 x = Lm 2^Ls. The exponent's integer part and the
+/// kernel's fraction share the word, Lm holding 254 or 255 bits.
+function log2pair(e, m) -> Lm, Ls {
+    let u := sub(e, 0x3ffff)
+    let lg := log2m(shl(18, m))
+    if iszero(u) { Lm := lg Ls := sub(0, 254) leave }
+    let sh := add(msb(absw(u)), 1)
+    Lm := add(shl(sub(254, sh), u), shr(sh, lg))
+    Ls := sub(sh, 254)
 }
 
 /// @export ln(int256 x) returns (int256 r)
 /// @domain x > 0
 /// @reverts OutOfRange() for x <= 0 or a word that is not a number
-/// @notice ln(x) = (E - bias) ln 2 + ln(M / 2^236): the exponent exactly,
-///         the mantissa through FP127's log2 kernel at 2^-192, one
-///         rounding. The kernel's polynomial is good to about 2^-153
-///         absolute, so ln carries about 150 correct bits in general and
-///         190 where the exponent dominates (powers of two are exact to
-///         2^-192). Within 2^-24 of one, d = x - 1 is exact and
-///         ln(1 + d) = d * series(d), so the relative precision holds all
-///         the way down.
+/// @notice ln(x) = (E - bias + log2(M / 2^236)) ln 2: the exponent exactly,
+///         the mantissa through the log2 kernel at 2^-254, the sum scaled to
+///         fill a word, one product with ln 2 and one rounding: correctly
+///         rounded at every committed vector. Within 2^-8 of one, d = x - 1
+///         is exact and ln(1 + d) = d * series(d) at 2^-254, so the relative
+///         precision holds all the way down.
 function fp256_ln(x) -> r {
     let s, e, m := unpack(x)
     if or(s, iszero(e)) { rev(0x7db3aba7) }
@@ -465,43 +569,32 @@ function fp256_ln(x) -> r {
         let d := fp256_sub(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000)
         let sd, ed, md := unpack(d)
         if lt(ed, 0x3fff7) {
-            r := fp256_mul(d, fromfixed192(ln1pseries(tofixed192(sd, sub(ed, 0x3ffff), md))))
+            let ud := sub(ed, 0x3ffff)
+            let p1, p0 := mul512(md, ln1pseries(tofixed254(sd, ud, md)))
+            r := normround(sd, add(0x3ffff, ud), or(shl(20, p1), shr(236, p0)))
             leave
         }
     }
-    let lg := add(shl(192, sub(e, 0x3ffff)), log2m(shr(44, m)))
-    r := fromfixed192(mulg(lg, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e))
-}
-
-/// 2^t for a number t.
-function exp2f(t) -> r {
-    let s, e, m := unpack(t)
-    if iszero(e) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
-    let u := sub(e, 0x3ffff)
-    if iszero(slt(u, 19)) {
-        if s { r := 0 leave }
-        rev(0x35278d12)
-    }
-    if slt(u, sub(0, 118)) {
-        r := fp256_exp(fp256_mul(t, 0x3fffe62e42fefa39ef35793c7673007e5ed5e81e6864ce5316c5b141a2eb7175))
-        leave
-    }
-    r := exp2fixed(tofixed192(s, u, m))
+    let Lm, Ls := log2pair(e, m)
+    let l := mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)
+    r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
 }
 
 /// @export pow(int256 x, int256 y) returns (int256 r)
 /// @domain x >= 0
 /// @reverts OutOfRange() for x < 0; DivisionByZero() for 0^y with y < 0; Overflow() when the result does not fit
-/// @notice x^y = 2^(y log2 x), with log2 x as a number from the exponent and
-///         FP127's kernel, the product rounded once, then 2^t. 0^0 = 1.
-///         Shortcuts for y in {1, 2, 1/2, -1}. The float product means a
-///         huge y against an x near one is handled by the format.
+/// @notice x^y = 2^(y log2 x): log2 x as a scaled word from the kernel (or
+///         the near-one series), its exact 512-bit product with y's
+///         significand split into the integer part and a fraction at
+///         2^-254, then the 2^f kernel and one rounding. The kernel's
+///         2^-250 on log2 x bounds the result at about 250 - log2|t| bits
+///         for t = y log2 x. 0^0 = 1. Shortcuts for y in {1, 2, 1/2, -1}.
 function fp256_pow(x, y) -> r {
     if iszero(y) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
     let sx, ex, mx := unpack(x)
-    check(y)
+    let sy, ey, my := unpack(y)
     if iszero(ex) {
-        if slt(y, 0) { rev(0x23d359a3) }
+        if sy { rev(0x23d359a3) }
         r := 0
         leave
     }
@@ -513,11 +606,42 @@ function fp256_pow(x, y) -> r {
     case 0x3fffe00000000000000000000000000000000000000000000000000000000000 { r := fp256_sqrt(x) }
     case 0xbffff00000000000000000000000000000000000000000000000000000000000 { r := fp256_div(0x3ffff00000000000000000000000000000000000000000000000000000000000, x) }
     default {
-        let lg := fromfixed192(add(shl(192, sub(ex, 0x3ffff)), log2m(shr(44, mx))))
-        r := exp2f(fp256_mul(y, lg))
+        // |log2 x| = Lm 2^Ls with its sign in ls
+        let Lm, Ls, ls
+        let band := 0
+        if or(eq(ex, 0x3ffff), eq(ex, 0x3fffe)) {
+            let d := fp256_sub(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000)
+            let sd, ed, md := unpack(d)
+            if lt(ed, 0x3fff7) {
+                let ud := sub(ed, 0x3ffff)
+                Lm := mulwu(mulwu(shl(17, md), ln1pseries(tofixed254(sd, ud, md))), 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
+                Ls := sub(ud, 253)
+                ls := sd
+                band := 1
+            }
+        }
+        if iszero(band) {
+            let l, lsc := log2pair(ex, mx)
+            ls := slt(l, 0)
+            Lm := absw(l)
+            Ls := lsc
+        }
+        let p1, p0 := mul512(Lm, my)
+        // |t| = (p1, p0) 2^(Ls + uy - 236); at 2^-254 a shift right by q - 254
+        let q := sub(236, add(Ls, sub(ey, 0x3ffff)))
+        let s := xor(ls, sy)
+        if slt(q, 254) {
+            if s { r := 0 leave }
+            rev(0x35278d12)
+        }
+        let k := shr512(p1, p0, q)
+        if iszero(lt(k, 0x80000)) {
+            if s { r := 0 leave }
+            rev(0x35278d12)
+        }
+        r := exp2kf(s, k, and(shr512(p1, p0, sub(q, 254)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
     }
 }
-
 // ---------------------------------------------------------------------------
 // Sign and comparison
 // ---------------------------------------------------------------------------

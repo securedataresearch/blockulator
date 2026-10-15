@@ -37,13 +37,14 @@ abstract contract LadderBase is ILadderAdapter {
     function _isNeg(int256 x) internal pure virtual returns (bool) { return x < 0; }
 
     /// pi, by Ramanujan's series through the library's own mul, div and
-    /// sqrt (five terms, the recipe of docs/benchmarks/pi.md). FP127 has it
+    /// sqrt (nine terms, eight digits each, so a 71-digit form is not bounded
+    /// by it; the recipe of docs/benchmarks/pi.md). FP127 has it
     /// as an op.
     function _pi() internal view virtual returns (int256) {
         int256 one = _one();
         int256 c = one;
         int256 s = _fromUint(0);
-        for (uint256 k; k < 5; k++) {
+        for (uint256 k; k < 9; k++) {
             s = _add(s, _mul(c, _fromUint(1103 + 26390 * k)));
             uint256 k4 = 4 * k;
             c = _div(_mul(c, _fromUint((k4 + 1) * (k4 + 2) * (k4 + 3) * (k4 + 4))), _fromUint((k + 1) ** 4 * 24591257856));
