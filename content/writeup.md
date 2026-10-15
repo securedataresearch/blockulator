@@ -9,7 +9,7 @@ Every number here is a cell in a committed dataset, named in brackets: [`ladder.
 
 FP127 is a signed 127.128 fixed-point library for the EVM: one `int256` per value, 128 fractional bits, 49 operations including `exp`, `ln`, `sqrt`, `pow`, an exact integer power, the error function and the normal distribution, both real branches of the Lambert W function and pi by Ramanujan's series, written as one Yul source that compiles to a deployed contract and to an inlinable Solidity library. It is validated against mpmath at 200 decimal places, and it is deployed on Sepolia at `0xe43F720861074497db2e974E5c4554E4A3b341B9`.
 
-The one number that matters: $10,000 at 10% APR compounded daily for a year, one multiplication per day. After 365 steps ABDK is right to 17 digits, Solady and PRBMath to 16, FP127 to 36 [compound, N = 365]. The [ladder](/demo/) has eight of these scenarios, and you can re-run any cell against the chain.
+The one number that matters: $10,000 at 10% APR compounded daily for a year, one multiplication per day. After 365 steps ABDK is right to 17 digits, Solady, PRBMath and Balancer to 16, ABDKMathQuad to 31, Maker's rpow to 24, FP127 to 36 [compound, N = 365]. The [ladder](/demo/) has thirteen of these scenarios over nine libraries, and you can re-run any cell against the chain.
 
 ## Why WAD loses digits
 
@@ -35,11 +35,21 @@ The object has no storage, no owner, no proxy and no upgrade path. It was deploy
 
 ## What it costs
 
-Per op, inline, median over the gas ladder [gas.json, lib]: `mul` 472 against Solady's 347 and PRBMath's 647; `div` 939 against 361 and 715; `exp` 5,353 against 549 and 2,898; `ln` 999 against 720 and 1,052; `sqrt` 3,564 against 622 and 1,333. Multiplication and division cost about what they cost in WAD. The transcendentals cost more because they compute twice as many bits, and `sqrt` in particular pays for seven Newton steps that make it bit-exact. Through the deployed object add the `staticcall`, about 700 gas, to every op. The full table is on the [compare](/compare/) page.
+Per op, inline, median over the gas ladder [gas.json, lib]: `mul` 531 against Solady's 321, PRBMath's 641 and Quad's 1,036; `div` 981 against 329, 705 and 1,209; `exp` 5,366 against 547, 2,951 and 6,072; `ln` 1,035 against 731, 1,099 and 1,927; `sqrt` 3,632 against 622, 1,402 and 1,205; `normCdf` 23,487, the honest expensive one. Multiplication and division cost about what they cost in WAD. The transcendentals cost more because they compute twice as many bits, and `sqrt` in particular pays for seven Newton steps that make it bit-exact. Through the deployed object add the `staticcall`, about 700 gas, to every op. The full table is on the [compare](/compare/) page.
+
+## The edges
+
+The ladder measures a slope. The [edges](/edges/) measure the cliffs: 139 probes, one call each at the end of a domain, through nine libraries, every cell either with its digits or with how the library had no answer: zero below its floor, a revert, an argument outside its word, or no way to compute the op [edges.json]. ln(1 + 10^-9), a per-second rate inside a logarithm, has 8 digits on an 18-decimal grid and 30 on FP127; exp(−42), a probability of one in 10^18, is zero on the grid and 21 digits here; 10^-10 × 10^-10 is zero on every grid but this one and Quad's; N(−9), the normal tail an option lives in, is zero on WAD and 21 digits here. And FP127's own walls are on the page: exp(−89) is zero, exp(89) reverts, 1.0001^887272 is one bit past the word, a root of 10^-30 keeps eight digits. ABDKMathQuad, the one float, keeps 29 to 34 at every probe, because its point moves; it also keeps four fewer digits than FP127 in the middle and rounds at every op, so it loses on every ladder.
+
+The accrual maths of the protocols most of the money sits in are in the same tables, judged against the model each one states: Aave's and Morpho's three-term expansion of e^(rt) keeps 6 digits after one idle year and 1 after twenty-seven [accrual-continuous, N = 365 and 10,000]; Maker's rpow keeps 23 after ten thousand days [compound, N = 10,000]; Morpho's per-second rate in eighteen decimals has ten digits before any arithmetic. None of these are mistakes; each is right for the interval it was built for.
 
 ## What it is not for
 
-Range. FP127 tops out near 1.7 × 10^38. That is every balance a protocol will ever hold in whole units, but it is not every raw `uint256` in wei: a token with 18 decimals and a 10^21 supply is at 10^39 in wei. FP127 is for the maths in the middle, the rate, the price, the ratio, the exponent, and the conversion back to wei is one `toFixed18` at the edge. It is not a replacement for the integer arithmetic of a transfer, it is not for ERC20 balances, and it is not cheap enough to put in a path that does not need the digits. If your protocol multiplies once and settles, Solady is cheaper and good enough. If it accrues, iterates, chains transcendentals or subtracts two large numbers that are nearly equal, the [ladder](/demo/) is where you find out how many digits you have left.
+Range, and the floor. FP127 tops out near 1.7 × 10^38 and its grid stops at 2^-128. That is every balance a protocol will ever hold in whole units, but it is not every raw `uint256` in wei: a token with 18 decimals and a 10^21 supply is at 10^39 in wei. FP127 is for the maths in the middle, the rate, the price, the ratio, the exponent, and the conversion back to wei is one `toFixed18` at the edge. It is not a replacement for the integer arithmetic of a transfer, it is not for ERC20 balances, and it is not cheap enough to put in a path that does not need the digits. If your protocol multiplies once and settles, Solady is cheaper and good enough. If it accrues, iterates, chains transcendentals or subtracts two large numbers that are nearly equal, the [ladder](/demo/) is where you find out how many digits you have left.
+
+## The next ruler
+
+A fixed point spends 127 bits on a range nobody uses and still has walls; a float with half the word has no walls and four fewer digits. The other half of that word is idle. One sign bit, a 19-bit exponent and a 236-bit significand would hold about 70 digits at any magnitude, and every kernel in FP127 is already a significand engine: the integer power routine computes exactly that pair, a 256-bit mantissa and an exponent, before it rounds back to the grid. That library, FP256, is the next milestone; FP127 stays the fixed-point ruler for the middle of the number line.
 
 ## The talk
 

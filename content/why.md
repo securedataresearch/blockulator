@@ -80,24 +80,34 @@ same way, 16 against exact inputs and 19 against rounded ones at N = 365
 
 Per op, inline library form, median over the gas ladder [gas.json, lib]:
 
-| op | FP127 | Solady | PRBMath | ABDK |
-|---|---:|---:|---:|---:|
-| mul | 472 | 347 | 647 | 480 |
-| div | 939 | 361 | 715 | 578 |
-| exp | 5,353 | 549 | 2,898 | 3,512 |
-| ln | 999 | 720 | 1,052 | 7,325 |
-| sqrt | 3,564 | 622 | 1,333 | 1,111 |
+| op | FP127 | Quad | Solady | PRBMath | ABDK | Balancer |
+|---|---:|---:|---:|---:|---:|---:|
+| mul | 531 | 1,036 | 321 | 641 | 455 | 471 |
+| div | 981 | 1,209 | 329 | 705 | 546 | 512 |
+| exp | 5,366 | 6,072 | 547 | 2,951 | 3,542 | 1,191 |
+| ln | 1,035 | 1,927 | 731 | 1,099 | 7,340 | 1,358 |
+| sqrt | 3,632 | 1,205 | 622 | 1,402 | 1,159 | 2,520 |
+| pow | 6,654 | 23,879 | 1,605 | 10,062 | 1,932 | 2,412 |
+| normCdf | 23,487 | — | — | — | — | — |
 
 Multiplication and division cost about what they cost in WAD. The
-transcendentals cost more because they compute twice as many bits. Through
+transcendentals cost more because they compute twice as many bits, and the
+error function family is the honest expensive one. Quad, the one float,
+pays for its moving point on every add and four times over on pow. Through
 the deployed object add a `staticcall`, about 700 gas, per op.
 
 ## What it does not fix
 
-Range. FP127 tops out near 1.7·10^38. That is every balance a protocol
-will ever hold in whole units, but it is not every raw `uint256` in wei:
-a token with 18 decimals and a 10^21 supply is at 10^39 in wei. FP127 is
-for the maths in the middle, the rate, the price, the ratio, the exponent,
-and the conversion back to wei is one `toFixed18` at the edge. It is not a
-replacement for the integer arithmetic of a transfer, and it is not cheap
-enough to put in a path that does not need the digits.
+Range, and the floor. FP127 tops out near 1.7·10^38 and its grid stops at
+2^-128: exp(89) reverts and exp(-89) is zero, Uniswap's top tick
+1.0001^887272 is one bit past the word, and a result of 10^-30 has eight
+digits on the grid however exact the op was [edges: exp, pow, sqrt]. A
+fixed point maximises precision inside a band; a float maximises the band.
+ABDKMathQuad, the one float in the tables, holds 34 digits at every edge
+and 29 to 33 on every ladder, and does it with half the word idle. The
+[edges](/edges/) page shows both sides. FP127 is for the maths in the
+middle, the rate, the price, the ratio, the exponent, where it holds 38
+digits against the float's 34, and the conversion back to wei is one
+`toFixed18` at the edge. It is not a replacement for the integer
+arithmetic of a transfer, and it is not cheap enough to put in a path that
+does not need the digits.
