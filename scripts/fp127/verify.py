@@ -87,7 +87,7 @@ def blockscout(chain: int, address: str) -> bool:
     field("compiler_version", SOLC_LONG)
     field("license_type", "mit")
     field("autodetect_constructor_args", "true")
-    field("files[0]", json.dumps(std_input()), "FP127.json", "application/json")
+    field("files[0]", json.dumps(std_input()), f"{CONTRACT}.json", "application/json")
     buf.write(f"--{boundary}--\r\n".encode())
     status, text = http("POST", f"{base}/api/v2/smart-contracts/{address}/verification/via/standard-input",
                         buf.getvalue(), {"Content-Type": f"multipart/form-data; boundary={boundary}"})
