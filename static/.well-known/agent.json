@@ -95,6 +95,17 @@
     },
     "version": "FP127 v4 (2026-10-15: 49 ops; adds powu, compound, log1p, expm1, sinh, cosh, tanh, atanh, erf, erfc, normCdf, and pow with its exponent product at 2^-192); v3, v2 and v1 stay live and verified at their recorded addresses"
   },
+  "floatContract": {
+    "id": "fp256",
+    "name": "FP256",
+    "address": "0x628b8dfC82954983a9E8E22056ffc767B4a26077",
+    "description": "The second ruler: 256-bit binary floating point. One int256 holding sign (bit 255), a 19-bit biased exponent (bits 254..236, bias 262143) and a 236-bit fraction with an implicit one: about 71 significant digits at any magnitude from 2^-262142 to 2^262145. No NaN, infinity or subnormals: invalid words revert OutOfRange, overflow reverts, underflow rounds to zero. Ops add, sub, mul, div, sqrt, exp, ln, pow, neg, abs, sign, cmp, lt, eq, fromUint, fromFP127, toFP127, fromFixed18, toFixed18; release one's exp/ln/pow carry about 145-150 bits, everything else is exact to the grid. Read with eth_call.",
+    "deployment": "https://blockulator.com/contracts/deployments/FP256.json",
+    "abi": "https://blockulator.com/data/fp256/abi.json",
+    "ops": "https://blockulator.com/data/fp256/ops.json",
+    "source": "https://github.com/securedataresearch/blockulator/blob/master/contracts/src/fp256/FP256.yul.src",
+    "version": "FP256 v1 (2026-10-15)"
+  },
   "ladderRunner": {
     "id": "ladder-runner",
     "name": "LadderRunner",

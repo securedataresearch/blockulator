@@ -81,8 +81,9 @@
   or subnormals (invalid words revert OutOfRange); ops add, sub, mul, div,
   sqrt, exp, ln, pow, neg, abs, sign, cmp, lt, eq, fromUint, fromFP127,
   toFP127, fromFixed18, toFixed18. Ops table /data/fp256/ops.json, ABI
-  /data/fp256/abi.json, record /data/fp256/fp256.json (address pending
-  deployment).
+  /data/fp256/abi.json, record /data/fp256/fp256.json; live on Sepolia at
+  0x628b8dfC82954983a9E8E22056ffc767B4a26077 (salt "FP256 v1", the same
+  CREATE2 proxy), Sourcify and Blockscout verified.
 - /demo/ the ladder, /edges/ the cliffs, /why/ the mechanism, /library/ address, ABI and
   the op table, /compare/ gas and precision per op, /writeup/ the story.
 
