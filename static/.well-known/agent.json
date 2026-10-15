@@ -109,8 +109,8 @@
   "ladderRunner": {
     "id": "ladder-runner",
     "name": "LadderRunner",
-    "address": "0x943E7D93386B33df8CcD4823DBf5C38aFffeF7b2",
-    "description": "Re-run any cell of the terminal-precision ladder (https://blockulator.com/demo/) with one eth_call: run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok, int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal). Scenarios 0-12 (index in scenarios.json); forms 0 fp127, 1 fp127lib, 2 abdk, 3 solady, 4 prb, 5 quad (ABDKMathQuad binary128), 6 balancer, 7 aave, 8 morpho, 9 maker. p is the input's parameters encoded into the form's representation, listed per input in https://blockulator.com/data/ladder-inputs.json under the keys fp127 (forms 0, 1), abdk (2), wad (3, 4, 6, 8), quad (5), ray (7, 9). Decode raw by the scale: 2^128, 2^64, 1e18, 1e27, or the IEEE binary128 bit pattern for form 5. Aave, Morpho and Maker answer only the accrual scenarios their models describe and revert Unsupported(uint8) elsewhere.",
+    "address": "0x0D74eac307a3B8899f30E8297F36fB9732a2906c",
+    "description": "Re-run any cell of the terminal-precision ladder (https://blockulator.com/demo/) with one eth_call: run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok, int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal). Scenarios 0-12 (index in scenarios.json); forms 0 fp127, 1 fp127lib, 2 abdk, 3 solady, 4 prb, 5 quad (ABDKMathQuad binary128), 6 balancer, 7 aave, 8 morpho, 9 maker, 10 fp256 (the 256-bit float). p is the input's parameters encoded into the form's representation, listed per input in https://blockulator.com/data/ladder-inputs.json under the keys fp127 (forms 0, 1), abdk (2), wad (3, 4, 6, 8), quad (5), ray (7, 9), fp256 (10). Decode raw by the scale: 2^128, 2^64, 1e18, 1e27, the IEEE binary128 bit pattern for form 5, or the FP256 word for form 10. Aave, Morpho and Maker answer only the accrual scenarios their models describe and revert Unsupported(uint8) elsewhere.",
     "abi": "https://blockulator.com/contracts/deployments/Ladder.json",
     "record": "https://blockulator.com/contracts/deployments/Ladder.json",
     "scenarios": "https://blockulator.com/data/scenarios.json",
@@ -121,7 +121,7 @@
   "edgeRunner": {
     "id": "edge-runner",
     "name": "EdgeRunner",
-    "address": "0x4A32B0f99FC1e888bB9e5cb85399aDd7890B0957",
+    "address": "0x48630435648FB7436fE018a601069c6C105123fe",
     "description": "Evaluate any probe of the edges dataset (https://blockulator.com/edges/) with one eth_call: run(uint8 op, uint8 form, int256[] args) returns (bool ok, int256 raw, bytes4 reason, uint256 gas). Ops 0 ln, 1 exp, 2 sqrt, 3 pow, 4 mul, 5 div, 6 lambertW0, 7 lambertWm1, 8 log1p, 9 expm1, 10 compound, 11 powu, 12 erf, 13 erfc, 14 normCdf; forms as for the ladder runner. args are the probe's arguments encoded for the form, listed per probe in https://blockulator.com/data/edge-inputs.json (an integer exponent is passed unscaled).",
     "abiNote": "run(uint8 op, uint8 form, int256[] args) returns (bool ok, int256 raw, bytes4 reason, uint256 gas); selector 0xf833b7d5",
     "dataset": "https://blockulator.com/data/edges.json",
