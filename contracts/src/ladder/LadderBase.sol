@@ -30,6 +30,22 @@ abstract contract LadderBase is ILadderAdapter {
     function _sqrt(int256 x) internal view virtual returns (int256);
     function _pow(int256 x, int256 y) internal view virtual returns (int256);
 
+    // ---- composite ops a library may have natively -------------------------
+
+    /// b (1 + rs)^steps, discrete compounding over `steps` periods. Default:
+    /// the real-exponent pow. FP127 overrides with compound (an exact
+    /// integer power); Maker answers with rpow.
+    function _accrue(int256 b, int256 rs, uint256 steps) internal view virtual returns (int256) {
+        return _mul(b, _pow(_add(_one(), rs), _fromUint(steps)));
+    }
+
+    /// b e^(r t) with t = days / 365, continuous accrual. Default: exp.
+    /// Aave and Morpho answer with their three-term expansions, from the
+    /// annual and the per-second rate respectively.
+    function _accrueCont(int256 b, int256 rateAnnual, int256 /*rateSec*/, uint32 days_) internal view virtual returns (int256) {
+        return _mul(b, _exp(_mul(rateAnnual, _div(_fromUint(days_), _fromUint(365)))));
+    }
+
     // ---- dispatch ----------------------------------------------------------
 
     function run(uint8 scenario, uint32 n, int256[] calldata p) external view returns (int256 raw, uint256 gasUsed) {
@@ -44,6 +60,8 @@ abstract contract LadderBase is ILadderAdapter {
         else if (scenario == Scenario.BLACK_SCHOLES_CHAIN) raw = _blackScholesChain(p, n);
         else if (scenario == Scenario.CUMULATIVE_PRODUCT) raw = _cumulativeProduct(p, n);
         else if (scenario == Scenario.COMPOUND_ANNUAL) raw = _compound(p, n);
+        else if (scenario == Scenario.ACCRUAL_PER_SECOND) raw = _accrualPerSecond(p, n);
+        else if (scenario == Scenario.ACCRUAL_CONTINUOUS) raw = _accrualContinuous(p, n);
         else revert UnknownScenario(scenario);
         gasUsed = g0 - gasleft();
     }
@@ -57,6 +75,8 @@ abstract contract LadderBase is ILadderAdapter {
         if (scenario == Scenario.GEO_MEAN) return 0;
         if (scenario == Scenario.BLACK_SCHOLES_CHAIN) return 6;
         if (scenario == Scenario.CUMULATIVE_PRODUCT) return 1;
+        if (scenario == Scenario.ACCRUAL_PER_SECOND) return 2;
+        if (scenario == Scenario.ACCRUAL_CONTINUOUS) return 3;
         revert UnknownScenario(scenario);
     }
 
@@ -134,5 +154,15 @@ abstract contract LadderBase is ILadderAdapter {
         int256 up = _add(_one(), _p(p, 0));
         int256 dn = _sub(_one(), _p(p, 0));
         for (uint32 i = 1; i <= n; i++) prod = _mul(prod, i & 1 == 1 ? up : dn);
+    }
+
+    /// p = [principal, rateSec]. b0 (1 + rs)^(N * 86400): N days of per-second compounding.
+    function _accrualPerSecond(int256[] calldata p, uint32 n) internal view returns (int256) {
+        return _accrue(_p(p, 0), _p(p, 1), uint256(n) * 86400);
+    }
+
+    /// p = [principal, rateAnnual, rateSec]. b0 e^(r N / 365): N days of continuous accrual.
+    function _accrualContinuous(int256[] calldata p, uint32 n) internal view returns (int256) {
+        return _accrueCont(_p(p, 0), _p(p, 1), _p(p, 2), n);
     }
 }

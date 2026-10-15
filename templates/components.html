@@ -47,7 +47,7 @@
 
 {% component gastable(repo: string) -%}
 {%- set gas = load_data(path="static/data/gas.json") -%}
-{%- set forms = ["yul", "lib", "abdk", "solady", "prb"] -%}
+{%- set forms = ["yul", "lib", "abdk", "solady", "prb", "quad", "balancer"] -%}
 <div class="scroll">
 <table>
 <thead><tr><th>op</th>{% for f in forms %}<th class="num">{{ gas.formLabels[f] }}</th>{% endfor %}</tr></thead>
@@ -60,7 +60,7 @@
 </tbody>
 </table>
 </div>
-<p class="note">Median gas per op over its input ladder, {{ gas.generated }}. The Yul object column includes the <code>staticcall</code>; the other four are internal library calls. A dash is an op the library does not offer, or that reverted on every ladder input. Min and max per cell are in <a href="/data/gas.json">gas.json</a>; the Huff and FP127Caller columns are in <a href="{{ repo }}/blob/master/docs/benchmarks/gas.md">gas.md</a>. Versions: {% for k, v in gas.versions %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+<p class="note">Median gas per op over its input ladder, {{ gas.generated }}. The Yul object column includes the <code>staticcall</code>; the other six are internal library calls. A dash is an op the library does not offer, or that reverted on every ladder input. Min and max per cell are in <a href="/data/gas.json">gas.json</a>; the Huff and FP127Caller columns are in <a href="{{ repo }}/blob/master/docs/benchmarks/gas.md">gas.md</a>. Versions: {% for k, v in gas.versions %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
 {%- endcomponent %}
 
 {% component precisiontable() -%}
@@ -122,9 +122,9 @@
 
 {#- Median digits per form against N with a min–max band over all inputs. key = "digits" or "digitsFormat". -#}
 {% component ladderband(summary: map, key: string, ladder: array, log10: map, cap: integer) -%}
-{%- set series = ["fp127", "solady", "abdk", "prb"] -%}
-{%- set labels = {"fp127": "FP127", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath"} -%}
-{%- set dy = {"fp127": 0, "solady": -11, "abdk": 0, "prb": 11} -%}
+{%- set series = ["fp127", "quad", "solady", "abdk", "prb", "balancer", "aave", "morpho", "maker"] -%}
+{%- set labels = {"fp127": "FP127", "quad": "Quad", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
+{%- set dy = {"fp127": -6, "quad": 6, "solady": -11, "abdk": 0, "prb": 11, "balancer": 22, "aave": -22, "morpho": 33, "maker": -33} -%}
 {%- set W = 640 %}{% set H = 300 %}{% set L = 44 %}{% set R = 86 %}{% set T = 16 %}{% set B = 40 -%}
 {%- set pw = W - L - R %}{% set ph = H - T - B -%}
 <svg viewBox="0 0 {{ W }} {{ H }}" width="100%" style="max-width:{{ W }}px;display:block">
@@ -136,12 +136,13 @@
 {%- endfor %}
 <text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 1 }}" text-anchor="middle">N steps</text>
 <text class="tick" transform="translate(11 {{ T + ph / 2 }}) rotate(-90)" text-anchor="middle">correct digits</text>
-{%- for f in series %}{% set_global med = "" %}{% set_global top = "" %}{% set_global bot = "" %}{% set_global lastx = 0 %}{% set_global lasty = 0 %}
-{%- for n in ladder %}{% set row = summary[f][n | str] %}{% if row[key] is defined %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set d = row[key] %}{% set ym = T + ph - ph * d.median / cap %}{% set ymax = T + ph - ph * d.max / cap %}{% set ymin = T + ph - ph * d.min / cap %}{% set_global med = med ~ x ~ "," ~ ym ~ " " %}{% set_global top = top ~ x ~ "," ~ ymax ~ " " %}{% set_global bot = x ~ "," ~ ymin ~ " " ~ bot %}{% set_global lastx = x %}{% set_global lasty = ym %}{% endif %}{% endfor %}
+{%- for f in series %}{% if summary[f] is defined %}{% set_global med = "" %}{% set_global top = "" %}{% set_global bot = "" %}{% set_global lastx = 0 %}{% set_global lasty = 0 %}{% set_global any = false %}
+{%- for n in ladder %}{% set row = summary[f][n | str] %}{% if row[key] is defined %}{% set_global any = true %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set d = row[key] %}{% set ym = T + ph - ph * d.median / cap %}{% set ymax = T + ph - ph * d.max / cap %}{% set ymin = T + ph - ph * d.min / cap %}{% set_global med = med ~ x ~ "," ~ ym ~ " " %}{% set_global top = top ~ x ~ "," ~ ymax ~ " " %}{% set_global bot = x ~ "," ~ ymin ~ " " ~ bot %}{% set_global lastx = x %}{% set_global lasty = ym %}{% endif %}{% endfor %}
+{%- if any %}
 <polygon class="band s-{{ f }}" points="{{ top }}{{ bot }}"/>
 <polyline class="s-{{ f }}" points="{{ med }}"/>
 {%- for n in ladder %}{% set row = summary[f][n | str] %}{% if row[key] is defined %}<circle class="s-{{ f }}" cx="{{ L + pw * (log10[n | str] | float) / 4 }}" cy="{{ T + ph - ph * row[key].median / cap }}" r="3"><title>{{ labels[f] }} N={{ n }}: median {{ row[key].median }}, range {{ row[key].min }}–{{ row[key].max }} over {{ row.count }} inputs{% if row.reverts %}, {{ row.reverts }} reverted{% endif %}</title></circle>{% endif %}{% endfor %}
 <text class="s-{{ f }} lbl" x="{{ lastx + 8 }}" y="{{ lasty + 4 + dy[f] }}">{{ labels[f] }}</text>
-{%- endfor %}
+{%- endif %}{% endif %}{% endfor %}
 </svg>
 {%- endcomponent %}
