@@ -62,7 +62,7 @@ color = "sapphire"
 
 [[extra.pages]]
 name = "Float"
-tag = "FP256, the second ruler: 71 digits at any magnitude, one word"
+tag = "FP256, the second ruler: 71 digits at any magnitude, one word, live on Sepolia"
 href = "/float/"
 site = "/float/"
 color = "sapphire"

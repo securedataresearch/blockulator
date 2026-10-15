@@ -57,7 +57,7 @@
   compounding, reference input, N = 365: FP127 36 digits (40 against the
   format truth), Solady and PRBMath 16, ABDK 17.
 - Any cell can be re-run on chain: LadderRunner at
-  0x943E7D93386B33df8CcD4823DBf5C38aFffeF7b2 (salt "FP127 ladder v5"),
+  0x0D74eac307a3B8899f30E8297F36fB9732a2906c (salt "FP127 ladder v6"),
   run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok,
   int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal), with p
   the input's floored parameters from /data/ladder-inputs.json. Scenario
@@ -73,7 +73,7 @@
   each cell with its digits or how the library had no answer (zero below
   its floor, revert, out of range, unsupported); /edges/ renders it and
   verifies cells through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
-  at 0x4A32B0f99FC1e888bB9e5cb85399aDd7890B0957 (selector 0xf833b7d5) with
+  at 0x48630435648FB7436fE018a601069c6C105123fe (selector 0xf833b7d5) with
   the arguments from /data/edge-inputs.json.
 - FP256 (/float/): a 256-bit binary float, release one: sign bit 255, a
   19-bit biased exponent (bias 262143) in bits 254..236, a 236-bit fraction

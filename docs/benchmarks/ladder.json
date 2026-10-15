@@ -14871,7 +14871,8 @@
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 10000
    }
   },
   {
@@ -28947,7 +28948,8 @@
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 10000
    }
   },
   {
@@ -39225,15 +39227,16 @@
    },
    "liveMaxN": {
     "fp127": 1000,
-    "fp127lib": 1000,
+    "fp127lib": 10000,
     "abdk": 10000,
     "solady": 10000,
     "prb": 10000,
     "quad": 1000,
-    "balancer": 1000,
+    "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 1000
    }
   },
   {
@@ -53287,7 +53290,8 @@
     "balancer": 1000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 1000
    }
   },
   {
@@ -64863,7 +64867,8 @@
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 1000
    }
   },
   {
@@ -67578,7 +67583,8 @@
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 1000
    }
   },
   {
@@ -79219,7 +79225,8 @@
     "balancer": 1000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 365
    }
   },
   {
@@ -86960,7 +86967,8 @@
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 10000
    }
   },
   {
@@ -94591,7 +94599,8 @@
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 10000
    }
   },
   {
@@ -104077,7 +104086,8 @@
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 10000
    }
   },
   {
@@ -114039,7 +114049,8 @@
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 10000
    }
   },
   {
@@ -123126,7 +123137,8 @@
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 10000
    }
   },
   {
@@ -130875,16 +130887,17 @@
     "fp127lib": 1000,
     "abdk": 1000,
     "solady": 10000,
-    "prb": 1000,
+    "prb": 10000,
     "quad": 1000,
-    "balancer": 10000,
+    "balancer": 1000,
     "aave": 10000,
     "morpho": 10000,
-    "maker": 10000
+    "maker": 10000,
+    "fp256": 1000
    }
   }
  ],
- "liveRunner": "0x943E7D93386B33df8CcD4823DBf5C38aFffeF7b2",
+ "liveRunner": "0x0D74eac307a3B8899f30E8297F36fB9732a2906c",
  "liveSelector": "0x281dbbfe",
  "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); the demo page greys out verify above it. Anyone with their own node can run every cell."
 }

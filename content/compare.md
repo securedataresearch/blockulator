@@ -9,7 +9,7 @@ The [ladder](/demo/) is the argument: precision over N steps, which is how proto
 
 {{ <gastable repo={config.extra.repo} /> }}
 
-Multiplication and division cost about what they cost in WAD. The transcendentals cost more because they compute twice as many bits. ABDKMathQuad, IEEE binary128, is the one float: it pays for its moving point on every add and several times over on pow; Balancer's LogExpMath is the pow behind every weighted pool. The error function family (`erf`, `erfc`, `normCdf`) and the Lambert W branches are the expensive ops, and only FP127 has them.
+Multiplication and division cost about what they cost in WAD. The transcendentals cost more because they compute twice as many bits. ABDKMathQuad, IEEE binary128, and FP256 ([its own table](/float/)) are the floats: they pay for the moving point on every add and several times over on pow; Balancer's LogExpMath is the pow behind every weighted pool. The error function family (`erf`, `erfc`, `normCdf`) and the Lambert W branches are the expensive ops, and only FP127 has them.
 
 ## Precision per op
 

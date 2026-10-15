@@ -80,21 +80,23 @@ same way, 16 against exact inputs and 19 against rounded ones at N = 365
 
 Per op, inline library form, median over the gas ladder [gas.json, lib]:
 
-| op | FP127 | Quad | Solady | PRBMath | ABDK | Balancer |
-|---|---:|---:|---:|---:|---:|---:|
-| mul | 531 | 1,036 | 321 | 641 | 455 | 471 |
-| div | 981 | 1,209 | 329 | 705 | 546 | 512 |
-| exp | 5,366 | 6,072 | 547 | 2,951 | 3,542 | 1,191 |
-| ln | 1,035 | 1,927 | 731 | 1,099 | 7,340 | 1,358 |
-| sqrt | 3,632 | 1,205 | 622 | 1,402 | 1,159 | 2,520 |
-| pow | 6,654 | 23,879 | 1,605 | 10,062 | 1,932 | 2,412 |
-| normCdf | 23,487 | — | — | — | — | — |
+| op | FP127 | FP256 | Quad | Solady | PRBMath | ABDK | Balancer |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| mul | 531 | 1,366 | 1,036 | 321 | 641 | 455 | 471 |
+| div | 981 | 2,115 | 1,209 | 329 | 705 | 546 | 512 |
+| exp | 5,366 | 6,159 | 6,072 | 547 | 2,951 | 3,542 | 1,191 |
+| ln | 1,035 | 4,878 | 1,927 | 731 | 1,099 | 7,340 | 1,358 |
+| sqrt | 3,632 | 2,794 | 1,205 | 622 | 1,402 | 1,159 | 2,520 |
+| pow | 6,654 | 9,505 | 23,879 | 1,605 | 10,062 | 1,932 | 2,412 |
+| normCdf | 23,487 | — | — | — | — | — | — |
 
 Multiplication and division cost about what they cost in WAD. The
 transcendentals cost more because they compute twice as many bits, and the
-error function family is the honest expensive one. Quad, the one float,
-pays for its moving point on every add and four times over on pow. Through
-the deployed object add a `staticcall`, about 700 gas, per op.
+error function family is the honest expensive one. The floats, FP256 and
+Quad, pay for their moving point on every add and several times over on
+pow; FP256's root is cheaper than FP127's because it starts from a native
+integer root. Through the deployed objects add a `staticcall`, about 700
+gas, per op.
 
 ## What it does not fix
 
@@ -103,9 +105,10 @@ Range, and the floor. FP127 tops out near 1.7·10^38 and its grid stops at
 1.0001^887272 is one bit past the word, and a result of 10^-30 has eight
 digits on the grid however exact the op was [edges: exp, pow, sqrt]. A
 fixed point maximises precision inside a band; a float maximises the band.
-ABDKMathQuad, the one float in the tables, holds 34 digits at every edge
-and 29 to 33 on every ladder, and does it with half the word idle. The
-[edges](/edges/) page shows both sides. FP127 is for the maths in the
+ABDKMathQuad, the first float in the tables, holds 34 digits at every edge
+and 29 to 33 on every ladder, with half the word idle; FP256, the
+[second ruler](/float/), fills the word and holds 71 at the edges and 40 to
+70 on the ladders. The [edges](/edges/) page shows all three sides. FP127 is for the maths in the
 middle, the rate, the price, the ratio, the exponent, where it holds 38
 digits against the float's 34, and the conversion back to wei is one
 `toFixed18` at the edge. It is not a replacement for the integer
