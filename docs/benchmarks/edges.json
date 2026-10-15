@@ -16505,5 +16505,8 @@
     }
    ]
   }
- ]
+ ],
+ "liveRunner": "0x4A32B0f99FC1e888bB9e5cb85399aDd7890B0957",
+ "liveSelector": "0xf833b7d5",
+ "liveNote": "Every cell was re-run through the live EdgeRunner on Sepolia by scripts/ladder/liveedges.py; the verify button repeats that call."
 }

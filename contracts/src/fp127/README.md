@@ -34,9 +34,8 @@ The same Yul function bodies are emitted twice.
 **Deployed object.** `FP127.yul` wraps the bodies in a `switch` on the
 4-byte selector. It is deployed with CREATE2 through the deterministic
 proxy at `0x4e59b44847b379578588920cA78FbF26c0B4956C` with salt
-`"FP127 v3"`, which puts it at `0xe43F720861074497db2e974E5c4554E4A3b341B9` on
-every chain it is deployed to (version 4, salt `"FP127 v4"`, lands at
-`0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` once deployed) (Sepolia today; record and verification
+`"FP127 v4"`, which puts it at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` on
+every chain it is deployed to (Sepolia today; record and verification
 recipe in [`contracts/deployments/FP127.md`](../../deployments/FP127.md)).
 Every contract that `staticcall`s it runs identical bytecode.
 `FP127Caller.sol` is the minimal Solidity wrapper for that path; it bubbles
