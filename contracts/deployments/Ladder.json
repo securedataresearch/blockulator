@@ -2,76 +2,115 @@
  "chainId": 11155111,
  "network": "sepolia",
  "proxy": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
- "salt": "0x4650313237206c61646465722076340000000000000000000000000000000000",
- "saltAscii": "FP127 ladder v4",
- "fp127": "0xe43F720861074497db2e974E5c4554E4A3b341B9",
+ "salt": "0x4650313237206c61646465722076350000000000000000000000000000000000",
+ "saltAscii": "FP127 ladder v5",
+ "fp127": "0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1",
  "contracts": {
   "LadderFP127": {
-   "address": "0x3b3b7300B22e621a2350353f2D6BCD5B3Cf79cB6",
-   "initCodeHash": "0x17229630714d7573a1200496ac769a5c7aa4afde7eb14edeffb8b71c4a5c2ff6",
+   "address": "0x475eEAc191aeD253Ab3d440E5B8536B82fA16E8b",
+   "initCodeHash": "0xf0ac1b5555a944851c125993b18ddf81c01152dfbf7982cd4c20e0a964f2abca",
    "constructorArgs": [],
-   "runtimeKeccak": "0xae74f0282d7489c7a04580b031509f9ad472ac0bd152141aa93848916cf5d633",
-   "deployed": true,
-   "txHash": "0x23aa191fd3b0a2f563d7e2e6fb0836e309e85b5b0963bb747f2050198d5b69ae",
-   "block": 11861165,
-   "gasUsed": 4103006
+   "runtimeKeccak": "0xf75b978e0dcc0534e247c3548e0b1aee37b0c9a6859b96b58a7afc0744b13bf5",
+   "deployed": true
   },
   "LadderFP127Lib": {
-   "address": "0x5Fe3420fc2C330553061bc39d9fb178E7d854Fe1",
-   "initCodeHash": "0x7cd438bd3b561cfc02a2dcc078fe4fd92c7b7662738ebabc3ccaa84b98e2bdc1",
+   "address": "0xf0789DdF81b7B44d5edd09769a2A04968d72F46D",
+   "initCodeHash": "0xd1167310090cdc99fe02bedd0bd9972d5c8cb9d984d52ec319e85d138b33b076",
    "constructorArgs": [],
-   "runtimeKeccak": "0xe4861f6cbf59edfb47b41ed7e096de43b64f58d82632a566d2f425fc8ad5659f",
-   "deployed": true,
-   "txHash": "0x953f7b7be6a55c5b046e17779e6f0bebcdee75c59f7680cef8c4097c93216cb2",
-   "block": 11861166,
-   "gasUsed": 9476398
+   "runtimeKeccak": "0xb8da334d8937cbc83537a9d1b4778a1bfcf7f0f45d693573d4abdff2c8f304e4",
+   "deployed": true
   },
   "LadderABDK": {
-   "address": "0x8974369439217370d5D486FB12EF71C0A1F38897",
-   "initCodeHash": "0x343b7307cbc8b65bcabcd7e7e04993668944395515bc33d7074048ded9773946",
+   "address": "0x5b37249FEd1A7d60ba792eC29FB37B126d645eC8",
+   "initCodeHash": "0x6cfedeed9a87100b0e48a2446255959cf1bf292cb4a5c8ca6af0943ed456cb65",
    "constructorArgs": [],
-   "runtimeKeccak": "0xf4997574e7d2cfc662da5e0fc488ce92437d64f3be31edb2e1f8f3f980bb1596",
-   "deployed": true,
-   "txHash": "0x0f38a2becfe648083df4b167d2ee2dca3fc40034bf91fb30146474dba6477ef7",
-   "block": 11861167,
-   "gasUsed": 9120028
+   "runtimeKeccak": "0x987702e80f59d949c5e0d46a967e4f1f9e1b913ad39dad5114d96b37ee10039d",
+   "deployed": true
   },
   "LadderSolady": {
-   "address": "0x9F7766CF9f807799CBB92068257891dAD0372de7",
-   "initCodeHash": "0x0622cf033ddbac8e7de237a82604efafb4c6cd68446b4b9637768cb1909d1629",
+   "address": "0x6803373dC64b71435F6ee17AfFC95330A1AcfFf3",
+   "initCodeHash": "0xfeab2ed1274a2c73775780d45f8eab6851e2a2981345a998ee4042edd023ca4e",
    "constructorArgs": [],
-   "runtimeKeccak": "0x3e35770179d7a4426e67b945e01d15d69ce17b1c544671546fe863a0cc34664a",
-   "deployed": true,
-   "txHash": "0xe79101221ff0ad2d6cc758a5fd00be9a80b7446692fa537d273690780a67555f",
-   "block": 11861168,
-   "gasUsed": 5935658
+   "runtimeKeccak": "0x83b838c7ef0815077d3c65d15fd585369244e59e7ae79aed9d2a06d40878189e",
+   "deployed": true
   },
   "LadderPRB": {
-   "address": "0xa014CCDd2F71B7D253Ba8A9bC0Fd72eba4d8E038",
-   "initCodeHash": "0x383a4a46b4029c1991cf6539b47119f67a375a2c096079999a741965e1433a5b",
+   "address": "0xAAaCe42c07C67be246232dB6488FC456DB595657",
+   "initCodeHash": "0x8ba467394f4088dd952717e9011e7ecda03ab6d0bdba1bebfeeb8a6d3c4a16e5",
    "constructorArgs": [],
-   "runtimeKeccak": "0xa29b957f5442f167d1ba08b822fc9a0404883e8f29b30d9f7a98feb884585308",
-   "deployed": true,
-   "txHash": "0x363db9cfd2d198e2f2ff00515d11b98ef4528b7952ad6ffc4b81950ec104c1d1",
-   "block": 11861170,
-   "gasUsed": 9844327
+   "runtimeKeccak": "0x3df1e1dc85fb08a05f3cd9634ab54c5b2c0633e3dbe9ea09ed78c3eabdc748ba",
+   "deployed": true
+  },
+  "LadderQuad": {
+   "address": "0x6A5633de4cd14c669be37f4D5e7A8f9CEece8674",
+   "initCodeHash": "0x408e3b02a6beed924af5e8d6e22edfc5672bd991874bf78863026cde4c34181c",
+   "constructorArgs": [],
+   "runtimeKeccak": "0x04e7408f6376fecb168867dc34a854004cf8c5ee3e5dbe806fab869ecee7c32b",
+   "deployed": true
+  },
+  "LadderBalancer": {
+   "address": "0xb9fD0678E1D2De5B95A2b6Db9B4b830cE885Da86",
+   "initCodeHash": "0x3482ffa3abcc65a4900ed8e76c7680d77f9720e6c281193f8440de3daee5de9e",
+   "constructorArgs": [],
+   "runtimeKeccak": "0x0a83f41454fe3d855c240090ed3a2588a0c30a9908aa3791dddd2c08da2288ad",
+   "deployed": true
+  },
+  "LadderAave": {
+   "address": "0xbDc5E6af1810e09A552F3de733e8ff11808686Ac",
+   "initCodeHash": "0x8decdc18a860256a7005f2a231189d6d4e0fb6e0a7f5457ad2430199d1a19212",
+   "constructorArgs": [],
+   "runtimeKeccak": "0x9c3a93a416b7e9363ed17c61ce7837c36957a6440e4d2aa45235867d4eb12486",
+   "deployed": true
+  },
+  "LadderMorpho": {
+   "address": "0xa28477dF3573BF42954d6e55ED4e110627AF5551",
+   "initCodeHash": "0x92d2c4ebcc4a629d9cf88ff1f2f92eaf18ce7c873a237916dbb96320cebb31ee",
+   "constructorArgs": [],
+   "runtimeKeccak": "0xf6ffc80100a97695935724d459c0509e8eff09f8a6bdc59230bfced4bcfb0aa1",
+   "deployed": true
+  },
+  "LadderMaker": {
+   "address": "0xBBdA80841B71EfE95C09982eFBf32C83E88a8d4c",
+   "initCodeHash": "0x2821f5e23df13513a10a6761b1cd5295e2107ebdc8016c288b5f3e3ca6d478f6",
+   "constructorArgs": [],
+   "runtimeKeccak": "0xf56e51e5d16fdee42bf381a8bb553531f073c549d6db1b43935fba947375a587",
+   "deployed": true
   },
   "LadderRunner": {
-   "address": "0x798C37A3E5B421D480AC850258466b5598A1A555",
-   "initCodeHash": "0xa94970295989a82612059b81563d42be052506232c5430db4147b265bfd5941d",
+   "address": "0x943E7D93386B33df8CcD4823DBf5C38aFffeF7b2",
+   "initCodeHash": "0xdfca12d11611eb57e05170619b3e94d6a6a0b79d1762e58049566f2a525118e8",
    "constructorArgs": [
-    "0x3b3b7300B22e621a2350353f2D6BCD5B3Cf79cB6",
-    "0x5Fe3420fc2C330553061bc39d9fb178E7d854Fe1",
-    "0x8974369439217370d5D486FB12EF71C0A1F38897",
-    "0x9F7766CF9f807799CBB92068257891dAD0372de7",
-    "0xa014CCDd2F71B7D253Ba8A9bC0Fd72eba4d8E038"
+    "0x475eEAc191aeD253Ab3d440E5B8536B82fA16E8b",
+    "0xf0789DdF81b7B44d5edd09769a2A04968d72F46D",
+    "0x5b37249FEd1A7d60ba792eC29FB37B126d645eC8",
+    "0x6803373dC64b71435F6ee17AfFC95330A1AcfFf3",
+    "0xAAaCe42c07C67be246232dB6488FC456DB595657",
+    "0x6A5633de4cd14c669be37f4D5e7A8f9CEece8674",
+    "0xb9fD0678E1D2De5B95A2b6Db9B4b830cE885Da86",
+    "0xbDc5E6af1810e09A552F3de733e8ff11808686Ac",
+    "0xa28477dF3573BF42954d6e55ED4e110627AF5551",
+    "0xBBdA80841B71EfE95C09982eFBf32C83E88a8d4c"
    ],
-   "runtimeKeccak": "0x06a56b2e114084b6db13a8d0233678975f79acc07ca8b3d59aef1cf5e306919e",
-   "deployed": true,
-   "txHash": "0x36e7ee330e95d3170111756691a4aa9bb7ef9f6916f97c7896ecd1caaa95473e",
-   "block": 11861171,
-   "gasUsed": 2644644
+   "runtimeKeccak": "0x7a69142bc7cc9cffa7305d2dde59d1f86edebb6b8b535170f972d4448daf4730",
+   "deployed": true
+  },
+  "EdgeRunner": {
+   "address": "0x4A32B0f99FC1e888bB9e5cb85399aDd7890B0957",
+   "initCodeHash": "0xeeda063f1225bf04e608b0ff44b92bc59415642f891a21714ef5b0065a6abe30",
+   "constructorArgs": [
+    "0x475eEAc191aeD253Ab3d440E5B8536B82fA16E8b",
+    "0xf0789DdF81b7B44d5edd09769a2A04968d72F46D",
+    "0x5b37249FEd1A7d60ba792eC29FB37B126d645eC8",
+    "0x6803373dC64b71435F6ee17AfFC95330A1AcfFf3",
+    "0xAAaCe42c07C67be246232dB6488FC456DB595657",
+    "0x6A5633de4cd14c669be37f4D5e7A8f9CEece8674",
+    "0xb9fD0678E1D2De5B95A2b6Db9B4b830cE885Da86",
+    "0xbDc5E6af1810e09A552F3de733e8ff11808686Ac",
+    "0xa28477dF3573BF42954d6e55ED4e110627AF5551",
+    "0xBBdA80841B71EfE95C09982eFBf32C83E88a8d4c"
+   ],
+   "runtimeKeccak": "0xe3f205f9a1e6b0ac820ef72b95b7fab20f6193d0cecc3f36a845626bffe19280",
+   "deployed": true
   }
- },
- "date": "2026-10-07"
+ }
 }

@@ -7,7 +7,7 @@ Every number here is a cell in a committed dataset, named in brackets: [`ladder.
 
 ## What it is
 
-FP127 is a signed 127.128 fixed-point library for the EVM: one `int256` per value, 128 fractional bits, 49 operations including `exp`, `ln`, `sqrt`, `pow`, an exact integer power, the error function and the normal distribution, both real branches of the Lambert W function and pi by Ramanujan's series, written as one Yul source that compiles to a deployed contract and to an inlinable Solidity library. It is validated against mpmath at 200 decimal places, and it is deployed on Sepolia at `0xe43F720861074497db2e974E5c4554E4A3b341B9`.
+FP127 is a signed 127.128 fixed-point library for the EVM: one `int256` per value, 128 fractional bits, 49 operations including `exp`, `ln`, `sqrt`, `pow`, an exact integer power, the error function and the normal distribution, both real branches of the Lambert W function and pi by Ramanujan's series, written as one Yul source that compiles to a deployed contract and to an inlinable Solidity library. It is validated against mpmath at 200 decimal places, and it is deployed on Sepolia at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`.
 
 The one number that matters: $10,000 at 10% APR compounded daily for a year, one multiplication per day. After 365 steps ABDK is right to 17 digits, Solady, PRBMath and Balancer to 16, ABDKMathQuad to 31, Maker's rpow to 24, FP127 to 36 [compound, N = 365]. The [ladder](/demo/) has thirteen of these scenarios over nine libraries, and you can re-run any cell against the chain.
 

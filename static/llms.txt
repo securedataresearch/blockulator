@@ -15,7 +15,7 @@
   (Ramanujan's series, pi(terms): five terms reach the format's floor),
   log1p, expm1, sinh, cosh, tanh, atanh, erf, erfc, normCdf (the standard
   normal distribution function, the N(d) of Black-Scholes). The last eleven
-  are in the inline library and in the v4 object, which awaits deployment.
+  are in the v4 object, live on Sepolia since 2026-10-15.
 - Encoding: every operand and result is an int256 holding value * 2**128.
   Decode by dividing by 2**128. Range about +/- 1.7e38.
 - Checked arithmetic: out-of-domain inputs revert with Overflow(),
@@ -32,8 +32,8 @@
 
 - Network: Ethereum Sepolia, chainId 11155111
 - RPC: https://ethereum-sepolia-rpc.publicnode.com
-- FP127: 0xe43F720861074497db2e974E5c4554E4A3b341B9 (CREATE2 through
-  0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v3"; record at
+- FP127: 0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1 (CREATE2 through
+  0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v4"; record at
   /contracts/deployments/FP127.md and /data/fp127.json)
 - ABI: /data/abi.json. All functions are pure; selectors are in /data/ops.json.
 - Example: sqrt(2) is `sqrt(int256)` with 2 * 2**128 =
@@ -57,7 +57,7 @@
   compounding, reference input, N = 365: FP127 36 digits (40 against the
   format truth), Solady and PRBMath 16, ABDK 17.
 - Any cell can be re-run on chain: LadderRunner at
-  0x798C37A3E5B421D480AC850258466b5598A1A555 (salt "FP127 ladder v4"),
+  0x943E7D93386B33df8CcD4823DBf5C38aFffeF7b2 (salt "FP127 ladder v5"),
   run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok,
   int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal), with p
   the input's floored parameters from /data/ladder-inputs.json. Scenario
@@ -73,7 +73,8 @@
   each cell with its digits or how the library had no answer (zero below
   its floor, revert, out of range, unsupported); /edges/ renders it and
   verifies cells through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
-  with the arguments from /data/edge-inputs.json.
+  at 0x4A32B0f99FC1e888bB9e5cb85399aDd7890B0957 (selector 0xf833b7d5) with
+  the arguments from /data/edge-inputs.json.
 - /demo/ the ladder, /edges/ the cliffs, /why/ the mechanism, /library/ address, ABI and
   the op table, /compare/ gas and precision per op, /writeup/ the story.
 

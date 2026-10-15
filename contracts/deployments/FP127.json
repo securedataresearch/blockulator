@@ -2,7 +2,6 @@
  "contract": "FP127",
  "chainId": 11155111,
  "network": "sepolia",
- "status": "pending: predicted address, not yet deployed; version 3 at 0xe43F720861074497db2e974E5c4554E4A3b341B9 is live",
  "address": "0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1",
  "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
  "salt": "0x4650313237207634000000000000000000000000000000000000000000000000",
@@ -11,7 +10,7 @@
  "runtimeKeccak": "0xacdbc10ba70c1086706d2ba9334582b3fb04022c97eefcf130afe0a79075aeeb",
  "runtimeBytes": 10401,
  "source": "contracts/src/fp127/FP127.yul",
- "sourceCommit": "pending",
+ "sourceCommit": "d757b9b",
  "compiler": {
   "language": "Yul",
   "solc": "0.8.24+commit.e11b9ed9",
@@ -19,18 +18,18 @@
   "runs": 200,
   "evmVersion": "shanghai"
  },
- "txHash": "pending",
- "block": null,
+ "txHash": "0x6d3f4ebc8606d07f419ee628eed570172f375ff5a9e540c88f7be792f999bbcd",
+ "block": 11921624,
  "verification": {
-  "sourcify": "pending",
-  "sourcifyRepo": "pending",
-  "blockscout": "pending",
+  "sourcify": "https://sourcify.dev/server/v2/contract/11155111/0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1",
+  "sourcifyRepo": "https://repo.sourcify.dev/11155111/0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1",
+  "blockscout": "https://eth-sepolia.blockscout.com/address/0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1?tab=contract",
   "etherscan": "unverified: the Etherscan API has no Yul path"
  },
  "abi": "contracts/src/fp127/abi.json",
  "deployedBy": "0xe6306669b2f188d616bfb518e7b9255d001d731d",
- "gasUsed": null,
- "explorerTx": "pending",
+ "gasUsed": 16297813,
+ "explorerTx": "https://sepolia.etherscan.io/tx/0x6d3f4ebc8606d07f419ee628eed570172f375ff5a9e540c88f7be792f999bbcd",
  "previous": {
   "v1": {
    "address": "0xA7Fb462A3733f24785a9AE8d7FbD4F87D8BC4c28",

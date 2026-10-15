@@ -20,7 +20,7 @@ Any contract can `staticcall` it, and every contract that does runs identical by
 A read from the command line, `sqrt(2)`:
 
 ```sh
-cast call 0xe43F720861074497db2e974E5c4554E4A3b341B9 "sqrt(int256)(int256)" \
+cast call 0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1 "sqrt(int256)(int256)" \
   680564733841876926926749214863536422912 \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com
 # 481231938336009023090067544955250113854
@@ -34,7 +34,7 @@ From Solidity, through the interface:
 import {IFP127} from "fp127/IFP127.sol";
 
 contract StaticcallExample {
-    IFP127 public constant FP127 = IFP127(0xe43F720861074497db2e974E5c4554E4A3b341B9);
+    IFP127 public constant FP127 = IFP127(0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1);
     int256 internal constant ONE = int256(1) << 128;
 
     function accrue(int256 principalWad, int256 rateWad, uint256 steps) external view returns (int256 balanceWad) {

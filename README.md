@@ -9,7 +9,7 @@ that are proven to agree bit for bit:
 
 - a **deployed object** (`FP127.yul`) that any contract can `staticcall`,
   at a CREATE2 address with a published salt:
-  `0xe43F720861074497db2e974E5c4554E4A3b341B9` on Sepolia
+  `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` on Sepolia
   ([deployment record](contracts/deployments/FP127.md));
 - an **inline library** (`FP127Lib.sol`) with the same bodies in
   `memory-safe` assembly blocks, for contracts that want no external call.
@@ -60,7 +60,7 @@ int256 b = FP127Lib.mul(FP127Lib.fromFixed18(1.5e18), FP127Lib.exp(FP127Lib.ONE)
 ```
 
 Deployed, through the interface: `import {IFP127} from "fp127/IFP127.sol";`
-and `IFP127(0xe43F720861074497db2e974E5c4554E4A3b341B9).ln(x)`. Both
+and `IFP127(0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1).ln(x)`. Both
 examples are compiled and tested in [`test/examples/`](test/examples/).
 
 For agents and scripts, every op is a free `eth_call`:

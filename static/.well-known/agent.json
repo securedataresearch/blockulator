@@ -32,7 +32,7 @@
   "primaryContract": {
     "id": "fp127",
     "name": "FP127",
-    "address": "0xe43F720861074497db2e974E5c4554E4A3b341B9",
+    "address": "0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1",
     "deployment": "https://blockulator.com/contracts/deployments/FP127.json",
     "abi": "https://blockulator.com/data/abi.json",
     "source": "https://github.com/securedataresearch/blockulator/blob/master/contracts/src/fp127/FP127.yul.src",
@@ -93,13 +93,13 @@
       "forgeInstall": "forge install securedataresearch/blockulator",
       "remapping": "fp127/=lib/blockulator/contracts/src/fp127/"
     },
-    "version": "FP127 v3 (adds pi by Ramanujan's series, 2026-10-07) is the live object; v4 (eleven ops: powu, compound, log1p, expm1, sinh, cosh, tanh, atanh, erf, erfc, normCdf, and pow with guard bits) is in the inline library and awaits deployment at 0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1; v2 and v1 stay live and verified"
+    "version": "FP127 v4 (2026-10-15: 49 ops; adds powu, compound, log1p, expm1, sinh, cosh, tanh, atanh, erf, erfc, normCdf, and pow with its exponent product at 2^-192); v3, v2 and v1 stay live and verified at their recorded addresses"
   },
   "ladderRunner": {
     "id": "ladder-runner",
     "name": "LadderRunner",
-    "address": "0x798C37A3E5B421D480AC850258466b5598A1A555",
-    "description": "Re-run any cell of the terminal-precision ladder (https://blockulator.com/demo/) with one eth_call: run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok, int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal). p is the input's parameters floored into the form's representation, listed per input in https://blockulator.com/data/ladder-inputs.json. Decode raw by the form's scale (2^128 for forms 0 and 1, 2^64 for 2, 1e18 for 3 and 4).",
+    "address": "0x943E7D93386B33df8CcD4823DBf5C38aFffeF7b2",
+    "description": "Re-run any cell of the terminal-precision ladder (https://blockulator.com/demo/) with one eth_call: run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok, int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal). Scenarios 0-12 (index in scenarios.json); forms 0 fp127, 1 fp127lib, 2 abdk, 3 solady, 4 prb, 5 quad (ABDKMathQuad binary128), 6 balancer, 7 aave, 8 morpho, 9 maker. p is the input's parameters encoded into the form's representation, listed per input in https://blockulator.com/data/ladder-inputs.json under the keys fp127 (forms 0, 1), abdk (2), wad (3, 4, 6, 8), quad (5), ray (7, 9). Decode raw by the scale: 2^128, 2^64, 1e18, 1e27, or the IEEE binary128 bit pattern for form 5. Aave, Morpho and Maker answer only the accrual scenarios their models describe and revert Unsupported(uint8) elsewhere.",
     "abi": "https://blockulator.com/contracts/deployments/Ladder.json",
     "record": "https://blockulator.com/contracts/deployments/Ladder.json",
     "scenarios": "https://blockulator.com/data/scenarios.json",
@@ -107,9 +107,19 @@
     "inputs": "https://blockulator.com/data/ladder-inputs.json",
     "deployment": "https://blockulator.com/contracts/deployments/Ladder.json"
   },
+  "edgeRunner": {
+    "id": "edge-runner",
+    "name": "EdgeRunner",
+    "address": "0x4A32B0f99FC1e888bB9e5cb85399aDd7890B0957",
+    "description": "Evaluate any probe of the edges dataset (https://blockulator.com/edges/) with one eth_call: run(uint8 op, uint8 form, int256[] args) returns (bool ok, int256 raw, bytes4 reason, uint256 gas). Ops 0 ln, 1 exp, 2 sqrt, 3 pow, 4 mul, 5 div, 6 lambertW0, 7 lambertWm1, 8 log1p, 9 expm1, 10 compound, 11 powu, 12 erf, 13 erfc, 14 normCdf; forms as for the ladder runner. args are the probe's arguments encoded for the form, listed per probe in https://blockulator.com/data/edge-inputs.json (an integer exponent is passed unscaled).",
+    "abiNote": "run(uint8 op, uint8 form, int256[] args) returns (bool ok, int256 raw, bytes4 reason, uint256 gas); selector 0xf833b7d5",
+    "dataset": "https://blockulator.com/data/edges.json",
+    "inputs": "https://blockulator.com/data/edge-inputs.json",
+    "record": "https://blockulator.com/contracts/deployments/Ladder.json"
+  },
   "precision": {
     "dataset": "https://blockulator.com/data/ladder.json",
-    "description": "Terminal precision over N iterated steps for FP127, FP127Lib, ABDKMath64x64, Solady and PRBMath against exact arithmetic; correct significant digits, relative error and gas per step for every cell.",
+    "description": "Terminal precision over N iterated steps for FP127, FP127Lib, ABDKMath64x64, Solady, PRBMath, ABDKMathQuad, Balancer LogExpMath and the accrual maths of Aave, Morpho and Maker against exact arithmetic; correct significant digits, relative error and gas per step for every cell. The edges dataset (https://blockulator.com/data/edges.json) holds 139 one-shot probes at the ends of each domain through the same libraries.",
     "perOp": "https://blockulator.com/data/precision.json",
     "gas": "https://blockulator.com/data/gas.json"
   },
