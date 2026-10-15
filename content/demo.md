@@ -1,6 +1,6 @@
 +++
 title = "Terminal precision"
-description = "Eleven scenarios, 76 inputs, nine libraries, N from 1 to 10,000, every cell against 200-digit arithmetic and checkable on Sepolia."
+description = "Thirteen scenarios, 87 inputs, nine libraries, N from 1 to 10,000, every cell against 200-digit arithmetic and checkable on Sepolia."
 template = "demo.html"
 +++
 

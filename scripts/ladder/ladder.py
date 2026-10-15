@@ -33,7 +33,7 @@ import json
 import sys
 from pathlib import Path
 
-from mpmath import mp, mpf, log, exp, sqrt, nstr, floor as mfloor_
+from mpmath import mp, mpf, log, exp, sqrt, ncdf, nstr, floor as mfloor_
 
 mp.dps = 200
 ROOT = Path(__file__).resolve().parents[2]
@@ -68,7 +68,7 @@ REASONS = {
 PARAM_OUT_OF_RANGE = "0x7964b44f"
 
 METHODOLOGY = {
-    "truth": "For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 200 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.",
+    "truth": "For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 200 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual, the option walk and the decay); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.",
     "rounding": "Each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units, or the nearest binary128 value for ABDKMathQuad; scripts/ladder/inputs.json). truthFormat is the exact loop started from those floored parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic.",
     "digits": "digits = floor(-log10 |v - t| / |t|), the number of correct leading significant digits by relative error, capped at 60, which is reported as exact. It is not a string comparison: a value can be correct to 36 digits while its 37th printed digit happens to agree with the truth, or while a carry makes the printed prefix differ earlier.",
     "agree": "agree is the count of leading significant digits of the printed value (42 significant digits) that are literally equal to the printed truth. The demo page colours the rest of the value with it. It is a reading aid, not a measurement: a carry across 0.999… / 1.000… gives 0.",
@@ -94,6 +94,17 @@ def truths(sid: str, p: dict, ns: list[int]) -> dict[int, mpf]:
     elif sid == "accrual-continuous":
         for n in ns:
             out[n] = p["principal"] * exp(p["rateAnnual"] * mpf(n) / 365)
+    elif sid == "deep-tail-option":
+        S0, K, sg, T, r, tick = p["spot"], p["strike"], p["sigma"], p["T"], p["r"], p["tick"]
+        vs = sg * sqrt(T)
+        for n in ns:
+            S = S0 * (1 - tick) ** n
+            d1 = (log(S / K) + (r + sg * sg / 2) * T) / vs
+            d2 = d1 - vs
+            out[n] = S * ncdf(d1) - K * exp(-r * T) * ncdf(d2)
+    elif sid == "decay":
+        for n in ns:
+            out[n] = 1 - exp(-p["eps"] * n)
     elif sid == "roundtrip":
         for n in ns:
             out[n] = p["x0"]

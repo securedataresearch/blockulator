@@ -19,4 +19,9 @@ contract LadderPRB is LadderBase {
     function _ln(int256 x) internal view override returns (int256) { return M.ln(sd(x)).unwrap(); }
     function _sqrt(int256 x) internal view override returns (int256) { return M.sqrt(sd(x)).unwrap(); }
     function _pow(int256 x, int256 y) internal view override returns (int256) { return M.pow(sd(x), sd(y)).unwrap(); }
+    /// powu: PRBMath's exponentiation by squaring.
+    function _powu(int256 x, int256 n) internal view override returns (int256) {
+        if (n < 0) return M.div(sd(1e18), M.powu(sd(x), uint256(-n))).unwrap();
+        return M.powu(sd(x), uint256(n)).unwrap();
+    }
 }

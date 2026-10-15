@@ -50,6 +50,9 @@ jobs:
       - name: Terminal-precision ladder is current
         run: make ladder-check
 
+      - name: Edges dataset is current
+        run: make edges-check
+
       - name: Runtime size
         run: make size
 

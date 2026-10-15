@@ -40,4 +40,6 @@ contract LadderAave is ILadderAdapter {
         raw = int256(rayMul(uint256(p[0]), factor));
         gasUsed = g0 - gasleft();
     }
+    /// Aave's maths has no general op: every edge is Unsupported.
+    function op(uint8 op_, int256[] calldata) external pure returns (int256, uint256) { revert Unsupported(op_); }
 }

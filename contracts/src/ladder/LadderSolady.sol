@@ -18,4 +18,11 @@ contract LadderSolady is LadderBase {
     function _ln(int256 x) internal view override returns (int256) { return S.lnWad(x); }
     function _sqrt(int256 x) internal view override returns (int256) { require(x >= 0, "sqrt<0"); return int256(S.sqrtWad(uint256(x))); }
     function _pow(int256 x, int256 y) internal view override returns (int256) { return S.powWad(x, y); }
+    function _lambertW0(int256 x) internal view override returns (int256) { return S.lambertW0Wad(x); }
+    /// rpow: Solady's port of Maker's exponentiation by squaring, half up each step.
+    function _powu(int256 x, int256 n) internal view override returns (int256) {
+        require(x >= 0, "powu<0");
+        if (n < 0) return S.sDivWad(1e18, int256(S.rpow(uint256(x), uint256(-n), 1e18)));
+        return int256(S.rpow(uint256(x), uint256(n), 1e18));
+    }
 }

@@ -28,6 +28,7 @@ contract LadderQuad is LadderBase {
         if (Q.isNaN(b) || Q.isInfinity(b)) revert QuadNotFinite();
         return int256(uint256(uint128(b)));
     }
+    function _isNeg(int256 x) internal pure override returns (bool) { return (uint256(x) >> 127) & 1 == 1; }
     function _one() internal pure override returns (int256) { return int256(uint256(uint128(Q.fromUInt(1)))); }
     function _fromUint(uint256 u) internal pure override returns (int256) { return _r(Q.fromUInt(u)); }
     function _add(int256 a, int256 b) internal pure override returns (int256) { return _r(Q.add(_q(a), _q(b))); }

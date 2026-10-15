@@ -67,3 +67,23 @@ export function decodeRun(hex) {
         gasTotal: BigInt('0x' + out.slice(256, 320)),
     };
 }
+
+// ABI encoding of EdgeRunner.run(uint8 op, uint8 form, int256[] args) and its
+// (bool ok, int256 raw, bytes4 reason, uint256 gas) return.
+export function encodeOp(selector, op, form, args) {
+    const head = word(op) + word(form) + word(0x60);
+    const tail = word(args.length) + args.map(word).join('');
+    return selector + head + tail;
+}
+
+export function decodeOp(hex) {
+    const out = hex.startsWith('0x') ? hex.slice(2) : hex;
+    if (out.length < 256) throw new Error('short return data');
+    const signed = (h) => { let x = BigInt('0x' + h); if (x >= 1n << 255n) x -= 1n << 256n; return x; };
+    return {
+        ok: BigInt('0x' + out.slice(0, 64)) === 1n,
+        raw: signed(out.slice(64, 128)),
+        reason: '0x' + out.slice(128, 136),
+        gas: BigInt('0x' + out.slice(192, 256)),
+    };
+}
