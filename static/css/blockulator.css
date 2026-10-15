@@ -48,6 +48,7 @@
 .chart .s-aave { stroke: var(--orange); } .chart circle.s-aave, .chart text.s-aave { fill: var(--orange); }
 .chart .s-morpho { stroke: var(--plum); } .chart circle.s-morpho, .chart text.s-morpho { fill: var(--plum); }
 .chart .s-maker { stroke: var(--slate); } .chart circle.s-maker, .chart text.s-maker { fill: var(--slate); }
+.chart .s-fp256 { stroke: var(--ink); } .chart circle.s-fp256, .chart text.s-fp256 { fill: var(--ink); } .chart polygon.s-fp256 { fill: var(--ink); }
 .chart polyline.s-quad { stroke-dasharray: 4 2; } .chart polyline.s-balancer { stroke-dasharray: 8 3; } .chart polyline.s-aave { stroke-dasharray: 1 3; } .chart polyline.s-morpho { stroke-dasharray: 6 2 2 2; } .chart polyline.s-maker { stroke-dasharray: 3 3; }
 .chart polyline.s-solady { stroke-dasharray: 6 4; } .chart polyline.s-abdk { stroke-dasharray: 2 3; } .chart polyline.s-prb { stroke-dasharray: 10 3 2 3; }
 .ladder { min-width: 1400px; font-size: 13px; }

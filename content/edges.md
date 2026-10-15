@@ -1,6 +1,6 @@
 +++
 title = "Edges"
-description = "One call at the end of each library's domain: where a result goes to zero, reverts, or runs out of digits, through nine libraries against 200-digit arithmetic, checkable on Sepolia."
+description = "One call at the end of each library's domain: where a result goes to zero, reverts, or runs out of digits, through ten libraries against 300-digit arithmetic, checkable on Sepolia."
 template = "edges.html"
 +++
 

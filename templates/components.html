@@ -127,13 +127,13 @@
 
 {#- Median digits per form against N with a min–max band over all inputs. key = "digits" or "digitsFormat". -#}
 {% component ladderband(summary: map, key: string, ladder: array, log10: map, cap: integer) -%}
-{%- set series = ["fp127", "quad", "solady", "abdk", "prb", "balancer", "aave", "morpho", "maker"] -%}
-{%- set labels = {"fp127": "FP127", "quad": "Quad", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
-{%- set dy = {"fp127": -6, "quad": 6, "solady": -11, "abdk": 0, "prb": 11, "balancer": 22, "aave": -22, "morpho": 33, "maker": -33} -%}
+{%- set series = ["fp256", "fp127", "quad", "solady", "abdk", "prb", "balancer", "aave", "morpho", "maker"] -%}
+{%- set labels = {"fp256": "FP256", "fp127": "FP127", "quad": "Quad", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
+{%- set dy = {"fp256": -17, "fp127": -6, "quad": 6, "solady": -11, "abdk": 0, "prb": 11, "balancer": 22, "aave": -22, "morpho": 33, "maker": -33} -%}
 {%- set W = 640 %}{% set H = 300 %}{% set L = 44 %}{% set R = 86 %}{% set T = 16 %}{% set B = 40 -%}
 {%- set pw = W - L - R %}{% set ph = H - T - B -%}
 <svg viewBox="0 0 {{ W }} {{ H }}" width="100%" style="max-width:{{ W }}px;display:block">
-{%- for g in [0, 10, 20, 30, 40] %}{% set y = T + ph - ph * g / cap %}
+{%- for g in [0, 20, 40, 60, 80] %}{% set y = T + ph - ph * g / cap %}
 <line class="grid" x1="{{ L }}" x2="{{ L + pw }}" y1="{{ y }}" y2="{{ y }}"/><text class="tick" x="{{ L - 8 }}" y="{{ y + 4 }}" text-anchor="end">{{ g }}</text>
 {%- endfor %}
 {%- for n in [1, 10, 100, 1000, 10000] %}{% set x = L + pw * (log10[n | str] | float) / 4 %}

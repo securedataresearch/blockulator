@@ -14,8 +14,8 @@ committed copies match the code at that commit.
   and inline library), ABDKMath64x64, Solady, PRBMath SD59x18, ABDKMathQuad
   (binary128), Balancer LogExpMath, and the accrual formulas of Aave v3,
   Morpho Blue and Maker (which answer only the accrual scenarios their
-  models describe) for N = 1 to 10,000, against the same loop in exact
-  arithmetic (mpmath, 200 digits) twice: from the exact parameters (`digits`)
+  models describe), and FP256, the 256-bit float, for N = 1 to 10,000, against the same loop in exact
+  arithmetic (mpmath, 300 digits) twice: from the exact parameters (`digits`)
   and from the parameters as the library received them (`digitsFormat`, the
   arithmetic alone). Each cell gives both digit counts, the signed error in
   ULPs, and gas per step measured inside the adapter; summaries give the

@@ -24,9 +24,10 @@ contract EdgeRunner {
     address public immutable aave;
     address public immutable morpho;
     address public immutable maker;
+    address public immutable fp256;
 
     /// The adapters in form-id order (ILadder.sol `Form`).
-    constructor(address[10] memory adapters) {
+    constructor(address[11] memory adapters) {
         fp127 = adapters[0];
         fp127lib = adapters[1];
         abdk = adapters[2];
@@ -37,6 +38,7 @@ contract EdgeRunner {
         aave = adapters[7];
         morpho = adapters[8];
         maker = adapters[9];
+        fp256 = adapters[10];
     }
 
     function adapter(uint8 form) public view returns (address) {
@@ -50,6 +52,7 @@ contract EdgeRunner {
         if (form == Form.AAVE) return aave;
         if (form == Form.MORPHO) return morpho;
         if (form == Form.MAKER) return maker;
+        if (form == Form.FP256) return fp256;
         revert UnknownForm(form);
     }
 

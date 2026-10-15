@@ -61,6 +61,11 @@
    "id": "maker",
    "label": "Maker rpow (RAY)",
    "scale": "10**27"
+  },
+  {
+   "id": "fp256",
+   "label": "FP256 (float, inline)",
+   "scale": "fp256"
   }
  ],
  "scenarios": [
@@ -190,6 +195,9 @@
     "maker": [
      "rpow",
      "rmul"
+    ],
+    "fp256": [
+     "mul"
     ]
    }
   },
@@ -326,6 +334,10 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "pow",
+     "mul"
     ]
    }
   },
@@ -437,6 +449,10 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "sqrt",
+     "add"
     ]
    }
   },
@@ -561,6 +577,10 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "ln",
+     "exp"
     ]
    }
   },
@@ -692,6 +712,10 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "mul",
+     "sub"
     ]
    }
   },
@@ -763,6 +787,12 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "div",
+     "ln",
+     "add",
+     "exp"
     ]
    }
   },
@@ -939,6 +969,13 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "div",
+     "ln",
+     "add",
+     "sqrt",
+     "mul"
     ]
    }
   },
@@ -1021,6 +1058,9 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "mul"
     ]
    }
   },
@@ -1110,6 +1150,9 @@
     "maker": [
      "rpow",
      "rmul"
+    ],
+    "fp256": [
+     "mul"
     ]
    }
   },
@@ -1165,6 +1208,10 @@
     "maker": [
      "rpow",
      "rmul"
+    ],
+    "fp256": [
+     "pow",
+     "mul"
     ]
    },
    "inputs": [
@@ -1281,6 +1328,11 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "mul",
+     "div",
+     "exp"
     ]
    },
    "inputs": [
@@ -1424,6 +1476,16 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "mul",
+     "sqrt",
+     "ln",
+     "div",
+     "add",
+     "exp",
+     "sub",
+     "normCdf by the series/fraction through these"
     ]
    },
    "inputs": [
@@ -1554,6 +1616,11 @@
     ],
     "maker": [
      "unsupported"
+    ],
+    "fp256": [
+     "exp",
+     "mul",
+     "sub"
     ]
    },
    "inputs": [

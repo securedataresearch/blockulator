@@ -4,9 +4,9 @@
 {% block hero %}{% set hero_slim = true %}{% set hero_title = page.title %}{% set hero_sub = page.description %}{% include "hero.html" %}{% endblock hero %}
 {% block content %}
 {%- set d = load_data(path="static/data/edges.json") -%}
-{%- set forms = ["fp127", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"] -%}
-{%- set formIndex = {"fp127": 0, "abdk": 2, "solady": 3, "prb": 4, "quad": 5, "balancer": 6, "aave": 7, "morpho": 8, "maker": 9} -%}
-{%- set short = {"fp127": "FP127", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
+{%- set forms = ["fp127", "fp256", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"] -%}
+{%- set formIndex = {"fp127": 0, "fp256": 10, "abdk": 2, "solady": 3, "prb": 4, "quad": 5, "balancer": 6, "aave": 7, "morpho": 8, "maker": 9} -%}
+{%- set short = {"fp127": "FP127", "fp256": "FP256", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
 <article class="prose doc wide">
 {{ page.content | safe }}
 
