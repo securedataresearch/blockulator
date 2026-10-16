@@ -38,6 +38,17 @@ committed copies match the code at that commit.
   `make edges` from `test/ladder/Edges.t.sol` through the same `EdgeRunner`
   that is deployed on Sepolia; probes in `scripts/ladder/edges.json`, the
   encoded arguments in `scripts/ladder/edge-inputs.json`.
+- [`accrual-deployed.md`](accrual-deployed.md) / [`accrual-deployed.json`](accrual-deployed.json):
+  **the accrual maths as deployed.** Aave v3 Core (v3.7.0) and Morpho Blue
+  (v1.0.0, with the AdaptiveCurveIrm) run from submodules whose runtime
+  bytecode is proven equal to mainnet (`make accrual-verify`), on stylised
+  cases built from live parameter sets and on every reserve's and market's
+  pending accrual at a pinned block (`scripts/accrual/survey.json`), against
+  mpmath at 200 digits of the formula each protocol says it approximates,
+  with each error split into series truncation and integer rounding, and
+  FP127 / FP256 computing the same formula for contrast. `make
+  accrual-deployed` from `test/accrual/DeployedAccrual.t.sol` via
+  `scripts/accrual/accrual.py`. Not in CI (it needs solc 0.8.19 for the IRM).
 - [`pi.md`](pi.md): **the same recipe, six grids.** Ramanujan's series for
   1/pi evaluated through each library's own sqrt, mul and div: FP127 reaches
   36 digits at five terms, Quad 34, ABDK 17, Balancer, Solady and PRBMath 16. `make pi-compare`

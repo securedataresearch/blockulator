@@ -22,3 +22,19 @@ the original reproduced and the source named:
 
 `scripts/fp127/gas_to_json.py versions()` records these pins in every
 generated dataset.
+
+The mainnet deployments are pinned as submodules for
+`docs/benchmarks/accrual-deployed.md`: `lib/aave-v3-origin` at v3.7.0
+(`cff15de6`, the Core Pool implementation `0x728a138a…03cf`, POOL_REVISION
+11), `lib/morpho-blue` at v1.0.0 (`55d2d993`, `0xBBBBBbbB…EFFCb`) and
+`lib/morpho-blue-irm` at v1.0.0 (`a7d9cce3`, AdaptiveCurveIrm
+`0x870aC11D…00BC`); `make accrual-verify` recompiles them and compares the
+runtime bytecode to mainnet. The transcriptions above are pinned to later
+`main` commits; the files they transcribe (MathUtils, WadRayMath, MathLib)
+are byte-identical at the deployed tags, and
+`test/accrual/DeployedAccrual.t.sol` checks LadderAave and LadderMorpho
+against the deployed libraries cell for cell. Two notes on the table: the
+deployed Morpho.sol (v1.0.0) carries a BUSL-1.1 header (MathLib.sol is
+GPL-2.0-or-later; later `main` relicensed Morpho.sol to GPL), and
+LadderMorpho models a constant per-second rate, not the AdaptiveCurveIrm,
+whose rate-path approximations are measured in the accrual study.

@@ -1,4 +1,4 @@
-.PHONY: build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
@@ -25,6 +25,9 @@ help:
 	@echo "  make gen-edges        - Generate scripts/ladder/edge-inputs.json from edges.json"
 	@echo "  make edges            - Edges dataset: every probe x library, one call each -> docs/benchmarks/edges.json + edges.md"
 	@echo "  make edges-check      - Fail if edges.json is stale"
+	@echo "  make accrual-deployed - Aave v3 / Morpho Blue accrual as deployed vs a 200-digit truth -> docs/benchmarks/accrual-deployed.{json,md}"
+	@echo "  make accrual-verify   - (network) recompile the pinned Aave/Morpho sources, compare runtime bytecode to mainnet"
+	@echo "  make accrual-survey   - (network) refresh scripts/accrual/survey.json from mainnet at the current block"
 	@echo "  make predict-ladder   - CREATE2 addresses of the ladder adapters and runner"
 	@echo "  make site             - Build the Zola site into public/ (pinned Zola is downloaded if none is installed)"
 	@echo "  make site-check       - zola check, the symlinked data test, and deno task test"
@@ -112,6 +115,19 @@ size: build
 
 bench: build
 	@forge test --match-contract "^GasLadder$$" -vv | $(PY) scripts/fp127/gas_to_json.py
+
+# Deployed accrual. The submodules lib/aave-v3-origin (v3.7.0), lib/morpho-blue
+# (v1.0.0) and lib/morpho-blue-irm (v1.0.0) are the mainnet code; accrual-verify
+# proves it byte for byte. accrual-deployed is offline once solc 0.8.19 is cached.
+accrual-deployed: build
+	@$(PY) scripts/accrual/verify_deployed.py build
+	@$(PY) scripts/accrual/accrual.py
+
+accrual-verify:
+	@$(PY) scripts/accrual/verify_deployed.py check
+
+accrual-survey:
+	@$(PY) scripts/accrual/survey.py
 
 pi-compare: build
 	@forge test --match-contract PiCompare -vv | $(PY) scripts/fp127/pi_compare.py

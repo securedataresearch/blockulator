@@ -1,0 +1,98 @@
+{
+ "rpc": "https://ethereum-rpc.publicnode.com",
+ "block": 26206682,
+ "targets": [
+  {
+   "name": "AavePoolImpl",
+   "address": "0x728a138a4823392c2efa55e028d434f526fe03cf",
+   "compiler": "v0.8.27+commit.40a35a09",
+   "files": 42,
+   "filesDifferFromVerified": [
+    "lib/aave-v3-origin-private/src/contracts/protocol/libraries/logic/LiquidationLogic.sol"
+   ],
+   "runtimeBytes": 21146,
+   "immutableSlotsMasked": 33,
+   "libraryAddressMasked": false,
+   "runtimeMatches": true
+  },
+  {
+   "name": "AaveSupplyLogic",
+   "address": "0x584C7d8c4cb05304FE5Ac7fbc97f20A10Fb07564",
+   "compiler": "v0.8.27+commit.40a35a09",
+   "files": 25,
+   "filesDifferFromVerified": [],
+   "runtimeBytes": 10302,
+   "immutableSlotsMasked": 0,
+   "libraryAddressMasked": true,
+   "runtimeMatches": true
+  },
+  {
+   "name": "AaveBorrowLogic",
+   "address": "0x52Da0ce88202D1542543598D1e1e27F0d344726A",
+   "compiler": "v0.8.27+commit.40a35a09",
+   "files": 25,
+   "filesDifferFromVerified": [],
+   "runtimeBytes": 9587,
+   "immutableSlotsMasked": 0,
+   "libraryAddressMasked": true,
+   "runtimeMatches": true
+  },
+  {
+   "name": "AaveLiquidationLogic",
+   "address": "0x96D5686812e33Ab509ECCDb38C89d15607B2a413",
+   "compiler": "v0.8.27+commit.40a35a09",
+   "files": 25,
+   "filesDifferFromVerified": [
+    "src/contracts/protocol/libraries/logic/LiquidationLogic.sol"
+   ],
+   "runtimeBytes": 12101,
+   "immutableSlotsMasked": 0,
+   "libraryAddressMasked": true,
+   "runtimeMatches": true
+  },
+  {
+   "name": "AaveFlashLoanLogic",
+   "address": "0x6D414cd0d5eAf8C43200ac0c325A7E2Ad83B8be6",
+   "compiler": "v0.8.27+commit.40a35a09",
+   "files": 28,
+   "filesDifferFromVerified": [],
+   "runtimeBytes": 8227,
+   "immutableSlotsMasked": 0,
+   "libraryAddressMasked": true,
+   "runtimeMatches": true
+  },
+  {
+   "name": "AavePoolLogic",
+   "address": "0xD70593841C57cbaA04957cc3EAcE95708e48853b",
+   "compiler": "v0.8.27+commit.40a35a09",
+   "files": 26,
+   "filesDifferFromVerified": [],
+   "runtimeBytes": 7311,
+   "immutableSlotsMasked": 0,
+   "libraryAddressMasked": true,
+   "runtimeMatches": true
+  },
+  {
+   "name": "MorphoBlue",
+   "address": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+   "compiler": "0.8.19+commit.7dd6d404",
+   "files": 14,
+   "filesDifferFromVerified": [],
+   "runtimeBytes": 15623,
+   "immutableSlotsMasked": 2,
+   "libraryAddressMasked": false,
+   "runtimeMatches": true
+  },
+  {
+   "name": "AdaptiveCurveIrm",
+   "address": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+   "compiler": "0.8.19+commit.7dd6d404",
+   "files": 11,
+   "filesDifferFromVerified": [],
+   "runtimeBytes": 2717,
+   "immutableSlotsMasked": 2,
+   "libraryAddressMasked": false,
+   "runtimeMatches": true
+  }
+ ]
+}
