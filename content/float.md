@@ -28,8 +28,6 @@ Rounding: once per op, ties away from zero. Overflow reverts; underflow rounds t
 
 ## Deployed form
 
-The address below is release one. Release two (the kernels described under [Release two](#release-two)) is in the repository and not yet deployed.
-
 {{ <deployment lib="fp256" /> }}
 
 ## Inline form
