@@ -9,17 +9,17 @@ ends: [blockulator.com](https://blockulator.com).
   digits than any other library on the EVM, including the floats.
 - **FP256** is a 256-bit binary float: one `int256` holding a sign, a 19-bit
   exponent and a 236-bit fraction, about 71 digits at any magnitude from
-  10^−78,900 to 10^78,900, no NaN, no infinity, no walls. Nineteen ops, each
-  rounded once from kernels at 2^−254 (release two, live on Sepolia).
+  10^−78,900 to 10^78,900, no NaN, no infinity, no walls. Twenty-eight ops, each
+  rounded once from kernels at 2^−254 (release three, live on Sepolia).
 
 Both are one Yul source each that generates two forms, proven to agree bit
 for bit on the full `int256` domain: a **deployed object** at a CREATE2
 address with a published salt, and an **inline library** with the same
 bodies in `memory-safe` assembly blocks.
 
-| | FP127 v4 | FP256 v2 |
+| | FP127 v4 | FP256 v3 |
 |---|---|---|
-| Sepolia | `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` | `0x2776d2BEE09683F95016eaF512939a7E21751C27` |
+| Sepolia | `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` | `0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be` |
 | record | [`contracts/deployments/FP127.md`](contracts/deployments/FP127.md) | [`contracts/deployments/FP256.md`](contracts/deployments/FP256.md) |
 | source | [`contracts/src/fp127/`](contracts/src/fp127/README.md) | [`contracts/src/fp256/`](contracts/src/fp256/README.md) |
 | precision | [`docs/fp127/precision.md`](docs/fp127/precision.md) | [`docs/fp256/precision.md`](docs/fp256/precision.md) |

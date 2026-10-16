@@ -42,15 +42,15 @@ import {FP256Lib} from "fp256/FP256Lib.sol";
 
 // a per-second rate over a year, with the rate itself held to 71 digits
 int256 r = FP256Lib.div(FP256Lib.fromFixed18(0.05e18), FP256Lib.fromUint(31536000));
-int256 g = FP256Lib.pow(FP256Lib.add(FP256Lib.ONE, r), FP256Lib.fromUint(31536000));
+int256 g = FP256Lib.compound(r, 31536000);   // (1 + r)^n without ever rounding 1 + r
 int256 balanceWad = FP256Lib.toFixed18(FP256Lib.mul(FP256Lib.fromFixed18(principalWad), g));
 ```
 
 `fromFP127` / `toFP127` convert exactly whenever the value fits; `fromFixed18` / `toFixed18` convert to WAD.
 
-## Release two
+## Release three
 
-Every op, `exp`, `ln` and `pow` included, returns the correctly rounded word at every committed vector. Release one borrowed FP127's kernels and held 146, 149 and 123 bits on those three. Release two computes at 2^−254 with 512-bit products: 2^f from a 16-entry table and a degree-26 polynomial, log2 from twelve reduction stages and a degree-17 polynomial, each within 2^−250 before the one rounding.
+28 ops. `exp`, `ln`, `log1p`, `expm1`, `erf`, `erfc`, `normCdf` and every non-transcendental op return the correctly rounded word at every committed vector. `pow`, `powu` and `compound` are within one unit in the last place while |y log2 x| stays below about 2^13; the Lambert branches are within one unit away from −1/e. The kernels run at 2^−254 with 512-bit products: 2^f from a 16-entry table and a degree-26 polynomial, log2 from twelve reduction stages and a degree-17 polynomial, `erfc` as e^(−y²) times a scaled series or continued fraction (never 1 − erf). Release one borrowed FP127's kernels (146, 149 and 123 bits on exp, ln and pow); release two refit them for the wide word; release three added nine ops.
 
 ## The ops
 

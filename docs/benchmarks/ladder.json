@@ -64863,7 +64863,7 @@
     "abdk": 10000,
     "solady": 10000,
     "prb": 10000,
-    "quad": 10000,
+    "quad": 1000,
     "balancer": 10000,
     "aave": 10000,
     "morpho": 10000,
@@ -130897,7 +130897,11 @@
    }
   }
  ],
- "liveRunner": "0xfcdf2f1887308316fCF6bb741D79E6edE6800Ec9",
+ "liveRunner": "0xEf689d3782490066fE911a6dD33357f59caE40fE",
  "liveSelector": "0x281dbbfe",
- "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell."
+ "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell.",
+ "liveChecked": 9373,
+ "liveMismatches": 0,
+ "liveBlock": 11929034,
+ "liveDate": "2026-10-16"
 }

@@ -10,6 +10,37 @@ called this same code, so the two cannot disagree; `scripts/ladder/livecap.py`
 re-runs every cell of every input through the live runner and records the
 largest N the public RPC completes.
 
+Version 8 (the eleven adapters; `LadderFP256` inlines FP256 release three, 28 ops,
+and answers log1p, expm1, erf, erfc, normCdf, both Lambert branches, powu and
+compound on the edges) is deployed with CREATE2 through the proxy
+`0x4e59b44847b379578588920cA78FbF26c0B4956C` with salt `"FP127 ladder v8"`
+(`0x4650313237206c61646465722076380000000000000000000000000000000000`).
+Deployed 2026-10-16 by `make deploy-ladder-sepolia`, all thirteen Sourcify
+`exact_match`; every cell of the ladder and of the edges was re-run through
+the live runners by `scripts/ladder/livecap.py` and `liveedges.py` (see the
+dataset's live stamp). Machine-readable copy: `Ladder.json`.
+
+| contract | address | tx | block | gas |
+|---|---|---|---:|---:|
+| `LadderFP127` | `0xeD1AF61768A974Ee7937Bc88BE1ac8b09f5c7489` | [`0xa49d1e12…`](https://sepolia.etherscan.io/tx/0xa49d1e12626a8dccb99eeb6d29708d45c0732666fb43a5dbeaf681c0178c8558) | 11,928,985 | 7,473,340 |
+| `LadderFP127Lib` | `0x20f729C8c242c700422D13034d178b697995C227` | [`0xc5772c91…`](https://sepolia.etherscan.io/tx/0xc5772c913b234d4907fefa75af43983febad943d6040fad49b72d14ab4ca902f) | 11,928,986 | 17,660,911 |
+| `LadderABDK` | `0xcD9d82eAdb450b61554259A8F5746960f2d513d6` | [`0x00513e36…`](https://sepolia.etherscan.io/tx/0x00513e36816685619089d8601cfcada2378aad7be626c0662611830ffb0d5090) | 11,928,987 | 14,677,821 |
+| `LadderSolady` | `0x6B62d824807Ad4832a5cAAf6eeF9aDEdE1DAbf55` | [`0xe763aab4…`](https://sepolia.etherscan.io/tx/0xe763aab4decfdf134a4026dd586a2160f5eb1783654ac886a752c322e50328ef) | 11,928,988 | 11,885,901 |
+| `LadderPRB` | `0x7a64b51E343eD5d81cCE075408514d6c87CEA9C9` | [`0x18c7bcdc…`](https://sepolia.etherscan.io/tx/0x18c7bcdc457ef997db4c295f5cb24e64541231cbdc481dfcadea292905822fea) | 11,928,989 | 15,052,209 |
+| `LadderQuad` | `0x544276580721Ebf22Aa34b4d7cFAD6af59e9494C` | [`0x836308ed…`](https://sepolia.etherscan.io/tx/0x836308ed8b6419bdcb9832c3a69d4dff1c922949c92c1e7f47261a80d0cdca27) | 11,928,990 | 21,704,556 |
+| `LadderBalancer` | `0x1450d0E43c806bEecA93f4f8a48eC8d37b5cd790` | [`0xab63c981…`](https://sepolia.etherscan.io/tx/0xab63c981ae3f197e307124a238b7ff32809ddaf8ad6b7430ebb16bbe7b9979e6) | 11,928,991 | 12,943,499 |
+| `LadderAave` | `0xD44a40c99D8b90b996e0f517e95ABa613240c483` | [`0x317690d3…`](https://sepolia.etherscan.io/tx/0x317690d37914e72a8dc103b9d5688052c1f91bd53ed029f3c3b8e201f65ef452) | 11,928,992 | 1,997,702 |
+| `LadderMorpho` | `0xFCF803465289B57eD33C1469E40bcbe0B88fb1b9` | [`0x09db2a29…`](https://sepolia.etherscan.io/tx/0x09db2a2961058524a158ad9bdcc82efc61beed6ccc9f6ff852d9a5bf037c7757) | 11,928,993 | 1,952,928 |
+| `LadderMaker` | `0x6eB340263F541A35Afb23b06c68Fe698AF8Bb102` | [`0x3fff3b19…`](https://sepolia.etherscan.io/tx/0x3fff3b191d229e32875b1925d5018e6d8c7550f48e41f8eece9814c4f7ea2532) | 11,928,994 | 2,676,657 |
+| `LadderFP256` | `0xE33503e51d4BF13DB4d92358cFbE83d4b00F78ED` | [`0x3dfba3ce…`](https://sepolia.etherscan.io/tx/0x3dfba3cee53f8a7bb0c170a812e0a58432b119b90846505364f54c55c70f5e1c) | 11,928,995 | 35,957,651 |
+| `LadderRunner` | `0xEf689d3782490066fE911a6dD33357f59caE40fE` | [`0xb8e95d85…`](https://sepolia.etherscan.io/tx/0xb8e95d8570b0433b654ac2e089f57e554573bc4463f272be97749a2a6618cd2c) | 11,928,996 | 3,608,605 |
+| `EdgeRunner` | `0x09b8fC41E872279A749a0221AE23D124079AcB44` | [`0xdf3192ad…`](https://sepolia.etherscan.io/tx/0xdf3192ad9df3c9d2e997b796b6c948486539f553801b6da9c4156329a9b30b98) | 11,928,997 | 3,415,260 |
+
+`LadderRunner` v8 and `EdgeRunner` are constructed with the eleven adapter
+addresses as one `address[11]` in form-id order; `LadderFP127` staticcalls
+FP127 v4 at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`; `LadderFP256` is
+inline (FP256Lib) and does not call the FP256 object.
+
 Version 7 (the eleven adapters of version 6; `LadderFP256` now inlines FP256
 release two, the 2^-254 kernels) is deployed with CREATE2 through the proxy
 `0x4e59b44847b379578588920cA78FbF26c0B4956C` with salt `"FP127 ladder v7"`
@@ -112,7 +143,7 @@ dataset, which is in the repository history up to the ladder-inputs merge.
 An edge (one op once) through `EdgeRunner`:
 
 ```
-cast call 0xa9f8C514F5834eB5dB4fB8c78f2FDe41f671e06E "run(uint8,uint8,int256[])(bool,int256,bytes4,uint256)" \
+cast call 0x09b8fC41E872279A749a0221AE23D124079AcB44 "run(uint8,uint8,int256[])(bool,int256,bytes4,uint256)" \
   <op> <form> "[<arg0>,...]" --rpc-url https://ethereum-sepolia-rpc.publicnode.com
 ```
 
@@ -123,7 +154,7 @@ probe's array for the form's scale in `scripts/ladder/edge-inputs.json`,
 an integer exponent unscaled. A ladder cell through `LadderRunner`:
 
 ```
-cast call 0xfcdf2f1887308316fCF6bb741D79E6edE6800Ec9 \
+cast call 0xEf689d3782490066fE911a6dD33357f59caE40fE \
   "run(uint8,uint8,uint32,int256[])(bool,int256,bytes4,uint256,uint256)" \
   <scenario> <form> <n> "[<p0>,<p1>,...]" \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com
@@ -152,7 +183,7 @@ scenario function.
 Example, the headline cell (compound, reference input, FP127, N = 365):
 
 ```
-cast call 0xfcdf2f1887308316fCF6bb741D79E6edE6800Ec9 \
+cast call 0xEf689d3782490066fE911a6dD33357f59caE40fE \
   "run(uint8,uint8,uint32,int256[])(bool,int256,bytes4,uint256,uint256)" 0 0 365 \
   "[3402823669209384634633746074317682114560000,93228045731763962592705371899114578]" \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com

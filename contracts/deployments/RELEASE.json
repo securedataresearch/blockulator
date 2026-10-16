@@ -1,0 +1,45 @@
+{
+ "release": "Blockulator 2.0",
+ "date": "2026-10-16",
+ "chainId": 11155111,
+ "network": "sepolia",
+ "note": "The public name for this release. Component versions (salts) name addresses and stay in each record.",
+ "components": {
+  "FP127": {
+   "version": "FP127 v4",
+   "address": "0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1",
+   "record": "contracts/deployments/FP127.md"
+  },
+  "FP256": {
+   "version": "FP256 v3",
+   "address": "0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be",
+   "record": "contracts/deployments/FP256.md"
+  },
+  "LadderRunner": {
+   "version": "FP127 ladder v8",
+   "address": "0xEf689d3782490066fE911a6dD33357f59caE40fE",
+   "record": "contracts/deployments/Ladder.md"
+  },
+  "EdgeRunner": {
+   "version": "FP127 ladder v8",
+   "address": "0x09b8fC41E872279A749a0221AE23D124079AcB44",
+   "record": "contracts/deployments/Ladder.md"
+  }
+ },
+ "live": {
+  "ladder": {
+   "liveRunner": "0xEf689d3782490066fE911a6dD33357f59caE40fE",
+   "liveChecked": 9373,
+   "liveMismatches": 0,
+   "liveBlock": 11929034,
+   "liveDate": "2026-10-16"
+  },
+  "edges": {
+   "liveRunner": "0x09b8fC41E872279A749a0221AE23D124079AcB44",
+   "liveChecked": 1511,
+   "liveMismatches": 0,
+   "liveBlock": 11929015,
+   "liveDate": "2026-10-16"
+  }
+ }
+}

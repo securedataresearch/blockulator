@@ -1,7 +1,6 @@
 # FP256 in Yul
 
-256-bit binary floating point for the EVM, release three (in the
-repository; Sepolia carries release two until the next deploy): 26 ops. One `int256` per
+256-bit binary floating point for the EVM, release three (live on Sepolia): 28 ops. One `int256` per
 value, the bit pattern of a float:
 
 | bits | field |

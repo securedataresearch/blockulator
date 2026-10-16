@@ -6,6 +6,10 @@
 > Solidity library. Every op is a read-only eth_call: no gas, no wallet, no
 > transaction. Agents get results more precise than a double by calling it.
 
+
+Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address in
+/contracts/deployments/RELEASE.json.
+
 ## What it is
 
 - 49 operations: add, sub, mul, div, fromFixed18, toFixed18, exp, exp2,
@@ -57,7 +61,7 @@
   compounding, reference input, N = 365: FP127 36 digits (40 against the
   format truth), Solady and PRBMath 16, ABDK 17.
 - Any cell can be re-run on chain: LadderRunner at
-  0xfcdf2f1887308316fCF6bb741D79E6edE6800Ec9 (salt "FP127 ladder v7"),
+  0xEf689d3782490066fE911a6dD33357f59caE40fE (salt "FP127 ladder v8"),
   run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok,
   int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal), with p
   the input's floored parameters from /data/ladder-inputs.json. Scenario
@@ -73,16 +77,14 @@
   each cell with its digits or how the library had no answer (zero below
   its floor, revert, out of range, unsupported); /results/edges/ renders it;
   any cell re-runs through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
-  at 0xa9f8C514F5834eB5dB4fB8c78f2FDe41f671e06E (selector 0xf833b7d5) with
+  at 0x09b8fC41E872279A749a0221AE23D124079AcB44 (selector 0xf833b7d5) with
   the arguments from /data/edge-inputs.json.
-- FP256 (/library/fp256/): a 256-bit binary float, release two: sign bit 255, a
+- FP256 (/library/fp256/): a 256-bit binary float, release three: sign bit 255, a
   19-bit biased exponent (bias 262143) in bits 254..236, a 236-bit fraction
   with an implicit one; about 71 digits at any magnitude; no NaN, infinity
-  or subnormals (invalid words revert OutOfRange); ops add, sub, mul, div,
-  sqrt, exp, ln, pow, neg, abs, sign, cmp, lt, eq, fromUint, fromFP127,
-  toFP127, fromFixed18, toFixed18. Ops table /data/fp256/ops.json, ABI
+  or subnormals (invalid words revert OutOfRange); 28 ops: add, sub, mul, div, sqrt, exp, ln, pow, log1p, expm1, erf, erfc, normCdf, lambertW0, lambertWm1, powu, compound, neg, abs, sign, cmp, lt, eq, fromUint, fromFP127, toFP127, fromFixed18, toFixed18. Ops table /data/fp256/ops.json, ABI
   /data/fp256/abi.json, record /data/fp256/fp256.json; live on Sepolia at
-  0x2776d2BEE09683F95016eaF512939a7E21751C27 (salt "FP256 v2", the same
+  0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be (salt "FP256 v3", the same
   CREATE2 proxy), Sourcify and Blockscout verified.
 - /results/ the headline numbers, /results/ladder/ the ladder, /results/edges/ the cliffs,
   /results/ops/ gas and precision per op, /library/ address, ABI and the op table,
