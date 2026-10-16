@@ -99,6 +99,20 @@ interface IFP256 {
     ///         about -181,700 at the bottom of the format). Within one ULP away
     ///         from -1/e; near it as lambertW0.
     function lambertWm1(int256 x) external pure returns (int256 r);
+    /// @notice x^n for |n| below 2^16 by binary exponentiation on a 256-bit
+    ///         significand with its own exponent, each product keeping its top
+    ///         256 bits, rounded once at the end: within one ULP, and exact
+    ///         whenever x^n fits 256 bits (so every exactly representable power
+    ///         and every exact tie). n < 0 inverts the final significand once.
+    ///         From 2^16 on, pow(|x|, n) with the sign restored. 0^0 = 1.
+    function powu(int256 x, int256 n) external pure returns (int256 r);
+    /// @notice (1 + rate)^n without forming a rounded 1 + rate (a per-second
+    ///         rate needs 266 bits for it): log2(1 + rate) unrounded, as log1p
+    ///         takes it (the series below 2^-4, 1 + rate exact under its leading
+    ///         bit above), its exact product with n, then pow's 2^t and one
+    ///         rounding: within one ULP while |n log2(1 + rate)| stays below
+    ///         about 2^13, losing log2 of that above, as pow does.
+    function compound(int256 rate, int256 n) external pure returns (int256 r);
     /// @notice -x: the sign bit flipped; -0 is 0.
     function neg(int256 x) external pure returns (int256 r);
     /// @notice |x|: the sign bit cleared.

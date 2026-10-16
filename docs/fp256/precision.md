@@ -21,6 +21,8 @@ Bits are relative correct bits of the result on the decoded values: the signific
 | normCdf | 434 | 3 | exact | exact |  |
 | lambertW0 | 815 | 72 | 218 | 252 | `0xbfffd78b56362ce82e5614a55440337bfb164715cbe72f8ed626af774eac2232` |
 | lambertWm1 | 662 | 677 | 221 | 249 | `0xbfffd78b56362a2f87ca7f8b1f34a837009ce2511a0d898f20e9a30dc45166f2` |
+| powu | 375 | 125 | 233 | exact | `0x3ffff1999999999999999999999999999999999999999999999999999999999a`, `0x00000000000000000000000000000000000000000000000000000000000f4240` |
+| compound | 413 | 87 | 231 | exact | `0xbfffb9cd218786ffe65e58ae39f7eca8fe1406d48586be0b57c440dcb23c5365`, `0x00000000000000000000000000000000000000000000000000000000000f4240` |
 | neg | 1346 | 3 | exact | exact |  |
 | abs | 1346 | 3 | exact | exact |  |
 | sign | 1346 | 3 | exact | exact |  |

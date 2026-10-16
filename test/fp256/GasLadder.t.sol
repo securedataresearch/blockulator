@@ -98,6 +98,8 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("mul")) return FP256Lib.mul(a, b);
         if (h == keccak256("div")) return FP256Lib.div(a, b);
         if (h == keccak256("pow")) return FP256Lib.pow(a, b);
+        if (h == keccak256("powu")) return FP256Lib.powu(a, b);
+        if (h == keccak256("compound")) return FP256Lib.compound(a, b);
         if (h == keccak256("cmp")) return FP256Lib.cmp(a, b);
         if (h == keccak256("lt")) return FP256Lib.lt(a, b);
         if (h == keccak256("eq")) return FP256Lib.eq(a, b);
@@ -255,6 +257,14 @@ contract GasLadder256 is FP256Harness {
     function test_ladder_pow() public view {
         _run2("pow", [_v(0, 0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c >> 20), _v(1, PI_F >> 20), TWO, _v(3, 0x4 << 232), HALF, _v(1, 0x8 << 232)],
                      [_v(8, 0x6d << 229), _v(1, E_F >> 20), _v(3, 0x4 << 232), _v(1, 0x4 << 232), _nv(1, 0x8 << 232), TWO]);
+    }
+
+    /// powu and compound take a plain integer n; the FP127 and Quad columns are blank.
+    function test_ladder_powu() public view {
+        _run2("powu", [_v(0, 0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c >> 20), _v(1, PI_F >> 20), TWO, _v(0, 1 << 200), HALF, _v(-1, 0x8 << 232)],
+                      [int256(2), int256(12), int256(365), int256(31536000), int256(-10000), int256(1) << 100]);
+        _run2("compound", [_v(-30, 0), _v(-12, 0), _v(-4, 0x9999 << 220), _nv(-5, 0), _v(-8, 0x8 << 232), _v(-29, 0x5 << 232)],
+                      [int256(365), int256(10000), int256(10), int256(100), int256(-365), int256(315360000)]);
     }
 
     function test_ladder_conversions() public view {

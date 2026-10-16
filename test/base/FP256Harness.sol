@@ -23,6 +23,8 @@ contract LibUser256 {
     function normCdf(int256 x) external pure returns (int256) { return FP256Lib.normCdf(x); }
     function lambertW0(int256 x) external pure returns (int256) { return FP256Lib.lambertW0(x); }
     function lambertWm1(int256 x) external pure returns (int256) { return FP256Lib.lambertWm1(x); }
+    function powu(int256 x, int256 n) external pure returns (int256) { return FP256Lib.powu(x, n); }
+    function compound(int256 r, int256 n) external pure returns (int256) { return FP256Lib.compound(r, n); }
     function neg(int256 x) external pure returns (int256) { return FP256Lib.neg(x); }
     function abs(int256 x) external pure returns (int256) { return FP256Lib.abs(x); }
     function sign(int256 x) external pure returns (int256) { return FP256Lib.sign(x); }

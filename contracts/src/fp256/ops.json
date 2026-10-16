@@ -176,6 +176,30 @@
       "reverts": "OutOfRange() outside that or for a word that is not a number"
     },
     {
+      "name": "powu",
+      "signature": "powu(int256,int256)",
+      "selector": "0xb8846d69",
+      "inputs": [
+        "x",
+        "n"
+      ],
+      "notice": "x^n for |n| below 2^16 by binary exponentiation on a 256-bit significand with its own exponent, each product keeping its top 256 bits, rounded once at the end: within one ULP, and exact whenever x^n fits 256 bits (so every exactly representable power and every exact tie). n < 0 inverts the final significand once. From 2^16 on, pow(|x|, n) with the sign restored. 0^0 = 1.",
+      "domain": "any number x, any plain integer n (not a number); the result must fit",
+      "reverts": "Overflow() when x^n does not fit; DivisionByZero() for 0^n with n < 0; OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "compound",
+      "signature": "compound(int256,int256)",
+      "selector": "0xa31e7db8",
+      "inputs": [
+        "rate",
+        "n"
+      ],
+      "notice": "(1 + rate)^n without forming a rounded 1 + rate (a per-second rate needs 266 bits for it): log2(1 + rate) unrounded, as log1p takes it (the series below 2^-4, 1 + rate exact under its leading bit above), its exact product with n, then pow's 2^t and one rounding: within one ULP while |n log2(1 + rate)| stays below about 2^13, losing log2 of that above, as pow does.",
+      "domain": "rate >= -1, any plain integer n (not a number); the result must fit",
+      "reverts": "OutOfRange() for rate < -1; DivisionByZero() for rate = -1 with n < 0; Overflow() when the result does not fit"
+    },
+    {
       "name": "neg",
       "signature": "neg(int256)",
       "selector": "0x54a53dc1",

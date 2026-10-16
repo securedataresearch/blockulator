@@ -17,9 +17,9 @@ import {console} from "forge-std/console.sol";
 contract Precision256 is FP256Harness {
     function _out() internal pure virtual returns (string memory) { return "docs/fp256/precision.json"; }
 
-    function _ops() internal pure returns (string[26] memory o) {
+    function _ops() internal pure returns (string[28] memory o) {
         o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "lambertW0", "lambertWm1", "neg", "abs", "sign", "cmp", "lt", "eq",
-             "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18"];
+             "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18", "powu", "compound"];
     }
 
     /// Minimum relative correct bits per op. 256 means bit-exact.
@@ -28,6 +28,11 @@ contract Precision256 is FP256Harness {
         // t = y log2 x carries the log2 kernel's 2^-250 times |t|, so it is
         // held to one ULP (236 bits); 7 of its 234 vectors sit there
         if (keccak256(bytes(op)) == keccak256("pow")) return 236;
+        // powu (binary exponentiation below 2^16, pow's tail above) and compound
+        // (pow's tail) are within one ULP while |t| = |n log2 x| < 2^13 and lose
+        // log2|t| - 13 bits above it, as pow: 233 and 231 at |t| near 2^17 and 2^15
+        if (keccak256(bytes(op)) == keccak256("powu")) return 233;
+        if (keccak256(bytes(op)) == keccak256("compound")) return 231;
         // Lambert W iterates on the rounded float ops: within one ULP away from -1/e (235
         // bits at worst), and near it Newton loses log2(1/p) bits, p = sqrt(2(1 + e x)),
         // until the branch-point series takes over below p = 2^-21: 218 bits at worst
@@ -124,7 +129,7 @@ contract Precision256 is FP256Harness {
     }
 
     function test_precision_all() public virtual {
-        string[26] memory ops = _ops();
+        string[28] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));

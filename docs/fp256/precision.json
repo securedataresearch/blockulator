@@ -20,6 +20,13 @@
     "reverts": 5,
     "worstInput": ""
   },
+  "compound": {
+    "meanBits": 255,
+    "minBits": 231,
+    "n": 413,
+    "reverts": 87,
+    "worstInput": "0xbfffb9cd218786ffe65e58ae39f7eca8fe1406d48586be0b57c440dcb23c5365,0x00000000000000000000000000000000000000000000000000000000000f4240"
+  },
   "div": {
     "meanBits": 256,
     "minBits": 256,
@@ -145,6 +152,13 @@
     "n": 234,
     "reverts": 166,
     "worstInput": "0x3fffe6248f63a2a7f2d6bd7660f2222d6b4b5cc537e3698b36008c1cd0d2c5de,0xc0002e4138223b7118c7f7a1b460f692d54ecf269825fdbd1620278b418da150"
+  },
+  "powu": {
+    "meanBits": 255,
+    "minBits": 233,
+    "n": 375,
+    "reverts": 125,
+    "worstInput": "0x3ffff1999999999999999999999999999999999999999999999999999999999a,0x00000000000000000000000000000000000000000000000000000000000f4240"
   },
   "sign": {
     "meanBits": 256,

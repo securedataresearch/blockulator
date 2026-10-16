@@ -1,7 +1,7 @@
 # FP256 in Yul
 
 256-bit binary floating point for the EVM, release three (in the
-repository; Sepolia carries release two until the next deploy). One `int256` per
+repository; Sepolia carries release two until the next deploy): 26 ops. One `int256` per
 value, the bit pattern of a float:
 
 | bits | field |
@@ -64,6 +64,8 @@ rounds to zero with the sign dropped.
 | `normCdf` | Φ(x) = erfc(−x/√2)/2 with e^(−x²/2) from the exact square; the left tail keeps 71 digits until it underflows near x = −603; exactly one from x ≥ 13√2 | never |
 | `lambertW0` | W e^W = x, W ≥ −1: FP127's seeds (the branch-point series in p = √(2(1 + e·x)) with 1 + e·x exact, x − x² + 3/2·x³, Winitzki), six Newton steps on the float ops (w·e^w = x up to 3, w + ln w = ln x above, so W reaches 181,700); within one ULP away from −1/e; near it the ten-term series below p = 2^−21 and Newton above, 218 bits at worst | `OutOfRange` below −1/e |
 | `lambertWm1` | W ≤ −1 on [−1/e, 0): the series in −p or L − ln(−L) + ln(−L)/L, seven log-form Newton steps (no e^w; W reaches −181,700); as `lambertW0` near −1/e | `OutOfRange` outside [−1/e, 0) |
+| `powu(x, n)` | x^n for a plain integer n: below 2^16 binary exponentiation on a 256-bit significand, each product keeping its top 256 bits, one rounding (exact whenever x^n fits 256 bits); from 2^16 `pow(\|x\|, n)` with the sign restored; 0^0 = 1 | `Overflow`, `DivisionByZero` for 0^negative |
+| `compound(rate, n)` | (1 + rate)^n for a plain integer n without a rounded 1 + rate: log2(1 + rate) as `log1p` takes it (the series below 2^−4, 1 + rate exact above), its exact product with n, then pow's 2^t and one rounding | `OutOfRange` below −1, `DivisionByZero` for −1 with n < 0, `Overflow` |
 | `pow` | 2^(y log2 x): log2 x as a scaled word from the kernel (or the near-one series), its exact 512-bit product with y's significand split into the integer part and a fraction at 2^−254, then 2^f and one rounding; shortcuts for y ∈ {1, 2, ½, −1}; 0^0 = 1 | `OutOfRange` for x < 0, `DivisionByZero` for 0^negative, `Overflow` |
 | `neg`, `abs`, `sign` | bit operations; −0 is 0 | `OutOfRange` |
 | `cmp`, `lt`, `eq` | through a monotone key (negatives mirrored); `eq` is bit equality; results are plain integers | `OutOfRange` |
@@ -108,6 +110,12 @@ kernel's 2^−250 never meets a result small enough for it to matter.
 are within one ULP away from −1/e (235 bits at worst) but not correctly
 rounded; near −1/e Newton loses log2(1/p) bits until the branch-point
 series takes over, and the floor is 218 bits.
+
+`powu` and `compound` are within one ULP while |t| = |n log2 x| stays
+below about 2^13 and lose log2|t| − 13 bits above it, as `pow` does
+(floors 233 and 231 at |t| near 2^17 and 2^15). Binary exponentiation
+alone would lose n·2^−255 (each truncation is squared up through the
+steps after it), so `powu` hands n ≥ 2^16 to `pow`.
 
 `pow` is held to one ULP (236 bits): t = y log2 x carries the kernel's
 2^−250 scaled by |t|, and 7 of its 234 vectors sit one ULP from the

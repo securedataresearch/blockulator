@@ -258,6 +258,41 @@ def op_lambertWm1(x):
     return encode_mpf(lambertw(to_mpf(x), -1).real)
 
 
+def _int(n):
+    return n - TWO256 if n >= TWO255 else n
+
+
+def op_powu(x, n):
+    """x^n for a plain integer n: exact rationals for small n, 300 digits above."""
+    k = _int(n)
+    if k == 0:
+        return ONE
+    s, e, m = unpack(x)
+    if e == 0:
+        if k < 0:
+            raise Revert("DivisionByZero")
+        return 0
+    if abs(k) <= 64:
+        return encode(decode(x) ** k)
+    return encode_mpf(power(to_mpf(x), k))
+
+
+def op_compound(rate, n):
+    """(1 + rate)^n for a plain integer n, as exp(n log1p(rate)) at 300 digits."""
+    k = _int(n)
+    s, e, m = unpack(rate)
+    if k == 0 or e == 0:
+        return ONE
+    q = decode(rate)
+    if q < -1:
+        raise Revert("OutOfRange")
+    if q == -1:
+        if k < 0:
+            raise Revert("DivisionByZero")
+        return 0
+    return encode_mpf(mexp(k * log1p(to_mpf(rate))))
+
+
 def op_pow(x, y):
     if y == 0:
         return ONE

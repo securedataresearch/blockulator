@@ -1,6 +1,6 @@
 # Edges: where each library's domain ends
 
-Generated 2026-10-16 by `make edges`. Versions: fp127 2210689, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
+Generated 2026-10-16 by `make edges`. Versions: fp127 eef6294, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
 
 Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 200 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. FP127Lib coincides with FP127 and is omitted. The method is in the Methodology section at the end.
 
@@ -173,13 +173,13 @@ e^x - 1 as an op: the libraries without it compute exp(x) - 1 and the one cancel
 
 | probe | truth | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | fp256 |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `compound(0.05/31536000,31536000)` 5% APR per second, one year | `1.0512711` | 31 | 11 | 12 | 10 | 26 | 11 | n/a | n/a | 19 | 63 |
-| `compound(0.05/31536000,315360000)` ten years | `1.6487213` | 30 | 10 | 11 | 9 | 25 | 10 | n/a | n/a | 18 | 62 |
-| `compound(0.001/31536000,31536000)` 0.1% APR per second | `1.0010005` | 31 | 12 | 10 | 10 | 26 | 10 | n/a | n/a | 19 | 63 |
-| `compound(0.1/365,365)` the ladder's headline cell | `1.1051558` | 36 | 17 | 17 | 15 | 31 | 16 | n/a | n/a | 24 | 68 |
-| `compound(1e-12,1000000000)` a rate of 1e-12 over a billion steps | `1.0010005` | 29 | 11 | 12 | 12 | 25 | 18 | n/a | n/a | 22 | 62 |
+| `compound(0.05/31536000,31536000)` 5% APR per second, one year | `1.0512711` | 31 | 11 | 12 | 10 | 26 | 11 | n/a | n/a | 19 | 71 |
+| `compound(0.05/31536000,315360000)` ten years | `1.6487213` | 30 | 10 | 11 | 9 | 25 | 10 | n/a | n/a | 18 | 71 |
+| `compound(0.001/31536000,31536000)` 0.1% APR per second | `1.0010005` | 31 | 12 | 10 | 10 | 26 | 10 | n/a | n/a | 19 | 71 |
+| `compound(0.1/365,365)` the ladder's headline cell | `1.1051558` | 36 | 17 | 17 | 15 | 31 | 16 | n/a | n/a | 24 | 71 |
+| `compound(1e-12,1000000000)` a rate of 1e-12 over a billion steps | `1.0010005` | 29 | 11 | 12 | 12 | 25 | 18 | n/a | n/a | 22 | 71 |
 | `compound(-0.5,10)` | `0.0009765625` | exact | exact | exact | exact | 32 | exact | n/a | n/a | REVERT ParamOutOfRange | exact |
-| `compound(0.000000001,10000000)` | `1.0100502` | 31 | 12 | 10 | 10 | 27 | 10 | n/a | n/a | 19 | 64 |
+| `compound(0.000000001,10000000)` | `1.0100502` | 31 | 12 | 10 | 10 | 27 | 10 | n/a | n/a | 19 | 71 |
 
 ## powu(x, n)
 

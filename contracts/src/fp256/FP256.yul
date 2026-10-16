@@ -55,6 +55,9 @@ object "FP256" {
             case 0xa2745c74 { /* toFixed18(int256) */
                 ret(fp256_toFixed18(calldataload(4)))
             }
+            case 0xa31e7db8 { /* compound(int256,int256) */
+                ret(fp256_compound(calldataload(4), calldataload(36)))
+            }
             case 0xa5f3c23b { /* add(int256,int256) */
                 ret(fp256_add(calldataload(4), calldataload(36)))
             }
@@ -72,6 +75,9 @@ object "FP256" {
             }
             case 0xae94abc8 { /* lambertWm1(int256) */
                 ret(fp256_lambertWm1(calldataload(4)))
+            }
+            case 0xb8846d69 { /* powu(int256,int256) */
+                ret(fp256_powu(calldataload(4), calldataload(36)))
             }
             case 0xbbe93d91 { /* mul(int256,int256) */
                 ret(fp256_mul(calldataload(4), calldataload(36)))
@@ -681,21 +687,38 @@ object "FP256" {
                         Lm := absw(l)
                         Ls := lsc
                     }
-                    let p1, p0 := mul512(Lm, my)
-                    // |t| = (p1, p0) 2^(Ls + uy - 236); at 2^-254 a shift right by q - 254
-                    let q := sub(236, add(Ls, sub(ey, 0x3ffff)))
-                    let s := xor(ls, sy)
-                    if slt(q, 254) {
-                        if s { r := 0 leave }
-                        rev(0x35278d12)
-                    }
-                    let k := shr512(p1, p0, q)
-                    if iszero(lt(k, 0x80000)) {
-                        if s { r := 0 leave }
-                        rev(0x35278d12)
-                    }
-                    r := exp2kf(s, k, and(shr512(p1, p0, sub(q, 254)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                    r := pow2t(Lm, Ls, xor(ls, sy), ey, my)
                 }
+            }
+
+            function pow2t(Lm, Ls, s, ey, my) -> r {
+                let p1, p0 := mul512(Lm, my)
+                // |t| = (p1, p0) 2^(Ls + uy - 236); at 2^-254 a shift right by q - 254
+                let q := sub(236, add(Ls, sub(ey, 0x3ffff)))
+                if slt(q, 254) {
+                    if s { r := 0 leave }
+                    rev(0x35278d12)
+                }
+                let k := shr512(p1, p0, q)
+                if iszero(lt(k, 0x80000)) {
+                    if s { r := 0 leave }
+                    rev(0x35278d12)
+                }
+                r := exp2kf(s, k, and(shr512(p1, p0, sub(q, 254)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+            }
+
+            function log2of1p(s, u, m) -> Lm, Ls {
+                let b := 0
+                if sgt(u, 0) { b := u }
+                let a := shl(sub(254, b), 1)
+                switch s
+                case 0 { a := add(a, shl(add(18, sub(u, b)), m)) }
+                default { a := sub(a, shl(add(18, u), m)) }
+                let n := msb(a)
+                switch lt(n, 254)
+                case 1 { a := shl(sub(254, n), a) }
+                default { a := shr(sub(n, 254), a) }
+                Lm, Ls := log2pairm(add(b, sub(n, 254)), a)
             }
 
             function fp256_log1p(x) -> r {
@@ -713,18 +736,7 @@ object "FP256" {
                     leave
                 }
                 if s { if iszero(slt(u, 0)) { rev(0x7db3aba7) } }
-                // 1 + x = a 2^(b - 254) exactly, b = max(u, 0); a below 2^256
-                let b := 0
-                if sgt(u, 0) { b := u }
-                let a := shl(sub(254, b), 1)
-                switch s
-                case 0 { a := add(a, shl(add(18, sub(u, b)), m)) }
-                default { a := sub(a, shl(add(18, u), m)) }
-                let n := msb(a)
-                switch lt(n, 254)
-                case 1 { a := shl(sub(254, n), a) }
-                default { a := shr(sub(n, 254), a) }
-                let Lm, Ls := log2pairm(add(b, sub(n, 254)), a)
+                let Lm, Ls := log2of1p(s, u, m)
                 let l := mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)
                 r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
             }
@@ -1143,6 +1155,109 @@ object "FP256" {
                 }
                 for { let i := 0 } lt(i, 7) { i := add(i, 1) } { w := lwlog(w, lx) }
                 r := w
+            }
+
+            function mant(a, b) -> mm, c {
+                let p1, p0 := mul512(a, b)
+                switch shr(255, p1)
+                case 1 {
+                    mm := p1
+                    c := 1
+                }
+                default { mm := or(shl(1, p1), shr(255, p0)) }
+            }
+
+            function fp256_powu(x, n) -> r {
+                if iszero(n) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+                let s, e, m := unpack(x)
+                let recip := slt(n, 0)
+                let k := absw(n)
+                if iszero(e) {
+                    if recip { rev(0x23d359a3) }
+                    r := 0
+                    leave
+                }
+                let sgn := and(s, and(k, 1))
+                if gt(k, 0xffff) {
+                    // each truncation is squared up through the steps after it, n 2^-255 in
+                    // all, so from 2^16 on pow's 2^(n log2|x|) (the near-one series, and an
+                    // error of |t| 2^-250) is the better road
+                    let ny := fp256_fromUint(k)
+                    if recip { ny := fp256_neg(ny) }
+                    r := fp256_pow(and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), ny)
+                    if sgn { r := fp256_neg(r) }
+                    leave
+                }
+                let bm := shl(19, m)
+                let be := sub(e, 0x3ffff)
+                let am := 0x8000000000000000000000000000000000000000000000000000000000000000
+                let ae := 0
+                for {} 1 {} {
+                    if and(k, 1) {
+                        let pm, cy := mant(am, bm)
+                        am := pm
+                        ae := add(add(ae, be), cy)
+                    }
+                    k := shr(1, k)
+                    if iszero(k) { break }
+                    let qm, qc := mant(bm, bm)
+                    bm := qm
+                    be := add(add(be, be), qc)
+                    // past 2^20 the remaining factors take the result out of the format
+                    // on the side be is on; every partial product leans the same way
+                    if sgt(add(be, 0x100000), 0x200000) {
+                        if xor(sgt(be, 0), recip) { rev(0x35278d12) }
+                        r := 0
+                        leave
+                    }
+                }
+                if recip {
+                    // 1 / (am 2^(ae - 255)) = floor(2^511 / am) 2^(-ae - 256 - 255 + 255)
+                    switch eq(am, 0x8000000000000000000000000000000000000000000000000000000000000000)
+                    case 1 { ae := sub(0, ae) }
+                    default {
+                        let qh := divu(0x8000000000000000000000000000000000000000000000000000000000000000, am)
+                        am := or(shl(128, qh), divu(sub(0, mul(qh, am)), am))
+                        ae := sub(sub(0, ae), 1)
+                    }
+                }
+                r := normround(sgn, add(0x3ffff, sub(ae, 1)), am)
+            }
+
+            function fp256_compound(rate, n) -> r {
+                let s, e, m := unpack(rate)
+                if or(iszero(n), iszero(e)) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+                let u := sub(e, 0x3ffff)
+                if and(s, iszero(slt(u, 0))) {
+                    if eq(rate, 0xbffff00000000000000000000000000000000000000000000000000000000000) {
+                        if slt(n, 0) { rev(0x23d359a3) }
+                        r := 0
+                        leave
+                    }
+                    rev(0x7db3aba7)
+                }
+                let Lm := 0
+                let Ls := 0
+                let ls := s
+                switch slt(u, sub(0, 4))
+                case 1 {
+                    // log2(1 + d) = d ln1p(d)/d log2 e with log1p's series (64 terms from 2^-8)
+                    let df := tofixed254(s, u, m)
+                    let ps := 0
+                    switch slt(u, sub(0, 8))
+                    case 1 { ps := ln1pseries(df) }
+                    default { ps := ln1pwide(df) }
+                    Lm := mulwu(mulwu(shl(17, m), ps), 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
+                    Ls := sub(u, 253)
+                }
+                default {
+                    let l, lsc := log2of1p(s, u, m)
+                    ls := slt(l, 0)
+                    Lm := absw(l)
+                    Ls := lsc
+                }
+                let sy, ey, my := unpack(fp256_fromUint(absw(n)))
+                r := pow2t(Lm, Ls, xor(ls, slt(n, 0)), ey, my)
             }
 
             function fp256_neg(x) -> r {

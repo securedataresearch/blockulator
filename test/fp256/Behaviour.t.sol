@@ -165,4 +165,24 @@ contract Behaviour256 is FP256Harness {
         assertEq(obj.lt(obj.fromUint(181000), obj.lambertW0(MAX_WORD)), 1);
         assertEq(obj.lt(obj.lambertWm1(obj.neg(MIN_NORMAL)), obj.neg(obj.fromUint(181000))), 1);
     }
+
+    /// powu and compound: exact small powers, signs, the reciprocal, the domain.
+    function test_powu_compound() public view {
+        assertEq(obj.powu(obj.fromUint(3), 5), obj.fromUint(243), "3^5 = 243 exactly");
+        assertEq(obj.powu(TWO, -3), _mk(false, -3, uint256(1) << 236), "2^-3 = 1/8");
+        assertEq(obj.powu(obj.neg(TWO), 3), obj.neg(obj.fromUint(8)), "(-2)^3 = -8");
+        assertEq(obj.powu(obj.neg(TWO), 4), obj.fromUint(16), "(-2)^4 = 16");
+        assertEq(obj.powu(0, 0), ONE, "0^0 = 1");
+        assertEq(obj.powu(0, 7), 0);
+        _expectRevert(abi.encodeCall(IFP256.powu, (0, -1)), IFP256.DivisionByZero.selector, "0^-1");
+        _expectRevert(abi.encodeCall(IFP256.powu, (TWO, 1 << 20)), IFP256.Overflow.selector, "2^(2^20)");
+        assertEq(obj.powu(HALF, 1 << 20), 0, "(1/2)^(2^20) underflows");
+        assertEq(obj.compound(0, 1000), ONE);
+        assertEq(obj.compound(obj.fromFixed18(50000000000000000), 0), ONE);
+        assertEq(obj.compound(obj.neg(ONE), 2), 0, "(1 - 1)^2 = 0");
+        _expectRevert(abi.encodeCall(IFP256.compound, (obj.neg(ONE), -1)), IFP256.DivisionByZero.selector, "0^-1");
+        _expectRevert(abi.encodeCall(IFP256.compound, (obj.neg(TWO), 1)), IFP256.OutOfRange.selector, "rate below -1");
+        // (1 + r)^n against powu of the base, for an r the base holds exactly
+        assertGe(_bits(obj.compound(HALF, 12), obj.powu(obj.add(ONE, HALF), 12)), 236, "compound(1/2, 12) = 1.5^12");
+    }
 }
