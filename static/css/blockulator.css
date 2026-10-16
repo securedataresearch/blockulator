@@ -85,3 +85,71 @@
 .summary { font-size: 14px; } .summary .meta { color: var(--g-500); font-size: 12px; }
 .inputs { margin: 1em 0 1.4em; } .inputs summary { cursor: pointer; font-weight: 600; }
 .inputlist td { font-size: 13.5px; }
+
+/* fonts: self-hosted (SIL OFL 1.1), preloaded in base.html, and optional: a font that is not ready for the first paint waits for the next page instead of swapping in */
+@font-face { font-family: "Instrument Sans"; font-style: normal; font-weight: 400 700; font-display: optional; src: url(/fonts/instrument-sans.woff2) format("woff2"); }
+@font-face { font-family: "Instrument Sans"; font-style: italic; font-weight: 400 700; font-display: optional; src: url(/fonts/instrument-sans-italic.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: optional; src: url(/fonts/jetbrains-mono.woff2) format("woff2"); }
+
+/* page changes cross-fade; the bar stays put */
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .12s; }
+.inner .topbar { view-transition-name: topbar; }
+
+/* top bar: a static dark strip on inner pages, over the hero on the home page */
+.topbar { position: relative; z-index: 3; background: var(--ink); }
+.topbar .top { position: static; }
+.home .topbar { position: absolute; inset: 0 0 auto 0; background: transparent; }
+.links a[aria-current] { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; }
+@media (max-width: 640px) { .links a:not(.cta) { display: inline; } .links { gap: 4px 12px; font-size: 14px; } .brand span { display: none; } }
+
+/* the shader stays hidden until it has drawn a frame (home.html adds .on), then fades in over the CSS gradient */
+canvas.cloth { opacity: 0; transition: opacity .6s ease-out; }
+canvas.cloth.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { canvas.cloth { transition: none; } ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
+
+/* inner page header */
+.pagehead { margin: 0 0 1.6em; }
+.pagehead .subnav { margin: 0 0 1.4em; }
+.doc .pagehead h1 { margin: 0 0 .3em; }
+.pagehead .lead { color: var(--g-700); margin: 0; }
+.doc h2 { font-family: var(--sans); font-size: clamp(22px, 2.6vw, 28px); letter-spacing: -.02em; text-transform: none; color: var(--ink); font-weight: 600; margin: 1.8em 0 .5em; }
+
+/* home: digits after a year, one bar per library */
+.bars { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 8px; max-width: 760px; }
+.bar { --c: var(--g-300); display: grid; grid-template-columns: 7.5em 1fr 2.5em; align-items: center; gap: 12px; font-size: 15px; }
+.bar .track { height: 14px; background: var(--g-100); border-radius: 999px; overflow: hidden; }
+.bar .fill { display: block; height: 100%; background: var(--c); border-radius: 999px; }
+.bar .val { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.bar.ours .name, .bar.ours .val { font-weight: 600; color: var(--ink); }
+.bar.s-fp256 { --c: var(--ink); } .bar.s-fp127 { --c: var(--emerald); } .bar.s-quad { --c: var(--violet); } .bar.s-maker { --c: var(--slate); }
+.bar.s-abdk { --c: var(--sapphire); } .bar.s-solady { --c: var(--gold); } .bar.s-prb { --c: var(--red); } .bar.s-balancer { --c: var(--teal); }
+.block .note { margin: -16px 0 22px; }
+.block h2 { text-shadow: none; }
+.home .ask { padding-block: clamp(48px, 7vw, 80px); }
+
+/* results overview */
+.matrix td, .matrix th { white-space: nowrap; padding: 9px 8px; }
+.matrix td { font-size: 14px; }
+.matrix th:first-child, .matrix td:first-child { padding-left: 14px; white-space: normal; min-width: 12em; }
+.matrix td.ours { font-weight: 600; color: var(--ink); background: var(--g-50); }
+.matrix a { text-decoration: none; }
+.matrix a:hover { text-decoration: underline; }
+.matrix .rev { color: var(--red); font-size: 12px; }
+.matrix .meta { color: var(--g-300); }
+.stamp { font-size: 14px; background: var(--white); border-left: 3px solid var(--emerald); border-radius: 8px; box-shadow: var(--shadow); padding: 10px 14px; margin: 1em 0 1.4em; }
+.stamp.pending { border-left-color: var(--gold); }
+.stamp.bad { border-left-color: var(--red); }
+.next { list-style: none; padding: 0; }
+.next li { margin: .5em 0; }
+.next a { margin-right: .4em; }
+
+/* footer */
+.foot { padding-block: 28px 40px; margin-top: clamp(40px, 6vw, 72px); border-top: 1px solid var(--g-200); font-size: 14px; color: var(--g-500); }
+.foot nav { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 8px; }
+.foot a { color: var(--g-700); text-decoration: none; }
+.foot a:hover { color: var(--ink); text-decoration: underline; }
+.foot p { margin: 0; }
+
+/* the scrollbar always has its gutter, so a short page and a long one line up and a page change never shifts the layout sideways */
+html { scrollbar-gutter: stable; }

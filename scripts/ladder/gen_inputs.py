@@ -5,7 +5,7 @@ Every input's parameters are resolved exactly (mpmath at 200 digits; derived
 values such as the amortisation payment computed here, so the contracts hold
 no arithmetic that is not a step) and floored once into each representation:
 127.128 (2^128), 64.64 (2^64) and WAD (1e18). The harness (test/ladder) and
-the live verify button pass these integers to the adapters as calldata.
+the live checks (livecap.py, liveedges.py) pass these integers to the adapters as calldata.
 
     uv run scripts/ladder/gen_inputs.py          # write
     uv run scripts/ladder/gen_inputs.py --check  # fail if stale

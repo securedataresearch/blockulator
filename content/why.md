@@ -1,12 +1,11 @@
 +++
 title = "Why WAD loses digits"
-description = "Where the bits go in an 18-decimal library, why iteration is what breaks it, and what 128 fractional bits buy."
+description = "60 bits of fraction, rounded once per step, for every step. Where the digits go and what 128 bits buy."
 +++
 
-Every number on this page is a cell in [`ladder.json`](/data/ladder.json)
-or [`gas.json`](/data/gas.json), named in brackets so you can check it.
-Ladder cells are the reference input of each scenario, the one the
-[demo](/demo/) shows in full; `digits` there is against the exact truth.
+Bracketed references are cells in [`ladder.json`](/data/ladder.json) or
+[`gas.json`](/data/gas.json): the reference input of each scenario, digits
+against the exact truth.
 
 ## Where the bits go in WAD
 
@@ -107,8 +106,8 @@ digits on the grid however exact the op was [edges: exp, pow, sqrt]. A
 fixed point maximises precision inside a band; a float maximises the band.
 ABDKMathQuad, the first float in the tables, holds 34 digits at every edge
 and 29 to 33 on every ladder, with half the word idle; FP256, the
-[second ruler](/float/), fills the word and holds 71 at the edges and 40 to
-70 on the ladders. The [edges](/edges/) page shows all three sides. FP127 is for the maths in the
+[second ruler](/library/fp256/), fills the word and holds 71 at the edges and 40 to
+70 on the ladders. The [edges](/results/edges/) page shows all three sides. FP127 is for the maths in the
 middle, the rate, the price, the ratio, the exponent, where it holds 38
 digits against the float's 34, and the conversion back to wei is one
 `toFixed18` at the edge. It is not a replacement for the integer

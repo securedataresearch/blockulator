@@ -2,42 +2,49 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<script>(function(){var h=location.hash,p=location.pathname;if(p!=='/'&&p!=='/index.html')return;if(h.slice(0,2)!=='#/')return;var s=h.slice(2).split('/'),m={games:'/archive/',vyper:'/archive/',futures:'/archive/',badges:'/badges/',fp127:'/library/',benchmarks:'/compare/',about:'/why/'},t=m[s[0]];if(!t)return;if(s[0]==='games'||s[0]==='vyper'||s[0]==='futures')t+='#/'+s.slice(0,2).join('/');location.replace(t);})();</script>
+<script>(function(){var h=location.hash,p=location.pathname;if(p!=='/'&&p!=='/index.html')return;if(h.slice(0,2)!=='#/')return;var s=h.slice(2).split('/'),m={games:'/archive/',vyper:'/archive/',futures:'/archive/',badges:'/badges/',fp127:'/library/',benchmarks:'/results/',about:'/why/'},t=m[s[0]];if(!t)return;if(s[0]==='games'||s[0]==='vyper'||s[0]==='futures')t+='#/'+s.slice(0,2).join('/');location.replace(t);})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{% block title %}{{ config.title }}{% endblock title %}</title>
 <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
 <link rel="icon" type="image/png" href="/blockulator_favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="preload" href="/fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/site.css">
 <link rel="stylesheet" href="/css/blockulator.css">
 {% if page and page.extra.math %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
 {% endif %}{% block head %}{% endblock head %}</head>
-<body>
+<body class="{% block bodyclass %}inner{% endblock bodyclass %}">
+{%- set here = current_path | default(value="/") %}
+<div class="topbar">
 <header class="top">
   <a class="brand" href="/"><img src="/blockulator_favicon.png" alt="" width="28" height="28"><span>blockulator</span></a>
-  <nav class="links">
-    <a href="/demo/">Demo</a>
-    <a href="/edges/">Edges</a>
-    <a href="/why/">Why</a>
-    <a href="/library/">Library</a>
-    <a href="/float/">Float</a>
-    <a href="/compare/">Compare</a>
-    <a href="/badges/">Badges</a>
-    <a href="/archive/">Archive</a>
-    <a href="/writeup/">Write-up</a>
+  <nav class="links" aria-label="Main">
+    <a href="/results/"{% if "/results/" in here %} aria-current="page"{% endif %}>Results</a>
+    <a href="/library/"{% if "/library/" in here %} aria-current="page"{% endif %}>Library</a>
+    <a href="/writeup/"{% if "/writeup/" in here %} aria-current="page"{% endif %}>Write-up</a>
     <a class="cta" href="{{ config.extra.repo }}">Source</a>
   </nav>
 </header>
+</div>
 {% block hero %}{% endblock hero %}
 <main class="wrap">
 {% block content %}{% endblock content %}
 </main>
 {% block wide %}{% endblock wide %}
-<script src="/js/hero.js" defer></script>
+<footer class="foot wrap">
+  <nav aria-label="More">
+    <a href="/why/">Why WAD loses digits</a>
+    <a href="/archive/">Archive</a>
+    <a href="/badges/">Badges</a>
+    <a href="/llms.txt">llms.txt</a>
+    <a href="{{ config.extra.repo }}">GitHub</a>
+    <a href="mailto:sam@securedataresearch.net?subject=FP127">Contact</a>
+  </nav>
+  <p>Secure Data Research. Testnet only; not audited.</p>
+</footer>
+{% block scripts %}{% endblock scripts %}
 <script>document.addEventListener('click',function(e){var b=e.target.closest('.copy');if(!b||!navigator.clipboard)return;navigator.clipboard.writeText(b.dataset.copy).then(function(){var t=b.textContent;b.textContent='copied';setTimeout(function(){b.textContent=t;},1200);});});</script>
 </body>
 </html>

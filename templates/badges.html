@@ -2,9 +2,9 @@
 {% block title %}{{ page.title }} · {{ config.title }}{% endblock title %}
 {% block description %}{{ page.description }}{% endblock description %}
 {% block head %}<link rel="stylesheet" href="/css/legacy/main.css">{% endblock head %}
-{% block hero %}{% set hero_slim = true %}{% set hero_title = page.title %}{% set hero_sub = page.description %}{% include "hero.html" %}{% endblock hero %}
 {% block content %}
 <article class="prose doc">
+{% include "pagehead.html" %}
 {{ page.content | safe }}
 </article>
 <div class="island" id="badges-island">

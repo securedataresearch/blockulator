@@ -1,0 +1,15 @@
+{#- Title, one line under it, and the sub-nav of the page's group. No canvas: inner pages are static. -#}
+{%- set groups = {
+  "results": [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/ops/", "Per op"]],
+  "library": [["/library/", "FP127"], ["/library/fp256/", "FP256"]]
+} -%}
+<header class="pagehead">
+  {%- set g = page.extra.group | default(value="") %}
+  {%- if g and groups[g] is defined %}
+  <nav class="tabs subnav" aria-label="{{ g }}">
+    {%- for item in groups[g] %}<a href="{{ item[0] }}"{% if current_path == item[0] %} class="on" aria-current="page"{% endif %}>{{ item[1] }}</a>{% endfor %}
+  </nav>
+  {%- endif %}
+  <h1>{{ page.title }}</h1>
+  {%- if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
+</header>

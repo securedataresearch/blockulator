@@ -6,8 +6,8 @@
 Calls EdgeRunner.run(op, form, args) on Sepolia for every probe and form
 with the probe's encoded arguments (scripts/ladder/edge-inputs.json),
 compares the raw result (or the revert selector) with
-docs/benchmarks/edges.json, and records the runner and selector in it so
-the edges page's verify buttons know where to call.
+docs/benchmarks/edges.json, and stamps the run (runner, cells checked,
+mismatches, block, date) into it for the results page.
 """
 from __future__ import annotations
 
@@ -71,6 +71,7 @@ def main(argv: list[str]) -> int:
             match = ok and str(raw) == c["raw"]
         return f"{p['id']:34} {form:9} {'match' if match else 'MISMATCH'}", 0 if match else 1
 
+    block = int(subprocess.run(["cast", "block-number", "--rpc-url", rpc], capture_output=True, text=True, check=True).stdout.strip())
     with ThreadPoolExecutor(max_workers=workers) as pool:
         results = list(pool.map(one, jobs))
     mismatches = 0
@@ -81,7 +82,11 @@ def main(argv: list[str]) -> int:
     print(f"{len(jobs)} cells, {mismatches} mismatches")
     doc["liveRunner"] = runner
     doc["liveSelector"] = SELECTOR
-    doc["liveNote"] = "Every cell was re-run through the live EdgeRunner on Sepolia by scripts/ladder/liveedges.py; the verify button repeats that call."
+    doc["liveNote"] = "Every cell was re-run through the live EdgeRunner on Sepolia by scripts/ladder/liveedges.py; the stamp on the results page records the run."
+    doc["liveChecked"] = len(jobs)
+    doc["liveMismatches"] = mismatches
+    doc["liveBlock"] = block
+    doc["liveDate"] = time.strftime("%Y-%m-%d", time.gmtime())
     EDGES.write_text(json.dumps(doc, indent=1) + "\n")
     print(f"wrote {EDGES.relative_to(ROOT)}")
     return 1 if mismatches else 0

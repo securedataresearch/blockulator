@@ -104,7 +104,7 @@ blockulator/
 ├── config.toml, build.sh       the Zola site
 ├── content/, templates/        pages and templates; tables and charts are Tera components
 ├── static/css/site.css         synced from securedataresearch.net (scripts/sync-sdr.sh)
-├── static/js/islands/          the live parts: verify buttons, badges, archive
+├── static/js/islands/          scenario tabs; the badges and archive islands
 └── static/data/                symlinks into docs/ and contracts/, served as /data
 ```
 
