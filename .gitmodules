@@ -10,3 +10,15 @@
 [submodule "lib/abdk-libraries-solidity"]
 	path = lib/abdk-libraries-solidity
 	url = https://github.com/abdk-consulting/abdk-libraries-solidity
+[submodule "lib/aave-v3-origin"]
+	update = none
+	path = lib/aave-v3-origin
+	url = https://github.com/aave-dao/aave-v3-origin
+[submodule "lib/morpho-blue"]
+	update = none
+	path = lib/morpho-blue
+	url = https://github.com/morpho-org/morpho-blue
+[submodule "lib/morpho-blue-irm"]
+	update = none
+	path = lib/morpho-blue-irm
+	url = https://github.com/morpho-org/morpho-blue-irm
