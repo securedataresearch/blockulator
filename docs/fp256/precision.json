@@ -37,14 +37,14 @@
   "exp": {
     "meanBits": 256,
     "minBits": 256,
-    "n": 637,
+    "n": 767,
     "reverts": 5,
     "worstInput": ""
   },
   "expm1": {
     "meanBits": 256,
     "minBits": 256,
-    "n": 838,
+    "n": 851,
     "reverts": 5,
     "worstInput": ""
   },
@@ -72,14 +72,14 @@
   "ln": {
     "meanBits": 256,
     "minBits": 256,
-    "n": 2104,
+    "n": 2118,
     "reverts": 96,
     "worstInput": ""
   },
   "log1p": {
     "meanBits": 256,
     "minBits": 256,
-    "n": 1213,
+    "n": 1226,
     "reverts": 11,
     "worstInput": ""
   },
@@ -105,11 +105,11 @@
     "worstInput": ""
   },
   "pow": {
-    "meanBits": 256,
-    "minBits": 256,
+    "meanBits": 255,
+    "minBits": 236,
     "n": 234,
     "reverts": 166,
-    "worstInput": ""
+    "worstInput": "0x3fffe6248f63a2a7f2d6bd7660f2222d6b4b5cc537e3698b36008c1cd0d2c5de,0xc0002e4138223b7118c7f7a1b460f692d54ecf269825fdbd1620278b418da150"
   },
   "sign": {
     "meanBits": 256,

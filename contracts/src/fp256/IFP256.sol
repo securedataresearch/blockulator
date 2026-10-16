@@ -30,9 +30,12 @@ interface IFP256 {
     /// @notice e^x = 2^(x log2 e): the 512-bit product of the significand and
     ///         log2 e in two words (2^-508), split into the integer part and a
     ///         fraction at 2^-254, then the 2^f kernel and one rounding:
-    ///         correctly rounded at every committed vector. Below 2^-118 the
-    ///         series 1 + x (1 + x/2) at full precision; below 2^-237 exactly
-    ///         one; zero below about -181,700.
+    ///         correctly rounded at every committed vector. Below 2^-118,
+    ///         1 + x + x^2/2 floored exactly on the 2^-254 grid (the cubic only
+    ///         breaks ties) and rounded once; a positive x whose lowest bit is
+    ///         2^-118, below 2^-84, makes that sum an exact tie the kernel cannot
+    ///         see past, so it takes the same path. Exactly one below 2^-238;
+    ///         zero below about -181,700.
     function exp(int256 x) external pure returns (int256 r);
     /// @notice ln(x) = (E - bias + log2(M / 2^236)) ln 2: the exponent exactly,
     ///         the mantissa through the log2 kernel at 2^-254, the sum scaled to

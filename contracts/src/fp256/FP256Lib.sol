@@ -428,9 +428,12 @@ library FP256Lib {
     /// @notice e^x = 2^(x log2 e): the 512-bit product of the significand and
     ///         log2 e in two words (2^-508), split into the integer part and a
     ///         fraction at 2^-254, then the 2^f kernel and one rounding:
-    ///         correctly rounded at every committed vector. Below 2^-118 the
-    ///         series 1 + x (1 + x/2) at full precision; below 2^-237 exactly
-    ///         one; zero below about -181,700.
+    ///         correctly rounded at every committed vector. Below 2^-118,
+    ///         1 + x + x^2/2 floored exactly on the 2^-254 grid (the cubic only
+    ///         breaks ties) and rounded once; a positive x whose lowest bit is
+    ///         2^-118, below 2^-84, makes that sum an exact tie the kernel cannot
+    ///         see past, so it takes the same path. Exactly one below 2^-238;
+    ///         zero below about -181,700.
     function exp(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function mul512(a, b) -> p1, p0 {
@@ -559,6 +562,32 @@ library FP256Lib {
                 k := shr512(p1, p0, add(sh, 254))
             }
 
+            function expsmall(s, u, m) -> r {
+                let k := sub(0, add(u, 18))
+                let tq := shr(k, m)
+                let tf := shl(sub(256, k), and(m, sub(shl(k, 1), 1)))
+                let p1, p0 := mul512(m, m)
+                let j := sub(219, add(u, u))
+                let qq := shr512(p1, p0, j)
+                let n := sub(j, 256)
+                let qf := shr512(p1, p0, n)
+                let st := 0
+                switch lt(n, 256)
+                case 1 { st := and(p0, sub(shl(n, 1), 1)) }
+                default { st := or(p0, and(p1, sub(shl(sub(n, 256), 1), 1))) }
+                let d := 0
+                switch s
+                case 0 {
+                    // floor(T + Q + C): a carry when the two fractions reach one
+                    d := add(add(0x4000000000000000000000000000000000000000000000000000000000000000, tq), add(qq, and(iszero(iszero(tf)), iszero(lt(qf, sub(0, tf))))))
+                }
+                default {
+                    // floor(-T + Q - C): a borrow unless Q's fraction is above T's
+                    d := sub(add(sub(0x4000000000000000000000000000000000000000000000000000000000000000, tq), qq), or(lt(qf, tf), and(eq(qf, tf), iszero(st))))
+                }
+                r := normround(0, 0x3ffff, d)
+            }
+
             function unpack(x) -> s, e, m {
                 s := shr(255, x)
                 e := and(shr(236, x), 0x7ffff)
@@ -570,43 +599,6 @@ library FP256Lib {
                 m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
             }
 
-            function addsub(a, b, flip) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                sb := xor(sb, flip)
-                if iszero(eb) { r := a leave }
-                if iszero(ea) { r := or(shl(255, sb), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) leave }
-                if lt(and(a, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) {
-                    let t := sa sa := sb sb := t
-                    t := ea ea := eb eb := t
-                    t := ma ma := mb mb := t
-                }
-                let d := sub(ea, eb)
-                ma := shl(18, ma)
-                mb := shl(18, mb)
-                switch eq(sa, sb)
-                case 1 { ma := add(ma, shr(d, mb)) }
-                default {
-                    ma := sub(sub(ma, shr(d, mb)), iszero(iszero(and(mb, sub(shl(d, 1), 1)))))
-                    if iszero(ma) { r := 0 leave }
-                }
-                r := normround(sa, ea, ma)
-            }
-
-            function fp256_add(a, b) -> r {
-                r := addsub(a, b, 0)
-            }
-
-            function fp256_mul(a, b) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                if or(iszero(ea), iszero(eb)) { r := 0 leave }
-                let p0 := mul(ma, mb)
-                let mm := mulmod(ma, mb, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
-            }
-
             function fp256_exp(x) -> r {
                 let s, e, m := unpack(x)
                 if iszero(e) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
@@ -615,11 +607,18 @@ library FP256Lib {
                     if s { r := 0 leave }
                     rev(0x35278d12)
                 }
-                if slt(u, sub(0, 237)) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
-                if slt(u, sub(0, 118)) {
-                    let one := 0x3ffff00000000000000000000000000000000000000000000000000000000000
-                    r := fp256_add(one, fp256_mul(x, fp256_add(one, sub(x, 0x100000000000000000000000000000000000000000000000000000000000))))
-                    leave
+                if slt(u, sub(0, 238)) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+                if slt(u, sub(0, 118)) { r := expsmall(s, u, m) leave }
+                if iszero(s) {
+                    if slt(u, sub(0, 84)) {
+                        // x = a 2^-118, a odd: 1 + x + a^2 2^-237 is a tie and the cubic is positive
+                        let tz := sub(118, u)
+                        if and(and(shr(tz, m), 1), iszero(and(m, sub(shl(tz, 1), 1)))) {
+                            let a := shr(tz, m)
+                            r := normround(0, 0x3ffff, add(add(0x4000000000000000000000000000000000000000000000000000000000000000, shr(sub(0, add(u, 18)), m)), shl(17, mul(a, a))))
+                            leave
+                        }
+                    }
                 }
                 let k, f := explog2(u, m)
                 if iszero(lt(k, 0x80000)) {

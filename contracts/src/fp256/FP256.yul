@@ -543,6 +543,32 @@ object "FP256" {
                 k := shr512(p1, p0, add(sh, 254))
             }
 
+            function expsmall(s, u, m) -> r {
+                let k := sub(0, add(u, 18))
+                let tq := shr(k, m)
+                let tf := shl(sub(256, k), and(m, sub(shl(k, 1), 1)))
+                let p1, p0 := mul512(m, m)
+                let j := sub(219, add(u, u))
+                let qq := shr512(p1, p0, j)
+                let n := sub(j, 256)
+                let qf := shr512(p1, p0, n)
+                let st := 0
+                switch lt(n, 256)
+                case 1 { st := and(p0, sub(shl(n, 1), 1)) }
+                default { st := or(p0, and(p1, sub(shl(sub(n, 256), 1), 1))) }
+                let d := 0
+                switch s
+                case 0 {
+                    // floor(T + Q + C): a carry when the two fractions reach one
+                    d := add(add(0x4000000000000000000000000000000000000000000000000000000000000000, tq), add(qq, and(iszero(iszero(tf)), iszero(lt(qf, sub(0, tf))))))
+                }
+                default {
+                    // floor(-T + Q - C): a borrow unless Q's fraction is above T's
+                    d := sub(add(sub(0x4000000000000000000000000000000000000000000000000000000000000000, tq), qq), or(lt(qf, tf), and(eq(qf, tf), iszero(st))))
+                }
+                r := normround(0, 0x3ffff, d)
+            }
+
             function fp256_exp(x) -> r {
                 let s, e, m := unpack(x)
                 if iszero(e) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
@@ -551,11 +577,18 @@ object "FP256" {
                     if s { r := 0 leave }
                     rev(0x35278d12)
                 }
-                if slt(u, sub(0, 237)) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
-                if slt(u, sub(0, 118)) {
-                    let one := 0x3ffff00000000000000000000000000000000000000000000000000000000000
-                    r := fp256_add(one, fp256_mul(x, fp256_add(one, sub(x, 0x100000000000000000000000000000000000000000000000000000000000))))
-                    leave
+                if slt(u, sub(0, 238)) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+                if slt(u, sub(0, 118)) { r := expsmall(s, u, m) leave }
+                if iszero(s) {
+                    if slt(u, sub(0, 84)) {
+                        // x = a 2^-118, a odd: 1 + x + a^2 2^-237 is a tie and the cubic is positive
+                        let tz := sub(118, u)
+                        if and(and(shr(tz, m), 1), iszero(and(m, sub(shl(tz, 1), 1)))) {
+                            let a := shr(tz, m)
+                            r := normround(0, 0x3ffff, add(add(0x4000000000000000000000000000000000000000000000000000000000000000, shr(sub(0, add(u, 18)), m)), shl(17, mul(a, a))))
+                            leave
+                        }
+                    }
                 }
                 let k, f := explog2(u, m)
                 if iszero(lt(k, 0x80000)) {

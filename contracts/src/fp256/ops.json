@@ -71,7 +71,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "e^x = 2^(x log2 e): the 512-bit product of the significand and log2 e in two words (2^-508), split into the integer part and a fraction at 2^-254, then the 2^f kernel and one rounding: correctly rounded at every committed vector. Below 2^-118 the series 1 + x (1 + x/2) at full precision; below 2^-237 exactly one; zero below about -181,700.",
+      "notice": "e^x = 2^(x log2 e): the 512-bit product of the significand and log2 e in two words (2^-508), split into the integer part and a fraction at 2^-254, then the 2^f kernel and one rounding: correctly rounded at every committed vector. Below 2^-118, 1 + x + x^2/2 floored exactly on the 2^-254 grid (the cubic only breaks ties) and rounded once; a positive x whose lowest bit is 2^-118, below 2^-84, makes that sum an exact tie the kernel cannot see past, so it takes the same path. Exactly one below 2^-238; zero below about -181,700.",
       "domain": "x < 2^18",
       "reverts": "Overflow() when e^x does not fit (x above about 181,705); OutOfRange() for a word that is not a number"
     },

@@ -9,9 +9,10 @@ import {console} from "forge-std/console.sol";
 /// @notice Every FP256 op against committed vectors (test/fp256/vectors/*.json,
 ///         produced by scripts/fp256/oracle.py). For each vector: a REVERT
 ///         must revert with that selector; otherwise the relative correct
-///         bits on the decoded values (FP256Harness._bits) must be at or
-///         above the op's floor, with a result within 2 ULP counted as
-///         exact. Prints PREC|op|n|min|mean|worstInput and writes
+///         bits on the decoded values (FP256Harness._bits, 256 when the words
+///         are equal) must be at or above the op's floor. There is no ULP
+///         slack: a floor of 256 means the word must equal the oracle's.
+///         Prints PREC|op|n|min|mean|worstInput and writes
 ///         docs/fp256/precision.json.
 contract Precision256 is FP256Harness {
     function _out() internal pure virtual returns (string memory) { return "docs/fp256/precision.json"; }
@@ -23,16 +24,10 @@ contract Precision256 is FP256Harness {
 
     /// Minimum relative correct bits per op. 256 means bit-exact.
     function _floorBits(string memory op) internal pure returns (uint256) {
-        bytes32 h = keccak256(bytes(op));
-        // release two: the 2^-254 kernels round exp and ln correctly (one ULP at most
-        // against the oracle); pow loses log2 of y log2 x on top
-
-        if (h == keccak256("exp")) return 236;
-        if (h == keccak256("pow")) return 230;
-        if (h == keccak256("ln")) return 236;
-        // release three: log1p and expm1 on the same kernels, no cancellation
-        if (h == keccak256("log1p")) return 236;
-        if (h == keccak256("expm1")) return 236;
+        // every op but pow is correctly rounded at every committed vector. pow's
+        // t = y log2 x carries the log2 kernel's 2^-250 times |t|, so it is
+        // held to one ULP (236 bits); 7 of its 234 vectors sit there
+        if (keccak256(bytes(op)) == keccak256("pow")) return 236;
         return 256;
     }
 
@@ -104,15 +99,8 @@ contract Precision256 is FP256Harness {
         int256 got = abi.decode(out, (int256));
         int256 truth = int256(vm.parseUint(expected));
         uint256 b;
-        if (_plain(op)) {
-            b = got == truth ? 256 : 0;
-            // the 127.128 and 18-decimal conversions round once; allow one unit
-            int256 d = got > truth ? got - truth : truth - got;
-            if (d <= 1) b = 256;
-        } else {
-            b = _bits(got, truth);
-            if (floorBits < 256 && _ulps(got, truth) <= 2) b = 256;
-        }
+        if (_plain(op)) b = got == truth ? 256 : 0;
+        else b = got == truth ? 256 : _bits(got, truth);
         st.n++;
         st.sumBits += b;
         if (b < st.minBits) { st.minBits = b; st.worst = _label(inp); }

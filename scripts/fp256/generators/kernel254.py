@@ -239,11 +239,14 @@ class Kernels:
             if s:
                 return 0
             raise OverflowError
-        if u < -237:
+        if u < -238:
             return ONE
         if u < -118:
-            # 1 + x (1 + x/2), exact enough; modelled with mpmath here
-            return encode(1 + decode(x) * (1 + decode(x) / 2))
+            return self.expsmall(s, u, m)
+        tz = 118 - u
+        if not s and u < -84 and (m >> tz) & 1 and m & ((1 << tz) - 1) == 0:
+            a = m >> tz                       # x = a 2^-118: 1 + x + x^2/2 is a tie
+            return normround(0, BIAS, WS + (m >> -(u + 18)) + ((a * a) << 17))
         # t = x log2 e = m 2^(u-236) (LOG2E_HI + LOG2E_LO 2^-254) 2^-254
         k, f = self.explog2(u, m)
         if k >= 1 << 19:
@@ -251,6 +254,23 @@ class Kernels:
                 return 0
             raise OverflowError
         return self.exp2kf(s, k, f)
+
+    def expsmall(self, s: int, u: int, m: int) -> int:
+        """e^x for u in [-238, -119]: floor((1 + x + x^2/2 +- x^3/6) 2^254) exactly, as the Yul."""
+        k = -(u + 18)
+        tq = m >> k
+        tf = ((m & ((1 << k) - 1)) << (256 - k)) & MASK
+        P = m * m
+        j = 219 - 2 * u
+        qq = P >> j
+        n = j - 256
+        qf = (P >> n) & MASK
+        st = P & ((1 << n) - 1)
+        if not s:
+            d = WS + tq + qq + (1 if tf and qf >= (1 << 256) - tf else 0)
+        else:
+            d = WS - tq + qq - (1 if qf < tf or (qf == tf and st == 0) else 0)
+        return normround(0, BIAS, d)
 
     def log2pair(self, e: int, m: int):
         """log2 of a positive number as (Lm, Ls): L = Lm 2^Ls, Lm a signed word, via the

@@ -55,7 +55,7 @@ rounds to zero with the sign dropped.
 | `mul` | the 474-bit product of the significands, one rounding | `Overflow`, `OutOfRange` |
 | `div` | floor(ma·2^255 / mb) by two exact 2^128 stages, one rounding | `DivisionByZero`, `Overflow`, `OutOfRange` |
 | `sqrt` | the integer root of the significand at 2^136 (Newton, corrected by squaring), one rounding; never overflows | `OutOfRange` for x < 0 |
-| `exp` | 2^(x log2 e): the 512-bit product of the significand and log2 e in two words, split into the integer part and a fraction at 2^−254, 2^f from a 16-entry table and a degree-26 polynomial, one rounding; the series 1 + x(1 + x/2) below 2^−118; exactly one below 2^−237 | `Overflow` above about 181,705; zero below −181,700 |
+| `exp` | 2^(x log2 e): the 512-bit product of the significand and log2 e in two words, split into the integer part and a fraction at 2^−254, 2^f from a 16-entry table and a degree-26 polynomial, one rounding; 1 + x + x²/2 floored exactly on the grid below 2^−118 (and at the x = a·2^−118 ties), one rounding; exactly one below 2^−238 | `Overflow` above about 181,705; zero below −181,700 |
 | `ln` | (E − bias + log2(M/2^236)) ln 2: the exponent exactly, the mantissa through twelve reduction stages and a degree-17 polynomial at 2^−254, the sum scaled to fill a word, one product with ln 2 and one rounding; within 2^−8 of one, d = x − 1 exact and a 32-term series at 2^−254 | `OutOfRange` for x ≤ 0 |
 | `log1p` | ln(1 + x) without a rounded 1 + x: below 2^−4, x times the ln series at 2^−254 (32 terms below 2^−8, 64 above); above, 1 + x exactly on a 2^−254 grid under its leading bit, the log2 kernel and one product with ln 2 | `OutOfRange` for x ≤ −1 |
 | `expm1` | e^x − 1 without cancellation: below 2^−8, x times the 24-term series Σ x^k/(k+1)! at 2^−254; above, exp's split of x log2 e and its unrounded 2^f with the one subtracted on the same grid; −1 below about −176 | `Overflow` above about 181,705 |
@@ -76,18 +76,33 @@ rationals for the arithmetic and the conversions, so those references are
 bit-exact, and mpmath at 300 digits for `exp`, `ln`, `pow`, `log1p` and `expm1`) and writes
 `docs/fp256/precision.json`; `make precision-report-fp256` renders
 `docs/fp256/precision.md`. The arithmetic ops, `sqrt`, the comparisons and
-the conversions are bit-exact at every vector, and so are `exp`, `ln`
-and `pow`: release two's kernels compute at 2^−254 with 512-bit products
+the conversions are bit-exact at every vector, and so are `exp`, `ln`,
+`log1p` and `expm1`: the kernels compute at 2^−254 with 512-bit products
 (`scripts/fp256/generators/kernel254.py` fits them, models every op in
 exact integers and reports the bits before rounding: 2^f within 2^−253,
 log2 within 2^−250 absolute), so the one rounding at the end is the
-correct one at every committed vector. Release three's `log1p` and
-`expm1` ride the same kernels and are bit-exact at every one of their
-vectors; `log1p` keeps the series up to 2^−4 so the log2 kernel's 2^−250
-never meets a result small enough for it to matter. The test floors are
-236 bits for `exp`, `ln`, `log1p` and `expm1` (one ULP) and 230 for `pow`, whose argument y log2 x
-carries the kernel's 2^−250 scaled by its own size. Release one rode
-FP127's 2^−192 kernels and held 146, 149 and 123 bits.
+correct one. The test has no ULP slack: the floor is 256 bits, the word
+itself, for every op but `pow`.
+
+Exact ties need care, because a kernel within 2^−250 cannot tell a value a
+hair above a tie from one a hair below. A transcendental result of a
+dyadic argument is never exactly a tie, but a truncated series can be:
+1 + x + x²/2 is one whenever x = a·2^−118 with a odd, and the cubic that
+breaks it is below the kernel's reach under 2^−84. `exp` takes those
+inputs, and everything under 2^−118, through an exact floor of
+1 + x + x²/2 on the 2^−254 grid (the cubic only breaks the tie) and one
+rounding; release two's 1 + x(1 + x/2) rounded twice, and returned exactly
+one for some x in (−2^−237, −2^−238). The series bands of `ln`, `log1p`
+and `expm1` meet the same ties (x ± x²/2 when the exponent is even and the
+lowest bit sits at 2^−(236 − u)/2), and their Horner floors land exactly on
+the tie with the true value on the side that rounds up; tie vectors for
+each are in the spec. `log1p` keeps its series up to 2^−4 so the log2
+kernel's 2^−250 never meets a result small enough for it to matter.
+
+`pow` is held to one ULP (236 bits): t = y log2 x carries the kernel's
+2^−250 scaled by |t|, and 7 of its 234 vectors sit one ULP from the
+oracle. Correct rounding there needs a double-word log2 (about 2^−300).
+Release one rode FP127's 2^−192 kernels and held 146, 149 and 123 bits.
 
 ## What changed from FP127's conventions
 

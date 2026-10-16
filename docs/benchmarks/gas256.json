@@ -2,7 +2,7 @@
  "generated": "2026-10-16",
  "description": "Gas per FP256 op across an input ladder: the object (staticcall), the inline library, the same op in FP127Lib on the same value where it fits, and ABDKMathQuad. null = reverted or unsupported. summary holds min/median/max per form.",
  "versions": {
-  "fp127": "1230b03",
+  "fp127": "9e9e026",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -117,12 +117,12 @@
      2180
     ],
     "lib": [
-     1443,
-     1441,
-     1439,
-     1439,
-     1464,
-     1438
+     1455,
+     1453,
+     1451,
+     1451,
+     1476,
+     1450
     ],
     "fp127lib": [
      345,
@@ -148,9 +148,9 @@
      "max": 4682
     },
     "lib": {
-     "min": 1438,
-     "median": 1440,
-     "max": 1464
+     "min": 1450,
+     "median": 1452,
+     "max": 1476
     },
     "fp127lib": {
      "min": 344,
@@ -357,20 +357,20 @@
    ],
    "gas": {
     "yul": [
-     6625,
-     6636,
-     6587,
-     6499,
-     6632,
-     6468
+     6651,
+     6662,
+     6642,
+     6554,
+     6687,
+     6523
     ],
     "lib": [
-     7277,
-     7254,
-     7254,
-     7165,
-     7295,
-     7096
+     7294,
+     7271,
+     7299,
+     7210,
+     7340,
+     7141
     ],
     "fp127lib": [
      5408,
@@ -391,14 +391,14 @@
    },
    "summary": {
     "yul": {
-     "min": 6468,
-     "median": 6606,
-     "max": 6636
+     "min": 6523,
+     "median": 6646,
+     "max": 6687
     },
     "lib": {
-     "min": 7096,
-     "median": 7254,
-     "max": 7295
+     "min": 7141,
+     "median": 7282,
+     "max": 7340
     },
     "fp127lib": {
      "min": 5387,
@@ -853,12 +853,12 @@
      2188
     ],
     "lib": [
-     1368,
-     1373,
-     1372,
-     1365,
-     1365,
-     1365
+     1380,
+     1385,
+     1384,
+     1377,
+     1377,
+     1377
     ],
     "fp127lib": [
      525,
@@ -884,9 +884,9 @@
      "max": 2211
     },
     "lib": {
-     "min": 1365,
-     "median": 1366,
-     "max": 1373
+     "min": 1377,
+     "median": 1378,
+     "max": 1385
     },
     "fp127lib": {
      "min": 522,
