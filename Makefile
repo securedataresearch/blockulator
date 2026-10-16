@@ -159,7 +159,7 @@ smoke-sepolia: build
 # ---- FP256 (the second ruler): same procedure, its own artifact, salt and record
 
 DEPLOY_SCRIPT256 := script/DeployFP256.s.sol
-SALT256 := 0x4650323536207631000000000000000000000000000000000000000000000000
+SALT256 := 0x4650323536207632000000000000000000000000000000000000000000000000
 
 predict-fp256: build
 	@forge script $(DEPLOY_SCRIPT256) --sig "predict()" --rpc-url $(SEPOLIA_RPC) 2>&1 | grep -E "deployer|salt|hash|keccak|bytes|address|deployed"

@@ -1,6 +1,6 @@
 # FP256 in Yul
 
-256-bit binary floating point for the EVM, release one. One `int256` per
+256-bit binary floating point for the EVM, release two. One `int256` per
 value, the bit pattern of a float:
 
 | bits | field |
