@@ -1,4 +1,4 @@
-.PHONY: accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
@@ -119,11 +119,14 @@ bench: build
 # Deployed accrual. The submodules lib/aave-v3-origin (v3.7.0), lib/morpho-blue
 # (v1.0.0) and lib/morpho-blue-irm (v1.0.0) are the mainnet code; accrual-verify
 # proves it byte for byte. accrual-deployed is offline once solc 0.8.19 is cached.
-accrual-deployed: build
+accrual-submodules:
+	@git submodule update --init --checkout --recursive lib/aave-v3-origin lib/morpho-blue lib/morpho-blue-irm
+
+accrual-deployed: build accrual-submodules
 	@$(PY) scripts/accrual/verify_deployed.py build
 	@$(PY) scripts/accrual/accrual.py
 
-accrual-verify:
+accrual-verify: accrual-submodules
 	@$(PY) scripts/accrual/verify_deployed.py check
 
 accrual-survey:

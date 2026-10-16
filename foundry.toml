@@ -11,7 +11,10 @@ cache_path = "cache"
 # 1.8 hands every Yul source to one solc call, and Yul mode takes exactly one.
 skip = ["contracts/src/**/*.vy", "contracts/src/fp256/FP256.yul", "contracts/src/tools/**", "contracts/src/games/**",
         "contracts/src/market/**", "contracts/src/content/**",
-        "contracts/src/identity/**", "contracts/src/interfaces/**"]
+        "contracts/src/identity/**", "contracts/src/interfaces/**",
+        # the deployed-accrual suite imports lib/aave-v3-origin and lib/morpho-blue,
+        # which CI does not fetch (update = none); it builds under profile.accrual
+        "test/accrual/**"]
 
 solc_version = "0.8.24"
 evm_version = "shanghai"
@@ -45,3 +48,12 @@ sepolia = "${SEPOLIA_RPC}"
 
 [lint]
 lint_on_build = false
+
+# make accrual-deployed: the default profile plus test/accrual, in its own out/cache
+# so switching profiles does not invalidate the main build
+[profile.accrual]
+out = "out-accrual"
+cache_path = "cache-accrual"
+skip = ["contracts/src/**/*.vy", "contracts/src/fp256/FP256.yul", "contracts/src/tools/**", "contracts/src/games/**",
+        "contracts/src/market/**", "contracts/src/content/**",
+        "contracts/src/identity/**", "contracts/src/interfaces/**"]

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -220,7 +221,7 @@ def run_harness() -> str:
     art = ROOT / "out" / "accrual" / "AdaptiveCurveIrm.json"
     if not art.exists():
         subprocess.run(["uv", "run", str(HERE / "verify_deployed.py"), "build"], check=True, cwd=ROOT)
-    r = subprocess.run(["forge", "test", "--match-path", "test/accrual/DeployedAccrual.t.sol", "-vv"],
+    r = subprocess.run(["forge", "test", "--match-path", "test/accrual/DeployedAccrual.t.sol", "-vv"], env={**os.environ, "FOUNDRY_PROFILE": "accrual"},
                        capture_output=True, text=True, cwd=ROOT)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     LOG.write_text(r.stdout + r.stderr)
