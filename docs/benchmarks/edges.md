@@ -262,7 +262,7 @@ N(d) of Black-Scholes: zero on an 18-decimal grid from d = -8.3, two ULPs of FP1
 
 **gas.** gas is measured inside the adapter around the op, after the adapter and the FP127 object are warm. The FP127 (deployed) form includes the staticcall; the others are internal calls.
 
-**live.** EdgeRunner.run(op, form, args) on Sepolia evaluates any cell with one eth_call and returns (ok, raw, reason, gas); the edges page's verify button sends the probe's encoded arguments and compares the raw word bit for bit.
+**live.** EdgeRunner.run(op, form, args) on Sepolia evaluates any cell with one eth_call and returns (ok, raw, reason, gas); scripts/ladder/liveedges.py sends every probe's encoded arguments and compares the raw word bit for bit.
 
 **reproduce.** make edges regenerates edges.json and edges.md from test/ladder/Edges.t.sol and this script; make edges-check fails CI when the committed dataset differs.
 

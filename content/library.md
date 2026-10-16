@@ -1,23 +1,26 @@
 +++
-title = "Library"
-description = "The deployed FP127 object, the inline Solidity library, the encoding, and every op."
+title = "FP127"
+description = "Signed 127.128 fixed point. One int256, 38 digits, 49 ops. One Yul source, two forms: a deployed object and an inline library."
+
+[extra]
+group = "library"
 +++
 
-FP127 is one Yul source that generates two forms. Both are in [the repository]({{ config.extra.repo }}) and both are proven equal on the full `int256` domain, including which inputs revert and with what data.
+Both forms are generated from one file and proven equal on the full `int256` domain, reverts included.
 
 ## Encoding
 
-A value is one `int256` holding `value × 2^128`, two's complement. Encode with `int256(value * 2**128)`, decode by dividing by `2^128`. `ONE` is `2^128`. Range about ±1.7 × 10^38, 128 fractional bits, about 38 decimal digits. Every parameter and result of every op is that one type; there is no 18-decimal flavour of each op. `fromFixed18` and `toFixed18` are the bridge to WAD, and they are the only place a WAD value should meet FP127.
+`value × 2^128` in an `int256`, two's complement. `ONE` is `2^128`. Range ±1.7 × 10^38, 128 fractional bits, about 38 digits. Every op takes and returns this one type. `fromFixed18` and `toFixed18` convert to and from WAD.
 
-Errors are `Overflow()`, `DivisionByZero()` and `OutOfRange()`. Arithmetic is checked: nothing wraps.
+Errors: `Overflow()`, `DivisionByZero()`, `OutOfRange()`. Nothing wraps.
 
 ## Deployed form
 
 {{ <deployment /> }}
 
-Any contract can `staticcall` it, and every contract that does runs identical bytecode. There is no storage, no owner and no upgrade path; a change to the source is a new init code hash, a new salt and a new address, recorded in the repository.
+No storage, no owner, no upgrade path. A new version is a new salt and a new address.
 
-A read from the command line, `sqrt(2)`:
+`sqrt(2)` from the command line:
 
 ```sh
 cast call 0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1 "sqrt(int256)(int256)" \
@@ -28,7 +31,7 @@ python3 -c "print(481231938336009023090067544955250113854 / 2**128)"
 # 1.4142135623730951
 ```
 
-From Solidity, through the interface:
+From Solidity:
 
 ```solidity
 import {IFP127} from "fp127/IFP127.sol";
@@ -50,7 +53,7 @@ contract StaticcallExample {
 
 ## Inline form
 
-`FP127Lib.sol` holds the same Yul bodies in `memory-safe` assembly blocks, one `internal pure` function per op, so there is no external call and no shared address. It is the cheapest per op and the form to use when the math belongs inside your contract.
+`FP127Lib.sol`: the same Yul in `memory-safe` assembly, one `internal pure` function per op. No external call; about 700 gas cheaper per op than the `staticcall`.
 
 ```sh
 forge install securedataresearch/blockulator
@@ -72,14 +75,12 @@ contract CompoundExample {
 }
 ```
 
-Both examples are compiled and tested in the repository under `test/examples/`, against the compound scenario of the [ladder](/demo/). Through the deployed object each op costs about 700 gas more than inline, the price of the `staticcall`; the [compare](/compare/) page has both columns for every op.
+Both examples are compiled and tested in `test/examples/` against the [ladder's](/results/ladder/#compound) compound scenario.
 
 ## The ops
-
-Generated from the Yul source: the signature and selector, what the op computes, the domain, and what it reverts on. Precision and gas are joined from the committed reports.
 
 {{ <optable /> }}
 
 ## For agents
 
-The same address and ABI are published for machines at [`/.well-known/agent.json`](/.well-known/agent.json) and [`/llms.txt`](/llms.txt). The ABI is [`/data/abi.json`](/data/abi.json). Reads are `eth_call`: no gas, no wallet, no transaction.
+[`/.well-known/agent.json`](/.well-known/agent.json), [`/llms.txt`](/llms.txt), ABI at [`/data/abi.json`](/data/abi.json). Reads are `eth_call`: no gas, no wallet.

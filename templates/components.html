@@ -151,3 +151,13 @@
 {%- endif %}{% endif %}{% endfor %}
 </svg>
 {%- endcomponent %}
+
+{#- The live check, done once at build time by scripts/ladder/livecap.py or liveedges.py, which write
+    liveChecked, liveMismatches, liveBlock and liveDate into the dataset. A regenerated dataset drops them. -#}
+{% component stamp(d: map, script: string) -%}
+{%- if d.liveChecked is defined %}
+<p class="stamp{% if d.liveMismatches > 0 %} bad{% endif %}"><strong>{{ d.liveChecked | num_format }} cells checked live on Sepolia at block {{ d.liveBlock | num_format }}, {{ d.liveMismatches }} mismatch{% if d.liveMismatches != 1 %}es{% endif %}.</strong> {{ d.liveDate }}, runner <a href="https://repo.sourcify.dev/11155111/{{ d.liveRunner }}">{{ d.liveRunner | truncate(length=10, end="…") }}</a>. Re-run: <code>uv run scripts/ladder/{{ script }}</code></p>
+{%- else %}
+<p class="stamp pending"><strong>Not re-checked on Sepolia since this data was generated ({{ d.generated }}).</strong> Check every cell against the live runner with <code>uv run scripts/ladder/{{ script }}</code></p>
+{%- endif %}
+{%- endcomponent %}

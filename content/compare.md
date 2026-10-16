@@ -1,18 +1,25 @@
 +++
-title = "Compare"
-description = "Gas and single-op precision for FP127 against ABDKMath64x64, ABDKMathQuad, Solady, PRBMath and Balancer."
-+++
+title = "Per op"
+description = "Gas and single-call precision for FP127 against ABDK, Quad, Solady, PRBMath and Balancer."
+path = "results/ops"
+aliases = ["/compare/"]
 
-The [ladder](/demo/) is the argument: precision over N steps, which is how protocols use a math library. This page is the per-op view behind it, measured by the same Foundry suites that CI runs on every commit.
+[extra]
+group = "results"
++++
 
 ## Gas per op
 
 {{ <gastable repo={config.extra.repo} /> }}
 
-Multiplication and division cost about what they cost in WAD. The transcendentals cost more because they compute twice as many bits. ABDKMathQuad, IEEE binary128, and FP256 ([its own table](/float/)) are the floats: they pay for the moving point on every add and several times over on pow; Balancer's LogExpMath is the pow behind every weighted pool. The error function family (`erf`, `erfc`, `normCdf`) and the Lambert W branches are the expensive ops, and only FP127 has them.
+`mul` and `div` cost about what they cost in WAD. The transcendentals cost more because they compute twice the bits. Quad and FP256 ([its table](/library/fp256/#the-ops)) pay for the moving point on every op. Only FP127 has `erf`, `erfc`, `normCdf` and Lambert W, and they are the expensive ones.
 
 ## Precision per op
 
 {{ <precisiontable /> }}
 
-Integer, rounding and comparison ops are bit-exact, and so are `ln`, `log2` and `log10` to within one ULP of the truth; `exp`, `exp2` and `exp10` hold 146 bits or better, the limit of their degree-24 polynomial. The transcendentals compute with 64 guard bits and round to nearest once, so their error has no sign bias and iterated calls do not drift. The two Lambert W branches lose bits only within 2^-20 of the branch point at −1/e, where the slope is infinite and one ULP of input moves the output by 2^-63; everywhere else they measure 126 to 128 bits. The version 4 ops sit at the same limits: `powu`, `compound`, `erf`, `erfc` and `normCdf` are within two ULP of the truth at every vector, `expm1`, `sinh`, `cosh` and `tanh` hold 140 bits or better, `log1p` and `atanh` ride the log kernel's one ULP. Where every library's domain ends, one call at a time, is the [edges](/edges/) page.
+- Integer, rounding and comparison ops: bit-exact. `ln`, `log2`, `log10`: within one ULP.
+- `exp`, `exp2`, `exp10`: 146 bits or better, the limit of the degree-24 polynomial.
+- Transcendentals use 64 guard bits and round to nearest once, so the error has no sign bias and iterated calls do not drift.
+- Lambert W: 126 to 128 bits, except within 2^−20 of the branch point at −1/e, where one ULP of input moves the output by 2^−63.
+- `powu`, `compound`, `erf`, `erfc`, `normCdf`: within two ULP. `expm1`, `sinh`, `cosh`, `tanh`: 140 bits or better. `log1p`, `atanh`: one ULP.

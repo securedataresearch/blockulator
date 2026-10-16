@@ -8,7 +8,8 @@ For every scenario, input and form, calls LadderRunner.run(scenario, form,
 n, p) on Sepolia for each N on the ladder with the input's floored
 parameters (scripts/ladder/inputs.json), compares the raw result with
 docs/benchmarks/ladder.json, and records the largest N every input of the
-form completed as `liveMaxN` (the demo page greys out "verify" above it).
+form completed as `liveMaxN`, and stamps the run (cells checked, mismatches,
+block, date) into the dataset for the results page.
 """
 from __future__ import annotations
 
@@ -47,11 +48,16 @@ def call(rpc: str, runner: str, s: int, f: int, n: int, p: list[str], tries: int
     return None, err
 
 
+def live_block(rpc: str) -> int:
+    r = subprocess.run(["cast", "block-number", "--rpc-url", rpc], capture_output=True, text=True, check=True)
+    return int(r.stdout.strip())
+
+
 def walk(rpc: str, runner: str, scn: dict, inp: dict, fi: int, form: str, p: list[str], ladder: list[int]):
     """Climb one (scenario, input, form) column until the RPC refuses, the cell
-    disagrees, or the ladder ends. Returns (largest N reached, mismatch flag, log lines)."""
+    disagrees, or the ladder ends. Returns (largest N reached, mismatch flag, cells checked, log lines)."""
     sid, name = scn["id"], inp["name"]
-    reached, mismatch, log = 0, False, []
+    reached, mismatch, checked, log = 0, False, 0, []
     for n in ladder:
         cell = inp["cells"].get(form, {}).get(str(n))
         if cell is None:
@@ -67,12 +73,13 @@ def walk(rpc: str, runner: str, scn: dict, inp: dict, fi: int, form: str, p: lis
             if not res["ok"] and res["reason"] == "0x00000000":
                 log.append(f"{sid:20} {name:18} {form:9} N={n:<6} out of gas at the RPC cap (needs about {cell['gas']:,})")
                 break
+        checked += 1
         if not agree:
             mismatch = True
             log.append(f"{sid:20} {name:18} {form:9} N={n:<6} MISMATCH live={res} committed={cell.get('raw', 'reverted')}")
             break
         reached = n
-    return reached, mismatch, log
+    return reached, mismatch, checked, log
 
 
 def main(argv: list[str]) -> int:
@@ -87,22 +94,28 @@ def main(argv: list[str]) -> int:
             for inp in scn["inputs"]:
                 p = inputs[(scn["id"], inp["name"])][SCALE_OF_FORM[form]]
                 jobs.append((scn, inp, fi, form, p))
-    mismatches = 0
+    mismatches, checked = 0, 0
+    block = live_block(rpc)
     with ThreadPoolExecutor(max_workers=workers) as pool:
         results = list(pool.map(lambda j: walk(rpc, runner, j[0], j[1], j[2], j[3], j[4], doc["ladder"]), jobs))
     for scn in doc["scenarios"]:
         scn["liveMaxN"] = {}
-    for (scn, inp, fi, form, _), (reached, mismatch, log) in zip(jobs, results):
+    for (scn, inp, fi, form, _), (reached, mismatch, n_checked, log) in zip(jobs, results):
         for line in log:
             print(line)
         mismatches += mismatch
+        checked += n_checked
         cur = scn["liveMaxN"].get(form)
         scn["liveMaxN"][form] = reached if cur is None else min(cur, reached)
     for scn in doc["scenarios"]:
         print(f"{scn['id']:20} liveMaxN " + " ".join(f"{f}={scn['liveMaxN'][f]}" for f in FORMS))
     doc["liveRunner"] = runner
     doc["liveSelector"] = SELECTOR
-    doc["liveNote"] = "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); the demo page greys out verify above it. Anyone with their own node can run every cell."
+    doc["liveNote"] = "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell."
+    doc["liveChecked"] = checked
+    doc["liveMismatches"] = mismatches
+    doc["liveBlock"] = block
+    doc["liveDate"] = time.strftime("%Y-%m-%d", time.gmtime())
 
     LADDER.write_text(json.dumps(doc, indent=1) + "\n")
     print(f"updated {LADDER.relative_to(ROOT)}; mismatches: {mismatches}")

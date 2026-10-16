@@ -71,11 +71,11 @@
   one, exp at both ends, tiny roots and products, per-second rates to a
   power, both Lambert branches, erf/erfc/normCdf) through nine libraries,
   each cell with its digits or how the library had no answer (zero below
-  its floor, revert, out of range, unsupported); /edges/ renders it and
-  verifies cells through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
+  its floor, revert, out of range, unsupported); /results/edges/ renders it;
+  any cell re-runs through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
   at 0x48630435648FB7436fE018a601069c6C105123fe (selector 0xf833b7d5) with
   the arguments from /data/edge-inputs.json.
-- FP256 (/float/): a 256-bit binary float, release one: sign bit 255, a
+- FP256 (/library/fp256/): a 256-bit binary float, release one: sign bit 255, a
   19-bit biased exponent (bias 262143) in bits 254..236, a 236-bit fraction
   with an implicit one; about 71 digits at any magnitude; no NaN, infinity
   or subnormals (invalid words revert OutOfRange); ops add, sub, mul, div,
@@ -84,8 +84,9 @@
   /data/fp256/abi.json, record /data/fp256/fp256.json; live on Sepolia at
   0x628b8dfC82954983a9E8E22056ffc767B4a26077 (salt "FP256 v1", the same
   CREATE2 proxy), Sourcify and Blockscout verified.
-- /demo/ the ladder, /edges/ the cliffs, /why/ the mechanism, /library/ address, ABI and
-  the op table, /compare/ gas and precision per op, /writeup/ the story.
+- /results/ the headline numbers, /results/ladder/ the ladder, /results/edges/ the cliffs,
+  /results/ops/ gas and precision per op, /library/ address, ABI and the op table,
+  /why/ the mechanism, /writeup/ the story.
 
 ## Documentation
 

@@ -43,7 +43,7 @@ METHODOLOGY = {
     "reverted": "A revert is recorded with its selector and name. Unsupported means the library has no way to compute the op (the accrual libraries have no general ops; only FP127 has the secondary Lambert branch; the libraries without erf, erfc or normCdf run the same series and continued fraction through their own ops instead, so those cells are not Unsupported).",
     "range": "RANGE means the argument does not fit the representation at all (above 2^127 for FP127, 2^63 for 64.64, 2^128 as a bit pattern for binary128; FP256 holds every probe) and nothing was called.",
     "gas": "gas is measured inside the adapter around the op, after the adapter and the FP127 object are warm. The FP127 (deployed) form includes the staticcall; the others are internal calls.",
-    "live": "EdgeRunner.run(op, form, args) on Sepolia evaluates any cell with one eth_call and returns (ok, raw, reason, gas); the edges page's verify button sends the probe's encoded arguments and compares the raw word bit for bit.",
+    "live": "EdgeRunner.run(op, form, args) on Sepolia evaluates any cell with one eth_call and returns (ok, raw, reason, gas); scripts/ladder/liveedges.py sends every probe's encoded arguments and compares the raw word bit for bit.",
     "reproduce": "make edges regenerates edges.json and edges.md from test/ladder/Edges.t.sol and this script; make edges-check fails CI when the committed dataset differs.",
 }
 
@@ -195,8 +195,14 @@ def strip_volatile(doc: dict) -> dict:
         for p in op["probes"]:
             for c in p["cells"].values():
                 c.pop("gas", None)
-    d.pop("liveRunner", None); d.pop("liveSelector", None); d.pop("liveNote", None)
+    for k in LIVE_KEYS:
+        d.pop(k, None)
     return d
+
+
+# Written by liveedges.py. The stamp (checked, mismatches, block, date) is
+# only true of the data it checked, so a regenerated dataset drops it.
+LIVE_KEYS = ("liveRunner", "liveSelector", "liveNote", "liveChecked", "liveMismatches", "liveBlock", "liveDate")
 
 
 def main(argv: list[str]) -> int:

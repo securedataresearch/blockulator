@@ -90,4 +90,4 @@ open = "games/message-board"
 source = "contracts/src/content"
 +++
 
-These were built to exercise the first FP127. They still run. They are not maintained, and they call the legacy Huff address at `0xfae694D0c2c44181791F838c54Ed64C3151FfE30`, so their results are Huff-era results. Open one and it mounts below the cards, exactly as it was.
+Built to exercise the first FP127. They still run, unmaintained, against the legacy Huff address `0xfae694D0c2c44181791F838c54Ed64C3151FfE30`. Open one and it mounts below the cards.

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block title %}{{ page.title }} · {{ config.title }}{% endblock title %}
 {% block description %}{{ page.description }}{% endblock description %}
-{% block hero %}{% set hero_slim = true %}{% set hero_title = page.title %}{% set hero_sub = page.description %}{% include "hero.html" %}{% endblock hero %}
 {% block content %}
 {%- set d = load_data(path="static/data/edges.json") -%}
 {%- set forms = ["fp127", "fp256", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"] -%}
-{%- set formIndex = {"fp127": 0, "fp256": 10, "abdk": 2, "solady": 3, "prb": 4, "quad": 5, "balancer": 6, "aave": 7, "morpho": 8, "maker": 9} -%}
 {%- set short = {"fp127": "FP127", "fp256": "FP256", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
 <article class="prose doc wide">
+{% include "pagehead.html" %}
 {{ page.content | safe }}
+{{ <stamp d={d} script="liveedges.py" /> }}
 
 <details class="method" id="method">
 <summary>How this was measured</summary>
@@ -44,7 +44,7 @@
 {%- elif c.zero %}<span class="rev">zero</span>
 {%- else %}<span class="ok" title="{{ c.value }}">{% if c.exact %}exact{% else %}{{ c.digits }}{% endif %}</span>{% if c.errUlps %} <span class="meta">{{ c.errUlps }} ULP</span>{% endif %}
 {%- endif %}
-{%- if c is defined and not c.range %}<br><button class="verify" data-kind="edge" data-op="{{ op.index }}" data-probe="{{ p.id }}" data-form="{{ formIndex[f] }}" data-raw="{{ c.raw | default(value='') }}" data-reason="{{ c.reason | default(value='') }}"{% if d.liveRunner is undefined %} disabled title="The edge runner is not deployed yet"{% endif %}>verify</button>{% endif %}
+
 </td>
 {%- endfor %}
 </tr>
@@ -54,7 +54,7 @@
 </div>
 </section>
 {%- endfor %}
-<p class="note">Cells show correct significant digits against the exact value (hover for the value), or <span class="rev">zero</span>, <span class="rev">revert</span>, <span class="rev">range</span>, n/a as defined above. Verify calls <code>run(op, form, args)</code> on {% if d.liveRunner is defined %}<a href="https://repo.sourcify.dev/11155111/{{ d.liveRunner }}">{{ d.liveRunner }}</a>{% else %}the edge runner{% endif %} through the public Sepolia RPC with the probe's encoded arguments and compares the raw word with the committed cell. {{ d.liveNote | default(value="") }} The whole dataset is <a href="/data/edges.json">edges.json</a>; the generator is <code>make edges</code>.</p>
+<p class="note">A cell is correct significant digits against the exact value (hover for it), or <span class="rev">zero</span>, <span class="rev">revert</span>, <span class="rev">range</span> or n/a. Full dataset: <a href="/data/edges.json">edges.json</a>. Regenerate with <code>make edges</code>.</p>
 </article>
-<script type="module" src="/js/islands/verify.js"></script>
+<script type="module" src="/js/islands/tabs.js"></script>
 {% endblock content %}

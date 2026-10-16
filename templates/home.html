@@ -1,12 +1,37 @@
 {% extends "base.html" %}
-{% block hero %}{% set x = section.extra %}{% set hero_title = x.headline %}{% set hero_sub = x.sub %}{% set hero_actions = true %}{% include "hero.html" %}{% endblock hero %}
+{% block bodyclass %}home{% endblock bodyclass %}
+{% block hero %}{% set x = section.extra %}
+<section class="hero">
+  <canvas class="cloth" data-quiet aria-hidden="true"></canvas>
+  <div class="hero-inner wrap">
+    <h1>{{ x.headline }}</h1>
+    <p class="sub">{{ x.sub }}</p>
+    <p class="actions">
+      <a class="btn primary" href="{{ x.cta_primary_href }}">{{ x.cta_primary_text }}</a>
+      <a class="btn ghost" href="{{ x.cta_secondary_href }}">{{ x.cta_secondary_text }}</a>
+    </p>
+  </div>
+  <svg class="curve" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0,60 C360,100 1080,0 1440,50 L1440,90 L0,90 Z" fill="currentColor"/></svg>
+</section>
+{% endblock hero %}
 {% block content %}{% set x = section.extra %}
-<section class="lede prose">
-  {{ section.content | safe }}
+{%- set d = load_data(path="static/data/ladder.json") -%}
+{%- for s in d.scenarios %}{% if s.id == "compound" %}{% set_global sc = s %}{% endif %}{% endfor -%}
+{%- set ref = sc.inputs[0] -%}
+{%- set bars = ["fp256", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer"] -%}
+{%- set short = {"fp127": "FP127", "abdk": "ABDK 64.64", "solady": "Solady", "prb": "PRBMath", "quad": "ABDK Quad", "balancer": "Balancer", "maker": "Maker rpow", "fp256": "FP256"} -%}
+<section class="block">
+  <h2>{{ x.chart_title }}</h2>
+  <p class="note">{{ x.chart_note }}</p>
+  <ol class="bars" aria-label="Correct digits after 365 daily compounding steps">
+    {%- for f in bars %}{% set c = ref.cells[f]["365"] %}
+    <li class="bar s-{{ f }}{% if f == 'fp127' or f == 'fp256' %} ours{% endif %}"><span class="name">{{ short[f] }}</span><span class="track"><span class="fill" style="width:{{ c.digits / 70 * 100 | round(precision=1) }}%"></span></span><span class="val">{{ c.digits }}</span></li>
+    {%- endfor %}
+  </ol>
+  <p class="small">Reference input of the <a href="/results/ladder/#compound">compound scenario</a>, N = 365, digits against exact arithmetic. Full data: <a href="/data/ladder.json">ladder.json</a>.</p>
 </section>
 
-<section id="how" class="block">
-  <h2>{{ x.steps_title }}</h2>
+<section class="block">
   <div class="steps">
     {% for s in x.steps %}
     <div class="card step">
@@ -17,31 +42,13 @@
     {% endfor %}
   </div>
 </section>
-{% endblock content %}
-{% block wide %}{% set x = section.extra %}
-<section class="band">
-  <div class="band-bg" aria-hidden="true"><canvas class="cloth"></canvas></div>
-  <div class="wrap">
-    <h2>{{ x.tiles_title }}</h2>
-    <div class="tiles">
-      {% for p in x.pages %}
-      <a class="tile {{ p.color }}" href="{{ p.href }}">
-        <h3>{{ p.name }}</h3>
-        <p>{{ p.tag }}</p>
-        <span class="site">{{ p.site }}</span>
-      </a>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-<section class="ask wrap">
+
+<section class="ask">
   <div class="card askcard">
-    <canvas class="cloth" aria-hidden="true"></canvas>
-    <div class="askinner">
     <h2>{{ x.ask_title }}</h2>
     <p>{{ x.ask_text | safe }}</p>
     <p class="actions"><a class="btn primary" href="{{ x.ask_primary_href }}">{{ x.ask_primary_text }}</a> <a class="btn ghost" href="{{ x.ask_secondary_href }}">{{ x.ask_secondary_text }}</a></p>
-    </div>
   </div>
 </section>
-{% endblock wide %}
+{% endblock content %}
+{% block scripts %}<script src="/js/hero.js" defer></script>{% endblock scripts %}

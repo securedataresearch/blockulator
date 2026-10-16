@@ -34,20 +34,28 @@ commits and explains the licensing).
 
 ## The site
 
-A Zola site in the style of securedataresearch.net. `templates/base.html`,
-`hero.html` and `page.html` are copied from the sdr-static repository;
+A Zola site in the style of securedataresearch.net.
 `static/css/site.css` and `static/js/hero.js` are pulled from the live
-company site by `scripts/sync-sdr.sh`. Pages are Markdown under `content/`.
-Tables and the ladder chart are Tera components in
+company site by `scripts/sync-sdr.sh`; `static/css/blockulator.css` layers
+this site's changes on top. The shader hero runs on the home page only;
+inner pages get a static header (`templates/pagehead.html`) and a sub-nav
+for their group (Results, Library). The fonts are self-hosted in
+`static/fonts/` (OFL) and preloaded, so navigation never swaps them.
+Pages are Markdown under `content/`; `path` and `aliases` in the front
+matter place them and keep the old URLs (`/demo/`, `/edges/`, `/compare/`,
+`/float/`). Tables and the ladder chart are Tera components in
 `templates/components.html` that read the committed datasets at build time
 through symlinks in `static/data/`, so the site cannot disagree with the
 repository.
 
-Four pages are JS islands, the only places the browser touches Sepolia:
+The ladder and edges pages do not call Sepolia. `scripts/ladder/livecap.py`
+and `liveedges.py` re-run every cell through `LadderRunner.run` and
+`EdgeRunner.run` and stamp the dataset (`liveChecked`, `liveMismatches`,
+`liveBlock`, `liveDate`); the page prints the stamp. Regenerating a dataset
+drops its stamp until the check is run again.
 
-- `/demo/` and `/edges/`: `static/js/islands/verify.js` calls
-  `LadderRunner.run` or `EdgeRunner.run` with a hand-encoded `eth_call` and
-  compares the raw word with the committed cell. No wallet, no ethers.
+Two pages are JS islands, the only places the browser touches Sepolia:
+
 - `/badges/` and `/archive/`: the previous single-page app's code, moved
   unchanged to `static/js/legacy/` and `static/css/legacy/`, booted by
   `static/js/islands/shell.js` (wallet, network switcher, toast) and mounted
