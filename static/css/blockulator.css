@@ -86,15 +86,15 @@
 .inputs { margin: 1em 0 1.4em; } .inputs summary { cursor: pointer; font-weight: 600; }
 .inputlist td { font-size: 13.5px; }
 
-/* fonts: self-hosted (SIL OFL 1.1) and preloaded in base.html, so a page change never swaps them */
-@font-face { font-family: "Instrument Sans"; font-style: normal; font-weight: 400 700; font-display: swap; src: url(/fonts/instrument-sans.woff2) format("woff2"); }
-@font-face { font-family: "Instrument Sans"; font-style: italic; font-weight: 400 700; font-display: swap; src: url(/fonts/instrument-sans-italic.woff2) format("woff2"); }
-@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: swap; src: url(/fonts/jetbrains-mono.woff2) format("woff2"); }
+/* fonts: self-hosted (SIL OFL 1.1), preloaded in base.html, and optional: a font that is not ready for the first paint waits for the next page instead of swapping in */
+@font-face { font-family: "Instrument Sans"; font-style: normal; font-weight: 400 700; font-display: optional; src: url(/fonts/instrument-sans.woff2) format("woff2"); }
+@font-face { font-family: "Instrument Sans"; font-style: italic; font-weight: 400 700; font-display: optional; src: url(/fonts/instrument-sans-italic.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: optional; src: url(/fonts/jetbrains-mono.woff2) format("woff2"); }
 
 /* page changes cross-fade; the bar stays put */
 @view-transition { navigation: auto; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .12s; }
-.topbar { view-transition-name: topbar; }
+.inner .topbar { view-transition-name: topbar; }
 
 /* top bar: a static dark strip on inner pages, over the hero on the home page */
 .topbar { position: relative; z-index: 3; background: var(--ink); }
@@ -103,10 +103,10 @@
 .links a[aria-current] { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; }
 @media (max-width: 640px) { .links a:not(.cta) { display: inline; } .links { gap: 4px 12px; font-size: 14px; } .brand span { display: none; } }
 
-/* the shader fades in instead of flashing black before its first frame */
-canvas.cloth { opacity: 0; animation: cloth-in .8s ease-out .1s forwards; }
-@keyframes cloth-in { to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { canvas.cloth { animation: none; opacity: 1; } ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
+/* the shader stays hidden until it has drawn a frame (home.html adds .on), then fades in over the CSS gradient */
+canvas.cloth { opacity: 0; transition: opacity .6s ease-out; }
+canvas.cloth.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { canvas.cloth { transition: none; } ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
 
 /* inner page header */
 .pagehead { margin: 0 0 1.6em; }

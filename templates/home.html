@@ -51,4 +51,5 @@
   </div>
 </section>
 {% endblock content %}
-{% block scripts %}<script src="/js/hero.js" defer></script>{% endblock scripts %}
+{% block scripts %}<script src="/js/hero.js" defer></script>
+<script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){requestAnimationFrame(function(){document.querySelectorAll('canvas.cloth').forEach(function(c){c.classList.add('on');});});});});</script>{% endblock scripts %}
