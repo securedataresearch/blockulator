@@ -41,6 +41,13 @@
     "reverts": 5,
     "worstInput": ""
   },
+  "expm1": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 838,
+    "reverts": 5,
+    "worstInput": ""
+  },
   "fromFP127": {
     "meanBits": 256,
     "minBits": 256,
@@ -67,6 +74,13 @@
     "minBits": 256,
     "n": 2104,
     "reverts": 96,
+    "worstInput": ""
+  },
+  "log1p": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1213,
+    "reverts": 11,
     "worstInput": ""
   },
   "lt": {

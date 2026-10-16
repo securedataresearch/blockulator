@@ -102,4 +102,25 @@ contract Behaviour256 is FP256Harness {
         assertEq(obj.lt(l, d), 1);
         assertGe(_bits(obj.exp(l), obj.add(ONE, d)), 235, "round trip inside the band");
     }
+
+    /// log1p and expm1 take the argument itself, so nothing near zero is lost to a rounded 1 + x.
+    function test_log1p_expm1() public view {
+        assertEq(obj.log1p(0), 0);
+        assertEq(obj.expm1(0), 0);
+        int256 t = _mk(false, -300, uint256(1) << 236);           // 2^-300: the second term is below the grid
+        assertEq(obj.log1p(t), t, "log1p(2^-300) = 2^-300");
+        assertEq(obj.expm1(t), t, "expm1(2^-300) = 2^-300");
+        int256 d = _mk(false, -200, uint256(1) << 236);
+        int256 sq = _mk(false, -401, uint256(1) << 236);
+        assertEq(obj.log1p(d), obj.sub(d, sq), "log1p(2^-200) = 2^-200 - 2^-401");
+        assertEq(obj.expm1(d), obj.add(d, sq), "expm1(2^-200) = 2^-200 + 2^-401");
+        assertEq(obj.log1p(ONE), obj.ln(TWO), "log1p(1) = ln 2");
+        assertEq(obj.expm1(obj.neg(obj.fromUint(1000))), obj.neg(ONE), "expm1(-1000) = -1");
+        _expectRevert(abi.encodeCall(IFP256.log1p, (obj.neg(ONE))), IFP256.OutOfRange.selector, "log1p(-1)");
+        _expectRevert(abi.encodeCall(IFP256.log1p, (obj.neg(TWO))), IFP256.OutOfRange.selector, "log1p(-2)");
+        _expectRevert(abi.encodeCall(IFP256.expm1, (obj.fromUint(181706))), IFP256.Overflow.selector, "expm1 above the word");
+        int256 x = _mk(false, -30, uint256(1) << 236);
+        assertGe(_bits(obj.expm1(obj.log1p(x)), x), 235, "expm1(log1p(2^-30))");
+        assertGe(_bits(obj.log1p(obj.expm1(obj.fromUint(3))), obj.fromUint(3)), 235, "log1p(expm1(3))");
+    }
 }

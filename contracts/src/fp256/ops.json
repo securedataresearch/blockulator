@@ -99,6 +99,28 @@
       "reverts": "OutOfRange() for x < 0; DivisionByZero() for 0^y with y < 0; Overflow() when the result does not fit"
     },
     {
+      "name": "log1p",
+      "signature": "log1p(int256)",
+      "selector": "0x8552a5b0",
+      "inputs": [
+        "x"
+      ],
+      "notice": "ln(1 + x) without forming a rounded 1 + x. Below 2^-4, x times the ln series at 2^-254 (32 terms below 2^-8, 64 above), so the relative precision holds all the way down; above, 1 + x exactly on a 2^-254 grid under its leading bit, the log2 kernel and one product with ln 2. Correctly rounded at every committed vector.",
+      "domain": "x > -1",
+      "reverts": "OutOfRange() for x <= -1 or a word that is not a number"
+    },
+    {
+      "name": "expm1",
+      "signature": "expm1(int256)",
+      "selector": "0x973fe005",
+      "inputs": [
+        "x"
+      ],
+      "notice": "e^x - 1 without cancellation. Below 2^-8, x times the series sum x^k / (k + 1)! at 2^-254; above, exp's split of x log2 e and its unrounded 2^f, with the one subtracted on the same 2^-254 grid. Correctly rounded at every committed vector; -1 below about -176.",
+      "domain": "x < 2^18",
+      "reverts": "Overflow() when e^x - 1 does not fit (x above about 181,705); OutOfRange() for a word that is not a number"
+    },
+    {
       "name": "neg",
       "signature": "neg(int256)",
       "selector": "0x54a53dc1",

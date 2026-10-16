@@ -28,11 +28,17 @@ object "FP256" {
             case 0x7c90b7f9 { /* toFP127(int256) */
                 ret(fp256_toFP127(calldataload(4)))
             }
+            case 0x8552a5b0 { /* log1p(int256) */
+                ret(fp256_log1p(calldataload(4)))
+            }
             case 0x8e6f2353 { /* ln(int256) */
                 ret(fp256_ln(calldataload(4)))
             }
             case 0x92b0c5b2 { /* pow(int256,int256) */
                 ret(fp256_pow(calldataload(4), calldataload(36)))
+            }
+            case 0x973fe005 { /* expm1(int256) */
+                ret(fp256_expm1(calldataload(4)))
             }
             case 0x9aea0a13 { /* fromFixed18(int256) */
                 ret(fp256_fromFixed18(calldataload(4)))
@@ -259,7 +265,15 @@ object "FP256" {
             }
 
             function ln1pseries(df) -> p {
-                p := ln1ptail(df)
+                p := ln1pq1(df, ln1pq2(df, 0))
+            }
+
+            function ln1pwide(df) -> p {
+                p := ln1pq1(df, ln1pq2(df, ln1pq3(df, ln1pq4(df, 0))))
+            }
+
+            function ln1pq1(df, q) -> p {
+                p := q
                 p := add(0xfc00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
                 p := add(0x444444444444444444444444444444444444444444444444444444444444444, mulw(df, p))
                 p := add(0xfb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6e, mulw(df, p))
@@ -278,8 +292,9 @@ object "FP256" {
                 p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
             }
 
-            function ln1ptail(df) -> p {
-                p := 0xfe00000000000000000000000000000000000000000000000000000000000000
+            function ln1pq2(df, q) -> p {
+                p := q
+                p := add(0xfe00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
                 p := add(0x210842108421084210842108421084210842108421084210842108421084211, mulw(df, p))
                 p := add(0xfdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddde, mulw(df, p))
                 p := add(0x234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c, mulw(df, p))
@@ -295,6 +310,77 @@ object "FP256" {
                 p := add(0x35e50d79435e50d79435e50d79435e50d79435e50d79435e50d79435e50d794, mulw(df, p))
                 p := add(0xfc71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c72, mulw(df, p))
                 p := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, mulw(df, p))
+            }
+
+            function ln1pq3(df, q) -> p {
+                p := q
+                p := add(0xfeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0x15c9882b9310572620ae4c415c9882b9310572620ae4c415c9882b931057262, mulw(df, p))
+                p := add(0xfe9bd37a6f4de9bd37a6f4de9bd37a6f4de9bd37a6f4de9bd37a6f4de9bd37a7, mulw(df, p))
+                p := add(0x16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c, mulw(df, p))
+                p := add(0xfe8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8c, mulw(df, p))
+                p := add(0x17d05f417d05f417d05f417d05f417d05f417d05f417d05f417d05f417d05f4, mulw(df, p))
+                p := add(0xfe79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e7a, mulw(df, p))
+                p := add(0x18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c190, mulw(df, p))
+                p := add(0xfe66666666666666666666666666666666666666666666666666666666666666, mulw(df, p))
+                p := add(0x1a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a4, mulw(df, p))
+                p := add(0xfe50d79435e50d79435e50d79435e50d79435e50d79435e50d79435e50d79436, mulw(df, p))
+                p := add(0x1bacf914c1bacf914c1bacf914c1bacf914c1bacf914c1bacf914c1bacf914c, mulw(df, p))
+                p := add(0xfe38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39, mulw(df, p))
+                p := add(0x1d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d4, mulw(df, p))
+                p := add(0xfe1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e, mulw(df, p))
+                p := add(0x1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f0, mulw(df, p))
+            }
+
+            function ln1pq4(df, q) -> p {
+                p := q
+                p := add(0xff00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x104104104104104104104104104104104104104104104104104104104104104, mulw(df, p))
+                p := add(0xfef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef8, mulw(df, p))
+                p := add(0x10c9714fbcda3ac10c9714fbcda3ac10c9714fbcda3ac10c9714fbcda3ac10d, mulw(df, p))
+                p := add(0xfeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef, mulw(df, p))
+                p := add(0x115b1e5f75270d0456c797dd49c34115b1e5f75270d0456c797dd49c34115b2, mulw(df, p))
+                p := add(0xfee58469ee58469ee58469ee58469ee58469ee58469ee58469ee58469ee5846a, mulw(df, p))
+                p := add(0x11f7047dc11f7047dc11f7047dc11f7047dc11f7047dc11f7047dc11f7047dc, mulw(df, p))
+                p := add(0xfedb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db, mulw(df, p))
+                p := add(0x129e4129e4129e4129e4129e4129e4129e4129e4129e4129e4129e4129e412a, mulw(df, p))
+                p := add(0xfed097b425ed097b425ed097b425ed097b425ed097b425ed097b425ed097b426, mulw(df, p))
+                p := add(0x13521cfb2b78c13521cfb2b78c13521cfb2b78c13521cfb2b78c13521cfb2b8, mulw(df, p))
+                p := add(0xfec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec5, mulw(df, p))
+                p := add(0x141414141414141414141414141414141414141414141414141414141414141, mulw(df, p))
+                p := add(0xfeb851eb851eb851eb851eb851eb851eb851eb851eb851eb851eb851eb851eb8, mulw(df, p))
+                p := add(0x14e5e0a72f05397829cbc14e5e0a72f05397829cbc14e5e0a72f05397829cbc, mulw(df, p))
+            }
+
+            function expm1series(df) -> p {
+                p := expm1tail(df)
+                p := add(0x23ddb1dff1b12f6a89b530f59fd097d8039ee96cf38e3b216956e2a95, mulw(df, p))
+                p := add(0x1ae64567f544e38fe747e4b837dc71e202b72f11b6aaac590f0129fef9, mulw(df, p))
+                p := add(0x127e4fb7789f5c72ef016d3ea6678e4b61ddf05c2d95567d3a50ccdf4b2, mulw(df, p))
+                p := add(0xb8ef1d2ab6399c7d560e4472800b8ef1d2ab6399c7d560e4472800b8ef2, mulw(df, p))
+                p := add(0x680680680680680680680680680680680680680680680680680680680680, mulw(df, p))
+                p := add(0x3403403403403403403403403403403403403403403403403403403403403, mulw(df, p))
+                p := add(0x16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c17, mulw(df, p))
+                p := add(0x88888888888888888888888888888888888888888888888888888888888889, mulw(df, p))
+                p := add(0x2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0x2000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+            }
+
+            function expm1tail(df) -> p {
+                p := 0x7cb3c065cbd5df3292d019f2a7628819cffac21b76c8
+                p := add(0xbb0da098b1c0cecbdc3826ebfb13cc26b7f82329322c2, mulw(df, p))
+                p := add(0x10ce396db7f8529450c90b7f338ec7577a874b28b381f78, mulw(df, p))
+                p := add(0x171b8ef6dcf5718bef146fcee6e45218487a0757f6d2b457, mulw(df, p))
+                p := add(0x1e542ba402022507a9cad2bf8f0babbfdf2029a373f48cb25, mulw(df, p))
+                p := add(0x25e9368d0282ae49943d876f72ce96afd6e8340c50f1afdeed, mulw(df, p))
+                p := add(0x2d04f0c772fb2ef7600910d4585552f0cf33bdcea01f00d8b9e, mulw(df, p))
+                p := add(0x32a58ee0615a94d64c0a32eee35ffd4ee91a35887422e0f3d121, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e333, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e3337, mulw(df, p))
+                p := add(0x3272e95180f93a4175be28bbf47c9d519a311b52ebaebe12dd5003c, mulw(df, p))
+                p := add(0x2c248c2750da12f9470663a475ed09a766eaf7e88e38e65081a60347, mulw(df, p))
             }
 
             function unpack(x) -> s, e, m {
@@ -429,17 +515,32 @@ object "FP256" {
                 if s { t := sub(0, t) }
             }
 
-            function exp2kf(s, k, f) -> r {
+            function exp2kv(s, k, f) -> kk, v {
+                kk := k
                 if s {
-                    k := sub(0, k)
+                    kk := sub(0, k)
                     if f {
-                        k := sub(k, 1)
+                        kk := sub(kk, 1)
                         f := sub(0x4000000000000000000000000000000000000000000000000000000000000000, f)
                     }
                 }
-                let v := 0x4000000000000000000000000000000000000000000000000000000000000000
+                v := 0x4000000000000000000000000000000000000000000000000000000000000000
                 if f { v := exp2frac(f) }
-                r := normround(0, add(k, 0x3ffff), v)
+            }
+
+            function exp2kf(s, k, f) -> r {
+                let kk, v := exp2kv(s, k, f)
+                r := normround(0, add(kk, 0x3ffff), v)
+            }
+
+            function explog2(u, m) -> k, f {
+                let p1, p0 := mul512(m, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
+                let lo := mulwu(m, 0x3bc3887eeaa2ed9ac49b25eeb82d7c167d52173cc1895213f897f5e06a7be736)
+                p0 := add(p0, lo)
+                p1 := add(p1, lt(p0, lo))
+                let sh := sub(236, u)
+                f := and(shr512(p1, p0, sh), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                k := shr512(p1, p0, add(sh, 254))
             }
 
             function fp256_exp(x) -> r {
@@ -456,13 +557,7 @@ object "FP256" {
                     r := fp256_add(one, fp256_mul(x, fp256_add(one, sub(x, 0x100000000000000000000000000000000000000000000000000000000000))))
                     leave
                 }
-                let p1, p0 := mul512(m, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
-                let lo := mulwu(m, 0x3bc3887eeaa2ed9ac49b25eeb82d7c167d52173cc1895213f897f5e06a7be736)
-                p0 := add(p0, lo)
-                p1 := add(p1, lt(p0, lo))
-                let sh := sub(236, u)
-                let f := and(shr512(p1, p0, sh), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
-                let k := shr512(p1, p0, add(sh, 254))
+                let k, f := explog2(u, m)
                 if iszero(lt(k, 0x80000)) {
                     if s { r := 0 leave }
                     rev(0x35278d12)
@@ -471,8 +566,11 @@ object "FP256" {
             }
 
             function log2pair(e, m) -> Lm, Ls {
-                let u := sub(e, 0x3ffff)
-                let lg := log2m(shl(18, m))
+                Lm, Ls := log2pairm(sub(e, 0x3ffff), shl(18, m))
+            }
+
+            function log2pairm(u, mm) -> Lm, Ls {
+                let lg := log2m(mm)
                 if iszero(u) { Lm := lg Ls := sub(0, 254) leave }
                 let sh := add(msb(absw(u)), 1)
                 Lm := add(shl(sub(254, sh), u), shr(sh, lg))
@@ -549,6 +647,70 @@ object "FP256" {
                         rev(0x35278d12)
                     }
                     r := exp2kf(s, k, and(shr512(p1, p0, sub(q, 254)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                }
+            }
+
+            function fp256_log1p(x) -> r {
+                let s, e, m := unpack(x)
+                if iszero(e) { r := 0 leave }
+                let u := sub(e, 0x3ffff)
+                if slt(u, sub(0, 4)) {
+                    let df := tofixed254(s, u, m)
+                    let p := 0
+                    switch slt(u, sub(0, 8))
+                    case 1 { p := ln1pseries(df) }
+                    default { p := ln1pwide(df) }
+                    let p1, p0 := mul512(m, p)
+                    r := normround(s, e, or(shl(20, p1), shr(236, p0)))
+                    leave
+                }
+                if s { if iszero(slt(u, 0)) { rev(0x7db3aba7) } }
+                // 1 + x = a 2^(b - 254) exactly, b = max(u, 0); a below 2^256
+                let b := 0
+                if sgt(u, 0) { b := u }
+                let a := shl(sub(254, b), 1)
+                switch s
+                case 0 { a := add(a, shl(add(18, sub(u, b)), m)) }
+                default { a := sub(a, shl(add(18, u), m)) }
+                let n := msb(a)
+                switch lt(n, 254)
+                case 1 { a := shl(sub(254, n), a) }
+                default { a := shr(sub(n, 254), a) }
+                let Lm, Ls := log2pairm(add(b, sub(n, 254)), a)
+                let l := mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)
+                r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
+            }
+
+            function fp256_expm1(x) -> r {
+                let s, e, m := unpack(x)
+                if iszero(e) { r := 0 leave }
+                let u := sub(e, 0x3ffff)
+                if slt(u, sub(0, 8)) {
+                    let p1, p0 := mul512(m, expm1series(tofixed254(s, u, m)))
+                    r := normround(s, e, or(shl(20, p1), shr(236, p0)))
+                    leave
+                }
+                if iszero(slt(u, 18)) {
+                    if s { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+                    rev(0x35278d12)
+                }
+                let k, f := explog2(u, m)
+                if iszero(lt(k, 0x80000)) {
+                    if s { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+                    rev(0x35278d12)
+                }
+                let kk, v := exp2kv(s, k, f)
+                switch s
+                case 0 {
+                    // (v - 2^(254 - kk)) 2^(kk - 254), kk >= 0; the one is below the grid past kk = 254
+                    r := normround(0, add(0x3ffff, kk), sub(v, shl(sub(254, kk), 1)))
+                }
+                default {
+                    // 1 - v 2^kk for kk <= -1, with v 2^kk rounded up so the magnitude is floored
+                    let nk := sub(0, kk)
+                    let c := shr(nk, v)
+                    if and(v, sub(shl(nk, 1), 1)) { c := add(c, 1) }
+                    r := normround(1, 0x3ffff, sub(0x4000000000000000000000000000000000000000000000000000000000000000, c))
                 }
             }
 

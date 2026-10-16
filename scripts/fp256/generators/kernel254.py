@@ -19,7 +19,14 @@ f = mm - 1 < 2^(1/4096) - 1 goes to a Chebyshev fit of log2(1 + f)/f.
 
 ln near one: ln(1 + d)/d = sum (-d)^k/(k + 1), 32 terms for |d| < 2^-8.
 
-The op models below (model_exp, model_ln, model_pow) are the Yul in Python:
+expm1 near zero (release three): (e^d - 1)/d = sum d^k/(k + 1)!, 24 terms for
+|d| < 2^-8 (truncation below 2^-263). log1p below 2^-4 is d times the same
+ln series (32 terms below 2^-8, 64 from there, truncation below 2^-261), so the log2 kernel's
+2^-250 never meets a result below 2^-4; above, 1 + x is formed exactly on a
+2^-254 grid under its leading bit and goes through log2m. expm1 above 2^-8 takes exp's unrounded 2^f and
+subtracts the one on the same grid, so neither op cancels.
+
+The op models below (model_exp, model_ln, model_pow, model_log1p, model_expm1) are the Yul in Python:
 unpack, the same shifts and products, normround. They are measured against
 mpmath over random floats; the Precision floors in test/fp256 are set from
 what they report.
@@ -39,6 +46,8 @@ M254 = WS - 1
 TABLE_BITS = 4
 STAGES = 12
 SERIES_TERMS = 32
+WIDE_TERMS = 64        # log1p's band, |d| < 2^-4
+EXPM1_TERMS = 24
 BIAS = 0x3FFFF
 HIDDEN = 1 << 236
 FMASK = HIDDEN - 1
@@ -148,16 +157,17 @@ def decode(w: int):
 # ---- kernels -------------------------------------------------------------------
 
 class Kernels:
-    def __init__(self, exp_c, table, log_c, thr, inv, series, ln2, log2e_hi, log2e_lo):
+    def __init__(self, exp_c, table, log_c, thr, inv, series, ln2, log2e_hi, log2e_lo, eseries):
         self.exp_c = exp_c          # ascending, for 2^r on [0, 1/16)
         self.table = table          # 2^(j/16), j = 0..15
         self.log_c = log_c          # ascending, for log2(1+f)/f
         self.thr = thr              # 2^(1/2^k), k = 1..STAGES
         self.inv = inv              # 2^(-1/2^k)
-        self.series = series        # 1/(k+1) with alternating signs, k = 0..SERIES_TERMS-1, at 2^-254
+        self.series = series        # 1/(k+1) with alternating signs, k = 0..WIDE_TERMS-1, at 2^-254
         self.LN2 = ln2
         self.LOG2E_HI = log2e_hi    # log2 e at 2^-254
         self.LOG2E_LO = log2e_lo    # the next 254 bits
+        self.eseries = eseries      # 1/(k+1)!, k = 0..EXPM1_TERMS-1, at 2^-254
 
     def exp2frac(self, f: int) -> int:
         """2^f for f in [0, 2^254) at 2^-254, result in [2^254, 2^255)."""
@@ -181,24 +191,43 @@ class Kernels:
             p = (mulw(p, f) + c) & MASK
         return (acc + signed(mulw(p, f))) & MASK
 
-    def ln1pseries(self, df: int) -> int:
-        """ln(1 + d)/d at 2^-254 for a signed d at 2^-254, |d| < 2^-8."""
-        p = self.series[-1]
-        for c in reversed(self.series[:-1]):
+    def ln1pseries(self, df: int, terms: int = SERIES_TERMS) -> int:
+        """ln(1 + d)/d at 2^-254 for a signed d at 2^-254: 32 terms for |d| < 2^-8,
+        64 (ln1pwide) for |d| < 2^-4. Horner from zero, as the Yul quarters run it."""
+        p = 0
+        for c in reversed(self.series[:terms]):
+            p = (mulw(df, p) + c) & MASK
+        return p
+
+    def expm1series(self, df: int) -> int:
+        """(e^d - 1)/d at 2^-254 for a signed d at 2^-254, |d| < 2^-8."""
+        p = self.eseries[-1]
+        for c in reversed(self.eseries[:-1]):
             p = (mulw(df, p) + c) & MASK
         return p
 
     # ---- the ops ------------------------------------------------------------------
 
-    def exp2kf(self, s: int, k: int, f: int) -> int:
-        """2^(+-(k + f/2^254)) rounded once; k < 2^19 checked by the caller."""
+    def exp2kv(self, s: int, k: int, f: int):
+        """2^(+-(k + f/2^254)) as (k', v): v at 2^-254 in [1, 2), unrounded."""
         if s:
             if f:
                 k = -k - 1; f = WS - f
             else:
                 k = -k
-        v = self.exp2frac(f) if f else WS
+        return k, (self.exp2frac(f) if f else WS)
+
+    def exp2kf(self, s: int, k: int, f: int) -> int:
+        """2^(+-(k + f/2^254)) rounded once; k < 2^19 checked by the caller."""
+        k, v = self.exp2kv(s, k, f)
         return normround(0, k + BIAS, v)
+
+    def explog2(self, u: int, m: int):
+        """x log2 e for x = m 2^(u - 236) as (k, f): the integer part and the
+        fraction at 2^-254, from the two-word product."""
+        P = m * self.LOG2E_HI + mulwu(m, self.LOG2E_LO)
+        qsh = 236 - u
+        return shr512(P, qsh + 254), shr512(P, qsh) & M254
 
     def model_exp(self, x: int) -> int:
         s, e, m = unpack(x)
@@ -216,11 +245,7 @@ class Kernels:
             # 1 + x (1 + x/2), exact enough; modelled with mpmath here
             return encode(1 + decode(x) * (1 + decode(x) / 2))
         # t = x log2 e = m 2^(u-236) (LOG2E_HI + LOG2E_LO 2^-254) 2^-254
-        P = m * self.LOG2E_HI + mulwu(m, self.LOG2E_LO)
-        # t at 2^-254 = P 2^(u - 490 + 254) = P >> (236 - u)
-        qsh = 236 - u
-        f = shr512(P, qsh) & M254
-        k = shr512(P, qsh + 254)
+        k, f = self.explog2(u, m)
         if k >= 1 << 19:
             if s:
                 return 0
@@ -230,8 +255,11 @@ class Kernels:
     def log2pair(self, e: int, m: int):
         """log2 of a positive number as (Lm, Ls): L = Lm 2^Ls, Lm a signed word, via the
         general path. The caller handles the near-one band."""
-        u = e - BIAS
-        lg = self.log2m(m << 18)
+        return self.log2pairm(e - BIAS, m << 18)
+
+    def log2pairm(self, u: int, mm: int):
+        """log2(mm 2^(u - 254)) for a mantissa mm in [2^254, 2^255), as log2pair."""
+        lg = self.log2m(mm)
         if u == 0:
             return lg, -254
         au = abs(u)
@@ -306,6 +334,56 @@ class Kernels:
         return self.exp2kf(s, k, f)
 
 
+def _model_log1p(self, x: int) -> int:
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    u = e - BIAS
+    if u < -4:
+        P = m * self.ln1pseries(self.tofixed254(s, u, m), SERIES_TERMS if u < -8 else WIDE_TERMS)
+        return normround(s, e, P >> 236)
+    assert not (s and u >= 0)
+    b = max(u, 0)
+    xs = m << (18 + u - b)
+    one = (1 << (254 - b)) if b <= 254 else 0
+    a = one - xs if s else one + xs
+    n = msb(a)
+    k = b + n - 254
+    a = a << (254 - n) if n < 254 else a >> (n - 254)
+    Lm, Ls = self.log2pairm(k, a)
+    r = signed(mulw(Lm, self.LN2))
+    return normround(1 if r < 0 else 0, BIAS + Ls + 254, abs(r))
+
+
+def _model_expm1(self, x: int) -> int:
+    s, e, m = unpack(x)
+    NEGONE = (1 << 255) | (BIAS << 236)
+    if e == 0:
+        return 0
+    u = e - BIAS
+    if u < -8:
+        P = m * self.expm1series(self.tofixed254(s, u, m))
+        return normround(s, e, P >> 236)
+    if u >= 18:
+        if s:
+            return NEGONE
+        raise OverflowError
+    k, f = self.explog2(u, m)
+    if k >= 1 << 19:
+        if s:
+            return NEGONE
+        raise OverflowError
+    k, v = self.exp2kv(s, k, f)
+    if not s:
+        return normround(0, BIAS + k, v - ((1 << (254 - k)) if k <= 254 else 0))
+    c = -(-v >> -k)                      # ceil(v 2^k)
+    return normround(1, BIAS, WS - c)
+
+
+Kernels.model_log1p = _model_log1p
+Kernels.model_expm1 = _model_expm1
+
+
 def bits(got: int, truth) -> float:
     g = decode(got)
     if g == truth:
@@ -331,8 +409,9 @@ def build():
                    [q(c) for c in lc],
                    [q(power(2, mpf(1) / 2 ** (k + 1))) for k in range(STAGES)],
                    [q(power(2, -mpf(1) / 2 ** (k + 1))) for k in range(STAGES)],
-                   [q(mpf((-1) ** k) / (k + 1)) for k in range(SERIES_TERMS)],
-                   q(log(2)), hi, lo), d1, d2
+                   [q(mpf((-1) ** k) / (k + 1)) for k in range(WIDE_TERMS)],
+                   q(log(2)), hi, lo,
+                   [q(1 / mp.factorial(k + 1)) for k in range(EXPM1_TERMS)]), d1, d2
 
 
 def hx(v: int) -> str:
@@ -375,19 +454,36 @@ def emit_yul(K: Kernels, d1: int, d2: int) -> str:
                    f"        acc := add(acc, {hx(1 << (W - 1 - k))})\n"
                    f"    }}")
     out.append(f"    r := add(acc, log2poly(sub(mm, {hx(WS)})))\n}}\n")
-    half = SERIES_TERMS // 2
-    out.append(f"/// ln(1 + d) / d: the series sum_{{k>=0}} (-d)^k / (k + 1) at 2^-254 for\n"
-               f"/// |d| < 2^-8, Horner in {SERIES_TERMS} terms (truncation below 2^-261), in\n"
-               f"/// two halves so the Yul pipeline's stack stays shallow.\n"
+    out.append(f"/// ln(1 + d) / d: the series sum_{{k>=0}} (-d)^k / (k + 1) at 2^-254, Horner\n"
+               f"/// in {SERIES_TERMS} terms for |d| < 2^-8 (truncation below 2^-261), from zero\n"
+               f"/// through two 16-term quarters so the Yul pipeline's stack stays shallow.\n"
                f"function ln1pseries(df) -> p {{\n"
-               f"    p := ln1ptail(df)")
-    for c in reversed(K.series[:half]):
+               f"    p := ln1pq1(df, ln1pq2(df, 0))\n}}\n")
+    out.append(f"/// The same series in {WIDE_TERMS} terms for |d| < 2^-4 (truncation below\n"
+               f"/// 2^-262): log1p's band, four quarters.\n"
+               f"function ln1pwide(df) -> p {{\n"
+               f"    p := ln1pq1(df, ln1pq2(df, ln1pq3(df, ln1pq4(df, 0))))\n}}\n")
+    for qn in range(1, WIDE_TERMS // 16 + 1):
+        lo, hi = 16 * (qn - 1), 16 * qn
+        out.append(f"/// Horner steps for terms {hi - 1} down to {lo} of the ln series.\n"
+                   f"function ln1pq{qn}(df, q) -> p {{\n"
+                   f"    p := q")
+        for c in reversed(K.series[lo:hi]):
+            out.append(f"    p := add({hx(c)}, mulw(df, p))")
+        out.append("}\n")
+    eh = EXPM1_TERMS // 2
+    out.append(f"/// (e^d - 1) / d: the series sum_{{k>=0}} d^k / (k + 1)! at 2^-254 for\n"
+               f"/// |d| < 2^-8, Horner in {EXPM1_TERMS} terms (truncation below 2^-263), in\n"
+               f"/// two halves as ln1pseries.\n"
+               f"function expm1series(df) -> p {{\n"
+               f"    p := expm1tail(df)")
+    for c in reversed(K.eseries[:eh]):
         out.append(f"    p := add({hx(c)}, mulw(df, p))")
     out.append("}\n")
-    out.append(f"/// The upper {SERIES_TERMS - half} terms of ln1pseries.\n"
-               f"function ln1ptail(df) -> p {{\n"
-               f"    p := {hx(K.series[-1])}")
-    for c in reversed(K.series[half:-1]):
+    out.append(f"/// The upper {EXPM1_TERMS - eh} terms of expm1series.\n"
+               f"function expm1tail(df) -> p {{\n"
+               f"    p := {hx(K.eseries[-1])}")
+    for c in reversed(K.eseries[eh:-1]):
         out.append(f"    p := add({hx(c)}, mulw(df, p))")
     out.append("}\n")
     out.append(f"// LN2      {hx(K.LN2)}\n// LOG2E_HI {hx(K.LOG2E_HI)}\n// LOG2E_LO {hx(K.LOG2E_LO)}")
@@ -434,6 +530,19 @@ def measure_ops(K: Kernels, rng):
             bsmall.append(bb)
     rows.append(("pow", min(b), sum(b) / len(b)))
     rows.append(("pow |t|<64", min(bsmall), sum(bsmall) / len(bsmall)))
+    from mpmath import log1p as mlog1p, expm1 as mexpm1
+    xs = [rand_float(rng, -300, 30, 0) for _ in range(300)] + [rand_float(rng, -300, -1, 1) for _ in range(300)]
+    xs += [rand_float(rng, -12, -6) for _ in range(200)]
+    b = [bits(K.model_log1p(x), mlog1p(decode(x))) for x in xs]
+    rows.append(("log1p", min(b), sum(b) / len(b)))
+    xs = [rand_float(rng, -300, 17) for _ in range(500)] + [rand_float(rng, -12, -6) for _ in range(200)]
+    b = []
+    for x in xs:
+        try:
+            b.append(bits(K.model_expm1(x), mexpm1(decode(x))))
+        except OverflowError:
+            pass
+    rows.append(("expm1", min(b), sum(b) / len(b)))
     for name, mn, mean in rows:
         print(f"{name:12} bits min {mn:7.2f} mean {mean:7.2f}")
 

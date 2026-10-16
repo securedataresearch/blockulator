@@ -193,6 +193,44 @@
   },
   {
     "type": "function",
+    "name": "log1p",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "expm1",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
     "name": "neg",
     "stateMutability": "pure",
     "inputs": [

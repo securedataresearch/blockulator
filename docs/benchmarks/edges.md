@@ -1,6 +1,6 @@
 # Edges: where each library's domain ends
 
-Generated 2026-10-15 by `make edges`. Versions: fp127 60e7ec3, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
+Generated 2026-10-16 by `make edges`. Versions: fp127 1230b03, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
 
 Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 200 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. FP127Lib coincides with FP127 and is omitted. The method is in the Methodology section at the end.
 
@@ -140,14 +140,14 @@ ln(1 + x) as an op: the libraries without it compute ln(1 + x), and 1 + x is whe
 
 | probe | truth | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | fp256 |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `log1p(1e-6)` | `1.0e-6` | 34 | 13 | 12 | 11 | 28 | 12 | n/a | n/a | n/a | 65 |
-| `log1p(1e-9)` a per-second rate | `1.0e-9` | 30 | 10 | 8 | 8 | 25 | 8 | n/a | n/a | n/a | 62 |
-| `log1p(1e-12)` | `1.0e-12` | 26 | 7 | 12 | 5 | 22 | 6 | n/a | n/a | n/a | 59 |
-| `log1p(1e-15)` | `1.0e-15` | 24 | 4 | 15 | 2 | 18 | 3 | n/a | n/a | n/a | 56 |
-| `log1p(1e-18)` | `1.0e-18` | 21 | 1 | 18 | ZERO | 15 | ZERO | n/a | n/a | n/a | 53 |
-| `log1p(1e-20)` below an 18-decimal grid | `1.0e-20` | 18 | ZERO | ZERO | ZERO | 14 | ZERO | n/a | n/a | n/a | 51 |
-| `log1p(1e-30)` | `1.0e-30` | 8 | ZERO | ZERO | ZERO | 4 | ZERO | n/a | n/a | n/a | 41 |
-| `log1p(-1e-9)` | `-1.0e-9` | 30 | 10 | 9 | 8 | 25 | 9 | n/a | n/a | n/a | 63 |
+| `log1p(1e-6)` | `1.0e-6` | 34 | 13 | 12 | 11 | 28 | 12 | n/a | n/a | n/a | 71 |
+| `log1p(1e-9)` a per-second rate | `1.0e-9` | 30 | 10 | 8 | 8 | 25 | 8 | n/a | n/a | n/a | 71 |
+| `log1p(1e-12)` | `1.0e-12` | 26 | 7 | 12 | 5 | 22 | 6 | n/a | n/a | n/a | 71 |
+| `log1p(1e-15)` | `1.0e-15` | 24 | 4 | 15 | 2 | 18 | 3 | n/a | n/a | n/a | 71 |
+| `log1p(1e-18)` | `1.0e-18` | 21 | 1 | 18 | ZERO | 15 | ZERO | n/a | n/a | n/a | 72 |
+| `log1p(1e-20)` below an 18-decimal grid | `1.0e-20` | 18 | ZERO | ZERO | ZERO | 14 | ZERO | n/a | n/a | n/a | 71 |
+| `log1p(1e-30)` | `1.0e-30` | 8 | ZERO | ZERO | ZERO | 4 | ZERO | n/a | n/a | n/a | 72 |
+| `log1p(-1e-9)` | `-1.0e-9` | 30 | 10 | 9 | 8 | 25 | 9 | n/a | n/a | n/a | 72 |
 | `log1p(1e6)` | `13.815512` | 40 | 20 | 19 | 18 | 33 | 19 | n/a | n/a | n/a | 71 |
 
 ## expm1(x)
@@ -156,13 +156,13 @@ e^x - 1 as an op: the libraries without it compute exp(x) - 1 and the one cancel
 
 | probe | truth | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | fp256 |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `expm1(1e-6)` | `1.0e-6` | 33 | 13 | 12 | 11 | 27 | 12 | n/a | n/a | n/a | 65 |
-| `expm1(1e-9)` | `1.0e-9` | 29 | 9 | 8 | 8 | 24 | 8 | n/a | n/a | n/a | 62 |
-| `expm1(1e-12)` | `1.0e-12` | 26 | 7 | 12 | 5 | 21 | 12 | n/a | n/a | n/a | 59 |
-| `expm1(1e-15)` | `1.0e-15` | 23 | 4 | 15 | 2 | 18 | 15 | n/a | n/a | n/a | 57 |
-| `expm1(1e-18)` | `1.0e-18` | 20 | 1 | 18 | ZERO | 15 | 18 | n/a | n/a | n/a | 53 |
-| `expm1(1e-20)` | `1.0e-20` | 18 | ZERO | ZERO | ZERO | 14 | ZERO | n/a | n/a | n/a | 51 |
-| `expm1(-1e-9)` | `-1.0e-9` | 30 | 10 | 9 | 9 | 25 | 9 | n/a | n/a | n/a | 63 |
+| `expm1(1e-6)` | `1.0e-6` | 33 | 13 | 12 | 11 | 27 | 12 | n/a | n/a | n/a | 71 |
+| `expm1(1e-9)` | `1.0e-9` | 29 | 9 | 8 | 8 | 24 | 8 | n/a | n/a | n/a | 71 |
+| `expm1(1e-12)` | `1.0e-12` | 26 | 7 | 12 | 5 | 21 | 12 | n/a | n/a | n/a | 72 |
+| `expm1(1e-15)` | `1.0e-15` | 23 | 4 | 15 | 2 | 18 | 15 | n/a | n/a | n/a | 71 |
+| `expm1(1e-18)` | `1.0e-18` | 20 | 1 | 18 | ZERO | 15 | 18 | n/a | n/a | n/a | 71 |
+| `expm1(1e-20)` | `1.0e-20` | 18 | ZERO | ZERO | ZERO | 14 | ZERO | n/a | n/a | n/a | 71 |
+| `expm1(-1e-9)` | `-1.0e-9` | 30 | 10 | 9 | 9 | 25 | 9 | n/a | n/a | n/a | 72 |
 | `expm1(-40)` | `-1.0` | 38 | 19 | 18 | 18 | 34 | 18 | n/a | n/a | n/a | 71 |
 | `expm1(-88)` | `-1.0` | 39 | 38 | 38 | 38 | 34 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 72 |
 | `expm1(20)` | `4.8516519e+8` | 44 | 19 | 19 | 17 | 32 | 21 | n/a | n/a | n/a | 71 |

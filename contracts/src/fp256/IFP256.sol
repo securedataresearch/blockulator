@@ -48,6 +48,18 @@ interface IFP256 {
     ///         2^-250 on log2 x bounds the result at about 250 - log2|t| bits
     ///         for t = y log2 x. 0^0 = 1. Shortcuts for y in {1, 2, 1/2, -1}.
     function pow(int256 x, int256 y) external pure returns (int256 r);
+    /// @notice ln(1 + x) without forming a rounded 1 + x. Below 2^-4, x times
+    ///         the ln series at 2^-254 (32 terms below 2^-8, 64 above), so the
+    ///         relative precision holds all the way down; above, 1 + x exactly
+    ///         on a 2^-254 grid under its leading bit, the log2 kernel and one
+    ///         product with ln 2. Correctly rounded at every committed vector.
+    function log1p(int256 x) external pure returns (int256 r);
+    /// @notice e^x - 1 without cancellation. Below 2^-8, x times the series
+    ///         sum x^k / (k + 1)! at 2^-254; above, exp's split of x log2 e and
+    ///         its unrounded 2^f, with the one subtracted on the same 2^-254
+    ///         grid. Correctly rounded at every committed vector; -1 below
+    ///         about -176.
+    function expm1(int256 x) external pure returns (int256 r);
     /// @notice -x: the sign bit flipped; -0 is 0.
     function neg(int256 x) external pure returns (int256 r);
     /// @notice |x|: the sign bit cleared.

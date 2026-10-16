@@ -73,6 +73,8 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("sqrt")) return FP256Lib.sqrt(x);
         if (h == keccak256("exp")) return FP256Lib.exp(x);
         if (h == keccak256("ln")) return FP256Lib.ln(x);
+        if (h == keccak256("log1p")) return FP256Lib.log1p(x);
+        if (h == keccak256("expm1")) return FP256Lib.expm1(x);
         if (h == keccak256("neg")) return FP256Lib.neg(x);
         if (h == keccak256("abs")) return FP256Lib.abs(x);
         if (h == keccak256("sign")) return FP256Lib.sign(x);
@@ -102,6 +104,8 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("sqrt")) return FP127Lib.sqrt(x);
         if (h == keccak256("exp")) return FP127Lib.exp(x);
         if (h == keccak256("ln")) return FP127Lib.ln(x);
+        if (h == keccak256("log1p")) return FP127Lib.log1p(x);
+        if (h == keccak256("expm1")) return FP127Lib.expm1(x);
         if (h == keccak256("neg")) return FP127Lib.neg(x);
         if (h == keccak256("abs")) return FP127Lib.abs(x);
         if (h == keccak256("sign")) return FP127Lib.sign(x);
@@ -227,6 +231,8 @@ contract GasLadder256 is FP256Harness {
         _run1("abs", xs, false);
         _run1("sign", xs, false);
         _run1("exp", [_nv(6, 0x4 << 232), _nv(0, 0), _v(-1, 0), ONE, _v(4, 0x4 << 232), _v(17, 0x6 << 232)], false);
+        _run1("log1p", [_v(-60, 0), _v(-30, 0), _nv(-9, 0), _v(-8, 0), _v(-1, 0), _v(9, 0xf4240 << 216)], false);
+        _run1("expm1", [_v(-60, 0), _v(-30, 0), _nv(-9, 0), _v(-8, 0), _nv(-1, 0), _v(4, 0x4 << 232)], false);
     }
 
     function test_ladder_pow() public view {

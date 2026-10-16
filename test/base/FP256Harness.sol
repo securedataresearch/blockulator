@@ -16,6 +16,8 @@ contract LibUser256 {
     function exp(int256 x) external pure returns (int256) { return FP256Lib.exp(x); }
     function ln(int256 x) external pure returns (int256) { return FP256Lib.ln(x); }
     function pow(int256 x, int256 y) external pure returns (int256) { return FP256Lib.pow(x, y); }
+    function log1p(int256 x) external pure returns (int256) { return FP256Lib.log1p(x); }
+    function expm1(int256 x) external pure returns (int256) { return FP256Lib.expm1(x); }
     function neg(int256 x) external pure returns (int256) { return FP256Lib.neg(x); }
     function abs(int256 x) external pure returns (int256) { return FP256Lib.abs(x); }
     function sign(int256 x) external pure returns (int256) { return FP256Lib.sign(x); }

@@ -12,7 +12,7 @@ LIB = "fp256" if "--lib" in _sys.argv and _sys.argv[_sys.argv.index("--lib") + 1
 SRC = ROOT / "docs" / LIB / "precision.json"
 OUT = ROOT / "docs" / LIB / "precision.md"
 
-ORDER_FP256 = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "neg", "abs", "sign", "cmp", "lt", "eq",
+ORDER_FP256 = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "neg", "abs", "sign", "cmp", "lt", "eq",
                "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18"]
 
 ORDER = [

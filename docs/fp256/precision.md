@@ -14,6 +14,8 @@ Bits are relative correct bits of the result on the decoded values: the signific
 | exp | 637 | 5 | exact | exact |  |
 | ln | 2104 | 96 | exact | exact |  |
 | pow | 234 | 166 | exact | exact |  |
+| log1p | 1213 | 11 | exact | exact |  |
+| expm1 | 838 | 5 | exact | exact |  |
 | neg | 1346 | 3 | exact | exact |  |
 | abs | 1346 | 3 | exact | exact |  |
 | sign | 1346 | 3 | exact | exact |  |

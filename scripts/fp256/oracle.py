@@ -12,7 +12,7 @@ reverts, the oracle says `REVERT:<ErrorName>`.
 Words are the int256 bit patterns (0x-hex or decimal, two's complement).
 add, sub, mul, div, sqrt and the conversions are computed with exact
 rationals (fractions.Fraction, math.isqrt), so they are bit-exact
-references; exp, ln and pow go through mpmath at 300 digits and are
+references; exp, ln, pow, log1p and expm1 go through mpmath at 300 digits and are
 rounded the same way, and the tests allow those ops their kernel floors.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ import tempfile
 from fractions import Fraction
 from pathlib import Path
 
-from mpmath import mp, mpf, log, exp as mexp, power, frexp
+from mpmath import mp, mpf, log, exp as mexp, power, frexp, log1p, expm1
 
 mp.dps = 300
 
@@ -194,6 +194,26 @@ def op_ln(x):
     if x == ONE:
         return 0
     return encode_mpf(log(to_mpf(x)))
+
+
+def op_log1p(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    if s and e - BIAS >= 0:
+        raise Revert("OutOfRange")
+    return encode_mpf(log1p(to_mpf(x)))
+
+
+def op_expm1(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    if e - BIAS >= 18:
+        if s:
+            return NEGONE
+        raise Revert("Overflow")
+    return encode_mpf(expm1(to_mpf(x)))
 
 
 def op_pow(x, y):

@@ -33,6 +33,12 @@
 // rounded at every committed vector and pow loses only log2|y log2 x|
 // bits. ln within 2^-8 of one and exp below 2^-118 use short series so
 // small arguments keep their relative precision.
+//
+// Release three adds log1p and expm1 on the same kernels: near zero a
+// series times the argument, above it 1 + x formed exactly under its
+// leading bit (log1p) or the one subtracted from exp's unrounded 2^f on
+// the same grid (expm1), so neither cancels; both correctly rounded at
+// every committed vector.
 
 /// @error Overflow() 0x35278d12
 /// @error DivisionByZero() 0x23d359a3
@@ -253,11 +259,22 @@ function log2m(mm) -> r {
     r := add(acc, log2poly(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)))
 }
 
-/// ln(1 + d) / d: the series sum_{k>=0} (-d)^k / (k + 1) at 2^-254 for
-/// |d| < 2^-8, Horner in 32 terms (truncation below 2^-261), in
-/// two halves so the Yul pipeline's stack stays shallow.
+/// ln(1 + d) / d: the series sum_{k>=0} (-d)^k / (k + 1) at 2^-254, Horner
+/// in 32 terms for |d| < 2^-8 (truncation below 2^-261), from zero
+/// through two 16-term quarters so the Yul pipeline's stack stays shallow.
 function ln1pseries(df) -> p {
-    p := ln1ptail(df)
+    p := ln1pq1(df, ln1pq2(df, 0))
+}
+
+/// The same series in 64 terms for |d| < 2^-4 (truncation below
+/// 2^-262): log1p's band, four quarters.
+function ln1pwide(df) -> p {
+    p := ln1pq1(df, ln1pq2(df, ln1pq3(df, ln1pq4(df, 0))))
+}
+
+/// Horner steps for terms 15 down to 0 of the ln series.
+function ln1pq1(df, q) -> p {
+    p := q
     p := add(0xfc00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
     p := add(0x444444444444444444444444444444444444444444444444444444444444444, mulw(df, p))
     p := add(0xfb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6e, mulw(df, p))
@@ -276,9 +293,10 @@ function ln1pseries(df) -> p {
     p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
 }
 
-/// The upper 16 terms of ln1pseries.
-function ln1ptail(df) -> p {
-    p := 0xfe00000000000000000000000000000000000000000000000000000000000000
+/// Horner steps for terms 31 down to 16 of the ln series.
+function ln1pq2(df, q) -> p {
+    p := q
+    p := add(0xfe00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
     p := add(0x210842108421084210842108421084210842108421084210842108421084211, mulw(df, p))
     p := add(0xfdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddde, mulw(df, p))
     p := add(0x234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c, mulw(df, p))
@@ -294,6 +312,83 @@ function ln1ptail(df) -> p {
     p := add(0x35e50d79435e50d79435e50d79435e50d79435e50d79435e50d79435e50d794, mulw(df, p))
     p := add(0xfc71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c72, mulw(df, p))
     p := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, mulw(df, p))
+}
+
+/// Horner steps for terms 47 down to 32 of the ln series.
+function ln1pq3(df, q) -> p {
+    p := q
+    p := add(0xfeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+    p := add(0x15c9882b9310572620ae4c415c9882b9310572620ae4c415c9882b931057262, mulw(df, p))
+    p := add(0xfe9bd37a6f4de9bd37a6f4de9bd37a6f4de9bd37a6f4de9bd37a6f4de9bd37a7, mulw(df, p))
+    p := add(0x16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c, mulw(df, p))
+    p := add(0xfe8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8c, mulw(df, p))
+    p := add(0x17d05f417d05f417d05f417d05f417d05f417d05f417d05f417d05f417d05f4, mulw(df, p))
+    p := add(0xfe79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e79e7a, mulw(df, p))
+    p := add(0x18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c18f9c190, mulw(df, p))
+    p := add(0xfe66666666666666666666666666666666666666666666666666666666666666, mulw(df, p))
+    p := add(0x1a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a41a4, mulw(df, p))
+    p := add(0xfe50d79435e50d79435e50d79435e50d79435e50d79435e50d79435e50d79436, mulw(df, p))
+    p := add(0x1bacf914c1bacf914c1bacf914c1bacf914c1bacf914c1bacf914c1bacf914c, mulw(df, p))
+    p := add(0xfe38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39, mulw(df, p))
+    p := add(0x1d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d41d4, mulw(df, p))
+    p := add(0xfe1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e, mulw(df, p))
+    p := add(0x1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f07c1f0, mulw(df, p))
+}
+
+/// Horner steps for terms 63 down to 48 of the ln series.
+function ln1pq4(df, q) -> p {
+    p := q
+    p := add(0xff00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+    p := add(0x104104104104104104104104104104104104104104104104104104104104104, mulw(df, p))
+    p := add(0xfef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef7bdef8, mulw(df, p))
+    p := add(0x10c9714fbcda3ac10c9714fbcda3ac10c9714fbcda3ac10c9714fbcda3ac10d, mulw(df, p))
+    p := add(0xfeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef, mulw(df, p))
+    p := add(0x115b1e5f75270d0456c797dd49c34115b1e5f75270d0456c797dd49c34115b2, mulw(df, p))
+    p := add(0xfee58469ee58469ee58469ee58469ee58469ee58469ee58469ee58469ee5846a, mulw(df, p))
+    p := add(0x11f7047dc11f7047dc11f7047dc11f7047dc11f7047dc11f7047dc11f7047dc, mulw(df, p))
+    p := add(0xfedb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db, mulw(df, p))
+    p := add(0x129e4129e4129e4129e4129e4129e4129e4129e4129e4129e4129e4129e412a, mulw(df, p))
+    p := add(0xfed097b425ed097b425ed097b425ed097b425ed097b425ed097b425ed097b426, mulw(df, p))
+    p := add(0x13521cfb2b78c13521cfb2b78c13521cfb2b78c13521cfb2b78c13521cfb2b8, mulw(df, p))
+    p := add(0xfec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec5, mulw(df, p))
+    p := add(0x141414141414141414141414141414141414141414141414141414141414141, mulw(df, p))
+    p := add(0xfeb851eb851eb851eb851eb851eb851eb851eb851eb851eb851eb851eb851eb8, mulw(df, p))
+    p := add(0x14e5e0a72f05397829cbc14e5e0a72f05397829cbc14e5e0a72f05397829cbc, mulw(df, p))
+}
+
+/// (e^d - 1) / d: the series sum_{k>=0} d^k / (k + 1)! at 2^-254 for
+/// |d| < 2^-8, Horner in 24 terms (truncation below 2^-263), in
+/// two halves as ln1pseries.
+function expm1series(df) -> p {
+    p := expm1tail(df)
+    p := add(0x23ddb1dff1b12f6a89b530f59fd097d8039ee96cf38e3b216956e2a95, mulw(df, p))
+    p := add(0x1ae64567f544e38fe747e4b837dc71e202b72f11b6aaac590f0129fef9, mulw(df, p))
+    p := add(0x127e4fb7789f5c72ef016d3ea6678e4b61ddf05c2d95567d3a50ccdf4b2, mulw(df, p))
+    p := add(0xb8ef1d2ab6399c7d560e4472800b8ef1d2ab6399c7d560e4472800b8ef2, mulw(df, p))
+    p := add(0x680680680680680680680680680680680680680680680680680680680680, mulw(df, p))
+    p := add(0x3403403403403403403403403403403403403403403403403403403403403, mulw(df, p))
+    p := add(0x16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c17, mulw(df, p))
+    p := add(0x88888888888888888888888888888888888888888888888888888888888889, mulw(df, p))
+    p := add(0x2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+    p := add(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+    p := add(0x2000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+    p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+}
+
+/// The upper 12 terms of expm1series.
+function expm1tail(df) -> p {
+    p := 0x7cb3c065cbd5df3292d019f2a7628819cffac21b76c8
+    p := add(0xbb0da098b1c0cecbdc3826ebfb13cc26b7f82329322c2, mulw(df, p))
+    p := add(0x10ce396db7f8529450c90b7f338ec7577a874b28b381f78, mulw(df, p))
+    p := add(0x171b8ef6dcf5718bef146fcee6e45218487a0757f6d2b457, mulw(df, p))
+    p := add(0x1e542ba402022507a9cad2bf8f0babbfdf2029a373f48cb25, mulw(df, p))
+    p := add(0x25e9368d0282ae49943d876f72ce96afd6e8340c50f1afdeed, mulw(df, p))
+    p := add(0x2d04f0c772fb2ef7600910d4585552f0cf33bdcea01f00d8b9e, mulw(df, p))
+    p := add(0x32a58ee0615a94d64c0a32eee35ffd4ee91a35887422e0f3d121, mulw(df, p))
+    p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e333, mulw(df, p))
+    p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e3337, mulw(df, p))
+    p := add(0x3272e95180f93a4175be28bbf47c9d519a311b52ebaebe12dd5003c, mulw(df, p))
+    p := add(0x2c248c2750da12f9470663a475ed09a766eaf7e88e38e65081a60347, mulw(df, p))
 }
 
 
@@ -478,7 +573,7 @@ function fp256_sqrt(x) -> r {
 // Exponentials and logarithms, on the 2^-254 kernels
 // ---------------------------------------------------------------------------
 
-/// A number with unbiased exponent u <= -9 as a signed 2^-254 fixed word
+/// A number with unbiased exponent u <= -5 as a signed 2^-254 fixed word
 /// (exact: the significand only moves right when u < -18).
 function tofixed254(s, u, m) -> t {
     switch slt(u, sub(0, 18))
@@ -488,19 +583,39 @@ function tofixed254(s, u, m) -> t {
 }
 
 /// 2^(k + f) for an integer k below 2^19 and f in [0, 1) at 2^-254, or
-/// 2^-(k + f) when s is set: the integer part goes to the exponent, 2^f
-/// comes from the kernel and sits under the hidden bit, one rounding.
-function exp2kf(s, k, f) -> r {
+/// 2^-(k + f) when s is set, unrounded: the signed integer part kk and 2^f
+/// at 2^-254 in [1, 2) from the kernel.
+function exp2kv(s, k, f) -> kk, v {
+    kk := k
     if s {
-        k := sub(0, k)
+        kk := sub(0, k)
         if f {
-            k := sub(k, 1)
+            kk := sub(kk, 1)
             f := sub(0x4000000000000000000000000000000000000000000000000000000000000000, f)
         }
     }
-    let v := 0x4000000000000000000000000000000000000000000000000000000000000000
+    v := 0x4000000000000000000000000000000000000000000000000000000000000000
     if f { v := exp2frac(f) }
-    r := normround(0, add(k, 0x3ffff), v)
+}
+
+/// exp2kv rounded once: the integer part goes to the exponent, 2^f sits
+/// under the hidden bit.
+function exp2kf(s, k, f) -> r {
+    let kk, v := exp2kv(s, k, f)
+    r := normround(0, add(kk, 0x3ffff), v)
+}
+
+/// x log2 e for x = m 2^(u - 236): the 512-bit product of the significand
+/// and log2 e in two words (2^-508), split into the integer part k and the
+/// fraction f at 2^-254.
+function explog2(u, m) -> k, f {
+    let p1, p0 := mul512(m, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
+    let lo := mulwu(m, 0x3bc3887eeaa2ed9ac49b25eeb82d7c167d52173cc1895213f897f5e06a7be736)
+    p0 := add(p0, lo)
+    p1 := add(p1, lt(p0, lo))
+    let sh := sub(236, u)
+    f := and(shr512(p1, p0, sh), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+    k := shr512(p1, p0, add(sh, 254))
 }
 
 /// @export exp(int256 x) returns (int256 r)
@@ -526,13 +641,7 @@ function fp256_exp(x) -> r {
         r := fp256_add(one, fp256_mul(x, fp256_add(one, sub(x, 0x100000000000000000000000000000000000000000000000000000000000))))
         leave
     }
-    let p1, p0 := mul512(m, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
-    let lo := mulwu(m, 0x3bc3887eeaa2ed9ac49b25eeb82d7c167d52173cc1895213f897f5e06a7be736)
-    p0 := add(p0, lo)
-    p1 := add(p1, lt(p0, lo))
-    let sh := sub(236, u)
-    let f := and(shr512(p1, p0, sh), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
-    let k := shr512(p1, p0, add(sh, 254))
+    let k, f := explog2(u, m)
     if iszero(lt(k, 0x80000)) {
         if s { r := 0 leave }
         rev(0x35278d12)
@@ -544,8 +653,13 @@ function fp256_exp(x) -> r {
 /// Lm and a scale Ls: log2 x = Lm 2^Ls. The exponent's integer part and the
 /// kernel's fraction share the word, Lm holding 254 or 255 bits.
 function log2pair(e, m) -> Lm, Ls {
-    let u := sub(e, 0x3ffff)
-    let lg := log2m(shl(18, m))
+    Lm, Ls := log2pairm(sub(e, 0x3ffff), shl(18, m))
+}
+
+/// log2(mm 2^u) for a mantissa mm in [1, 2) at 2^-254 and an integer u, as
+/// log2pair.
+function log2pairm(u, mm) -> Lm, Ls {
+    let lg := log2m(mm)
     if iszero(u) { Lm := lg Ls := sub(0, 254) leave }
     let sh := add(msb(absw(u)), 1)
     Lm := add(shl(sub(254, sh), u), shr(sh, lg))
@@ -642,6 +756,86 @@ function fp256_pow(x, y) -> r {
         r := exp2kf(s, k, and(shr512(p1, p0, sub(q, 254)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
     }
 }
+/// @export log1p(int256 x) returns (int256 r)
+/// @domain x > -1
+/// @reverts OutOfRange() for x <= -1 or a word that is not a number
+/// @notice ln(1 + x) without forming a rounded 1 + x. Below 2^-4, x times
+///         the ln series at 2^-254 (32 terms below 2^-8, 64 above), so the
+///         relative precision holds all the way down; above, 1 + x exactly
+///         on a 2^-254 grid under its leading bit, the log2 kernel and one
+///         product with ln 2. Correctly rounded at every committed vector.
+function fp256_log1p(x) -> r {
+    let s, e, m := unpack(x)
+    if iszero(e) { r := 0 leave }
+    let u := sub(e, 0x3ffff)
+    if slt(u, sub(0, 4)) {
+        let df := tofixed254(s, u, m)
+        let p := 0
+        switch slt(u, sub(0, 8))
+        case 1 { p := ln1pseries(df) }
+        default { p := ln1pwide(df) }
+        let p1, p0 := mul512(m, p)
+        r := normround(s, e, or(shl(20, p1), shr(236, p0)))
+        leave
+    }
+    if s { if iszero(slt(u, 0)) { rev(0x7db3aba7) } }
+    // 1 + x = a 2^(b - 254) exactly, b = max(u, 0); a below 2^256
+    let b := 0
+    if sgt(u, 0) { b := u }
+    let a := shl(sub(254, b), 1)
+    switch s
+    case 0 { a := add(a, shl(add(18, sub(u, b)), m)) }
+    default { a := sub(a, shl(add(18, u), m)) }
+    let n := msb(a)
+    switch lt(n, 254)
+    case 1 { a := shl(sub(254, n), a) }
+    default { a := shr(sub(n, 254), a) }
+    let Lm, Ls := log2pairm(add(b, sub(n, 254)), a)
+    let l := mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)
+    r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
+}
+
+/// @export expm1(int256 x) returns (int256 r)
+/// @domain x < 2^18
+/// @reverts Overflow() when e^x - 1 does not fit (x above about 181,705); OutOfRange() for a word that is not a number
+/// @notice e^x - 1 without cancellation. Below 2^-8, x times the series
+///         sum x^k / (k + 1)! at 2^-254; above, exp's split of x log2 e and
+///         its unrounded 2^f, with the one subtracted on the same 2^-254
+///         grid. Correctly rounded at every committed vector; -1 below
+///         about -176.
+function fp256_expm1(x) -> r {
+    let s, e, m := unpack(x)
+    if iszero(e) { r := 0 leave }
+    let u := sub(e, 0x3ffff)
+    if slt(u, sub(0, 8)) {
+        let p1, p0 := mul512(m, expm1series(tofixed254(s, u, m)))
+        r := normround(s, e, or(shl(20, p1), shr(236, p0)))
+        leave
+    }
+    if iszero(slt(u, 18)) {
+        if s { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+        rev(0x35278d12)
+    }
+    let k, f := explog2(u, m)
+    if iszero(lt(k, 0x80000)) {
+        if s { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+        rev(0x35278d12)
+    }
+    let kk, v := exp2kv(s, k, f)
+    switch s
+    case 0 {
+        // (v - 2^(254 - kk)) 2^(kk - 254), kk >= 0; the one is below the grid past kk = 254
+        r := normround(0, add(0x3ffff, kk), sub(v, shl(sub(254, kk), 1)))
+    }
+    default {
+        // 1 - v 2^kk for kk <= -1, with v 2^kk rounded up so the magnitude is floored
+        let nk := sub(0, kk)
+        let c := shr(nk, v)
+        if and(v, sub(shl(nk, 1), 1)) { c := add(c, 1) }
+        r := normround(1, 0x3ffff, sub(0x4000000000000000000000000000000000000000000000000000000000000000, c))
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Sign and comparison
 // ---------------------------------------------------------------------------
