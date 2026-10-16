@@ -134,7 +134,7 @@ accrual-survey:
 	@$(PY) scripts/accrual/survey.py
 
 talk:
-	@uv run --with matplotlib --with weasyprint python scripts/talk/deck.py
+	@uv run --with matplotlib --with weasyprint --with mpmath python scripts/talk/deck.py
 
 pi-compare: build
 	@forge test --match-contract PiCompare -vv | $(PY) scripts/fp127/pi_compare.py
