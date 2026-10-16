@@ -150,3 +150,6 @@ canvas.cloth.on { opacity: 1; }
 .foot a { color: var(--g-700); text-decoration: none; }
 .foot a:hover { color: var(--ink); text-decoration: underline; }
 .foot p { margin: 0; }
+
+/* the scrollbar always has its gutter, so a short page and a long one line up and a page change never shifts the layout sideways */
+html { scrollbar-gutter: stable; }
