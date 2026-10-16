@@ -42,6 +42,8 @@
 // (scripts/fp256/generators/erf256.py), so erfc is a product, never a
 // difference, with e^(-y^2) from the exact square: a series below 1/2,
 // Taylor around 45 anchors to 6, a scaled continued fraction beyond.
+// lambertW0 and lambertWm1 take FP127's seeds and Newton on the float ops,
+// with 1 + e x exact and the ten-term branch-point series near -1/e.
 
 /// @error Overflow() 0x35278d12
 /// @error DivisionByZero() 0x23d359a3
@@ -1224,6 +1226,142 @@ function fp256_normCdf(x) -> r {
         leave
     }
     r := normround(0, 0x3fffe, sub(0x8000000000000000000000000000000000000000000000000000000000000000, shr(sub(0, ee), D)))
+}
+
+// ---------------------------------------------------------------------------
+// Lambert W (release three)
+// ---------------------------------------------------------------------------
+
+/// q = 1 + e x for x = -m 2^-238 in [-1/2, -1/4), from the exact product of
+/// the significand with e in two words (2^-492), rounded once. Reverts
+/// OutOfRange when q < 0 (x below -1/e); zero exactly at the word nearest
+/// -1/e only if it is -1/e.
+function lwq(m) -> q {
+    let p1, p0 := mul512(m, 0xadf85458a2bb4a9aafdc5620273d3cf1d8b9c583ce2d3695a9e13641146433fb)
+    let c1, c0 := mul512(m, 0x3324e7738926cfbe5f4bf8d8d8c31d763da06c80abb1185eb4f7c7b5757f5958)
+    let t := or(shl(2, c1), shr(254, c0))
+    let lo := add(p0, t)
+    let hi := add(p1, lt(lo, p0))
+    // D = 2^492 - P
+    let dl := sub(0, lo)
+    let dh := sub(sub(0x100000000000000000000000000000000000000000000000000000000000, hi), iszero(iszero(lo)))
+    if slt(dh, 0) { rev(0x7db3aba7) }
+    if iszero(or(dh, dl)) { q := 0 leave }
+    let n := msb(dl)
+    if dh { n := add(256, msb(dh)) }
+    let d := shl(sub(254, n), dl)
+    if gt(n, 254) { d := shr512(dh, dl, sub(n, 254)) }
+    q := normround(0, sub(add(0x3ffff, n), 492), d)
+}
+
+/// The branch-point series W = -1 + sum_(k>=1) mu_k p^k, p = +-sqrt(2(1 + e x)),
+/// ten terms (Corless et al.), by Horner on the float ops; its error is about
+/// 0.004 p^10, under the last bit for |p| < 2^-21.
+function lwser(p) -> r {
+    r := 0x3fff78a2b4a92630e73c3e874bf9fb1c7fb474ec251c5bbed9eaf374b634b3da
+    r := fp256_add(0xbfff83b20565de449b98bcb4e16db1b857921d7a5610d5fd926a88a237f7403e, fp256_mul(p, r))
+    r := fp256_add(0x3fff9002c98983bc435a045285a1b7069470dcdc800879e4896c9e5fb4ad8b52, fp256_mul(p, r))
+    r := fp256_add(0xbfff9a9bbcb24fe29f595de1b82e796c546675cfa8d4a04088c62d92416ff112, fp256_mul(p, r))
+    r := fp256_add(0x3fffa6c901e573ac901e573ac901e573ac901e573ac901e573ac901e573ac902, fp256_mul(p, r))
+    r := fp256_add(0xbfffb4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b, fp256_mul(p, r))
+    r := fp256_add(0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39, fp256_mul(p, r))
+    r := fp256_add(0xbfffd55555555555555555555555555555555555555555555555555555555555, fp256_mul(p, r))
+    r := fp256_add(0x3ffff00000000000000000000000000000000000000000000000000000000000, fp256_mul(p, r))
+    r := fp256_add(0xbffff00000000000000000000000000000000000000000000000000000000000, fp256_mul(p, r))
+}
+
+/// One log-form Newton step for w + ln|w| = lx: w' = w - w (w + ln|w| - lx) / (w + 1).
+/// It never forms e^w, which leaves the format at both ends of the domain.
+function lwlog(w, lx) -> wn {
+    let f := fp256_sub(fp256_add(w, fp256_ln(fp256_abs(w))), lx)
+    wn := fp256_sub(w, fp256_div(fp256_mul(w, f), fp256_add(w, 0x3ffff00000000000000000000000000000000000000000000000000000000000)))
+}
+
+/// @export lambertW0(int256 x) returns (int256 r)
+/// @domain x >= -1/e
+/// @reverts OutOfRange() below -1/e or for a word that is not a number
+/// @notice The principal branch of Lambert W, W(x) e^W(x) = x, W >= -1.
+///         Seeds as FP127's: the branch-point series in p = sqrt(2(1 + e x))
+///         with 1 + e x exact, x - x^2 + 3/2 x^3 on (-1/4, 0), Winitzki's
+///         L (1 - ln(1 + L)/(2 + L)), L = ln(1 + x), above. Six Newton steps
+///         on the float ops: w e^w = x up to 3, the log form w + ln w = ln x
+///         above (no e^w, so the whole range up to W = 181,700 works). Within
+///         one ULP across the domain except near -1/e, where W's slope is
+///         infinite: below p = 2^-21 the ten-term series alone (within one
+///         ULP), above it Newton loses log2(1/p) bits, about 22 at worst.
+function fp256_lambertW0(x) -> r {
+    let s, e, m := unpack(x)
+    if iszero(e) { r := 0 leave }
+    let u := sub(e, 0x3ffff)
+    let one := 0x3ffff00000000000000000000000000000000000000000000000000000000000
+    let w := 0
+    switch s
+    case 1 {
+        if sgt(u, sub(0, 2)) { rev(0x7db3aba7) }
+        switch eq(u, sub(0, 2))
+        case 1 {
+            let q := lwq(m)
+            if iszero(q) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+            let p := fp256_sqrt(fp256_add(q, q))
+            if slt(p, 0x3ffea00000000000000000000000000000000000000000000000000000000000) { r := lwser(p) leave }
+            let p2 := fp256_mul(p, p)
+            w := fp256_add(fp256_sub(fp256_sub(p, one), fp256_mul(p2, 0x3fffd55555555555555555555555555555555555555555555555555555555555)),
+                           fp256_mul(fp256_mul(p2, p), 0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39))
+        }
+        default {
+            let x2 := fp256_mul(x, x)
+            w := fp256_add(fp256_sub(x, x2), fp256_mul(x2, fp256_mul(x, 0x3ffff80000000000000000000000000000000000000000000000000000000000)))
+        }
+    }
+    default {
+        let l := fp256_ln(fp256_add(x, one))
+        w := fp256_mul(l, fp256_sub(one, fp256_div(fp256_ln(fp256_add(l, one)), fp256_add(l, 0x4000000000000000000000000000000000000000000000000000000000000000))))
+    }
+    switch and(iszero(s), sgt(x, 0x4000080000000000000000000000000000000000000000000000000000000000))
+    case 1 {
+        let lx := fp256_ln(x)
+        for { let i := 0 } lt(i, 6) { i := add(i, 1) } { w := lwlog(w, lx) }
+    }
+    default {
+        // w' = w - (w - x e^-w) / (w + 1)
+        for { let i := 0 } lt(i, 6) { i := add(i, 1) } {
+            w := fp256_sub(w, fp256_div(fp256_sub(w, fp256_div(x, fp256_exp(w))), fp256_add(w, one)))
+        }
+    }
+    r := w
+}
+
+/// @export lambertWm1(int256 x) returns (int256 r)
+/// @domain -1/e <= x < 0
+/// @reverts OutOfRange() outside that or for a word that is not a number
+/// @notice The secondary real branch of Lambert W, W(x) <= -1. Seeds as
+///         FP127's: the branch-point series in -p for x < -1/4, the
+///         asymptotic L - ln(-L) + ln(-L)/L, L = ln(-x), above; seven
+///         log-form Newton steps (w + ln(-w) = ln(-x), no e^w: W reaches
+///         about -181,700 at the bottom of the format). Within one ULP away
+///         from -1/e; near it as lambertW0.
+function fp256_lambertWm1(x) -> r {
+    let s, e, m := unpack(x)
+    let u := sub(e, 0x3ffff)
+    if or(iszero(s), sgt(u, sub(0, 2))) { rev(0x7db3aba7) }
+    let lx := fp256_ln(and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+    let w := 0
+    switch eq(u, sub(0, 2))
+    case 1 {
+        let q := lwq(m)
+        if iszero(q) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+        let p := fp256_sqrt(fp256_add(q, q))
+        if slt(p, 0x3ffea00000000000000000000000000000000000000000000000000000000000) { r := lwser(fp256_neg(p)) leave }
+        let p2 := fp256_mul(p, p)
+        w := fp256_sub(fp256_sub(fp256_sub(0xbffff00000000000000000000000000000000000000000000000000000000000, p), fp256_mul(p2, 0x3fffd55555555555555555555555555555555555555555555555555555555555)),
+                       fp256_mul(fp256_mul(p2, p), 0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39))
+    }
+    default {
+        let ll := fp256_ln(fp256_neg(lx))
+        w := fp256_add(fp256_sub(lx, ll), fp256_div(ll, lx))
+    }
+    for { let i := 0 } lt(i, 7) { i := add(i, 1) } { w := lwlog(w, lx) }
+    r := w
 }
 
 // ---------------------------------------------------------------------------

@@ -146,4 +146,23 @@ contract Behaviour256 is FP256Harness {
         int256 z = obj.neg(obj.mul(y, obj.sqrt(TWO)));
         assertGe(_bits(obj.erfc(y), obj.mul(TWO, obj.normCdf(z))), 220, "erfc(30) = 2 Phi(-30 sqrt 2)");
     }
+
+    /// Lambert W: the defining identity on both branches, the domain ends.
+    function test_lambert() public view {
+        assertEq(obj.lambertW0(0), 0);
+        int256 em1 = obj.exp(obj.neg(ONE));                          // 1/e
+        int256 w = obj.lambertW0(obj.fromUint(10));
+        assertGe(_bits(obj.mul(w, obj.exp(w)), obj.fromUint(10)), 234, "W0(10) e^W0(10) = 10");
+        assertGe(_bits(obj.lambertW0(obj.mul(ONE, obj.exp(ONE))), ONE), 235, "W0(e) = 1");
+        int256 x = obj.neg(obj.fromFixed18(100000000000000000));    // -0.1
+        int256 v = obj.lambertWm1(x);
+        assertGe(_bits(obj.mul(v, obj.exp(v)), x), 234, "Wm1(-0.1) e^Wm1 = -0.1");
+        assertEq(obj.lt(v, obj.neg(ONE)), 1, "Wm1 is below -1");
+        _expectRevert(abi.encodeCall(IFP256.lambertW0, (obj.neg(HALF))), IFP256.OutOfRange.selector, "W0(-1/2)");
+        _expectRevert(abi.encodeCall(IFP256.lambertWm1, (em1)), IFP256.OutOfRange.selector, "Wm1(1/e)");
+        _expectRevert(abi.encodeCall(IFP256.lambertWm1, (0)), IFP256.OutOfRange.selector, "Wm1(0)");
+        // the far ends: W0 near the top of the format, Wm1 near the bottom
+        assertEq(obj.lt(obj.fromUint(181000), obj.lambertW0(MAX_WORD)), 1);
+        assertEq(obj.lt(obj.lambertWm1(obj.neg(MIN_NORMAL)), obj.neg(obj.fromUint(181000))), 1);
+    }
 }

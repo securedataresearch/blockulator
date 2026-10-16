@@ -62,6 +62,8 @@ rounds to zero with the sign dropped.
 | `erf` | below ½, x·(2/√π)·e^(−x²) times the all-positive series Σ (2x²)^k/(2k+1)!!; above, 1 − erfc; ±1 from \|x\| ≥ 13 | never |
 | `erfc` | a product, never a difference, for x ≥ ½: e^(−x²)·g(x), g = e^(x²)·erfc from a Taylor series around 45 anchors on [½, 6] (one stored g(j/8) each, coefficients from g′ = 2xg − 2/√π) and a continued fraction scaled by x^k beyond; e^(−x²) from the exact 474-bit square, so the tail keeps 71 digits until it underflows near x = 427; 1 − erf below ½, 2 − erfc(−x) below zero | never |
 | `normCdf` | Φ(x) = erfc(−x/√2)/2 with e^(−x²/2) from the exact square; the left tail keeps 71 digits until it underflows near x = −603; exactly one from x ≥ 13√2 | never |
+| `lambertW0` | W e^W = x, W ≥ −1: FP127's seeds (the branch-point series in p = √(2(1 + e·x)) with 1 + e·x exact, x − x² + 3/2·x³, Winitzki), six Newton steps on the float ops (w·e^w = x up to 3, w + ln w = ln x above, so W reaches 181,700); within one ULP away from −1/e; near it the ten-term series below p = 2^−21 and Newton above, 218 bits at worst | `OutOfRange` below −1/e |
+| `lambertWm1` | W ≤ −1 on [−1/e, 0): the series in −p or L − ln(−L) + ln(−L)/L, seven log-form Newton steps (no e^w; W reaches −181,700); as `lambertW0` near −1/e | `OutOfRange` outside [−1/e, 0) |
 | `pow` | 2^(y log2 x): log2 x as a scaled word from the kernel (or the near-one series), its exact 512-bit product with y's significand split into the integer part and a fraction at 2^−254, then 2^f and one rounding; shortcuts for y ∈ {1, 2, ½, −1}; 0^0 = 1 | `OutOfRange` for x < 0, `DivisionByZero` for 0^negative, `Overflow` |
 | `neg`, `abs`, `sign` | bit operations; −0 is 0 | `OutOfRange` |
 | `cmp`, `lt`, `eq` | through a monotone key (negatives mirrored); `eq` is bit equality; results are plain integers | `OutOfRange` |
@@ -101,6 +103,11 @@ lowest bit sits at 2^−(236 − u)/2), and their Horner floors land exactly on
 the tie with the true value on the side that rounds up; tie vectors for
 each are in the spec. `log1p` keeps its series up to 2^−4 so the log2
 kernel's 2^−250 never meets a result small enough for it to matter.
+
+`lambertW0` and `lambertWm1` iterate on the rounded float ops, so they
+are within one ULP away from −1/e (235 bits at worst) but not correctly
+rounded; near −1/e Newton loses log2(1/p) bits until the branch-point
+series takes over, and the floor is 218 bits.
 
 `pow` is held to one ULP (236 bits): t = y log2 x carries the kernel's
 2^−250 scaled by |t|, and 7 of its 234 vectors sit one ULP from the

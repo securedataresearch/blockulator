@@ -1,6 +1,6 @@
 # Edges: where each library's domain ends
 
-Generated 2026-10-16 by `make edges`. Versions: fp127 c35c1b5, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
+Generated 2026-10-16 by `make edges`. Versions: fp127 2210689, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
 
 Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 200 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. FP127Lib coincides with FP127 and is omitted. The method is in the Methodology section at the end.
 
@@ -114,15 +114,15 @@ The principal Lambert branch near its branch point -1/e, where the slope is infi
 
 | probe | truth | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | fp256 |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `lambertW0(-1/e+1e-6)` | `-0.99767017` | 35 | n/a | 15 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertW0(-1/e+1e-9)` | `-0.99992627` | 34 | n/a | 13 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertW0(-1/e+1e-12)` | `-0.99999767` | 32 | n/a | 12 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertW0(-1/e+1e-15)` | `-0.99999993` | 30 | n/a | 10 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertW0(-1/e+1e-18)` one grid step from the branch point | `-1.0` | 29 | n/a | 8 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertW0(-1e-18)` | `-1.0e-18` | 20 | n/a | 17 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertW0(1e-18)` | `1.0e-18` | 20 | n/a | 18 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertW0(1e30)` | `64.904634` | 41 | RANGE | 20 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertW0(1e38)` | `83.078448` | 40 | RANGE | 20 | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| `lambertW0(-1/e+1e-6)` | `-0.99767017` | 35 | n/a | 15 | n/a | n/a | n/a | n/a | n/a | n/a | 69 |
+| `lambertW0(-1/e+1e-9)` | `-0.99992627` | 34 | n/a | 13 | n/a | n/a | n/a | n/a | n/a | n/a | 67 |
+| `lambertW0(-1/e+1e-12)` | `-0.99999767` | 32 | n/a | 12 | n/a | n/a | n/a | n/a | n/a | n/a | 65 |
+| `lambertW0(-1/e+1e-15)` | `-0.99999993` | 30 | n/a | 10 | n/a | n/a | n/a | n/a | n/a | n/a | 64 |
+| `lambertW0(-1/e+1e-18)` one grid step from the branch point | `-1.0` | 29 | n/a | 8 | n/a | n/a | n/a | n/a | n/a | n/a | 62 |
+| `lambertW0(-1e-18)` | `-1.0e-18` | 20 | n/a | 17 | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
+| `lambertW0(1e-18)` | `1.0e-18` | 20 | n/a | 18 | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
+| `lambertW0(1e30)` | `64.904634` | 41 | RANGE | 20 | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
+| `lambertW0(1e38)` | `83.078448` | 40 | RANGE | 20 | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
 
 ## W-1(x)
 
@@ -130,9 +130,9 @@ The secondary branch, toward zero from below; FP127 only.
 
 | probe | truth | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | fp256 |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `lambertWm1(-1/e+1e-9)` | `-1.0000737` | 34 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertWm1(-1e-10)` | `-26.295239` | 30 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
-| `lambertWm1(-1e-30)` | `-73.37311` | 11 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a |
+| `lambertWm1(-1/e+1e-9)` | `-1.0000737` | 34 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | 67 |
+| `lambertWm1(-1e-10)` | `-26.295239` | 30 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
+| `lambertWm1(-1e-30)` | `-73.37311` | 11 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
 
 ## log1p(x)
 

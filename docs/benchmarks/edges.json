@@ -2,7 +2,7 @@
  "generated": "2026-10-16",
  "description": "Edges: one-shot evaluations at the ends of each library's domain, every probe through every library in its native representation, against mpmath at 200 digits. See methodology.",
  "versions": {
-  "fp127": "c35c1b5",
+  "fp127": "2210689",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -8245,10 +8245,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "-0.997670166272007889180233477978950456300023",
+       "digits": 69,
+       "digitsFormat": 70,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "5.66403e-70",
+       "raw": "-28948133251828082970481055392116584246311178019159488979118675581225707751658",
+       "gas": 101547,
+       "zero": false
       }
      }
     },
@@ -8350,10 +8356,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "-0.999926268755381939963278028190034982609379",
+       "digits": 67,
+       "digitsFormat": 67,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "6.52929e-68",
+       "raw": "-28948132753554576646897898041930629696397671293716695426744786442286644270280",
+       "gas": 101331,
+       "zero": false
       }
      }
     },
@@ -8455,10 +8467,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "-0.999997668357830588824807239009953294772211",
+       "digits": 65,
+       "digitsFormat": 65,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "-2.18097e-66",
+       "raw": "-28948132737785554395305550111388854932639410207914430888778933459390578307971",
+       "gas": 90186,
+       "zero": false
       }
      }
     },
@@ -8560,10 +8578,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "-0.999999926266945067481447951489038789309731",
+       "digits": 64,
+       "digitsFormat": 72,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "3.65361e-65",
+       "raw": "-28948132737286881883873928180308800855408177404116011068129915836908839698501",
+       "gas": 27606,
+       "zero": false
       }
      }
     },
@@ -8665,10 +8689,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "-0.999999997668356020215063680339196315932982",
+       "digits": 62,
+       "digitsFormat": 71,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "-1.14387e-63",
+       "raw": "-28948132737271112462203569108918754831448809374592988254969714645712201220566",
+       "gas": 27594,
+       "zero": false
       }
      }
     },
@@ -8770,10 +8800,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "-1.0000000000000000010000000000000000015e-18",
+       "digits": 71,
+       "digitsFormat": 72,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "-1.62103e-72",
+       "raw": "-28954741526956544189789362437383309281050679199757622968105459577676258414885",
+       "gas": 80219,
+       "zero": false
       }
      }
     },
@@ -8875,10 +8911,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "9.999999999999999990000000000000000015e-19",
+       "digits": 71,
+       "digitsFormat": 71,
+       "exact": false,
+       "agree": 41,
+       "errUlps": null,
+       "relErr": "1.67002e-72",
+       "raw": "28941303091701553521995875437463602834823529577351607879352521980738986667690",
+       "gas": 103843,
+       "zero": false
       }
      }
     },
@@ -8977,10 +9019,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "64.9046337700461240796056036242928335672165",
+       "digits": 71,
+       "digitsFormat": 71,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "-3.96496e-72",
+       "raw": "28948576009924996500798695375049405843762544155665978783238544592550759913500",
+       "gas": 110713,
+       "zero": false
       }
      }
     },
@@ -9079,10 +9127,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "83.0784482131640959272041044694253846541147",
+       "digits": 71,
+       "digitsFormat": 71,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "5.5301e-72",
+       "raw": "28948607367689356510560351470457996755954299273120418522152588002814483331892",
+       "gas": 113755,
+       "zero": false
       }
      }
     }
@@ -9189,10 +9243,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "-1.00007373486899383602255136440424856348901",
+       "digits": 67,
+       "digitsFormat": 67,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "1.34635e-68",
+       "raw": "-28948132729128207701564727888828566571220532670823635630037088218904673773758",
+       "gas": 134420,
+       "zero": false
       }
      }
     },
@@ -9288,10 +9348,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "-26.2952388192469256941101288218549182377276",
+       "digits": 71,
+       "digitsFormat": 71,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "2.10267e-72",
+       "raw": "-28947619970377492834964074836621774786719289697690897430076677352157408276092",
+       "gas": 120836,
+       "zero": false
       }
      }
     },
@@ -9387,10 +9453,16 @@
        "unsupported": true
       },
       "fp256": {
-       "reverted": true,
-       "reason": "0x7bb9ae15",
-       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
-       "unsupported": true
+       "value": "-73.3731103138229767970674787581208745291816",
+       "digits": 71,
+       "digitsFormat": 71,
+       "exact": false,
+       "agree": 42,
+       "errUlps": null,
+       "relErr": "-5.1717e-72",
+       "raw": "-28947453996913838987618504035972825976294043067244309342410088381742842278254",
+       "gas": 116810,
+       "zero": false
       }
      }
     }
@@ -12125,7 +12197,7 @@
        "errUlps": null,
        "relErr": "1.34319e-64",
        "raw": "28947917543149129352130010076983708614275819021729791720147222255733789867246",
-       "gas": 19218,
+       "gas": 19206,
        "zero": false
       }
      }
@@ -12268,7 +12340,7 @@
        "errUlps": null,
        "relErr": "1.34319e-63",
        "raw": "28947983518341990280441951579799634301289322401064706918056063517862929188577",
-       "gas": 19456,
+       "gas": 19444,
        "zero": false
       }
      }
@@ -12411,7 +12483,7 @@
        "errUlps": null,
        "relErr": "1.34053e-64",
        "raw": "28947911991870674133801926570558604159856794081808934316643581589940051981084",
-       "gas": 19387,
+       "gas": 19375,
        "zero": false
       }
      }
@@ -12554,7 +12626,7 @@
        "errUlps": null,
        "relErr": "1.05299e-69",
        "raw": "28947923493524006030215667005921455077896718580559061186788842167176505692249",
-       "gas": 19263,
+       "gas": 19251,
        "zero": false
       }
      }
@@ -12697,7 +12769,7 @@
        "errUlps": null,
        "relErr": "-3.50981e-63",
        "raw": "28947911991870674135499232585243268893612530115901455429210222947255821216916",
-       "gas": 19405,
+       "gas": 19393,
        "zero": false
       }
      }
@@ -12834,7 +12906,7 @@
        "errUlps": null,
        "relErr": "0",
        "raw": "28946807601972013716666157735140216206837864771231039021830687397714893733888",
-       "gas": 11133,
+       "gas": 11121,
        "zero": false
       }
      }
@@ -12977,7 +13049,7 @@
        "errUlps": null,
        "relErr": "3.79624e-65",
        "raw": "28947912991206762973849963544919693860346262638428828811843770042974167824557",
-       "gas": 19369,
+       "gas": 19357,
        "zero": false
       }
      }

@@ -19,6 +19,8 @@ Bits are relative correct bits of the result on the decoded values: the signific
 | erf | 382 | 3 | exact | exact |  |
 | erfc | 437 | 3 | exact | exact |  |
 | normCdf | 434 | 3 | exact | exact |  |
+| lambertW0 | 815 | 72 | 218 | 252 | `0xbfffd78b56362ce82e5614a55440337bfb164715cbe72f8ed626af774eac2232` |
+| lambertWm1 | 662 | 677 | 221 | 249 | `0xbfffd78b56362a2f87ca7f8b1f34a837009ce2511a0d898f20e9a30dc45166f2` |
 | neg | 1346 | 3 | exact | exact |  |
 | abs | 1346 | 3 | exact | exact |  |
 | sign | 1346 | 3 | exact | exact |  |

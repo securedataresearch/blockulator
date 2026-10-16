@@ -26,7 +26,7 @@ import tempfile
 from fractions import Fraction
 from pathlib import Path
 
-from mpmath import mp, mpf, log, exp as mexp, power, frexp, log1p, expm1, erf as merf, erfc as merfc, ncdf
+from mpmath import mp, mpf, log, exp as mexp, power, frexp, log1p, expm1, erf as merf, erfc as merfc, ncdf, lambertw
 
 mp.dps = 300
 
@@ -235,6 +235,27 @@ def op_normCdf(x):
     if e == 0:
         return HALF
     return encode_mpf(ncdf(to_mpf(x)))
+
+
+def _below_branch(x):
+    """x < -1/e, decided at 300 digits (e x is irrational, never exactly -1)."""
+    return x >> 255 and to_mpf(x) * mexp(1) < -1
+
+
+def op_lambertW0(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    if _below_branch(x):
+        raise Revert("OutOfRange")
+    return encode_mpf(lambertw(to_mpf(x), 0).real)
+
+
+def op_lambertWm1(x):
+    s, e, m = unpack(x)
+    if e == 0 or not s or _below_branch(x):
+        raise Revert("OutOfRange")
+    return encode_mpf(lambertw(to_mpf(x), -1).real)
 
 
 def op_pow(x, y):

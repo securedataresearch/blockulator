@@ -83,6 +83,20 @@
     "reverts": 0,
     "worstInput": ""
   },
+  "lambertW0": {
+    "meanBits": 252,
+    "minBits": 218,
+    "n": 815,
+    "reverts": 72,
+    "worstInput": "0xbfffd78b56362ce82e5614a55440337bfb164715cbe72f8ed626af774eac2232"
+  },
+  "lambertWm1": {
+    "meanBits": 249,
+    "minBits": 221,
+    "n": 662,
+    "reverts": 677,
+    "worstInput": "0xbfffd78b56362a2f87ca7f8b1f34a837009ce2511a0d898f20e9a30dc45166f2"
+  },
   "ln": {
     "meanBits": 256,
     "minBits": 256,

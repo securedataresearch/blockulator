@@ -82,6 +82,23 @@ interface IFP256 {
     ///         18-decimal grid is empty from about -8.3); one rounding; exactly
     ///         one from x >= 13 sqrt 2.
     function normCdf(int256 x) external pure returns (int256 r);
+    /// @notice The principal branch of Lambert W, W(x) e^W(x) = x, W >= -1.
+    ///         Seeds as FP127's: the branch-point series in p = sqrt(2(1 + e x))
+    ///         with 1 + e x exact, x - x^2 + 3/2 x^3 on (-1/4, 0), Winitzki's
+    ///         L (1 - ln(1 + L)/(2 + L)), L = ln(1 + x), above. Six Newton steps
+    ///         on the float ops: w e^w = x up to 3, the log form w + ln w = ln x
+    ///         above (no e^w, so the whole range up to W = 181,700 works). Within
+    ///         one ULP across the domain except near -1/e, where W's slope is
+    ///         infinite: below p = 2^-21 the ten-term series alone (within one
+    ///         ULP), above it Newton loses log2(1/p) bits, about 22 at worst.
+    function lambertW0(int256 x) external pure returns (int256 r);
+    /// @notice The secondary real branch of Lambert W, W(x) <= -1. Seeds as
+    ///         FP127's: the branch-point series in -p for x < -1/4, the
+    ///         asymptotic L - ln(-L) + ln(-L)/L, L = ln(-x), above; seven
+    ///         log-form Newton steps (w + ln(-w) = ln(-x), no e^w: W reaches
+    ///         about -181,700 at the bottom of the format). Within one ULP away
+    ///         from -1/e; near it as lambertW0.
+    function lambertWm1(int256 x) external pure returns (int256 r);
     /// @notice -x: the sign bit flipped; -0 is 0.
     function neg(int256 x) external pure returns (int256 r);
     /// @notice |x|: the sign bit cleared.

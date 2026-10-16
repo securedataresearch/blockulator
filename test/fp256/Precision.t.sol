@@ -17,8 +17,8 @@ import {console} from "forge-std/console.sol";
 contract Precision256 is FP256Harness {
     function _out() internal pure virtual returns (string memory) { return "docs/fp256/precision.json"; }
 
-    function _ops() internal pure returns (string[24] memory o) {
-        o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "neg", "abs", "sign", "cmp", "lt", "eq",
+    function _ops() internal pure returns (string[26] memory o) {
+        o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "lambertW0", "lambertWm1", "neg", "abs", "sign", "cmp", "lt", "eq",
              "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18"];
     }
 
@@ -28,6 +28,10 @@ contract Precision256 is FP256Harness {
         // t = y log2 x carries the log2 kernel's 2^-250 times |t|, so it is
         // held to one ULP (236 bits); 7 of its 234 vectors sit there
         if (keccak256(bytes(op)) == keccak256("pow")) return 236;
+        // Lambert W iterates on the rounded float ops: within one ULP away from -1/e (235
+        // bits at worst), and near it Newton loses log2(1/p) bits, p = sqrt(2(1 + e x)),
+        // until the branch-point series takes over below p = 2^-21: 218 bits at worst
+        if (keccak256(bytes(op)) == keccak256("lambertW0") || keccak256(bytes(op)) == keccak256("lambertWm1")) return 218;
         return 256;
     }
 
@@ -120,7 +124,7 @@ contract Precision256 is FP256Harness {
     }
 
     function test_precision_all() public virtual {
-        string[24] memory ops = _ops();
+        string[26] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));

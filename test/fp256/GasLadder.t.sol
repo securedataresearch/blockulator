@@ -78,6 +78,8 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("erf")) return FP256Lib.erf(x);
         if (h == keccak256("erfc")) return FP256Lib.erfc(x);
         if (h == keccak256("normCdf")) return FP256Lib.normCdf(x);
+        if (h == keccak256("lambertW0")) return FP256Lib.lambertW0(x);
+        if (h == keccak256("lambertWm1")) return FP256Lib.lambertWm1(x);
         if (h == keccak256("neg")) return FP256Lib.neg(x);
         if (h == keccak256("abs")) return FP256Lib.abs(x);
         if (h == keccak256("sign")) return FP256Lib.sign(x);
@@ -112,6 +114,8 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("erf")) return FP127Lib.erf(x);
         if (h == keccak256("erfc")) return FP127Lib.erfc(x);
         if (h == keccak256("normCdf")) return FP127Lib.normCdf(x);
+        if (h == keccak256("lambertW0")) return FP127Lib.lambertW0(x);
+        if (h == keccak256("lambertWm1")) return FP127Lib.lambertWm1(x);
         if (h == keccak256("neg")) return FP127Lib.neg(x);
         if (h == keccak256("abs")) return FP127Lib.abs(x);
         if (h == keccak256("sign")) return FP127Lib.sign(x);
@@ -243,6 +247,9 @@ contract GasLadder256 is FP256Harness {
         _run1("erf", [_v(-30, 0), _v(-2, 0), ONE, _v(1, 0x8 << 232), _v(2, 0x4 << 232), _v(3, 0x2 << 232)], false);
         _run1("erfc", [_v(-2, 0), ONE, _v(1, 0x8 << 232), _v(2, 0x4 << 232), _v(3, 0x2 << 232), _v(8, 0x9 << 232)], false);
         _run1("normCdf", [_nv(-2, 0), _nv(0, 0), _nv(2, 0x8 << 232), _nv(3, 0x2 << 232), _nv(5, 0), _nv(9, 0x1 << 232)], false);
+        // Lambert W: the branch-point series, Newton near the branch, the origin, the log form, the far end
+        _run1("lambertW0", [_nv(-2, 0x78b56362cb << 200), _nv(-2, 0x78b56 << 216), _nv(-4, 0), ONE, _v(4, 0), _v(100, 0)], false);
+        _run1("lambertWm1", [_nv(-2, 0x78b56362cb << 200), _nv(-2, 0x78b56 << 216), _nv(-3, 0), _nv(-10, 0), _nv(-60, 0), _nv(-1000, 0)], false);
     }
 
     function test_ladder_pow() public view {

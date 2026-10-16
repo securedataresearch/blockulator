@@ -3000,6 +3000,997 @@ library FP256Lib {
             _r := fp256_normCdf(_x)
         }
     }
+    /// @notice The principal branch of Lambert W, W(x) e^W(x) = x, W >= -1.
+    ///         Seeds as FP127's: the branch-point series in p = sqrt(2(1 + e x))
+    ///         with 1 + e x exact, x - x^2 + 3/2 x^3 on (-1/4, 0), Winitzki's
+    ///         L (1 - ln(1 + L)/(2 + L)), L = ln(1 + x), above. Six Newton steps
+    ///         on the float ops: w e^w = x up to 3, the log form w + ln w = ln x
+    ///         above (no e^w, so the whole range up to W = 181,700 works). Within
+    ///         one ULP across the domain except near -1/e, where W's slope is
+    ///         infinite: below p = 2^-21 the ten-term series alone (within one
+    ///         ULP), above it Newton loses log2(1/p) bits, about 22 at worst.
+    function lambertW0(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function pack(s, e, m) -> r {
+                if sgt(e, 0x7ffff) { rev(0x35278d12) }
+                if slt(e, 1) { r := 0 leave }
+                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function normround(s, e, D) -> r {
+                let n := msb(D)
+                e := add(e, sub(n, 254))
+                D := shl(sub(255, n), D)
+                let m := add(shr(19, D), and(shr(18, D), 1))
+                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
+                    m := 0x100000000000000000000000000000000000000000000000000000000000
+                    e := add(e, 1)
+                }
+                r := pack(s, e, m)
+            }
+
+            function unpack(x) -> s, e, m {
+                s := shr(255, x)
+                e := and(shr(236, x), 0x7ffff)
+                m := and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                if iszero(e) {
+                    if or(s, m) { rev(0x7db3aba7) }
+                    leave
+                }
+                m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
+            }
+
+            function addsub(a, b, flip) -> r {
+                let sa, ea, ma := unpack(a)
+                let sb, eb, mb := unpack(b)
+                sb := xor(sb, flip)
+                if iszero(eb) { r := a leave }
+                if iszero(ea) { r := or(shl(255, sb), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) leave }
+                if lt(and(a, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) {
+                    let t := sa sa := sb sb := t
+                    t := ea ea := eb eb := t
+                    t := ma ma := mb mb := t
+                }
+                let d := sub(ea, eb)
+                ma := shl(18, ma)
+                mb := shl(18, mb)
+                switch eq(sa, sb)
+                case 1 { ma := add(ma, shr(d, mb)) }
+                default {
+                    ma := sub(sub(ma, shr(d, mb)), iszero(iszero(and(mb, sub(shl(d, 1), 1)))))
+                    if iszero(ma) { r := 0 leave }
+                }
+                r := normround(sa, ea, ma)
+            }
+
+            function fp256_add(a, b) -> r {
+                r := addsub(a, b, 0)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function fp256_div(a, b) -> r {
+                let sa, ea, ma := unpack(a)
+                let sb, eb, mb := unpack(b)
+                if iszero(eb) { rev(0x23d359a3) }
+                if iszero(ea) { r := 0 leave }
+                let qh := divu(ma, mb)
+                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+            }
+
+            function mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function mulwu(a, b) -> r {
+                let p1, p0 := mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function exp2frac(f) -> r {
+                let x := and(f, 0x3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                r := 0xef15a4451ca23d12b30dfe18d411fa4ddfad5e
+                r := add(mulwu(r, x), 0x2245d31ff476d0c9b30c9334de63851af8c5d488)
+                r := add(mulwu(r, x), 0x4d46b4130787134f2a100f94c77c56ed31416a76b)
+                r := add(mulwu(r, x), 0xa73a8ad71927f01c2b655223d08c7d886ad653d9e1)
+                r := add(mulwu(r, x), 0x15acfad3732e67e3eb833ad1df1d51e455b9162ed161)
+                r := add(mulwu(r, x), 0x2aff8af07c0e85ac8a653c0ab487083b0cd9bd8c95642)
+                r := add(mulwu(r, x), 0x516b312d4144dcab4ef2cf7c79f553111a7f01bb0a7930)
+                r := add(mulwu(r, x), 0x92d3f65c1ae326d005819c8f5f4c0a9d81dcba6dad8512a)
+                r := add(mulwu(r, x), 0xfb8bb5eda1b4aeb99d7afbdec0f0b415b75127ab7911e36e)
+                r := add(mulwu(r, x), 0x198444b41c25a7d561d83a8cbe3d8980ac15c25e1cccecd1ce)
+                r := add(mulwu(r, x), 0x271d135cf3f1672471fc9dbc5618b80e2afe40ac27fc02788b8)
+                r := add(mulwu(r, x), 0x386dd087608043ccf62afe3524ff2ac6e0ed7fb23e766921b288)
+                r := add(mulwu(r, x), 0x4c52593561e2a5cfc50d89572bb8d9d9451308dba591d37ed4920)
+                r := add(mulwu(r, x), 0x605864c59b43e58a06b0c03dc6c670b3c410cc09a7f09024860f8d)
+                r := add(mulwu(r, x), 0x70ef5943f0a6178ad5a1f85e8bb9873c1c3a1b6f4210f27c95f2660)
+                r := add(mulwu(r, x), 0x7a32b1cd46ec9303d5e65791c85276e3d9cc30260527257f7d671652)
+                r := add(mulwu(r, x), 0x7933d4562e3b27dbf687654b9da67150304513747d41a3490ca9e84db)
+                r := add(mulwu(r, x), 0x6d494f4e579f0f6929c39693fe4228c65c6554dbdc44060f48666bac2f)
+                r := add(mulwu(r, x), 0x58b0088e97208ff63ff981b69df12c370d07b883d5efb0e18af5cb30c31)
+                r := add(mulwu(r, x), 0x3ff97f8b11618d0d62a3990fb1cd256708a9744087f72b707591e866cc73)
+                r := add(mulwu(r, x), 0x2861225f0d8f0ede9615130d64683e7d98a7fe6623dd82a4e1a6d15a077c0)
+                r := add(mulwu(r, x), 0x15d87fe78a673110717f69a514bec330576ca696e71970e466df389c1f9ecb)
+                r := add(mulwu(r, x), 0x9d955b7dd273b94e65df05a9f756283923c7529f31c88eb4cdb84c8e6d5e2f)
+                r := add(mulwu(r, x), 0x38d611ae09417f16674ec576657a5bdd3d711d113680443a3a98cc56eadaba4)
+                r := add(mulwu(r, x), 0xf5fdeffc162c754378b583764b9afe551d13a8e186734ea615f49ddd89cc7c5)
+                r := add(mulwu(r, x), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)
+                r := add(mulwu(r, x), 0x4000000000000000000000000000000000000000000000000000000000000000)
+                switch shr(250, f)
+                case 1 { r := mulwu(r, 0x42d561b3e6243d8a62e4adc610aa60d90a45022cf3ac28a8aea159b1578f742d) }
+                case 2 { r := mulwu(r, 0x45cae0f1f545eb737df23143ac529e480d5427fdf5d61a4fc8f09af74251fb9a) }
+                case 3 { r := mulwu(r, 0x48e1e9b9d588e19b07eb6c70572d64ec0ca159a40b7da79378901e57b2dfdcdd) }
+                case 4 { r := mulwu(r, 0x4c1bf828c6dc54b7a356918c17217b7b2f09cd0d8a7d40bc6bc5b2e5f7d3ddb8) }
+                case 5 { r := mulwu(r, 0x4f7a993048d088d6d0488f84f5dcfee8b2e0ae091099f15110fcbbff3e3fd08c) }
+                case 6 { r := mulwu(r, 0x52ff6b54d8a89c750e5ebfb10b88380d8ee8b856715e7e0b92c4e4c5414869f8) }
+                case 7 { r := mulwu(r, 0x56ac1f752150a56324c054647acd176235f204a0381a7ef6d8b2f8a0c19d33ed) }
+                case 8 { r := mulwu(r, 0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8b) }
+                case 9 { r := mulwu(r, 0x5e8451cfac061b5f54408fdb3687d7bd0ad9a5de5814c7a086cd25f011f67019) }
+                case 10 { r := mulwu(r, 0x62b39508aa836d6e9f156864b26ecf9bb587c9cccc128d1b63b4300372736049) }
+                case 11 { r := mulwu(r, 0x6712460a8fc24071f11ac1c7caf96376b7943085c61b242d15de9cc579ae03d0) }
+                case 12 { r := mulwu(r, 0x6ba27e656b4eb57a1cd345dcc8169fef0eb99d7a9102c58b5ae09d6d073bc14d) }
+                case 13 { r := mulwu(r, 0x70666f76154a7088832c4a8246e999e51125928d998490010e5cce9f8ff94c51) }
+                case 14 { r := mulwu(r, 0x75606373ee921c976816bad9b8372a7d627d567021dbfc8e0bec68f46518c405) }
+                case 15 { r := mulwu(r, 0x7a92be8a924366163dce863d76cc07e1b7a8818433bb84fadeec01949b255150) }
+            }
+
+            function exp2kv(s, k, f) -> kk, v {
+                kk := k
+                if s {
+                    kk := sub(0, k)
+                    if f {
+                        kk := sub(kk, 1)
+                        f := sub(0x4000000000000000000000000000000000000000000000000000000000000000, f)
+                    }
+                }
+                v := 0x4000000000000000000000000000000000000000000000000000000000000000
+                if f { v := exp2frac(f) }
+            }
+
+            function exp2kf(s, k, f) -> r {
+                let kk, v := exp2kv(s, k, f)
+                r := normround(0, add(kk, 0x3ffff), v)
+            }
+
+            function shr512(p1, p0, n) -> r {
+                switch lt(n, 256)
+                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
+                default { r := shr(sub(n, 256), p1) }
+            }
+
+            function explog2(u, m) -> k, f {
+                let p1, p0 := mul512(m, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
+                let lo := mulwu(m, 0x3bc3887eeaa2ed9ac49b25eeb82d7c167d52173cc1895213f897f5e06a7be736)
+                p0 := add(p0, lo)
+                p1 := add(p1, lt(p0, lo))
+                let sh := sub(236, u)
+                f := and(shr512(p1, p0, sh), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                k := shr512(p1, p0, add(sh, 254))
+            }
+
+            function expsmall(s, u, m) -> r {
+                let k := sub(0, add(u, 18))
+                let tq := shr(k, m)
+                let tf := shl(sub(256, k), and(m, sub(shl(k, 1), 1)))
+                let p1, p0 := mul512(m, m)
+                let j := sub(219, add(u, u))
+                let qq := shr512(p1, p0, j)
+                let n := sub(j, 256)
+                let qf := shr512(p1, p0, n)
+                let st := 0
+                switch lt(n, 256)
+                case 1 { st := and(p0, sub(shl(n, 1), 1)) }
+                default { st := or(p0, and(p1, sub(shl(sub(n, 256), 1), 1))) }
+                let d := 0
+                switch s
+                case 0 {
+                    // floor(T + Q + C): a carry when the two fractions reach one
+                    d := add(add(0x4000000000000000000000000000000000000000000000000000000000000000, tq), add(qq, and(iszero(iszero(tf)), iszero(lt(qf, sub(0, tf))))))
+                }
+                default {
+                    // floor(-T + Q - C): a borrow unless Q's fraction is above T's
+                    d := sub(add(sub(0x4000000000000000000000000000000000000000000000000000000000000000, tq), qq), or(lt(qf, tf), and(eq(qf, tf), iszero(st))))
+                }
+                r := normround(0, 0x3ffff, d)
+            }
+
+            function fp256_exp(x) -> r {
+                let s, e, m := unpack(x)
+                if iszero(e) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+                let u := sub(e, 0x3ffff)
+                if iszero(slt(u, 18)) {
+                    if s { r := 0 leave }
+                    rev(0x35278d12)
+                }
+                if slt(u, sub(0, 238)) { r := 0x3ffff00000000000000000000000000000000000000000000000000000000000 leave }
+                if slt(u, sub(0, 118)) { r := expsmall(s, u, m) leave }
+                if iszero(s) {
+                    if slt(u, sub(0, 84)) {
+                        // x = a 2^-118, a odd: 1 + x + a^2 2^-237 is a tie and the cubic is positive
+                        let tz := sub(118, u)
+                        if and(and(shr(tz, m), 1), iszero(and(m, sub(shl(tz, 1), 1)))) {
+                            let a := shr(tz, m)
+                            r := normround(0, 0x3ffff, add(add(0x4000000000000000000000000000000000000000000000000000000000000000, shr(sub(0, add(u, 18)), m)), shl(17, mul(a, a))))
+                            leave
+                        }
+                    }
+                }
+                let k, f := explog2(u, m)
+                if iszero(lt(k, 0x80000)) {
+                    if s { r := 0 leave }
+                    rev(0x35278d12)
+                }
+                r := exp2kf(s, k, f)
+            }
+
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function fp256_sub(a, b) -> r {
+                r := addsub(a, b, 1)
+            }
+
+            function mulw(a, b) -> r {
+                let p1, p0 := mul512(a, b)
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function ln1pq1(df, q) -> p {
+                p := q
+                p := add(0xfc00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x444444444444444444444444444444444444444444444444444444444444444, mulw(df, p))
+                p := add(0xfb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6e, mulw(df, p))
+                p := add(0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec, mulw(df, p))
+                p := add(0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0x5d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1, mulw(df, p))
+                p := add(0xf99999999999999999999999999999999999999999999999999999999999999a, mulw(df, p))
+                p := add(0x71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c, mulw(df, p))
+                p := add(0xf800000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x924924924924924924924924924924924924924924924924924924924924925, mulw(df, p))
+                p := add(0xf555555555555555555555555555555555555555555555555555555555555555, mulw(df, p))
+                p := add(0xccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccd, mulw(df, p))
+                p := add(0xf000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x1555555555555555555555555555555555555555555555555555555555555555, mulw(df, p))
+                p := add(0xe000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+            }
+
+            function ln1pq2(df, q) -> p {
+                p := q
+                p := add(0xfe00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x210842108421084210842108421084210842108421084210842108421084211, mulw(df, p))
+                p := add(0xfdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddde, mulw(df, p))
+                p := add(0x234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c, mulw(df, p))
+                p := add(0xfdb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db7, mulw(df, p))
+                p := add(0x25ed097b425ed097b425ed097b425ed097b425ed097b425ed097b425ed097b4, mulw(df, p))
+                p := add(0xfd89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d8a, mulw(df, p))
+                p := add(0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f, mulw(df, p))
+                p := add(0xfd55555555555555555555555555555555555555555555555555555555555555, mulw(df, p))
+                p := add(0x2c8590b21642c8590b21642c8590b21642c8590b21642c8590b21642c8590b2, mulw(df, p))
+                p := add(0xfd1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d17, mulw(df, p))
+                p := add(0x30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c, mulw(df, p))
+                p := add(0xfccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccd, mulw(df, p))
+                p := add(0x35e50d79435e50d79435e50d79435e50d79435e50d79435e50d79435e50d794, mulw(df, p))
+                p := add(0xfc71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c72, mulw(df, p))
+                p := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, mulw(df, p))
+            }
+
+            function ln1pseries(df) -> p {
+                p := ln1pq1(df, ln1pq2(df, 0))
+            }
+
+            function log2poly(f) -> r {
+                r := 0xfae0b8675497d903f5e4542ac3ac8663083462bdeaccf9dfa001a45ff5546ea4
+                r := add(mulw(r, f), 0x56e6ad0426b074a78f4695774d29dbbeb179d4d39005acd056f3e8e39322bcf)
+                r := add(mulw(r, f), 0xfa3aae26be852b5debd632905047f581fb7a76542a44f3db53dc746a1ee25cb9)
+                r := add(mulw(r, f), 0x627cec5a5334e620480f50409f14445c6bd87524c5bf6b71cc734050c24f117)
+                r := add(mulw(r, f), 0xf967a275614849b98209eb79f293c5dde48b35893c6e6b99cfb19171116df250)
+                r := add(mulw(r, f), 0x71a3d5a34c5d807383166248359d08e9e6a6cb6384e8e859f65e05ebf921953)
+                r := add(mulw(r, f), 0xf84e3d88f17f00a2d80fad799e2dc58ef76103db31157909de119f3d462b9170)
+                r := add(mulw(r, f), 0x864d424ca0116942b91d16680a2d5c0c11744f6cfa34e5797be9f7d971d833f)
+                r := add(mulw(r, f), 0xf6c449d7883200c369ac6675945867b028e9563704b8a68381f3cc6c431afa2e)
+                r := add(mulw(r, f), 0xa42589ebe01547c354071b63eba837883254261f73033c62bb1d97e0ee4fc66)
+                r := add(mulw(r, f), 0xf4755c4d6a3e80f444178012f96e2c17714ca49aee0222f21141a545623568d0)
+                r := add(mulw(r, f), 0xd30bb153d6f6c9fb22e490ee2efcd9c10cf642cef6810d6d6b6291ad3e3d7ec)
+                r := add(mulw(r, f), 0xf09c7b11e2fe0145b01f556ea1e83ac9ec636071ed9114aae3bb34557f978f73)
+                r := add(mulw(r, f), 0x12776c50ef9bfe792ca73314d74fb9741788bf77495755d1fc8f9a730dc08318)
+                r := add(mulw(r, f), 0xe8eab89ad47d01e8882f0025f2dc582ee29510aae452d4b4ee9d2c0c8de61dc3)
+                r := add(mulw(r, f), 0x1ec709dc3a03fd749fc15522bc2f8a6c27393f1c24e6e4641730d911aa9e7e7c)
+                r := add(mulw(r, f), 0xd1d57135a8fa03d1105e004be5b8b05dc52a2155c8a5a969dd36ba64cb97bfd3)
+                r := add(mulw(r, f), 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09924)
+                r := mulw(r, f)
+            }
+
+            function log2m(mm) -> r {
+                let acc := 0
+                if iszero(gt(0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8b, mm)) {
+                    mm := mulwu(mm, 0x2d413cccfe779921165f626cdd52afa7c75bd82ea24eea133b45eb2160cce645)
+                    acc := add(acc, 0x2000000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4c1bf828c6dc54b7a356918c17217b7b2f09cd0d8a7d40bc6bc5b2e5f7d3ddb8, mm)) {
+                    mm := mulwu(mm, 0x35d13f32b5a75abd0e69a2ee640b4ff7875ccebd488162c5ad704eb6839de0a6)
+                    acc := add(acc, 0x1000000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x45cae0f1f545eb737df23143ac529e480d5427fdf5d61a4fc8f09af74251fb9a, mm)) {
+                    mm := mulwu(mm, 0x3ab031b9f7490e4bb40b5d6cdc1b953eb13eab3810edfe4705f6347a328c6203)
+                    acc := add(acc, 0x800000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x42d561b3e6243d8a62e4adc610aa60d90a45022cf3ac28a8aea159b1578f742d, mm)) {
+                    mm := mulwu(mm, 0x3d495f454921b30b1ee7431ebb6603f0dbd440c219ddc27d6f7600ca4d92a8a8)
+                    acc := add(acc, 0x400000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4166c34c5615d0eb9f1523ada32905ff94f8d257df7d2ebe128178a8339bc50c, mm)) {
+                    mm := mulwu(mm, 0x3ea0ecb6dc8a80ce9f096ec50c575ff32001bf886a57453712112ca6fd2bc63a)
+                    acc := add(acc, 0x200000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x40b268f9de0183b9bdf2b293de8a6f7a4f5c28b2af172e26e8403ad60f900726, mm)) {
+                    mm := mulwu(mm, 0x3f4f83033d21b05d214fce964c783b80c186deeca16981e46748a16d9d53b758)
+                    acc := add(acc, 0x100000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4058f6a7ecccd5b61299ab8cdb737e9000fb0130d82f890101e1aad65d26fa7d, mm)) {
+                    mm := mulwu(mm, 0x3fa784571ee3e212eb74966579e74bc25a4d3b15af8349510e9d48bb600e949f)
+                    acc := add(acc, 0x80000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x402c6be96af2fb584a6ac4fb04772551156e061fc325d07acee3808c8aa5c7cd, mm)) {
+                    mm := mulwu(mm, 0x3fd3b2d65447b2294c06e885fbc6375f0bd02615e55b51d7f6c5c51d1c0335cc)
+                    acc := add(acc, 0x40000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4016321b687027a87fc674a533cbd9e71a2fc17ad8fd71071e858c6034bae0b1, mm)) {
+                    mm := mulwu(mm, 0x3fe9d59487236bb467ce86d23ee5316240c1edd208bf54566423ff662221bc13)
+                    acc := add(acc, 0x20000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x400b18178ba33b141b486ff22688e804201b0290b576b9f824dc7b8ee5524a11, mm)) {
+                    mm := mulwu(mm, 0x3ff4e9d4703df842f4ee7e2b804bef81a3ad7b351f76ca25dc72d54b267f0a74)
+                    acc := add(acc, 0x10000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x40058bce410147e84a2f2a71570c79781b774c4557f81b103b661bffcac2670b, mm)) {
+                    mm := mulwu(mm, 0x3ffa74acbdf6c9d5777c74a28de290e31bc14bd8ba0f98e48b94c35526e2b018)
+                    acc := add(acc, 0x8000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4002c5d7bff71dae8e38c59c72a4e5c99a518c38bd42e8cc4a2d9e530905beaa, mm)) {
+                    mm := mulwu(mm, 0x3ffd3a46ffc6e30f620ce383afca12937a074726c06dee1d9b0c021666c08c48)
+                    acc := add(acc, 0x4000000000000000000000000000000000000000000000000000000000000)
+                }
+                r := add(acc, log2poly(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)))
+            }
+
+            function log2pairm(u, mm) -> Lm, Ls {
+                let lg := log2m(mm)
+                if iszero(u) { Lm := lg Ls := sub(0, 254) leave }
+                let sh := add(msb(absw(u)), 1)
+                Lm := add(shl(sub(254, sh), u), shr(sh, lg))
+                Ls := sub(sh, 254)
+            }
+
+            function log2pair(e, m) -> Lm, Ls {
+                Lm, Ls := log2pairm(sub(e, 0x3ffff), shl(18, m))
+            }
+
+            function tofixed254(s, u, m) -> t {
+                switch slt(u, sub(0, 18))
+                case 1 { t := shr(sub(sub(0, 18), u), m) }
+                default { t := shl(add(u, 18), m) }
+                if s { t := sub(0, t) }
+            }
+
+            function fp256_ln(x) -> r {
+                let s, e, m := unpack(x)
+                if or(s, iszero(e)) { rev(0x7db3aba7) }
+                if eq(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000) { r := 0 leave }
+                if or(eq(e, 0x3ffff), eq(e, 0x3fffe)) {
+                    let d := fp256_sub(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000)
+                    let sd, ed, md := unpack(d)
+                    if lt(ed, 0x3fff7) {
+                        let ud := sub(ed, 0x3ffff)
+                        let p1, p0 := mul512(md, ln1pseries(tofixed254(sd, ud, md)))
+                        r := normround(sd, add(0x3ffff, ud), or(shl(20, p1), shr(236, p0)))
+                        leave
+                    }
+                }
+                let Lm, Ls := log2pair(e, m)
+                let l := mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)
+                r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
+            }
+
+            function fp256_mul(a, b) -> r {
+                let sa, ea, ma := unpack(a)
+                let sb, eb, mb := unpack(b)
+                if or(iszero(ea), iszero(eb)) { r := 0 leave }
+                let p0 := mul(ma, mb)
+                let mm := mulmod(ma, mb, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
+            }
+
+            function gtsq(y, n) -> t {
+                let p0 := mul(y, y)
+                let mm := mulmod(y, y, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                t := or(gt(p1, n), and(eq(p1, n), iszero(iszero(p0))))
+            }
+
+            function isqrt(n) -> y {
+                y := 0x80000000000000000000000000000000
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                if gt(y, div(n, y)) { y := sub(y, 1) }
+            }
+
+            function fp256_sqrt(x) -> r {
+                let s, e, m := unpack(x)
+                if s { rev(0x7db3aba7) }
+                if iszero(e) { r := 0 leave }
+                let u := sub(e, 0x3ffff)
+                let odd := and(u, 1)
+                let n := shl(add(16, odd), m)
+                let y := isqrt(n)
+                y := shr(1, add(shl(128, y), divu(n, y)))
+                let qh := divu(n, y)
+                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                if gtsq(y, n) { y := sub(y, 1) }
+                if gtsq(y, n) { y := sub(y, 1) }
+                r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
+            }
+
+            function check(x) {
+                if and(iszero(and(x, 0x7ffff00000000000000000000000000000000000000000000000000000000000)), iszero(iszero(x))) { rev(0x7db3aba7) }
+            }
+
+            function fp256_abs(x) -> r {
+                check(x)
+                r := and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            }
+
+            function lwlog(w, lx) -> wn {
+                let f := fp256_sub(fp256_add(w, fp256_ln(fp256_abs(w))), lx)
+                wn := fp256_sub(w, fp256_div(fp256_mul(w, f), fp256_add(w, 0x3ffff00000000000000000000000000000000000000000000000000000000000)))
+            }
+
+            function lwq(m) -> q {
+                let p1, p0 := mul512(m, 0xadf85458a2bb4a9aafdc5620273d3cf1d8b9c583ce2d3695a9e13641146433fb)
+                let c1, c0 := mul512(m, 0x3324e7738926cfbe5f4bf8d8d8c31d763da06c80abb1185eb4f7c7b5757f5958)
+                let t := or(shl(2, c1), shr(254, c0))
+                let lo := add(p0, t)
+                let hi := add(p1, lt(lo, p0))
+                // D = 2^492 - P
+                let dl := sub(0, lo)
+                let dh := sub(sub(0x100000000000000000000000000000000000000000000000000000000000, hi), iszero(iszero(lo)))
+                if slt(dh, 0) { rev(0x7db3aba7) }
+                if iszero(or(dh, dl)) { q := 0 leave }
+                let n := msb(dl)
+                if dh { n := add(256, msb(dh)) }
+                let d := shl(sub(254, n), dl)
+                if gt(n, 254) { d := shr512(dh, dl, sub(n, 254)) }
+                q := normround(0, sub(add(0x3ffff, n), 492), d)
+            }
+
+            function lwser(p) -> r {
+                r := 0x3fff78a2b4a92630e73c3e874bf9fb1c7fb474ec251c5bbed9eaf374b634b3da
+                r := fp256_add(0xbfff83b20565de449b98bcb4e16db1b857921d7a5610d5fd926a88a237f7403e, fp256_mul(p, r))
+                r := fp256_add(0x3fff9002c98983bc435a045285a1b7069470dcdc800879e4896c9e5fb4ad8b52, fp256_mul(p, r))
+                r := fp256_add(0xbfff9a9bbcb24fe29f595de1b82e796c546675cfa8d4a04088c62d92416ff112, fp256_mul(p, r))
+                r := fp256_add(0x3fffa6c901e573ac901e573ac901e573ac901e573ac901e573ac901e573ac902, fp256_mul(p, r))
+                r := fp256_add(0xbfffb4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b, fp256_mul(p, r))
+                r := fp256_add(0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39, fp256_mul(p, r))
+                r := fp256_add(0xbfffd55555555555555555555555555555555555555555555555555555555555, fp256_mul(p, r))
+                r := fp256_add(0x3ffff00000000000000000000000000000000000000000000000000000000000, fp256_mul(p, r))
+                r := fp256_add(0xbffff00000000000000000000000000000000000000000000000000000000000, fp256_mul(p, r))
+            }
+
+            function fp256_lambertW0(x) -> r {
+                let s, e, m := unpack(x)
+                if iszero(e) { r := 0 leave }
+                let u := sub(e, 0x3ffff)
+                let one := 0x3ffff00000000000000000000000000000000000000000000000000000000000
+                let w := 0
+                switch s
+                case 1 {
+                    if sgt(u, sub(0, 2)) { rev(0x7db3aba7) }
+                    switch eq(u, sub(0, 2))
+                    case 1 {
+                        let q := lwq(m)
+                        if iszero(q) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+                        let p := fp256_sqrt(fp256_add(q, q))
+                        if slt(p, 0x3ffea00000000000000000000000000000000000000000000000000000000000) { r := lwser(p) leave }
+                        let p2 := fp256_mul(p, p)
+                        w := fp256_add(fp256_sub(fp256_sub(p, one), fp256_mul(p2, 0x3fffd55555555555555555555555555555555555555555555555555555555555)),
+                                       fp256_mul(fp256_mul(p2, p), 0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39))
+                    }
+                    default {
+                        let x2 := fp256_mul(x, x)
+                        w := fp256_add(fp256_sub(x, x2), fp256_mul(x2, fp256_mul(x, 0x3ffff80000000000000000000000000000000000000000000000000000000000)))
+                    }
+                }
+                default {
+                    let l := fp256_ln(fp256_add(x, one))
+                    w := fp256_mul(l, fp256_sub(one, fp256_div(fp256_ln(fp256_add(l, one)), fp256_add(l, 0x4000000000000000000000000000000000000000000000000000000000000000))))
+                }
+                switch and(iszero(s), sgt(x, 0x4000080000000000000000000000000000000000000000000000000000000000))
+                case 1 {
+                    let lx := fp256_ln(x)
+                    for { let i := 0 } lt(i, 6) { i := add(i, 1) } { w := lwlog(w, lx) }
+                }
+                default {
+                    // w' = w - (w - x e^-w) / (w + 1)
+                    for { let i := 0 } lt(i, 6) { i := add(i, 1) } {
+                        w := fp256_sub(w, fp256_div(fp256_sub(w, fp256_div(x, fp256_exp(w))), fp256_add(w, one)))
+                    }
+                }
+                r := w
+            }
+
+            _r := fp256_lambertW0(_x)
+        }
+    }
+    /// @notice The secondary real branch of Lambert W, W(x) <= -1. Seeds as
+    ///         FP127's: the branch-point series in -p for x < -1/4, the
+    ///         asymptotic L - ln(-L) + ln(-L)/L, L = ln(-x), above; seven
+    ///         log-form Newton steps (w + ln(-w) = ln(-x), no e^w: W reaches
+    ///         about -181,700 at the bottom of the format). Within one ULP away
+    ///         from -1/e; near it as lambertW0.
+    function lambertWm1(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function pack(s, e, m) -> r {
+                if sgt(e, 0x7ffff) { rev(0x35278d12) }
+                if slt(e, 1) { r := 0 leave }
+                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function normround(s, e, D) -> r {
+                let n := msb(D)
+                e := add(e, sub(n, 254))
+                D := shl(sub(255, n), D)
+                let m := add(shr(19, D), and(shr(18, D), 1))
+                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
+                    m := 0x100000000000000000000000000000000000000000000000000000000000
+                    e := add(e, 1)
+                }
+                r := pack(s, e, m)
+            }
+
+            function unpack(x) -> s, e, m {
+                s := shr(255, x)
+                e := and(shr(236, x), 0x7ffff)
+                m := and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                if iszero(e) {
+                    if or(s, m) { rev(0x7db3aba7) }
+                    leave
+                }
+                m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
+            }
+
+            function addsub(a, b, flip) -> r {
+                let sa, ea, ma := unpack(a)
+                let sb, eb, mb := unpack(b)
+                sb := xor(sb, flip)
+                if iszero(eb) { r := a leave }
+                if iszero(ea) { r := or(shl(255, sb), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) leave }
+                if lt(and(a, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) {
+                    let t := sa sa := sb sb := t
+                    t := ea ea := eb eb := t
+                    t := ma ma := mb mb := t
+                }
+                let d := sub(ea, eb)
+                ma := shl(18, ma)
+                mb := shl(18, mb)
+                switch eq(sa, sb)
+                case 1 { ma := add(ma, shr(d, mb)) }
+                default {
+                    ma := sub(sub(ma, shr(d, mb)), iszero(iszero(and(mb, sub(shl(d, 1), 1)))))
+                    if iszero(ma) { r := 0 leave }
+                }
+                r := normround(sa, ea, ma)
+            }
+
+            function fp256_add(a, b) -> r {
+                r := addsub(a, b, 0)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function fp256_div(a, b) -> r {
+                let sa, ea, ma := unpack(a)
+                let sb, eb, mb := unpack(b)
+                if iszero(eb) { rev(0x23d359a3) }
+                if iszero(ea) { r := 0 leave }
+                let qh := divu(ma, mb)
+                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+            }
+
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function fp256_sub(a, b) -> r {
+                r := addsub(a, b, 1)
+            }
+
+            function mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function mulw(a, b) -> r {
+                let p1, p0 := mul512(a, b)
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function ln1pq1(df, q) -> p {
+                p := q
+                p := add(0xfc00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x444444444444444444444444444444444444444444444444444444444444444, mulw(df, p))
+                p := add(0xfb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6e, mulw(df, p))
+                p := add(0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec, mulw(df, p))
+                p := add(0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0x5d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1, mulw(df, p))
+                p := add(0xf99999999999999999999999999999999999999999999999999999999999999a, mulw(df, p))
+                p := add(0x71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c, mulw(df, p))
+                p := add(0xf800000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x924924924924924924924924924924924924924924924924924924924924925, mulw(df, p))
+                p := add(0xf555555555555555555555555555555555555555555555555555555555555555, mulw(df, p))
+                p := add(0xccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccd, mulw(df, p))
+                p := add(0xf000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x1555555555555555555555555555555555555555555555555555555555555555, mulw(df, p))
+                p := add(0xe000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+            }
+
+            function ln1pq2(df, q) -> p {
+                p := q
+                p := add(0xfe00000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x210842108421084210842108421084210842108421084210842108421084211, mulw(df, p))
+                p := add(0xfdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddde, mulw(df, p))
+                p := add(0x234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c234f72c, mulw(df, p))
+                p := add(0xfdb6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db6db7, mulw(df, p))
+                p := add(0x25ed097b425ed097b425ed097b425ed097b425ed097b425ed097b425ed097b4, mulw(df, p))
+                p := add(0xfd89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d89d8a, mulw(df, p))
+                p := add(0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f, mulw(df, p))
+                p := add(0xfd55555555555555555555555555555555555555555555555555555555555555, mulw(df, p))
+                p := add(0x2c8590b21642c8590b21642c8590b21642c8590b21642c8590b21642c8590b2, mulw(df, p))
+                p := add(0xfd1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d1745d17, mulw(df, p))
+                p := add(0x30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c30c, mulw(df, p))
+                p := add(0xfccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccd, mulw(df, p))
+                p := add(0x35e50d79435e50d79435e50d79435e50d79435e50d79435e50d79435e50d794, mulw(df, p))
+                p := add(0xfc71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c72, mulw(df, p))
+                p := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, mulw(df, p))
+            }
+
+            function ln1pseries(df) -> p {
+                p := ln1pq1(df, ln1pq2(df, 0))
+            }
+
+            function log2poly(f) -> r {
+                r := 0xfae0b8675497d903f5e4542ac3ac8663083462bdeaccf9dfa001a45ff5546ea4
+                r := add(mulw(r, f), 0x56e6ad0426b074a78f4695774d29dbbeb179d4d39005acd056f3e8e39322bcf)
+                r := add(mulw(r, f), 0xfa3aae26be852b5debd632905047f581fb7a76542a44f3db53dc746a1ee25cb9)
+                r := add(mulw(r, f), 0x627cec5a5334e620480f50409f14445c6bd87524c5bf6b71cc734050c24f117)
+                r := add(mulw(r, f), 0xf967a275614849b98209eb79f293c5dde48b35893c6e6b99cfb19171116df250)
+                r := add(mulw(r, f), 0x71a3d5a34c5d807383166248359d08e9e6a6cb6384e8e859f65e05ebf921953)
+                r := add(mulw(r, f), 0xf84e3d88f17f00a2d80fad799e2dc58ef76103db31157909de119f3d462b9170)
+                r := add(mulw(r, f), 0x864d424ca0116942b91d16680a2d5c0c11744f6cfa34e5797be9f7d971d833f)
+                r := add(mulw(r, f), 0xf6c449d7883200c369ac6675945867b028e9563704b8a68381f3cc6c431afa2e)
+                r := add(mulw(r, f), 0xa42589ebe01547c354071b63eba837883254261f73033c62bb1d97e0ee4fc66)
+                r := add(mulw(r, f), 0xf4755c4d6a3e80f444178012f96e2c17714ca49aee0222f21141a545623568d0)
+                r := add(mulw(r, f), 0xd30bb153d6f6c9fb22e490ee2efcd9c10cf642cef6810d6d6b6291ad3e3d7ec)
+                r := add(mulw(r, f), 0xf09c7b11e2fe0145b01f556ea1e83ac9ec636071ed9114aae3bb34557f978f73)
+                r := add(mulw(r, f), 0x12776c50ef9bfe792ca73314d74fb9741788bf77495755d1fc8f9a730dc08318)
+                r := add(mulw(r, f), 0xe8eab89ad47d01e8882f0025f2dc582ee29510aae452d4b4ee9d2c0c8de61dc3)
+                r := add(mulw(r, f), 0x1ec709dc3a03fd749fc15522bc2f8a6c27393f1c24e6e4641730d911aa9e7e7c)
+                r := add(mulw(r, f), 0xd1d57135a8fa03d1105e004be5b8b05dc52a2155c8a5a969dd36ba64cb97bfd3)
+                r := add(mulw(r, f), 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09924)
+                r := mulw(r, f)
+            }
+
+            function mulwu(a, b) -> r {
+                let p1, p0 := mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function log2m(mm) -> r {
+                let acc := 0
+                if iszero(gt(0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8b, mm)) {
+                    mm := mulwu(mm, 0x2d413cccfe779921165f626cdd52afa7c75bd82ea24eea133b45eb2160cce645)
+                    acc := add(acc, 0x2000000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4c1bf828c6dc54b7a356918c17217b7b2f09cd0d8a7d40bc6bc5b2e5f7d3ddb8, mm)) {
+                    mm := mulwu(mm, 0x35d13f32b5a75abd0e69a2ee640b4ff7875ccebd488162c5ad704eb6839de0a6)
+                    acc := add(acc, 0x1000000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x45cae0f1f545eb737df23143ac529e480d5427fdf5d61a4fc8f09af74251fb9a, mm)) {
+                    mm := mulwu(mm, 0x3ab031b9f7490e4bb40b5d6cdc1b953eb13eab3810edfe4705f6347a328c6203)
+                    acc := add(acc, 0x800000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x42d561b3e6243d8a62e4adc610aa60d90a45022cf3ac28a8aea159b1578f742d, mm)) {
+                    mm := mulwu(mm, 0x3d495f454921b30b1ee7431ebb6603f0dbd440c219ddc27d6f7600ca4d92a8a8)
+                    acc := add(acc, 0x400000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4166c34c5615d0eb9f1523ada32905ff94f8d257df7d2ebe128178a8339bc50c, mm)) {
+                    mm := mulwu(mm, 0x3ea0ecb6dc8a80ce9f096ec50c575ff32001bf886a57453712112ca6fd2bc63a)
+                    acc := add(acc, 0x200000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x40b268f9de0183b9bdf2b293de8a6f7a4f5c28b2af172e26e8403ad60f900726, mm)) {
+                    mm := mulwu(mm, 0x3f4f83033d21b05d214fce964c783b80c186deeca16981e46748a16d9d53b758)
+                    acc := add(acc, 0x100000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4058f6a7ecccd5b61299ab8cdb737e9000fb0130d82f890101e1aad65d26fa7d, mm)) {
+                    mm := mulwu(mm, 0x3fa784571ee3e212eb74966579e74bc25a4d3b15af8349510e9d48bb600e949f)
+                    acc := add(acc, 0x80000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x402c6be96af2fb584a6ac4fb04772551156e061fc325d07acee3808c8aa5c7cd, mm)) {
+                    mm := mulwu(mm, 0x3fd3b2d65447b2294c06e885fbc6375f0bd02615e55b51d7f6c5c51d1c0335cc)
+                    acc := add(acc, 0x40000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4016321b687027a87fc674a533cbd9e71a2fc17ad8fd71071e858c6034bae0b1, mm)) {
+                    mm := mulwu(mm, 0x3fe9d59487236bb467ce86d23ee5316240c1edd208bf54566423ff662221bc13)
+                    acc := add(acc, 0x20000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x400b18178ba33b141b486ff22688e804201b0290b576b9f824dc7b8ee5524a11, mm)) {
+                    mm := mulwu(mm, 0x3ff4e9d4703df842f4ee7e2b804bef81a3ad7b351f76ca25dc72d54b267f0a74)
+                    acc := add(acc, 0x10000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x40058bce410147e84a2f2a71570c79781b774c4557f81b103b661bffcac2670b, mm)) {
+                    mm := mulwu(mm, 0x3ffa74acbdf6c9d5777c74a28de290e31bc14bd8ba0f98e48b94c35526e2b018)
+                    acc := add(acc, 0x8000000000000000000000000000000000000000000000000000000000000)
+                }
+                if iszero(gt(0x4002c5d7bff71dae8e38c59c72a4e5c99a518c38bd42e8cc4a2d9e530905beaa, mm)) {
+                    mm := mulwu(mm, 0x3ffd3a46ffc6e30f620ce383afca12937a074726c06dee1d9b0c021666c08c48)
+                    acc := add(acc, 0x4000000000000000000000000000000000000000000000000000000000000)
+                }
+                r := add(acc, log2poly(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)))
+            }
+
+            function log2pairm(u, mm) -> Lm, Ls {
+                let lg := log2m(mm)
+                if iszero(u) { Lm := lg Ls := sub(0, 254) leave }
+                let sh := add(msb(absw(u)), 1)
+                Lm := add(shl(sub(254, sh), u), shr(sh, lg))
+                Ls := sub(sh, 254)
+            }
+
+            function log2pair(e, m) -> Lm, Ls {
+                Lm, Ls := log2pairm(sub(e, 0x3ffff), shl(18, m))
+            }
+
+            function tofixed254(s, u, m) -> t {
+                switch slt(u, sub(0, 18))
+                case 1 { t := shr(sub(sub(0, 18), u), m) }
+                default { t := shl(add(u, 18), m) }
+                if s { t := sub(0, t) }
+            }
+
+            function fp256_ln(x) -> r {
+                let s, e, m := unpack(x)
+                if or(s, iszero(e)) { rev(0x7db3aba7) }
+                if eq(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000) { r := 0 leave }
+                if or(eq(e, 0x3ffff), eq(e, 0x3fffe)) {
+                    let d := fp256_sub(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000)
+                    let sd, ed, md := unpack(d)
+                    if lt(ed, 0x3fff7) {
+                        let ud := sub(ed, 0x3ffff)
+                        let p1, p0 := mul512(md, ln1pseries(tofixed254(sd, ud, md)))
+                        r := normround(sd, add(0x3ffff, ud), or(shl(20, p1), shr(236, p0)))
+                        leave
+                    }
+                }
+                let Lm, Ls := log2pair(e, m)
+                let l := mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)
+                r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
+            }
+
+            function fp256_mul(a, b) -> r {
+                let sa, ea, ma := unpack(a)
+                let sb, eb, mb := unpack(b)
+                if or(iszero(ea), iszero(eb)) { r := 0 leave }
+                let p0 := mul(ma, mb)
+                let mm := mulmod(ma, mb, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
+            }
+
+            function check(x) {
+                if and(iszero(and(x, 0x7ffff00000000000000000000000000000000000000000000000000000000000)), iszero(iszero(x))) { rev(0x7db3aba7) }
+            }
+
+            function fp256_neg(x) -> r {
+                check(x)
+                r := x
+                if x { r := xor(x, 0x8000000000000000000000000000000000000000000000000000000000000000) }
+            }
+
+            function gtsq(y, n) -> t {
+                let p0 := mul(y, y)
+                let mm := mulmod(y, y, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                t := or(gt(p1, n), and(eq(p1, n), iszero(iszero(p0))))
+            }
+
+            function isqrt(n) -> y {
+                y := 0x80000000000000000000000000000000
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                y := shr(1, add(y, div(n, y)))
+                if gt(y, div(n, y)) { y := sub(y, 1) }
+            }
+
+            function fp256_sqrt(x) -> r {
+                let s, e, m := unpack(x)
+                if s { rev(0x7db3aba7) }
+                if iszero(e) { r := 0 leave }
+                let u := sub(e, 0x3ffff)
+                let odd := and(u, 1)
+                let n := shl(add(16, odd), m)
+                let y := isqrt(n)
+                y := shr(1, add(shl(128, y), divu(n, y)))
+                let qh := divu(n, y)
+                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                if gtsq(y, n) { y := sub(y, 1) }
+                if gtsq(y, n) { y := sub(y, 1) }
+                r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
+            }
+
+            function fp256_abs(x) -> r {
+                check(x)
+                r := and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            }
+
+            function lwlog(w, lx) -> wn {
+                let f := fp256_sub(fp256_add(w, fp256_ln(fp256_abs(w))), lx)
+                wn := fp256_sub(w, fp256_div(fp256_mul(w, f), fp256_add(w, 0x3ffff00000000000000000000000000000000000000000000000000000000000)))
+            }
+
+            function shr512(p1, p0, n) -> r {
+                switch lt(n, 256)
+                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
+                default { r := shr(sub(n, 256), p1) }
+            }
+
+            function lwq(m) -> q {
+                let p1, p0 := mul512(m, 0xadf85458a2bb4a9aafdc5620273d3cf1d8b9c583ce2d3695a9e13641146433fb)
+                let c1, c0 := mul512(m, 0x3324e7738926cfbe5f4bf8d8d8c31d763da06c80abb1185eb4f7c7b5757f5958)
+                let t := or(shl(2, c1), shr(254, c0))
+                let lo := add(p0, t)
+                let hi := add(p1, lt(lo, p0))
+                // D = 2^492 - P
+                let dl := sub(0, lo)
+                let dh := sub(sub(0x100000000000000000000000000000000000000000000000000000000000, hi), iszero(iszero(lo)))
+                if slt(dh, 0) { rev(0x7db3aba7) }
+                if iszero(or(dh, dl)) { q := 0 leave }
+                let n := msb(dl)
+                if dh { n := add(256, msb(dh)) }
+                let d := shl(sub(254, n), dl)
+                if gt(n, 254) { d := shr512(dh, dl, sub(n, 254)) }
+                q := normround(0, sub(add(0x3ffff, n), 492), d)
+            }
+
+            function lwser(p) -> r {
+                r := 0x3fff78a2b4a92630e73c3e874bf9fb1c7fb474ec251c5bbed9eaf374b634b3da
+                r := fp256_add(0xbfff83b20565de449b98bcb4e16db1b857921d7a5610d5fd926a88a237f7403e, fp256_mul(p, r))
+                r := fp256_add(0x3fff9002c98983bc435a045285a1b7069470dcdc800879e4896c9e5fb4ad8b52, fp256_mul(p, r))
+                r := fp256_add(0xbfff9a9bbcb24fe29f595de1b82e796c546675cfa8d4a04088c62d92416ff112, fp256_mul(p, r))
+                r := fp256_add(0x3fffa6c901e573ac901e573ac901e573ac901e573ac901e573ac901e573ac902, fp256_mul(p, r))
+                r := fp256_add(0xbfffb4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b, fp256_mul(p, r))
+                r := fp256_add(0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39, fp256_mul(p, r))
+                r := fp256_add(0xbfffd55555555555555555555555555555555555555555555555555555555555, fp256_mul(p, r))
+                r := fp256_add(0x3ffff00000000000000000000000000000000000000000000000000000000000, fp256_mul(p, r))
+                r := fp256_add(0xbffff00000000000000000000000000000000000000000000000000000000000, fp256_mul(p, r))
+            }
+
+            function fp256_lambertWm1(x) -> r {
+                let s, e, m := unpack(x)
+                let u := sub(e, 0x3ffff)
+                if or(iszero(s), sgt(u, sub(0, 2))) { rev(0x7db3aba7) }
+                let lx := fp256_ln(and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                let w := 0
+                switch eq(u, sub(0, 2))
+                case 1 {
+                    let q := lwq(m)
+                    if iszero(q) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+                    let p := fp256_sqrt(fp256_add(q, q))
+                    if slt(p, 0x3ffea00000000000000000000000000000000000000000000000000000000000) { r := lwser(fp256_neg(p)) leave }
+                    let p2 := fp256_mul(p, p)
+                    w := fp256_sub(fp256_sub(fp256_sub(0xbffff00000000000000000000000000000000000000000000000000000000000, p), fp256_mul(p2, 0x3fffd55555555555555555555555555555555555555555555555555555555555)),
+                                   fp256_mul(fp256_mul(p2, p), 0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39))
+                }
+                default {
+                    let ll := fp256_ln(fp256_neg(lx))
+                    w := fp256_add(fp256_sub(lx, ll), fp256_div(ll, lx))
+                }
+                for { let i := 0 } lt(i, 7) { i := add(i, 1) } { w := lwlog(w, lx) }
+                r := w
+            }
+
+            _r := fp256_lambertWm1(_x)
+        }
+    }
     /// @notice -x: the sign bit flipped; -0 is 0.
     function neg(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
