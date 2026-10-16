@@ -25,7 +25,7 @@ FORM_LABEL = {
     "huff": "Huff (Sepolia, staticcall)",
     "yul": "Yul object (staticcall)",
     "caller": "FP127Caller",
-    "lib": "FP127Lib (inline)",
+    "lib": "FP256Lib (inline)" if LIB == "fp256" else "FP127Lib (inline)",
     "abdk": "ABDKMath64x64",
     "solady": "Solady",
     "prb": "PRBMath SD59x18",

@@ -98,18 +98,18 @@
   "floatContract": {
     "id": "fp256",
     "name": "FP256",
-    "address": "0x2776d2BEE09683F95016eaF512939a7E21751C27",
-    "description": "The second ruler: 256-bit binary floating point. One int256 holding sign (bit 255), a 19-bit biased exponent (bits 254..236, bias 262143) and a 236-bit fraction with an implicit one: about 71 significant digits at any magnitude from 2^-262142 to 2^262145. No NaN, infinity or subnormals: invalid words revert OutOfRange, overflow reverts, underflow rounds to zero. Ops add, sub, mul, div, sqrt, exp, ln, pow, neg, abs, sign, cmp, lt, eq, fromUint, fromFP127, toFP127, fromFixed18, toFixed18; every op is rounded once from kernels at 2^-254 and correctly rounded at every committed vector. Read with eth_call.",
+    "address": "0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be",
+    "description": "The second ruler: 256-bit binary floating point. One int256 holding sign (bit 255), a 19-bit biased exponent (bits 254..236, bias 262143) and a 236-bit fraction with an implicit one: about 71 significant digits at any magnitude from 2^-262142 to 2^262145. No NaN, infinity or subnormals: invalid words revert OutOfRange, overflow reverts, underflow rounds to zero. Ops add, sub, mul, div, sqrt, exp, ln, pow, log1p, expm1, erf, erfc, normCdf, lambertW0, lambertWm1, powu, compound, neg, abs, sign, cmp, lt, eq, fromUint, fromFP127, toFP127, fromFixed18, toFixed18; every op is rounded once from kernels at 2^-254 and correctly rounded at every committed vector. Read with eth_call.",
     "deployment": "https://blockulator.com/contracts/deployments/FP256.json",
     "abi": "https://blockulator.com/data/fp256/abi.json",
     "ops": "https://blockulator.com/data/fp256/ops.json",
     "source": "https://github.com/securedataresearch/blockulator/blob/master/contracts/src/fp256/FP256.yul.src",
-    "version": "FP256 v2 (2026-10-16: exp, ln and pow on the 2^-254 kernels with 512-bit products); v1 stays live and verified at 0x628b8dfC82954983a9E8E22056ffc767B4a26077"
+    "version": "FP256 v3 (2026-10-16: 28 ops, adding log1p, expm1, erf, erfc, normCdf, lambertW0, lambertWm1, powu and compound); v2 and v1 stay live and verified at 0x2776d2BEE09683F95016eaF512939a7E21751C27 and 0x628b8dfC82954983a9E8E22056ffc767B4a26077"
   },
   "ladderRunner": {
     "id": "ladder-runner",
     "name": "LadderRunner",
-    "address": "0xfcdf2f1887308316fCF6bb741D79E6edE6800Ec9",
+    "address": "0xEf689d3782490066fE911a6dD33357f59caE40fE",
     "description": "Re-run any cell of the terminal-precision ladder (https://blockulator.com/results/ladder/) with one eth_call: run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok, int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal). Scenarios 0-12 (index in scenarios.json); forms 0 fp127, 1 fp127lib, 2 abdk, 3 solady, 4 prb, 5 quad (ABDKMathQuad binary128), 6 balancer, 7 aave, 8 morpho, 9 maker, 10 fp256 (the 256-bit float). p is the input's parameters encoded into the form's representation, listed per input in https://blockulator.com/data/ladder-inputs.json under the keys fp127 (forms 0, 1), abdk (2), wad (3, 4, 6, 8), quad (5), ray (7, 9), fp256 (10). Decode raw by the scale: 2^128, 2^64, 1e18, 1e27, the IEEE binary128 bit pattern for form 5, or the FP256 word for form 10. Aave, Morpho and Maker answer only the accrual scenarios their models describe and revert Unsupported(uint8) elsewhere.",
     "abi": "https://blockulator.com/contracts/deployments/Ladder.json",
     "record": "https://blockulator.com/contracts/deployments/Ladder.json",
@@ -121,7 +121,7 @@
   "edgeRunner": {
     "id": "edge-runner",
     "name": "EdgeRunner",
-    "address": "0xa9f8C514F5834eB5dB4fB8c78f2FDe41f671e06E",
+    "address": "0x09b8fC41E872279A749a0221AE23D124079AcB44",
     "description": "Evaluate any probe of the edges dataset (https://blockulator.com/results/edges/) with one eth_call: run(uint8 op, uint8 form, int256[] args) returns (bool ok, int256 raw, bytes4 reason, uint256 gas). Ops 0 ln, 1 exp, 2 sqrt, 3 pow, 4 mul, 5 div, 6 lambertW0, 7 lambertWm1, 8 log1p, 9 expm1, 10 compound, 11 powu, 12 erf, 13 erfc, 14 normCdf; forms as for the ladder runner. args are the probe's arguments encoded for the form, listed per probe in https://blockulator.com/data/edge-inputs.json (an integer exponent is passed unscaled).",
     "abiNote": "run(uint8 op, uint8 form, int256[] args) returns (bool ok, int256 raw, bytes4 reason, uint256 gas); selector 0xf833b7d5",
     "dataset": "https://blockulator.com/data/edges.json",

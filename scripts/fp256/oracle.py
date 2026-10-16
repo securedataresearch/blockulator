@@ -12,7 +12,7 @@ reverts, the oracle says `REVERT:<ErrorName>`.
 Words are the int256 bit patterns (0x-hex or decimal, two's complement).
 add, sub, mul, div, sqrt and the conversions are computed with exact
 rationals (fractions.Fraction, math.isqrt), so they are bit-exact
-references; exp, ln and pow go through mpmath at 300 digits and are
+references; exp, ln, pow, log1p and expm1 go through mpmath at 300 digits and are
 rounded the same way, and the tests allow those ops their kernel floors.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ import tempfile
 from fractions import Fraction
 from pathlib import Path
 
-from mpmath import mp, mpf, log, exp as mexp, power, frexp
+from mpmath import mp, mpf, log, exp as mexp, power, frexp, log1p, expm1, erf as merf, erfc as merfc, ncdf, lambertw
 
 mp.dps = 300
 
@@ -194,6 +194,103 @@ def op_ln(x):
     if x == ONE:
         return 0
     return encode_mpf(log(to_mpf(x)))
+
+
+def op_log1p(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    if s and e - BIAS >= 0:
+        raise Revert("OutOfRange")
+    return encode_mpf(log1p(to_mpf(x)))
+
+
+def op_expm1(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    if e - BIAS >= 18:
+        if s:
+            return NEGONE
+        raise Revert("Overflow")
+    return encode_mpf(expm1(to_mpf(x)))
+
+
+def op_erf(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    return encode_mpf(merf(to_mpf(x)))
+
+
+def op_erfc(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return ONE
+    return encode_mpf(merfc(to_mpf(x)))
+
+
+def op_normCdf(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return HALF
+    return encode_mpf(ncdf(to_mpf(x)))
+
+
+def _below_branch(x):
+    """x < -1/e, decided at 300 digits (e x is irrational, never exactly -1)."""
+    return x >> 255 and to_mpf(x) * mexp(1) < -1
+
+
+def op_lambertW0(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    if _below_branch(x):
+        raise Revert("OutOfRange")
+    return encode_mpf(lambertw(to_mpf(x), 0).real)
+
+
+def op_lambertWm1(x):
+    s, e, m = unpack(x)
+    if e == 0 or not s or _below_branch(x):
+        raise Revert("OutOfRange")
+    return encode_mpf(lambertw(to_mpf(x), -1).real)
+
+
+def _int(n):
+    return n - TWO256 if n >= TWO255 else n
+
+
+def op_powu(x, n):
+    """x^n for a plain integer n: exact rationals for small n, 300 digits above."""
+    k = _int(n)
+    if k == 0:
+        return ONE
+    s, e, m = unpack(x)
+    if e == 0:
+        if k < 0:
+            raise Revert("DivisionByZero")
+        return 0
+    if abs(k) <= 64:
+        return encode(decode(x) ** k)
+    return encode_mpf(power(to_mpf(x), k))
+
+
+def op_compound(rate, n):
+    """(1 + rate)^n for a plain integer n, as exp(n log1p(rate)) at 300 digits."""
+    k = _int(n)
+    s, e, m = unpack(rate)
+    if k == 0 or e == 0:
+        return ONE
+    q = decode(rate)
+    if q < -1:
+        raise Revert("OutOfRange")
+    if q == -1:
+        if k < 0:
+            raise Revert("DivisionByZero")
+        return 0
+    return encode_mpf(mexp(k * log1p(to_mpf(rate))))
 
 
 def op_pow(x, y):

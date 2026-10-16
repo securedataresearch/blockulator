@@ -73,6 +73,13 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("sqrt")) return FP256Lib.sqrt(x);
         if (h == keccak256("exp")) return FP256Lib.exp(x);
         if (h == keccak256("ln")) return FP256Lib.ln(x);
+        if (h == keccak256("log1p")) return FP256Lib.log1p(x);
+        if (h == keccak256("expm1")) return FP256Lib.expm1(x);
+        if (h == keccak256("erf")) return FP256Lib.erf(x);
+        if (h == keccak256("erfc")) return FP256Lib.erfc(x);
+        if (h == keccak256("normCdf")) return FP256Lib.normCdf(x);
+        if (h == keccak256("lambertW0")) return FP256Lib.lambertW0(x);
+        if (h == keccak256("lambertWm1")) return FP256Lib.lambertWm1(x);
         if (h == keccak256("neg")) return FP256Lib.neg(x);
         if (h == keccak256("abs")) return FP256Lib.abs(x);
         if (h == keccak256("sign")) return FP256Lib.sign(x);
@@ -91,6 +98,8 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("mul")) return FP256Lib.mul(a, b);
         if (h == keccak256("div")) return FP256Lib.div(a, b);
         if (h == keccak256("pow")) return FP256Lib.pow(a, b);
+        if (h == keccak256("powu")) return FP256Lib.powu(a, b);
+        if (h == keccak256("compound")) return FP256Lib.compound(a, b);
         if (h == keccak256("cmp")) return FP256Lib.cmp(a, b);
         if (h == keccak256("lt")) return FP256Lib.lt(a, b);
         if (h == keccak256("eq")) return FP256Lib.eq(a, b);
@@ -102,6 +111,13 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("sqrt")) return FP127Lib.sqrt(x);
         if (h == keccak256("exp")) return FP127Lib.exp(x);
         if (h == keccak256("ln")) return FP127Lib.ln(x);
+        if (h == keccak256("log1p")) return FP127Lib.log1p(x);
+        if (h == keccak256("expm1")) return FP127Lib.expm1(x);
+        if (h == keccak256("erf")) return FP127Lib.erf(x);
+        if (h == keccak256("erfc")) return FP127Lib.erfc(x);
+        if (h == keccak256("normCdf")) return FP127Lib.normCdf(x);
+        if (h == keccak256("lambertW0")) return FP127Lib.lambertW0(x);
+        if (h == keccak256("lambertWm1")) return FP127Lib.lambertWm1(x);
         if (h == keccak256("neg")) return FP127Lib.neg(x);
         if (h == keccak256("abs")) return FP127Lib.abs(x);
         if (h == keccak256("sign")) return FP127Lib.sign(x);
@@ -227,11 +243,28 @@ contract GasLadder256 is FP256Harness {
         _run1("abs", xs, false);
         _run1("sign", xs, false);
         _run1("exp", [_nv(6, 0x4 << 232), _nv(0, 0), _v(-1, 0), ONE, _v(4, 0x4 << 232), _v(17, 0x6 << 232)], false);
+        _run1("log1p", [_v(-60, 0), _v(-30, 0), _nv(-9, 0), _v(-8, 0), _v(-1, 0), _v(9, 0xf4240 << 216)], false);
+        _run1("expm1", [_v(-60, 0), _v(-30, 0), _nv(-9, 0), _v(-8, 0), _nv(-1, 0), _v(4, 0x4 << 232)], false);
+        // the erf family: the series (below 1/2), the anchors (to 4), the continued fraction, the deep tail
+        _run1("erf", [_v(-30, 0), _v(-2, 0), ONE, _v(1, 0x8 << 232), _v(2, 0x4 << 232), _v(3, 0x2 << 232)], false);
+        _run1("erfc", [_v(-2, 0), ONE, _v(1, 0x8 << 232), _v(2, 0x4 << 232), _v(3, 0x2 << 232), _v(8, 0x9 << 232)], false);
+        _run1("normCdf", [_nv(-2, 0), _nv(0, 0), _nv(2, 0x8 << 232), _nv(3, 0x2 << 232), _nv(5, 0), _nv(9, 0x1 << 232)], false);
+        // Lambert W: the branch-point series, Newton near the branch, the origin, the log form, the far end
+        _run1("lambertW0", [_nv(-2, 0x78b56362cb << 200), _nv(-2, 0x78b56 << 216), _nv(-4, 0), ONE, _v(4, 0), _v(100, 0)], false);
+        _run1("lambertWm1", [_nv(-2, 0x78b56362cb << 200), _nv(-2, 0x78b56 << 216), _nv(-3, 0), _nv(-10, 0), _nv(-60, 0), _nv(-1000, 0)], false);
     }
 
     function test_ladder_pow() public view {
         _run2("pow", [_v(0, 0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c >> 20), _v(1, PI_F >> 20), TWO, _v(3, 0x4 << 232), HALF, _v(1, 0x8 << 232)],
                      [_v(8, 0x6d << 229), _v(1, E_F >> 20), _v(3, 0x4 << 232), _v(1, 0x4 << 232), _nv(1, 0x8 << 232), TWO]);
+    }
+
+    /// powu and compound take a plain integer n; the FP127 and Quad columns are blank.
+    function test_ladder_powu() public view {
+        _run2("powu", [_v(0, 0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c >> 20), _v(1, PI_F >> 20), TWO, _v(0, 1 << 200), HALF, _v(-1, 0x8 << 232)],
+                      [int256(2), int256(12), int256(365), int256(31536000), int256(-10000), int256(1) << 100]);
+        _run2("compound", [_v(-30, 0), _v(-12, 0), _v(-4, 0x9999 << 220), _nv(-5, 0), _v(-8, 0x8 << 232), _v(-29, 0x5 << 232)],
+                      [int256(365), int256(10000), int256(10), int256(100), int256(-365), int256(315360000)]);
     }
 
     function test_ladder_conversions() public view {

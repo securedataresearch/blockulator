@@ -9,27 +9,34 @@ import {console} from "forge-std/console.sol";
 /// @notice Every FP256 op against committed vectors (test/fp256/vectors/*.json,
 ///         produced by scripts/fp256/oracle.py). For each vector: a REVERT
 ///         must revert with that selector; otherwise the relative correct
-///         bits on the decoded values (FP256Harness._bits) must be at or
-///         above the op's floor, with a result within 2 ULP counted as
-///         exact. Prints PREC|op|n|min|mean|worstInput and writes
+///         bits on the decoded values (FP256Harness._bits, 256 when the words
+///         are equal) must be at or above the op's floor. There is no ULP
+///         slack: a floor of 256 means the word must equal the oracle's.
+///         Prints PREC|op|n|min|mean|worstInput and writes
 ///         docs/fp256/precision.json.
 contract Precision256 is FP256Harness {
     function _out() internal pure virtual returns (string memory) { return "docs/fp256/precision.json"; }
 
-    function _ops() internal pure returns (string[19] memory o) {
-        o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "neg", "abs", "sign", "cmp", "lt", "eq",
-             "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18"];
+    function _ops() internal pure returns (string[28] memory o) {
+        o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "lambertW0", "lambertWm1", "neg", "abs", "sign", "cmp", "lt", "eq",
+             "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18", "powu", "compound"];
     }
 
     /// Minimum relative correct bits per op. 256 means bit-exact.
     function _floorBits(string memory op) internal pure returns (uint256) {
-        bytes32 h = keccak256(bytes(op));
-        // release two: the 2^-254 kernels round exp and ln correctly (one ULP at most
-        // against the oracle); pow loses log2 of y log2 x on top
-
-        if (h == keccak256("exp")) return 236;
-        if (h == keccak256("pow")) return 230;
-        if (h == keccak256("ln")) return 236;
+        // every op but pow is correctly rounded at every committed vector. pow's
+        // t = y log2 x carries the log2 kernel's 2^-250 times |t|, so it is
+        // held to one ULP (236 bits); 7 of its 234 vectors sit there
+        if (keccak256(bytes(op)) == keccak256("pow")) return 236;
+        // powu (binary exponentiation below 2^16, pow's tail above) and compound
+        // (pow's tail) are within one ULP while |t| = |n log2 x| < 2^13 and lose
+        // log2|t| - 13 bits above it, as pow: 233 and 231 at |t| near 2^17 and 2^15
+        if (keccak256(bytes(op)) == keccak256("powu")) return 233;
+        if (keccak256(bytes(op)) == keccak256("compound")) return 231;
+        // Lambert W iterates on the rounded float ops: within one ULP away from -1/e (235
+        // bits at worst), and near it Newton loses log2(1/p) bits, p = sqrt(2(1 + e x)),
+        // until the branch-point series takes over below p = 2^-21: 218 bits at worst
+        if (keccak256(bytes(op)) == keccak256("lambertW0") || keccak256(bytes(op)) == keccak256("lambertWm1")) return 218;
         return 256;
     }
 
@@ -101,15 +108,8 @@ contract Precision256 is FP256Harness {
         int256 got = abi.decode(out, (int256));
         int256 truth = int256(vm.parseUint(expected));
         uint256 b;
-        if (_plain(op)) {
-            b = got == truth ? 256 : 0;
-            // the 127.128 and 18-decimal conversions round once; allow one unit
-            int256 d = got > truth ? got - truth : truth - got;
-            if (d <= 1) b = 256;
-        } else {
-            b = _bits(got, truth);
-            if (floorBits < 256 && _ulps(got, truth) <= 2) b = 256;
-        }
+        if (_plain(op)) b = got == truth ? 256 : 0;
+        else b = got == truth ? 256 : _bits(got, truth);
         st.n++;
         st.sumBits += b;
         if (b < st.minBits) { st.minBits = b; st.worst = _label(inp); }
@@ -129,7 +129,7 @@ contract Precision256 is FP256Harness {
     }
 
     function test_precision_all() public virtual {
-        string[19] memory ops = _ops();
+        string[28] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));

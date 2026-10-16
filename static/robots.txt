@@ -29,3 +29,5 @@ Allow: /
 # Pointers for agents
 # LLM-friendly summary: https://blockulator.com/llms.txt
 # Agent manifest:       https://blockulator.com/.well-known/agent.json
+
+Sitemap: https://blockulator.com/sitemap.xml

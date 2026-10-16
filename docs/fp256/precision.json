@@ -20,6 +20,13 @@
     "reverts": 5,
     "worstInput": ""
   },
+  "compound": {
+    "meanBits": 255,
+    "minBits": 231,
+    "n": 413,
+    "reverts": 87,
+    "worstInput": "0xbfffb9cd218786ffe65e58ae39f7eca8fe1406d48586be0b57c440dcb23c5365,0x00000000000000000000000000000000000000000000000000000000000f4240"
+  },
   "div": {
     "meanBits": 256,
     "minBits": 256,
@@ -34,10 +41,31 @@
     "reverts": 0,
     "worstInput": ""
   },
+  "erf": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 382,
+    "reverts": 3,
+    "worstInput": ""
+  },
+  "erfc": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 437,
+    "reverts": 3,
+    "worstInput": ""
+  },
   "exp": {
     "meanBits": 256,
     "minBits": 256,
-    "n": 637,
+    "n": 767,
+    "reverts": 5,
+    "worstInput": ""
+  },
+  "expm1": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 851,
     "reverts": 5,
     "worstInput": ""
   },
@@ -62,11 +90,32 @@
     "reverts": 0,
     "worstInput": ""
   },
+  "lambertW0": {
+    "meanBits": 252,
+    "minBits": 218,
+    "n": 815,
+    "reverts": 72,
+    "worstInput": "0xbfffd78b56362ce82e5614a55440337bfb164715cbe72f8ed626af774eac2232"
+  },
+  "lambertWm1": {
+    "meanBits": 249,
+    "minBits": 221,
+    "n": 662,
+    "reverts": 677,
+    "worstInput": "0xbfffd78b56362a2f87ca7f8b1f34a837009ce2511a0d898f20e9a30dc45166f2"
+  },
   "ln": {
     "meanBits": 256,
     "minBits": 256,
-    "n": 2104,
+    "n": 2118,
     "reverts": 96,
+    "worstInput": ""
+  },
+  "log1p": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1226,
+    "reverts": 11,
     "worstInput": ""
   },
   "lt": {
@@ -90,12 +139,26 @@
     "reverts": 3,
     "worstInput": ""
   },
-  "pow": {
+  "normCdf": {
     "meanBits": 256,
     "minBits": 256,
+    "n": 434,
+    "reverts": 3,
+    "worstInput": ""
+  },
+  "pow": {
+    "meanBits": 255,
+    "minBits": 236,
     "n": 234,
     "reverts": 166,
-    "worstInput": ""
+    "worstInput": "0x3fffe6248f63a2a7f2d6bd7660f2222d6b4b5cc537e3698b36008c1cd0d2c5de,0xc0002e4138223b7118c7f7a1b460f692d54ecf269825fdbd1620278b418da150"
+  },
+  "powu": {
+    "meanBits": 255,
+    "minBits": 233,
+    "n": 375,
+    "reverts": 125,
+    "worstInput": "0x3ffff1999999999999999999999999999999999999999999999999999999999a,0x00000000000000000000000000000000000000000000000000000000000f4240"
   },
   "sign": {
     "meanBits": 256,

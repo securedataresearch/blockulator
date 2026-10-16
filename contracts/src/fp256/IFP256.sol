@@ -30,9 +30,12 @@ interface IFP256 {
     /// @notice e^x = 2^(x log2 e): the 512-bit product of the significand and
     ///         log2 e in two words (2^-508), split into the integer part and a
     ///         fraction at 2^-254, then the 2^f kernel and one rounding:
-    ///         correctly rounded at every committed vector. Below 2^-118 the
-    ///         series 1 + x (1 + x/2) at full precision; below 2^-237 exactly
-    ///         one; zero below about -181,700.
+    ///         correctly rounded at every committed vector. Below 2^-118,
+    ///         1 + x + x^2/2 floored exactly on the 2^-254 grid (the cubic only
+    ///         breaks ties) and rounded once; a positive x whose lowest bit is
+    ///         2^-118, below 2^-84, makes that sum an exact tie the kernel cannot
+    ///         see past, so it takes the same path. Exactly one below 2^-238;
+    ///         zero below about -181,700.
     function exp(int256 x) external pure returns (int256 r);
     /// @notice ln(x) = (E - bias + log2(M / 2^236)) ln 2: the exponent exactly,
     ///         the mantissa through the log2 kernel at 2^-254, the sum scaled to
@@ -48,6 +51,68 @@ interface IFP256 {
     ///         2^-250 on log2 x bounds the result at about 250 - log2|t| bits
     ///         for t = y log2 x. 0^0 = 1. Shortcuts for y in {1, 2, 1/2, -1}.
     function pow(int256 x, int256 y) external pure returns (int256 r);
+    /// @notice ln(1 + x) without forming a rounded 1 + x. Below 2^-4, x times
+    ///         the ln series at 2^-254 (32 terms below 2^-8, 64 above), so the
+    ///         relative precision holds all the way down; above, 1 + x exactly
+    ///         on a 2^-254 grid under its leading bit, the log2 kernel and one
+    ///         product with ln 2. Correctly rounded at every committed vector.
+    function log1p(int256 x) external pure returns (int256 r);
+    /// @notice e^x - 1 without cancellation. Below 2^-8, x times the series
+    ///         sum x^k / (k + 1)! at 2^-254; above, exp's split of x log2 e and
+    ///         its unrounded 2^f, with the one subtracted on the same 2^-254
+    ///         grid. Correctly rounded at every committed vector; -1 below
+    ///         about -176.
+    function expm1(int256 x) external pure returns (int256 r);
+    /// @notice The error function. Below 1/2, x (2/sqrt pi) e^(-x^2) times the
+    ///         all-positive series sum (2x^2)^k / (2k+1)!!; above, 1 - erfc with
+    ///         erfc = e^(-x^2) g(x) from the anchors or the continued fraction
+    ///         (see erfc). e^(-x^2) comes from the exact square. One rounding;
+    ///         +-1 from |x| >= 13.
+    function erf(int256 x) external pure returns (int256 r);
+    /// @notice The complementary error function as a product, never a
+    ///         difference, for x >= 1/2: erfc(x) = e^(-x^2) g(x), g = e^(x^2) erfc
+    ///         from a Taylor series around 45 anchors on [1/2, 6] and the
+    ///         continued fraction above, e^(-x^2) from the exact 474-bit square,
+    ///         so the tail keeps 71 digits until it underflows 2^-262142 near
+    ///         x = 427. 1 - erf below 1/2, 2 - erfc(-x) below zero. One rounding.
+    function erfc(int256 x) external pure returns (int256 r);
+    /// @notice The standard normal distribution function Phi(x) = erfc(-x /
+    ///         sqrt 2) / 2, with e^(-x^2/2) from the exact square, so the left
+    ///         tail keeps 71 digits until it underflows near x = -603 (the
+    ///         18-decimal grid is empty from about -8.3); one rounding; exactly
+    ///         one from x >= 13 sqrt 2.
+    function normCdf(int256 x) external pure returns (int256 r);
+    /// @notice The principal branch of Lambert W, W(x) e^W(x) = x, W >= -1.
+    ///         Seeds as FP127's: the branch-point series in p = sqrt(2(1 + e x))
+    ///         with 1 + e x exact, x - x^2 + 3/2 x^3 on (-1/4, 0), Winitzki's
+    ///         L (1 - ln(1 + L)/(2 + L)), L = ln(1 + x), above. Six Newton steps
+    ///         on the float ops: w e^w = x up to 3, the log form w + ln w = ln x
+    ///         above (no e^w, so the whole range up to W = 181,700 works). Within
+    ///         one ULP across the domain except near -1/e, where W's slope is
+    ///         infinite: below p = 2^-21 the ten-term series alone (within one
+    ///         ULP), above it Newton loses log2(1/p) bits, about 22 at worst.
+    function lambertW0(int256 x) external pure returns (int256 r);
+    /// @notice The secondary real branch of Lambert W, W(x) <= -1. Seeds as
+    ///         FP127's: the branch-point series in -p for x < -1/4, the
+    ///         asymptotic L - ln(-L) + ln(-L)/L, L = ln(-x), above; seven
+    ///         log-form Newton steps (w + ln(-w) = ln(-x), no e^w: W reaches
+    ///         about -181,700 at the bottom of the format). Within one ULP away
+    ///         from -1/e; near it as lambertW0.
+    function lambertWm1(int256 x) external pure returns (int256 r);
+    /// @notice x^n for |n| below 2^16 by binary exponentiation on a 256-bit
+    ///         significand with its own exponent, each product keeping its top
+    ///         256 bits, rounded once at the end: within one ULP, and exact
+    ///         whenever x^n fits 256 bits (so every exactly representable power
+    ///         and every exact tie). n < 0 inverts the final significand once.
+    ///         From 2^16 on, pow(|x|, n) with the sign restored. 0^0 = 1.
+    function powu(int256 x, int256 n) external pure returns (int256 r);
+    /// @notice (1 + rate)^n without forming a rounded 1 + rate (a per-second
+    ///         rate needs 266 bits for it): log2(1 + rate) unrounded, as log1p
+    ///         takes it (the series below 2^-4, 1 + rate exact under its leading
+    ///         bit above), its exact product with n, then pow's 2^t and one
+    ///         rounding: within one ULP while |n log2(1 + rate)| stays below
+    ///         about 2^13, losing log2 of that above, as pow does.
+    function compound(int256 rate, int256 n) external pure returns (int256 r);
     /// @notice -x: the sign bit flipped; -0 is 0.
     function neg(int256 x) external pure returns (int256 r);
     /// @notice |x|: the sign bit cleared.
