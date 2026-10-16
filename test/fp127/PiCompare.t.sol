@@ -83,7 +83,7 @@ contract PiCompare is Test {
     }
 
     function test_pi_compare() public view {
-        for (uint256 t = 1; t <= 6; t++) {
+        for (uint256 t = 1; t <= 10; t++) {
             uint256 g0 = gasleft(); int256 r = _series(t, ONE, fpSqrt, fpMul, fpDiv); _log("fp127lib", t, r, "2**128", g0 - gasleft());
             g0 = gasleft(); r = _series(t, 1e18, solSqrt, solMul, solDiv); _log("solady", t, r, "10**18", g0 - gasleft());
             g0 = gasleft(); r = _series(t, 1e18, prbSqrt, prbMul, prbDiv); _log("prb", t, r, "10**18", g0 - gasleft());
