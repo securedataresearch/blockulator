@@ -9,7 +9,7 @@ address constant FP127_ADDRESS = 0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1;
 // @notice The FP256 Yul object's CREATE2 address (contracts/deployments/FP256.md);
 //         the FP256 adapter is inline (FP256Lib) and does not call it, so the
 //         ladder does not depend on its deployment.
-address constant FP256_ADDRESS = 0x628b8dfC82954983a9E8E22056ffc767B4a26077;
+address constant FP256_ADDRESS = 0x2776d2BEE09683F95016eaF512939a7E21751C27;
 
 /// @notice Scenario ids. Mirrors "index" in scripts/ladder/scenarios.json.
 library Scenario {
