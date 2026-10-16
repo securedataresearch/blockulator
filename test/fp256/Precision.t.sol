@@ -17,8 +17,8 @@ import {console} from "forge-std/console.sol";
 contract Precision256 is FP256Harness {
     function _out() internal pure virtual returns (string memory) { return "docs/fp256/precision.json"; }
 
-    function _ops() internal pure returns (string[21] memory o) {
-        o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "neg", "abs", "sign", "cmp", "lt", "eq",
+    function _ops() internal pure returns (string[24] memory o) {
+        o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "neg", "abs", "sign", "cmp", "lt", "eq",
              "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18"];
     }
 
@@ -120,7 +120,7 @@ contract Precision256 is FP256Harness {
     }
 
     function test_precision_all() public virtual {
-        string[21] memory ops = _ops();
+        string[24] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));

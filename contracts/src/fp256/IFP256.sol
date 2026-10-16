@@ -63,6 +63,25 @@ interface IFP256 {
     ///         grid. Correctly rounded at every committed vector; -1 below
     ///         about -176.
     function expm1(int256 x) external pure returns (int256 r);
+    /// @notice The error function. Below 1/2, x (2/sqrt pi) e^(-x^2) times the
+    ///         all-positive series sum (2x^2)^k / (2k+1)!!; above, 1 - erfc with
+    ///         erfc = e^(-x^2) g(x) from the anchors or the continued fraction
+    ///         (see erfc). e^(-x^2) comes from the exact square. One rounding;
+    ///         +-1 from |x| >= 13.
+    function erf(int256 x) external pure returns (int256 r);
+    /// @notice The complementary error function as a product, never a
+    ///         difference, for x >= 1/2: erfc(x) = e^(-x^2) g(x), g = e^(x^2) erfc
+    ///         from a Taylor series around 45 anchors on [1/2, 6] and the
+    ///         continued fraction above, e^(-x^2) from the exact 474-bit square,
+    ///         so the tail keeps 71 digits until it underflows 2^-262142 near
+    ///         x = 427. 1 - erf below 1/2, 2 - erfc(-x) below zero. One rounding.
+    function erfc(int256 x) external pure returns (int256 r);
+    /// @notice The standard normal distribution function Phi(x) = erfc(-x /
+    ///         sqrt 2) / 2, with e^(-x^2/2) from the exact square, so the left
+    ///         tail keeps 71 digits until it underflows near x = -603 (the
+    ///         18-decimal grid is empty from about -8.3); one rounding; exactly
+    ///         one from x >= 13 sqrt 2.
+    function normCdf(int256 x) external pure returns (int256 r);
     /// @notice -x: the sign bit flipped; -0 is 0.
     function neg(int256 x) external pure returns (int256 r);
     /// @notice |x|: the sign bit cleared.

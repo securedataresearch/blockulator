@@ -8,9 +8,9 @@ import {FP256Lib} from "../fp256/FP256Lib.sol";
 /// @notice FP256, the 256-bit float, inline (FP256Lib). Each int256 is the
 ///         float's bit pattern (scripts/ladder/inputs.json encodes the
 ///         parameters to nearest); the sign is bit 255, so the sign test is
-///         overridden. pow, log1p and expm1 are the library's; the composite
-///         ops (compound, normCdf) run the generic recipes through these
-///         primitives, as Quad's do, since FP256 has no erf yet.
+///         overridden. pow, log1p, expm1, erf, erfc and normCdf are the
+///         library's; compound runs the generic recipe through these
+///         primitives, as Quad's does.
 contract LadderFP256 is LadderBase {
     function _isNeg(int256 x) internal pure override returns (bool) { return x < 0; }
     function _one() internal pure override returns (int256) { return FP256Lib.ONE; }
@@ -25,4 +25,7 @@ contract LadderFP256 is LadderBase {
     function _pow(int256 x, int256 y) internal view override returns (int256) { return FP256Lib.pow(x, y); }
     function _log1p(int256 x) internal view override returns (int256) { return FP256Lib.log1p(x); }
     function _expm1(int256 x) internal view override returns (int256) { return FP256Lib.expm1(x); }
+    function _erf(int256 x) internal view override returns (int256) { return FP256Lib.erf(x); }
+    function _erfc(int256 x) internal view override returns (int256) { return FP256Lib.erfc(x); }
+    function _normCdf(int256 x) internal view override returns (int256) { return FP256Lib.normCdf(x); }
 }

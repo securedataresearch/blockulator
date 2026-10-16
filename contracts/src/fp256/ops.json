@@ -121,6 +121,39 @@
       "reverts": "Overflow() when e^x - 1 does not fit (x above about 181,705); OutOfRange() for a word that is not a number"
     },
     {
+      "name": "erf",
+      "signature": "erf(int256)",
+      "selector": "0x7a959e36",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The error function. Below 1/2, x (2/sqrt pi) e^(-x^2) times the all-positive series sum (2x^2)^k / (2k+1)!!; above, 1 - erfc with erfc = e^(-x^2) g(x) from the anchors or the continued fraction (see erfc). e^(-x^2) comes from the exact square. One rounding; +-1 from |x| >= 13.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "erfc",
+      "signature": "erfc(int256)",
+      "selector": "0xa79456da",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The complementary error function as a product, never a difference, for x >= 1/2: erfc(x) = e^(-x^2) g(x), g = e^(x^2) erfc from a Taylor series around 45 anchors on [1/2, 6] and the continued fraction above, e^(-x^2) from the exact 474-bit square, so the tail keeps 71 digits until it underflows 2^-262142 near x = 427. 1 - erf below 1/2, 2 - erfc(-x) below zero. One rounding.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "name": "normCdf",
+      "signature": "normCdf(int256)",
+      "selector": "0x7b9745a0",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The standard normal distribution function Phi(x) = erfc(-x / sqrt 2) / 2, with e^(-x^2/2) from the exact square, so the left tail keeps 71 digits until it underflows near x = -603 (the 18-decimal grid is empty from about -8.3); one rounding; exactly one from x >= 13 sqrt 2.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
       "name": "neg",
       "signature": "neg(int256)",
       "selector": "0x54a53dc1",

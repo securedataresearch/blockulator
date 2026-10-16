@@ -26,7 +26,7 @@ import tempfile
 from fractions import Fraction
 from pathlib import Path
 
-from mpmath import mp, mpf, log, exp as mexp, power, frexp, log1p, expm1
+from mpmath import mp, mpf, log, exp as mexp, power, frexp, log1p, expm1, erf as merf, erfc as merfc, ncdf
 
 mp.dps = 300
 
@@ -214,6 +214,27 @@ def op_expm1(x):
             return NEGONE
         raise Revert("Overflow")
     return encode_mpf(expm1(to_mpf(x)))
+
+
+def op_erf(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    return encode_mpf(merf(to_mpf(x)))
+
+
+def op_erfc(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return ONE
+    return encode_mpf(merfc(to_mpf(x)))
+
+
+def op_normCdf(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return HALF
+    return encode_mpf(ncdf(to_mpf(x)))
 
 
 def op_pow(x, y):

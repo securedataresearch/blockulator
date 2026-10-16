@@ -24,6 +24,9 @@ contract Equivalence256 is FP256Harness {
     function testFuzz_objEqLib_pow(int256 x, int256 y) public view { _objLib(abi.encodeCall(IFP256.pow, (x, y)), "pow"); }
     function testFuzz_objEqLib_log1p(int256 x) public view { _objLib(abi.encodeCall(IFP256.log1p, (x)), "log1p"); }
     function testFuzz_objEqLib_expm1(int256 x) public view { _objLib(abi.encodeCall(IFP256.expm1, (x)), "expm1"); }
+    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP256.erf, (x)), "erf"); }
+    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP256.erfc, (x)), "erfc"); }
+    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP256.normCdf, (x)), "normCdf"); }
     function testFuzz_objEqLib_neg(int256 x) public view { _objLib(abi.encodeCall(IFP256.neg, (x)), "neg"); }
     function testFuzz_objEqLib_abs(int256 x) public view { _objLib(abi.encodeCall(IFP256.abs, (x)), "abs"); }
     function testFuzz_objEqLib_sign(int256 x) public view { _objLib(abi.encodeCall(IFP256.sign, (x)), "sign"); }

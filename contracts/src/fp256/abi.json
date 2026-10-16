@@ -231,6 +231,63 @@
   },
   {
     "type": "function",
+    "name": "erf",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "erfc",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "normCdf",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
     "name": "neg",
     "stateMutability": "pure",
     "inputs": [

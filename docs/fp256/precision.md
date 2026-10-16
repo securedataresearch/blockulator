@@ -16,6 +16,9 @@ Bits are relative correct bits of the result on the decoded values: the signific
 | pow | 234 | 166 | 236 | exact | `0x3fffe6248f63a2a7f2d6bd7660f2222d6b4b5cc537e3698b36008c1cd0d2c5de`, `0xc0002e4138223b7118c7f7a1b460f692d54ecf269825fdbd1620278b418da150` |
 | log1p | 1226 | 11 | exact | exact |  |
 | expm1 | 851 | 5 | exact | exact |  |
+| erf | 382 | 3 | exact | exact |  |
+| erfc | 437 | 3 | exact | exact |  |
+| normCdf | 434 | 3 | exact | exact |  |
 | neg | 1346 | 3 | exact | exact |  |
 | abs | 1346 | 3 | exact | exact |  |
 | sign | 1346 | 3 | exact | exact |  |

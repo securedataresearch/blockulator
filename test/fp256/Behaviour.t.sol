@@ -123,4 +123,27 @@ contract Behaviour256 is FP256Harness {
         assertGe(_bits(obj.expm1(obj.log1p(x)), x), 235, "expm1(log1p(2^-30))");
         assertGe(_bits(obj.log1p(obj.expm1(obj.fromUint(3))), obj.fromUint(3)), 235, "log1p(expm1(3))");
     }
+
+    /// The error function family: odd and complementary symmetry, the ends, the deep tail.
+    function test_erf_family() public view {
+        assertEq(obj.erf(0), 0);
+        assertEq(obj.erfc(0), ONE);
+        assertEq(obj.normCdf(0), HALF);
+        int256 x = _mk(false, 0, uint256(0x3) << 233);           // 1.375
+        assertEq(obj.erf(obj.neg(x)), obj.neg(obj.erf(x)), "erf is odd");
+        assertGe(_bits(obj.add(obj.erf(x), obj.erfc(x)), ONE), 236, "erf + erfc = 1");
+        assertGe(_bits(obj.add(obj.normCdf(x), obj.normCdf(obj.neg(x))), ONE), 236, "Phi(x) + Phi(-x) = 1");
+        assertEq(obj.erf(obj.fromUint(13)), ONE, "erf is one from 13");
+        assertEq(obj.erfc(obj.fromUint(1000)), 0, "erfc underflows");
+        assertEq(obj.erfc(obj.neg(obj.fromUint(1000))), TWO, "erfc(-1000) = 2");
+        assertEq(obj.normCdf(obj.fromUint(1000)), ONE);
+        assertEq(obj.normCdf(obj.neg(obj.fromUint(1000))), 0, "Phi underflows");
+        assertGt(obj.erfc(obj.fromUint(426)), 0, "erfc(426) is still a number, about 10^-78,800");
+        assertGt(obj.normCdf(obj.neg(obj.fromUint(602))), 0, "Phi(-602) is still a number");
+        // erfc(y) = 2 Phi(-y sqrt 2) in the tail; the rounded argument y sqrt 2 costs
+        // about 2 y^2 2^-236 relative, eleven bits at y = 30
+        int256 y = obj.fromUint(30);
+        int256 z = obj.neg(obj.mul(y, obj.sqrt(TWO)));
+        assertGe(_bits(obj.erfc(y), obj.mul(TWO, obj.normCdf(z))), 220, "erfc(30) = 2 Phi(-30 sqrt 2)");
+    }
 }
