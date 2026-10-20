@@ -28,3 +28,4 @@ public/
 zola
 out-accrual/
 cache-accrual/
+test/sweep/wide/

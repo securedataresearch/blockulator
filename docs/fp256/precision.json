@@ -13,6 +13,13 @@
     "reverts": 3,
     "worstInput": ""
   },
+  "ceil": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 154,
+    "reverts": 0,
+    "worstInput": ""
+  },
   "cmp": {
     "meanBits": 256,
     "minBits": 256,
@@ -21,17 +28,31 @@
     "worstInput": ""
   },
   "compound": {
-    "meanBits": 255,
-    "minBits": 231,
-    "n": 413,
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 421,
     "reverts": 87,
-    "worstInput": "0xbfffb9cd218786ffe65e58ae39f7eca8fe1406d48586be0b57c440dcb23c5365,0x00000000000000000000000000000000000000000000000000000000000f4240"
+    "worstInput": ""
   },
   "div": {
     "meanBits": 256,
     "minBits": 256,
     "n": 496,
     "reverts": 4,
+    "worstInput": ""
+  },
+  "divDown": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 492,
+    "reverts": 8,
+    "worstInput": ""
+  },
+  "divUp": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 494,
+    "reverts": 6,
     "worstInput": ""
   },
   "eq": {
@@ -69,6 +90,13 @@
     "reverts": 5,
     "worstInput": ""
   },
+  "floor": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 154,
+    "reverts": 0,
+    "worstInput": ""
+  },
   "fromFP127": {
     "meanBits": 256,
     "minBits": 256,
@@ -90,19 +118,33 @@
     "reverts": 0,
     "worstInput": ""
   },
+  "fromUintDown": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 19,
+    "reverts": 0,
+    "worstInput": ""
+  },
+  "fromUintUp": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 19,
+    "reverts": 0,
+    "worstInput": ""
+  },
   "lambertW0": {
-    "meanBits": 252,
-    "minBits": 218,
+    "meanBits": 256,
+    "minBits": 256,
     "n": 815,
     "reverts": 72,
-    "worstInput": "0xbfffd78b56362ce82e5614a55440337bfb164715cbe72f8ed626af774eac2232"
+    "worstInput": ""
   },
   "lambertWm1": {
-    "meanBits": 249,
-    "minBits": 221,
+    "meanBits": 256,
+    "minBits": 256,
     "n": 662,
     "reverts": 677,
-    "worstInput": "0xbfffd78b56362a2f87ca7f8b1f34a837009ce2511a0d898f20e9a30dc45166f2"
+    "worstInput": ""
   },
   "ln": {
     "meanBits": 256,
@@ -132,6 +174,20 @@
     "reverts": 5,
     "worstInput": ""
   },
+  "mulDown": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 487,
+    "reverts": 13,
+    "worstInput": ""
+  },
+  "mulUp": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 490,
+    "reverts": 10,
+    "worstInput": ""
+  },
   "neg": {
     "meanBits": 256,
     "minBits": 256,
@@ -147,18 +203,18 @@
     "worstInput": ""
   },
   "pow": {
-    "meanBits": 255,
-    "minBits": 236,
-    "n": 234,
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 244,
     "reverts": 166,
-    "worstInput": "0x3fffe6248f63a2a7f2d6bd7660f2222d6b4b5cc537e3698b36008c1cd0d2c5de,0xc0002e4138223b7118c7f7a1b460f692d54ecf269825fdbd1620278b418da150"
+    "worstInput": ""
   },
   "powu": {
-    "meanBits": 255,
-    "minBits": 233,
-    "n": 375,
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 380,
     "reverts": 125,
-    "worstInput": "0x3ffff1999999999999999999999999999999999999999999999999999999999a,0x00000000000000000000000000000000000000000000000000000000000f4240"
+    "worstInput": ""
   },
   "sign": {
     "meanBits": 256,
@@ -193,6 +249,48 @@
     "minBits": 256,
     "n": 1107,
     "reverts": 242,
+    "worstInput": ""
+  },
+  "toFixed18Down": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1107,
+    "reverts": 242,
+    "worstInput": ""
+  },
+  "toFixed18Up": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1107,
+    "reverts": 242,
+    "worstInput": ""
+  },
+  "toIntDown": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 147,
+    "reverts": 7,
+    "worstInput": ""
+  },
+  "toIntUp": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 147,
+    "reverts": 7,
+    "worstInput": ""
+  },
+  "toUintDown": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 77,
+    "reverts": 77,
+    "worstInput": ""
+  },
+  "toUintUp": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 77,
+    "reverts": 77,
     "worstInput": ""
   }
 }

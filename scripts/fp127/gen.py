@@ -6,6 +6,13 @@ contracts/src/fp256/FP256.yul.src).
 Usage:
     uv run scripts/fp127/gen.py [--lib fp127|fp256]            # write outputs next to the source
     uv run scripts/fp127/gen.py [--lib fp127|fp256] --check    # regenerate and diff
+    uv run scripts/fp127/gen.py --lib fp256 --wide-lib <path>  # the test-only library whose
+                                                               # rounding test always fails
+
+An export may carry `/// @object <Name>` to go into a second deployed object
+(FP256's release four splits FP256 and FP256X). Each object then holds only
+its exports and their callees and gets its own interface and ABI; the
+inline library holds every export.
 
 The generator is deterministic. CI runs --check so the committed outputs can
 never drift from the source.
@@ -41,7 +48,13 @@ LIBS = {
         "object": "FP256", "lib": "FP256Lib", "iface": "IFP256",
         "one": "int256 internal constant ONE = int256(0x3ffff) << 236;",
         "iface_notice": "Interface of the deployed FP256 object. Values are 256-bit binary\n///         floating point: one int256 holding sign (bit 255), a 19-bit biased\n///         exponent (bits 254..236, bias 262143) and a 236-bit fraction with an\n///         implicit leading one; zero is the all-zero word.",
-        "lib_notice": "Inlinable FP256: 256-bit binary floating point, one int256 per value\n///         (sign, 19-bit exponent, 236-bit fraction). Every function body is the\n///         same Yul that the deployed FP256 object runs, so the two agree by\n///         construction.",
+        "lib_notice": "Inlinable FP256: 256-bit binary floating point, one int256 per value\n///         (sign, 19-bit exponent, 236-bit fraction). Every function body is the\n///         same Yul that the deployed FP256 and FP256X objects run, so the three\n///         agree by construction.",
+        # release four: two deployed objects from the one source
+        "objects": {
+            "FP256": {"iface": "IFP256", "abi": "abi.json"},
+            "FP256X": {"iface": "IFP256X", "abi": "abiX.json",
+                       "iface_notice": "Interface of the deployed FP256X object, FP256's extension: the\n///         error function family and Lambert W on the same 256-bit binary\n///         floating point words as IFP256 (sign bit 255, a 19-bit biased\n///         exponent, bias 262143, a 236-bit fraction; zero is the all-zero word)."},
+        },
     },
 }
 LIB = LIBS["fp127"]
@@ -84,6 +97,7 @@ class Export:
     doc: list[str] = field(default_factory=list)
     domain: str = ""
     reverts: str = ""
+    obj: str = ""
 
     @property
     def signature(self) -> str:
@@ -122,7 +136,7 @@ _FUNC_RE = re.compile(
 _EXPORT_RE = re.compile(
     r"@export\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*returns\s*\(([^)]*)\)"
 )
-_TAG_RE = re.compile(r"///\s*@(domain|reverts)\s+(.*)$")
+_TAG_RE = re.compile(r"///\s*@(domain|reverts|object)\s+(.*)$")
 _ERROR_RE = re.compile(r"///\s*@error\s+([A-Za-z_][A-Za-z0-9_]*\(\))\s+(0x[0-9a-fA-F]{8})")
 _CALL_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 
@@ -198,7 +212,7 @@ def parse(text: str) -> Source:
                         f"{name}: @export returns {[p.name for p in outs]} "
                         f"do not match Yul returns {rets}"
                     )
-                meta = {"domain": "", "reverts": ""}
+                meta = {"domain": "", "reverts": "", "object": ""}
                 kept = []
                 for d in doc_lines:
                     tm = _TAG_RE.match(d)
@@ -210,7 +224,7 @@ def parse(text: str) -> Source:
                     raise ValueError(f"{name}: @export needs both @domain and @reverts")
                 exports.append(
                     Export(em.group(1), ins, outs, name, kept,
-                           meta["domain"], meta["reverts"])
+                           meta["domain"], meta["reverts"], meta["object"])
                 )
         pos = end + 1
 
@@ -284,12 +298,37 @@ def validate(src: Source, raw: str) -> None:
     sels = [e.selector for e in src.exports]
     if len(sels) != len(set(sels)):
         problems.append("selector collision between exports")
+    for e in src.exports:
+        if object_of(e) not in objects():
+            problems.append(f"{e.yul_name}: @object {e.obj} is not one of {sorted(objects())}")
 
     if problems:
         sys.stderr.write("FP127.yul.src failed validation:\n")
         for p in problems:
             sys.stderr.write(f"  - {p}\n")
         sys.exit(1)
+
+
+def objects() -> dict[str, dict]:
+    """The deployed objects of the current library: one unless LIB names more."""
+    return LIB.get("objects") or {OBJECT_NAME: {"iface": IFACE_NAME, "abi": "abi.json"}}
+
+
+def object_of(e: Export) -> str:
+    return e.obj or OBJECT_NAME
+
+
+def object_funcs(src: Source, name: str) -> list[Func]:
+    """The functions an object carries. A one-object library keeps every
+    function in source order (FP127's deployed bytes depend on it); a split
+    library keeps each object's exports and their callees, in source order."""
+    if len(objects()) == 1:
+        return list(src.funcs.values())
+    need: set[str] = set()
+    for e in src.exports:
+        if object_of(e) == name:
+            need.update(f.name for f in closure(src, e.yul_name))
+    return [f for f in src.funcs.values() if f.name in need]
 
 
 def closure(src: Source, root: str) -> list[Func]:
@@ -320,8 +359,9 @@ def _indent(text: str, n: int) -> str:
     return "\n".join((pad + l) if l.strip() else l for l in text.splitlines())
 
 
-def emit_object(src: Source) -> str:
-    exports = sorted(src.exports, key=lambda e: int(e.selector, 16))
+def emit_object(src: Source, name: str | None = None) -> str:
+    name = name or OBJECT_NAME
+    exports = sorted((e for e in src.exports if object_of(e) == name), key=lambda e: int(e.selector, 16))
     cases = []
     for e in exports:
         args = ", ".join(f"calldataload({4 + 32 * i})" for i in range(len(e.inputs)))
@@ -330,8 +370,8 @@ def emit_object(src: Source) -> str:
             f"                ret({e.yul_name}({args}))\n"
             f"            }}"
         )
-    funcs = "\n\n".join(_indent(f.text, 12) for f in src.funcs.values())
-    return f"""{banner()}object "{OBJECT_NAME}" {{
+    funcs = "\n\n".join(_indent(f.text, 12) for f in object_funcs(src, name))
+    return f"""{banner()}object "{name}" {{
     code {{
         datacopy(0, dataoffset("runtime"), datasize("runtime"))
         return(0, datasize("runtime"))
@@ -354,10 +394,16 @@ def emit_object(src: Source) -> str:
 """
 
 
-def emit_interface(src: Source) -> str:
+def emit_interface(src: Source, name: str | None = None) -> str:
+    name = name or OBJECT_NAME
+    meta = objects()[name]
+    iface = meta["iface"]
+    notice = meta.get("iface_notice", LIB["iface_notice"])
     errs = "\n".join(f"    error {sig};" for sig in src.errors)
     fns = []
     for e in src.exports:
+        if object_of(e) != name:
+            continue
         ins = ", ".join(f"{p.type} {p.name}" for p in e.inputs)
         outs = ", ".join(f"{p.type} {p.name}" for p in e.outputs)
         doc = "\n".join(f"    {d}" for d in e.doc)
@@ -365,9 +411,9 @@ def emit_interface(src: Source) -> str:
     return f"""// SPDX-License-Identifier: MIT
 pragma solidity {SOLIDITY_PRAGMA};
 {banner()}
-/// @title {IFACE_NAME}
-/// @notice {LIB["iface_notice"]}
-interface {IFACE_NAME} {{
+/// @title {iface}
+/// @notice {notice}
+interface {iface} {{
 {errs}
 
 {chr(10).join(fns)}
@@ -375,7 +421,11 @@ interface {IFACE_NAME} {{
 """
 
 
-def emit_library(src: Source) -> str:
+def emit_library(src: Source, lib_name: str | None = None, wide: bool = False) -> str:
+    """The inline library. wide=True is the test-only variant: rbad (the
+    rounding test of every correctly rounded op) always says the fast result
+    is too close to a tie, so every call takes the wide second stage."""
+    lib_name = lib_name or LIB_NAME
     errs = "\n".join(f"    error {sig};" for sig in src.errors)
     fns = []
     for e in src.exports:
@@ -383,7 +433,14 @@ def emit_library(src: Source) -> str:
         outs = ", ".join(f"{p.type} _{p.name}" for p in e.outputs)
         call_args = ", ".join(f"_{p.name}" for p in e.inputs)
         ret_names = ", ".join(f"_{p.name}" for p in e.outputs)
-        body = "\n\n".join(_indent(f.text, 12) for f in closure(src, e.yul_name))
+        funcs = closure(src, e.yul_name)
+        texts = []
+        for f in funcs:
+            t = f.text
+            if wide and f.name == "rbad":
+                t = "function rbad(D, err) -> b {\n    b := 1\n}"
+            texts.append(t)
+        body = "\n\n".join(_indent(t, 12) for t in texts)
         doc = "\n".join(f"    {d}" for d in e.doc)
         fns.append(
             f"{doc}\n"
@@ -397,11 +454,11 @@ def emit_library(src: Source) -> str:
     return f"""// SPDX-License-Identifier: MIT
 pragma solidity {SOLIDITY_PRAGMA};
 {banner()}
-/// @title {LIB_NAME}
-/// @notice {LIB["lib_notice"]}
+/// @title {lib_name}
+/// @notice {LIB["lib_notice"] if not wide else "TEST ONLY. " + LIB_NAME + " with the rounding test forced to fail, so every\n///         correctly rounded op returns its wide second stage. Generated for\n///         make sweep's second-stage pass; never deploy or import it."}
 /// @dev Blocks are memory-safe: the only memory touched is scratch space
 ///      (0x00..0x3f) for revert selectors.
-library {LIB_NAME} {{
+library {lib_name} {{
 {errs}
 
     {LIB["one"]}
@@ -411,11 +468,14 @@ library {LIB_NAME} {{
 """
 
 
-def emit_abi(src: Source) -> str:
+def emit_abi(src: Source, name: str | None = None) -> str:
+    name = name or OBJECT_NAME
     abi = []
     for sig in src.errors:
         abi.append({"type": "error", "name": sig[:-2], "inputs": []})
     for e in src.exports:
+        if object_of(e) != name:
+            continue
         abi.append({
             "type": "function",
             "name": e.sol_name,
@@ -443,7 +503,9 @@ def emit_ops(src: Source) -> str:
             elif grab:
                 lines.append(d[3:].strip())
         notice = " ".join(lines)
+        extra = {"object": object_of(e)} if len(objects()) > 1 else {}
         ops.append({
+            **extra,
             "name": e.sol_name,
             "signature": e.signature,
             "selector": e.selector,
@@ -456,13 +518,14 @@ def emit_ops(src: Source) -> str:
 
 
 def emit_all(src: Source) -> dict[str, str]:
-    return {
-        "ops.json": emit_ops(src),
-        f"{OBJECT_NAME}.yul": emit_object(src),
-        f"{LIB_NAME}.sol": emit_library(src),
-        f"{IFACE_NAME}.sol": emit_interface(src),
-        "abi.json": emit_abi(src),
-    }
+    out = {"ops.json": emit_ops(src)}
+    for name, meta in objects().items():
+        out[f"{name}.yul"] = emit_object(src, name)
+    out[f"{LIB_NAME}.sol"] = emit_library(src)
+    for name, meta in objects().items():
+        out[f"{meta['iface']}.sol"] = emit_interface(src, name)
+        out[meta["abi"]] = emit_abi(src, name)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -475,6 +538,7 @@ def main() -> int:
     ap.add_argument("--lib", choices=sorted(LIBS), default="fp127", help="which library's source and names")
     ap.add_argument("--src", type=Path, default=None)
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--wide-lib", type=Path, default=None, help="write only the test-only forced-second-stage library here")
     args = ap.parse_args()
     global LIB, SRC, OUT_DIR, OBJECT_NAME, LIB_NAME, IFACE_NAME
     LIB = LIBS[args.lib]
@@ -486,6 +550,12 @@ def main() -> int:
     raw = args.src.read_text()
     src = parse(raw)
     validate(src, raw)
+    if args.wide_lib:
+        name = args.wide_lib.stem
+        args.wide_lib.parent.mkdir(parents=True, exist_ok=True)
+        args.wide_lib.write_text(emit_library(src, name, wide=True))
+        print(f"wrote {args.wide_lib} ({name}: rbad forced to 1)")
+        return 0
     outputs = emit_all(src)
 
     if args.check:

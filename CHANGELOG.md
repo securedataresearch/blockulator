@@ -37,6 +37,36 @@ bytes of runtime). v4 stays live at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`
   (+5,242), `lambertWm1` 31,764 (+2,402), `atanh` 7,646 (−1,055); six more
   selectors add about 90 to the other ops' dispatch.
 
+FP256 release four, not yet deployed: correctly rounded, and the edge.
+
+| component | version | Sepolia |
+|---|---|---|
+| FP256 | FP256 v4, 37 ops, 24,250 bytes | not yet deployed |
+| FP256X | FP256X v4, 5 ops, 23,891 bytes | not yet deployed |
+
+- Every FP256 op is correctly rounded or exact: 0 misrounded of 281,821
+  random inputs, and 0 when every input is forced through the second stage
+  (`docs/benchmarks/sweep.md`); release three had pow 8 in 20,000 off by
+  one ULP, ln 1, normCdf 1 in 4,000, compound up to 4 ULP (291 of 3,853),
+  lambertW0 up to 2 (668 of 2,000). Each fast value carries a stated error
+  bound; when it reaches the rounding boundary a second stage recomputes the
+  value in two words at 2^−510. pow, compound and powu compute exact ties
+  exactly. The bounds are measured against the models in
+  `scripts/fp256/generators/bounds.py`: none reaches 0.67 of its value.
+- The edge, rounding toward minus or plus infinity once from the exact
+  value: `mulDown`, `mulUp`, `divDown`, `divUp`, `toUintDown`, `toUintUp`,
+  `toIntDown`, `toIntUp`, `toFixed18Down`, `toFixed18Up`, `floor`, `ceil`,
+  `fromUintDown`, `fromUintUp`; a positive Up result never underflows to
+  zero.
+- Two objects from one source: FP256 (arithmetic, the edge, exp, ln, log1p,
+  expm1, pow, powu, compound, conversions) and FP256X (erf, erfc, normCdf,
+  lambertW0, lambertWm1), salts `FP256 v4` and `FP256X v4`; the inline
+  library holds all 42. `make predict-fp256x`, `deploy-fp256x-sepolia`,
+  `verify-fp256x-sepolia`.
+- Gas: the fast paths cost a few hundred gas more; the second stage, when it
+  runs, 36k (exp) to 436k (erfc's continued fraction); Lambert W always
+  takes one wide step, 152k at the median (109k before).
+
 ## Blockulator 2.0 (2026-10-16)
 
 Two rulers in one word: FP127 for the money range, FP256 for everything.
