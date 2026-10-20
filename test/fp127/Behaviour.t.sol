@@ -153,21 +153,34 @@ contract Behaviour is FP127Harness {
     }
 
     // ------------------------------------------------------------------
-    // Shortcut dispatch: the shortcut must equal the direct op
+    // Shortcut dispatch
     // ------------------------------------------------------------------
 
+    /// v5 keeps four pow shortcuts, all correctly rounded: y = 1 (x itself),
+    /// y = 2 (the 512-bit square, rounded once), x = 2 (exp2) and x = 10
+    /// (exp10). v4's y in {3, 4, 1/2, 1/4, -1} floored through mul, sqrt or
+    /// div; they now take the general path, which is the nearest word, so
+    /// they sit within the old composites' own error of them.
     function testFuzz_pow_shortcuts(int256 x, uint8 which) public view {
         x = bound(x, ONE / 1000, 1000 * ONE);
         uint8 k = which % 7;
-        int256 y; int256 direct;
-        if (k == 0) { y = ONE; direct = x; }
-        else if (k == 1) { y = 2 * ONE; direct = obj.mul(x, x); }
-        else if (k == 2) { y = 3 * ONE; direct = obj.mul(obj.mul(x, x), x); }
-        else if (k == 3) { y = 4 * ONE; int256 x2 = obj.mul(x, x); direct = obj.mul(x2, x2); }
-        else if (k == 4) { y = ONE / 2; direct = obj.sqrt(x); }
-        else if (k == 5) { y = ONE / 4; direct = obj.sqrt(obj.sqrt(x)); }
-        else { y = -ONE; direct = obj.inv(x); }
-        assertEq(obj.pow(x, y), direct, "y shortcut");
+        int256 got;
+        if (k == 0) { assertEq(obj.pow(x, ONE), x, "y = 1"); }
+        else if (k == 1) {
+            got = obj.pow(x, 2 * ONE);
+            uint256 lo;
+            unchecked { lo = uint256(x) * uint256(x); }
+            assertEq(got, obj.mul(x, x) + int256((lo >> 127) & 1), "y = 2 is the rounded square");
+        } else {
+            int256 y; int256 direct;
+            if (k == 2) { y = 3 * ONE; direct = obj.mul(obj.mul(x, x), x); }
+            else if (k == 3) { y = 4 * ONE; int256 x2 = obj.mul(x, x); direct = obj.mul(x2, x2); }
+            else if (k == 4) { y = ONE / 2; direct = obj.sqrt(x); }
+            else if (k == 5) { y = ONE / 4; direct = obj.sqrt(obj.sqrt(x)); }
+            else { y = -ONE; direct = obj.inv(x); }
+            got = obj.pow(x, y);
+            assertLe(_absd(got, direct), (_absd(direct, 0) >> 100) + 4, "general path within the composite's error");
+        }
         int256 ysm = bound(int256(uint256(which)), -30 * ONE, 30 * ONE);
         assertEq(obj.pow(2 * ONE, ysm), obj.exp2(ysm), "x=2 shortcut");
         assertEq(obj.pow(10 * ONE, ysm), obj.exp10(ysm), "x=10 shortcut");
@@ -180,7 +193,9 @@ contract Behaviour is FP127Harness {
         assertEq(obj.pow(3 * ONE, 2 * ONE), 9 * ONE);
         assertEq(obj.pow(2 * ONE, 10 * ONE), 1024 * ONE);
         assertEq(obj.pow(10 * ONE, 2 * ONE), 100 * ONE);
-        assertEq(obj.pow(27 * ONE, ONE / 2), obj.sqrt(27 * ONE));
+        assertLe(_absd(obj.pow(27 * ONE, ONE / 2), obj.sqrt(27 * ONE)), 1);
+        assertEq(obj.pow(4 * ONE, ONE / 2), 2 * ONE, "exact square root");
+        assertEq(obj.pow(9 * ONE, ONE / 2), 3 * ONE, "exact square root through the general path");
     }
 
     function test_cbrt_shortcuts() public view {
@@ -188,7 +203,10 @@ contract Behaviour is FP127Harness {
         assertEq(obj.cbrt(27 * ONE), 3 * ONE);
         assertEq(obj.cbrt(64 * ONE), 4 * ONE);
         assertEq(obj.cbrt(0), 0);
-        assertEq(obj.cbrt(-27 * ONE), -obj.pow(27 * ONE, obj.div(ONE, 3 * ONE)));
+        assertEq(obj.cbrt(-27 * ONE), -3 * ONE);
+        assertEq(obj.cbrt(1000 * ONE), 10 * ONE, "no shortcut: exact through the double word");
+        assertEq(obj.cbrt(-ONE / 8), -ONE / 2);
+        assertEq(obj.cbrt(int256(1) << 254), int256(1) << 170, "2^126 cubed root");
     }
 
     function test_log2_powers_of_two() public view {
@@ -271,6 +289,61 @@ contract Behaviour is FP127Harness {
         assertEq(f & (ONE - 1), 0);
         assertEq(c & (ONE - 1), 0);
         assertEq(obj.frac(x), x - f);
+    }
+
+    // ------------------------------------------------------------------
+    // v5: directed rounding at the token edge
+    // ------------------------------------------------------------------
+
+    /// The replays (docs/benchmarks/replay-*.md) show the loss lives where a
+    /// protocol leaves the fixed point for integer token units: it must round
+    /// toward itself there. These are the ops it rounds with.
+    function test_directed_known() public view {
+        int256 third = ONE / 3;                          // floor(2^128 / 3)
+        assertEq(obj.mulDown(third, 3 * ONE), ONE - 1);
+        assertEq(obj.mulUp(third, 3 * ONE), ONE - 1, "exact product: up = down");
+        assertEq(obj.mulDown(ONE + 1, ONE / 2), ONE / 2);
+        assertEq(obj.mulUp(ONE + 1, ONE / 2), ONE / 2 + 1);
+        assertEq(obj.mulDown(-(ONE + 1), ONE / 2), -(ONE / 2) - 1);
+        assertEq(obj.mulUp(-(ONE + 1), ONE / 2), -(ONE / 2));
+        assertEq(obj.divDown(ONE, 3 * ONE), third);
+        assertEq(obj.divUp(ONE, 3 * ONE), third + 1);
+        assertEq(obj.divDown(-ONE, 3 * ONE), -third - 1, "toward -inf, where div truncates");
+        assertEq(obj.div(-ONE, 3 * ONE), -third);
+        assertEq(obj.divUp(-ONE, 3 * ONE), -third);
+        assertEq(obj.divUp(6 * ONE, 3 * ONE), 2 * ONE, "exact quotient: up = down");
+        assertEq(obj.toFixed18Down(ONE / 3), 333333333333333333);
+        assertEq(obj.toFixed18Up(ONE / 3), 333333333333333334);
+        assertEq(obj.toFixed18Up(ONE), 1e18, "exact: no rounding");
+        assertEq(obj.toFixed18Up(1), 1, "one ULP is a whole wei charged");
+        assertEq(obj.toFixed18Down(1), 0, "and nothing paid");
+        assertEq(obj.toFixed18Up(-1), 0);
+        assertEq(obj.toFixed18Down(-1), -1);
+        _expectRevert(abi.encodeCall(IFP127.mulUp, (MAX, ONE + 1)), IFP127.Overflow.selector, "mulUp overflow");
+        _expectRevert(abi.encodeCall(IFP127.divUp, (ONE, 0)), IFP127.DivisionByZero.selector, "divUp by zero");
+        _expectRevert(abi.encodeCall(IFP127.divDown, (MIN, ONE / 2)), IFP127.Overflow.selector, "divDown overflow");
+    }
+
+    function testFuzz_prop_directed(int256 a, int256 b) public view {
+        a = bound(a, -(int256(1) << 190), int256(1) << 190);
+        b = bound(b, -(int256(1) << 190), int256(1) << 190);
+        int256 lo = obj.mulDown(a, b);
+        int256 hi = obj.mulUp(a, b);
+        assertEq(lo, obj.mul(a, b), "mulDown is mul");
+        assertTrue(hi == lo || hi == lo + 1, "mulUp is mulDown or one above");
+        // exactly when the product has bits below the grid
+        unchecked { assertEq(hi - lo, (uint256(a) * uint256(b)) % uint256(ONE) == 0 ? int256(0) : int256(1)); }
+        if (b > int256(1) << 64 || b < -(int256(1) << 64)) {
+            int256 dd = obj.divDown(a, b);
+            int256 du = obj.divUp(a, b);
+            assertTrue(du == dd || du == dd + 1, "divUp is divDown or one above");
+            int256 t = obj.div(a, b);
+            assertEq(t, (a < 0) != (b < 0) ? du : dd, "div truncates toward zero");
+        }
+        int256 wd = obj.toFixed18Down(a);
+        int256 wu = obj.toFixed18Up(a);
+        assertEq(wd, obj.toFixed18(a));
+        assertTrue(wu == wd || wu == wd + 1);
     }
 
     // ------------------------------------------------------------------
