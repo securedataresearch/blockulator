@@ -5,11 +5,16 @@ ends: [blockulator.com](https://blockulator.com).
 
 - **FP127** is a signed 127.128 fixed point: one `int256` holding
   `value × 2^128`, a grid of 2^−128: 38 digits at 1, 32 at 10^−6, 8 at
-  10^−30. 49 ops: `add` and `sub` exact, `mul`, `div` and `sqrt` within one
-  ULP (rounded down, `div` toward zero), `ln` and `log2` within two, the exp family within
-  2^−146 relative, `pow` and `cbrt` 2^−123. From 3 × 10^−5 up it holds more
-  digits than any other fixed point or binary128 we measured: 38 at 1
-  against 34.
+  10^−30. v5 (this source, 55 ops, not yet deployed; v4 is live): `add` and
+  `sub` exact; every transcendental the nearest word, within half an ULP on
+  every one of 1,500 to 4,000 random inputs per op (`exp`, `pow`, `cbrt`,
+  `ln`, `log2`, `powu`, `compound`, Lambert W and the rest; v4 had `exp` and
+  `pow` off by up to 10^34 ULPs at the top of the range); `pow` with an
+  exponent near 2^90 is the one exception. `mul`, `div` and `sqrt` within one
+  ULP (rounded down, `div` toward zero), with `mulUp`, `mulDown`, `divUp`,
+  `divDown`, `toFixed18Up` and `toFixed18Down` for rounding toward the
+  protocol at the token edge. From 3 × 10^−5 up it holds more digits than any
+  other fixed point or binary128 we measured: 38 at 1 against 34.
 - **FP256** is a 256-bit binary float: one `int256` holding a sign, a 19-bit
   exponent and a 236-bit fraction, about 71 digits at any magnitude from
   10^−78,900 to 10^78,900, no NaN, no infinity. Twenty-eight ops (release
@@ -24,7 +29,7 @@ for bit across the full `int256` domain: a **deployed object** at a CREATE2
 address with a published salt, and an **inline library** with the same
 bodies in `memory-safe` assembly blocks.
 
-| | FP127 v4 | FP256 v3 |
+| | FP127 v4 (live; v5 in source) | FP256 v3 |
 |---|---|---|
 | Sepolia | `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` | `0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be` |
 | record | [`contracts/deployments/FP127.md`](contracts/deployments/FP127.md) | [`contracts/deployments/FP256.md`](contracts/deployments/FP256.md) |

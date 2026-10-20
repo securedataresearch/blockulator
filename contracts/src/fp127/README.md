@@ -34,10 +34,12 @@ The same Yul function bodies are emitted twice.
 
 **Deployed object.** `FP127.yul` wraps the bodies in a `switch` on the
 4-byte selector. It is deployed with CREATE2 through the deterministic
-proxy at `0x4e59b44847b379578588920cA78FbF26c0B4956C` with salt
-`"FP127 v4"`, which puts it at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` on
-every chain it is deployed to (Sepolia today; record and verification
-recipe in [`contracts/deployments/FP127.md`](../../deployments/FP127.md)).
+proxy at `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the
+version. v4 (salt `"FP127 v4"`) is live at
+`0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` on Sepolia. This source is v5
+(salt `"FP127 v5"`, 55 ops, 17,066 bytes of runtime), not yet deployed;
+`make predict` prints its address. Record and verification recipe in
+[`contracts/deployments/FP127.md`](../../deployments/FP127.md).
 Every contract that `staticcall`s it runs identical bytecode.
 `FP127Caller.sol` is the minimal Solidity wrapper for that path; it bubbles
 revert data unchanged.
@@ -91,19 +93,22 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | op | semantics | reverts |
 |---|---|---|
 | `add`, `sub` | exact | `Overflow` |
-| `mul(a, b)` | floor(a·b / 2^128) | `Overflow` |
+| `mul(a, b)`, `mulDown(a, b)` | floor(a·b / 2^128) | `Overflow` |
+| `mulUp(a, b)` | ceil(a·b / 2^128) | `Overflow` |
 | `div(a, b)` | trunc(a·2^128 / b) | `DivisionByZero`, `Overflow` |
+| `divDown(a, b)`, `divUp(a, b)` | floor, ceil of a·2^128 / b | `DivisionByZero`, `Overflow` |
 | `fromFixed18(x)` | trunc(x·2^128 / 10^18) | `OutOfRange` if \|x\| ≥ 2^127 |
-| `toFixed18(x)` | floor(x·10^18 / 2^128) | never |
-| `exp(x)` | e^x; 0 below −88 | `Overflow` above 88 |
-| `exp2(x)` | 2^x; 0 below −128 | `Overflow` at or above 127 |
-| `exp10(x)` | 10^x | `Overflow` |
+| `toFixed18(x)`, `toFixed18Down(x)` | floor(x·10^18 / 2^128) | never |
+| `toFixed18Up(x)` | ceil(x·10^18 / 2^128) | never |
+| `exp(x)` | e^x; 0 below −90 (under half an ULP from −89.42) | `Overflow` above 88 |
+| `exp2(x)` | 2^x; 0 below −129 | `Overflow` at or above 127 |
+| `exp10(x)` | 10^x; 0 below 2^-129 | `Overflow` from 2^127 (x ≈ 38.23) |
 | `ln`, `log2`, `log10` | x > 0 | `OutOfRange` |
-| `log2Up(x)` | ceil(log2 x), exact for powers of two | `OutOfRange` |
-| `sqrt(x)` | x ≥ 0 | `OutOfRange` |
-| `cbrt(x)` | all x, odd | `Overflow` only at −2^255 |
-| `pow(x, y)` | x^y for x ≥ 0; 0^0 = 1; exact for y ∈ {1,2,3,4,½,¼,−1} and x ∈ {2,10}; the exponent product at 2^-192 | `OutOfRange` for x < 0, `Overflow` |
-| `powu(x, n)` | x^floor(n) for any integer n, binary exponentiation on a 256-bit mantissa, one rounding; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
+| `log2Up(x)` | ceil(log2 x): msb − 128, plus one unless a power of two | `OutOfRange` |
+| `sqrt(x)` | floor, x ≥ 0 | `OutOfRange` |
+| `cbrt(x)` | all x, odd; exact for perfect cubes | `Overflow` only at −2^255 |
+| `pow(x, y)` | x^y for x ≥ 0; 0^0 = 1; shortcuts y = 1, y = 2 (the rounded square), x = 2, x = 10 | `OutOfRange` for x < 0, `Overflow` |
+| `powu(x, n)` | x^floor(n) for any integer n, binary exponentiation on a 256-bit mantissa, a 512-bit one where that is ambiguous, one rounding; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
 | `compound(r, n)` | (1 + r)^floor(n) through `powu` | `Overflow`, `DivisionByZero` |
 | `inv(x)` | 1/x | `DivisionByZero`, `Overflow` |
 | `abs`, `neg` | | `Overflow` at −2^255 |
@@ -116,12 +121,51 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0 | `OutOfRange` |
 | `pi(terms)` | Ramanujan's 1914 series, floor(terms) terms, 1 ≤ terms ≤ 7; five terms give 36 digits, 230 ULP from π, and more add nothing | `OutOfRange` |
 | `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
-| `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −88 | `Overflow` above 88 |
+| `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −90 | `Overflow` above 88 |
 | `sinh`, `cosh` | \|x\| ≤ 88; the odd series at 2^-192 for sinh below 1 | `Overflow` |
-| `tanh(x)` | all x; ±1 exactly from \|x\| = 44 | never |
+| `tanh(x)` | all x; ±1 exactly from \|x\| = 46 | never |
 | `atanh(x)` | \|x\| < 1, both logs unrounded at 2^-192 | `OutOfRange` |
 | `erf(x)`, `erfc(x)` | all x; series to 4, continued fraction beyond, at 2^-192; erfc(9.3) is one ULP, zero beyond | never |
 | `normCdf(x)` | Φ(x) = erfc(−x/√2)/2, the N(d) of Black-Scholes; Φ(−13) is two ULPs, Φ(−14) is zero, Φ(14) is one | never |
+
+**Rounding (v5).** Every transcendental returns the nearest word, ties up:
+`exp`, `exp2`, `exp10`, `expm1`, `sinh`, `cosh`, `tanh`, `pow`, `cbrt`,
+`ln`, `log2`, `log10`, `log1p`, `powu`, `compound`, `lambertW0`,
+`lambertWm1`, and, through the one-word kernel, `atanh`, `erf`, `erfc` and
+`normCdf` (no misrounding at any vector or random input). `add`, `sub`,
+`log2Up` and the integer ops are exact. `mul`, `mulDown`, `divDown`,
+`sqrt`, `toFixed18`, `toFixed18Down` floor; `mulUp`, `divUp`, `toFixed18Up`
+ceil; `div`, `inv`, `fromFixed18` truncate. The exception is `pow` with an
+extreme exponent: its error is below 2^-299 (1 + |y|) relative before the
+rounding, so it is the nearest word while |y| x^y < 2^140 or so and
+faithful to |y| x^y < 2^170; a base within 2^-88 of one raised past 2^90
+(results near 2^120) misses by up to 1e11 ULPs. `gavg` and `hypot` are the
+v4 compositions (floored root of a floored product or sum), kept
+bit-identical to the Huff: within one ULP when the product is 1 or more,
+but a small product's 2^-128 is amplified by the root.
+
+**At the token edge.** The replays
+([`docs/benchmarks/replay-*.md`](../../../docs/benchmarks/)) put every loss
+where a protocol leaves the fixed point for integer token units. Round
+toward the protocol there: `mulUp`/`divUp`/`toFixed18Up` for what it
+charges or takes in, `mulDown`/`divDown`/`toFixed18Down` for what it pays
+out, `floor` and `ceil` for whole units. `div` truncates toward zero, so a
+negative quotient rounds up; `divDown` does not.
+
+**The v5 kernels.** An exponential is split exactly into 2^n 2^f with f a
+512-bit fraction (`y2nf`: the exponent y·log2(b), log2(b) to 2^-384, formed
+as one 768-bit product), and e^(f ln 2) − 1 is evaluated by `expk` to about
+2^-300 relative: the top 16 bits of the argument pick up to eight
+double-word factors e^(v·4^-k) from a 24-entry table, the rest goes to
+u + u²/2 in the double word and a one-word tail. The result is formed at
+2^-192 in two words and rounded once. `l2p` refines the one-word log2 by one
+Newton step through `expk` (2^-299 absolute); `pow` and `cbrt` use it.
+`ln`, `log2` and `log10` round the one-word kernel when its 2^-145 error
+bound cannot change the answer and fall back to `l2p` within 2^-145 of a
+midpoint (about one input in 2^17). Lambert W ends with one Newton step
+whose residual comes from the double-word exponential, and near −1/e it
+seeds from 1 + e·x to 2^-254. `scripts/fp127/generators/precise_model.py`
+models the kernels in integers and measures them.
 
 Rounding directions of the arithmetic are inherited from the Huff and
 preserved exactly: `mul` floors because it is the middle 256 bits of the
@@ -132,9 +176,10 @@ their kernels at 2^-192, 64 guard bits below the format, floor every
 product there (`mulg`), and round to nearest once at the end (`round64`).
 `ln` and `log10` scale the unrounded 192-bit `log2`, `exp` and `exp10` form
 their argument at 2^-192, and a large `exp2` result keeps the guard bits as
-result bits, so `ln`, `log2` and `log10` are within two ULP (1.31 and 1.88
-at worst for `ln` and `log2` on 4,000 random inputs each) and the
-exponentials within one ULP below 2^16 and 2^-146 relative above. The ladder's `exp(ln(x))` round trip,
+result bits, so in v2 to v4 `ln`, `log2` and `log10` were within two ULP
+(1.31 and 1.88 at worst for `ln` and `log2` on 4,000 random inputs each) and
+the exponentials within one ULP below 2^16 and 2^-146 relative above; v5
+replaced the exponentials' kernel and added the logs' fallback (above). The ladder's `exp(ln(x))` round trip,
 which drifted 8 ULPs per step under floor, now returns the same word on
 every step. The polynomials (degree 24 for 2^f, degree 14 for
 log2(1+f)/f) are Chebyshev fits with error below 2^-145, from
@@ -147,8 +192,9 @@ the guard scale, so `(1 + r)^n` with a per-second `r` keeps the bits that
 a 128-bit product lost. `powu` and `compound` do not use the exponential
 at all: |x| is written as a 256-bit mantissa with a binary exponent,
 squared and multiplied keeping the top 256 bits of every 512-bit product,
-and the word is formed once at the end, so an integer power is within one
-ULP for results below 2^104 (231 bits above) and exact whenever the value is representable, where
+and the word is formed once at the end, so an integer power was within one
+ULP for results below 2^104 (231 bits above; v5 adds the 512-bit decider and
+is the nearest word throughout) and exact whenever the value is representable, where
 Maker's `rpow` and PRBMath's `powu` floor on every squaring. `expm1`,
 `sinh`, `tanh` and `atanh` subtract before they round (series at 2^-192
 near zero, the kernels above), so a result near zero keeps its relative
@@ -164,21 +210,19 @@ erfc(−x/√2)/2. The term counts, the regime split and the fraction depth
 `make test` runs every op over the committed mpmath vectors in
 `test/fp127/vectors/` (generated by `scripts/fp127/oracle.py`, which uses
 exact integer arithmetic for the integer ops and mpmath at 200 digits for
-the rest, with the same rounding and domain as the Yul) and writes
-[`docs/fp127/precision.json`](../../../docs/fp127/precision.json);
-`make precision-report` renders
-[`docs/fp127/precision.md`](../../../docs/fp127/precision.md). Every
-integer op is bit-exact, and so are `mul`, `div` and `sqrt` against an
-oracle that rounds the same way; `ln`, `log2` and `log10` are within two
-ULP of the floored truth at every tested input; `exp`, `exp2` and `exp10` hold 146 bits or
-better (their polynomials' limit), `pow` and `cbrt` 123.
-The version 4 ops sit at the same limits: `powu`, `compound`, `erf`,
-`erfc` and `normCdf` are within two ULP of the truth at every vector,
-`expm1`, `sinh`, `cosh`, `tanh` hold 140 bits or better and `log1p`,
-`atanh` ride the log kernel's two ULP. On random inputs `erf` and `normCdf`
-were correctly rounded every time (2,000 each). The one place precision is structurally
-lower is Lambert W at the branch point −1/e, where the function has infinite
-slope and one ULP of input resolution limits any answer to about 63 bits.
+the rest, with the same rounding and domain as the Yul). Each vector carries
+the real truth, and `Precision.t.sol` holds every op to its rounding
+contract against it, measured to 2^-64 ULP: exact ops 0, directed ops under
+one ULP, nearest ops at most half; v4's test allowed 2 ULP from a floored
+reference. It writes [`docs/fp127/precision.json`](../../../docs/fp127/precision.json);
+`make precision-report` renders [`docs/fp127/precision.md`](../../../docs/fp127/precision.md).
+On 15,058 vectors every nearest op is the nearest word; `pi` is within 230
+ULP of its own partial sum (the floored terms are scaled by 1103 + 26390 k).
+`make sweep` measures 4,000 seeded random inputs per op
+([`docs/benchmarks/sweep.md`](../../../docs/benchmarks/sweep.md)): every
+v5 transcendental within half an ULP, where v4 had `exp` at 4e32, `pow` at
+4.8e34, `cbrt` at 1.6e14, `compound` at 1.3e6, Lambert W at 1,153 and `ln`,
+`log2` at 1.31 and 1.88 ULPs.
 
 ## Gas
 
@@ -189,12 +233,20 @@ Huff baseline, the Yul object, `FP127Caller`, `FP127Lib`, and ABDK, Solady
 and PRBMath side by side. Through a `staticcall` the Yul object costs 700
 to 800 gas more than the Huff on `add` and `mul` and less on `ln`, `log2`,
 `pow` and `cbrt`; the inline library removes the call overhead.
-Lambert W is the one op that got dearer, buying 118+ bits where the Huff had
-50 to 100. Of the version 4 ops, `powu` and `compound` cost 2,200 to 10,500
-gas (one squaring step per bit of the exponent), the near-one and
-hyperbolic ops 4,800 to 11,500, and the error function family is the
-honest expensive one: 1,100 to 39,000 gas depending on where x falls,
-the continued fraction near x = 4 being the dearest.
+Lambert W is the one op that got dearer, buying the nearest word where the
+Huff had 50 to 100 bits: a median of 41k gas for `lambertW0` and 30k for
+`lambertWm1` through the object in v5. Of the version 4 ops, `powu` and
+`compound` cost 2,200 to 10,500 gas (one squaring step per bit of the
+exponent), the near-one and hyperbolic ops 4,000 to 11,500, and the error
+function family is the honest expensive one: 1,100 to 39,000 gas depending
+on where x falls, the continued fraction near x = 4 being the dearest.
+
+v5 against v4, medians through the object: `exp` 7,076 (+1,544), `exp10`
+5,794 (+908), `exp2` 4,664 (−696), `pow` 5,742 (−352), `cbrt` 7,270 (+551),
+`cosh` 9,372 (+155), `atanh` 7,042 (−1,659), `log1p` 4,095 (−619),
+`lambertW0` 40,777 (+4,538), `lambertWm1` 29,952 (+590). Six more selectors
+put about 90 gas on most other ops' dispatch. The directed ops cost 900 to
+2,600 through the object, 950 to 1,530 inline.
 
 ## What changed from the Huff
 
@@ -244,13 +296,18 @@ the log form w + ln(−w) = ln(−x) by Newton, w′ = w − w (w + ln(−w) −
 which is the IB step with the logarithm split and needs only `ln` and `div`.
 Seeds are the branch-point series below −¼ and the three-term asymptotic
 L − ln(−L) + ln(−L)/L above it; five steps take 8 to 40 seed bits to 120 to
-128 outside 2^-20 of −1/e. At the branch point itself it returns exactly −1.
+128 outside 2^-20 of −1/e, and v5's double-word step takes that to the
+nearest word. v4 returned exactly −1 at the format's branch point
+−floor(2^128/e); W₋₁ there is −1 − 2^-63.3, which v5 returns.
 
-**Shortcuts.** `pow`, `cbrt` and `lambertW0` keep the exact shortcuts from
-`shortcut_constants.huff`. The bytecode on Sepolia predates that file (its
-W(2) is the iterated value, 3 ULP from the table), so the equivalence
-suite compares those paths to the Huff within a tolerance rather than to
-the bit.
+**Shortcuts.** v4 kept the exact shortcuts from `shortcut_constants.huff`
+for `pow`, `cbrt` and `lambertW0`. v5 keeps W(1..5) (nearest, W(4) one ULP
+up from v4) and, for `pow`, y = 1, y = 2 (the rounded square), x = 2 and
+x = 10; `cbrt` and the other `pow` shortcuts take the double-word path,
+which is the nearest word and exact on perfect powers. The bytecode on
+Sepolia predates that file (its W(2) is the iterated value, 3 ULP from the
+table), so the equivalence suite compares those paths to the Huff within a
+tolerance rather than to the bit.
 
 ## Legacy baseline
 
