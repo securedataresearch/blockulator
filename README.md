@@ -12,19 +12,24 @@ ends: [blockulator.com](https://blockulator.com).
   against 34.
 - **FP256** is a 256-bit binary float: one `int256` holding a sign, a 19-bit
   exponent and a 236-bit fraction, about 71 digits at any magnitude from
-  10^−78,900 to 10^78,900, no NaN, no infinity. Twenty-eight ops (release
-  three, live on Sepolia): `add`, `mul`, `div`, `sqrt`, `exp`, `log1p`,
-  `expm1`, `erf` and `erfc` correctly rounded on every one of 4,000 to
-  20,000 random inputs each; `ln`, `normCdf` and `pow` off by one ULP on 1 in
-  20,000, 4,000 and 2,500; `compound` within 4 ULP, `lambertW0` within 2
-  ([`docs/benchmarks/sweep.md`](docs/benchmarks/sweep.md)).
+  10^−78,900 to 10^78,900, no NaN, no infinity. Release four (not yet
+  deployed): 42 ops, every one correctly rounded or exact, 0 misrounded of
+  281,821 random inputs ([`docs/benchmarks/sweep.md`](docs/benchmarks/sweep.md));
+  a fast value whose stated error bound reaches the rounding boundary is
+  recomputed in two words, and exact ties of `pow`, `compound` and `powu`
+  are computed exactly. The edge rounds toward the protocol: `mulDown`,
+  `mulUp`, `divDown`, `divUp`, `toUintDown`, `toUintUp`, `toIntDown`,
+  `toIntUp`, `toFixed18Down`, `toFixed18Up`, `floor`, `ceil`,
+  `fromUintDown`, `fromUintUp`. Two objects: FP256 (24,250 bytes) and
+  FP256X (23,891: erf, erfc, normCdf, Lambert W). Release three (28 ops,
+  within 1 to 4 ULP on five of them) is live on Sepolia.
 
 Both are one Yul source each that generates two forms, fuzzed to agree bit
 for bit across the full `int256` domain: a **deployed object** at a CREATE2
 address with a published salt, and an **inline library** with the same
 bodies in `memory-safe` assembly blocks.
 
-| | FP127 v4 | FP256 v3 |
+| | FP127 v4 | FP256 v3 (live; v4 and FP256X v4 not yet deployed) |
 |---|---|---|
 | Sepolia | `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` | `0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be` |
 | record | [`contracts/deployments/FP127.md`](contracts/deployments/FP127.md) | [`contracts/deployments/FP256.md`](contracts/deployments/FP256.md) |
@@ -95,14 +100,14 @@ an agent it is a free `eth_call`: [`/llms.txt`](https://blockulator.com/llms.txt
 ```
 blockulator/
 ├── contracts/src/fp127/        FP127.yul.src and its five generated files (make gen)
-├── contracts/src/fp256/        FP256.yul.src and its five generated files (make gen-fp256)
+├── contracts/src/fp256/        FP256.yul.src and its eight generated files, two objects (make gen-fp256)
 ├── contracts/src/ladder/       LadderRunner, EdgeRunner, one adapter per library, vendor/ (Balancer; the rest transcribed)
 ├── contracts/src/{identity,games,market,tools,content}/  Vyper: badges, and the archived apps
 ├── contracts/archive/huff/     the Huff implementation and its Sepolia bytecode (FP127's equivalence baseline)
 ├── contracts/deployments/      CREATE2 records: FP127, FP256, Ladder
-├── script/                     DeployFP127.s.sol, DeployFP256.s.sol
+├── script/                     DeployFP127.s.sol, DeployFP256.s.sol, DeployFP256X.s.sol
 ├── scripts/fp127/              generator (both libraries), FP127 oracle, verification, gas report
-├── scripts/fp256/              FP256 oracle and vector spec
+├── scripts/fp256/              FP256 oracle, vector spec, kernel models and bounds.py
 ├── scripts/ladder/             scenarios, edges, inputs, datasets, deploy and live-check tooling
 ├── test/fp127/, test/fp256/    equivalence, behaviour, precision, gas ladder, fork smoke tests
 ├── test/ladder/                the ladder and edges harnesses
@@ -126,7 +131,7 @@ Needs `forge` (solc 0.8.24 is installed on first build), `uv`, `deno`, and
 git submodule update --init --recursive   # solady, prb-math, abdk, forge-std
 uv sync                                   # mpmath, keccak
 
-make gen gen-fp256       # regenerate the five files of each library from its .yul.src
+make gen gen-fp256       # regenerate each library's generated files from its .yul.src
 make build               # forge build; FP256.yul is compiled by solc standard-json (make build-fp256)
 make test                # gen-check, vectors-check, every suite under test/fp127, test/fp256, test/ladder
 make bench bench-fp256   # gas ladders -> docs/benchmarks/gas.{json,md}, gas256.{json,md}
@@ -134,14 +139,15 @@ make ladder              # terminal-precision ladder -> docs/benchmarks/ladder.{
 make edges               # the edges -> docs/benchmarks/edges.{json,md}
 make pi-compare          # docs/benchmarks/pi.md
 make precision-report precision-report-fp256
-make size size-fp256     # runtime bytes against the 24,576 limit
+make size size-fp256     # runtime bytes against the 24,576 limit (FP256 and FP256X)
+make sweep               # random inputs through every op, both stages -> docs/benchmarks/sweep.{json,md}
 make site site-check     # zola build -> public/; zola check, the symlink test, deno task test
 ```
 
 `make *-check` targets fail when a committed dataset no longer matches the
 code; CI runs them all. Deploying follows the records: `make predict`,
 `deploy-sepolia`, `verify-sepolia`, `smoke-sepolia` for FP127, the `-fp256`
-variants for FP256, and `predict-ladder` / `deploy-ladder-sepolia` /
+and `-fp256x` variants for FP256's two objects, and `predict-ladder` / `deploy-ladder-sepolia` /
 `verify-ladder-sepolia` then `scripts/ladder/livecap.py` and `liveedges.py`
 for the runners. The deployer key is read from `DEPLOYER_KEY` and never
 stored.
