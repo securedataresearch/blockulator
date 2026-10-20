@@ -6,52 +6,52 @@ Every vector carries the real truth, and the error is the true distance |got −
 
 | op | rounding | vectors | reverts | max error (ULP) | nearest | min bits (≥ 1) | worst input |
 |---|---|---:|---:|---:|---:|---:|---|
-| add | exact | 381 | 19 | 0.0000 | 381 | exact |  |
-| sub | exact | 387 | 13 | 0.0000 | 387 | exact |  |
-| mul | floor | 224 | 176 | 1.0000 | 168 | 129 | `0x0000000000000000000000000000000000000000000000000000000000000001`, `0x7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe` |
-| mulDown | floor | 233 | 167 | 1.0000 | 172 | 130 | `0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`, `0x0000000000000000000000000000000000000000000000000000000000000002` |
-| mulUp | ceil | 230 | 170 | 1.0000 | 173 | 130 | `0x7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe`, `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
-| div | trunc | 377 | 23 | 0.9984 | 226 | 129 | `0x0e040b84d816047e2807aa990eb5bac4941ea69495d6cc40e7d99aab219b12eb`, `0x90bae45b6890723133983b76205a63ba9e62d0389aa830978b5564c622e1397a` |
-| divDown | floor | 372 | 28 | 1.0000 | 183 | 128 | `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`, `0x00000000000000000000000000000000004189374bc6a7ef9db22d0e56041893` |
-| divUp | ceil | 364 | 36 | 1.0000 | 200 | 129 | `0x0000000000000000000000000000000180000000000000000000000000000000`, `0x00000000000000000000000000000000004189374bc6a7ef9db22d0e56041893` |
+| add | exact | 377 | 23 | 0.0000 | 377 | exact |  |
+| sub | exact | 380 | 20 | 0.0000 | 380 | exact |  |
+| mul | floor | 231 | 169 | 1.0000 | 181 | 132 | `0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe`, `0x8000000000000000000000000000000000000000000000000000000000000001` |
+| mulDown | floor | 218 | 182 | 1.0000 | 162 | 131 | `0x0000000000000000000000000000000000000000000000000000000000000002`, `0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe` |
+| mulUp | ceil | 225 | 175 | 1.0000 | 159 | 129 | `0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe`, `0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
+| div | trunc | 377 | 23 | 0.9944 | 225 | 129 | `0x23fccae3cfdca92920400cceaf07264105d9fd08f1256e2392022e9d1745ab4a`, `0x00000000000000000000000000000003243f6a8885a308d313198a2e03707344` |
+| divDown | floor | 363 | 37 | 1.0000 | 174 | 128 | `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`, `0x7870107c047009ebaad71c7ebbaf317671aaa8a105a47733a492aebe56be3702` |
+| divUp | ceil | 367 | 33 | 1.0000 | 206 | 129 | `0x0000000000000000000000000000000180000000000000000000000000000000`, `0x00000000000000000000000000000000004189374bc6a7ef9db22d0e56041893` |
 | fromFixed18 | trunc | 33 | 4 | 0.9921 | 20 | 131 | `0xfffffffffffffffffffffffffffffffff5cc03f34ac9aaa4896da2872a07e2d0` |
-| toFixed18 | floor | 97 | 0 | 1.0000 | 54 | 181 | `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
-| toFixed18Down | floor | 97 | 0 | 1.0000 | 54 | 181 | `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
-| toFixed18Up | ceil | 97 | 0 | 1.0000 | 64 | 182 | `0x0000000000000000000000000000000000000000000000000000000000000001` |
+| toFixed18 | floor | 99 | 0 | 1.0000 | 55 | 181 | `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
+| toFixed18Down | floor | 99 | 0 | 1.0000 | 55 | 181 | `0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff` |
+| toFixed18Up | ceil | 99 | 0 | 1.0000 | 65 | 182 | `0x0000000000000000000000000000000000000000000000000000000000000001` |
 | exp | nearest | 117 | 4 | 0.4980 | 117 | 130 | `0xffffffffffffffffffffffffffffffa6947ae147ae147ae147ae147ae147ae14` |
 | exp2 | nearest | 104 | 3 | 0.5000 | 104 | 130 | `0xffffffffffffffffffffffffffffff7f00000000000000000000000000000000` |
 | exp10 | nearest | 80 | 3 | 0.4973 | 80 | 131 | `0xfffffffffffffffffffffffffffffff141f0353d3320c8f151d83c6c95e647d4` |
-| ln | nearest | 311 | 4 | 0.5000 | 311 | 130 | `0x0000000000000000000000000019eeee1991f56daa32cdc95baeb71517c3c017` |
-| log2 | nearest | 311 | 4 | 0.5000 | 311 | 130 | `0x0000000000000000028dfc4db50a10ff45a3860e8964d6a14a662cfe41b5139e` |
-| log10 | nearest | 311 | 4 | 0.5000 | 311 | 130 | `0x00000000000000000000000000000000005fa366409a1e0f1037a02f8b4a8778` |
-| log2Up | exact | 311 | 4 | 0.0000 | 311 | exact |  |
+| ln | nearest | 322 | 4 | 0.5000 | 322 | 130 | `0x0000000000000000000000000019eeee1991f56daa32cdc95baeb71517c3c017` |
+| log2 | nearest | 322 | 4 | 0.5000 | 322 | 130 | `0x0000000000000000028dfc4db50a10ff45a3860e8964d6a14a662cfe41b5139e` |
+| log10 | nearest | 322 | 4 | 0.5000 | 322 | 130 | `0x00000000000000000000000000000000005fa366409a1e0f1037a02f8b4a8778` |
+| log2Up | exact | 322 | 4 | 0.0000 | 322 | exact |  |
 | sqrt | floor | 298 | 3 | 0.9808 | 206 | 129 | `0x0000000000000000000000000000000000000000000000000000000000020000` |
-| cbrt | nearest | 96 | 1 | 0.4929 | 96 | 130 | `0x00000000000000001bce1abd36207803b5f3bb79b2f817e5a2d5e288b8fe5d96` |
-| pow | nearest | 495 | 105 | 0.4998 | 495 | 130 | `0x0000000000000000000000000000017b8003884dd86c89a488fc31f62f8cea98`, `0xfffffffffffffffffffffffffffffffee80023779f2d390dbf519c550fe6719a` |
+| cbrt | nearest | 98 | 1 | 0.4929 | 98 | 130 | `0x00000000000000001bce1abd36207803b5f3bb79b2f817e5a2d5e288b8fe5d96` |
+| pow | nearest | 501 | 99 | 0.4998 | 501 | 130 | `0x0000000000000000000000000000017b8003884dd86c89a488fc31f62f8cea98`, `0xfffffffffffffffffffffffffffffffee80023779f2d390dbf519c550fe6719a` |
 | inv | trunc | 62 | 3 | 0.9520 | 32 | exact | `0x203165f4c782db9cffce938726dd1ec020de05fd184a1af4395e2a8402671297` |
-| abs | exact | 96 | 1 | 0.0000 | 96 | exact |  |
-| neg | exact | 96 | 1 | 0.0000 | 96 | exact |  |
-| sign | exact | 97 | 0 | 0.0000 | 97 | exact |  |
+| abs | exact | 98 | 1 | 0.0000 | 98 | exact |  |
+| neg | exact | 98 | 1 | 0.0000 | 98 | exact |  |
+| sign | exact | 99 | 0 | 0.0000 | 99 | exact |  |
 | min | exact | 200 | 0 | 0.0000 | 200 | exact |  |
 | max | exact | 200 | 0 | 0.0000 | 200 | exact |  |
 | clamp | exact | 300 | 0 | 0.0000 | 300 | exact |  |
-| avg | floor | 200 | 0 | 0.5000 | 200 | 130 | `0xfffffffffffffffffffffffffffffa075dee210043d3948fc9f918f68c24c04b`, `0xd0f47a5b5d6240843725d7b0bc8a8593571c678566b231a03cc58488864cac28` |
-| zeroFloorSub | exact | 191 | 9 | 0.0000 | 191 | exact |  |
+| avg | floor | 200 | 0 | 0.5000 | 200 | 129 | `0xfffffffffffffffff21f494c589c000000000000000000000000000000000000`, `0xfffffffffffffffffffffffffffffd34d62c1fdb28540383534af43c13a51359` |
+| zeroFloorSub | exact | 189 | 11 | 0.0000 | 189 | exact |  |
 | dist | exact | 190 | 10 | 0.0000 | 190 | exact |  |
-| lerp | floor | 285 | 15 | 0.0000 | 285 | exact |  |
-| floor | exact | 97 | 0 | 0.0000 | 97 | exact |  |
-| ceil | exact | 95 | 2 | 0.0000 | 95 | exact |  |
-| frac | exact | 97 | 0 | 0.0000 | 97 | exact |  |
-| round | exact | 95 | 2 | 0.0000 | 95 | exact |  |
+| lerp | floor | 289 | 11 | 0.0000 | 289 | exact |  |
+| floor | exact | 99 | 0 | 0.0000 | 99 | exact |  |
+| ceil | exact | 97 | 2 | 0.0000 | 97 | exact |  |
+| frac | exact | 99 | 0 | 0.0000 | 99 | exact |  |
+| round | exact | 97 | 2 | 0.0000 | 97 | exact |  |
 | gcd | exact | 81 | 0 | 0.0000 | 81 | exact |  |
 | factorial | exact | 12 | 6 | 0.0000 | 12 | exact |  |
 | hypot | sqrt of floors | 121 | 0 | 1.0000 | 68 | 129 | `0x0000000000000000000000000000000000000000000000000000000000000000`, `0x00000000000000000000000000000003243f6a8885a308d313198a2e03707344` |
-| gavg | sqrt of floors | 162 | 38 | 13043817825332782212.3496 | 77 | 132 | `0x0000000000000000000000000000000000200000000000000000000000000000`, `0x0000000000000000000000000000000000000000000000000000000000000400` |
+| gavg | sqrt of floors | 158 | 42 | 576460752303423488.0000 | 99 | 131 | `0x0000000000000000000000000000000000000000000000000004000000000000`, `0x0000000000000000000000000000000000000000000000100000000000000000` |
 | lambertW0 | nearest | 140 | 3 | 0.4951 | 140 | 130 | `0xffffffffffffffffffffffffffffffffa3d70a3d70a3d70a3d70a3d70a3d70a3` |
 | lambertWm1 | nearest | 86 | 6 | 0.4968 | 86 | 130 | `0xffffffffffffffffffffffffffffffffb30b072074fe3b487073a1b28c4adf68` |
 | pi | series | 8 | 7 | 230.3592 | 0 | 122 | `0x0000000000000000000000000000000700000000000000000000000000000000` |
-| powu | nearest | 437 | 163 | 0.4999 | 437 | 130 | `0xfffffffffffffffffffffffffffffffc29a12310624d183ca1d03b091fb77270`, `0x0000000000000000000000000000004000000000000000000000000000000000` |
-| compound | nearest | 146 | 54 | 0.4915 | 146 | 130 | `0xfffffffffffffffffffffffffffffffffc36c64ea9485dc5de6311874908ce9b`, `0x00000000000000000000000000000e4200000000000000000000000000000000` |
+| powu | nearest | 435 | 165 | 0.4999 | 435 | 130 | `0xfffffffffffffffffffffffffffffffc29a12310624d183ca1d03b091fb77270`, `0x0000000000000000000000000000004000000000000000000000000000000000` |
+| compound | nearest | 141 | 59 | 0.4907 | 141 | 130 | `0x0000000000000000000000000000000019999999999999999999999999999999`, `0x0000000000000000000000000000016d00000000000000000000000000000000` |
 | log1p | nearest | 561 | 18 | 0.5000 | 561 | 130 | `0x0000000000000000000000000000000000000000000000010000000000000000` |
 | expm1 | nearest | 577 | 2 | 0.5000 | 577 | 130 | `0x0000000000000000000000000000000000000000000000010000000000000000` |
 | sinh | nearest | 575 | 4 | 0.4989 | 575 | 130 | `0x0000000000000000000000000000000000016a09e667f3bcc908b2fb1366ea95` |

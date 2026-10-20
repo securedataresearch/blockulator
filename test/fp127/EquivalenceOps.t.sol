@@ -181,9 +181,29 @@ contract EquivalenceOps is FP127Harness {
         _objHuffClose(abi.encodeCall(IFP127.log10, (x)), abi.encodeCall(IHuffOps.log10Raw, (_u(x))), "log10");
     }
 
+    /// v5 computes ceil(log2 x) exactly from the msb. The Huff (and v4) took
+    /// ceil of a rounded log2, which is one low when x sits just above a
+    /// power of two and the log2 rounds down onto the integer; there the Yul
+    /// is one higher, and right.
     function testFuzz_huff_log2Up(int256 x) public view {
         x = bound(x, 1, MAX);
-        _objHuff(abi.encodeCall(IFP127.log2Up, (x)), abi.encodeCall(IHuffOps.log2UpRaw, (_u(x))), "log2Up");
+        Res memory o = _try(address(obj), abi.encodeCall(IFP127.log2Up, (x)));
+        Res memory h = _try(address(huff), abi.encodeCall(IHuffOps.log2UpRaw, (_u(x))));
+        assertTrue(o.ok && h.ok, "log2Up: both succeed");
+        uint256 m;
+        for (uint256 t = uint256(x); t > 1; t >>= 1) m++;
+        if (o.value == h.value + ONE) {
+            // x = 2^m (1 + e) with e below 2^-120: the rounded log2 is m - 128 exactly
+            assertLt(uint256(x) - (uint256(1) << m), (uint256(1) << m) >> 120, "log2Up: Huff low only just above a power of two");
+        } else {
+            assertEq(o.value, h.value, "log2Up: obj != huff");
+        }
+    }
+
+    function test_divergence_log2Up_above_power_of_two() public view {
+        int256 x = (ONE << 64) + 0x5fc97a4a9078;     // 2^64 (1 + 2^-152): log2 rounds to 64
+        assertEq(obj.log2Up(x), 65 * ONE);
+        assertEq(int256(IHuffOps(address(huff)).log2UpRaw(_u(x))), 64 * ONE);
     }
 
     function testFuzz_huff_sqrt(int256 x) public view {
