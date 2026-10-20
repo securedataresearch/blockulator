@@ -39,6 +39,10 @@ pi, the replays and the accrual are not diffed in CI.
   `make edges` from `test/ladder/Edges.t.sol` through the same `EdgeRunner`
   that is deployed on Sepolia; probes in `scripts/ladder/edges.json`, the
   encoded arguments in `scripts/ladder/edge-inputs.json`.
+- [`sweep.md`](sweep.md) / [`sweep.json`](sweep.json): **per-op accuracy on
+  random inputs.** Every FP256 op against the correctly rounded word and every
+  FP127 op against the real truth, 1,500 to 20,000 seeded inputs each
+  (`make sweep`).
 - **Replays: four exploits, bit-exact.** Each one reproduces the deployed
   arithmetic from integers pinned out of the attack transaction and asserted
   against the chain, then prices the decisive step again under the

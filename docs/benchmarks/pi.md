@@ -15,7 +15,7 @@ The same recipe, 1/pi = (2 sqrt2 / 9801) sum (4k)! (1103 + 26390 k) / ((k!)^4 39
 | 9 | — | 36 (21,653) | 70 (89,271) | 33 (56,553) | 17 (18,596) | 16 (20,094) | 16 (18,044) | 16 (19,407) |
 | 10 | — | 36 (23,522) | 70 (98,095) | 33 (62,076) | 17 (20,475) | 16 (21,973) | 16 (19,923) | 16 (21,285) |
 
-PRBMath's `PI` constant, for reference: 3.141592653589793238…, 18 digits, the most an 18-decimal grid can hold. ABDKMathQuad has 113 significand bits, about 34 digits, and reaches them at five terms; FP256 has 237 and keeps going, about eight digits a term, to 70 digits at nine terms. At five terms FP127's `pi` returns 3.141592653589793238462643383279502884874…, 36 digits; truth 3.141592653589793238462643383279502884197…
+PRBMath's `PI` constant, for reference: 3.141592653589793238…, 18 digits, the most an 18-decimal grid can hold. ABDKMathQuad has 113 significand bits, about 34 digits, and stops at 33 from five terms; FP256 has 237 and keeps going, about eight digits a term, to 70 digits at nine terms. At five terms FP127's `pi` returns 3.141592653589793238462643383279502884874…, 36 digits; truth 3.141592653589793238462643383279502884197…
 
 Values at five terms:
 
