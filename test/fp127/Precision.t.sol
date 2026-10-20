@@ -9,18 +9,29 @@ import {console} from "forge-std/console.sol";
 /// @notice Every op against committed mpmath vectors (test/fp127/vectors/*.json,
 ///         produced by scripts/fp127/oracle.py). No ffi at test time.
 ///
-/// For each vector: if the oracle says REVERT:<Error>, the Yul must revert
-/// with that selector. Otherwise the relative correct bits
-/// msb(|truth|) - msb(|truth - got|) (256 when exact) must be at or above the
-/// op's floor. Per-op count / min / mean bits and the worst input are printed
-/// as PREC|op|n|min|mean|worstInput and written to docs/fp127/precision.json.
+/// Each vector holds the inputs, a reference word `out` and `t`, the real
+/// truth's offset from `out` in units of 2^-64 ULP. If the oracle says
+/// REVERT:<Error>, the Yul must revert with that selector. Otherwise the error
+/// is the true distance |got - truth|, measured to 2^-64 ULP, and it must be
+/// within the op's rounding contract (_contract): 0 for an exact op, one ULP
+/// for a directed one (floor, ceil, trunc), half an ULP for a nearest one,
+/// all at the 2^-64 ULP resolution of t. The two v4 composites (gavg, hypot)
+/// must equal their definition instead. Per op the test records the vectors, the reverts, the largest
+/// error, how many results are the nearest word, and the fewest relative
+/// correct bits over results of magnitude 1 or more; PREC| lines and
+/// docs/fp127/precision.json carry them.
 contract Precision is FP127Harness {
     /// Where the per-op stats are written; empty disables the write.
     function _out() internal pure virtual returns (string memory) { return "docs/fp127/precision.json"; }
 
-    function _ops() internal pure returns (string[49] memory o) {
+    uint256 constant ULP = 1 << 64;          // one ULP in the error's units
+    uint256 constant HALF = 1 << 63;
+    uint256 constant COMPOSITE = type(uint256).max;   // bound marker: got must equal out
+
+    function _ops() internal pure returns (string[55] memory o) {
         o = [
-            "add", "sub", "mul", "div", "fromFixed18", "toFixed18",
+            "add", "sub", "mul", "mulDown", "mulUp", "div", "divDown", "divUp",
+            "fromFixed18", "toFixed18", "toFixed18Down", "toFixed18Up",
             "exp", "exp2", "exp10", "ln", "log2", "log10", "log2Up",
             "sqrt", "cbrt", "pow", "inv", "abs", "neg", "sign", "min", "max", "clamp", "avg",
             "zeroFloorSub", "dist", "lerp", "floor", "ceil", "frac", "round", "gcd", "factorial",
@@ -29,35 +40,36 @@ contract Precision is FP127Harness {
         ];
     }
 
-    /// Minimum relative correct bits per op. 256 means bit-exact.
-    function _floorBits(string memory op) internal pure returns (uint256) {
+    function _is(bytes32 h, string memory a) internal pure returns (bool) { return h == keccak256(bytes(a)); }
+
+    /// The rounding each op promises and the largest error, in 2^-64 ULP, that
+    /// promise allows against the real truth.
+    function _contract(string memory op) internal pure returns (string memory label, uint256 bound) {
         bytes32 h = keccak256(bytes(op));
-        if (h == keccak256("hypot") || h == keccak256("gavg")) return 120;
-        // guard-bit kernels: the exp family is limited by its polynomial (2^-145),
-        // the log family rounds to within one ULP of the truth
-        if (h == keccak256("exp") || h == keccak256("exp2") || h == keccak256("exp10")) return 140;
-        if (h == keccak256("ln") || h == keccak256("log2") || h == keccak256("log10")) return 200;
-        if (h == keccak256("pow") || h == keccak256("cbrt") || h == keccak256("lambertW0")
-            || h == keccak256("lambertWm1") || h == keccak256("pi")) return 115;
-        // v4: the exp kernel's 2^-145 bounds expm1, sinh, cosh, tanh and the
-        // erf family; log1p and atanh ride the log kernel; powu and compound
-        // round a 256-bit mantissa once and are within one ULP
-        if (h == keccak256("expm1") || h == keccak256("sinh") || h == keccak256("cosh") || h == keccak256("tanh")
-            || h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")) return 140;
-        if (h == keccak256("log1p") || h == keccak256("atanh")) return 200;
-        if (h == keccak256("powu") || h == keccak256("compound")) return 120;
-        return 256;
+        if (_is(h, "mul") || _is(h, "mulDown") || _is(h, "divDown") || _is(h, "toFixed18") || _is(h, "toFixed18Down")
+            || _is(h, "sqrt") || _is(h, "avg") || _is(h, "lerp")) return ("floor", ULP);
+        if (_is(h, "mulUp") || _is(h, "divUp") || _is(h, "toFixed18Up")) return ("ceil", ULP);
+        if (_is(h, "div") || _is(h, "inv") || _is(h, "fromFixed18")) return ("trunc", ULP);
+        // the v4 composites, kept bit-identical to the Huff: the floored sqrt
+        // of a floored product or sum. They must equal that definition (the
+        // oracle's out) exactly; their distance from the real root is
+        // recorded, not bounded, since the floored product's 2^-128 is
+        // amplified by 1 / (2 sqrt(a b)) when the product is small.
+        if (_is(h, "hypot") || _is(h, "gavg")) return ("sqrt of floors", COMPOSITE);
+        // Ramanujan's partial sums in integers (truth: the exact partial sum);
+        // each term is floored and then scaled by 1103 + 26390 k, which with the
+        // floored sqrt(2) and the truncated reciprocal costs up to a few hundred ULPs
+        if (_is(h, "pi")) return ("series", 256 * ULP);
+        if (_is(h, "exp") || _is(h, "exp2") || _is(h, "exp10") || _is(h, "ln") || _is(h, "log2") || _is(h, "log10")
+            || _is(h, "cbrt") || _is(h, "pow") || _is(h, "lambertW0") || _is(h, "lambertWm1") || _is(h, "powu")
+            || _is(h, "compound") || _is(h, "log1p") || _is(h, "expm1") || _is(h, "sinh") || _is(h, "cosh")
+            || _is(h, "tanh") || _is(h, "atanh") || _is(h, "erf") || _is(h, "erfc") || _is(h, "normCdf")) {
+            return ("nearest", HALF);
+        }
+        return ("exact", 0);
     }
 
     function _msb(uint256 x) internal pure returns (uint256 r) { while (x > 1) { x >>= 1; r++; } }
-
-    function _bits(int256 got, int256 truth) internal pure returns (uint256) {
-        uint256 d = uint256(got > truth ? got - truth : truth - got);
-        if (d == 0) return 256;
-        uint256 t = uint256(truth < 0 ? -truth : truth);
-        uint256 mt = _msb(t); uint256 md = _msb(d);
-        return mt > md ? mt - md : 0;
-    }
 
     function _errSel(string memory name) internal pure returns (bytes4) {
         bytes32 h = keccak256(bytes(name));
@@ -90,38 +102,50 @@ contract Precision is FP127Harness {
         for (uint256 i = 1; i < inp.length; i++) s = string.concat(s, ",", inp[i]);
     }
 
-    struct Stats { uint256 n; uint256 minBits; uint256 sumBits; uint256 reverts; string worst; }
+    /// |got - truth| in 2^-64 ULP, where truth = out + t 2^-64; saturates at
+    /// 2^255 when got is absurdly far from out.
+    function _err(int256 got, int256 out, int256 t) internal pure returns (uint256) {
+        uint256 ud;
+        unchecked { ud = got >= out ? uint256(got) - uint256(out) : uint256(out) - uint256(got); }
+        if (ud >= 1 << 180) return 1 << 255;
+        int256 d = int256(ud << 64);
+        if (got < out) d = -d;
+        d -= t;
+        return uint256(d < 0 ? -d : d);
+    }
 
-    /// Runs one op's vector file: {"arity": k, "in0": [...], ..., "out": [...]}.
-    function _runOp(string memory op) internal view returns (Stats memory st) {
+    struct Stats {
+        uint256 n; uint256 reverts; uint256 maxErr; uint256 nearest;
+        uint256 minBits; uint256 sumBits; uint256 nBits; string worst; uint256 bound;
+    }
+
+    struct Vec { string[] outs; string[] ts; string[] in0; string[] in1; string[] in2; uint256 arity; }
+
+    function _load(string memory op) internal view returns (Vec memory v) {
         string memory json = vm.readFile(string.concat("test/fp127/vectors/", op, ".json"));
-        uint256 arity = vm.parseJsonUint(json, ".arity");
-        string[] memory outs = vm.parseJsonStringArray(json, ".out");
-        string[] memory in0 = vm.parseJsonStringArray(json, ".in0");
-        string[] memory in1 = arity > 1 ? vm.parseJsonStringArray(json, ".in1") : new string[](0);
-        string[] memory in2 = arity > 2 ? vm.parseJsonStringArray(json, ".in2") : new string[](0);
-        uint256 floorBits = _floorBits(op);
+        v.arity = vm.parseJsonUint(json, ".arity");
+        v.outs = vm.parseJsonStringArray(json, ".out");
+        v.ts = vm.parseJsonStringArray(json, ".t");
+        v.in0 = vm.parseJsonStringArray(json, ".in0");
+        v.in1 = v.arity > 1 ? vm.parseJsonStringArray(json, ".in1") : new string[](0);
+        v.in2 = v.arity > 2 ? vm.parseJsonStringArray(json, ".in2") : new string[](0);
+    }
+
+    /// Runs one op's vector file: {"arity": k, "in0": [...], ..., "out": [...], "t": [...]}.
+    function _runOp(string memory op) internal view returns (Stats memory st) {
+        Vec memory v = _load(op);
+        (, st.bound) = _contract(op);
         st.minBits = 256;
-        for (uint256 i; i < outs.length; i++) {
-            string[] memory inp = new string[](arity);
-            inp[0] = in0[i];
-            if (arity > 1) inp[1] = in1[i];
-            if (arity > 2) inp[2] = in2[i];
-            _one(op, inp, outs[i], floorBits, st);
+        for (uint256 i; i < v.outs.length; i++) {
+            string[] memory inp = new string[](v.arity);
+            inp[0] = v.in0[i];
+            if (v.arity > 1) inp[1] = v.in1[i];
+            if (v.arity > 2) inp[2] = v.in2[i];
+            _one(op, inp, v.outs[i], vm.parseInt(v.ts[i]), st);
         }
     }
 
-    /// Both branches have infinite slope at the branch point -1/e: one ULP of input
-    /// resolution there moves W by about 2^-63, so no implementation can
-    /// report more than ~63 correct bits within 2^-20 of it. The floor is
-    /// relaxed to 60 bits in that neighbourhood only.
-    int256 constant NEG_INV_E = -int256(0x5e2d58d8b3bcdf1abadec7829054f90d);
-
-    function _one(string memory op, string[] memory inp, string memory expected, uint256 floorBits, Stats memory st) internal view {
-        if (keccak256(bytes(op)) == keccak256("lambertW0") || keccak256(bytes(op)) == keccak256("lambertWm1")) {
-            int256 x = int256(vm.parseUint(inp[0]));
-            if (x < NEG_INV_E + (ONE >> 20)) floorBits = 60;
-        }
+    function _one(string memory op, string[] memory inp, string memory expected, int256 t, Stats memory st) internal view {
         (bool ok, bytes memory out) = address(obj).staticcall(_encode(op, inp));
         if (_isRevert(expected)) {
             assertFalse(ok, string.concat(op, " should revert for ", _label(inp)));
@@ -131,36 +155,60 @@ contract Precision is FP127Harness {
         }
         assertTrue(ok, string.concat(op, " reverted for ", _label(inp)));
         int256 got = abi.decode(out, (int256));
-        int256 truth = int256(vm.parseUint(expected));
-        uint256 b = _bits(got, truth);
-        // For approximated ops a result within 2 ULP of the truth is as good
-        // as the format allows, whatever the relative measure says when the
-        // truth itself is a handful of ULP (e.g. W(-2^-128)). Exact ops keep
-        // the strict rule.
-        if (floorBits < 256) {
-            int256 d = got > truth ? got - truth : truth - got;
-            if (d <= 2 && b < 255) b = 255;
-        }
+        int256 ref = int256(vm.parseUint(expected));
+        uint256 e = _err(got, ref, t);
         st.n++;
-        st.sumBits += b;
-        if (b < st.minBits) { st.minBits = b; st.worst = _label(inp); }
-        assertGe(b, floorBits, string.concat(op, " below precision floor at ", _label(inp)));
+        if (e <= HALF) st.nearest++;
+        if (e > st.maxErr) {
+            st.maxErr = e;
+            st.worst = _label(inp);
+        }
+        // relative correct bits over results of magnitude 1 or more
+        uint256 a;
+        unchecked { a = ref < 0 ? uint256(-ref) : uint256(ref); }
+        if (a >= uint256(ONE)) {
+            uint256 b = 256;
+            if (e > 0) {
+                uint256 mt = _msb(a) + 64;
+                uint256 md = _msb(e);
+                b = mt > md ? mt - md : 0;
+            }
+            st.nBits++;
+            st.sumBits += b;
+            if (b < st.minBits) st.minBits = b;
+        }
+        if (st.bound == COMPOSITE) assertEq(got, ref, string.concat(op, " differs from its definition at ", _label(inp)));
+        else assertLe(e, st.bound, string.concat(op, " outside its rounding contract at ", _label(inp)));
     }
 
     function _record(string memory op, Stats memory st) internal returns (string memory) {
-        uint256 mean = st.n == 0 ? 256 : st.sumBits / st.n;
-        console.log(string.concat("PREC|", op, "|", vm.toString(st.n), "|", vm.toString(st.minBits), "|", vm.toString(mean), "|", st.worst));
+        (string memory label,) = _contract(op);
+        uint256 mean = st.nBits == 0 ? 256 : st.sumBits / st.nBits;
+        console.log(string.concat("PREC|", op, "|", vm.toString(st.n), "|", _ulpString(st.maxErr), "|",
+            vm.toString(st.nearest), "|", vm.toString(st.minBits), "|", st.worst));
         string memory o = string.concat("op_", op);
+        vm.serializeString(o, "rounding", label);
         vm.serializeUint(o, "n", st.n);
         vm.serializeUint(o, "reverts", st.reverts);
+        vm.serializeString(o, "maxErrUlp", _ulpString(st.maxErr));
+        vm.serializeUint(o, "nearest", st.nearest);
         vm.serializeUint(o, "minBits", st.minBits);
         vm.serializeUint(o, "meanBits", mean);
         string memory entry = vm.serializeString(o, "worstInput", st.worst);
         return vm.serializeString("precision", op, entry);
     }
 
+    /// An error in 2^-64 ULP as a decimal ULP count with four places.
+    function _ulpString(uint256 e) internal pure returns (string memory) {
+        if (e >= 1 << 200) return "huge";
+        uint256 q = (e * 10000 + (ULP >> 1)) >> 64;
+        string memory f = vm.toString(q % 10000);
+        while (bytes(f).length < 4) f = string.concat("0", f);
+        return string.concat(vm.toString(q / 10000), ".", f);
+    }
+
     function test_precision_all() public virtual {
-        string[49] memory ops = _ops();
+        string[55] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));
