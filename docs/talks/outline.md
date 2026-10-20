@@ -7,8 +7,9 @@ section by section). Every number has a source in this repo, listed under each p
 
 Thesis: the failures that cost real money happen where a protocol's numbers meet the
 bottom of its ruler. Converging algorithms reach any ruler. FP256 is a ruler that a
-one-word format cannot beat by more than three digits. A new library can be cheaper
-than these, but on the ops they round correctly it cannot be more accurate.
+one-word format cannot beat by more than three digits, and every op of FP256 release four
+returns the nearest word. A new library can be cheaper than these, but it cannot be
+more accurate.
 
 ---
 
@@ -190,31 +191,58 @@ Say first:
 
 ### 3.2 The accuracy ceiling (1.5 min)
 
-- On FP256 the result is the correctly rounded word on every random input tested (4,000
-  to 20,000 per op) for add, sub, mul, div, sqrt, exp, log1p, expm1, erf and erfc. For add,
-  sub, mul, div and sqrt that holds by construction, for every input.
-- Off by one mark, rarely: ln 1 in 20,000, pow 8 in 20,000, normCdf 1 in 4,000.
-- **So on the ops FP256 rounds correctly, a new library can be cheaper, but it cannot be
-  more accurate.** There is no closer value in the word.
+- **FP256 release four: every one of its 42 ops returns the correctly rounded word.**
+  - **The sweep:** 281,821 seeded random inputs, 0 misrounded. That includes pow,
+    compound, ln, normCdf and Lambert W, which release three missed by 1 to 4 marks.
+  - **The slow path checked alone:** 0 misrounded with every input forced through the
+    second stage.
+  - **How it works:** each fast value carries a stated error bound. When the bound reaches
+    a rounding boundary, a second stage recomputes the value at 2^-510 and rounds that.
+- **FP127 v5:**
+  - **Nearest word on every random input tested:** exp, exp2, exp10, expm1, sinh, cosh,
+    tanh, ln, log2, log10, pow, cbrt, powu, compound and both Lambert W branches.
+  - **Before v5:** exp and pow were off by up to 10^32 and 10^34 marks at large results,
+    and cbrt by 10^14.
+- **So a new library can be cheaper than these, but it cannot be more accurate.** There
+  is no closer value in the word.
 
 Say first:
-- **Two FP256 ops are not there yet:** compound (up to 4 marks) and lambertW0 (up to 2
-  marks).
-- **FP127 is faithful, not nearest:**
-  - mul and sqrt round down, and div truncates.
-  - exp and pow lose precision at large results: about 146 and 123 correct bits relative
-    to the result, where the grid there would hold more.
-- These are on the list in 3.4.
+- **This is the guarantee every correctly rounded maths library gives, not a proof for
+  every input.** An input could misround only if its exact value lay within 2^-K of a
+  halfway point between two marks:
 
-Source: `docs/benchmarks/sweep.md` (`make sweep`, PR #100: seeded random inputs, FP256
-against the correctly rounded word, FP127 against the real truth) and
-`docs/fp256/precision.md`.
+  | op | K |
+  |---|---|
+  | exp, ln, pow | about 233 to 268 |
+  | erfc (continued fraction) | 155 |
+  | Lambert W, at its branch point | 117 |
 
-### 3.3 What it costs (1 min)
+  No such input is known. For e^x, ln and W, exact ties are ruled out by theorem.
+- **FP127's mul, div and sqrt still round down** (div toward zero). That is unchanged
+  for compatibility, with directed versions beside them (3.3).
+- **Two narrow limits:**
+  - FP127's pow is nearest only while |y|·x^y < 2^140, and faithful to 2^170.
+  - FP256's powu is not correctly rounded for |n| ≥ 2^237. compound handles any n.
+
+Source: `docs/benchmarks/sweep.md` on PR #102 (FP256 release four) and PR #101 (FP127 v5).
+`scripts/fp256/generators/bounds.py` checks each stated bound against the Python models
+of the Yul. The worst measured error is 0.67 of its bound.
+
+### 3.3 The edge is one call (0.5 min)
+
+- Rule two, round toward the protocol at the token edge, now takes a single call in both
+  libraries:
+  - **FP256:** `toUintDown`/`Up`, `toIntDown`/`Up`, `toFixed18Down`/`Up`, `mulDown`/`Up`,
+    `divDown`/`Up`, `floor` and `ceil`. All exact, with 0 misrounded in the sweep. An
+    `Up` result never rounds positive dust to zero.
+  - **FP127:** `mulUp`/`Down`, `divUp`/`Down` and `toFixed18Up`/`Down`.
+- These are the calls the replays had to build by hand.
+
+### 3.4 What it costs (1 min)
 
 - **Solady is 1.4 to 10 times cheaper per op, and should be.** Integer-exact work
   (`mulDivUp`, `fullMulDiv`) stays in Solady and OZ; these libraries complement them.
-- Median gas per op, inline:
+- Median gas per op, inline (release three and v4, live today):
 
   | op | Solady | PRBMath | FP127 | FP256 |
   |---|---|---|---|---|
@@ -229,25 +257,42 @@ against the correctly rounded word, FP127 against the real truth) and
   0 of 165 calls. Set against nine-figure losses, a few thousand gas is the cheapest line
   in the audit.
 
-Source: `docs/benchmarks/gas.md` (inline FP127Lib and the other libraries, medians over each op's
-input ladder) and `docs/benchmarks/gas256.md` (FP256Lib).
+Say first:
+- **Correct rounding costs gas when it is hard.** In FP256 release four:
+  - The fast path is a few hundred gas dearer (exp: 7,336 → 8,058 median).
+  - The second stage costs 36k to 436k gas, and on some ops it runs often enough to show
+    at the 99th percentile:
 
-### 3.4 What remains before "final" is true everywhere (0.5 min)
+    | op | median | p99 |
+    |---|---|---|
+    | pow | 15,322 | 81,063 |
+    | compound | 17,433 | 167,293 |
 
-1. **Directed rounding at the token edge:**
-   - FP256 toUint/toInt, floor and ceil, exact across uint256.
-   - A mulDiv with a rounding direction.
-   - Rule two needs these, and the replays had to work around their absence.
-2. **Correct rounding for FP256 pow, compound and Lambert W.** Also a stated large-result
-   bound for FP127's exp and pow, or a fix.
-3. **The remaining FP256 ops (#79).** The deployed object has 277 bytes left, so they
-   need a second object.
-4. **Audit and mainnet.**
+  - Lambert W always takes the wide step, at about 152k.
+- Budget gas for the p99 if an attacker can choose your inputs.
 
-### 3.5 The ask (0.5 min)
+Source: `docs/benchmarks/gas.md` and `gas256.md` (live releases); the gas columns of
+`docs/benchmarks/sweep.md` on PR #102 (release four).
+
+### 3.5 Why nothing else needs writing (0.5 min)
+
+1. **The format:** no one-word format holds more than 3 digits more than FP256 (3.1).
+2. **The accuracy:** every op returns the nearest word, so a rewrite can only be cheaper
+   (3.2).
+3. **The edge:** directed rounding is one call (3.3).
+4. **What is left is not a new library.** It is:
+   - gas work inside these two;
+   - new ops added to them (the FP256X split leaves room);
+   - deployment, an audit and mainnet.
+
+### 3.6 The ask (0.5 min)
 
 Use FP127 and FP256. They are free, MIT-licensed, and one `forge install` away. Keep the
 state in the format, and round toward the protocol at the edge.
+
+**Before the talk:** 3.2 and 3.3 describe FP127 v5 (#101) and FP256 release four (#102).
+Deploy both and merge them. Until then, the live contracts are FP127 v4 and FP256 release
+three, and 3.2 must be said in the past tense of release three.
 
 ---
 
@@ -257,7 +302,8 @@ state in the format, and round toward the protocol at the edge.
   digits are log10(x) + 38.5: 32 at 10^−6, 8 at 10^−30.
 - "More digits than any library, including the floats." binary128 beats FP127 below
   3×10^−5.
-- "Every op correctly rounded" or "every op at its grid". See 3.2.
+- "Every op correctly rounded" before release four is deployed. Afterwards say it with
+  the guarantee in 3.2, and never for FP127's plain mul, div and sqrt, which round down.
 - "Proven equal on all of int256." The object and the library are fuzzed against each
   other, not proven equal.
 - "Five terms reach the format's floor" for FP127's π.
