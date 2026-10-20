@@ -1,5 +1,7 @@
 # Dust is Over
 
+> Superseded in order and claims by [`outline.md`](outline.md) (2026-10-20): the opening is now the four replayed exploits, and several numbers below (the Morpho idle market as a library failure, "more digits than anything in the middle", "every op at its grid", release one's "43 digits") are corrected there. This text waits for the author's own words, section by section.
+
 A 20-minute talk, board and slides. Draft 10, 2026-10-16. "Board:" is written
 by hand while talking; "Slide:" is projected. Every number is a measured cell;
 the card at the end says where each one comes from.
