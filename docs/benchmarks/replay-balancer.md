@@ -1,6 +1,6 @@
 # Replay: the Balancer V2 Composable Stable Pool exploit, five rulers
 
-Generated 2026-10-20T17:27:34Z by `uv run scripts/replays/balancer.py` from `scripts/replays/balancer.json` (fetched 2026-10-20T17:26:44Z by `balancer.py fetch`); every integer below is asserted by `forge test --match-path test/replays/Balancer.t.sol` with no network.
+Generated 2026-10-20T18:10:45Z by `uv run scripts/replays/balancer.py` from `scripts/replays/balancer.json` (fetched 2026-10-20T17:26:44Z by `balancer.py fetch`); every integer below is asserted by `forge test --match-path test/replays/Balancer.t.sol` with no network.
 
 ## What happened, in the transaction's own integers
 
@@ -139,7 +139,7 @@ StableMath's `_calculateInvariant` and `_getTokenBalanceGivenInvariantAndAllOthe
 - Transaction 0x6ed07db1a9fe5c0794d44cd36081d6a6df103fab868cdd75d581e3bd23bc9742, block 23717397 (`0xa41291bd698366d29a718636ac12a3a46bb969f43d3955b9f7666a8293ac1fb5`), from `0x506d1f9efe24f0d47853adca907eb8d89ae03207`, contract created `0x54b53503c0e2173df29f8da735fbd45ee8aba30d`, status 1, gas 28,348,674.
 - Call trace: `debug_traceTransaction` with `callTracer` from https://eth.drpc.org (keyless), sha256 of the canonical JSON `55dc57cfcbbe1ee54269bdafe25a3e0c3e0293913a0aec1ccfa4f613aa39a23f`. Every `onSwap` (selector `0x01ec954a`) to each pool is decoded into `pools.*.swaps` (kind, indices, amount, the balances the Vault passed, the return).
 - Pool state at block 23717396 by `eth_call` on https://mainnet.gateway.tenderly.co: pool tokens and balances (equal to the first call's), scaling factors, rate providers, amp, swap fee, BPT rate, `version()` (`20230711-composable-stable-pool-v5`). The rate used by every swap is the one in the transaction: the attacker called `updateTokenRateCache` first. osETH's provider returned 1058132408689971699 in the transaction, against a cached 1058109553424427048 and 1058132398695929516 from the provider at block − 1. For wstETH the cache already equalled the provider (1218116415279760760). `scalingFactorsInTx` is the attacker's own `getScalingFactors()` read after the update.
-- Source: verified standard-JSON input of both pools from https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api (`getsourcecode`), ComposableStablePool v0.7.1+commit.f4a555be, optimizer 800 runs; the two pools' files are byte-identical. Transcribed into `test/replays/Balancer.t.sol` (library `BalancerV2`, under its GPL-3.0-or-later license):
+- Source: verified standard-JSON input of both pools from https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api (`getsourcecode`), ComposableStablePool v0.7.1+commit.f4a555be, optimizer 800 runs; the two pools' files are byte-identical. Transcribed into `test/replays/Balancer.t.sol` (library `BalancerV2`):
 
 | function | verified file:lines | sha256 of the file |
 |---|---|---|

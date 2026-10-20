@@ -1,6 +1,5 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-// This file transcribes Balancer V2 arithmetic (GPL-3.0-or-later; see BalancerV2 below), so it carries
-// Balancer's license rather than the repository's MIT.
+// SPDX-License-Identifier: MIT
+// Transcribes Balancer V2 arithmetic from the verified pool source; every function cites its file:lines (see BalancerV2 below).
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";

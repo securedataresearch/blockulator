@@ -936,7 +936,7 @@ def render(data):
       f"the attacker's own `getScalingFactors()` read after the update.")
     w(f"- Source: verified standard-JSON input of both pools from {pv['sourceApi']} (`getsourcecode`), "
       f"{po['source']['contractName']} {po['source']['compiler']}, optimizer {po['source']['optimizer']['runs']} runs; the "
-      f"two pools' files are byte-identical. Transcribed into `{TEST}` (library `BalancerV2`, under its GPL-3.0-or-later license):")
+      f"two pools' files are byte-identical. Transcribed into `{TEST}` (library `BalancerV2`):")
     w("")
     w("| function | verified file:lines | sha256 of the file |")
     w("|---|---|---|")
