@@ -184,6 +184,65 @@ contract Behaviour256 is FP256Harness {
         _expectRevert(abi.encodeCall(IFP256.compound, (obj.neg(ONE), -1)), IFP256.DivisionByZero.selector, "0^-1");
         _expectRevert(abi.encodeCall(IFP256.compound, (obj.neg(TWO), 1)), IFP256.OutOfRange.selector, "rate below -1");
         // (1 + r)^n against powu of the base, for an r the base holds exactly
-        assertGe(_bits(obj.compound(HALF, 12), obj.powu(obj.add(ONE, HALF), 12)), 236, "compound(1/2, 12) = 1.5^12");
+        assertEq(obj.compound(HALF, 12), obj.powu(obj.add(ONE, HALF), 12), "compound(1/2, 12) = 1.5^12, both correctly rounded");
+    }
+
+    /// Release four: directed rounding at the token edge, values a reader can check.
+    function test_directed() public view {
+        int256 third = obj.div(ONE, obj.fromUint(3));
+        // 1/3 rounded down and up: one ULP apart, the nearest one of them
+        int256 d = obj.divDown(ONE, obj.fromUint(3));
+        int256 u = obj.divUp(ONE, obj.fromUint(3));
+        assertEq(u, d + 1, "1/3: Up is Down plus one ULP");
+        assertTrue(third == d || third == u);
+        assertEq(obj.divDown(obj.neg(ONE), obj.fromUint(3)), obj.neg(u), "-1/3 down is -(1/3 up)");
+        assertEq(obj.divUp(obj.fromUint(6), obj.fromUint(3)), TWO, "exact quotients are exact both ways");
+        assertEq(obj.mulDown(third, obj.fromUint(3)), obj.mulUp(third, obj.fromUint(3)) - 1, "3 x (1/3) is inexact");
+        // token units: 2.5 tokens of 18 decimals pay out 2 and charge 3 at the integer edge
+        int256 two5 = obj.add(TWO, HALF);
+        assertEq(obj.toUintDown(two5), 2);
+        assertEq(obj.toUintUp(two5), 3);
+        assertEq(obj.toUintDown(obj.fromUint(7)), 7, "integers are exact");
+        assertEq(obj.toUintUp(obj.fromUint(7)), 7);
+        assertEq(obj.toUintUp(_mk(false, -300, uint256(1) << 236)), 1, "any positive amount charges at least one unit");
+        assertEq(obj.toUintDown(_mk(false, -300, uint256(1) << 236)), 0);
+        _expectRevert(abi.encodeCall(IFP256.toUintDown, (obj.neg(HALF))), IFP256.OutOfRange.selector, "negative amounts revert");
+        _expectRevert(abi.encodeCall(IFP256.toUintUp, (_mk(false, 256, uint256(1) << 236))), IFP256.Overflow.selector, "2^256 does not fit");
+        assertEq(obj.toUintDown(_mk(false, 255, (uint256(1) << 237) - 1)), type(uint256).max - ((uint256(1) << 19) - 1), "the largest number below 2^256");
+        // signed integers and integral numbers
+        assertEq(obj.toIntDown(obj.neg(two5)), -3);
+        assertEq(obj.toIntUp(obj.neg(two5)), -2);
+        assertEq(obj.toIntDown(obj.neg(_mk(false, 255, uint256(1) << 236))), type(int256).min, "-2^255 fits");
+        _expectRevert(abi.encodeCall(IFP256.toIntUp, (_mk(false, 255, uint256(1) << 236))), IFP256.Overflow.selector, "2^255 does not");
+        assertEq(obj.floor(two5), TWO);
+        assertEq(obj.ceil(two5), obj.fromUint(3));
+        assertEq(obj.floor(obj.neg(two5)), obj.neg(obj.fromUint(3)));
+        assertEq(obj.ceil(obj.neg(HALF)), 0, "ceil(-1/2) is zero, not minus zero");
+        assertEq(obj.floor(obj.neg(HALF)), obj.neg(ONE));
+        // above 2^237 fromUint rounds; Down and Up bracket the integer
+        uint256 v = (uint256(1) << 240) + 3;
+        assertEq(obj.toUintDown(obj.fromUintDown(v)), uint256(1) << 240);
+        assertEq(obj.toUintDown(obj.fromUintUp(v)), (uint256(1) << 240) + 16, "one ULP at 2^240 is 16");
+        assertEq(obj.fromUintUp(type(uint256).max), _mk(false, 256, uint256(1) << 236), "rounds up to 2^256");
+        // underflow: Up never rounds a positive product to zero
+        int256 tiny = _mk(false, -200000, uint256(1) << 236);
+        assertEq(obj.mulDown(tiny, tiny), 0);
+        assertEq(obj.mulUp(tiny, tiny), MIN_NORMAL, "the smallest number");
+        assertEq(obj.mulDown(obj.neg(tiny), tiny), MIN_NORMAL | SIGN, "minus the smallest number");
+        assertEq(obj.mulUp(obj.neg(tiny), tiny), 0);
+        _expectRevert(abi.encodeCall(IFP256.divUp, (ONE, 0)), IFP256.DivisionByZero.selector, "divUp by zero");
+    }
+
+    /// Release four: exact ties round away from zero, as a reader can check.
+    function test_ties() public view {
+        uint256 c = (uint256(1) << 79) + 1;       // c^3 = 2^237 + 3 2^158 + 3 2^79 + 1: 238 bits, odd
+        int256 want = obj.fromUint(c * c * c);   // fromUint's one rounding: half away from zero
+        assertEq(obj.pow(obj.fromUint(c), obj.fromUint(3)), want, "pow(c, 3)");
+        assertEq(obj.pow(obj.fromUint(c * c), obj.div(obj.fromUint(3), TWO)), want, "pow(c^2, 3/2)");
+        assertEq(obj.powu(obj.fromUint(c), 3), want, "powu(c, 3)");
+        assertEq(obj.powu(obj.neg(obj.fromUint(c)), 3), obj.neg(want), "powu(-c, 3)");
+        assertEq(obj.compound(obj.fromUint(c - 1), 3), want, "compound(c - 1, 3)");
+        assertEq(obj.compound(TWO, 150), obj.powu(obj.fromUint(3), 150), "3^150: 238 bits, a tie both ways");
+        assertEq(obj.pow(obj.fromUint(9), obj.div(obj.fromUint(3), TWO)), obj.fromUint(27), "9^1.5 = 27 exactly");
     }
 }
