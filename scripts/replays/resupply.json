@@ -1,0 +1,380 @@
+{
+ "_doc": "Pinned by `uv run scripts/replays/resupply.py fetch` (read-only, public RPC). `pins` are the integers test/replays/Resupply.t.sol replays; `provenance` says where each came from; `state` is eth_call at block-1 (pre-state: the tx is index 0) and at the block; `sources` are the Sourcify-verified contracts with every cited line checked. Integers are decimal strings.",
+ "tx": "0xffbbd492e0605a8bb6d490c3cd879e87ff60862b0684160d08fd5711e7a872d3",
+ "attacker": "0x6d9f6e900ac2ce6770fd9f04f98b7b0fc355e2ea",
+ "borrower": "0x151aa63dbb7c605e7b0a173ab7375e1450e79238",
+ "blockTimestamp": 1750902839,
+ "rpc": {
+  "trace": "https://eth.drpc.org",
+  "state": "https://eth.drpc.org"
+ },
+ "addresses": {
+  "pair": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+  "oracle": "0xcb7e25fbbd8afe4ce73d7dac647dbc3d847f3c82",
+  "vault": "0x01144442fba7adccb5c9dc9cf33dd009d50a9e1d",
+  "vaultImpl": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+  "controller": "0x89707721927d7aaeeee513797a8d6cbbd0e08f41",
+  "crvUSD": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+  "reUSD": "0x57ab1e0003f623289cd798b1824be09a793e4bec"
+ },
+ "pins": {
+  "block": "22785461",
+  "txIndex": "0",
+  "price": "2000000000000000000001998001998001998",
+  "vaultTotalAssets": "2002000000000000000001",
+  "vaultTotalSupply": "1",
+  "vaultPrecision": "1",
+  "deadShares": "1000",
+  "exchangeRateOnChain": "0",
+  "collateral": "1",
+  "borrowAmount": "10000000000000000000000000",
+  "borrowShares": "10000000000000000000000000",
+  "mintFee": "0",
+  "totalBorrowAmountBefore": "0",
+  "totalBorrowSharesBefore": "0",
+  "maxLTV": "95000",
+  "ltvPrecision": "100000",
+  "exchangePrecision": "1000000000000000000",
+  "donation": "2000000000000000000000",
+  "mintShares": "1",
+  "mintAssets": "2000000000000000001",
+  "debtAvailable": "10000000000000000000000000",
+  "pricePreAttack": "1000000000000000",
+  "exchangeRateBefore": "1000000000000000000000"
+ },
+ "provenance": {
+  "block": "eth_getTransactionByHash: blockNumber; transactionIndex 0, so block-1's end state is this tx's pre-state",
+  "txIndex": "eth_getTransactionByHash",
+  "price": "trace: STATICCALL oracle.getPrices(vault) return value (BasicVaultOracle.sol:23), inside pair.borrow; equal to the nested vault.convertToAssets(1e18) return",
+  "vaultTotalAssets": "trace: crvUSD.balanceOf(controller) + controller.total_debt() inside that convertToAssets (Vault.vy:267)",
+  "vaultTotalSupply": "eth_call vault.totalSupply() at block-1 plus the one cvcrvUSD mint Transfer log in this tx",
+  "vaultPrecision": "10**(18 - crvUSD.decimals()) (Vault.vy:197, 217); decimals by eth_call; reproduces the traced price, a different precision does not",
+  "deadShares": "Vault.vy:85 constant",
+  "exchangeRateOnChain": "log #34: pair UpdateExchangeRate(uint256) in this tx",
+  "collateral": "log #33: pair AddCollateral(borrower, amount); eth_call userCollateralBalance(borrower) at the block agrees",
+  "borrowAmount": "trace: pair.borrow(_borrowAmount, 0, receiver) input; log #36 Borrow agrees",
+  "borrowShares": "trace: pair.borrow return; log #36 Borrow agrees; eth_call userBorrowShares(borrower) at the block agrees",
+  "mintFee": "trace: pair.mintFee() return during the attack (also eth_call at block-1)",
+  "totalBorrowAmountBefore": "eth_call pair.totalBorrow() at block-1",
+  "totalBorrowSharesBefore": "eth_call pair.totalBorrow() at block-1",
+  "maxLTV": "eth_call pair.maxLTV() at block-1 and at the block",
+  "ltvPrecision": "eth_call pair.LTV_PRECISION(); ResupplyPairConstants.sol:12",
+  "exchangePrecision": "eth_call pair.EXCHANGE_PRECISION(); ResupplyPairConstants.sol:14",
+  "donation": "trace: crvUSD.transfer(controller, amount) from the attack contract",
+  "mintShares": "trace: vault.mint(shares) input",
+  "mintAssets": "trace: vault.mint return (assets pulled); the Vault.vy:422 ceil reproduces it from the pre-mint totals",
+  "debtAvailable": "trace: pair.totalDebtAvailable() return just before borrow",
+  "pricePreAttack": "eth_call oracle.getPrices(vault) at block-1",
+  "exchangeRateBefore": "eth_call pair.exchangeRateInfo() at block-1"
+ },
+ "checks": {
+  "exchangeRateStoredAfter": "0",
+  "userCollateralBalanceAfter": "1",
+  "userBorrowSharesAfter": "10000000000000000000000000",
+  "totalBorrowAfter": [
+   "10000000000000000000000000",
+   "10000000000000000000000000"
+  ],
+  "getPricesAtBlock": "2000000000000000000001998001998001998",
+  "borrowLogData": [
+   "10000000000000000000000000",
+   "10000000000000000000000000",
+   "0"
+  ],
+  "maxLTVAtBlock": "95000"
+ },
+ "state": {
+  "pre": {
+   "block": "22785460",
+   "pair.maxLTV": "95000",
+   "pair.mintFee": "0",
+   "pair.borrowLimit": "10000000000000000000000000",
+   "pair.minimumBorrowAmount": "1000000000000000000000",
+   "pair.totalBorrow.amount": "0",
+   "pair.totalBorrow.shares": "0",
+   "pair.exchangeRateInfo.exchangeRate": "1000000000000000000000",
+   "pair.exchangeRateInfo.oracle": "0xcb7e25fbbd8afe4ce73d7dac647dbc3d847f3c82",
+   "pair.collateral": "0x1144442fba7adccb5c9dc9cf33dd009d50a9e1d",
+   "pair.LTV_PRECISION": "100000",
+   "pair.EXCHANGE_PRECISION": "1000000000000000000",
+   "vault.totalSupply": "0",
+   "vault.totalAssets": "0",
+   "vault.controller": "0x89707721927d7aaeeee513797a8d6cbbd0e08f41",
+   "crvUSD.decimals": "18",
+   "oracle.getPrices(vault)": "1000000000000000"
+  },
+  "post": {
+   "block": "22785461",
+   "pair.maxLTV": "95000",
+   "pair.mintFee": "0",
+   "pair.borrowLimit": "10000000000000000000000000",
+   "pair.minimumBorrowAmount": "1000000000000000000000",
+   "pair.totalBorrow.amount": "10000000000000000000000000",
+   "pair.totalBorrow.shares": "10000000000000000000000000",
+   "pair.exchangeRateInfo.exchangeRate": "0",
+   "pair.exchangeRateInfo.oracle": "0xcb7e25fbbd8afe4ce73d7dac647dbc3d847f3c82",
+   "pair.collateral": "0x1144442fba7adccb5c9dc9cf33dd009d50a9e1d",
+   "pair.LTV_PRECISION": "100000",
+   "pair.EXCHANGE_PRECISION": "1000000000000000000",
+   "vault.totalSupply": "1",
+   "vault.totalAssets": "2002000000000000000001",
+   "vault.controller": "0x89707721927d7aaeeee513797a8d6cbbd0e08f41",
+   "crvUSD.decimals": "18",
+   "oracle.getPrices(vault)": "2000000000000000000001998001998001998",
+   "pair.userCollateralBalance(borrower)": "1",
+   "pair.userBorrowShares(borrower)": "10000000000000000000000000"
+  }
+ },
+ "sources": {
+  "pair": {
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "name": "ResupplyPair",
+   "compiler": "0.8.28+commit.7893614a",
+   "match": "match",
+   "runtimeMatch": "match",
+   "creationMatch": "match",
+   "deployBlock": 22784988,
+   "deployTx": "0x852eca15a9fd352817346915f7bc8817d46de349bd7a8fc6ee73c7b66ec9ab41",
+   "sourcifyOnchainBytecodeEqualsGetCode": true,
+   "files": {
+    "src/protocol/pair/ResupplyPairConstants.sol": {
+     "sha256": "f57a69aab48d75e629f2a9748ed2f49ed6a5cda5587b0f5a956514d99bc1eb0a",
+     "lines": 33
+    },
+    "src/protocol/pair/ResupplyPairCore.sol": {
+     "sha256": "8a8ca5c356c96c8dc9949936500603daf64afaf0838021971e8755a11a0f4be1",
+     "lines": 1252
+    },
+    "src/libraries/VaultAccount.sol": {
+     "sha256": "b1a90f59e60a8e7f06d6afa86408048c2e6a4142a8104f404f92237aea958d38",
+     "lines": 40
+    }
+   }
+  },
+  "oracle": {
+   "address": "0xcb7e25fbbd8afe4ce73d7dac647dbc3d847f3c82",
+   "name": "BasicVaultOracle",
+   "compiler": "0.8.28+commit.7893614a",
+   "match": "match",
+   "runtimeMatch": "match",
+   "creationMatch": "match",
+   "deployBlock": 22034883,
+   "deployTx": "0x008430322b86772c5183e313b1526e4384dfbcf7be530b05e8be9126c0269a42",
+   "sourcifyOnchainBytecodeEqualsGetCode": true,
+   "files": {
+    "src/protocol/BasicVaultOracle.sol": {
+     "sha256": "c5cbfd9f83b786985d9d6de79b0c8a07f604d2dc8baebdd5d101254f405095cb",
+     "lines": 30
+    }
+   }
+  },
+  "vaultImpl": {
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "name": "Vault",
+   "compiler": "0.3.10+commit.91361694",
+   "match": "match",
+   "runtimeMatch": "match",
+   "creationMatch": "match",
+   "deployBlock": 19422652,
+   "deployTx": "0x03ea1b214d84fe989b3aa848d3603571ff27bc65518d918e18bcecbc16a994d2",
+   "sourcifyOnchainBytecodeEqualsGetCode": true,
+   "files": {
+    "Vault.vy": {
+     "sha256": "c063d4ad185460560616b489ccbbc71af2ab8c1afb066c9bdfe688037fa97144",
+     "lines": 665
+    }
+   }
+  }
+ },
+ "ages": {
+  "pair": {
+   "creationTx": "0x852eca15a9fd352817346915f7bc8817d46de349bd7a8fc6ee73c7b66ec9ab41",
+   "block": 22784988,
+   "timestamp": 1750897127,
+   "secondsBeforeAttack": 5712
+  },
+  "vault": {
+   "creationTx": "0x221bb0b9118cf8c9528078eb5db919c32af42a7faf9a57b08614861f09f75f43",
+   "block": 22499073,
+   "timestamp": 1747440299,
+   "secondsBeforeAttack": 3462540
+  }
+ },
+ "citations": [
+  {
+   "contract": "vaultImpl",
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "file": "Vault.vy",
+   "line": 85,
+   "text": "DEAD_SHARES: constant(uint256) = 1000"
+  },
+  {
+   "contract": "vaultImpl",
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "file": "Vault.vy",
+   "line": 197,
+   "text": "borrowed_precision: uint256 = 10**(18 - borrowed_token.decimals())"
+  },
+  {
+   "contract": "vaultImpl",
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "file": "Vault.vy",
+   "line": 217,
+   "text": "self.precision = borrowed_precision"
+  },
+  {
+   "contract": "vaultImpl",
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "file": "Vault.vy",
+   "line": 267,
+   "text": "return self.borrowed_token.balanceOf(self.controller.address) + self.controller.total_debt()"
+  },
+  {
+   "contract": "vaultImpl",
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "file": "Vault.vy",
+   "line": 304,
+   "text": "numerator: uint256 = shares * (total_assets * precision + 1)"
+  },
+  {
+   "contract": "vaultImpl",
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "file": "Vault.vy",
+   "line": 305,
+   "text": "denominator: uint256 = (self.totalSupply + DEAD_SHARES) * precision"
+  },
+  {
+   "contract": "vaultImpl",
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "file": "Vault.vy",
+   "line": 307,
+   "text": "return numerator / denominator"
+  },
+  {
+   "contract": "vaultImpl",
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "file": "Vault.vy",
+   "line": 309,
+   "text": "return (numerator + denominator - 1) / denominator"
+  },
+  {
+   "contract": "vaultImpl",
+   "address": "0xc014f34d5ba10b6799d76b0f5acdeee577805085",
+   "file": "Vault.vy",
+   "line": 422,
+   "text": "assets: uint256 = self._convert_to_assets(shares, False, total_assets)"
+  },
+  {
+   "contract": "oracle",
+   "address": "0xcb7e25fbbd8afe4ce73d7dac647dbc3d847f3c82",
+   "file": "src/protocol/BasicVaultOracle.sol",
+   "line": 23,
+   "text": "_price = IERC4626(_vault).convertToAssets(1e18);"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairConstants.sol",
+   "line": 12,
+   "text": "uint256 public constant LTV_PRECISION = 1e5;"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairConstants.sol",
+   "line": 14,
+   "text": "uint256 public constant EXCHANGE_PRECISION = 1e18;"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 573,
+   "text": "_exchangeRate = 1e36 / IOracle(_exchangeRateInfo.oracle).getPrices(address(collateral));"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 272,
+   "text": "if (_maxLTV == 0) return true;"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 275,
+   "text": "uint256 _borrowerAmount = totalBorrow.toAmount(_userBorrowShares[_borrower], true);"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 280,
+   "text": "if (_collateralAmount == 0) return false;"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 282,
+   "text": "uint256 _ltv = ((_borrowerAmount * _exchangeRate * LTV_PRECISION) / EXCHANGE_PRECISION) / _collateralAmount;"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 283,
+   "text": "return _ltv <= _maxLTV;"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 304,
+   "text": "if (!_isSolvent(_borrower, _exchangeRateInfo.exchangeRate)) {"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 640,
+   "text": "uint256 debtForMint = (_borrowAmount * (LIQ_PRECISION + mintFee) / LIQ_PRECISION);"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 649,
+   "text": "_sharesAdded = _totalBorrow.toShares(debtForMint, true);"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/protocol/pair/ResupplyPairCore.sol",
+   "line": 688,
+   "text": "_updateExchangeRate();"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/libraries/VaultAccount.sol",
+   "line": 18,
+   "text": "shares = amount;"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/libraries/VaultAccount.sol",
+   "line": 33,
+   "text": "amount = (shares * total.amount) / total.shares;"
+  },
+  {
+   "contract": "pair",
+   "address": "0x6e90c85a495d54c6d7e1f3400fef1f6e59f86bd6",
+   "file": "src/libraries/VaultAccount.sol",
+   "line": 34,
+   "text": "if (roundUp && total.amount > 0 && (amount * total.shares) / total.amount < shares) {"
+  }
+ ]
+}

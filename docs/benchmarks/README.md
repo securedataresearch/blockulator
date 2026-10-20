@@ -38,6 +38,15 @@ committed copies match the code at that commit.
   `make edges` from `test/ladder/Edges.t.sol` through the same `EdgeRunner`
   that is deployed on Sepolia; probes in `scripts/ladder/edges.json`, the
   encoded arguments in `scripts/ladder/edge-inputs.json`.
+- **Replays: four exploits, bit-exact.** Each one reproduces the deployed
+  arithmetic from integers pinned out of the attack transaction and asserted
+  against the chain, then prices the decisive step again under the
+  protocol's own fix, FP127, FP256 and exact rationals (`make replays`;
+  `make replays-fetch` re-pins, read-only).
+  - [`replay-resupply.md`](replay-resupply.md): Resupply, 26 Jun 2025. `1e36 / price` floors 0.5 to 0, and 1 wei of collateral borrows 10M reUSD.
+  - [`replay-bunni.md`](replay-bunni.md): Bunni v2, 2 Sep 2025. 44 withdrawals take active USDC from 28 wei to 4 and liquidity falls 84%.
+  - [`replay-balancer.md`](replay-balancer.md): Balancer V2, 3 Nov 2025. 17.988 is read as 17 in the osETH and wstETH pools, with the invariant's Newton solve measured on each ruler.
+  - [`replay-balancer-v1.md`](replay-balancer-v1.md): Balancer V1, 31 Aug 2026. Five pools; rounding to nearest at raw token units, a case decided by direction, not precision.
 - [`accrual-deployed.md`](accrual-deployed.md) / [`accrual-deployed.json`](accrual-deployed.json):
   **the accrual maths as deployed.** Aave v3 Core (v3.7.0) and Morpho Blue
   (v1.0.0, with the AdaptiveCurveIrm) run from submodules whose runtime
