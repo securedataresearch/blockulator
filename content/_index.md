@@ -1,6 +1,6 @@
 +++
 title = "blockulator"
-description = "Blockulator 2.0 by Secure Data Research: FP127, 38 digits for the money range, and FP256, 71 digits at any magnitude, measured against ABDK, Solady, PRBMath, Balancer, Aave, Morpho and Maker."
+description = "Blockulator 2.0 by Secure Data Research: FP127, 38 digits at 1 for the money range, and FP256, 71 digits at any magnitude, measured against ABDK, Solady, PRBMath, Balancer, Aave, Morpho and Maker."
 template = "home.html"
 
 [extra]
@@ -28,12 +28,12 @@ text = "WAD gives the fraction 60 bits and the rest to overflow headroom. FP127 
 [[extra.steps]]
 label = "the ladder"
 title = "Measured over N steps"
-text = "13 scenarios, 87 inputs, 10 libraries, N = 1 to 10,000, against 200-digit arithmetic."
+text = "13 scenarios, 87 inputs, 10 libraries, N = 1 to 10,000, against 300-digit arithmetic."
 
 [[extra.steps]]
 label = "two forms"
 title = "One source"
-text = "A deployed object and an inline library, generated from the same Yul and proven equal on all of int256."
+text = "A deployed object and an inline library, generated from the same Yul and fuzzed equal on all of int256."
 
 [[extra.steps]]
 label = "trust"

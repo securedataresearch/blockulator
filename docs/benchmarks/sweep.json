@@ -1,0 +1,448 @@
+{
+ "_doc": "Random-input accuracy sweep of the inline FP127 and FP256 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.",
+ "seed": 20261020,
+ "seedLambert": 7,
+ "rows": [
+  {
+   "lib": "fp256",
+   "op": "add",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "mul",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "div",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "sqrt",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "exp",
+   "n": 20000,
+   "status": {
+    "ok": 20000
+   },
+   "correctlyRounded": 20000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 20000
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "ln",
+   "n": 20000,
+   "status": {
+    "ok": 20000
+   },
+   "correctlyRounded": 19999,
+   "misrounded": 1,
+   "maxUlp": 1,
+   "hist": {
+    "-1": 1,
+    "0": 19999
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "log1p",
+   "n": 19573,
+   "status": {
+    "ok": 19573,
+    "bothrev": 427
+   },
+   "correctlyRounded": 19573,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 19573
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "expm1",
+   "n": 20000,
+   "status": {
+    "ok": 20000
+   },
+   "correctlyRounded": 20000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 20000
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "pow",
+   "n": 20000,
+   "status": {
+    "ok": 20000
+   },
+   "correctlyRounded": 19992,
+   "misrounded": 8,
+   "maxUlp": 1,
+   "hist": {
+    "-1": 4,
+    "0": 19992,
+    "1": 4
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "erf",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "erfc",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "normCdf",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 3999,
+   "misrounded": 1,
+   "maxUlp": 1,
+   "hist": {
+    "0": 3999,
+    "1": 1
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "compound",
+   "n": 3853,
+   "status": {
+    "ok": 3853,
+    "bothrev": 147
+   },
+   "correctlyRounded": 3562,
+   "misrounded": 291,
+   "maxUlp": 4,
+   "hist": {
+    "-4": 3,
+    "-3": 9,
+    "-2": 29,
+    "-1": 102,
+    "0": 3562,
+    "1": 113,
+    "2": 28,
+    "3": 6,
+    "4": 1
+   }
+  },
+  {
+   "lib": "fp256",
+   "op": "lambertW0",
+   "n": 2000,
+   "status": {
+    "ok": 2000
+   },
+   "correctlyRounded": 1332,
+   "misrounded": 668,
+   "maxUlp": 2,
+   "hist": {
+    "-2": 7,
+    "-1": 351,
+    "0": 1332,
+    "1": 310
+   }
+  },
+  {
+   "lib": "fp127",
+   "op": "mul",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "nearest": 2001,
+   "faithful": 4000,
+   "maxUlp": 0.9997912911120365,
+   "p99Ulp": 0.9888783172365297,
+   "medianUlp": 0.499920627152484,
+   "minBits": 128.2,
+   "below": 4000,
+   "above": 0
+  },
+  {
+   "lib": "fp127",
+   "op": "div",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "nearest": 2072,
+   "faithful": 4000,
+   "maxUlp": 0.9997302804172112,
+   "p99Ulp": 0.9900948218874116,
+   "medianUlp": 0.48407405437929385,
+   "minBits": 128.3,
+   "below": 1962,
+   "above": 2038
+  },
+  {
+   "lib": "fp127",
+   "op": "sqrt",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "nearest": 1983,
+   "faithful": 4000,
+   "maxUlp": 0.9996559578596932,
+   "p99Ulp": 0.9880685764399338,
+   "medianUlp": 0.5039457946177215,
+   "minBits": 128.3,
+   "below": 3990,
+   "above": 0
+  },
+  {
+   "lib": "fp127",
+   "op": "exp",
+   "n": 3963,
+   "status": {
+    "ok": 3963,
+    "gotrev": 37
+   },
+   "nearest": 3784,
+   "faithful": 3787,
+   "maxUlp": 3.977090599470379e+32,
+   "p99Ulp": 1.3603348963267042e+16,
+   "medianUlp": 0.26213665541081005,
+   "minBits": 129.0,
+   "below": 1998,
+   "above": 1953
+  },
+  {
+   "lib": "fp127",
+   "op": "ln",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "nearest": 3329,
+   "faithful": 3945,
+   "maxUlp": 1.311884035956498,
+   "p99Ulp": 1.0373977501666425,
+   "medianUlp": 0.28781514808280095,
+   "minBits": 128.5,
+   "below": 2603,
+   "above": 1397
+  },
+  {
+   "lib": "fp127",
+   "op": "log2",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "nearest": 3020,
+   "faithful": 3732,
+   "maxUlp": 1.8773448901687169,
+   "p99Ulp": 1.3744723874428466,
+   "medianUlp": 0.327997499480513,
+   "minBits": 128.7,
+   "below": 2749,
+   "above": 1241
+  },
+  {
+   "lib": "fp127",
+   "op": "pow",
+   "n": 3970,
+   "status": {
+    "ok": 3970,
+    "gotrev": 30
+   },
+   "nearest": 3763,
+   "faithful": 3781,
+   "maxUlp": 4.78848513630861e+34,
+   "p99Ulp": 7016356200377263.0,
+   "medianUlp": 0.25840917189406953,
+   "minBits": 123.6,
+   "below": 2050,
+   "above": 1897
+  },
+  {
+   "lib": "fp127",
+   "op": "cbrt",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "nearest": 1953,
+   "faithful": 2026,
+   "maxUlp": 162628039488025.88,
+   "p99Ulp": 92541302439704.25,
+   "medianUlp": 0.6633226472587503,
+   "minBits": 123.1,
+   "below": 1972,
+   "above": 2021
+  },
+  {
+   "lib": "fp127",
+   "op": "expm1",
+   "n": 3987,
+   "status": {
+    "ok": 3987,
+    "gotrev": 13
+   },
+   "nearest": 3921,
+   "faithful": 3925,
+   "maxUlp": 8.170512219910007e+31,
+   "p99Ulp": 3203532.096641777,
+   "medianUlp": 0.2439975899061331,
+   "minBits": 129.2,
+   "below": 2126,
+   "above": 1855
+  },
+  {
+   "lib": "fp127",
+   "op": "erf",
+   "n": 2000,
+   "status": {
+    "ok": 2000
+   },
+   "nearest": 2000,
+   "faithful": 2000,
+   "maxUlp": 0.499926216832844,
+   "p99Ulp": 0.49417119189871767,
+   "medianUlp": 0.23933422119925662,
+   "minBits": null,
+   "below": 1037,
+   "above": 963
+  },
+  {
+   "lib": "fp127",
+   "op": "normCdf",
+   "n": 2000,
+   "status": {
+    "ok": 2000
+   },
+   "nearest": 2000,
+   "faithful": 2000,
+   "maxUlp": 0.499667169395256,
+   "p99Ulp": 0.4953584381973559,
+   "medianUlp": 0.23982588651212366,
+   "minBits": null,
+   "below": 1001,
+   "above": 989
+  },
+  {
+   "lib": "fp127",
+   "op": "compound",
+   "n": 3367,
+   "status": {
+    "ok": 3367,
+    "gotrev": 633
+   },
+   "nearest": 3353,
+   "faithful": 3353,
+   "maxUlp": 1304406.5303384806,
+   "p99Ulp": 0.4967729907776886,
+   "medianUlp": 0.20408249832052508,
+   "minBits": 129.0,
+   "below": 1372,
+   "above": 1439
+  },
+  {
+   "lib": "fp127",
+   "op": "lambertW0",
+   "n": 1500,
+   "status": {
+    "ok": 1500
+   },
+   "nearest": 193,
+   "faithful": 499,
+   "maxUlp": 1152.916196363718,
+   "p99Ulp": 378.2324354906232,
+   "medianUlp": 1.4342030388187752,
+   "minBits": 127.8,
+   "below": 1084,
+   "above": 416
+  },
+  {
+   "lib": "fp127",
+   "op": "lambertWm1",
+   "n": 1500,
+   "status": {
+    "ok": 1500
+   },
+   "nearest": 882,
+   "faithful": 1358,
+   "maxUlp": 252.83072053906776,
+   "p99Ulp": 1.5236153290094283,
+   "medianUlp": 0.4174003549250571,
+   "minBits": 120.0,
+   "below": 384,
+   "above": 1116
+  }
+ ]
+}

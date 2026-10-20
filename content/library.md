@@ -1,16 +1,16 @@
 +++
 title = "FP127"
-description = "Signed 127.128 fixed point. One int256, 38 digits, 49 ops. One Yul source, two forms: a deployed object and an inline library."
+description = "Signed 127.128 fixed point. One int256, 128 fractional bits (38 digits at 1), 49 ops. One Yul source, two forms: a deployed object and an inline library."
 
 [extra]
 group = "library"
 +++
 
-Both forms are generated from one file and proven equal on the full `int256` domain, reverts included.
+Both forms are generated from one file and fuzzed equal across the full `int256` domain, reverts included.
 
 ## Encoding
 
-`value × 2^128` in an `int256`, two's complement. `ONE` is `2^128`. Range ±1.7 × 10^38, 128 fractional bits, about 38 digits. Every op takes and returns this one type. `fromFixed18` and `toFixed18` convert to and from WAD.
+`value × 2^128` in an `int256`, two's complement. `ONE` is `2^128`. Range ±1.7 × 10^38, 128 fractional bits: 38 digits at 1, 32 at 10^−6, 8 at 10^−30. Every op takes and returns this one type. `fromFixed18` and `toFixed18` convert to and from WAD.
 
 Errors: `Overflow()`, `DivisionByZero()`, `OutOfRange()`. Nothing wraps.
 
@@ -53,7 +53,7 @@ contract StaticcallExample {
 
 ## Inline form
 
-`FP127Lib.sol`: the same Yul in `memory-safe` assembly, one `internal pure` function per op. No external call; about 700 gas cheaper per op than the `staticcall`.
+`FP127Lib.sol`: the same Yul in `memory-safe` assembly, one `internal pure` function per op. No external call: about 1,200 gas cheaper than the `staticcall` on `add` and `mul`, 170 on `exp` and `sqrt`; on `pow`, the erf family and Lambert W the deployed object is cheaper.
 
 ```sh
 forge install securedataresearch/blockulator

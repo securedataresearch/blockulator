@@ -48,7 +48,7 @@ def main() -> int:
         L.append(f"| {t} | " + " | ".join(cells) + " |")
     c = by[("prb-constant", 0)]
     L += ["", f"PRBMath's `PI` constant, for reference: {c[0][:22]}…, {c[1]} digits, the most an 18-decimal grid can hold. "
-          f"ABDKMathQuad has 113 significand bits, about 34 digits, and reaches them at five terms; FP256 has 237 and keeps going, about eight digits a term, to 70 digits at nine terms. At five terms FP127's `pi` returns {by[('fp127-pi', 5)][0]}…, {by[('fp127-pi', 5)][1]} digits; truth {nstr(pi, 40)}…", ""]
+          f"ABDKMathQuad has 113 significand bits, about 34 digits, and stops at 33 from five terms; FP256 has 237 and keeps going, about eight digits a term, to 70 digits at nine terms. At five terms FP127's `pi` returns {by[('fp127-pi', 5)][0]}…, {by[('fp127-pi', 5)][1]} digits; truth {nstr(pi, 40)}…", ""]
     L += ["Values at five terms:", "", "| library | value |", "|---|---|"]
     for f in forms:
         L.append(f"| {LABEL[f]} | `{by[(f, 5)][0]}` |")

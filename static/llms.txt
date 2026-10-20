@@ -1,10 +1,12 @@
 # Blockulator
 
-> FP127: signed 127.128 fixed-point math for the EVM, about 38 decimal
-> digits in one int256 against 18 for the usual WAD libraries, deployed as
+> FP127: signed 127.128 fixed-point math for the EVM, 128 fractional bits
+> (38 decimal places, 38 digits at 1) in one int256 against 18 for the usual
+> WAD libraries, deployed as
 > one callable contract on Ethereum Sepolia and available as an inlinable
 > Solidity library. Every op is a read-only eth_call: no gas, no wallet, no
-> transaction. Agents get results more precise than a double by calling it.
+> transaction. For values above 10^-22 agents get results more precise than
+> a double by calling it.
 
 
 Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address in
@@ -16,18 +18,21 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
   exp10, ln, log2, log10, log2Up, sqrt, cbrt, pow, powu, compound, gavg,
   hypot, inv, abs, neg, sign, min, max, clamp, avg, zeroFloorSub, dist, lerp,
   floor, ceil, frac, round, gcd, factorial, lambertW0, lambertWm1, pi
-  (Ramanujan's series, pi(terms): five terms reach the format's floor),
+  (Ramanujan's series, pi(terms): five terms give 36 digits, 230 ULP from
+  pi; more add nothing),
   log1p, expm1, sinh, cosh, tanh, atanh, erf, erfc, normCdf (the standard
-  normal distribution function, the N(d) of Black-Scholes). The last eleven
-  are in the v4 object, live on Sepolia since 2026-10-15.
+  normal distribution function, the N(d) of Black-Scholes). powu, compound
+  and the last nine are new in the v4 object, live on Sepolia since
+  2026-10-15.
 - Encoding: every operand and result is an int256 holding value * 2**128.
   Decode by dividing by 2**128. Range about +/- 1.7e38.
 - Checked arithmetic: out-of-domain inputs revert with Overflow(),
   DivisionByZero() or OutOfRange(). Nothing wraps.
 - Validated against mpmath at 200 decimal places: integer and rounding
-  ops bit-exact; ln, log2 and log10 within one ULP; exp, exp2 and exp10
-  146 bits or better. The transcendentals round to nearest with 64 guard
-  bits, so iterated calls do not drift.
+  ops bit-exact; mul and sqrt round down and div toward zero, within one
+  ULP; ln, log2 and log10 within two ULP; exp, exp2 and exp10 146 bits or
+  better. The transcendentals round to nearest with 64 guard bits:
+  exp(ln(x)) returns the same word for 10,000 steps.
   /data/precision.json
 - Machine-readable op table (signature, selector, domain, reverts):
   /data/ops.json
@@ -51,8 +56,9 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
 ## The precision claim, as data
 
 - /data/ladder.json: thirteen iterated scenarios (daily compounding, an
-  amortising loan, exp(ln(x)) round trips, ...), 64 inputs in all, through
-  FP127, FP127Lib, ABDKMath64x64, Solady and PRBMath for N in 1..10000.
+  amortising loan, exp(ln(x)) round trips, ...), 87 inputs in all, through
+  FP127, FP127Lib, ABDKMath64x64, Solady, PRBMath, ABDKMathQuad, Balancer,
+  Aave, Morpho, Maker and FP256 for N in 1..10000.
   Every cell carries the decoded value, correct significant digits against
   the exact truth (digits) and against the truth from the parameters as the
   library received them (digitsFormat, the arithmetic alone), the signed
@@ -73,7 +79,7 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
 
 - /data/edges.json: 139 one-shot probes at the ends of each domain (ln near
   one, exp at both ends, tiny roots and products, per-second rates to a
-  power, both Lambert branches, erf/erfc/normCdf) through nine libraries,
+  power, both Lambert branches, erf/erfc/normCdf) through ten libraries,
   each cell with its digits or how the library had no answer (zero below
   its floor, revert, out of range, unsupported); /results/edges/ renders it;
   any cell re-runs through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
@@ -102,5 +108,5 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
 - Sepolia only today; there is no mainnet address yet.
 - The Vyper calculators listed in /.well-known/agent.json with
   "status": "archived", and the games and futures market on /archive/,
-  still run but call the legacy Huff FP127 and are not maintained. Use the
+  are from the Huff era, do not call FP127 and are not maintained. Use the
   FP127 contract above.

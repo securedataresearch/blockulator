@@ -30,7 +30,7 @@
 
 <h2>Where to go next</h2>
 <ul class="next">
-<li><a href="/results/ladder/"><strong>Ladder</strong></a> {{ d.scenarios | length }} scenarios, every N from 1 to 10,000, the reference input cell by cell.</li>
+<li><a href="/results/ladder/"><strong>Ladder</strong></a> {{ d.scenarios | length }} scenarios, N from 1 to 10,000, the reference input cell by cell.</li>
 <li><a href="/results/edges/"><strong>Edges</strong></a> {% set_global probes = 0 %}{% for op in e.ops %}{% set_global probes = probes + op.probes | length %}{% endfor %}{{ probes }} single calls at the ends of each library's domain: where results go to zero or revert.</li>
 <li><a href="/results/ops/"><strong>Per op</strong></a> gas and precision for each op, against each library.</li>
 </ul>

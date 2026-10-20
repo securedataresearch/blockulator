@@ -36,7 +36,8 @@ fs_permissions = [
   { access = "read-write", path = "docs/fp256" },
   { access = "read-write", path = "docs/fp127" },
   { access = "read", path = "scripts" },
-  { access = "read-write", path = "docs/benchmarks" }
+  { access = "read-write", path = "docs/benchmarks" },
+  { access = "read-write", path = "cache/sweep" }
 ]
 
 [profile.default.fuzz]
