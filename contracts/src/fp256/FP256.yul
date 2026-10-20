@@ -473,18 +473,28 @@ object "FP256" {
             }
 
             function wmul(ah, al, bh, bl) -> rh, rl {
-                let p1, p0 := mul512(ah, bh)
-                let q1, q0 := mul512(ah, bl)
-                let t1, t0 := mul512(al, bh)
-                q0 := add(q0, t0)
-                q1 := add(add(q1, t1), lt(q0, t0))
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
                 rl := shl(2, p0)
-                let x := or(shl(2, q1), shr(254, q0))
-                rl := add(rl, x)
-                rh := add(add(or(shl(2, p1), shr(254, p0)), shr(254, q1)), lt(rl, x))
-                x := shr(254, mulhi(al, bl))
-                rl := add(rl, x)
-                rh := add(rh, lt(rl, x))
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
             }
 
             function mul3(h, l, m) -> n2, n1, n0 {
@@ -553,14 +563,17 @@ object "FP256" {
             }
 
             function wexpm1(rh, rl) -> eh, el {
-                let th := 0x4000000000000000000000000000000000000000000000000000000000000000
-                let tl := 0
-                for { let k := 20 } gt(k, 1) { k := sub(k, 1) } {
-                    th, tl := wmul(rh, rl, th, tl)
-                    th, tl := wdivs(th, tl, shl(24, k))
-                    th := add(th, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(mulwu(rh, t), shl(24, k)))
                 }
-                eh, el := wmul(rh, rl, th, tl)
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := wmul(rh, rl, t, tl)
+                    t, tl := wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := wmul(rh, rl, t, tl)
                 for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
                     let sh, sl := wmul(eh, el, eh, el)
                     sh, sl := wshr(sh, sl, i)
@@ -620,9 +633,13 @@ object "FP256" {
             }
 
             function wln(mm) -> lh, ll {
-                let y0 := mulwu(log2m(mm), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)
+                lh, ll := wlnw(mm, 0)
+            }
+
+            function wlnw(mh, ml) -> lh, ll {
+                let y0 := mulwu(log2m(mh), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)
                 let eh, el := wexpm1(y0, 0)
-                let dh, dl := wsub(eh, el, sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000), 0)
+                let dh, dl := wsub(eh, el, sub(mh, 0x4000000000000000000000000000000000000000000000000000000000000000), ml)
                 let ng := slt(dh, 0)
                 if ng { dh, dl := wsub(0, 0, dh, dl) }
                 let c := div254(or(shl(248, dh), shr(8, dl)), add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000))

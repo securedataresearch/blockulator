@@ -260,18 +260,28 @@ object "FP256X" {
             }
 
             function wmul(ah, al, bh, bl) -> rh, rl {
-                let p1, p0 := mul512(ah, bh)
-                let q1, q0 := mul512(ah, bl)
-                let t1, t0 := mul512(al, bh)
-                q0 := add(q0, t0)
-                q1 := add(add(q1, t1), lt(q0, t0))
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
                 rl := shl(2, p0)
-                let x := or(shl(2, q1), shr(254, q0))
-                rl := add(rl, x)
-                rh := add(add(or(shl(2, p1), shr(254, p0)), shr(254, q1)), lt(rl, x))
-                x := shr(254, mulhi(al, bl))
-                rl := add(rl, x)
-                rh := add(rh, lt(rl, x))
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
             }
 
             function mul3(h, l, m) -> n2, n1, n0 {
@@ -289,11 +299,6 @@ object "FP256X" {
                     leave
                 }
                 rh, rl := wshr(z2, z1, sub(n, 256))
-            }
-
-            function wmulf(h, l, m, n) -> rh, rl {
-                let z2, z1, z0 := mul3(h, l, m)
-                rh, rl := shr3(z2, z1, z0, n)
             }
 
             function wdivs(h, l, k) -> qh, ql {
@@ -347,14 +352,17 @@ object "FP256X" {
             }
 
             function wexpm1(rh, rl) -> eh, el {
-                let th := 0x4000000000000000000000000000000000000000000000000000000000000000
-                let tl := 0
-                for { let k := 20 } gt(k, 1) { k := sub(k, 1) } {
-                    th, tl := wmul(rh, rl, th, tl)
-                    th, tl := wdivs(th, tl, shl(24, k))
-                    th := add(th, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(mulwu(rh, t), shl(24, k)))
                 }
-                eh, el := wmul(rh, rl, th, tl)
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := wmul(rh, rl, t, tl)
+                    t, tl := wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := wmul(rh, rl, t, tl)
                 for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
                     let sh, sl := wmul(eh, el, eh, el)
                     sh, sl := wshr(sh, sl, i)
@@ -400,10 +408,10 @@ object "FP256X" {
                 eh, el := wexpm1(rh, rl)
             }
 
-            function wln(mm) -> lh, ll {
-                let y0 := mulwu(log2m(mm), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)
+            function wlnw(mh, ml) -> lh, ll {
+                let y0 := mulwu(log2m(mh), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)
                 let eh, el := wexpm1(y0, 0)
-                let dh, dl := wsub(eh, el, sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000), 0)
+                let dh, dl := wsub(eh, el, sub(mh, 0x4000000000000000000000000000000000000000000000000000000000000000), ml)
                 let ng := slt(dh, 0)
                 if ng { dh, dl := wsub(0, 0, dh, dl) }
                 let c := div254(or(shl(248, dh), shr(8, dl)), add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000))
@@ -1059,9 +1067,23 @@ object "FP256X" {
             }
 
             function cfstep(x0h, x0l, x1h, x1l, m, sa, k) -> nh, nl {
-                let th, tl := wmulf(x1h, x1l, m, 237)
-                let qh, ql := wmulf(x0h, x0l, k, sa)
-                nh, nl := wadd(th, tl, qh, ql)
+                // (X1 m) >> 237: X1 below 2^509 and m below 2^237
+                let lo := mul(x1l, m)
+                let mm := mulmod(x1l, m, not(0))
+                nl := shr(237, lo)
+                let c := sub(sub(mm, lo), lt(mm, lo))
+                lo := mul(x1h, m)
+                mm := mulmod(x1h, m, not(0))
+                mm := sub(sub(mm, lo), lt(mm, lo))
+                lo := add(lo, c)
+                nh := or(shl(19, add(mm, lt(lo, c))), shr(237, lo))
+                nl := or(shl(19, lo), nl)
+                // + (X0 >> sa) k, floored before the product (k below 2^10: within k units)
+                lo := or(shl(sub(256, sa), x0h), shr(sa, x0l))
+                c := mul(lo, k)
+                mm := mulmod(lo, k, not(0))
+                nl := add(nl, c)
+                nh := add(add(nh, add(mul(shr(sa, x0h), k), sub(sub(mm, c), lt(mm, c)))), lt(nl, c))
             }
 
             function cfrun(b, m, sa, n) -> h, l, e {
@@ -1203,16 +1225,6 @@ object "FP256X" {
                 if ng { a2, a1, a0 := sub3(0, 0, 0, z2, z1, z0) }
             }
 
-            function lnx3(x) -> z2, z1, z0 {
-                let s, e, m := unpack(x)
-                let u := sub(e, 0x3ffff)
-                let lh, ll := wln(shl(18, m))
-                z2, z1, z0 := kln2x(absw(u))
-                switch slt(u, 0)
-                case 0 { z2, z1, z0 := add3(z2, z1, z0, 0, lh, ll) }
-                default { z2, z1, z0 := sub3(0, lh, ll, z2, z1, z0) }
-            }
-
             function lwcorr(r2, r1, r0, g) -> q, qe, ng {
                 let a2, a1, a0, sr := abs3(r2, r1, r0)
                 let sg, eg, mg := unpack(g)
@@ -1225,17 +1237,30 @@ object "FP256X" {
             }
 
             function lwres1(x, w) -> q, qe, ng, sc {
-                let l2, l1, l0 := lnx3(w)
-                let m2, m1, m0 := lnx3(x)
-                l2, l1, l0 := sub3(l2, l1, l0, m2, m1, m0)
+                let l2, l1, l0 := lnratio3(w, x)
                 // w at 2^-510 (zero below 2^-274, where it is under 2^-37 ULP of the residual)
-                m2, m1, m0 := shl3(or(and(w, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000), sub(and(shr(236, w), 0x7ffff), 0x3feed))
+                let m2, m1, m0 := shl3(or(and(w, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000), sub(and(shr(236, w), 0x7ffff), 0x3feed))
                 switch shr(255, w)
                 case 0 { l2, l1, l0 := add3(l2, l1, l0, m2, m1, m0) }
                 default { l2, l1, l0 := sub3(l2, l1, l0, m2, m1, m0) }
                 q, qe, ng := lwcorr(l2, l1, l0, fp256_div(w, fp256_add(w, 0x3ffff00000000000000000000000000000000000000000000000000000000000)))
                 qe := sub(qe, 510)
                 sc := sub(and(shr(236, w), 0x7ffff), 0x402e9)
+            }
+
+            function lnratio3(w, x) -> z2, z1, z0 {
+                let qh, ql := wrecip(shl(18, or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)), 0)
+                qh, ql := wmul(qh, ql, shl(18, or(and(w, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)), 0)
+                let u := sub(and(shr(236, w), 0x7ffff), and(shr(236, x), 0x7ffff))
+                if lt(qh, 0x4000000000000000000000000000000000000000000000000000000000000000) {
+                    qh, ql := wshl(qh, ql, 1)
+                    u := sub(u, 1)
+                }
+                qh, ql := wlnw(qh, ql)
+                z2, z1, z0 := kln2x(absw(u))
+                switch slt(u, 0)
+                case 0 { z2, z1, z0 := add3(z2, z1, z0, 0, qh, ql) }
+                default { z2, z1, z0 := sub3(0, qh, ql, z2, z1, z0) }
             }
 
             function lwapply(w, q, qe, ng, sc) -> r {
