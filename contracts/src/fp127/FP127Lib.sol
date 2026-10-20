@@ -1024,62 +1024,70 @@ library FP127Lib {
                 rh := add(rh, lt(rl, a))
             }
 
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function log2poly(f) -> r {
+                // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-                r := mulg(r, f)
+                let l := 0
+                let mm := 0
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
             }
 
             function log2m(mm) -> r {
                 let acc := 0
                 if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x800000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x400000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x200000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x100000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x80000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x40000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x20000000000000000000000000000000000000000000000)
                 }
                 r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -1286,62 +1294,70 @@ library FP127Lib {
                 rh := add(rh, lt(rl, a))
             }
 
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function log2poly(f) -> r {
+                // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-                r := mulg(r, f)
+                let l := 0
+                let mm := 0
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
             }
 
             function log2m(mm) -> r {
                 let acc := 0
                 if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x800000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x400000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x200000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x100000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x80000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x40000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x20000000000000000000000000000000000000000000000)
                 }
                 r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -1397,6 +1413,15 @@ library FP127Lib {
                 let mm := shl(sub(192, m), x)
                 if gt(m, 192) { mm := shr(sub(m, 192), x) }
                 r := add(shl(192, sub(m, 128)), log2m(mm))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
             }
 
             function nearmid(v) -> b {
@@ -1555,62 +1580,70 @@ library FP127Lib {
                 rh := add(rh, lt(rl, a))
             }
 
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function log2poly(f) -> r {
+                // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-                r := mulg(r, f)
+                let l := 0
+                let mm := 0
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
             }
 
             function log2m(mm) -> r {
                 let acc := 0
                 if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x800000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x400000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x200000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x100000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x80000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x40000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x20000000000000000000000000000000000000000000000)
                 }
                 r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -1666,6 +1699,15 @@ library FP127Lib {
                 let mm := shl(sub(192, m), x)
                 if gt(m, 192) { mm := shr(sub(m, 192), x) }
                 r := add(shl(192, sub(m, 128)), log2m(mm))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
             }
 
             function nearmid(v) -> b {
@@ -1993,62 +2035,70 @@ library FP127Lib {
                 r := sub(xor(x, m), m)
             }
 
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function log2poly(f) -> r {
+                // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-                r := mulg(r, f)
+                let l := 0
+                let mm := 0
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
             }
 
             function log2m(mm) -> r {
                 let acc := 0
                 if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x800000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x400000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x200000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x100000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x80000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x40000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x20000000000000000000000000000000000000000000000)
                 }
                 r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -2669,62 +2719,70 @@ library FP127Lib {
                 rh := add(rh, lt(rl, a))
             }
 
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function log2poly(f) -> r {
+                // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-                r := mulg(r, f)
+                let l := 0
+                let mm := 0
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
             }
 
             function log2m(mm) -> r {
                 let acc := 0
                 if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x800000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x400000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x200000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x100000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x80000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x40000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x20000000000000000000000000000000000000000000000)
                 }
                 r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -3535,62 +3593,70 @@ library FP127Lib {
                 r := shr(1, add(y, divu(x, y)))
             }
 
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function log2poly(f) -> r {
+                // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-                r := mulg(r, f)
+                let l := 0
+                let mm := 0
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
             }
 
             function log2m(mm) -> r {
                 let acc := 0
                 if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x800000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x400000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x200000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x100000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x80000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x40000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x20000000000000000000000000000000000000000000000)
                 }
                 r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -3602,6 +3668,15 @@ library FP127Lib {
                 let mm := shl(sub(192, m), x)
                 if gt(m, 192) { mm := shr(sub(m, 192), x) }
                 r := add(shl(192, sub(m, 128)), log2m(mm))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
             }
 
             function round64(r) -> q {
@@ -3645,12 +3720,6 @@ library FP127Lib {
                 default { w := sub(sub(0, add(odd, even)), 0x100000000000000000000000000000000) }
             }
 
-            function hmul(a, b) -> h {
-                let l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(mm, l), lt(mm, l))
-            }
-
             function expmul(sh, sl, ch, cl) -> rh, rl {
                 let pl := mul(sh, ch)
                 let mm := mulmod(sh, ch, not(0))
@@ -3669,6 +3738,12 @@ library FP127Lib {
                 rh := add(add(sh, ch), lt(rl, cl))
                 rl := add(rl, pl)
                 rh := add(add(rh, ph), lt(rl, pl))
+            }
+
+            function hmul(a, b) -> h {
+                let l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
             }
 
             function mul512(a, b) -> h, l {
@@ -3762,49 +3837,51 @@ library FP127Lib {
                 h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
             }
 
-            function l2p(x) -> lh, ll {
-                let ms := msb(x)
-                let m := shl(sub(255, ms), x)
-                lh := shl(128, sub(ms, 128))
-                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
-                let y0 := log2m(shr(63, m))
-                if slt(y0, 1) { y0 := 1 }
-                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
-                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
-                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
-                let sh, sl := expk(rh, rl)
-                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
-                let qh, ql := mul512(m, sh)
-                let c := hmul(m, sl)
-                ql := add(ql, c)
-                qh := add(add(qh, m), lt(ql, c))
-                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
-                let d := or(shl(128, qh), shr(128, ql))
-                let ad := absw(d)
-                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
-                let corr := or(shl(1, ph), shr(255, pl))
-                // log2(x) = (ms - 128) + y0 + corr
-                let y1 := shl(192, y0)
-                ll := add(y1, corr)
-                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+            function y2nf(y, lh, ll) -> n, fh, fl {
+                let b1, b0 := smul512(y, ll)
+                let c0 := mul(y, lh)
+                let mm := mulmod(y, lh, not(0))
+                let c1 := sub(sub(sub(sub(mm, c0), lt(mm, c0)), mul(slt(y, 0), lh)), mul(slt(lh, 0), y))
+                fl := b0
+                fh := add(c0, b1)
+                n := add(c1, sub(lt(fh, c0), slt(b1, 0)))
+            }
+
+            function expx(x) -> n, sh, sl {
+                let fh := 0
+                let fl := 0
+                n, fh, fl := y2nf(x, 0x171547652b82fe1777d0ffda0d23a7d11, 0xd6aef551bad2b4b1164a2cd9a342648fbc3887eeaa2ed9ac49b25eeb82d7c168)
+                let rh, rl := lnmul(fh, fl)
+                sh, sl := expk(rh, rl)
             }
 
             function lwfin(x, w) -> r {
-                let ah, al := l2p(absw(x))
-                let bh, bl := l2p(absw(w))
-                // D = log2|x| - log2|w|, times ln 2, at 2^-384
-                let dl := sub(al, bl)
-                let ph, pl := smul512(sub(sub(ah, bh), lt(al, bl)), 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
-                let c := hmul(dl, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
-                pl := add(pl, c)
-                ph := add(ph, lt(pl, c))
-                // F = w - D ln 2 at 2^-384; F w, which is about w - W, at 2^-312 in one
-                // word (F itself is not small when w is a few ULPs)
-                let fh := sub(sub(w, ph), iszero(iszero(pl)))
-                let g1, g0 := smul512(w, sub(0, pl))
-                let g := or(shl(56, add(mul(fh, w), g1)), shr(200, g0))
-                let d := fp127_div(g, add(w, 0x100000000000000000000000000000000))
-                r := add(w, sar(184, add(sub(0, d), 0x8000000000000000000000000000000000000000000000)))
+                let n, sh, sl := expx(w)
+                let aw := absw(w)
+                // A = |w| (1 + s) at 2^-384
+                let ah, al := mul512(aw, sh)
+                let c := hmul(aw, sl)
+                al := add(al, c)
+                ah := add(add(ah, aw), lt(al, c))
+                // B = |x| 2^-n at 2^-384
+                let ax := absw(x)
+                let k := sub(256, n)
+                let bh := 0
+                let bl := 0
+                switch slt(k, 256)
+                case 1 {
+                    bh := shr(sub(256, k), ax)
+                    bl := shl(k, ax)
+                }
+                default { bh := shl(sub(k, 256), ax) }
+                // B y = A - B, small: at 2^-300 in one word; y to the 2^-128 of B's top
+                let pl := sub(al, bl)
+                let p := or(shl(172, sub(sub(ah, bh), lt(al, bl))), shr(84, pl))
+                let y := fp127_div(p, bh)
+                let ay := absw(y)
+                let f := sub(y, shr(45, hmul(ay, ay)))
+                let d := fp127_div(mulraw(f, w), add(w, 0x100000000000000000000000000000000))
+                r := add(w, sar(172, add(sub(0, d), 0x8000000000000000000000000000000000000000000)))
             }
 
             function exp2frac(f) -> r {
@@ -4019,62 +4096,70 @@ library FP127Lib {
                 r := shr(1, add(y, divu(x, y)))
             }
 
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function log2poly(f) -> r {
+                // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-                r := mulg(r, f)
+                let l := 0
+                let mm := 0
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
             }
 
             function log2m(mm) -> r {
                 let acc := 0
                 if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x800000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x400000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x200000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x100000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x80000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x40000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x20000000000000000000000000000000000000000000000)
                 }
                 r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -4086,6 +4171,15 @@ library FP127Lib {
                 let mm := shl(sub(192, m), x)
                 if gt(m, 192) { mm := shr(sub(m, 192), x) }
                 r := add(shl(192, sub(m, 128)), log2m(mm))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
             }
 
             function round64(r) -> q {
@@ -4119,12 +4213,6 @@ library FP127Lib {
                 default { w := sub(sub(0, add(odd, even)), 0x100000000000000000000000000000000) }
             }
 
-            function hmul(a, b) -> h {
-                let l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(mm, l), lt(mm, l))
-            }
-
             function expmul(sh, sl, ch, cl) -> rh, rl {
                 let pl := mul(sh, ch)
                 let mm := mulmod(sh, ch, not(0))
@@ -4143,6 +4231,12 @@ library FP127Lib {
                 rh := add(add(sh, ch), lt(rl, cl))
                 rl := add(rl, pl)
                 rh := add(add(rh, ph), lt(rl, pl))
+            }
+
+            function hmul(a, b) -> h {
+                let l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
             }
 
             function mul512(a, b) -> h, l {
@@ -4236,49 +4330,51 @@ library FP127Lib {
                 h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
             }
 
-            function l2p(x) -> lh, ll {
-                let ms := msb(x)
-                let m := shl(sub(255, ms), x)
-                lh := shl(128, sub(ms, 128))
-                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
-                let y0 := log2m(shr(63, m))
-                if slt(y0, 1) { y0 := 1 }
-                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
-                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
-                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
-                let sh, sl := expk(rh, rl)
-                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
-                let qh, ql := mul512(m, sh)
-                let c := hmul(m, sl)
-                ql := add(ql, c)
-                qh := add(add(qh, m), lt(ql, c))
-                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
-                let d := or(shl(128, qh), shr(128, ql))
-                let ad := absw(d)
-                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
-                let corr := or(shl(1, ph), shr(255, pl))
-                // log2(x) = (ms - 128) + y0 + corr
-                let y1 := shl(192, y0)
-                ll := add(y1, corr)
-                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+            function y2nf(y, lh, ll) -> n, fh, fl {
+                let b1, b0 := smul512(y, ll)
+                let c0 := mul(y, lh)
+                let mm := mulmod(y, lh, not(0))
+                let c1 := sub(sub(sub(sub(mm, c0), lt(mm, c0)), mul(slt(y, 0), lh)), mul(slt(lh, 0), y))
+                fl := b0
+                fh := add(c0, b1)
+                n := add(c1, sub(lt(fh, c0), slt(b1, 0)))
+            }
+
+            function expx(x) -> n, sh, sl {
+                let fh := 0
+                let fl := 0
+                n, fh, fl := y2nf(x, 0x171547652b82fe1777d0ffda0d23a7d11, 0xd6aef551bad2b4b1164a2cd9a342648fbc3887eeaa2ed9ac49b25eeb82d7c168)
+                let rh, rl := lnmul(fh, fl)
+                sh, sl := expk(rh, rl)
             }
 
             function lwfin(x, w) -> r {
-                let ah, al := l2p(absw(x))
-                let bh, bl := l2p(absw(w))
-                // D = log2|x| - log2|w|, times ln 2, at 2^-384
-                let dl := sub(al, bl)
-                let ph, pl := smul512(sub(sub(ah, bh), lt(al, bl)), 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
-                let c := hmul(dl, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
-                pl := add(pl, c)
-                ph := add(ph, lt(pl, c))
-                // F = w - D ln 2 at 2^-384; F w, which is about w - W, at 2^-312 in one
-                // word (F itself is not small when w is a few ULPs)
-                let fh := sub(sub(w, ph), iszero(iszero(pl)))
-                let g1, g0 := smul512(w, sub(0, pl))
-                let g := or(shl(56, add(mul(fh, w), g1)), shr(200, g0))
-                let d := fp127_div(g, add(w, 0x100000000000000000000000000000000))
-                r := add(w, sar(184, add(sub(0, d), 0x8000000000000000000000000000000000000000000000)))
+                let n, sh, sl := expx(w)
+                let aw := absw(w)
+                // A = |w| (1 + s) at 2^-384
+                let ah, al := mul512(aw, sh)
+                let c := hmul(aw, sl)
+                al := add(al, c)
+                ah := add(add(ah, aw), lt(al, c))
+                // B = |x| 2^-n at 2^-384
+                let ax := absw(x)
+                let k := sub(256, n)
+                let bh := 0
+                let bl := 0
+                switch slt(k, 256)
+                case 1 {
+                    bh := shr(sub(256, k), ax)
+                    bl := shl(k, ax)
+                }
+                default { bh := shl(sub(k, 256), ax) }
+                // B y = A - B, small: at 2^-300 in one word; y to the 2^-128 of B's top
+                let pl := sub(al, bl)
+                let p := or(shl(172, sub(sub(ah, bh), lt(al, bl))), shr(84, pl))
+                let y := fp127_div(p, bh)
+                let ay := absw(y)
+                let f := sub(y, shr(45, hmul(ay, ay)))
+                let d := fp127_div(mulraw(f, w), add(w, 0x100000000000000000000000000000000))
+                r := add(w, sar(172, add(sub(0, d), 0x8000000000000000000000000000000000000000000)))
             }
 
             function lwm1(lx, w) -> wn {
@@ -4456,62 +4552,70 @@ library FP127Lib {
                 rh := add(rh, lt(rl, a))
             }
 
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function log2poly(f) -> r {
+                // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-                r := mulg(r, f)
+                let l := 0
+                let mm := 0
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
             }
 
             function log2m(mm) -> r {
                 let acc := 0
                 if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x800000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x400000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x200000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x100000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x80000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x40000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x20000000000000000000000000000000000000000000000)
                 }
                 r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -4567,6 +4671,15 @@ library FP127Lib {
                 let mm := shl(sub(192, m), x)
                 if gt(m, 192) { mm := shr(sub(m, 192), x) }
                 r := add(shl(192, sub(m, 128)), log2m(mm))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
             }
 
             function nearmid(v) -> b {
@@ -5455,62 +5568,70 @@ library FP127Lib {
                 r := sub(xor(x, m), m)
             }
 
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function log2poly(f) -> r {
+                // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
                 r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-                r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-                r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-                r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-                r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-                r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-                r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-                r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-                r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-                r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-                r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-                r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-                r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-                r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-                r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-                r := mulg(r, f)
+                let l := 0
+                let mm := 0
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+                l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
             }
 
             function log2m(mm) -> r {
                 let acc := 0
                 if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-                    mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+                    let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x800000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-                    mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+                    let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x400000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-                    mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+                    let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x200000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-                    mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+                    let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x100000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-                    mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+                    let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x80000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-                    mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+                    let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x40000000000000000000000000000000000000000000000)
                 }
                 if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-                    mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+                    let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+                    mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
                     acc := add(acc, 0x20000000000000000000000000000000000000000000000)
                 }
                 r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -5533,6 +5654,15 @@ library FP127Lib {
                 let mm := shl(sub(192, m), x)
                 if gt(m, 192) { mm := shr(sub(m, 192), x) }
                 r := add(shl(192, sub(m, 128)), log2m(mm))
+            }
+
+            function mulg(a, b) -> r {
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(64, p1), shr(192, p0))
             }
 
             function rev(sel) {

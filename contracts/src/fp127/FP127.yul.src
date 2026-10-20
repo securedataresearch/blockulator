@@ -635,55 +635,72 @@ function fp127_exp10(x) -> r {
 /// degree-14 Chebyshev-fitted polynomial for log2(1 + f) / f (max error
 /// 2^-145, guard_model.py), Horner with floor at every step via mulg.
 function log2poly(f) -> r {
+    // mulg(r, f) inline: f >= 0, so only r's sign corrects the high word
     r := 0x17b3936278bdf3108194c0601c98145899c19988d7a109e4
-    r := add(mulg(r, f), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
-    r := add(mulg(r, f), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
-    r := add(mulg(r, f), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
-    r := add(mulg(r, f), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
-    r := add(mulg(r, f), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
-    r := add(mulg(r, f), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
-    r := add(mulg(r, f), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
-    r := add(mulg(r, f), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
-    r := add(mulg(r, f), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
-    r := add(mulg(r, f), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
-    r := add(mulg(r, f), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
-    r := add(mulg(r, f), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
-    r := add(mulg(r, f), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
-    r := add(mulg(r, f), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
-    r := mulg(r, f)
+    let l := 0
+    let mm := 0
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l)), 0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a)
+    l := mul(r, f) mm := mulmod(r, f, not(0)) r := or(shl(64, sub(sub(sub(mm, l), lt(mm, l)), mul(slt(r, 0), f))), shr(192, l))
 }
 
 /// log2(m) at 2^-192 for m = mm 2^-192 in [1, 2), unrounded: seven
-/// range-reduction stages by 2^(1/2^k) at 2^-192, then the polynomial on the
-/// residual. About 2^-150 absolute (precise_model.py measures 2^-153).
+/// range-reduction stages by 2^(1/2^k) at 2^-192 (unsigned mulg, inline),
+/// then the polynomial on the residual. About 2^-150 absolute (precise_model.py measures 2^-153).
 function log2m(mm) -> r {
     let acc := 0
     if iszero(gt(0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, mm)) {
-        mm := mulg(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+        let l := mul(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+        let h := mulmod(mm, 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, not(0))
+        mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
         acc := add(acc, 0x800000000000000000000000000000000000000000000000)
     }
     if iszero(gt(0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2, mm)) {
-        mm := mulg(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+        let l := mul(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17)
+        let h := mulmod(mm, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17, not(0))
+        mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
         acc := add(acc, 0x400000000000000000000000000000000000000000000000)
     }
     if iszero(gt(0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, mm)) {
-        mm := mulg(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+        let l := mul(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c)
+        let h := mulmod(mm, 0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, not(0))
+        mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
         acc := add(acc, 0x200000000000000000000000000000000000000000000000)
     }
     if iszero(gt(0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3, mm)) {
-        mm := mulg(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+        let l := mul(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6)
+        let h := mulmod(mm, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6, not(0))
+        mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
         acc := add(acc, 0x100000000000000000000000000000000000000000000000)
     }
     if iszero(gt(0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, mm)) {
-        mm := mulg(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+        let l := mul(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc)
+        let h := mulmod(mm, 0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, not(0))
+        mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
         acc := add(acc, 0x80000000000000000000000000000000000000000000000)
     }
     if iszero(gt(0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c, mm)) {
-        mm := mulg(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+        let l := mul(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792)
+        let h := mulmod(mm, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792, not(0))
+        mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
         acc := add(acc, 0x40000000000000000000000000000000000000000000000)
     }
     if iszero(gt(0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404, mm)) {
-        mm := mulg(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+        let l := mul(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544)
+        let h := mulmod(mm, 0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544, not(0))
+        mm := or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l))
         acc := add(acc, 0x20000000000000000000000000000000000000000000000)
     }
     r := add(acc, log2poly(sub(mm, 0x1000000000000000000000000000000000000000000000000)))
@@ -1371,28 +1388,42 @@ function lwib(x, w) -> wn {
 }
 
 /// The final step of both branches, in the double word: Newton on
-///   F(w) = w + ln|w| - ln|x|,  w' = w - F w / (w + 1),
-/// with ln|x| - ln|w| from l2p (2^-299) and the correction rounded once.
-/// The one-word iterations leave w within about 2^-128 / |1 + W| of W; this
-/// step takes that to the nearest word, where v4 was 1,153 ULPs off near
-/// -1/e (the residual is computed exactly enough that the amplification
-/// 1 / (1 + w) no longer reaches the grid) and 2 ULPs off elsewhere.
+///   F(w) = w + ln|w| - ln|x| = ln(1 + y),  y = |w| e^w / |x| - 1,
+///   w' = w - F w / (w + 1),
+/// with e^w = 2^n (1 + s) from the double-word kernel: A = |w| (1 + s) and
+/// B = |x| 2^-n at 2^-384, y = (A - B) / B and F = y - y^2/2 to about
+/// 2^-300, and the correction rounded once. The one-word iterations leave w within about
+/// 2^-128 / |1 + W| of W; this step takes that to the nearest word, where v4
+/// was 1,153 ULPs off near -1/e (the residual is now exact enough that the
+/// amplification 1 / (1 + w) no longer reaches the grid) and 2 ULPs off
+/// elsewhere.
 function lwfin(x, w) -> r {
-    let ah, al := l2p(absw(x))
-    let bh, bl := l2p(absw(w))
-    // D = log2|x| - log2|w|, times ln 2, at 2^-384
-    let dl := sub(al, bl)
-    let ph, pl := smul512(sub(sub(ah, bh), lt(al, bl)), 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
-    let c := hmul(dl, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
-    pl := add(pl, c)
-    ph := add(ph, lt(pl, c))
-    // F = w - D ln 2 at 2^-384; F w, which is about w - W, at 2^-312 in one
-    // word (F itself is not small when w is a few ULPs)
-    let fh := sub(sub(w, ph), iszero(iszero(pl)))
-    let g1, g0 := smul512(w, sub(0, pl))
-    let g := or(shl(56, add(mul(fh, w), g1)), shr(200, g0))
-    let d := fp127_div(g, add(w, 0x100000000000000000000000000000000))
-    r := add(w, sar(184, add(sub(0, d), 0x8000000000000000000000000000000000000000000000)))
+    let n, sh, sl := expx(w)
+    let aw := absw(w)
+    // A = |w| (1 + s) at 2^-384
+    let ah, al := mul512(aw, sh)
+    let c := hmul(aw, sl)
+    al := add(al, c)
+    ah := add(add(ah, aw), lt(al, c))
+    // B = |x| 2^-n at 2^-384
+    let ax := absw(x)
+    let k := sub(256, n)
+    let bh := 0
+    let bl := 0
+    switch slt(k, 256)
+    case 1 {
+        bh := shr(sub(256, k), ax)
+        bl := shl(k, ax)
+    }
+    default { bh := shl(sub(k, 256), ax) }
+    // B y = A - B, small: at 2^-300 in one word; y to the 2^-128 of B's top
+    let pl := sub(al, bl)
+    let p := or(shl(172, sub(sub(ah, bh), lt(al, bl))), shr(84, pl))
+    let y := fp127_div(p, bh)
+    let ay := absw(y)
+    let f := sub(y, shr(45, hmul(ay, ay)))
+    let d := fp127_div(mulraw(f, w), add(w, 0x100000000000000000000000000000000))
+    r := add(w, sar(172, add(sub(0, d), 0x8000000000000000000000000000000000000000000)))
 }
 
 /// q = 1 + e x at 2^-256 for -1/e <= x < 0, with e to 2^-254: the distance to
