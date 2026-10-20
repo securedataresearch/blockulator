@@ -12,7 +12,7 @@
 {%- if page %}{% set og_title = page.title %}{% set og_desc = page.description | default(value=config.description) %}{% elif section and section.path != "/" %}{% set og_title = section.title %}{% set og_desc = section.description | default(value=config.description) %}{% else %}{% set og_title = config.title %}{% set og_desc = config.description %}{% endif %}
 <link rel="canonical" href="{{ current_url | default(value=config.base_url) }}">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="blockulator">
+<meta property="og:site_name" content="Blockulator by Secure Data Research">
 <meta property="og:title" content="{{ og_title }}">
 <meta property="og:description" content="{{ og_desc }}">
 <meta property="og:url" content="{{ current_url | default(value=config.base_url) }}">
@@ -53,9 +53,9 @@
     <a href="/badges/">Badges</a>
     <a href="/llms.txt">llms.txt</a>
     <a href="{{ config.extra.repo }}">GitHub</a>
-    <a href="mailto:sam@securedataresearch.net?subject=FP127">Contact</a>
+    <a href="mailto:sam@securedataresearch.net?subject=Blockulator">Contact</a>
   </nav>
-  <p>Secure Data Research. Testnet only; not audited.</p>
+  <p>Blockulator, FP127 and FP256 are made by Secure Data Research LLC and released under the <a href="{{ config.extra.repo }}/blob/master/LICENSE">MIT licence</a>.</p>
 </footer>
 {% block scripts %}{% endblock scripts %}
 <script>document.addEventListener('click',function(e){var b=e.target.closest('.copy');if(!b||!navigator.clipboard)return;navigator.clipboard.writeText(b.dataset.copy).then(function(){var t=b.textContent;b.textContent='copied';setTimeout(function(){b.textContent=t;},1200);});});</script>
