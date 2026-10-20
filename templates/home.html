@@ -4,6 +4,7 @@
 <section class="hero">
   <canvas class="cloth" data-quiet aria-hidden="true"></canvas>
   <div class="hero-inner wrap">
+    {%- if x.eyebrow %}<p class="eyebrow">{{ x.eyebrow }}</p>{% endif %}
     <h1>{{ x.headline }}</h1>
     <p class="sub">{{ x.sub }}</p>
     <p class="actions">
