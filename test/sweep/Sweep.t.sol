@@ -42,6 +42,17 @@ contract Sweep is Test {
         if (op == "fp127_compound") return FP127Lib.compound(a, b);
         if (op == "fp127_lambertW0") return FP127Lib.lambertW0(a);
         if (op == "fp127_lambertWm1") return FP127Lib.lambertWm1(a);
+        if (op == "fp127_exp2") return FP127Lib.exp2(a);
+        if (op == "fp127_exp10") return FP127Lib.exp10(a);
+        if (op == "fp127_log10") return FP127Lib.log10(a);
+        if (op == "fp127_sinh") return FP127Lib.sinh(a);
+        if (op == "fp127_cosh") return FP127Lib.cosh(a);
+        if (op == "fp127_tanh") return FP127Lib.tanh(a);
+        if (op == "fp127_powu") return FP127Lib.powu(a, b);
+        if (op == "fp127_mulUp") return FP127Lib.mulUp(a, b);
+        if (op == "fp127_divUp") return FP127Lib.divUp(a, b);
+        if (op == "fp127_divDown") return FP127Lib.divDown(a, b);
+        if (op == "fp127_toFixed18Up") return FP127Lib.toFixed18Up(a);
         revert("op");
     }
 
@@ -75,5 +86,8 @@ contract Sweep is Test {
         _run("fp127_ln", false); _run("fp127_log2", false); _run("fp127_pow", true); _run("fp127_cbrt", false);
         _run("fp127_expm1", false); _run("fp127_erf", false); _run("fp127_normCdf", false); _run("fp127_compound", true);
         _run("fp127_lambertW0", false); _run("fp127_lambertWm1", false);
+        _run("fp127_exp2", false); _run("fp127_exp10", false); _run("fp127_log10", false); _run("fp127_sinh", false);
+        _run("fp127_cosh", false); _run("fp127_tanh", false); _run("fp127_powu", true); _run("fp127_mulUp", true);
+        _run("fp127_divUp", true); _run("fp127_divDown", true); _run("fp127_toFixed18Up", false);
     }
 }

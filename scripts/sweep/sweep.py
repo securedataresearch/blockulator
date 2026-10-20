@@ -32,8 +32,9 @@ BIAS = 0x3FFFF
 SEED, SEED_LW = 20261020, 7
 OPS256 = ["add", "mul", "div", "sqrt", "exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf",
           "compound", "lambertW0"]
-OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "normCdf", "compound"]
-TWO = {"add", "mul", "div", "pow", "compound"}
+OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "normCdf", "compound",
+          "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up"]
+TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulUp", "divUp", "divDown"}
 
 
 # ---- inputs ----------------------------------------------------------------
@@ -89,6 +90,19 @@ def gen():
     write("fp127_erf", [f127(rng, 100, 130) for _ in range(S // 2)])
     write("fp127_normCdf", [f127(rng, 100, 131) for _ in range(S // 2)])
     write("fp127_compound", [f127(rng, 80, 123) for _ in range(S)], [rng.randint(1, 40_000_000) << 128 for _ in range(S)])
+    # FP127 v5: the rest of the exponential family, the hyperbolics, powu and the directed edge ops
+    rv = random.Random(SEED + 5)
+    write("fp127_exp2", [f127(rv, 100, 134) for _ in range(S)])
+    write("fp127_exp10", [f127(rv, 100, 133) for _ in range(S)])
+    write("fp127_log10", [f127(rv, 1, 254, 0) for _ in range(S)])
+    write("fp127_sinh", [f127(rv, 100, 134) for _ in range(S)])
+    write("fp127_cosh", [f127(rv, 100, 134) for _ in range(S)])
+    write("fp127_tanh", [f127(rv, 100, 134) for _ in range(S)])
+    write("fp127_powu", [f127(rv, 120, 136) for _ in range(S)], [rv.randint(-300, 300) << 128 for _ in range(S)])
+    write("fp127_mulUp", [f127(rv, 100, 200) for _ in range(S)], [f127(rv, 60, 160) for _ in range(S)])
+    write("fp127_divUp", [f127(rv, 100, 200) for _ in range(S)], [f127(rv, 100, 200) for _ in range(S)])
+    write("fp127_divDown", [f127(rv, 100, 200) for _ in range(S)], [f127(rv, 100, 200) for _ in range(S)])
+    write("fp127_toFixed18Up", [f127(rv, 1, 250) for _ in range(S)])
     # FP127 Lambert W: W0 log-uniform on (0, 2^100] and within [2^-20, 1/e] of -1/e; W-1 on [-1/e, 0)
     mp.dps = 80
     rl = random.Random(SEED_LW)
@@ -157,6 +171,17 @@ def truth127(op, a, b):
         "erf": lambda: mp.erf(x) * ONE,
         "normCdf": lambda: mp.ncdf(x) * ONE,
         "compound": lambda: mp.power(1 + x, int(mp.floor(y))) * ONE,
+        "exp2": lambda: mp.power(2, x) * ONE,
+        "exp10": lambda: mp.power(10, x) * ONE,
+        "log10": lambda: mp.log(x, 10) * ONE,
+        "sinh": lambda: mp.sinh(x) * ONE,
+        "cosh": lambda: mp.cosh(x) * ONE,
+        "tanh": lambda: mp.tanh(x) * ONE,
+        "powu": lambda: mp.power(x, int(mp.floor(y))) * ONE,
+        "mulUp": lambda: mpf(A) * B / ONE,
+        "divUp": lambda: mpf(A) * ONE / B,
+        "divDown": lambda: mpf(A) * ONE / B,
+        "toFixed18Up": lambda: mpf(A) * 10**18 / ONE,
         "lambertW0": lambda: lambertw(x, 0).real * ONE,
         "lambertWm1": lambda: lambertw(x, -1).real * ONE,
     }[op]()
@@ -235,7 +260,9 @@ def score():
            "",
            "*nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the "
            "result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; "
-           "for Lambert W the 2^-20 neighbourhood of -1/e is shown separately).",
+           "for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, "
+           "divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows "
+           "the direction; toFixed18Up is measured in its own unit, 10^-18.",
            "",
            "| op | inputs | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth |",
            "|---|---:|---:|---:|---:|---:|---:|---|"]
