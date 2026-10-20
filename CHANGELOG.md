@@ -6,7 +6,7 @@ keeps its own version in its CREATE2 salt, because the salt names the address;
 
 ## Unreleased
 
-FP127 v5: in source, not yet deployed (salt `FP127 v5`, 55 ops, 17,066
+FP127 v5: in source, not yet deployed (salt `FP127 v5`, 55 ops, 17,157
 bytes of runtime). v4 stays live at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`.
 
 - Every transcendental returns the nearest word. `exp`, `exp2`, `exp10`,
@@ -33,8 +33,8 @@ bytes of runtime). v4 stays live at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`
 - The precision test measures the true distance to the real truth and holds
   each op to its rounding contract (v4: within 2 ULP of a floored reference).
 - Gas through the object, medians: `exp` 7,076 (+1,544), `exp2` 4,664
-  (−696), `pow` 5,742 (−352), `cbrt` 7,270 (+551), `lambertW0` 40,777
-  (+4,538), `lambertWm1` 29,952 (+590), `atanh` 7,042 (−1,659); six more
+  (−696), `pow` 5,742 (−352), `cbrt` 7,270 (+551), `lambertW0` 41,481
+  (+5,242), `lambertWm1` 31,764 (+2,402), `atanh` 7,646 (−1,055); six more
   selectors add about 90 to the other ops' dispatch.
 
 ## Blockulator 2.0 (2026-10-16)

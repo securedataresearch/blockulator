@@ -37,7 +37,7 @@ The same Yul function bodies are emitted twice.
 proxy at `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the
 version. v4 (salt `"FP127 v4"`) is live at
 `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` on Sepolia. This source is v5
-(salt `"FP127 v5"`, 55 ops, 17,066 bytes of runtime), not yet deployed;
+(salt `"FP127 v5"`, 55 ops, 17,157 bytes of runtime), not yet deployed;
 `make predict` prints its address. Record and verification recipe in
 [`contracts/deployments/FP127.md`](../../deployments/FP127.md).
 Every contract that `staticcall`s it runs identical bytecode.
@@ -216,7 +216,7 @@ contract against it, measured to 2^-64 ULP: exact ops 0, directed ops under
 one ULP, nearest ops at most half; v4's test allowed 2 ULP from a floored
 reference. It writes [`docs/fp127/precision.json`](../../../docs/fp127/precision.json);
 `make precision-report` renders [`docs/fp127/precision.md`](../../../docs/fp127/precision.md).
-On 15,058 vectors every nearest op is the nearest word; `pi` is within 230
+On 15,124 vectors every nearest op is the nearest word; `pi` is within 230
 ULP of its own partial sum (the floored terms are scaled by 1103 + 26390 k).
 `make sweep` measures 4,000 seeded random inputs per op
 ([`docs/benchmarks/sweep.md`](../../../docs/benchmarks/sweep.md)): every
@@ -234,7 +234,7 @@ and PRBMath side by side. Through a `staticcall` the Yul object costs 700
 to 800 gas more than the Huff on `add` and `mul` and less on `ln`, `log2`,
 `pow` and `cbrt`; the inline library removes the call overhead.
 Lambert W is the one op that got dearer, buying the nearest word where the
-Huff had 50 to 100 bits: a median of 41k gas for `lambertW0` and 30k for
+Huff had 50 to 100 bits: a median of 41k gas for `lambertW0` and 32k for
 `lambertWm1` through the object in v5. Of the version 4 ops, `powu` and
 `compound` cost 2,200 to 10,500 gas (one squaring step per bit of the
 exponent), the near-one and hyperbolic ops 4,000 to 11,500, and the error
@@ -243,8 +243,8 @@ on where x falls, the continued fraction near x = 4 being the dearest.
 
 v5 against v4, medians through the object: `exp` 7,076 (+1,544), `exp10`
 5,794 (+908), `exp2` 4,664 (−696), `pow` 5,742 (−352), `cbrt` 7,270 (+551),
-`cosh` 9,372 (+155), `atanh` 7,042 (−1,659), `log1p` 4,095 (−619),
-`lambertW0` 40,777 (+4,538), `lambertWm1` 29,952 (+590). Six more selectors
+`cosh` 9,372 (+155), `atanh` 7,646 (−1,055), `log1p` 4,397 (−317),
+`lambertW0` 41,481 (+5,242), `lambertWm1` 31,764 (+2,402). Six more selectors
 put about 90 gas on most other ops' dispatch. The directed ops cost 900 to
 2,600 through the object, 950 to 1,530 inline.
 
