@@ -12,8 +12,10 @@ reverts, the oracle says `REVERT:<ErrorName>`.
 Words are the int256 bit patterns (0x-hex or decimal, two's complement).
 add, sub, mul, div, sqrt and the conversions are computed with exact
 rationals (fractions.Fraction, math.isqrt), so they are bit-exact
-references; exp, ln, pow, log1p and expm1 go through mpmath at 300 digits and are
-rounded the same way, and the tests allow those ops their kernel floors.
+references; the transcendental ops go through mpmath at 300 digits and are
+rounded the same way. Release four's directed ops (mulDown, mulUp, divDown,
+divUp, toUintDown, toUintUp, toIntDown, toIntUp, floor, ceil, fromUintDown,
+fromUintUp) are exact rationals rounded toward minus or plus infinity.
 """
 from __future__ import annotations
 
@@ -262,6 +264,43 @@ def _int(n):
     return n - TWO256 if n >= TWO255 else n
 
 
+def _iroot(a: int, q: int) -> int | None:
+    """The integer q-th root of a >= 0 when a is a perfect q-th power."""
+    if a < 2:
+        return a
+    r = int(round(a ** (1.0 / q))) if a.bit_length() < 1000 else 1 << (a.bit_length() // q)
+    # Newton from above, then check
+    r = max(r, 1)
+    while True:
+        nr = ((q - 1) * r + a // r ** (q - 1)) // q
+        if nr >= r:
+            break
+        r = nr
+    for c in (r - 1, r, r + 1):
+        if c >= 0 and c ** q == a:
+            return c
+    return None
+
+
+def _exact_pow(x: Fraction, y: Fraction) -> Fraction | None:
+    """x^y exactly when it is rational, for x > 0 and y = p / 2^k with k <= 8
+    and |p| <= 300 (every exact tie of a 237-bit result is among these); None
+    otherwise. Release four: the 300-digit path can land a hair on the wrong
+    side of an exact tie."""
+    p, q = y.numerator, y.denominator
+    if q > 256 or abs(p) > 300:
+        return None
+    num, den = x.numerator, x.denominator          # den is a power of two
+    c = (num & -num).bit_length() - 1
+    odd, e2 = num >> c, c - (den.bit_length() - 1)
+    if e2 % q:
+        return None
+    r = _iroot(odd, q)
+    if r is None:
+        return None
+    return (Fraction(r) * Fraction(2) ** (e2 // q)) ** p
+
+
 def op_powu(x, n):
     """x^n for a plain integer n: exact rationals for small n, 300 digits above."""
     k = _int(n)
@@ -272,7 +311,7 @@ def op_powu(x, n):
         if k < 0:
             raise Revert("DivisionByZero")
         return 0
-    if abs(k) <= 64:
+    if abs(k) <= 300:
         return encode(decode(x) ** k)
     return encode_mpf(power(to_mpf(x), k))
 
@@ -290,6 +329,8 @@ def op_compound(rate, n):
         if k < 0:
             raise Revert("DivisionByZero")
         return 0
+    if abs(k) <= 160:
+        return encode((1 + q) ** k)
     return encode_mpf(mexp(k * log1p(to_mpf(rate))))
 
 
@@ -319,6 +360,9 @@ def op_pow(x, y):
         if t < 0:
             return 0
         raise Revert("Overflow")
+    ex = _exact_pow(decode(x), decode(y))
+    if ex is not None:
+        return encode(ex)
     return encode_mpf(power(2, t))
 
 
@@ -390,6 +434,92 @@ def op_toFixed18(x):
     return (-r) % TWO256 if s else r
 
 
+# ---- release four: the edge (directed rounding) -------------------------------
+
+def encode_dir(q: Fraction, up: bool) -> int:
+    """The word nearest q in the direction of +infinity (up) or -infinity:
+    floor of the magnitude, plus one ULP when the direction is away from
+    zero and bits were dropped; past the bottom of the format the smallest
+    number away from zero, else zero."""
+    if q == 0:
+        return 0
+    s = 1 if q < 0 else 0
+    a = abs(q)
+    away = up != bool(s)
+    n, d = a.numerator, a.denominator
+    e = n.bit_length() - d.bit_length()
+    if Fraction(2) ** e > a:
+        e -= 1
+    elif Fraction(2) ** (e + 1) <= a:
+        e += 1
+    num, den = (n << (236 - e), d) if e <= 236 else (n, d << (e - 236))
+    M, rem = divmod(num, den)
+    if away and rem:
+        M += 1
+        if M == 1 << 237:
+            M = HIDDEN
+            e += 1
+    E = e + BIAS
+    if E > EMAX:
+        raise Revert("Overflow")
+    if E < 1:
+        return ((s << 255) | (1 << 236)) if away else 0
+    return (s << 255) | (E << 236) | (M - HIDDEN)
+
+
+def op_mulDown(a, b): return encode_dir(decode(a) * decode(b), False)
+def op_mulUp(a, b): return encode_dir(decode(a) * decode(b), True)
+
+
+def _divdir(a, b, up):
+    qa, qb = decode(a), decode(b)
+    if qb == 0:
+        raise Revert("DivisionByZero")
+    return encode_dir(qa / qb, up)
+
+
+def op_divDown(a, b): return _divdir(a, b, False)
+def op_divUp(a, b): return _divdir(a, b, True)
+
+
+def _floorq(q: Fraction) -> int:
+    return q.numerator // q.denominator
+
+
+def _ceilq(q: Fraction) -> int:
+    return -((-q.numerator) // q.denominator)
+
+
+def _touint(x, up):
+    q = decode(x)
+    if q < 0:
+        raise Revert("OutOfRange")
+    v = _ceilq(q) if up else _floorq(q)
+    if v >= TWO256:
+        raise Revert("Overflow")
+    return v
+
+
+def op_toUintDown(x): return _touint(x, False)
+def op_toUintUp(x): return _touint(x, True)
+
+
+def _toint(x, up):
+    q = decode(x)
+    v = _ceilq(q) if up else _floorq(q)
+    if v >= TWO255 or v < -TWO255:
+        raise Revert("Overflow")
+    return v % TWO256
+
+
+def op_toIntDown(x): return _toint(x, False)
+def op_toIntUp(x): return _toint(x, True)
+def op_floor(x): return encode(Fraction(_floorq(decode(x))))
+def op_ceil(x): return encode(Fraction(_ceilq(decode(x))))
+def op_fromUintDown(x): return encode_dir(Fraction(x % TWO256), False)
+def op_fromUintUp(x): return encode_dir(Fraction(x % TWO256), True)
+
+
 OPS = {name[3:]: fn for name, fn in globals().items() if name.startswith("op_")}
 OPS_LOWER = {k.lower(): k for k in OPS}
 
@@ -441,6 +571,14 @@ def _expand_set(items: list, rng: random.Random) -> list[int]:
 
 
 def build_inputs(spec: dict, sets: dict[str, list[int]], rng: random.Random) -> list[list[int]]:
+    rows = _build_rows(spec, sets, rng)
+    # explicit tuples (release four: exact ties of pow, compound and powu)
+    for pair in spec.get("pairs", []):
+        rows.append([_expand_set([item], rng)[0] for item in pair])
+    return rows
+
+
+def _build_rows(spec: dict, sets: dict[str, list[int]], rng: random.Random) -> list[list[int]]:
     cols = [sets[name] for name in spec["args"]]
     if len(cols) == 1:
         return [[v] for v in cols[0]]

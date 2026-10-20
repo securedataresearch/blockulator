@@ -10,33 +10,27 @@ import {console} from "forge-std/console.sol";
 ///         produced by scripts/fp256/oracle.py). For each vector: a REVERT
 ///         must revert with that selector; otherwise the relative correct
 ///         bits on the decoded values (FP256Harness._bits, 256 when the words
-///         are equal) must be at or above the op's floor. There is no ULP
-///         slack: a floor of 256 means the word must equal the oracle's.
+///         are equal) must be at or above the op's floor. Release four: the
+///         floor is 256 for every op, so every word must equal the oracle's
+///         (correct rounding, ties away from zero, or the exact value rounded
+///         in the op's direction). The error function family and Lambert W
+///         run on FP256X, everything else on FP256.
 ///         Prints PREC|op|n|min|mean|worstInput and writes
 ///         docs/fp256/precision.json.
 contract Precision256 is FP256Harness {
     function _out() internal pure virtual returns (string memory) { return "docs/fp256/precision.json"; }
 
-    function _ops() internal pure returns (string[28] memory o) {
+    function _ops() internal pure returns (string[40] memory o) {
         o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "lambertW0", "lambertWm1", "neg", "abs", "sign", "cmp", "lt", "eq",
-             "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18", "powu", "compound"];
+             "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18", "powu", "compound",
+             "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "floor", "ceil", "fromUintDown", "fromUintUp"];
     }
 
-    /// Minimum relative correct bits per op. 256 means bit-exact.
-    function _floorBits(string memory op) internal pure returns (uint256) {
-        // every op but pow is correctly rounded at every committed vector. pow's
-        // t = y log2 x carries the log2 kernel's 2^-250 times |t|, so it is
-        // held to one ULP (236 bits); 7 of its 234 vectors sit there
-        if (keccak256(bytes(op)) == keccak256("pow")) return 236;
-        // powu (binary exponentiation below 2^16, pow's tail above) and compound
-        // (pow's tail) are within one ULP while |t| = |n log2 x| < 2^13 and lose
-        // log2|t| - 13 bits above it, as pow: 233 and 231 at |t| near 2^17 and 2^15
-        if (keccak256(bytes(op)) == keccak256("powu")) return 233;
-        if (keccak256(bytes(op)) == keccak256("compound")) return 231;
-        // Lambert W iterates on the rounded float ops: within one ULP away from -1/e (235
-        // bits at worst), and near it Newton loses log2(1/p) bits, p = sqrt(2(1 + e x)),
-        // until the branch-point series takes over below p = 2^-21: 218 bits at worst
-        if (keccak256(bytes(op)) == keccak256("lambertW0") || keccak256(bytes(op)) == keccak256("lambertWm1")) return 218;
+    /// Minimum relative correct bits per op. 256 means bit-exact, and since
+    /// release four every op is held to it: a fast value whose error bound
+    /// reaches the rounding boundary is recomputed in two words, exact ties
+    /// of pow, compound and powu are computed exactly.
+    function _floorBits(string memory) internal pure returns (uint256) {
         return 256;
     }
 
@@ -44,7 +38,8 @@ contract Precision256 is FP256Harness {
     function _plain(string memory op) internal pure returns (bool) {
         bytes32 h = keccak256(bytes(op));
         return h == keccak256("cmp") || h == keccak256("lt") || h == keccak256("eq")
-            || h == keccak256("toFP127") || h == keccak256("toFixed18");
+            || h == keccak256("toFP127") || h == keccak256("toFixed18")
+            || h == keccak256("toUintDown") || h == keccak256("toUintUp") || h == keccak256("toIntDown") || h == keccak256("toIntUp");
     }
 
     function _errSel(string memory name) internal pure returns (bytes4) {
@@ -68,7 +63,8 @@ contract Precision256 is FP256Harness {
     }
 
     function _encode(string memory op, string[] memory inp) internal pure returns (bytes memory) {
-        bool u = keccak256(bytes(op)) == keccak256("fromUint");
+        bytes32 oh = keccak256(bytes(op));
+        bool u = oh == keccak256("fromUint") || oh == keccak256("fromUintDown") || oh == keccak256("fromUintUp");
         if (inp.length == 1) return abi.encodeWithSignature(string.concat(op, u ? "(uint256)" : "(int256)"), int256(vm.parseUint(inp[0])));
         return abi.encodeWithSignature(string.concat(op, "(int256,int256)"), int256(vm.parseUint(inp[0])), int256(vm.parseUint(inp[1])));
     }
@@ -97,7 +93,7 @@ contract Precision256 is FP256Harness {
     }
 
     function _one(string memory op, string[] memory inp, string memory expected, uint256 floorBits, Stats memory st) internal view {
-        (bool ok, bytes memory out) = address(obj).staticcall(_encode(op, inp));
+        (bool ok, bytes memory out) = _objFor(op).staticcall(_encode(op, inp));
         if (_isRevert(expected)) {
             assertFalse(ok, string.concat(op, " should revert for ", _label(inp)));
             assertEq(_sel(out), _errSel(_after7(expected)), string.concat(op, " wrong error for ", _label(inp)));
@@ -129,7 +125,7 @@ contract Precision256 is FP256Harness {
     }
 
     function test_precision_all() public virtual {
-        string[28] memory ops = _ops();
+        string[40] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));

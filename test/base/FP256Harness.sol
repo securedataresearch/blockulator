@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
+import {IFP256X} from "../../contracts/src/fp256/IFP256X.sol";
 import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
 
 /// @notice External wrapper around the inline library so every call can be
@@ -36,10 +37,24 @@ contract LibUser256 {
     function toFP127(int256 x) external pure returns (int256) { return FP256Lib.toFP127(x); }
     function fromFixed18(int256 x) external pure returns (int256) { return FP256Lib.fromFixed18(x); }
     function toFixed18(int256 x) external pure returns (int256) { return FP256Lib.toFixed18(x); }
+    function mulDown(int256 a, int256 b) external pure returns (int256) { return FP256Lib.mulDown(a, b); }
+    function mulUp(int256 a, int256 b) external pure returns (int256) { return FP256Lib.mulUp(a, b); }
+    function divDown(int256 a, int256 b) external pure returns (int256) { return FP256Lib.divDown(a, b); }
+    function divUp(int256 a, int256 b) external pure returns (int256) { return FP256Lib.divUp(a, b); }
+    function toUintDown(int256 x) external pure returns (uint256) { return FP256Lib.toUintDown(x); }
+    function toUintUp(int256 x) external pure returns (uint256) { return FP256Lib.toUintUp(x); }
+    function toIntDown(int256 x) external pure returns (int256) { return FP256Lib.toIntDown(x); }
+    function toIntUp(int256 x) external pure returns (int256) { return FP256Lib.toIntUp(x); }
+    function floor(int256 x) external pure returns (int256) { return FP256Lib.floor(x); }
+    function ceil(int256 x) external pure returns (int256) { return FP256Lib.ceil(x); }
+    function fromUintDown(uint256 x) external pure returns (int256) { return FP256Lib.fromUintDown(x); }
+    function fromUintUp(uint256 x) external pure returns (int256) { return FP256Lib.fromUintUp(x); }
 }
 
 abstract contract FP256Harness is Test {
     IFP256 internal obj;
+    /// release four's second object: the error function family and Lambert W
+    IFP256X internal objX;
     LibUser256 internal lib;
 
     uint256 internal constant BIAS = 0x3ffff;
@@ -54,6 +69,7 @@ abstract contract FP256Harness is Test {
 
     function setUp() public virtual {
         obj = IFP256(_deployYulObject("out/FP256.yul/FP256.json"));
+        objX = IFP256X(_deployYulObject("out/FP256X.yul/FP256X.json"));
         lib = new LibUser256();
     }
 
@@ -136,6 +152,24 @@ abstract contract FP256Harness is Test {
         assertEq(x.ok, y.ok, string.concat(what, ": ok flag"));
         if (x.ok) assertEq(x.value, y.value, string.concat(what, ": value"));
         else assertEq(keccak256(x.err), keccak256(y.err), string.concat(what, ": revert data"));
+    }
+
+    /// The object that serves op: FP256X for the error function family and
+    /// Lambert W, FP256 for everything else.
+    function _isX(string memory op) internal pure returns (bool) {
+        bytes32 h = keccak256(bytes(op));
+        return h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
+            || h == keccak256("lambertW0") || h == keccak256("lambertWm1");
+    }
+
+    function _objFor(string memory op) internal view returns (address) {
+        return _isX(op) ? address(objX) : address(obj);
+    }
+
+    function _expectRevertX(bytes memory call, bytes4 err, string memory what) internal view {
+        Res memory o = _try(address(objX), call);
+        assertFalse(o.ok, string.concat(what, ": expected revert"));
+        assertEq(_sel(o.err), err, string.concat(what, ": wrong error"));
     }
 
     function _expectRevert(bytes memory call, bytes4 err, string memory what) internal view {

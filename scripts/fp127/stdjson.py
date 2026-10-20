@@ -6,6 +6,7 @@ object, and the bytecode proofs built on it.
     uv run scripts/fp127/stdjson.py check             # compile it with solc, compare to the Foundry artifact
     uv run scripts/fp127/stdjson.py onchain <rpc> <address>   # compare the live runtime to the artifact
     FP_LIB=fp256 uv run scripts/fp127/stdjson.py artifact     # compile FP256.yul with solc and write out/FP256.yul/FP256.json
+    FP_LIB=fp256x uv run scripts/fp127/stdjson.py artifact    # the same for FP256X.yul (release four's second object)
 
 The input uses language "Yul" and the settings from foundry.toml (solc
 0.8.24, optimizer on, 200 runs, shanghai). `check` is the proof that this
@@ -24,12 +25,14 @@ from pathlib import Path
 from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
-# FP_LIB=fp256 selects the second library; the proofs are otherwise identical
+# FP_LIB=fp256 selects the second library and FP_LIB=fp256x its second
+# object (release four); the proofs are otherwise identical
 LIB = os.environ.get("FP_LIB", "fp127")
-CONTRACT = {"fp127": "FP127", "fp256": "FP256"}[LIB]
-SOURCE = ROOT / "contracts" / "src" / LIB / f"{CONTRACT}.yul"
+CONTRACT = {"fp127": "FP127", "fp256": "FP256", "fp256x": "FP256X"}[LIB]
+LIB_DIR = {"fp256x": "fp256"}.get(LIB, LIB)
+SOURCE = ROOT / "contracts" / "src" / LIB_DIR / f"{CONTRACT}.yul"
 ARTIFACT = ROOT / "out" / f"{CONTRACT}.yul" / f"{CONTRACT}.json"
-SOURCE_UNIT = f"contracts/src/{LIB}/{CONTRACT}.yul"
+SOURCE_UNIT = f"contracts/src/{LIB_DIR}/{CONTRACT}.yul"
 SOLC_VERSION = "0.8.24"
 SOLC_LONG = "v0.8.24+commit.e11b9ed9"
 EVM_VERSION = "shanghai"

@@ -71,6 +71,7 @@ build: gen-check gen-inputs-check
 # and Yul mode takes one file); the artifact has the Foundry shape.
 build-fp256:
 	@test ! -f contracts/src/fp256/FP256.yul || FP_LIB=fp256 $(PY) scripts/fp127/stdjson.py artifact
+	@test ! -f contracts/src/fp256/FP256X.yul || FP_LIB=fp256x $(PY) scripts/fp127/stdjson.py artifact
 
 gen-inputs:
 	@$(PY) scripts/ladder/gen_inputs.py
@@ -101,6 +102,7 @@ test: gen-check vectors-check
 
 size-fp256: build
 	@$(PY) python -c "import json;b=json.load(open('out/FP256.yul/FP256.json'))['deployedBytecode']['object'];print('FP256 runtime:', (len(b)-2)//2, 'bytes of 24576')"
+	@$(PY) python -c "import json;b=json.load(open('out/FP256X.yul/FP256X.json'))['deployedBytecode']['object'];print('FP256X runtime:', (len(b)-2)//2, 'bytes of 24576')"
 
 ladder: build
 	@forge test --match-contract "^Ladder$$" -vv | $(PY) scripts/ladder/ladder.py

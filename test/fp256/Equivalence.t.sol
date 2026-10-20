@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {FP256Harness} from "../base/FP256Harness.sol";
 import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
+import {IFP256X} from "../../contracts/src/fp256/IFP256X.sol";
 
 /// @title Equivalence256
 /// @notice The deployed object and the inline library return identical
@@ -11,7 +12,7 @@ import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
 ///         promises (section 15 of the design).
 contract Equivalence256 is FP256Harness {
     function _objLib(bytes memory call, string memory what) internal view {
-        _assertSame(_try(address(obj), call), _try(address(lib), call), what);
+        _assertSame(_try(_objFor(what), call), _try(address(lib), call), what);
     }
 
     function testFuzz_objEqLib_add(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.add, (a, b)), "add"); }
@@ -26,11 +27,11 @@ contract Equivalence256 is FP256Harness {
     function testFuzz_objEqLib_compound(int256 r, int256 n) public view { _objLib(abi.encodeCall(IFP256.compound, (r, n)), "compound"); }
     function testFuzz_objEqLib_log1p(int256 x) public view { _objLib(abi.encodeCall(IFP256.log1p, (x)), "log1p"); }
     function testFuzz_objEqLib_expm1(int256 x) public view { _objLib(abi.encodeCall(IFP256.expm1, (x)), "expm1"); }
-    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP256.erf, (x)), "erf"); }
-    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP256.erfc, (x)), "erfc"); }
-    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP256.normCdf, (x)), "normCdf"); }
-    function testFuzz_objEqLib_lambertW0(int256 x) public view { _objLib(abi.encodeCall(IFP256.lambertW0, (x)), "lambertW0"); }
-    function testFuzz_objEqLib_lambertWm1(int256 x) public view { _objLib(abi.encodeCall(IFP256.lambertWm1, (x)), "lambertWm1"); }
+    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP256X.erf, (x)), "erf"); }
+    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP256X.erfc, (x)), "erfc"); }
+    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP256X.normCdf, (x)), "normCdf"); }
+    function testFuzz_objEqLib_lambertW0(int256 x) public view { _objLib(abi.encodeCall(IFP256X.lambertW0, (x)), "lambertW0"); }
+    function testFuzz_objEqLib_lambertWm1(int256 x) public view { _objLib(abi.encodeCall(IFP256X.lambertWm1, (x)), "lambertWm1"); }
     function testFuzz_objEqLib_neg(int256 x) public view { _objLib(abi.encodeCall(IFP256.neg, (x)), "neg"); }
     function testFuzz_objEqLib_abs(int256 x) public view { _objLib(abi.encodeCall(IFP256.abs, (x)), "abs"); }
     function testFuzz_objEqLib_sign(int256 x) public view { _objLib(abi.encodeCall(IFP256.sign, (x)), "sign"); }

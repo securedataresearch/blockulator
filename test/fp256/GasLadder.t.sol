@@ -88,6 +88,14 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("toFixed18")) return FP256Lib.toFixed18(x);
         if (h == keccak256("fromFixed18")) return FP256Lib.fromFixed18(x);
         if (h == keccak256("fromUint")) return FP256Lib.fromUint(uint256(x));
+        if (h == keccak256("fromUintDown")) return FP256Lib.fromUintDown(uint256(x));
+        if (h == keccak256("fromUintUp")) return FP256Lib.fromUintUp(uint256(x));
+        if (h == keccak256("toUintDown")) return int256(FP256Lib.toUintDown(x));
+        if (h == keccak256("toUintUp")) return int256(FP256Lib.toUintUp(x));
+        if (h == keccak256("toIntDown")) return FP256Lib.toIntDown(x);
+        if (h == keccak256("toIntUp")) return FP256Lib.toIntUp(x);
+        if (h == keccak256("floor")) return FP256Lib.floor(x);
+        if (h == keccak256("ceil")) return FP256Lib.ceil(x);
         revert("na");
     }
 
@@ -103,6 +111,10 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("cmp")) return FP256Lib.cmp(a, b);
         if (h == keccak256("lt")) return FP256Lib.lt(a, b);
         if (h == keccak256("eq")) return FP256Lib.eq(a, b);
+        if (h == keccak256("mulDown")) return FP256Lib.mulDown(a, b);
+        if (h == keccak256("mulUp")) return FP256Lib.mulUp(a, b);
+        if (h == keccak256("divDown")) return FP256Lib.divDown(a, b);
+        if (h == keccak256("divUp")) return FP256Lib.divUp(a, b);
         revert("na");
     }
 
@@ -163,7 +175,7 @@ contract GasLadder256 is FP256Harness {
             string memory label = vm.toString(xs[i]);
             bytes memory call = abi.encodeWithSignature(string.concat(op, uintArg ? "(uint256)" : "(int256)"), xs[i]);
             uint256 base = _baseline();
-            _emit(op, i, label, "yul", _ext(address(obj), call));
+            _emit(op, i, label, "yul", _ext(_objFor(op), call));
             _emit(op, i, label, "lib", _net(_selfTry(abi.encodeWithSelector(this.cLib1.selector, op, xs[i])), base));
             _emit(op, i, label, "fp127lib", _fp127Gas1(op, xs[i], base));
             _emit(op, i, label, "quad", _quadGas1(op, xs[i], base));
@@ -186,7 +198,7 @@ contract GasLadder256 is FP256Harness {
         for (uint256 i; i < a.length; i++) {
             string memory label = string.concat(vm.toString(a[i]), ",", vm.toString(b[i]));
             uint256 base = _baseline();
-            _emit(op, i, label, "yul", _ext(address(obj), abi.encodeWithSignature(string.concat(op, "(int256,int256)"), a[i], b[i])));
+            _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256)"), a[i], b[i])));
             _emit(op, i, label, "lib", _net(_selfTry(abi.encodeWithSelector(this.cLib2.selector, op, a[i], b[i])), base));
             _emit(op, i, label, "fp127lib", _fp127Gas2(op, a[i], b[i], base));
             _emit(op, i, label, "quad", _quadGas2(op, a[i], b[i], base));
@@ -233,6 +245,11 @@ contract GasLadder256 is FP256Harness {
         _run2("cmp", a, b);
         _run2("lt", a, b);
         _run2("eq", a, b);
+        // release four: directed rounding of the product and the quotient
+        _run2("mulDown", a, b);
+        _run2("mulUp", a, b);
+        _run2("divDown", a, b);
+        _run2("divUp", a, b);
     }
 
     function test_ladder_unary() public view {
@@ -274,5 +291,15 @@ contract GasLadder256 is FP256Harness {
         _run1("fromFP127", [int256(1), int256(1) << 127, int256(1) << 128, int256(3) << 127, int256(1000) << 128, -(int256(1) << 128)], false);
         _run1("fromFixed18", [int256(1), 5e17, 1e18, 3141592653589793238, 1000e18, -3141592653589793238], false);
         _run1("fromUint", [int256(1), int256(2), int256(1e18), int256(1) << 100, int256(1) << 236, int256(1) << 250], true);
+        // release four: the edge
+        _run1("fromUintDown", [int256(1), int256(2), int256(1e18), int256(1) << 100, int256(1) << 236, (int256(1) << 250) + 12345], true);
+        _run1("fromUintUp", [int256(1), int256(2), int256(1e18), int256(1) << 100, int256(1) << 236, (int256(1) << 250) + 12345], true);
+        int256[6] memory amts = [_v(-60, 0), _v(-1, 0), ONE, _v(1, PI_F >> 20), _v(59, 0xf4240 << 216), _v(200, 1)];
+        _run1("toUintDown", amts, false);
+        _run1("toUintUp", amts, false);
+        _run1("toIntDown", amts, false);
+        _run1("toIntUp", amts, false);
+        _run1("floor", amts, false);
+        _run1("ceil", amts, false);
     }
 }
