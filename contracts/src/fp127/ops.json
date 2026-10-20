@@ -28,6 +28,28 @@
       "reverts": "never"
     },
     {
+      "name": "toFixed18Down",
+      "signature": "toFixed18Down(int256)",
+      "selector": "0x32154abe",
+      "inputs": [
+        "x"
+      ],
+      "notice": "Convert a 127.128 value to 18-decimal fixed-point, rounding toward negative infinity: toFixed18 under the name that says its direction. For an amount a protocol pays out.",
+      "domain": "any x",
+      "reverts": "never"
+    },
+    {
+      "name": "toFixed18Up",
+      "signature": "toFixed18Up(int256)",
+      "selector": "0x27066ea4",
+      "inputs": [
+        "x"
+      ],
+      "notice": "Convert a 127.128 value to 18-decimal fixed-point, rounding toward positive infinity: ceil(x * 1e18 / 2^128). For an amount a protocol charges.",
+      "domain": "any x",
+      "reverts": "never"
+    },
+    {
       "name": "add",
       "signature": "add(int256,int256)",
       "selector": "0xa5f3c23b",
@@ -76,14 +98,62 @@
       "reverts": "DivisionByZero() when b == 0; Overflow() when the quotient does not fit"
     },
     {
+      "name": "mulDown",
+      "signature": "mulDown(int256,int256)",
+      "selector": "0x4b8d10e0",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "floor(a * b / 2^128), toward negative infinity: mul under the name that says its direction.",
+      "domain": "any a, b",
+      "reverts": "Overflow() when a·b / 2^128 does not fit"
+    },
+    {
+      "name": "mulUp",
+      "signature": "mulUp(int256,int256)",
+      "selector": "0x1aabb2f7",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "ceil(a * b / 2^128), toward positive infinity.",
+      "domain": "any a, b",
+      "reverts": "Overflow() when the rounded product does not fit"
+    },
+    {
+      "name": "divDown",
+      "signature": "divDown(int256,int256)",
+      "selector": "0xddb29e92",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "a / b in 127.128, rounded toward negative infinity. div truncates toward zero, which rounds a negative quotient up; this does not.",
+      "domain": "b != 0",
+      "reverts": "DivisionByZero() when b == 0; Overflow() when the quotient does not fit"
+    },
+    {
+      "name": "divUp",
+      "signature": "divUp(int256,int256)",
+      "selector": "0xe2bec1fe",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "a / b in 127.128, rounded toward positive infinity.",
+      "domain": "b != 0",
+      "reverts": "DivisionByZero() when b == 0; Overflow() when the quotient does not fit"
+    },
+    {
       "name": "exp2",
       "signature": "exp2(int256)",
       "selector": "0xdbbb06d2",
       "inputs": [
         "x"
       ],
-      "notice": "2^x.",
-      "domain": "x < 127; returns 0 below -128",
+      "notice": "2^x, rounded to nearest.",
+      "domain": "x < 127; returns 0 below -129",
       "reverts": "Overflow() for x >= 127"
     },
     {
@@ -93,8 +163,8 @@
       "inputs": [
         "x"
       ],
-      "notice": "e^x, computed as 2^(x * log2(e)).",
-      "domain": "x <= 88; returns 0 below -88",
+      "notice": "e^x, rounded to nearest.",
+      "domain": "x <= 88; returns 0 below -90",
       "reverts": "Overflow() for x > 88"
     },
     {
@@ -104,8 +174,8 @@
       "inputs": [
         "x"
       ],
-      "notice": "10^x, computed as 2^(x * log2(10)).",
-      "domain": "x·log2(10) < 127",
+      "notice": "10^x, rounded to nearest.",
+      "domain": "10^x < 2^127 (x below about 38.23)",
       "reverts": "Overflow() above that"
     },
     {
@@ -115,7 +185,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "log2(x) for x > 0.",
+      "notice": "log2(x) for x > 0, rounded to nearest.",
       "domain": "x > 0",
       "reverts": "OutOfRange() for x <= 0"
     },
@@ -126,7 +196,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "ln(x) = log2(x) * ln(2) for x > 0, scaled at 2^-192 before one rounding. Reverts with OutOfRange otherwise.",
+      "notice": "ln(x) = log2(x) * ln(2) for x > 0, rounded to nearest. Reverts with OutOfRange otherwise.",
       "domain": "x > 0",
       "reverts": "OutOfRange() for x <= 0"
     },
@@ -137,7 +207,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "log10(x) = log2(x) / log2(10) for x > 0, scaled at 2^-192 before one rounding. Reverts with OutOfRange otherwise.",
+      "notice": "log10(x) = log2(x) / log2(10) for x > 0, rounded to nearest. Reverts with OutOfRange otherwise.",
       "domain": "x > 0",
       "reverts": "OutOfRange() for x <= 0"
     },
@@ -148,7 +218,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "ceil(log2(x)) for x > 0. Exact for powers of two.",
+      "notice": "ceil(log2(x)) for x > 0: msb(x) - 128, plus one unless x is a power of two. Exact.",
       "domain": "x > 0",
       "reverts": "OutOfRange() for x <= 0"
     },
@@ -171,7 +241,7 @@
         "x",
         "y"
       ],
-      "notice": "x^y = 2^(y * log2(x)) for x >= 0, with the product y * log2(x) formed at 2^-192 so the exponent keeps its guard bits.",
+      "notice": "x^y = 2^(y * log2(x)) for x >= 0, rounded to nearest.",
       "domain": "x >= 0",
       "reverts": "OutOfRange() for x < 0; Overflow() when the result does not fit"
     },
@@ -183,7 +253,7 @@
         "x",
         "n"
       ],
-      "notice": "x^floor(n) for an integer exponent, by binary exponentiation on a 256-bit mantissa with a separate binary exponent, rounded to nearest once at the end: within one ULP for every n, exact whenever the true value is representable. Negative n inverts the final mantissa, so x^-n is as accurate as x^n.",
+      "notice": "x^floor(n) for an integer exponent, rounded to nearest: binary exponentiation on a 256-bit mantissa with a separate binary exponent, rounded once; when that mantissa's error bound (k + 5) 2^-255, k = |n|, straddles a rounding midpoint, the same product on a 512-bit mantissa decides. Exact whenever the true value is representable. Negative n inverts the mantissa, so x^-n is as accurate as x^n.",
       "domain": "any x, any integer n = floor(n); the result must fit",
       "reverts": "Overflow() when x^n does not fit; DivisionByZero() for 0^n with n < 0"
     },
@@ -206,7 +276,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "Cube root, defined for all x: cbrt(-x) = -cbrt(x).",
+      "notice": "Cube root, defined for all x: cbrt(-x) = -cbrt(x). Rounded to nearest; exact for perfect cubes.",
       "domain": "any x",
       "reverts": "Overflow() only at -2^255"
     },
@@ -449,7 +519,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "Principal branch of the Lambert W function, W(x) e^W(x) = x, for x >= -1/e.",
+      "notice": "Principal branch of the Lambert W function, W(x) e^W(x) = x, for x >= -1/e, rounded to nearest.",
       "domain": "x >= -1/e",
       "reverts": "OutOfRange() below -1/e"
     },
@@ -460,7 +530,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "Secondary real branch of the Lambert W function, W(x) e^W(x) = x with W(x) <= -1, for -1/e <= x < 0.",
+      "notice": "Secondary real branch of the Lambert W function, W(x) e^W(x) = x with W(x) <= -1, for -1/e <= x < 0, rounded to nearest.",
       "domain": "-1/e <= x < 0",
       "reverts": "OutOfRange() outside that"
     },
@@ -471,7 +541,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "ln(1 + x). The sum 1 + x is exact in 127.128, so this is ln of an exact argument, rounded once; it exists because on an 18-decimal grid the sum is where a small x loses its digits.",
+      "notice": "ln(1 + x), rounded to nearest. The sum 1 + x is exact in 127.128, so this is ln of an exact argument, rounded once; it exists because on an 18-decimal grid the sum is where a small x loses its digits.",
       "domain": "x > -1",
       "reverts": "OutOfRange() at or below -1; Overflow() if 1 + x does not fit"
     },
@@ -482,8 +552,8 @@
       "inputs": [
         "x"
       ],
-      "notice": "e^x - 1, with the one subtracted before rounding so a small x keeps its relative precision: a 27-term series at 2^-192 for |x| <= 1/16, the exp kernel at 2^-192 for |x| < 1, exp(x) - 1 beyond, where the subtraction cannot cancel.",
-      "domain": "x <= 88; returns -1 below -88",
+      "notice": "e^x - 1, rounded to nearest, with the one subtracted before the rounding so a small x keeps its relative precision: a 27-term series at 2^-192 for |x| <= 1/16, the double-word exp beyond.",
+      "domain": "x <= 88; returns -1 below -90",
       "reverts": "Overflow() for x > 88"
     },
     {
@@ -493,7 +563,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "sinh(x). For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms, rounded once; beyond, (e^x - e^-x) / 2 from the rounded exponentials, where the difference cannot cancel.",
+      "notice": "sinh(x), rounded to nearest. For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms; beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the difference taken before the one rounding.",
       "domain": "|x| <= 88",
       "reverts": "Overflow() beyond that"
     },
@@ -504,7 +574,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "cosh(x) = (e^x + e^-x) / 2 from the rounded exponentials; both terms are positive, so nothing cancels. cosh(0) is exactly one.",
+      "notice": "cosh(x) = (e^x + e^-x) / 2, rounded to nearest: both halves from the double-word kernel, summed before the one rounding. cosh(0) is exactly one.",
       "domain": "|x| <= 88",
       "reverts": "Overflow() beyond that"
     },
@@ -515,7 +585,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "tanh(x). For |x| < 1/4, u / (u + 2) with u = e^(2x) - 1 at 2^-192; up to |x| < 44, 1 - 2 / (e^(2x) + 1); beyond, exactly +-1, which the format cannot distinguish from the truth.",
+      "notice": "tanh(x), rounded to nearest. For |x| < 1/4, u / (u + 2) with u = e^(2|x|) - 1 at 2^-192; up to |x| < 46, (1 - w) / (1 + w) with w = e^(-2|x|) at 2^-192; beyond, exactly +-1, the nearest word.",
       "domain": "any x",
       "reverts": "never"
     },
