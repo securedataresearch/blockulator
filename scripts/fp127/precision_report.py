@@ -13,7 +13,9 @@ SRC = ROOT / "docs" / LIB / "precision.json"
 OUT = ROOT / "docs" / LIB / "precision.md"
 
 ORDER_FP256 = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "lambertW0", "lambertWm1", "powu", "compound", "neg", "abs", "sign", "cmp", "lt", "eq",
-               "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18"]
+               "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18",
+               "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "floor", "ceil",
+               "fromUintDown", "fromUintUp"]
 
 ORDER = [
     "add", "sub", "mul", "div", "fromFixed18", "toFixed18",
@@ -26,7 +28,8 @@ ORDER = [
 
 
 def fmt_bits(b: int) -> str:
-    return "exact" if b >= 255 else str(b)
+    # FP256 holds every op to the word itself (256); FP127 counts 255 as exact
+    return "exact" if b >= (256 if LIB == "fp256" else 255) else str(b)
 
 
 def main() -> int:
@@ -46,8 +49,11 @@ def main() -> int:
         ("Bits are relative correct bits of the result on the decoded values: the significands aligned at the larger exponent, msb(truth) - msb(|truth - got|). "
          if LIB == "fp256" else
          "Bits are relative correct bits of the 127.128 result: msb(|truth|) - msb(|truth - got|). ")
-        + "\"exact\" means bit-identical, or within 2 ULP for an approximated op. "
-        "`reverts` counts vectors where the oracle and the Yul both reject the input with the same error.",
+        + ("\"exact\" means bit-identical: since release four every FP256 op returns the oracle's word "
+           "(correctly rounded, ties away from zero; the Down and Up ops rounded toward minus or plus infinity). "
+           if LIB == "fp256" else
+           "\"exact\" means bit-identical, or within 2 ULP for an approximated op. ")
+        + "`reverts` counts vectors where the oracle and the Yul both reject the input with the same error.",
         "",
         "| op | vectors | reverts | min bits | mean bits | worst input |",
         "|---|---:|---:|---:|---:|---|",
