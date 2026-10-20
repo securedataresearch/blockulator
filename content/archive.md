@@ -1,19 +1,19 @@
 +++
 title = "Archive"
-description = "The games, the 21 Vyper calculators and the futures market that exercised the first FP127."
+description = "The games, the 25 Vyper calculators and the futures market from the Huff era."
 template = "archive.html"
 
 [[extra.apps]]
 kind = "calculators"
-name = "21 Vyper calculators"
-text = "One single-purpose contract each: π, e, τ, sin, cos, atan, √, 2^x, 10^x, e^x, ln, log₂, log₁₀, erf, Φ, φ, n!, ln n!, C(n,k), z-score, Gaussian tail, sinh, cosh, tanh, gcd and lcm. Each reads the legacy Huff FP127."
+name = "25 Vyper calculators"
+text = "One single-purpose contract each: π, e, τ, sin, cos, atan, √, 2^x, 10^x, e^x, ln, log₂, log₁₀, erf, Φ, φ, n!, ln n!, C(n,k), z-score, Gaussian tail, sinh, cosh, tanh, gcd and lcm. Each computes in its own Vyper; none calls FP127."
 open = "vyper"
 source = "contracts/src/tools"
 
 [[extra.apps]]
 kind = "market"
 name = "Futures market"
-text = "A small on-chain futures market with six payout distributions, priced through the legacy FP127."
+text = "A small on-chain futures market with six payout distributions, priced from its own tables."
 open = "futures"
 source = "contracts/src/market"
 
@@ -90,4 +90,4 @@ open = "games/message-board"
 source = "contracts/src/content"
 +++
 
-Built to exercise the first FP127. They still run, unmaintained, against the legacy Huff address `0xfae694D0c2c44181791F838c54Ed64C3151FfE30`. Open one and it mounts below the cards.
+Built in the Huff era. They still run, unmaintained. Open one and it mounts below the cards.

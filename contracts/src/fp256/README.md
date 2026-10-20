@@ -19,7 +19,7 @@ about 10^±78,900; 237 significant bits, about 71 decimal digits, at every
 magnitude.
 
 This is the second ruler. [FP127](../fp127/README.md) is a fixed point:
-38 digits between 2^−128 and 2^127 and nothing outside. FP256 keeps 71
+38 digits at 1, 8 at 10^−30, and nothing outside 2^−128 to 2^127. FP256 keeps 71
 digits wherever the value sits, at the price of an exponent to align on
 every add and a renormalisation on every result. The
 [edges](../../../docs/benchmarks/edges.md) are why it exists.
@@ -61,7 +61,7 @@ rounds to zero with the sign dropped.
 | `erf` | below ½, x·(2/√π)·e^(−x²) times the all-positive series Σ (2x²)^k/(2k+1)!!; above, 1 − erfc; ±1 from \|x\| ≥ 13 | never |
 | `erfc` | a product, never a difference, for x ≥ ½: e^(−x²)·g(x), g = e^(x²)·erfc from a Taylor series around 45 anchors on [½, 6] (one stored g(j/8) each, coefficients from g′ = 2xg − 2/√π) and a continued fraction scaled by x^k beyond; e^(−x²) from the exact 474-bit square, so the tail keeps 71 digits until it underflows near x = 427; 1 − erf below ½, 2 − erfc(−x) below zero | never |
 | `normCdf` | Φ(x) = erfc(−x/√2)/2 with e^(−x²/2) from the exact square; the left tail keeps 71 digits until it underflows near x = −603; exactly one from x ≥ 13√2 | never |
-| `lambertW0` | W e^W = x, W ≥ −1: FP127's seeds (the branch-point series in p = √(2(1 + e·x)) with 1 + e·x exact, x − x² + 3/2·x³, Winitzki), six Newton steps on the float ops (w·e^w = x up to 3, w + ln w = ln x above, so W reaches 181,700); within one ULP away from −1/e; near it the ten-term series below p = 2^−21 and Newton above, 218 bits at worst | `OutOfRange` below −1/e |
+| `lambertW0` | W e^W = x, W ≥ −1: FP127's seeds (the branch-point series in p = √(2(1 + e·x)) with 1 + e·x exact, x − x² + 3/2·x³, Winitzki), six Newton steps on the float ops (w·e^w = x up to 3, w + ln w = ln x above, so W reaches 181,700); within two ULP away from −1/e; near it the ten-term series below p = 2^−21 and Newton above, 218 bits at worst | `OutOfRange` below −1/e |
 | `lambertWm1` | W ≤ −1 on [−1/e, 0): the series in −p or L − ln(−L) + ln(−L)/L, seven log-form Newton steps (no e^w; W reaches −181,700); as `lambertW0` near −1/e | `OutOfRange` outside [−1/e, 0) |
 | `powu(x, n)` | x^n for a plain integer n: below 2^16 binary exponentiation on a 256-bit significand, each product keeping its top 256 bits, one rounding (exact whenever x^n fits 256 bits); from 2^16 `pow(\|x\|, n)` with the sign restored; 0^0 = 1 | `Overflow`, `DivisionByZero` for 0^negative |
 | `compound(rate, n)` | (1 + rate)^n for a plain integer n without a rounded 1 + rate: log2(1 + rate) as `log1p` takes it (the series below 2^−4, 1 + rate exact above), its exact product with n, then pow's 2^t and one rounding | `OutOfRange` below −1, `DivisionByZero` for −1 with n < 0, `Overflow` |
@@ -87,8 +87,12 @@ the conversions are bit-exact at every vector, and so are `exp`, `ln`,
 (`scripts/fp256/generators/kernel254.py` fits them, models every op in
 exact integers and reports the bits before rounding: 2^f within 2^−253,
 log2 within 2^−250 absolute), so the one rounding at the end is the
-correct one. The test has no ULP slack: the floor is 256 bits, the word
-itself, for every op but `pow`.
+correct one except within the kernel's error of a tie. The test has no ULP
+slack: the floor is 256 bits, the word itself, for every op but `pow`. On
+random inputs (4,000 to 20,000 per op) `add`, `mul`, `div`, `sqrt`, `exp`,
+`log1p`, `expm1`, `erf` and `erfc` were correctly rounded every time; `ln`
+and `normCdf` were one ULP off once each, on 1 in 20,000 and 1 in 4,000,
+with the truth 0.0006 and 0.000006 ULP from a tie.
 
 Exact ties need care, because a kernel within 2^−250 cannot tell a value a
 hair above a tie from one a hair below. A transcendental result of a
@@ -106,8 +110,8 @@ each are in the spec. `log1p` keeps its series up to 2^−4 so the log2
 kernel's 2^−250 never meets a result small enough for it to matter.
 
 `lambertW0` and `lambertWm1` iterate on the rounded float ops, so they
-are within one ULP away from −1/e (235 bits at worst) but not correctly
-rounded; near −1/e Newton loses log2(1/p) bits until the branch-point
+are within two ULP away from −1/e (235 bits at worst; a third of 2,000
+random `lambertW0` inputs misround, by at most two ULP) but not correctly rounded; near −1/e Newton loses log2(1/p) bits until the branch-point
 series takes over, and the floor is 218 bits.
 
 `powu` and `compound` are within one ULP while |t| = |n log2 x| stays
@@ -117,14 +121,14 @@ alone would lose n·2^−255 (each truncation is squared up through the
 steps after it), so `powu` hands n ≥ 2^16 to `pow`.
 
 `pow` is held to one ULP (236 bits): t = y log2 x carries the kernel's
-2^−250 scaled by |t|, and 7 of its 234 vectors sit one ULP from the
-oracle. Correct rounding there needs a double-word log2 (about 2^−300).
+2^−250 scaled by |t|, and 7 of its 234 vectors, and 8 of 20,000 random
+inputs, sit one ULP from the oracle. Correct rounding there needs a double-word log2 (about 2^−300).
 Release one rode FP127's 2^−192 kernels and held 146, 149 and 123 bits.
 
 ## What changed from FP127's conventions
 
 `pow(0, y)` with y < 0 reverts `DivisionByZero` (FP127 returns 0). The
 comparisons return plain integers, not numbers. Everything else follows
-FP127: the same three errors, the same generator, the same proof that the
-object and the library agree on the full `int256` domain
+FP127: the same three errors, the same generator, the same fuzzing of the
+object and the library for agreement across the full `int256` domain
 (`test/fp256/Equivalence.t.sol`).

@@ -9,4 +9,4 @@ group = "results"
 n = 10000
 +++
 
-Each scenario repeats one step N times in every library's own representation and compares the result with the same loop in 200-digit arithmetic. Daily compounding: FP127 keeps 34 digits, Solady 14. The per-second accrual a lending market runs: 29 against 8.5.
+Each scenario repeats one step N times in every library's own representation and compares the result with the same loop in 300-digit arithmetic. Daily compounding: FP127 keeps 34 digits, Solady 14. The per-second accrual a lending market runs: 29 against 8.5.

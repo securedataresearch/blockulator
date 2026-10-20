@@ -2,7 +2,8 @@
 
 Signed 127.128 fixed-point arithmetic for the EVM. One `int256` per value,
 `value = raw / 2^128`, so `ONE = 2^128`. Range about ±1.7e38, 128 fractional
-bits, about 38 decimal digits.
+bits on an absolute grid of 2^-128: 38 digits at 1, 32 at 10^-6, 8 at
+10^-30.
 
 This directory holds **one hand-written file** and five generated ones.
 
@@ -46,10 +47,12 @@ closure of helpers it calls, inside a `("memory-safe")` assembly block. No
 external call, no shared address, cheapest per op. This is the form Austin
 Griffith and Hadrien Croubois suggested.
 
-`test/fp127/Equivalence.t.sol` and `EquivalenceOps.t.sol` prove the two
-agree on the full `int256` domain, including which inputs revert and with
-what data, and prove both agree with the Huff bytecode live on Sepolia on
-every input where the Huff computed a defined answer. `Behaviour.t.sol`
+`test/fp127/Equivalence.t.sol` and `EquivalenceOps.t.sol` fuzz the two
+across the full `int256` domain for identical results, including which
+inputs revert and with what data, and check both against the Huff bytecode
+live on Sepolia wherever the Huff computed a defined answer: bit for bit on
+the arithmetic, within 2^-100 relative on the transcendentals, which now
+round where the Huff floored. `Behaviour.t.sol`
 holds the known values, identities and shortcut-dispatch checks a reader
 can verify by hand; `Precision.t.sol` holds the oracle comparison.
 
@@ -111,7 +114,7 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `factorial(n)` | floor(n)! for 0 ≤ n < 34 | `OutOfRange` |
 | `lambertW0(x)` | W(x) for x ≥ −1/e | `OutOfRange` |
 | `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0 | `OutOfRange` |
-| `pi(terms)` | Ramanujan's 1914 series, floor(terms) terms, 1 ≤ terms ≤ 7; five terms reach the floor | `OutOfRange` |
+| `pi(terms)` | Ramanujan's 1914 series, floor(terms) terms, 1 ≤ terms ≤ 7; five terms give 36 digits, 230 ULP from π, and more add nothing | `OutOfRange` |
 | `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
 | `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −88 | `Overflow` above 88 |
 | `sinh`, `cosh` | \|x\| ≤ 88; the odd series at 2^-192 for sinh below 1 | `Overflow` |
@@ -129,8 +132,9 @@ their kernels at 2^-192, 64 guard bits below the format, floor every
 product there (`mulg`), and round to nearest once at the end (`round64`).
 `ln` and `log10` scale the unrounded 192-bit `log2`, `exp` and `exp10` form
 their argument at 2^-192, and a large `exp2` result keeps the guard bits as
-result bits, so each of these ops is within about one ULP of the true
-value and its error has no sign bias. The ladder's `exp(ln(x))` round trip,
+result bits, so `ln`, `log2` and `log10` are within two ULP (1.31 and 1.88
+at worst for `ln` and `log2` on 4,000 random inputs each) and the
+exponentials within one ULP below 2^16 and 2^-146 relative above. The ladder's `exp(ln(x))` round trip,
 which drifted 8 ULPs per step under floor, now returns the same word on
 every step. The polynomials (degree 24 for 2^f, degree 14 for
 log2(1+f)/f) are Chebyshev fits with error below 2^-145, from
@@ -144,7 +148,7 @@ a 128-bit product lost. `powu` and `compound` do not use the exponential
 at all: |x| is written as a 256-bit mantissa with a binary exponent,
 squared and multiplied keeping the top 256 bits of every 512-bit product,
 and the word is formed once at the end, so an integer power is within one
-ULP for any exponent and exact whenever the value is representable, where
+ULP for results below 2^104 (231 bits above) and exact whenever the value is representable, where
 Maker's `rpow` and PRBMath's `powu` floor on every squaring. `expm1`,
 `sinh`, `tanh` and `atanh` subtract before they round (series at 2^-192
 near zero, the kernels above), so a result near zero keeps its relative
@@ -164,13 +168,15 @@ the rest, with the same rounding and domain as the Yul) and writes
 [`docs/fp127/precision.json`](../../../docs/fp127/precision.json);
 `make precision-report` renders
 [`docs/fp127/precision.md`](../../../docs/fp127/precision.md). Every
-integer op is bit-exact, and so are `ln`, `log2` and `log10` to within one
-ULP of the rounded truth at every tested input; `exp`, `exp2` and `exp10`
-hold 146 bits or better (their polynomials' limit), `pow` and `cbrt` 122.
+integer op is bit-exact, and so are `mul`, `div` and `sqrt` against an
+oracle that rounds the same way; `ln`, `log2` and `log10` are within two
+ULP of the floored truth at every tested input; `exp`, `exp2` and `exp10` hold 146 bits or
+better (their polynomials' limit), `pow` and `cbrt` 123.
 The version 4 ops sit at the same limits: `powu`, `compound`, `erf`,
 `erfc` and `normCdf` are within two ULP of the truth at every vector,
 `expm1`, `sinh`, `cosh`, `tanh` hold 140 bits or better and `log1p`,
-`atanh` ride the log kernel's one ULP. The one place precision is structurally
+`atanh` ride the log kernel's two ULP. On random inputs `erf` and `normCdf`
+were correctly rounded every time (2,000 each). The one place precision is structurally
 lower is Lambert W at the branch point −1/e, where the function has infinite
 slope and one ULP of input resolution limits any answer to about 63 bits.
 
@@ -180,13 +186,14 @@ slope and one ULP of input resolution limits any answer to about 63 bits.
 and writes [`docs/benchmarks/gas.json`](../../../docs/benchmarks/gas.json)
 and [`docs/benchmarks/gas.md`](../../../docs/benchmarks/gas.md), with the
 Huff baseline, the Yul object, `FP127Caller`, `FP127Lib`, and ABDK, Solady
-and PRBMath side by side. The Yul object costs about the same as the Huff
-through a `staticcall`; the inline library removes the call overhead.
-Lambert W is the one op that got dearer, buying 126+ bits where the Huff had
+and PRBMath side by side. Through a `staticcall` the Yul object costs 700
+to 800 gas more than the Huff on `add` and `mul` and less on `ln`, `log2`,
+`pow` and `cbrt`; the inline library removes the call overhead.
+Lambert W is the one op that got dearer, buying 118+ bits where the Huff had
 50 to 100. Of the version 4 ops, `powu` and `compound` cost 2,200 to 10,500
 gas (one squaring step per bit of the exponent), the near-one and
-hyperbolic ops 5,000 to 10,000, and the error function family is the
-honest expensive one: 1,000 to 35,000 gas depending on where x falls,
+hyperbolic ops 4,800 to 11,500, and the error function family is the
+honest expensive one: 1,100 to 39,000 gas depending on where x falls,
 the continued fraction near x = 4 being the dearest.
 
 ## What changed from the Huff
@@ -236,8 +243,8 @@ where one overflows and the other underflows the format. Instead it iterates
 the log form w + ln(−w) = ln(−x) by Newton, w′ = w − w (w + ln(−w) − L) / (w + 1),
 which is the IB step with the logarithm split and needs only `ln` and `div`.
 Seeds are the branch-point series below −¼ and the three-term asymptotic
-L − ln(−L) + ln(−L)/L above it; five steps take 8 to 40 seed bits to 126 to
-128. At the branch point itself it returns exactly −1.
+L − ln(−L) + ln(−L)/L above it; five steps take 8 to 40 seed bits to 120 to
+128 outside 2^-20 of −1/e. At the branch point itself it returns exactly −1.
 
 **Shortcuts.** `pow`, `cbrt` and `lambertW0` keep the exact shortcuts from
 `shortcut_constants.huff`. The bytecode on Sepolia predates that file (its

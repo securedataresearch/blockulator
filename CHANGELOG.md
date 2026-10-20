@@ -16,14 +16,16 @@ Two rulers in one word: FP127 for the money range, FP256 for everything.
 | EdgeRunner | FP127 ladder v8 | `0x09b8fC41E872279A749a0221AE23D124079AcB44` |
 
 - FP256, a 256-bit binary float: sign, 19-bit exponent, 236-bit fraction,
-  about 71 digits from 10^−78,900 to 10^78,900, no NaN, infinity or walls.
+  about 71 digits from 10^−78,900 to 10^78,900, no NaN or infinity.
   Release three adds log1p, expm1, erf, erfc, normCdf, both Lambert branches,
   powu and compound; exp, ln, log1p, expm1 and the erf family return the
   correctly rounded word at every committed vector.
 - FP127 v4: 49 ops, adding powu, compound, log1p, expm1, the hyperbolics,
   erf, erfc and normCdf.
-- The ladder (13 scenarios × 11 libraries, N to 10,000) and the edges (139
-  one-shot probes) re-run every cell through the live runners.
+- The ladder (13 scenarios × 10 libraries, N to 10,000) and the edges (139
+  one-shot probes) re-run through the live runners with 0 mismatches: the
+  9,373 ladder cells a public RPC can execute and all 1,511 edge cells that
+  make a call.
 - The site: four-item navigation, one results overview, one live-check
   stamp per page.
 

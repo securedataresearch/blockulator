@@ -16,9 +16,10 @@ compound on the edges) is deployed with CREATE2 through the proxy
 `0x4e59b44847b379578588920cA78FbF26c0B4956C` with salt `"FP127 ladder v8"`
 (`0x4650313237206c61646465722076380000000000000000000000000000000000`).
 Deployed 2026-10-16 by `make deploy-ladder-sepolia`, all thirteen Sourcify
-`exact_match`; every cell of the ladder and of the edges was re-run through
-the live runners by `scripts/ladder/livecap.py` and `liveedges.py` (see the
-dataset's live stamp). Machine-readable copy: `Ladder.json`.
+`exact_match`; every ladder cell a public RPC can execute (9,373 of 9,570)
+and every edge cell that makes a call (1,511 of 1,529; the rest are out of
+range) was re-run through the live runners by `scripts/ladder/livecap.py`
+and `liveedges.py` (see the dataset's live stamp). Machine-readable copy: `Ladder.json`.
 
 | contract | address | tx | block | gas |
 |---|---|---|---:|---:|
