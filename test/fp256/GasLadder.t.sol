@@ -96,6 +96,8 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("toIntUp")) return FP256Lib.toIntUp(x);
         if (h == keccak256("floor")) return FP256Lib.floor(x);
         if (h == keccak256("ceil")) return FP256Lib.ceil(x);
+        if (h == keccak256("toFixed18Down")) return FP256Lib.toFixed18Down(x);
+        if (h == keccak256("toFixed18Up")) return FP256Lib.toFixed18Up(x);
         revert("na");
     }
 
@@ -301,5 +303,7 @@ contract GasLadder256 is FP256Harness {
         _run1("toIntUp", amts, false);
         _run1("floor", amts, false);
         _run1("ceil", amts, false);
+        _run1("toFixed18Down", xs, false);
+        _run1("toFixed18Up", xs, false);
     }
 }

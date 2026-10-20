@@ -2561,6 +2561,16 @@
    "args": [
     "uint_dir"
    ]
+  },
+  "toFixed18Down": {
+   "args": [
+    "signed"
+   ]
+  },
+  "toFixed18Up": {
+   "args": [
+    "signed"
+   ]
   }
  }
 }

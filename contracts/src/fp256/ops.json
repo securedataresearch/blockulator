@@ -477,6 +477,30 @@
     },
     {
       "object": "FP256",
+      "name": "toFixed18Down",
+      "signature": "toFixed18Down(int256)",
+      "selector": "0x32154abe",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The 18-decimal word at or below x (toward minus infinity), from the exact 512-bit product M 10^18: what a protocol pays out in 18-decimal units.",
+      "domain": "|x| 10^18 < 2^255",
+      "reverts": "Overflow() when the result does not fit int256; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256",
+      "name": "toFixed18Up",
+      "signature": "toFixed18Up(int256)",
+      "selector": "0x27066ea4",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The 18-decimal word at or above x (toward plus infinity): what a protocol charges; a positive x below 10^-18 is one unit, never zero.",
+      "domain": "|x| 10^18 < 2^255",
+      "reverts": "Overflow() when the result does not fit int256; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256",
       "name": "fromUintDown",
       "signature": "fromUintDown(uint256)",
       "selector": "0xfebfc540",

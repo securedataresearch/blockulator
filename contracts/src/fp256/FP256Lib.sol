@@ -9266,6 +9266,129 @@ library FP256Lib {
             _r := fp256_ceil(_x)
         }
     }
+    /// @notice The 18-decimal word at or below x (toward minus infinity), from
+    ///         the exact 512-bit product M 10^18: what a protocol pays out in
+    ///         18-decimal units.
+    function toFixed18Down(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function shr512(p1, p0, n) -> r {
+                switch lt(n, 256)
+                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
+                default { r := shr(sub(n, 256), p1) }
+            }
+
+            function unpack(x) -> s, e, m {
+                s := shr(255, x)
+                e := and(shr(236, x), 0x7ffff)
+                m := and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                if iszero(e) {
+                    if or(s, m) { rev(0x7db3aba7) }
+                    leave
+                }
+                m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
+            }
+
+            function tofix18(x, up) -> r {
+                let s, e, m := unpack(x)
+                if iszero(e) { leave }
+                let k := sub(0x400eb, e)
+                if iszero(sgt(k, 0)) { rev(0x35278d12) }
+                let away := xor(s, up)
+                let q := away
+                if iszero(sgt(k, 297)) {
+                    let p1, p0 := mul512(m, 1000000000000000000)
+                    if lt(k, 256) { if shr(k, p1) { rev(0x35278d12) } }
+                    q := shr512(p1, p0, k)
+                    let st := 0
+                    switch lt(k, 256)
+                    case 1 { st := and(p0, sub(shl(k, 1), 1)) }
+                    default { st := or(p0, and(p1, sub(shl(sub(k, 256), 1), 1))) }
+                    if and(away, iszero(iszero(st))) { q := add(q, 1) }
+                }
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, s)) { rev(0x35278d12) }
+                r := q
+                if s { r := sub(0, q) }
+            }
+
+            function fp256_toFixed18Down(x) -> r {
+                r := tofix18(x, 0)
+            }
+
+            _r := fp256_toFixed18Down(_x)
+        }
+    }
+    /// @notice The 18-decimal word at or above x (toward plus infinity): what a
+    ///         protocol charges; a positive x below 10^-18 is one unit, never zero.
+    function toFixed18Up(int256 _x) internal pure returns (int256 _r) {
+        assembly ("memory-safe") {
+            function mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function shr512(p1, p0, n) -> r {
+                switch lt(n, 256)
+                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
+                default { r := shr(sub(n, 256), p1) }
+            }
+
+            function unpack(x) -> s, e, m {
+                s := shr(255, x)
+                e := and(shr(236, x), 0x7ffff)
+                m := and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                if iszero(e) {
+                    if or(s, m) { rev(0x7db3aba7) }
+                    leave
+                }
+                m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
+            }
+
+            function tofix18(x, up) -> r {
+                let s, e, m := unpack(x)
+                if iszero(e) { leave }
+                let k := sub(0x400eb, e)
+                if iszero(sgt(k, 0)) { rev(0x35278d12) }
+                let away := xor(s, up)
+                let q := away
+                if iszero(sgt(k, 297)) {
+                    let p1, p0 := mul512(m, 1000000000000000000)
+                    if lt(k, 256) { if shr(k, p1) { rev(0x35278d12) } }
+                    q := shr512(p1, p0, k)
+                    let st := 0
+                    switch lt(k, 256)
+                    case 1 { st := and(p0, sub(shl(k, 1), 1)) }
+                    default { st := or(p0, and(p1, sub(shl(sub(k, 256), 1), 1))) }
+                    if and(away, iszero(iszero(st))) { q := add(q, 1) }
+                }
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, s)) { rev(0x35278d12) }
+                r := q
+                if s { r := sub(0, q) }
+            }
+
+            function fp256_toFixed18Up(x) -> r {
+                r := tofix18(x, 1)
+            }
+
+            _r := fp256_toFixed18Up(_x)
+        }
+    }
     /// @notice The largest number at or below x: x itself below 2^237, x
     ///         truncated to 237 significant bits above.
     function fromUintDown(uint256 _x) internal pure returns (int256 _r) {

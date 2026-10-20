@@ -55,6 +55,8 @@ contract Equivalence256 is FP256Harness {
     function testFuzz_objEqLib_ceil(int256 x) public view { _objLib(abi.encodeCall(IFP256.ceil, (x)), "ceil"); }
     function testFuzz_objEqLib_fromUintDown(uint256 x) public view { _objLib(abi.encodeCall(IFP256.fromUintDown, (x)), "fromUintDown"); }
     function testFuzz_objEqLib_fromUintUp(uint256 x) public view { _objLib(abi.encodeCall(IFP256.fromUintUp, (x)), "fromUintUp"); }
+    function testFuzz_objEqLib_toFixed18Down(int256 x) public view { _objLib(abi.encodeCall(IFP256.toFixed18Down, (x)), "toFixed18Down"); }
+    function testFuzz_objEqLib_toFixed18Up(int256 x) public view { _objLib(abi.encodeCall(IFP256.toFixed18Up, (x)), "toFixed18Up"); }
 
     // ---- a valid number from fuzz input -------------------------------------
 
@@ -210,6 +212,19 @@ contract Equivalence256 is FP256Harness {
         assertTrue(u == d || u == d + 1, "ceil is floor or floor + 1");
         assertEq(obj.toIntUp(obj.neg(x)), -d, "ceil(-x) = -floor(x)");
         assertEq(obj.ceil(obj.neg(x)), obj.neg(obj.floor(x)), "ceil(-x) = -floor(x) as numbers");
+    }
+
+    function testFuzz_prop_toFixed18_directed(int256 w) public view {
+        int256 x = _num(w, -80, 180);
+        int256 n = obj.toFixed18(x);
+        int256 d = obj.toFixed18Down(x);
+        int256 u = obj.toFixed18Up(x);
+        assertTrue(u == d || u == d + 1, "Up is Down or Down + 1");
+        assertTrue(n == d || n == u, "nearest is one of the two");
+        assertEq(obj.toFixed18Up(obj.neg(x)), -d, "Up(-x) = -Down(x)");
+        // exact 18-decimal words go through unchanged
+        int256 f = obj.fromFixed18(d);
+        if (obj.toFixed18Down(f) == obj.toFixed18Up(f)) assertEq(obj.toFixed18Down(f), d);
     }
 
     function testFuzz_prop_fromUint_directed(uint256 v) public view {

@@ -20,10 +20,10 @@ import {console} from "forge-std/console.sol";
 contract Precision256 is FP256Harness {
     function _out() internal pure virtual returns (string memory) { return "docs/fp256/precision.json"; }
 
-    function _ops() internal pure returns (string[40] memory o) {
+    function _ops() internal pure returns (string[42] memory o) {
         o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "lambertW0", "lambertWm1", "neg", "abs", "sign", "cmp", "lt", "eq",
              "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18", "powu", "compound",
-             "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "floor", "ceil", "fromUintDown", "fromUintUp"];
+             "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up"];
     }
 
     /// Minimum relative correct bits per op. 256 means bit-exact, and since
@@ -39,7 +39,8 @@ contract Precision256 is FP256Harness {
         bytes32 h = keccak256(bytes(op));
         return h == keccak256("cmp") || h == keccak256("lt") || h == keccak256("eq")
             || h == keccak256("toFP127") || h == keccak256("toFixed18")
-            || h == keccak256("toUintDown") || h == keccak256("toUintUp") || h == keccak256("toIntDown") || h == keccak256("toIntUp");
+            || h == keccak256("toUintDown") || h == keccak256("toUintUp") || h == keccak256("toIntDown") || h == keccak256("toIntUp")
+            || h == keccak256("toFixed18Down") || h == keccak256("toFixed18Up");
     }
 
     function _errSel(string memory name) internal pure returns (bytes4) {
@@ -125,7 +126,7 @@ contract Precision256 is FP256Harness {
     }
 
     function test_precision_all() public virtual {
-        string[40] memory ops = _ops();
+        string[42] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));

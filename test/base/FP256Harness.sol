@@ -49,6 +49,8 @@ contract LibUser256 {
     function ceil(int256 x) external pure returns (int256) { return FP256Lib.ceil(x); }
     function fromUintDown(uint256 x) external pure returns (int256) { return FP256Lib.fromUintDown(x); }
     function fromUintUp(uint256 x) external pure returns (int256) { return FP256Lib.fromUintUp(x); }
+    function toFixed18Down(int256 x) external pure returns (int256) { return FP256Lib.toFixed18Down(x); }
+    function toFixed18Up(int256 x) external pure returns (int256) { return FP256Lib.toFixed18Up(x); }
 }
 
 abstract contract FP256Harness is Test {

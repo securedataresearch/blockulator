@@ -46,3 +46,5 @@ Bits are relative correct bits of the result on the decoded values: the signific
 | ceil | 154 | 0 | exact | exact |  |
 | fromUintDown | 19 | 0 | exact | exact |  |
 | fromUintUp | 19 | 0 | exact | exact |  |
+| toFixed18Down | 1107 | 242 | exact | exact |  |
+| toFixed18Up | 1107 | 242 | exact | exact |  |

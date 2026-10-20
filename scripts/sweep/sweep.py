@@ -39,12 +39,12 @@ SEED, SEED_LW = 20261020, 7
 OPS256 = ["add", "mul", "div", "sqrt", "exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf",
           "compound", "lambertW0", "lambertWm1", "powu",
           "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp",
-          "floor", "ceil", "fromUintDown", "fromUintUp"]
+          "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up"]
 # the ops with a wide second stage, swept again through FP256LibWide
 WIDE256 = ["exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf", "compound", "lambertW0",
            "lambertWm1", "powu"]
 WIDE_N = 4000
-PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp"}
+PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp", "toFixed18Down", "toFixed18Up"}
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "normCdf", "compound"]
 TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp"}
 
@@ -153,6 +153,8 @@ def gen4():
         write(f"fp256_{op}", [f256(rng, -4, 254) for _ in range(S)])
     for op in ("fromUintDown", "fromUintUp"):
         write(f"fp256_{op}", [rng.getrandbits(rng.randint(200, 256)) for _ in range(S)])
+    for op in ("toFixed18Down", "toFixed18Up"):
+        write(f"fp256_{op}", [f256(rng, -80, 190) for _ in range(S)])
     # wider ranges for the ops whose second stage has more than one branch,
     # appended to the op's own rows ("x" files, merged by load)
     E = S // 2
@@ -216,7 +218,7 @@ def job256(args):
     if out.startswith("R"):
         return ("gotrev", None)
     if op in PLAIN:
-        return ("ok", s256(int(out, 16)) - s256(ref) if op.startswith("toInt") else int(out, 16) - ref % T256)
+        return ("ok", int(out, 16) - ref % T256 if op.startswith("toUint") else s256(int(out, 16)) - s256(ref))
     return ("ok", key256(int(out, 16)) - key256(ref))
 
 

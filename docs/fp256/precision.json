@@ -251,6 +251,20 @@
     "reverts": 242,
     "worstInput": ""
   },
+  "toFixed18Down": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1107,
+    "reverts": 242,
+    "worstInput": ""
+  },
+  "toFixed18Up": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1107,
+    "reverts": 242,
+    "worstInput": ""
+  },
   "toIntDown": {
     "meanBits": 256,
     "minBits": 256,

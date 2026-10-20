@@ -54,7 +54,8 @@
 // wide series near one, the erf series and continued fraction, and one wide
 // Newton step for Lambert W. pow, compound and powu detect exact ties. The
 // directed ops (mulDown, mulUp, divDown, divUp, toUintDown, toUintUp,
-// toIntDown, toIntUp, floor, ceil, fromUintDown, fromUintUp) round once
+// toIntDown, toIntUp, toFixed18Down, toFixed18Up, floor, ceil, fromUintDown,
+// fromUintUp) round once
 // toward minus or plus infinity from the exact value, so a protocol can
 // round toward itself. The error function family and Lambert W are tagged
 // @object FP256X: they deploy as a second object (FP256's runtime would pass
@@ -3035,6 +3036,50 @@ function fp256_floor(x) -> r {
 /// @notice The smallest integral number at or above x, exact.
 function fp256_ceil(x) -> r {
     r := fltdir(x, 1)
+}
+
+/// The 18-decimal word below (up = 0) or above (up = 1) x: the exact product
+/// M 10^18 shifted by k = 236 - u, plus one on the side away from zero when
+/// bits were dropped and the direction says so.
+function tofix18(x, up) -> r {
+    let s, e, m := unpack(x)
+    if iszero(e) { leave }
+    let k := sub(0x400eb, e)
+    if iszero(sgt(k, 0)) { rev(0x35278d12) }
+    let away := xor(s, up)
+    let q := away
+    if iszero(sgt(k, 297)) {
+        let p1, p0 := mul512(m, 1000000000000000000)
+        if lt(k, 256) { if shr(k, p1) { rev(0x35278d12) } }
+        q := shr512(p1, p0, k)
+        let st := 0
+        switch lt(k, 256)
+        case 1 { st := and(p0, sub(shl(k, 1), 1)) }
+        default { st := or(p0, and(p1, sub(shl(sub(k, 256), 1), 1))) }
+        if and(away, iszero(iszero(st))) { q := add(q, 1) }
+    }
+    if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, s)) { rev(0x35278d12) }
+    r := q
+    if s { r := sub(0, q) }
+}
+
+/// @export toFixed18Down(int256 x) returns (int256 r)
+/// @domain |x| 10^18 < 2^255
+/// @reverts Overflow() when the result does not fit int256; OutOfRange() for a word that is not a number
+/// @notice The 18-decimal word at or below x (toward minus infinity), from
+///         the exact 512-bit product M 10^18: what a protocol pays out in
+///         18-decimal units.
+function fp256_toFixed18Down(x) -> r {
+    r := tofix18(x, 0)
+}
+
+/// @export toFixed18Up(int256 x) returns (int256 r)
+/// @domain |x| 10^18 < 2^255
+/// @reverts Overflow() when the result does not fit int256; OutOfRange() for a word that is not a number
+/// @notice The 18-decimal word at or above x (toward plus infinity): what a
+///         protocol charges; a positive x below 10^-18 is one unit, never zero.
+function fp256_toFixed18Up(x) -> r {
+    r := tofix18(x, 1)
 }
 
 /// @export fromUintDown(uint256 x) returns (int256 r)

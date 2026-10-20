@@ -146,6 +146,13 @@ interface IFP256 {
     function floor(int256 x) external pure returns (int256 r);
     /// @notice The smallest integral number at or above x, exact.
     function ceil(int256 x) external pure returns (int256 r);
+    /// @notice The 18-decimal word at or below x (toward minus infinity), from
+    ///         the exact 512-bit product M 10^18: what a protocol pays out in
+    ///         18-decimal units.
+    function toFixed18Down(int256 x) external pure returns (int256 r);
+    /// @notice The 18-decimal word at or above x (toward plus infinity): what a
+    ///         protocol charges; a positive x below 10^-18 is one unit, never zero.
+    function toFixed18Up(int256 x) external pure returns (int256 r);
     /// @notice The largest number at or below x: x itself below 2^237, x
     ///         truncated to 237 significant bits above.
     function fromUintDown(uint256 x) external pure returns (int256 r);

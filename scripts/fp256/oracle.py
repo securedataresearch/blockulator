@@ -14,8 +14,9 @@ add, sub, mul, div, sqrt and the conversions are computed with exact
 rationals (fractions.Fraction, math.isqrt), so they are bit-exact
 references; the transcendental ops go through mpmath at 300 digits and are
 rounded the same way. Release four's directed ops (mulDown, mulUp, divDown,
-divUp, toUintDown, toUintUp, toIntDown, toIntUp, floor, ceil, fromUintDown,
-fromUintUp) are exact rationals rounded toward minus or plus infinity.
+divUp, toUintDown, toUintUp, toIntDown, toIntUp, toFixed18Down, toFixed18Up,
+floor, ceil, fromUintDown, fromUintUp) are exact rationals rounded toward minus
+or plus infinity.
 """
 from __future__ import annotations
 
@@ -516,6 +517,16 @@ def op_toIntDown(x): return _toint(x, False)
 def op_toIntUp(x): return _toint(x, True)
 def op_floor(x): return encode(Fraction(_floorq(decode(x))))
 def op_ceil(x): return encode(Fraction(_ceilq(decode(x))))
+def _tofixed18dir(x, up):
+    q = decode(x) * E18
+    v = _ceilq(q) if up else _floorq(q)
+    if v >= TWO255 or v < -TWO255:
+        raise Revert("Overflow")
+    return v % TWO256
+
+
+def op_toFixed18Down(x): return _tofixed18dir(x, False)
+def op_toFixed18Up(x): return _tofixed18dir(x, True)
 def op_fromUintDown(x): return encode_dir(Fraction(x % TWO256), False)
 def op_fromUintUp(x): return encode_dir(Fraction(x % TWO256), True)
 

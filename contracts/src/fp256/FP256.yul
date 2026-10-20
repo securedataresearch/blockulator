@@ -13,8 +13,14 @@ object "FP256" {
             case 0x1b5ac4b5 { /* abs(int256) */
                 ret(fp256_abs(calldataload(4)))
             }
+            case 0x27066ea4 { /* toFixed18Up(int256) */
+                ret(fp256_toFixed18Up(calldataload(4)))
+            }
             case 0x30880038 { /* lt(int256,int256) */
                 ret(fp256_lt(calldataload(4), calldataload(36)))
+            }
+            case 0x32154abe { /* toFixed18Down(int256) */
+                ret(fp256_toFixed18Down(calldataload(4)))
             }
             case 0x35e13636 { /* fromUintUp(uint256) */
                 ret(fp256_fromUintUp(calldataload(4)))
@@ -1749,6 +1755,36 @@ object "FP256" {
 
             function fp256_ceil(x) -> r {
                 r := fltdir(x, 1)
+            }
+
+            function tofix18(x, up) -> r {
+                let s, e, m := unpack(x)
+                if iszero(e) { leave }
+                let k := sub(0x400eb, e)
+                if iszero(sgt(k, 0)) { rev(0x35278d12) }
+                let away := xor(s, up)
+                let q := away
+                if iszero(sgt(k, 297)) {
+                    let p1, p0 := mul512(m, 1000000000000000000)
+                    if lt(k, 256) { if shr(k, p1) { rev(0x35278d12) } }
+                    q := shr512(p1, p0, k)
+                    let st := 0
+                    switch lt(k, 256)
+                    case 1 { st := and(p0, sub(shl(k, 1), 1)) }
+                    default { st := or(p0, and(p1, sub(shl(sub(k, 256), 1), 1))) }
+                    if and(away, iszero(iszero(st))) { q := add(q, 1) }
+                }
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, s)) { rev(0x35278d12) }
+                r := q
+                if s { r := sub(0, q) }
+            }
+
+            function fp256_toFixed18Down(x) -> r {
+                r := tofix18(x, 0)
+            }
+
+            function fp256_toFixed18Up(x) -> r {
+                r := tofix18(x, 1)
             }
 
             function fp256_fromUintDown(x) -> r {

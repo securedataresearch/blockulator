@@ -52,6 +52,8 @@ contract Sweep is Test {
         if (op == "fp256_ceil") return FP256Lib.ceil(a);
         if (op == "fp256_fromUintDown") return FP256Lib.fromUintDown(uint256(a));
         if (op == "fp256_fromUintUp") return FP256Lib.fromUintUp(uint256(a));
+        if (op == "fp256_toFixed18Down") return FP256Lib.toFixed18Down(a);
+        if (op == "fp256_toFixed18Up") return FP256Lib.toFixed18Up(a);
         if (op == "fp127_mul") return FP127Lib.mul(a, b);
         if (op == "fp127_div") return FP127Lib.div(a, b);
         if (op == "fp127_sqrt") return FP127Lib.sqrt(a);
@@ -115,6 +117,7 @@ contract Sweep is Test {
         this.runOne("fp256_mulDown", true); this.runOne("fp256_mulUp", true); this.runOne("fp256_divDown", true); this.runOne("fp256_divUp", true);
         this.runOne("fp256_toUintDown", false); this.runOne("fp256_toUintUp", false); this.runOne("fp256_toIntDown", false); this.runOne("fp256_toIntUp", false);
         this.runOne("fp256_floor", false); this.runOne("fp256_ceil", false); this.runOne("fp256_fromUintDown", false); this.runOne("fp256_fromUintUp", false);
+        this.runOne("fp256_toFixed18Down", false); this.runOne("fp256_toFixed18Up", false);
     }
 
     function test_sweep_fp127() public {

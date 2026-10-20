@@ -209,6 +209,13 @@ contract Behaviour256 is FP256Harness {
         _expectRevert(abi.encodeCall(IFP256.toUintDown, (obj.neg(HALF))), IFP256.OutOfRange.selector, "negative amounts revert");
         _expectRevert(abi.encodeCall(IFP256.toUintUp, (_mk(false, 256, uint256(1) << 236))), IFP256.Overflow.selector, "2^256 does not fit");
         assertEq(obj.toUintDown(_mk(false, 255, (uint256(1) << 237) - 1)), type(uint256).max - ((uint256(1) << 19) - 1), "the largest number below 2^256");
+        // 18-decimal units: 1/3 token pays 333333333333333333 wei and charges ...334
+        assertEq(obj.toFixed18Down(third), 333333333333333333);
+        assertEq(obj.toFixed18Up(third), 333333333333333334);
+        assertEq(obj.toFixed18Down(obj.neg(third)), -333333333333333334);
+        assertEq(obj.toFixed18Up(_mk(false, -100, uint256(1) << 236)), 1, "dust charges one wei");
+        assertEq(obj.toFixed18Down(_mk(false, -100, uint256(1) << 236)), 0);
+        assertEq(obj.toFixed18Up(obj.fromFixed18(1e18)), 1e18, "exact amounts are exact");
         // signed integers and integral numbers
         assertEq(obj.toIntDown(obj.neg(two5)), -3);
         assertEq(obj.toIntUp(obj.neg(two5)), -2);
