@@ -1,5 +1,5 @@
 {
- "_doc": "Random-input accuracy sweep of the inline FP127 and FP256 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.",
+ "_doc": "Random-input accuracy sweep of the inline FP127 and FP256 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n\nRelease four adds the directed ops, powu and lambertWm1, and a second pass: the\nsame inputs (the first 4,000 of each) through a test-only copy of FP256Lib whose\nrounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly\nrounded op returns its wide second stage. That pass is generated into\ntest/sweep/wide/ (not committed) and removed after the run.\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.",
  "seed": 20261020,
  "seedLambert": 7,
  "rows": [
@@ -15,7 +15,10 @@
    "maxUlp": 0,
    "hist": {
     "0": 4000
-   }
+   },
+   "gasMedian": 1461,
+   "gasP99": 1512,
+   "gasMax": 1512
   },
   {
    "lib": "fp256",
@@ -29,7 +32,10 @@
    "maxUlp": 0,
    "hist": {
     "0": 4000
-   }
+   },
+   "gasMedian": 1357,
+   "gasP99": 1357,
+   "gasMax": 1357
   },
   {
    "lib": "fp256",
@@ -43,7 +49,10 @@
    "maxUlp": 0,
    "hist": {
     "0": 4000
-   }
+   },
+   "gasMedian": 2110,
+   "gasP99": 2110,
+   "gasMax": 2110
   },
   {
    "lib": "fp256",
@@ -57,21 +66,28 @@
    "maxUlp": 0,
    "hist": {
     "0": 4000
-   }
+   },
+   "gasMedian": 2962,
+   "gasP99": 2962,
+   "gasMax": 2962
   },
   {
    "lib": "fp256",
    "op": "exp",
-   "n": 20000,
+   "n": 21923,
    "status": {
-    "ok": 20000
+    "ok": 21923,
+    "bothrev": 77
    },
-   "correctlyRounded": 20000,
+   "correctlyRounded": 21923,
    "misrounded": 0,
    "maxUlp": 0,
    "hist": {
-    "0": 20000
-   }
+    "0": 21923
+   },
+   "gasMedian": 8058,
+   "gasP99": 8486,
+   "gasMax": 36078
   },
   {
    "lib": "fp256",
@@ -80,58 +96,69 @@
    "status": {
     "ok": 20000
    },
-   "correctlyRounded": 19999,
-   "misrounded": 1,
-   "maxUlp": 1,
-   "hist": {
-    "-1": 1,
-    "0": 19999
-   }
-  },
-  {
-   "lib": "fp256",
-   "op": "log1p",
-   "n": 19573,
-   "status": {
-    "ok": 19573,
-    "bothrev": 427
-   },
-   "correctlyRounded": 19573,
-   "misrounded": 0,
-   "maxUlp": 0,
-   "hist": {
-    "0": 19573
-   }
-  },
-  {
-   "lib": "fp256",
-   "op": "expm1",
-   "n": 20000,
-   "status": {
-    "ok": 20000
-   },
    "correctlyRounded": 20000,
    "misrounded": 0,
    "maxUlp": 0,
    "hist": {
     "0": 20000
-   }
+   },
+   "gasMedian": 8847,
+   "gasP99": 10376,
+   "gasMax": 46809
+  },
+  {
+   "lib": "fp256",
+   "op": "log1p",
+   "n": 21573,
+   "status": {
+    "ok": 21573,
+    "bothrev": 427
+   },
+   "correctlyRounded": 21573,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 21573
+   },
+   "gasMedian": 9720,
+   "gasP99": 17262,
+   "gasMax": 45857
+  },
+  {
+   "lib": "fp256",
+   "op": "expm1",
+   "n": 21958,
+   "status": {
+    "ok": 21958,
+    "bothrev": 42
+   },
+   "correctlyRounded": 21958,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 21958
+   },
+   "gasMedian": 7540,
+   "gasP99": 8570,
+   "gasMax": 37094
   },
   {
    "lib": "fp256",
    "op": "pow",
-   "n": 20000,
+   "n": 21987,
    "status": {
-    "ok": 20000
+    "ok": 21987,
+    "bothrev": 13
    },
-   "correctlyRounded": 19992,
-   "misrounded": 8,
-   "maxUlp": 1,
+   "correctlyRounded": 21987,
+   "misrounded": 0,
+   "maxUlp": 0,
    "hist": {
-    "-1": 4,
-    "0": 19992,
-    "1": 4
-   }
+    "0": 21987
+   },
+   "gasMedian": 15318,
+   "gasP99": 81127,
+   "gasMax": 84841
   },
   {
    "lib": "fp256",
@@ -145,11 +172,83 @@
    "maxUlp": 0,
    "hist": {
     "0": 4000
-   }
+   },
+   "gasMedian": 18047,
+   "gasP99": 83167,
+   "gasMax": 101275
   },
   {
    "lib": "fp256",
    "op": "erfc",
+   "n": 6000,
+   "status": {
+    "ok": 6000
+   },
+   "correctlyRounded": 6000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 6000
+   },
+   "gasMedian": 35026,
+   "gasP99": 86024,
+   "gasMax": 434197
+  },
+  {
+   "lib": "fp256",
+   "op": "normCdf",
+   "n": 6000,
+   "status": {
+    "ok": 6000
+   },
+   "correctlyRounded": 6000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 6000
+   },
+   "gasMedian": 30770,
+   "gasP99": 86942,
+   "gasMax": 432276
+  },
+  {
+   "lib": "fp256",
+   "op": "compound",
+   "n": 5642,
+   "status": {
+    "ok": 5642,
+    "bothrev": 358
+   },
+   "correctlyRounded": 5642,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 5642
+   },
+   "gasMedian": 17435,
+   "gasP99": 167293,
+   "gasMax": 167454
+  },
+  {
+   "lib": "fp256",
+   "op": "lambertW0",
+   "n": 6000,
+   "status": {
+    "ok": 6000
+   },
+   "correctlyRounded": 6000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 6000
+   },
+   "gasMedian": 151684,
+   "gasP99": 166868,
+   "gasMax": 169252
+  },
+  {
+   "lib": "fp256",
+   "op": "lambertWm1",
    "n": 4000,
    "status": {
     "ok": 4000
@@ -159,62 +258,456 @@
    "maxUlp": 0,
    "hist": {
     "0": 4000
-   }
+   },
+   "gasMedian": 156914,
+   "gasP99": 169264,
+   "gasMax": 173242
   },
   {
    "lib": "fp256",
-   "op": "normCdf",
+   "op": "powu",
+   "n": 5853,
+   "status": {
+    "ok": 5853,
+    "bothrev": 147
+   },
+   "correctlyRounded": 5853,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 5853
+   },
+   "gasMedian": 6567,
+   "gasP99": 92590,
+   "gasMax": 95302
+  },
+  {
+   "lib": "fp256",
+   "op": "mulDown",
    "n": 4000,
    "status": {
     "ok": 4000
    },
-   "correctlyRounded": 3999,
-   "misrounded": 1,
-   "maxUlp": 1,
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
    "hist": {
-    "0": 3999,
-    "1": 1
-   }
+    "0": 4000
+   },
+   "gasMedian": 2264,
+   "gasP99": 2270,
+   "gasMax": 2270
+  },
+  {
+   "lib": "fp256",
+   "op": "mulUp",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "gasMedian": 2294,
+   "gasP99": 2300,
+   "gasMax": 2300
+  },
+  {
+   "lib": "fp256",
+   "op": "divDown",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "gasMedian": 2953,
+   "gasP99": 2999,
+   "gasMax": 2999
+  },
+  {
+   "lib": "fp256",
+   "op": "divUp",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "gasMedian": 2983,
+   "gasP99": 3029,
+   "gasMax": 3029
+  },
+  {
+   "lib": "fp256",
+   "op": "toUintDown",
+   "n": 3805,
+   "status": {
+    "ok": 3805,
+    "bothrev": 195
+   },
+   "correctlyRounded": 3805,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 3805
+   },
+   "gasMedian": 1495,
+   "gasP99": 1495,
+   "gasMax": 1495
+  },
+  {
+   "lib": "fp256",
+   "op": "toUintUp",
+   "n": 3818,
+   "status": {
+    "ok": 3818,
+    "bothrev": 182
+   },
+   "correctlyRounded": 3818,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 3818
+   },
+   "gasMedian": 1539,
+   "gasP99": 1539,
+   "gasMax": 1657
+  },
+  {
+   "lib": "fp256",
+   "op": "toIntDown",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "gasMedian": 1616,
+   "gasP99": 1634,
+   "gasMax": 1634
+  },
+  {
+   "lib": "fp256",
+   "op": "toIntUp",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "gasMedian": 1650,
+   "gasP99": 1660,
+   "gasMax": 1660
+  },
+  {
+   "lib": "fp256",
+   "op": "floor",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "gasMedian": 1747,
+   "gasP99": 1767,
+   "gasMax": 1784
+  },
+  {
+   "lib": "fp256",
+   "op": "ceil",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "gasMedian": 1777,
+   "gasP99": 1797,
+   "gasMax": 1814
+  },
+  {
+   "lib": "fp256",
+   "op": "fromUintDown",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "gasMedian": 1960,
+   "gasP99": 1996,
+   "gasMax": 2002
+  },
+  {
+   "lib": "fp256",
+   "op": "fromUintUp",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "gasMedian": 1989,
+   "gasP99": 2071,
+   "gasMax": 2077
+  },
+  {
+   "lib": "fp256",
+   "op": "exp",
+   "n": 5923,
+   "status": {
+    "ok": 5923,
+    "bothrev": 77
+   },
+   "correctlyRounded": 5923,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 5923
+   },
+   "stage": "second",
+   "gasMedian": 35526,
+   "gasP99": 35863,
+   "gasMax": 35874
+  },
+  {
+   "lib": "fp256",
+   "op": "ln",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "stage": "second",
+   "gasMedian": 43016,
+   "gasP99": 44552,
+   "gasMax": 45715
+  },
+  {
+   "lib": "fp256",
+   "op": "log1p",
+   "n": 5921,
+   "status": {
+    "ok": 5921,
+    "bothrev": 79
+   },
+   "correctlyRounded": 5921,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 5921
+   },
+   "stage": "second",
+   "gasMedian": 63689,
+   "gasP99": 126584,
+   "gasMax": 126590
+  },
+  {
+   "lib": "fp256",
+   "op": "expm1",
+   "n": 5958,
+   "status": {
+    "ok": 5958,
+    "bothrev": 42
+   },
+   "correctlyRounded": 5958,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 5958
+   },
+   "stage": "second",
+   "gasMedian": 36028,
+   "gasP99": 45921,
+   "gasMax": 45921
+  },
+  {
+   "lib": "fp256",
+   "op": "pow",
+   "n": 5987,
+   "status": {
+    "ok": 5987,
+    "bothrev": 13
+   },
+   "correctlyRounded": 5987,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 5987
+   },
+   "stage": "second",
+   "gasMedian": 80277,
+   "gasP99": 83856,
+   "gasMax": 105516
+  },
+  {
+   "lib": "fp256",
+   "op": "erf",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "stage": "second",
+   "gasMedian": 107240,
+   "gasP99": 434014,
+   "gasMax": 436365
+  },
+  {
+   "lib": "fp256",
+   "op": "erfc",
+   "n": 6000,
+   "status": {
+    "ok": 6000
+   },
+   "correctlyRounded": 6000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 6000
+   },
+   "stage": "second",
+   "gasMedian": 120080,
+   "gasP99": 433542,
+   "gasMax": 436412
+  },
+  {
+   "lib": "fp256",
+   "op": "normCdf",
+   "n": 6000,
+   "status": {
+    "ok": 6000
+   },
+   "correctlyRounded": 6000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 6000
+   },
+   "stage": "second",
+   "gasMedian": 111173,
+   "gasP99": 399437,
+   "gasMax": 435320
   },
   {
    "lib": "fp256",
    "op": "compound",
-   "n": 3853,
+   "n": 5642,
    "status": {
-    "ok": 3853,
-    "bothrev": 147
+    "ok": 5642,
+    "bothrev": 358
    },
-   "correctlyRounded": 3562,
-   "misrounded": 291,
-   "maxUlp": 4,
+   "correctlyRounded": 5642,
+   "misrounded": 0,
+   "maxUlp": 0,
    "hist": {
-    "-4": 3,
-    "-3": 9,
-    "-2": 29,
-    "-1": 102,
-    "0": 3562,
-    "1": 113,
-    "2": 28,
-    "3": 6,
-    "4": 1
-   }
+    "0": 5642
+   },
+   "stage": "second",
+   "gasMedian": 102931,
+   "gasP99": 164983,
+   "gasMax": 165148
   },
   {
    "lib": "fp256",
    "op": "lambertW0",
-   "n": 2000,
+   "n": 6000,
    "status": {
-    "ok": 2000
+    "ok": 6000
    },
-   "correctlyRounded": 1332,
-   "misrounded": 668,
-   "maxUlp": 2,
+   "correctlyRounded": 6000,
+   "misrounded": 0,
+   "maxUlp": 0,
    "hist": {
-    "-2": 7,
-    "-1": 351,
-    "0": 1332,
-    "1": 310
-   }
+    "0": 6000
+   },
+   "stage": "second",
+   "gasMedian": 151454,
+   "gasP99": 166696,
+   "gasMax": 169080
+  },
+  {
+   "lib": "fp256",
+   "op": "lambertWm1",
+   "n": 4000,
+   "status": {
+    "ok": 4000
+   },
+   "correctlyRounded": 4000,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 4000
+   },
+   "stage": "second",
+   "gasMedian": 156638,
+   "gasP99": 168964,
+   "gasMax": 172942
+  },
+  {
+   "lib": "fp256",
+   "op": "powu",
+   "n": 5853,
+   "status": {
+    "ok": 5853,
+    "bothrev": 147
+   },
+   "correctlyRounded": 5853,
+   "misrounded": 0,
+   "maxUlp": 0,
+   "hist": {
+    "0": 5853
+   },
+   "stage": "second",
+   "gasMedian": 85547,
+   "gasP99": 92477,
+   "gasMax": 113929
   },
   {
    "lib": "fp127",
