@@ -1,6 +1,6 @@
 # Edges: where each library's domain ends
 
-Generated 2026-10-16 by `make edges`. Versions: fp127 eef6294, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
+Generated 2026-10-20 by `make edges`. Versions: fp127 091c5aa, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
 
 Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 200 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. FP127Lib coincides with FP127 and is omitted. The method is in the Methodology section at the end.
 
@@ -35,14 +35,14 @@ exp below -42 is zero on an 18-decimal grid and has one digit at -40: every prob
 | `exp(-42)` zero on an 18-decimal grid | `5.75e-19` | 21 | 1 | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 71 |
 | `exp(-43)` | `2.115e-19` | 21 | 0 | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 71 |
 | `exp(-60)` | `8.757e-27` | 13 | ZERO | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 71 |
-| `exp(-88)` the last value above FP127's floor | `6.055e-39` | 1 | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 71 |
-| `exp(-89)` zero on FP127's grid | `2.227e-39` | ZERO | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 71 |
+| `exp(-88)` two ULPs on FP127's grid | `6.055e-39` | 1 | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 71 |
+| `exp(-89)` 0.76 ULP on FP127's grid, which rounds to one | `2.227e-39` | 0 | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 71 |
 | `exp(-100)` | `3.72e-44` | ZERO | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 71 |
-| `exp(40)` | `2.354e+17` | 43 | 19 | 20 | 16 | 32 | 21 | n/a | n/a | n/a | 72 |
-| `exp(43)` | `4.728e+18` | 43 | 21 | 21 | 16 | 32 | 20 | n/a | n/a | n/a | 71 |
-| `exp(44)` beyond ABDK 64.64's range | `1.285e+19` | 43 | REVERT bare revert | 20 | 16 | 32 | 20 | n/a | n/a | n/a | 72 |
-| `exp(60)` | `1.142e+26` | 45 | REVERT bare revert | 20 | 16 | 32 | 20 | n/a | n/a | n/a | 71 |
-| `exp(88)` the largest FP127 holds | `1.652e+38` | 44 | REVERT bare revert | 20 | 16 | 31 | 20 | n/a | n/a | n/a | 71 |
+| `exp(40)` | `2.354e+17` | 57 | 19 | 20 | 16 | 32 | 21 | n/a | n/a | n/a | 72 |
+| `exp(43)` | `4.728e+18` | 58 | 21 | 21 | 16 | 32 | 20 | n/a | n/a | n/a | 71 |
+| `exp(44)` beyond ABDK 64.64's range | `1.285e+19` | 57 | REVERT bare revert | 20 | 16 | 32 | 20 | n/a | n/a | n/a | 72 |
+| `exp(60)` | `1.142e+26` | 65 | REVERT bare revert | 20 | 16 | 32 | 20 | n/a | n/a | n/a | 71 |
+| `exp(88)` the largest FP127 holds | `1.652e+38` | 77 | REVERT bare revert | 20 | 16 | 31 | 20 | n/a | n/a | n/a | 71 |
 | `exp(89)` FP127 reverts; the WAD word still has room | `4.49e+38` | REVERT Overflow | REVERT bare revert | 20 | 16 | 31 | 20 | n/a | n/a | n/a | 72 |
 | `exp(100)` | `2.688e+43` | REVERT Overflow | REVERT bare revert | 21 | 16 | 31 | 21 | n/a | n/a | n/a | 71 |
 | `exp(130)` | `2.873e+56` | REVERT Overflow | REVERT bare revert | 20 | 16 | 31 | 21 | n/a | n/a | n/a | 72 |
@@ -117,10 +117,10 @@ The principal Lambert branch near its branch point -1/e, where the slope is infi
 | `lambertW0(-1/e+1e-6)` | `-0.99767017` | 35 | n/a | 15 | n/a | n/a | n/a | n/a | n/a | n/a | 69 |
 | `lambertW0(-1/e+1e-9)` | `-0.99992627` | 34 | n/a | 13 | n/a | n/a | n/a | n/a | n/a | n/a | 67 |
 | `lambertW0(-1/e+1e-12)` | `-0.99999767` | 32 | n/a | 12 | n/a | n/a | n/a | n/a | n/a | n/a | 65 |
-| `lambertW0(-1/e+1e-15)` | `-0.99999993` | 30 | n/a | 10 | n/a | n/a | n/a | n/a | n/a | n/a | 64 |
+| `lambertW0(-1/e+1e-15)` | `-0.99999993` | 31 | n/a | 10 | n/a | n/a | n/a | n/a | n/a | n/a | 64 |
 | `lambertW0(-1/e+1e-18)` one grid step from the branch point | `-1.0` | 29 | n/a | 8 | n/a | n/a | n/a | n/a | n/a | n/a | 62 |
 | `lambertW0(-1e-18)` | `-1.0e-18` | 20 | n/a | 17 | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
-| `lambertW0(1e-18)` | `1.0e-18` | 20 | n/a | 18 | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
+| `lambertW0(1e-18)` | `1.0e-18` | 21 | n/a | 18 | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
 | `lambertW0(1e30)` | `64.904634` | 41 | RANGE | 20 | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
 | `lambertW0(1e38)` | `83.078448` | 40 | RANGE | 20 | n/a | n/a | n/a | n/a | n/a | n/a | 71 |
 
@@ -165,7 +165,7 @@ e^x - 1 as an op: the libraries without it compute exp(x) - 1 and the one cancel
 | `expm1(-1e-9)` | `-1.0e-9` | 30 | 10 | 9 | 9 | 25 | 9 | n/a | n/a | n/a | 72 |
 | `expm1(-40)` | `-1.0` | 38 | 19 | 18 | 18 | 34 | 18 | n/a | n/a | n/a | 71 |
 | `expm1(-88)` | `-1.0` | 39 | 38 | 38 | 38 | 34 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 72 |
-| `expm1(20)` | `4.8516519e+8` | 44 | 19 | 19 | 17 | 32 | 21 | n/a | n/a | n/a | 71 |
+| `expm1(20)` | `4.8516519e+8` | 47 | 19 | 19 | 17 | 32 | 21 | n/a | n/a | n/a | 71 |
 
 ## compound(r, n)
 
