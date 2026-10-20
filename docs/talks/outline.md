@@ -338,7 +338,10 @@ Done (`make talk`, 18 slides, in the outline's order; titles are placeholders):
     (precision.json, sweep.json).
 13. 3.1 The format ceiling: digits against exponent bits, computed (19 → 71.3, 13 → 73.2,
     11 → 73.8, 9 → 74.4).
-14. 3.2 The accuracy ceiling: FP256's correctly rounded share per op (sweep.json).
+14. 3.2 The accuracy ceiling: FP256's correctly rounded share per op (sweep.json). It reads
+    master's sweep, which is release three until #102 merges. Run `make talk` again after
+    the merge. Slide 15's gas likewise gets release four's columns once `gas256.md` is
+    regenerated.
 15. 3.3 What it costs: median gas, Solady / PRBMath / FP127 / FP256 for mul, div, exp, ln,
     pow (gas.md, gas256.md).
 16. Both goals met, with the walls stated.
