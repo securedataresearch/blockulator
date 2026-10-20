@@ -5,22 +5,25 @@ format), laid out as 16:9 pages and written to docs/talks/dust-is-over.pdf.
 
     make talk
 
-Each slide is a title (a short claim), one plot made by a function below, and
-a source line. The spoken words live in docs/talks/dust-is-over.md.
+Each slide is a title (a short placeholder; the author supplies the wording),
+one plot made by a function below, and a source line naming the committed file
+the plot draws from. The order and the claims follow docs/talks/outline.md.
+The spoken words are not in the PDF.
 """
 from __future__ import annotations
 
+import importlib.util
 import io
 import json
 import math
 import re
+from fractions import Fraction
 from pathlib import Path
 
 import matplotlib
 
 matplotlib.use("svg")
 import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.patches import Rectangle  # noqa: E402
 import mpmath  # noqa: E402
 import weasyprint  # noqa: E402
 
@@ -28,15 +31,19 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "docs" / "talks" / "dust-is-over.pdf"
 BENCH = ROOT / "docs" / "benchmarks"
 DEPLOY = ROOT / "contracts" / "deployments"
+REPLAYS = ROOT / "scripts" / "replays"
 
 # One identity per ruler, fixed for the whole deck (validated categorical
 # order on the light surface). The two rulers the talk is about take the
-# first two slots; the WAD libraries are one class, drawn in gray.
+# first two slots; the WAD libraries are one class, drawn in gray. In the
+# replays, the deployed code is ink and its one-word fix (mulDivUp, mulUp)
+# is the WAD gray: it is still the 18-decimal ruler, rounded the other way.
 INK, MUTED, FAINT, GRID, SURFACE = "#0b0b0b", "#52514e", "#a9a8a2", "#e4e3df", "#fcfcfb"
 SERIES = {"FP256": "#2a78d6", "FP127": "#eb6834", "binary128": "#1baf7a", "64.64": "#6250d6", "WAD": "#8a8984"}
 RULERS = ["WAD", "64.64", "binary128", "FP127", "FP256"]
 FORM = {"WAD": "solady", "64.64": "abdk", "binary128": "quad", "FP127": "fp127lib", "FP256": "fp256"}
 DEPLOYED = "#0b0b0b"
+FIX = SERIES["WAD"]
 
 plt.rcParams.update({
     "font.family": "DejaVu Sans", "font.size": 15, "text.color": INK,
@@ -76,12 +83,21 @@ def legend_below(ax, n):
     ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncols=n, fontsize=12)
 
 
+def md_rows(path: Path, first: str) -> list[list[str]]:
+    """The cells of every markdown table row in `path` whose first cell starts with `first`."""
+    out = []
+    for l in path.read_text().splitlines():
+        if l.startswith("| " + first):
+            out.append([c.strip().strip("*") for c in l.strip().strip("|").split("|")])
+    return out
+
+
 # --- data -------------------------------------------------------------------
 
 LADDER = json.loads((BENCH / "ladder.json").read_text())
-EDGES = json.loads((BENCH / "edges.json").read_text())
 ACCRUAL = json.loads((BENCH / "accrual-deployed.json").read_text())
 RELEASE = json.loads((DEPLOY / "RELEASE.json").read_text())
+SWEEP = json.loads((BENCH / "sweep.json").read_text())
 NS = [1, 2, 5, 10, 20, 50, 100, 365, 1000, 10000]
 
 
@@ -115,131 +131,11 @@ def pi_table() -> dict[str, list[int]]:
     return out
 
 
-def edge_cell(probe: dict, ruler: str):
-    """digits, or one of 'zero', 'revert', 'n/a', 'range'."""
-    c = probe["cells"].get(FORM[ruler], {})
-    if c.get("range"):
-        return "range"
-    if c.get("unsupported"):
-        return "n/a"
-    if c.get("reverted"):
-        return "revert"
-    if c.get("zero") or c.get("digits") == 0:
-        return "zero"
-    return c.get("digits")
+def sup(e: int) -> str:
+    return f"10^{e}"
 
 
-def edge_probe(pid: str) -> dict:
-    return next(p for op in EDGES["ops"] for p in op["probes"] if p["id"] == pid)
-
-
-# --- the market (slides 2, 3, 16) ---------------------------------------------
-
-R0, K, MULT, PRINCIPAL = 0.1, 50.0, 4.0, 10e6  # target 10%, 50/yr adaptation, curve x4 at u = 100%, 10M
-
-
-def market_rate(d):
-    return MULT * R0 * math.exp(K * d / 365)
-
-
-def market_overcharge(d):
-    T = d / 365
-    true = PRINCIPAL * (math.exp(MULT * R0 * (math.exp(K * T) - 1) / K) - 1)
-    avg = (1 + math.exp(K * T) + 2 * math.exp(K * T / 2)) / 4
-    return PRINCIPAL * (math.exp(MULT * R0 * avg * T) - 1) - true
-
-
-def market_errors() -> dict[str, dict[int, float]]:
-    out = {"deployed": {}, "FP127": {}, "FP256": {}}
-    for d in (1, 7):
-        t = accrual_case(f"morpho-u100-10pct-{d}d")["truth"]["continuous"]
-        out["deployed"][d] = abs(float(t["deployed"]["errTokens"]))
-        out["FP127"][d] = abs(float(t["fp127"]["errTokens"]))
-        out["FP256"][d] = abs(float(t["fp256"]["errTokens"]))
-    return out
-
-
-def plot_market() -> str:
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12.5, 5.2), gridspec_kw={"width_ratios": [1, 1.15], "wspace": 0.32})
-    xs = [7 * i / 400 for i in range(401)]
-    a1.plot(xs, [100 * market_rate(x) for x in xs], color=SERIES["FP256"], lw=2.5, label="the rate", zorder=3)
-    tx = [0, 3.5, 7]
-    a1.plot(tx, [100 * market_rate(x) for x in tx], color=SERIES["FP127"], lw=2, ls=(0, (6, 3)),
-            marker="o", ms=8, mec=SURFACE, mew=2, label="the contract's two straight lines", zorder=4)
-    a1.set_xlabel("days since the last transaction")
-    a1.set_ylabel("borrow rate, % a year")
-    a1.set_xlim(0, 7)
-    a1.set_ylim(0, 125)
-    a1.legend(loc="upper left", fontsize=12)
-    days = [0.25 * i for i in range(29)]
-    a2.plot(days, [market_overcharge(d) for d in days], color=SERIES["FP127"], lw=2.5, zorder=3,
-            label="the straight lines' overcharge (formula)")
-    meas = market_errors()["deployed"]
-    a2.plot(list(meas), list(meas.values()), ls="none", marker="o", ms=10, color=DEPLOYED, mec=SURFACE, mew=2,
-            label="the deployed contract (measured)", zorder=4)
-    for d, v in meas.items():
-        a2.annotate(f"+{v:,.2f}" if v < 100 else f"+{v:,.0f}", (d, v), xytext=(-14, 10), textcoords="offset points",
-                    ha="right", fontsize=13, color=INK)
-    a2.set_xlabel("days since the last transaction")
-    a2.set_ylabel("USDC booked that the formula never accrued")
-    a2.set_xlim(0, 7.3)
-    a2.set_ylim(0, 3400)
-    a2.legend(loc="upper left", fontsize=12)
-    return svg(fig)
-
-
-def plot_market_errors(token_line: bool = False) -> str:
-    err = market_errors()
-    fig, ax = figure()
-    style = {"deployed": (DEPLOYED, "the deployed contract"), "FP127": (SERIES["FP127"], "FP127"),
-             "FP256": (SERIES["FP256"], "FP256")}
-    for i, (k, (col, lab)) in enumerate(style.items()):
-        xs = [0 + (i - 1) * 0.12, 1 + (i - 1) * 0.12]
-        ys = [err[k][1], err[k][7]]
-        ax.plot(xs, ys, ls="none", marker="o", ms=13, color=col, mec=SURFACE, mew=2, label=lab, zorder=4)
-        for x, y in zip(xs, ys):
-            txt = f"{y:,.2f} USDC" if y >= 1 else f"10^{math.floor(math.log10(y))}"
-            ax.annotate(txt, (x, y), xytext=(12, 0), textcoords="offset points", va="center", fontsize=12, color=INK)
-    ax.set_yscale("log")
-    ax.set_ylim(1e-75, 1e5)
-    ax.set_yticks([1e-70, 1e-60, 1e-50, 1e-40, 1e-30, 1e-20, 1e-10, 1, 1e4])
-    ax.set_xticks([0, 1], ["idle 1 day", "idle 7 days"])
-    ax.set_xlim(-0.5, 1.75)
-    ax.set_ylabel("error in the interest, USDC (log scale)")
-    ax.grid(axis="x", visible=False)
-    if token_line:
-        ax.axhspan(1e-75, 1e-6, color=SERIES["FP256"], alpha=0.07, lw=0, zorder=1)
-        ax.axhline(1e-6, color=MUTED, lw=1.2, ls=(0, (4, 4)))
-        ax.text(1.72, 2e-6, "one unit of USDC (10^-6)", ha="right", va="bottom", fontsize=12, color=MUTED)
-        ax.text(1.72, 1e-40, "below anything\nthe token can hold", ha="right", fontsize=13, color=SERIES["FP256"])
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.12), ncols=3, fontsize=12)
-    return svg(fig)
-
-
-def plot_live_markets() -> str:
-    pts = []
-    for c in ACCRUAL["cases"]:
-        if c.get("group") != "live":
-            continue
-        t = next(iter(c["truth"].values()))
-        d = t.get("deployed", {}).get("digitsInterest")
-        if d is None or not c.get("t"):
-            continue
-        pts.append((c["t"] / 86400, min(d, 20)))
-    fig, ax = figure()
-    ax.scatter([p[0] for p in pts], [p[1] for p in pts], s=34, color=SERIES["WAD"], alpha=0.75,
-               edgecolors=SURFACE, linewidths=1, zorder=3, label=f"{len(pts)} live accruals, two lending protocols")
-    ax.set_xscale("log")
-    ax.set_xlabel("days since the market was last touched (log scale)")
-    ax.set_ylabel("digits right in the interest")
-    ax.set_ylim(0, 20)
-    ax.axhline(4, color=SERIES["FP127"], lw=1.2, ls=(0, (4, 4)))
-    ax.text(ax.get_xlim()[1], 4.4, "4 digits", ha="right", fontsize=12, color=SERIES["FP127"])
-    ax.legend(loc="upper right", fontsize=12)
-    return svg(fig)
-
-
-# --- dust and the two goals (slides 1, 5, 6, 7, 8) ----------------------------
+# --- title (slide 1) ------------------------------------------------------------
 
 def wad_drift() -> tuple[list[int], list[float]]:
     cells = ladder_input("compound")["cells"][FORM["WAD"]]
@@ -262,26 +158,187 @@ def plot_title() -> str:
     return svg(fig)
 
 
-def plot_drift_all() -> str:
-    fig, ax = figure()
-    i = ladder_input("compound")
-    for name in RULERS:
-        cells = i["cells"][FORM[name]]
-        xs = [n for n in NS if str(n) in cells and cells[str(n)].get("relErr") not in (None, "0")]
-        ys = [abs(float(cells[str(n)]["relErr"])) for n in xs]
-        line(ax, xs, ys, name)
+# --- part 1: real failures (slides 2-6) --------------------------------------------
+
+def plot_honest() -> str:
+    """1.1: the Aave USDC control case. Every error sits below one unit of the token."""
+    c = accrual_case("aave-usdc-u100-borrow-1d")
+    t = c["truth"][c["primaryTruth"]]
+    unit = 10.0 ** -c["decimals"]
+    rows = [("Aave, as deployed", DEPLOYED, t["deployed"]), ("FP127", SERIES["FP127"], t["fp127"]),
+            ("FP256", SERIES["FP256"], t["fp256"])]
+    fig, ax = figure(11.5, 4.6)
+    ax.axvspan(1e-75, unit, color=SERIES["FP256"], alpha=0.06, lw=0, zorder=1)
+    ax.axvline(unit, color=MUTED, lw=1.4, ls=(0, (4, 4)), zorder=2)
+    ax.text(unit * 3, -0.55, f"one unit of {c['symbol']} (10^-{c['decimals']})", fontsize=12, color=MUTED, va="center")
+    ax.text(1e-73, -0.55, "every answer rounds to the same token amount", fontsize=12, color=SERIES["FP256"], va="center")
+    for y, (lab, col, cell) in enumerate(rows):
+        e = abs(float(cell["errTokens"]))
+        ax.plot([e], [y], "o", ms=14, color=col, mec=SURFACE, mew=2, zorder=4)
+        m, x = f"{e:.1e}".split("e")
+        ax.text(e * 30 if e < 1e-20 else e / 30, y,
+                f"{m}×10^{int(x)} USDC  ({cell['digitsInterest']} digits of the interest)",
+                va="center", ha="left" if e < 1e-20 else "right", fontsize=13)
     ax.set_xscale("log")
-    ax.set_yscale("log")
-    ends = {n: abs(float(i["cells"][FORM[n]]["10000"]["relErr"])) for n in RULERS}
-    ax.text(10000 * 1.4, ends["WAD"], "WAD and 64.64", va="center", fontsize=13)
-    for n in ("binary128", "FP127", "FP256"):
-        ax.text(10000 * 1.4, ends[n], n, va="center", fontsize=13)
-    ax.set_xlim(0.7, 10000 * 6)
-    ax.set_xlabel("days of daily compounding (log scale)")
-    ax.set_ylabel("relative error in the balance (log scale)")
-    legend_below(ax, 5)
+    ax.set_xlim(1e-75, 1e3)
+    ax.set_xticks([1e-70, 1e-60, 1e-50, 1e-40, 1e-30, 1e-20, 1e-10, 1],
+                  ["10^-70", "10^-60", "10^-50", "10^-40", "10^-30", "10^-20", "10^-10", "1"])
+    ax.set_yticks(range(len(rows)), [r[0] for r in rows])
+    ax.set_ylim(len(rows) - 0.5, -0.85)
+    ax.set_xlabel(f"error in a day's interest on {float(c['principalTokens']):,.0f} {c['symbol']} (log scale)")
+    ax.grid(axis="y", visible=False)
     return svg(fig)
 
+
+RESUPPLY = json.loads((REPLAYS / "resupply.json").read_text())
+
+
+def plot_resupply() -> str:
+    """1.2: the exchange rate 1e36 / price, floored to 0; then the LTV check against the cap."""
+    p = {k: int(v) for k, v in RESUPPLY["pins"].items()}
+    exact = Fraction(10 ** 36, p["price"])
+    deployed = 10 ** 36 // p["price"]
+    ltv = Fraction(p["borrowAmount"]) * exact * p["ltvPrecision"] / p["exchangePrecision"] / p["collateral"]
+    times_cap = float(ltv / p["maxLTV"])
+    dig = {re.match(r"FP\d+", r[0]).group(): r[2] for r in md_rows(BENCH / "replay-resupply.md", "FP")}
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12.5, 5.0), gridspec_kw={"wspace": 0.45})
+    names = ["deployed", "FP127", "FP256"]
+    cols = [DEPLOYED, SERIES["FP127"], SERIES["FP256"]]
+    vals = [deployed, float(exact), float(exact)]
+    a1.bar(range(3), vals, color=cols, width=0.6, zorder=3)
+    a1.axhline(float(exact), color=MUTED, lw=1.2, ls=(0, (4, 4)), zorder=2)
+    a1.text(0, 0.03, "0", ha="center", fontsize=15, fontweight="bold")
+    for x, n in ((1, "FP127"), (2, "FP256")):
+        a1.text(x, float(exact) + 0.03, f"{dig[n]}\ndigits", ha="center", fontsize=12)
+    a1.text(-0.42, float(exact) + 0.13, "the true rate: 0.4999999999999999999995", fontsize=12, color=MUTED)
+    a1.set_xticks(range(3), names)
+    a1.set_ylim(0, 0.75)
+    a1.set_ylabel("rate, collateral per reUSD")
+    a1.set_title("1e36 / price", fontsize=14, color=MUTED, loc="left")
+    a1.grid(axis="x", visible=False)
+    a2.bar([1, 2], [times_cap, times_cap], color=cols[1:], width=0.6, zorder=3)
+    a2.axhline(1, color=MUTED, lw=1.4, ls=(0, (4, 4)))
+    a2.text(-0.45, 0.85, "the cap (95%)", fontsize=12, color=MUTED, va="top", ha="left")
+    a2.text(0, 2.0, "0:\nborrow\npasses", ha="center", va="bottom", fontsize=13, fontweight="bold")
+    for x in (1, 2):
+        a2.text(x, times_cap * 1.8, f"{times_cap:,.0f}×\nreverts", ha="center", fontsize=12)
+    a2.set_yscale("log")
+    a2.set_ylim(0.3, 1e9)
+    a2.set_xlim(-0.5, 2.5)
+    a2.set_xticks(range(3), names)
+    a2.set_ylabel("loan-to-value, times the cap (log)")
+    a2.set_title(f"1 wei of collateral, {p['borrowAmount'] / 1e18 / 1e6:,.0f}M reUSD borrowed",
+                 fontsize=14, color=MUTED, loc="left")
+    a2.grid(axis="x", visible=False)
+    return svg(fig)
+
+
+def _bunni():
+    spec = importlib.util.spec_from_file_location("bunni_replay", REPLAYS / "bunni.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    d = json.loads((REPLAYS / "bunni.json").read_text())
+    r = m.replay(d)
+    return r, m.liquidity_table(d, r)
+
+
+def plot_bunni() -> str:
+    """1.3: the pool's active USDC over the 44 withdrawals, replayed from bunni.json."""
+    r, liq = _bunni()
+    seq = r["seq"]
+    xs = list(range(len(seq["deployed"])))
+    l0 = liq["start"]["L"]
+    fig, ax = figure()
+    ax.plot(xs, seq["deployed"], color=DEPLOYED, lw=2.5, drawstyle="steps-post", zorder=3, label="deployed (mulDiv)")
+    ax.plot(xs, seq["mulDivUp"], color=FIX, lw=2.5, drawstyle="steps-post", zorder=3, label="the fix (mulDivUp)")
+    ax.plot(xs, [float(v) for v in seq["exact"]], color=FAINT, lw=5, zorder=4, label="exact")
+    ax.plot(xs, [float(v) for v in seq["fp127"]], color=SERIES["FP127"], lw=2, ls=(0, (5, 3)), zorder=5,
+            label="FP127")
+    x1 = xs[-1] + 0.8
+    dl = lambda f: (liq[f]["L"] / l0 - 1) * 100  # noqa: E731
+    ax.text(x1, seq["deployed"][-1], f"deployed  {seq['deployed'][-1]} wei\nliquidity {dl('deployed'):+.2f}%",
+            va="center", fontsize=13)
+    ax.text(x1, seq["mulDivUp"][-1], f"mulDivUp  {seq['mulDivUp'][-1]} wei", va="center", fontsize=13)
+    ax.text(x1, float(seq["exact"][-1]), f"FP127, FP256, exact\n{float(seq['exact'][-1]):.4f} wei",
+            va="center", fontsize=13)
+    ax.set_xlim(0, xs[-1])
+    ax.set_ylim(0, 55)
+    ax.set_xlabel("withdrawals")
+    ax.set_ylabel("the pool's active USDC (wei)")
+    legend_below(ax, 4)
+    return svg(fig)
+
+
+BALANCER = json.loads((REPLAYS / "balancer.json").read_text())["score"]
+
+
+def plot_balancer() -> str:
+    """1.4: the true invariant D* across the osETH pool's micro-swap phase, each call charged by each model."""
+    s = BALANCER["osETH"]
+    models = [("deployed", "deployed (mulDown)", DEPLOYED, 2.5), ("mulUp", "the fix (mulUp)", FIX, 2.5),
+              ("fp256", "FP256", SERIES["FP256"], 4), ("fp127", "FP127", SERIES["FP127"], 2)]
+    fig, ax = figure()
+    for m, lab, col, lw in models:
+        ys, v = [1.0], 1.0
+        for st in s["steps"]:
+            v *= 1 + float(st["models"][m]["rel"])
+            ys.append(v)
+        ax.plot(range(len(ys)), ys, color=col, lw=lw, label=lab, zorder=5 if m == "fp127" else 4,
+                ls=(0, (5, 3)) if m == "fp127" else "-")
+    n = s["swaps"]
+    x1 = n + 1.5
+    mm = s["models"]
+    ax.text(x1, float(mm["mulUp"]["invariantRatio"]),
+            f"mulUp  ×{float(mm['mulUp']['invariantRatio']):.2f}\n{mm['mulUp']['stepsInvariantFalls']} of {n} calls lower D*",
+            va="center", fontsize=13)
+    ax.text(x1, float(mm["fp127"]["invariantRatio"]),
+            f"FP127 = FP256 = exact  ×{float(mm['fp127']['invariantRatio']):.4f}\n"
+            f"{mm['fp127']['stepsInvariantFalls']} of {n} calls lower D*", va="center", fontsize=13)
+    ax.text(x1, float(mm["deployed"]["invariantRatio"]),
+            f"deployed  ×{float(mm['deployed']['invariantRatio']):.3f}\n"
+            f"{mm['deployed']['stepsInvariantFalls']} of {n} calls lower D*", va="center", fontsize=13)
+    ax.set_yscale("log")
+    ax.set_ylim(0.01, 20)
+    ax.set_yticks([0.01, 0.1, 1, 10], ["×0.01", "×0.1", "×1", "×10"])
+    ax.set_xlim(0, n)
+    ax.set_xlabel(f"calls of the drain / micro / restore phase, osETH/WETH pool (swaps {s['firstSwap']}–{s['lastSwap']})")
+    ax.set_ylabel("true invariant D*, against its start")
+    legend_below(ax, 4)
+    return svg(fig)
+
+
+def plot_balancer_v1() -> str:
+    """1.5: one join/exit cycle re-tuned to each rounding rule, in every pool (replay-balancer-v1.md)."""
+    rows = md_rows(BENCH / "replay-balancer-v1.md", "")
+    rows = [r for r in rows if r[0].isdigit() and len(r) == 5
+            and (r[1].startswith("deployed (the attacker") or r[1].startswith("exact formula"))]
+    rules = [("deployed", "deployed", DEPLOYED), ("nearest", "exact, rounded to nearest once", FIX),
+             ("toward", "exact, rounded toward the pool once", SERIES["FP256"])]
+    net = {k: [] for k, _, _ in rules}
+    for r in rows:
+        k = "deployed" if r[1].startswith("deployed") else "nearest" if "nearest" in r[1] else "toward"
+        net[k].append(float(r[4].rstrip("%")))
+    pools = list(range(1, len(net["deployed"]) + 1))
+    fig, ax = figure()
+    w = 0.26
+    for i, (k, lab, col) in enumerate(rules):
+        xs = [p + (i - 1) * w for p in pools]
+        ax.bar(xs, net[k], width=w - 0.03, color=col, label=lab, zorder=3)
+        for p, x, v in zip(pools, xs, net[k]):
+            if k != "toward" and p != 1:
+                continue
+            ax.text(x, v + (0.12 if v >= 0 else -0.12), f"{v:.2f}" if abs(v) >= 0.1 else f"{v:.3f}",
+                    ha="center", va="bottom" if v >= 0 else "top", fontsize=10, color=INK)
+    ax.axhline(0, color=MUTED, lw=1)
+    ax.set_xticks(pools, [f"pool {p}" for p in pools])
+    ax.set_ylim(-1, 8.2)
+    ax.set_ylabel("attacker's net per cycle, % of BPT supply")
+    ax.grid(axis="x", visible=False)
+    legend_below(ax, 3)
+    return svg(fig)
+
+
+# --- part 2: converge, or fit (slides 7-12) ----------------------------------------
 
 def plot_goal_one() -> str:
     fig, ax = figure(11.5, 4.8)
@@ -301,6 +358,7 @@ def plot_goal_one() -> str:
 FIXED = {"WAD": (-18, math.log10(2**255 / 1e18)), "64.64": (math.log10(2**-64), math.log10(2**63)),
          "FP127": (math.log10(2**-128), math.log10(2**127))}
 FLOAT = {"binary128": 113 * math.log10(2), "FP256": 237 * math.log10(2)}
+FP256_WALL = math.floor((2**18) * math.log10(2))  # exponent 19 bits, bias 2^18 - 1: 10^±78,913
 
 
 def digits_at(name: str, e: float):
@@ -328,6 +386,8 @@ def plot_rulers(lit: tuple[str, ...] = ()) -> str:
             ax.text(top, digits_at(name, top) + 1.5, "revert", ha="center", fontsize=11, color=col if col != GRID else FAINT)
     ax.text(-44, 62, "a fixed ruler: zero below its finest mark,\nrevert above its largest value", fontsize=12,
             color=MUTED, va="top")
+    ax.text(-44, FLOAT["FP256"] + 2.5, f"FP256: {FLOAT['FP256']:.1f} digits out to its walls at 10^±{FP256_WALL:,}",
+            ha="left", fontsize=12, color=SERIES["FP256"])
     ax.set_xlabel("size of the number, power of ten")
     ax.set_ylabel("digits the ruler can hold")
     ax.set_xlim(-45, 45)
@@ -337,37 +397,54 @@ def plot_rulers(lit: tuple[str, ...] = ()) -> str:
     return svg(fig)
 
 
-def plot_words() -> str:
-    rows = [
-        ("WAD", [("sign", 1, FAINT), ("integer, about 196 bits", 196, SERIES["WAD"]), ("fraction, ~60", 59, MUTED)]),
-        ("64.64", [("unused, 128 bits", 128, GRID), ("integer 64", 64, SERIES["64.64"]), ("fraction 64", 64, MUTED)]),
-        ("binary128", [("unused, 128 bits", 128, GRID), ("exp 15", 16, SERIES["binary128"]), ("significand 112", 112, MUTED)]),
-        ("FP127", [("s", 1, FAINT), ("integer 127", 127, SERIES["FP127"]), ("fraction 128", 128, MUTED)]),
-        ("FP256", [("exp 19", 20, SERIES["FP256"]), ("significand 236", 236, MUTED)]),
-    ]
-    fig, ax = figure(11.5, 4.6)
-    for y, (name, segs) in enumerate(reversed(rows)):
-        x = 0
-        for lab, w, col in segs:
-            ax.add_patch(Rectangle((x, y - 0.32), w - 1.5, 0.64, color=col, lw=0))
-            if w >= 40:
-                ax.text(x + w / 2, y, lab, ha="center", va="center", fontsize=12,
-                        color=INK if col in (GRID, FAINT) else "white")
-            x += w
-        ax.text(-6, y, name, ha="right", va="center", fontsize=14, color=INK)
-    ax.set_xlim(-70, 258)
-    ax.set_ylim(-0.6, len(rows) - 0.4)
-    ax.axis("off")
-    ax.text(128, -0.75, "one 256-bit word", ha="center", fontsize=12, color=MUTED)
+def plot_ramanujan() -> str:
+    t = pi_table()
+    terms = list(range(1, len(t["FP256"]) + 1))
+    fig, ax = figure()
+    for name in RULERS:
+        line(ax, terms, t[name], name)
+    ax.plot([1, terms[-1]], [7, 7 + 8 * (terms[-1] - 1)], color=MUTED, lw=1.2, ls=(0, (4, 4)), zorder=2)
+    ax.text(7.35, 7 + 8 * 6.35 + 2, "the series alone:\n8 digits a term", fontsize=12, color=MUTED, ha="right", va="bottom")
+    end_labels(ax, terms[-1] + 0.25, {n: t[n][-1] for n in RULERS},
+               {"WAD": -2.2, "64.64": 2.2, "binary128": -2.2, "FP127": 2.2})
+    ax.set_xlabel("terms of Ramanujan's series")
+    ax.set_ylabel("correct digits of π")
+    ax.set_xticks(terms)
+    ax.set_xlim(0.6, terms[-1] + 0.2)
+    ax.set_ylim(0, 85)
+    legend_below(ax, 5)
     return svg(fig)
 
 
-# --- converge or fit (slides 9, 10, 11) ----------------------------------------
+def plot_newton() -> str:
+    """2.3: Balancer's invariant solve, the same Newton iteration on three rulers (worst over the phase)."""
+    rulers = [("deployed", "wei grid", DEPLOYED), ("fp127", "FP127", SERIES["FP127"]), ("fp256", "FP256", SERIES["FP256"])]
+    fig, ax = figure(11.5, 5.0)
+    y, ticks = 0, []
+    for pool in ("osETH", "wstETH"):
+        c = BALANCER[pool]["convergence"]
+        for k, lab, col in rulers:
+            d = c[k]["relD"]["minDigits"]
+            ax.barh(y, d, color=col, height=0.7, zorder=3)
+            ax.text(d + 0.8, y, f"{d:.1f} digits, median {c[k]['itD']['median']} iterations", va="center", fontsize=13)
+            ticks.append((y, lab))
+            y += 1
+        ax.text(-14, y - 2, f"{pool}/WETH", ha="right", va="center", fontsize=14, fontweight="bold")
+        y += 0.7
+    ax.set_yticks([t[0] for t in ticks], [t[1] for t in ticks])
+    ax.invert_yaxis()
+    ax.set_xlim(0, 100)
+    ax.set_xticks(range(0, 80, 10))
+    ax.set_xlabel("digits of the invariant D at the stop, worst call of the phase (against the exact root)")
+    ax.grid(axis="y", visible=False)
+    return svg(fig)
+
 
 def converge_vs_fit() -> tuple[list[int], list[float], list[float]]:
-    """At each word width: bits a Newton square root reaches (it runs until the
-    step stops changing anything), and bits a polynomial fitted once for 60 bits
-    delivers for exp (its truncation error does not shrink with the word)."""
+    """At each word width, computed with mpmath at that precision: bits a Newton
+    square root reaches (it runs until the step stops changing anything), and
+    bits a Taylor polynomial for exp tuned once for 60 bits delivers (its
+    truncation error does not shrink with the word)."""
     widths = list(range(64, 257, 16))
     # the fitted exp: the shortest Taylor polynomial on [0, ln 2] within 2^-60
     with mpmath.workprec(400):
@@ -393,7 +470,7 @@ def plot_converge() -> str:
     ax.plot(widths, newton, color=SERIES["FP256"], lw=2.8, marker="o", ms=7, mec=SURFACE, mew=2, zorder=4,
             label="converging: Newton's square root")
     ax.plot(widths, fitted, color=SERIES["FP127"], lw=2.8, marker="o", ms=7, mec=SURFACE, mew=2, zorder=4,
-            label="fitted: an exp polynomial tuned for 60 bits")
+            label="fitted: a Taylor polynomial for exp, tuned for 60 bits")
     ax.text(widths[-1] + 4, newton[-1], f"{newton[-1]:.0f} bits", va="center", fontsize=13)
     ax.text(widths[-1] + 4, fitted[-1], f"{fitted[-1]:.0f} bits", va="center", fontsize=13)
     ax.set_xlabel("bits in the word")
@@ -404,167 +481,136 @@ def plot_converge() -> str:
     return svg(fig)
 
 
-def plot_ramanujan() -> str:
-    t = pi_table()
-    terms = list(range(1, len(t["FP256"]) + 1))
-    fig, ax = figure()
-    for name in RULERS:
-        line(ax, terms, t[name], name)
-    ax.plot([1, terms[-1]], [7, 7 + 8 * (terms[-1] - 1)], color=MUTED, lw=1.2, ls=(0, (4, 4)), zorder=2)
-    ax.text(7.35, 7 + 8 * 6.35 + 2, "the series alone:\n8 digits a term", fontsize=12, color=MUTED, ha="right", va="bottom")
-    end_labels(ax, terms[-1] + 0.25, {n: t[n][-1] for n in RULERS},
-               {"WAD": -2.2, "64.64": 2.2, "binary128": -2.2, "FP127": 2.2})
-    ax.set_xlabel("terms of Ramanujan's series")
-    ax.set_ylabel("correct digits of π")
-    ax.set_xticks(terms)
-    ax.set_xlim(0.6, terms[-1] + 0.2)
-    ax.set_ylim(0, 85)
-    legend_below(ax, 5)
-    return svg(fig)
-
-
-# release one's worst bits (contracts/deployments/FP256.md): the converging ops
-# were exact to the 237-bit significand; exp, ln and pow ran on fitted kernels
-RELEASE_ONE = {"add": 237, "sub": 237, "mul": 237, "div": 237, "sqrt": 237, "exp": 146, "ln": 149, "pow": 123}
+def release_one() -> dict[str, int]:
+    """Release one's worst bits (contracts/deployments/FP256.md): the converging ops
+    were exact to the 237-bit significand; exp, ln and pow ran on fitted kernels."""
+    text = (DEPLOY / "FP256.md").read_text()
+    sec = text[text.index("## Release one"):]
+    exp_, ln_, pow_ = (int(x) for x in re.search(r"\((\d+), (\d+) and (\d+) bits at worst", sec).groups())
+    return {"add": 237, "sub": 237, "mul": 237, "div": 237, "sqrt": 237, "exp": exp_, "ln": ln_, "pow": pow_}
 
 
 def plot_release() -> str:
+    one = release_one()
     prec = json.loads((ROOT / "docs" / "fp256" / "precision.json").read_text())
-    now = {op: (237 if prec[op]["minBits"] >= 256 else prec[op]["minBits"]) for op in RELEASE_ONE}
+    now = {op: (237 if prec[op]["minBits"] >= 256 else prec[op]["minBits"]) for op in one}
+    exp_sweep = next(r for r in SWEEP["rows"] if r["lib"] == "fp256" and r["op"] == "exp")
     fig, ax = figure()
-    ops = list(RELEASE_ONE)
+    ops = list(one)
     for x, op in enumerate(ops):
-        a, b = RELEASE_ONE[op], now[op]
+        a, b = one[op], now[op]
         ax.plot([x, x], [a, b], color=GRID, lw=3, zorder=2)
         ax.plot(x, a, "o", ms=13, color=SERIES["FP127"], mec=SURFACE, mew=2, zorder=3,
                 label="release one" if x == 0 else None)
         ax.plot(x, b, "o", ms=13, color=SERIES["FP256"], mec=SURFACE, mew=2, zorder=4,
-                label="release three" if x == 0 else None)
+                label="now" if x == 0 else None)
         if a != b:
-            ax.text(x + 0.14, a, f"{a}", va="center", fontsize=12)
+            ax.text(x - 0.14, a, f"{a} bits\n{a * math.log10(2):.0f} digits", va="center", ha="right", fontsize=11)
     ax.axvspan(-0.5, 4.5, color=SERIES["FP256"], alpha=0.05, lw=0)
-    ax.text(2, 200, "converging:\nexact on day one", ha="center", fontsize=14, color=INK)
-    ax.text(6, 200, "fitted:\nhad to be refit", ha="center", fontsize=14, color=INK)
+    ax.text(2, 185, "converging:\nexact on day one", ha="center", fontsize=14, color=INK)
+    ax.text(6, 103, "fitted: had to be refit", ha="center", fontsize=14, color=INK)
+    ax.text(6, 89, f"exp now: {exp_sweep['correctlyRounded']:,} of {exp_sweep['n']:,} random inputs correctly rounded",
+            ha="center", fontsize=11, color=MUTED)
     ax.set_xticks(range(len(ops)), ops)
     ax.set_ylabel("worst bits right, FP256 (237 = exact)")
-    ax.set_ylim(95, 250)
+    ax.set_ylim(80, 250)
     ax.set_xlim(-0.5, len(ops) - 0.5)
     ax.grid(axis="x", visible=False)
     legend_below(ax, 2)
     return svg(fig)
 
 
-# --- the ruler with no ends (slides 12-15) --------------------------------------
+# --- part 3: the last library (slides 13-18) -----------------------------------------
 
-HEAT_PROBES = ["ln(1+1e-9)", "log1p(1e-30)", "exp(-40)", "exp(-42)", "exp(-89)", "exp(89)", "mul(1e-10,1e-10)",
-               "div(1e-9,1e12)", "sqrt(1e-30)", "pow(1.0001,-887272)", "pow(1.0001,887272)", "normCdf(-9)",
-               "lambertWm1(-1e-10)"]
-
-
-def plot_heatmap() -> str:
-    fig, ax = figure(11.5, 5.6)
-    cmap = plt.get_cmap("Blues")
-    for r, pid in enumerate(HEAT_PROBES):
-        p = edge_probe(pid)
-        for c, name in enumerate(RULERS):
-            v = edge_cell(p, name)
-            if isinstance(v, (int, float)) and v > 0:
-                ax.add_patch(Rectangle((c, r), 0.96, 0.92, color=cmap(0.18 + 0.8 * min(v, 72) / 72), lw=0))
-                ax.text(c + 0.48, r + 0.46, f"{v}", ha="center", va="center", fontsize=12,
-                        color="white" if v > 35 else INK)
-            else:
-                ax.add_patch(Rectangle((c, r), 0.96, 0.92, color=GRID, lw=0))
-                ax.text(c + 0.48, r + 0.46, str(v), ha="center", va="center", fontsize=12,
-                        color=SERIES["FP127"] if v in ("zero", "revert") else MUTED, fontweight="bold")
-        ax.text(-0.1, r + 0.46, pid, ha="right", va="center", fontsize=12)
-    for c, name in enumerate(RULERS):
-        ax.text(c + 0.48, -0.15, name, ha="center", va="bottom", fontsize=13)
-    ax.set_xlim(-3.2, len(RULERS))
-    ax.set_ylim(len(HEAT_PROBES) + 0.1, -0.9)
-    ax.axis("off")
-    return svg(fig)
-
-
-def plot_exp_sweep() -> str:
-    probes = [p for op in EDGES["ops"] for p in op["probes"] if re.fullmatch(r"exp\(-?[\d.]+\)", p["id"])]
-    probes.sort(key=lambda p: float(p["id"][4:-1]))
+def plot_format_ceiling() -> str:
+    """3.1: a 256-bit word with an e-bit exponent keeps 256 - e significand bits
+    (sign bit out, hidden bit in); its range is about 2^±2^(e-1)."""
+    es = list(range(8, 25))
+    dig = lambda e: (256 - e) * math.log10(2)  # noqa: E731
+    rng = lambda e: math.floor(2 ** (e - 1) * math.log10(2))  # noqa: E731
     fig, ax = figure()
-    for name in RULERS:
-        xs, ys, rx = [], [], []
-        for p in probes:
-            x = float(p["id"][4:-1])
-            v = edge_cell(p, name)
-            if isinstance(v, (int, float)):
-                xs.append(x)
-                ys.append(v)
-            elif v == "zero":
-                xs.append(x)
-                ys.append(0)
-            elif v in ("revert", "range"):
-                rx.append(x)
-        line(ax, xs, ys, name)
-        if rx:
-            ax.plot(rx, [-4] * len(rx), ls="none", marker="x", ms=9, mew=2.5, color=SERIES[name], zorder=4)
-    ax.text(-100, -8.5, "×  reverted", fontsize=12, color=MUTED)
-    ax.set_xlabel("x in exp(x)")
-    ax.set_ylabel("digits right")
-    ax.set_ylim(-11, 80)
-    legend_below(ax, 5)
+    ax.axvspan(7.5, 8.5, color=GRID, lw=0, zorder=1)
+    ax.text(8, 75.8, "too narrow\nfor uint256", ha="center", va="top", fontsize=11, color=MUTED)
+    ax.plot(es, [dig(e) for e in es], color=MUTED, lw=2, zorder=3)
+    marks = {9: "just covers uint256", 11: "", 13: "", 19: "FP256"}
+    for e, note in marks.items():
+        col = SERIES["FP256"] if e == 19 else INK
+        ax.plot(e, dig(e), "o", ms=12, color=col, mec=SURFACE, mew=2, zorder=4)
+        lab = f"{e} bits: {dig(e):.1f} digits, 10^±{rng(e):,}" + (f"\n{note}" if note else "")
+        ax.annotate(lab, (e, dig(e)), xytext=(10, 12), textcoords="offset points", fontsize=12, color=INK)
+    ax.axhline(dig(19), color=SERIES["FP256"], lw=1.2, ls=(0, (4, 4)), zorder=2)
+    ax.annotate("", xy=(9.0, dig(9)), xytext=(9.0, dig(19)),
+                arrowprops=dict(arrowstyle="<->", color=MUTED, lw=1.4))
+    ax.text(9.25, (dig(9) + dig(19)) / 2, f"{dig(9) - dig(19):.1f} digits:\nthe most any\none-word format\ncan add",
+            fontsize=12, color=MUTED, va="center")
+    ax.set_xlim(7.5, 24.5)
+    ax.set_ylim(69.5, 76)
+    ax.set_xticks(es)
+    ax.set_xlabel("exponent bits in a 256-bit word")
+    ax.set_ylabel("digits of significand")
     return svg(fig)
 
 
-def plot_per_second() -> str:
-    fig, ax = figure(11.5, 4.8)
-    vals = {n: ladder_digits("accrual-per-second", n)[365] for n in RULERS}
-    ys = list(range(len(RULERS)))
-    for y, n in zip(ys, RULERS):
-        ax.barh(y, vals[n], color=SERIES[n], height=0.62, zorder=3)
-        ax.text(vals[n] + 0.8, y, f"{vals[n]}", va="center", fontsize=15)
-    ax.set_yticks(ys, RULERS)
-    ax.set_xlabel("digits right after a year of per-second accrual at 5%")
-    ax.set_xlim(0, 75)
+def plot_accuracy() -> str:
+    """3.2: FP256 against the correctly rounded word, seeded random inputs (sweep.json)."""
+    rows = [r for r in SWEEP["rows"] if r["lib"] == "fp256"]
+    fig, ax = figure(11.5, 5.4)
+    for y, r in enumerate(rows):
+        share = 100 * r["correctlyRounded"] / r["n"]
+        ax.barh(y, share, color=SERIES["FP256"], height=0.72, zorder=3)
+        ax.barh(y, 100 - share, left=share, color=SERIES["FP127"], height=0.72, zorder=3)
+        note = f"{r['correctlyRounded']:,} / {r['n']:,}"
+        if r["misrounded"]:
+            note += f"   ({r['misrounded']:,} off, by up to {r['maxUlp']} mark{'s' if r['maxUlp'] > 1 else ''})"
+        ax.text(101.5, y, note, va="center", fontsize=11.5, color=INK)
+    ax.set_yticks(range(len(rows)), [r["op"] for r in rows], fontsize=13)
+    ax.invert_yaxis()
+    ax.set_xlim(0, 100)
+    ax.set_xticks(range(0, 101, 25), [f"{x}%" for x in range(0, 101, 25)])
+    ax.set_xlabel("FP256: share of random inputs that return the correctly rounded word")
     ax.grid(axis="y", visible=False)
     return svg(fig)
 
 
-def plot_option() -> str:
-    fig, ax = figure()
-    for name in RULERS:
-        d = ladder_digits("deep-tail-option", name)
-        xs = [n for n in NS if n in d]
-        line(ax, xs, [d[n] for n in xs], name)
-    end_labels(ax, 10000 * 1.35, {n: ladder_digits("deep-tail-option", n).get(10000, 0) for n in RULERS},
-               {"WAD": -4.5, "64.64": 0.5, "FP127": 3})
-    ax.set_xscale("log")
-    ax.set_xlabel("ticks the price has walked down (log scale)")
-    ax.set_ylabel("digits right in the option's price")
-    ax.set_ylim(-2, 80)
-    ax.set_xlim(0.8, 10000 * 1.3)
-    legend_below(ax, 5)
-    return svg(fig)
+GAS_OPS = ["mul", "div", "exp", "ln", "pow"]
 
 
-# --- cost and the close (slides 17, 19, 20) -------------------------------------
+def gas_medians() -> dict[str, dict[str, int]]:
+    """Median gas per op: Solady, PRBMath and FP127Lib from gas.md, FP256Lib from gas256.md."""
+    def table(path, want):
+        lines = [l for l in path.read_text().splitlines() if l.startswith("|")]
+        head = [c.strip() for c in lines[0].strip("|").split("|")]
+        idx = {k: head.index(h) for k, h in want.items()}
+        out = {k: {} for k in want}
+        for l in lines[2:]:
+            cells = [c.strip() for c in l.strip("|").split("|")]
+            if cells[0] in GAS_OPS:
+                for k, i in idx.items():
+                    out[k][cells[0]] = int(cells[i].split("/")[1].strip().replace(",", ""))
+        return out
+    g = table(BENCH / "gas.md", {"Solady": "Solady", "PRBMath": "PRBMath SD59x18", "FP127": "FP127Lib (inline)"})
+    g.update(table(BENCH / "gas256.md", {"FP256": "FP256Lib (inline)"}))
+    return g
+
 
 def plot_gas() -> str:
+    g = gas_medians()
+    libs = [("Solady", MUTED), ("PRBMath", FAINT), ("FP127", SERIES["FP127"]), ("FP256", SERIES["FP256"])]
     fig, ax = figure()
-    for name in RULERS:
-        xs, ys = [], []
-        for s in LADDER["scenarios"]:
-            i = next(x for x in s["inputs"] if x.get("reference"))
-            c = i["cells"].get(FORM[name], {}).get("365")
-            if isinstance(c, dict) and c.get("digits") is not None and c.get("gasPerStep"):
-                xs.append(c["gasPerStep"])
-                ys.append(c["digits"])
-        ax.scatter(xs, ys, s=70, color=SERIES[name], edgecolors=SURFACE, linewidths=1.5, label=name,
-                   zorder=4 if name in ("FP127", "FP256") else 3)
-    ax.set_xscale("log")
-    ax.set_xlabel("gas per step (log scale)")
-    ax.set_ylabel("digits right after 365 steps")
-    ax.set_ylim(-2, 80)
-    ax.text(0.99, 0.02, "each dot: one scenario of the ladder, reference input", transform=ax.transAxes,
-            ha="right", fontsize=11, color=MUTED)
-    legend_below(ax, 5)
+    w = 0.2
+    for i, (lib, col) in enumerate(libs):
+        xs = [k + (i - 1.5) * w for k in range(len(GAS_OPS))]
+        vs = [g[lib][op] for op in GAS_OPS]
+        ax.bar(xs, vs, width=w - 0.02, color=col, label=lib, zorder=3)
+        for x, v in zip(xs, vs):
+            ax.text(x, v * 1.08, f"{v:,}", ha="center", va="bottom", fontsize=9.5, rotation=90, color=INK)
+    ax.set_yscale("log")
+    ax.set_ylim(100, 60000)
+    ax.set_yticks([100, 1000, 10000], ["100", "1,000", "10,000"])
+    ax.set_xticks(range(len(GAS_OPS)), GAS_OPS)
+    ax.set_ylabel("median gas per op, inline (log scale)")
+    ax.grid(axis="x", visible=False)
+    legend_below(ax, 4)
     return svg(fig)
 
 
@@ -603,35 +649,53 @@ def plot_close() -> str:
 # --- the deck -----------------------------------------------------------------
 
 PI = "Ramanujan's series through each library's own sqrt, mul and div. docs/benchmarks/pi.md"
-MARKET = ("10M USDC borrowed, utilization 100%, target rate 10%. The rate model and market as deployed "
-          "(byte-equal to mainnet) vs the stated formula at 200 digits. docs/benchmarks/accrual-deployed.md")
 WAD_NOTE = "WAD = an 18-decimal library; 64.64 and binary128 = the two ABDK formats."
+FORMATS = "Exact properties of each format, computed in scripts/talk/deck.py."
 
 SLIDES = [
     ("Dust is Over", plot_title, "$10,000 at 10%, compounded daily on an 18-decimal ruler. docs/benchmarks/ladder.json: compound"),
-    ("Ten million dollars, untouched for a week", plot_market, MARKET),
-    ("The same calculation, three ways", plot_market_errors, MARKET),
-    ("It happens in live markets", plot_live_markets,
-     "Every live lending reserve and market with $10k+ borrowed, block 26,206,698, accrued by the deployed code. docs/benchmarks/accrual-deployed.md"),
-    ("Rounding with nowhere to go", plot_drift_all, "Daily compounding, reference input. " + WAD_NOTE),
+    # part 1: real failures
+    ("One honest transaction", plot_honest,
+     "Aave v3 USDC borrow, 1M USDC at 100% utilisation, untouched a day; the deployed code against the formula at 200 digits. "
+     "docs/benchmarks/accrual-deployed.json: aave-usdc-u100-borrow-1d"),
+    ("Resupply, 26 June 2025", plot_resupply,
+     "Tx 0xffbbd492…, block 22,785,461: the pinned integers, the same formula on each ruler. "
+     "scripts/replays/resupply.json; docs/benchmarks/replay-resupply.md"),
+    ("Bunni v2, 2 September 2025", plot_bunni,
+     "Tx 0x1c27c4d6…, block 23,273,098: the 44 withdrawals replayed from the trace, only the stored idle balance changed. "
+     "scripts/replays/bunni.json (bunni.py replay); docs/benchmarks/replay-bunni.md"),
+    ("Balancer V2, 3 November 2025", plot_balancer,
+     "Tx 0x6ed07db1…, block 23,717,397: every call priced on its own on-chain balances; D* solved exactly. "
+     "scripts/replays/balancer.json (score.osETH); docs/benchmarks/replay-balancer.md"),
+    ("Balancer V1, 31 August 2026", plot_balancer_v1,
+     "Five pools; from each pool's first join at 3 units, one join/exit cycle re-tuned to each rule at 200 digits. "
+     "docs/benchmarks/replay-balancer-v1.md: Precision or direction?"),
+    # part 2: converge, or fit
     ("Goal one: round once", plot_goal_one, "A year of daily compounding, $10,000 at 10%. docs/benchmarks/ladder.json. " + WAD_NOTE),
-    ("Goal two: never run out of ruler", plot_rulers, "Exact properties of each format: the finest mark, the largest value, the significand."),
-    ("Five ways to spend one word", plot_words, "Bit layouts of each format in a 256-bit word."),
+    ("Goal two: never run out of ruler", plot_rulers, FORMATS),
+    ("Ramanujan", plot_ramanujan, PI),
+    ("Balancer's Newton solve, three rulers", plot_newton,
+     "StableMath's invariant iteration on each ruler, residual against the exact root at 200 digits. "
+     "scripts/replays/balancer.json (score.*.convergence); docs/benchmarks/replay-balancer.md: Newton convergence"),
     ("Converge, or fit", plot_converge,
-     "Computed in exact arithmetic at each width: Newton's sqrt(2), and the shortest Taylor polynomial for exp within 2^-60 on [0, ln 2], at x = ln 2."),
-    ("The series never stops. The ruler does.", plot_ramanujan, PI),
-    ("FP256 proved it by accident", plot_release,
-     "Worst bits over the committed vectors. Release one: contracts/deployments/FP256.md; release three: docs/fp256/precision.json."),
-    ("The walls", plot_heatmap, "One call each, at the end of the domain, against 200 digits. docs/benchmarks/edges.json. " + WAD_NOTE),
-    ("exp, end to end", plot_exp_sweep, "docs/benchmarks/edges.json: exp probes. " + WAD_NOTE),
-    ("A rate per second", plot_per_second, "5% a year accrued per second for a year. docs/benchmarks/ladder.json: accrual-per-second. " + WAD_NOTE),
-    ("An option, walked down", plot_option,
-     "Normal-distribution option priced each tick as the price walks to d1 = -12. docs/benchmarks/ladder.json: deep-tail-option. " + WAD_NOTE),
-    ("The same market, rounded once", lambda: plot_market_errors(token_line=True), MARKET),
-    ("What the digits cost", plot_gas, "Gas per step and digits after 365 steps, every ladder scenario. docs/benchmarks/ladder.json. " + WAD_NOTE),
-    ("Both goals, met", lambda: plot_rulers(lit=("FP127", "FP256")), "Exact properties of each format."),
+     "Computed with mpmath at each width: Newton's sqrt(2), and a Taylor polynomial for exp tuned for 60 bits "
+     "(the shortest within 2^-60 on [0, ln 2]), at x = ln 2. scripts/talk/deck.py: converge_vs_fit"),
+    ("Release one, and now", plot_release,
+     "Worst bits over the committed vectors. Release one: contracts/deployments/FP256.md; now: docs/fp256/precision.json "
+     "(precision.md) and docs/benchmarks/sweep.json"),
+    # part 3: the last library
+    ("The format ceiling", plot_format_ceiling,
+     "A 256-bit word: sign, e exponent bits, 256 − e significand bits with the hidden bit; range 2^±2^(e−1). "
+     "Computed in scripts/talk/deck.py: plot_format_ceiling"),
+    ("The accuracy ceiling", plot_accuracy,
+     "Seeded random inputs against the correctly rounded word (300 digits, ties away from zero). "
+     "docs/benchmarks/sweep.json (sweep.md)"),
+    ("What it costs", plot_gas,
+     "Median gas over each op's input ladder, inline libraries. docs/benchmarks/gas.md (Solady, PRBMath SD59x18, FP127Lib); "
+     "docs/benchmarks/gas256.md (FP256Lib)"),
+    ("Both goals, met", lambda: plot_rulers(lit=("FP127", "FP256")), FORMATS),
     ("Checked on chain", plot_live, "contracts/deployments/RELEASE.json"),
-    ("Use FP127 and FP256", plot_close, "Blockulator 2.0. Sepolia; MIT licence."),
+    ("Use FP127 and FP256", plot_close, "Blockulator 2.0. Sepolia; MIT licence. contracts/deployments/RELEASE.json"),
 ]
 
 CSS = f"""

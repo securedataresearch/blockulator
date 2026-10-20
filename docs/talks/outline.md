@@ -269,10 +269,38 @@ state in the format, and round toward the protocol at the edge.
 
 ## Deck changes this outline needs
 
-- Slides 2–4 and 16 (the Morpho market) become the four replays, plus 1.1's honest
-  transaction.
-- A slide for the Balancer Newton solve on three rulers (2.3).
-- Slide 9's caption: the curve is a Taylor polynomial tuned for 60 bits, computed with
-  mpmath at each width.
-- Slide 11 should plot release one against now, as in 2.4.
-- A slide for the format-ceiling table (3.1). Slides 17–18 should state the walls.
+Done (`make talk`, 18 slides, in the outline's order; titles are placeholders):
+
+1. Title: the WAD drift (ladder.json).
+2. 1.1: the Aave USDC control case's error, deployed / FP127 / FP256, against one unit of
+   USDC (accrual-deployed.json).
+3. 1.2 Resupply: the rate, 0 against 0.4999…, and the loan-to-value against the cap
+   (resupply.json, replay-resupply.md).
+4. 1.3 Bunni: active USDC over the 44 withdrawals, deployed / mulDivUp / FP127 / exact,
+   replayed by `bunni.py`'s `replay` from bunni.json (replay-bunni.md).
+5. 1.4 Balancer V2: the true invariant across the osETH phase, deployed / mulUp / FP127 =
+   FP256 = exact, with the count of calls that lower it (balancer.json `score`).
+6. 1.5 Balancer V1: net per cycle by rounding rule in all five pools (replay-balancer-v1.md).
+7–8. 2.1 Two goals: round once (ladder.json); never run out of ruler, with FP256's walls
+   at 10^±78,913 on the plot.
+9. 2.2 Ramanujan (pi.md).
+10. 2.3 Balancer's Newton solve: digits of D at the stop and median iterations, wei grid /
+    FP127 / FP256, both pools (balancer.json `score.*.convergence`).
+11. 2.4 Converge or fit: caption now says a Taylor polynomial tuned for 60 bits, computed
+    with mpmath at each width.
+12. 2.4 Release one (exp 146, ln 149, pow 123, read from FP256.md) against now
+    (precision.json, sweep.json).
+13. 3.1 The format ceiling: digits against exponent bits, computed (19 → 71.3, 13 → 73.2,
+    11 → 73.8, 9 → 74.4).
+14. 3.2 The accuracy ceiling: FP256's correctly rounded share per op (sweep.json).
+15. 3.3 What it costs: median gas, Solady / PRBMath / FP127 / FP256 for mul, div, exp, ln,
+    pow (gas.md, gas256.md).
+16. Both goals met, with the walls stated.
+17. Checked on chain (RELEASE.json).
+18. 3.5 Use FP127 and FP256.
+
+Removed: the Morpho idle-market slides ("Ten million dollars…", "The same calculation…",
+"It happens in live markets", "The same market, rounded once"), and the slides the
+outline no longer uses (drift on every ruler, the five word layouts, the edges heatmap,
+exp end to end, the per-second rate, the option walk, gas against digits on the ladder).
+3.4 (what remains) has no slide.
