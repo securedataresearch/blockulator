@@ -24,9 +24,10 @@ than these, but on the ops they round correctly it cannot be more accurate.
   someone chooses where your numbers sit against the grid: they make the quantity tiny
   and repeat the step.
 
-Source: the 2026-10-20 real-input study (Balancer v2 quotes, Maker/Sky rpow and Pendle,
-reproduced bit for bit at block 26,234,952) and `docs/benchmarks/accrual-deployed.md`
-(the Aave USDC borrow control case, 9.51 digits).
+Source: `docs/benchmarks/accrual-deployed.md`. The Aave USDC borrow control case has 9.51
+digits of interest and an error of 1.2×10^-7 USDC. The 39 live Aave borrow sides have a
+median of 11.9 digits. A wider real-input study (Balancer v2 quotes, Maker/Sky rpow and
+Pendle, block 26,234,952) agrees, but it is not committed. Commit it before quoting it.
 
 ### 1.2 Resupply, 26 June 2025 (1.5 min)
 
@@ -163,7 +164,7 @@ Say first:
   there is no wider ruler than one word.
 
 Source: `contracts/deployments/FP256.md` and `git show a669484:docs/fp256/precision.md`
-for release one; `docs/fp256/precision.md` for now; the 2026-10-20 random sweep.
+for release one; `docs/fp256/precision.md` and `docs/benchmarks/sweep.md` for now.
 
 ---
 
@@ -201,30 +202,35 @@ Say first:
   marks).
 - **FP127 is faithful, not nearest:**
   - mul and sqrt round down, and div truncates.
-  - exp and pow lose precision at large results: about 146 and 122 correct bits.
+  - exp and pow lose precision at large results: about 146 and 123 correct bits relative
+    to the result, where the grid there would hold more.
 - These are on the list in 3.4.
 
-Source: the 2026-10-20 random sweep (155k FP256 and 41k FP127 inputs against correctly
-rounded truth at 300 digits); `docs/fp256/precision.md`.
+Source: `docs/benchmarks/sweep.md` (`make sweep`, PR #100: seeded random inputs, FP256
+against the correctly rounded word, FP127 against the real truth) and
+`docs/fp256/precision.md`.
 
 ### 3.3 What it costs (1 min)
 
-- **Solady is 2 to 13 times cheaper per op, and should be.** Integer-exact work
+- **Solady is 1.4 to 10 times cheaper per op, and should be.** Integer-exact work
   (`mulDivUp`, `fullMulDiv`) stays in Solady and OZ; these libraries complement them.
-- Per-op gas:
+- Median gas per op, inline:
 
-  | op | Solady | FP127 | FP256 |
-  |---|---|---|---|
-  | mul | 165 | 302 | 1,186 |
-  | exp | 556 | 5,334 | 7,352 |
-  | pow | 1,408 | 10,484 | 15,137 |
+  | op | Solady | PRBMath | FP127 | FP256 |
+  |---|---|---|---|---|
+  | mul | 321 | 641 | 531 | 1,388 |
+  | div | 329 | 705 | 981 | 2,137 |
+  | exp | 547 | 2,951 | 5,366 | 7,336 |
+  | ln | 731 | 1,099 | 1,035 | 6,950 |
+  | pow | 1,605 | 10,062 | 6,654 | 11,094 |
 
-- FP127 is below PRBMath on mul and ln. On pow it is within 4% (10,484 against 10,102).
+- FP127 costs less than PRBMath on mul, ln and pow.
 - What the premium buys: Resupply's rejected borrow, Bunni's 35.63 wei, and Balancer's
   0 of 165 calls. Set against nine-figure losses, a few thousand gas is the cheapest line
   in the audit.
 
-Source: the gas bench in the 2026-10-20 study; `docs/benchmarks/gas.md` and `gas256.md`.
+Source: `docs/benchmarks/gas.md` (inline FP127Lib and the other libraries, medians over each op's
+input ladder) and `docs/benchmarks/gas256.md` (FP256Lib).
 
 ### 3.4 What remains before "final" is true everywhere (0.5 min)
 
