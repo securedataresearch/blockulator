@@ -1,345 +1,552 @@
 {
   "abs": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
-    "n": 96,
+    "n": 98,
+    "nearest": 98,
     "reverts": 1,
+    "rounding": "exact",
     "worstInput": ""
   },
   "add": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 381,
-    "reverts": 19,
-    "worstInput": ""
-  },
-  "atanh": {
-    "meanBits": 255,
-    "minBits": 255,
-    "n": 534,
-    "reverts": 5,
-    "worstInput": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-  },
-  "avg": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 200,
-    "reverts": 0,
-    "worstInput": ""
-  },
-  "cbrt": {
-    "meanBits": 152,
-    "minBits": 123,
-    "n": 96,
-    "reverts": 1,
-    "worstInput": "0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-  },
-  "ceil": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 95,
-    "reverts": 2,
-    "worstInput": ""
-  },
-  "clamp": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 300,
-    "reverts": 0,
-    "worstInput": ""
-  },
-  "compound": {
-    "meanBits": 255,
-    "minBits": 255,
-    "n": 143,
-    "reverts": 57,
-    "worstInput": "0xffffffffffffffffffffffffffffffff99b1728cae9854967465fd34ac880ac1,0x0000000000000000000000000000000a00000000000000000000000000000000"
-  },
-  "cosh": {
-    "meanBits": 253,
-    "minBits": 146,
-    "n": 575,
-    "reverts": 4,
-    "worstInput": "0x00000000000000000000000000000016a09e667f3bcc908b2fb1366ea957d3e3"
-  },
-  "dist": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 190,
-    "reverts": 10,
-    "worstInput": ""
-  },
-  "div": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
     "n": 377,
+    "nearest": 377,
     "reverts": 23,
+    "rounding": "exact",
     "worstInput": ""
   },
-  "erf": {
-    "meanBits": 255,
-    "minBits": 255,
-    "n": 571,
+  "atanh": {
+    "maxErrUlp": "0.4946",
+    "meanBits": 131,
+    "minBits": 130,
+    "n": 534,
+    "nearest": 534,
+    "reverts": 5,
+    "rounding": "nearest",
+    "worstInput": "0x0000000000000000000000000000000000000b504f333f9de6484597d89b3754"
+  },
+  "avg": {
+    "maxErrUlp": "0.5000",
+    "meanBits": 234,
+    "minBits": 129,
+    "n": 200,
+    "nearest": 200,
     "reverts": 0,
-    "worstInput": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    "rounding": "floor",
+    "worstInput": "0xfffffffffffffffff21f494c589c000000000000000000000000000000000000,0xfffffffffffffffffffffffffffffd34d62c1fdb28540383534af43c13a51359"
+  },
+  "cbrt": {
+    "maxErrUlp": "0.4929",
+    "meanBits": 164,
+    "minBits": 130,
+    "n": 98,
+    "nearest": 98,
+    "reverts": 1,
+    "rounding": "nearest",
+    "worstInput": "0x00000000000000001bce1abd36207803b5f3bb79b2f817e5a2d5e288b8fe5d96"
+  },
+  "ceil": {
+    "maxErrUlp": "0.0000",
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 97,
+    "nearest": 97,
+    "reverts": 2,
+    "rounding": "exact",
+    "worstInput": ""
+  },
+  "clamp": {
+    "maxErrUlp": "0.0000",
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 300,
+    "nearest": 300,
+    "reverts": 0,
+    "rounding": "exact",
+    "worstInput": ""
+  },
+  "compound": {
+    "maxErrUlp": "0.4907",
+    "meanBits": 208,
+    "minBits": 130,
+    "n": 141,
+    "nearest": 141,
+    "reverts": 59,
+    "rounding": "nearest",
+    "worstInput": "0x0000000000000000000000000000000019999999999999999999999999999999,0x0000000000000000000000000000016d00000000000000000000000000000000"
+  },
+  "cosh": {
+    "maxErrUlp": "0.5000",
+    "meanBits": 175,
+    "minBits": 129,
+    "n": 575,
+    "nearest": 575,
+    "reverts": 4,
+    "rounding": "nearest",
+    "worstInput": "0x0000000000000000000000000000000000000000000000010000000000000000"
+  },
+  "dist": {
+    "maxErrUlp": "0.0000",
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 190,
+    "nearest": 190,
+    "reverts": 10,
+    "rounding": "exact",
+    "worstInput": ""
+  },
+  "div": {
+    "maxErrUlp": "0.9944",
+    "meanBits": 193,
+    "minBits": 129,
+    "n": 377,
+    "nearest": 225,
+    "reverts": 23,
+    "rounding": "trunc",
+    "worstInput": "0x23fccae3cfdca92920400cceaf07264105d9fd08f1256e2392022e9d1745ab4a,0x00000000000000000000000000000003243f6a8885a308d313198a2e03707344"
+  },
+  "divDown": {
+    "maxErrUlp": "1.0000",
+    "meanBits": 188,
+    "minBits": 128,
+    "n": 363,
+    "nearest": 174,
+    "reverts": 37,
+    "rounding": "floor",
+    "worstInput": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,0x7870107c047009ebaad71c7ebbaf317671aaa8a105a47733a492aebe56be3702"
+  },
+  "divUp": {
+    "maxErrUlp": "1.0000",
+    "meanBits": 190,
+    "minBits": 129,
+    "n": 367,
+    "nearest": 206,
+    "reverts": 33,
+    "rounding": "ceil",
+    "worstInput": "0x0000000000000000000000000000000180000000000000000000000000000000,0x00000000000000000000000000000000004189374bc6a7ef9db22d0e56041893"
+  },
+  "erf": {
+    "maxErrUlp": "0.4989",
+    "meanBits": 186,
+    "minBits": 132,
+    "n": 571,
+    "nearest": 571,
+    "reverts": 0,
+    "rounding": "nearest",
+    "worstInput": "0xfffffffffffffffffffffffffffffffd8dbd601ab0f3cdc0462642e695dcffd2"
   },
   "erfc": {
-    "meanBits": 255,
-    "minBits": 255,
+    "maxErrUlp": "0.4989",
+    "meanBits": 133,
+    "minBits": 130,
     "n": 571,
+    "nearest": 571,
     "reverts": 0,
-    "worstInput": "0x0000000000000000000000000000000000000000000000000000000000000001"
+    "rounding": "nearest",
+    "worstInput": "0xfffffffffffffffffffffffffffffffd8dbd601ab0f3cdc0462642e695dcffd2"
   },
   "exp": {
-    "meanBits": 221,
-    "minBits": 146,
-    "n": 87,
+    "maxErrUlp": "0.4980",
+    "meanBits": 207,
+    "minBits": 130,
+    "n": 117,
+    "nearest": 117,
     "reverts": 4,
-    "worstInput": "0x0000000000000000000000000000001400000000000000000000000000000000"
+    "rounding": "nearest",
+    "worstInput": "0xffffffffffffffffffffffffffffffa6947ae147ae147ae147ae147ae147ae14"
   },
   "exp10": {
-    "meanBits": 211,
-    "minBits": 146,
-    "n": 66,
+    "maxErrUlp": "0.4973",
+    "meanBits": 217,
+    "minBits": 131,
+    "n": 80,
+    "nearest": 80,
     "reverts": 3,
-    "worstInput": "0x0000000000000000000000000000000a00000000000000000000000000000000"
+    "rounding": "nearest",
+    "worstInput": "0xfffffffffffffffffffffffffffffff141f0353d3320c8f151d83c6c95e647d4"
   },
   "exp2": {
-    "meanBits": 211,
-    "minBits": 146,
-    "n": 80,
+    "maxErrUlp": "0.5000",
+    "meanBits": 217,
+    "minBits": 130,
+    "n": 104,
+    "nearest": 104,
     "reverts": 3,
-    "worstInput": "0x0000000000000000000000000000003200000000000000000000000000000000"
+    "rounding": "nearest",
+    "worstInput": "0xffffffffffffffffffffffffffffff7f00000000000000000000000000000000"
   },
   "expm1": {
-    "meanBits": 254,
-    "minBits": 146,
+    "maxErrUlp": "0.5000",
+    "meanBits": 153,
+    "minBits": 130,
     "n": 577,
+    "nearest": 577,
     "reverts": 2,
-    "worstInput": "0x00000000000000000000000000000016a09e667f3bcc908b2fb1366ea957d3e3"
+    "rounding": "nearest",
+    "worstInput": "0x0000000000000000000000000000000000000000000000010000000000000000"
   },
   "factorial": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
     "n": 12,
+    "nearest": 12,
     "reverts": 6,
+    "rounding": "exact",
     "worstInput": ""
   },
   "floor": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
-    "n": 97,
+    "n": 99,
+    "nearest": 99,
     "reverts": 0,
+    "rounding": "exact",
     "worstInput": ""
   },
   "frac": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
-    "n": 97,
+    "n": 99,
+    "nearest": 99,
     "reverts": 0,
+    "rounding": "exact",
     "worstInput": ""
   },
   "fromFixed18": {
-    "meanBits": 256,
-    "minBits": 256,
+    "maxErrUlp": "0.9921",
+    "meanBits": 191,
+    "minBits": 131,
     "n": 33,
+    "nearest": 20,
     "reverts": 4,
-    "worstInput": ""
+    "rounding": "trunc",
+    "worstInput": "0xfffffffffffffffffffffffffffffffff5cc03f34ac9aaa4896da2872a07e2d0"
   },
   "gavg": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 166,
-    "reverts": 34,
-    "worstInput": ""
+    "maxErrUlp": "576460752303423488.0000",
+    "meanBits": 197,
+    "minBits": 131,
+    "n": 158,
+    "nearest": 99,
+    "reverts": 42,
+    "rounding": "sqrt of floors",
+    "worstInput": "0x0000000000000000000000000000000000000000000000000004000000000000,0x0000000000000000000000000000000000000000000000100000000000000000"
   },
   "gcd": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
     "n": 81,
+    "nearest": 81,
     "reverts": 0,
+    "rounding": "exact",
     "worstInput": ""
   },
   "hypot": {
-    "meanBits": 256,
-    "minBits": 256,
+    "maxErrUlp": "1.0000",
+    "meanBits": 166,
+    "minBits": 129,
     "n": 121,
+    "nearest": 68,
     "reverts": 0,
-    "worstInput": ""
+    "rounding": "sqrt of floors",
+    "worstInput": "0x0000000000000000000000000000000000000000000000000000000000000000,0x00000000000000000000000000000003243f6a8885a308d313198a2e03707344"
   },
   "inv": {
+    "maxErrUlp": "0.9520",
     "meanBits": 256,
     "minBits": 256,
     "n": 62,
+    "nearest": 32,
     "reverts": 3,
-    "worstInput": ""
+    "rounding": "trunc",
+    "worstInput": "0x203165f4c782db9cffce938726dd1ec020de05fd184a1af4395e2a8402671297"
   },
   "lambertW0": {
-    "meanBits": 249,
-    "minBits": 65,
-    "n": 108,
+    "maxErrUlp": "0.4951",
+    "meanBits": 134,
+    "minBits": 130,
+    "n": 140,
+    "nearest": 140,
     "reverts": 3,
-    "worstInput": "0xffffffffffffffffffffffffffffffffa1d2a7274c4320e54521387d6fab06f4"
+    "rounding": "nearest",
+    "worstInput": "0xffffffffffffffffffffffffffffffffa3d70a3d70a3d70a3d70a3d70a3d70a3"
   },
   "lambertWm1": {
-    "meanBits": 243,
-    "minBits": 67,
-    "n": 66,
+    "maxErrUlp": "0.4968",
+    "meanBits": 131,
+    "minBits": 130,
+    "n": 86,
+    "nearest": 86,
     "reverts": 6,
-    "worstInput": "0xffffffffffffffffffffffffffffffffa1d2a7274c4320e54521387d6fab06f3"
+    "rounding": "nearest",
+    "worstInput": "0xffffffffffffffffffffffffffffffffb30b072074fe3b487073a1b28c4adf68"
   },
   "lerp": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
     "n": 289,
+    "nearest": 289,
     "reverts": 11,
+    "rounding": "floor",
     "worstInput": ""
   },
   "ln": {
-    "meanBits": 255,
-    "minBits": 255,
-    "n": 299,
+    "maxErrUlp": "0.5000",
+    "meanBits": 135,
+    "minBits": 130,
+    "n": 322,
+    "nearest": 322,
     "reverts": 4,
-    "worstInput": "0x0000000000000000000000000000000000000000000000000000000000000001"
+    "rounding": "nearest",
+    "worstInput": "0x0000000000000000000000000019eeee1991f56daa32cdc95baeb71517c3c017"
   },
   "log10": {
-    "meanBits": 255,
-    "minBits": 255,
-    "n": 299,
+    "maxErrUlp": "0.5000",
+    "meanBits": 135,
+    "minBits": 130,
+    "n": 322,
+    "nearest": 322,
     "reverts": 4,
-    "worstInput": "0x0000000000000000000000000000000000000000000000000000000000000003"
+    "rounding": "nearest",
+    "worstInput": "0x00000000000000000000000000000000005fa366409a1e0f1037a02f8b4a8778"
   },
   "log1p": {
-    "meanBits": 255,
-    "minBits": 255,
+    "maxErrUlp": "0.5000",
+    "meanBits": 132,
+    "minBits": 130,
     "n": 561,
+    "nearest": 561,
     "reverts": 18,
-    "worstInput": "0x0000000000000000000000000000000000000000000000000000000000000001"
+    "rounding": "nearest",
+    "worstInput": "0x0000000000000000000000000000000000000000000000010000000000000000"
   },
   "log2": {
-    "meanBits": 255,
-    "minBits": 255,
-    "n": 299,
+    "maxErrUlp": "0.5000",
+    "meanBits": 233,
+    "minBits": 130,
+    "n": 322,
+    "nearest": 322,
     "reverts": 4,
-    "worstInput": "0x00000000000000000000000000000000ffbe76c8b4395810624dd2f1a9fbe76c"
+    "rounding": "nearest",
+    "worstInput": "0x0000000000000000028dfc4db50a10ff45a3860e8964d6a14a662cfe41b5139e"
   },
   "log2Up": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
-    "n": 299,
+    "n": 322,
+    "nearest": 322,
     "reverts": 4,
+    "rounding": "exact",
     "worstInput": ""
   },
   "max": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
     "n": 200,
+    "nearest": 200,
     "reverts": 0,
+    "rounding": "exact",
     "worstInput": ""
   },
   "min": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
     "n": 200,
+    "nearest": 200,
     "reverts": 0,
+    "rounding": "exact",
     "worstInput": ""
   },
   "mul": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 224,
-    "reverts": 176,
-    "worstInput": ""
+    "maxErrUlp": "1.0000",
+    "meanBits": 232,
+    "minBits": 132,
+    "n": 231,
+    "nearest": 181,
+    "reverts": 169,
+    "rounding": "floor",
+    "worstInput": "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe,0x8000000000000000000000000000000000000000000000000000000000000001"
+  },
+  "mulDown": {
+    "maxErrUlp": "1.0000",
+    "meanBits": 229,
+    "minBits": 131,
+    "n": 218,
+    "nearest": 162,
+    "reverts": 182,
+    "rounding": "floor",
+    "worstInput": "0x0000000000000000000000000000000000000000000000000000000000000002,0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"
+  },
+  "mulUp": {
+    "maxErrUlp": "1.0000",
+    "meanBits": 226,
+    "minBits": 129,
+    "n": 225,
+    "nearest": 159,
+    "reverts": 175,
+    "rounding": "ceil",
+    "worstInput": "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe,0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
   },
   "neg": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
-    "n": 96,
+    "n": 98,
+    "nearest": 98,
     "reverts": 1,
+    "rounding": "exact",
     "worstInput": ""
   },
   "normCdf": {
-    "meanBits": 255,
-    "minBits": 255,
+    "maxErrUlp": "0.4989",
+    "meanBits": 228,
+    "minBits": 147,
     "n": 571,
+    "nearest": 571,
     "reverts": 0,
-    "worstInput": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-  },
-  "pi": {
-    "meanBits": 139,
-    "minBits": 122,
-    "n": 8,
-    "reverts": 7,
+    "rounding": "nearest",
     "worstInput": "0x0000000000000000000000000000000300000000000000000000000000000000"
   },
+  "pi": {
+    "maxErrUlp": "230.3592",
+    "meanBits": 123,
+    "minBits": 122,
+    "n": 8,
+    "nearest": 0,
+    "reverts": 7,
+    "rounding": "series",
+    "worstInput": "0x0000000000000000000000000000000700000000000000000000000000000000"
+  },
   "pow": {
-    "meanBits": 235,
-    "minBits": 124,
-    "n": 369,
-    "reverts": 31,
-    "worstInput": "0x0000000000000000000000000000003039d390f03ddfbfbc409fbb600262981a,0x0000000000000000000000000000001400000000000000000000000000000000"
+    "maxErrUlp": "0.4998",
+    "meanBits": 181,
+    "minBits": 130,
+    "n": 501,
+    "nearest": 501,
+    "reverts": 99,
+    "rounding": "nearest",
+    "worstInput": "0x0000000000000000000000000000017b8003884dd86c89a488fc31f62f8cea98,0xfffffffffffffffffffffffffffffffee80023779f2d390dbf519c550fe6719a"
   },
   "powu": {
-    "meanBits": 255,
-    "minBits": 255,
-    "n": 302,
-    "reverts": 98,
-    "worstInput": "0x000000000000000000000000000000015cbd69af9ce95a8ff0778c77c7993941,0x0000000000000000000000000000008000000000000000000000000000000000"
+    "maxErrUlp": "0.4999",
+    "meanBits": 204,
+    "minBits": 130,
+    "n": 435,
+    "nearest": 435,
+    "reverts": 165,
+    "rounding": "nearest",
+    "worstInput": "0xfffffffffffffffffffffffffffffffc29a12310624d183ca1d03b091fb77270,0x0000000000000000000000000000004000000000000000000000000000000000"
   },
   "round": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
-    "n": 95,
+    "n": 97,
+    "nearest": 97,
     "reverts": 2,
+    "rounding": "exact",
     "worstInput": ""
   },
   "sign": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
-    "n": 97,
+    "n": 99,
+    "nearest": 99,
     "reverts": 0,
+    "rounding": "exact",
     "worstInput": ""
   },
   "sinh": {
-    "meanBits": 253,
-    "minBits": 146,
+    "maxErrUlp": "0.4989",
+    "meanBits": 149,
+    "minBits": 130,
     "n": 575,
+    "nearest": 575,
     "reverts": 4,
-    "worstInput": "0x00000000000000000000000000000016a09e667f3bcc908b2fb1366ea957d3e3"
+    "rounding": "nearest",
+    "worstInput": "0x0000000000000000000000000000000000016a09e667f3bcc908b2fb1366ea95"
   },
   "sqrt": {
-    "meanBits": 256,
-    "minBits": 256,
+    "maxErrUlp": "0.9808",
+    "meanBits": 198,
+    "minBits": 129,
     "n": 298,
+    "nearest": 206,
     "reverts": 3,
-    "worstInput": ""
+    "rounding": "floor",
+    "worstInput": "0x0000000000000000000000000000000000000000000000000000000000020000"
   },
   "sub": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
-    "n": 387,
-    "reverts": 13,
+    "n": 380,
+    "nearest": 380,
+    "reverts": 20,
+    "rounding": "exact",
     "worstInput": ""
   },
   "tanh": {
-    "meanBits": 255,
-    "minBits": 255,
+    "maxErrUlp": "0.4972",
+    "meanBits": 216,
+    "minBits": 130,
     "n": 579,
+    "nearest": 579,
     "reverts": 0,
-    "worstInput": "0x0000000000000000000000000000000000000000000000000000000000000001"
+    "rounding": "nearest",
+    "worstInput": "0x00000000000000000000000000000000005a827999fcef32422cbec4d9baa55f"
   },
   "toFixed18": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 97,
+    "maxErrUlp": "1.0000",
+    "meanBits": 199,
+    "minBits": 181,
+    "n": 99,
+    "nearest": 55,
     "reverts": 0,
-    "worstInput": ""
+    "rounding": "floor",
+    "worstInput": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "toFixed18Down": {
+    "maxErrUlp": "1.0000",
+    "meanBits": 199,
+    "minBits": 181,
+    "n": 99,
+    "nearest": 55,
+    "reverts": 0,
+    "rounding": "floor",
+    "worstInput": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "toFixed18Up": {
+    "maxErrUlp": "1.0000",
+    "meanBits": 201,
+    "minBits": 182,
+    "n": 99,
+    "nearest": 65,
+    "reverts": 0,
+    "rounding": "ceil",
+    "worstInput": "0x0000000000000000000000000000000000000000000000000000000000000001"
   },
   "zeroFloorSub": {
+    "maxErrUlp": "0.0000",
     "meanBits": 256,
     "minBits": 256,
     "n": 189,
+    "nearest": 189,
     "reverts": 11,
+    "rounding": "exact",
     "worstInput": ""
   }
 }

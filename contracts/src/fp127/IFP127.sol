@@ -20,6 +20,16 @@ interface IFP127 {
     ///      (matches Huff: signed high word times 1e18 plus the truncated
     ///      unsigned low word product). Cannot overflow for any int256 input.
     function toFixed18(int256 x) external pure returns (int256 r);
+    /// @notice Convert a 127.128 value to 18-decimal fixed-point, rounding toward
+    ///         negative infinity: toFixed18 under the name that says its
+    ///         direction. For an amount a protocol pays out.
+    function toFixed18Down(int256 x) external pure returns (int256 r);
+    /// @notice Convert a 127.128 value to 18-decimal fixed-point, rounding toward
+    ///         positive infinity: ceil(x * 1e18 / 2^128). For an amount a
+    ///         protocol charges.
+    /// @dev The remainder of x * 1e18 modulo 2^128 is the low 128 bits of
+    ///      (x mod 2^128) * 1e18, a product below 2^188.
+    function toFixed18Up(int256 x) external pure returns (int256 r);
     /// @notice a + b. Reverts with Overflow on signed overflow.
     function add(int256 a, int256 b) external pure returns (int256 r);
     /// @notice a - b. Reverts with Overflow on signed overflow.
@@ -40,64 +50,92 @@ interface IFP127 {
     ///      DivisionByZero when b == 0 (the Huff returned garbage) and with
     ///      Overflow when the quotient does not fit in int256 (the Huff wrapped).
     function div(int256 a, int256 b) external pure returns (int256 r);
-    /// @notice 2^x.
+    /// @notice floor(a * b / 2^128), toward negative infinity: mul under the
+    ///         name that says its direction.
+    function mulDown(int256 a, int256 b) external pure returns (int256 r);
+    /// @notice ceil(a * b / 2^128), toward positive infinity.
+    /// @dev The floor plus one when the low 128 bits of the 512-bit product
+    ///      (the same in two's complement as unsigned) are not all zero.
+    function mulUp(int256 a, int256 b) external pure returns (int256 r);
+    /// @notice a / b in 127.128, rounded toward negative infinity. div truncates
+    ///         toward zero, which rounds a negative quotient up; this does not.
+    function divDown(int256 a, int256 b) external pure returns (int256 r);
+    /// @notice a / b in 127.128, rounded toward positive infinity.
+    function divUp(int256 a, int256 b) external pure returns (int256 r);
+    /// @notice 2^x, rounded to nearest.
     /// @dev Reverts with Overflow for x >= 127 (2^127 is 2^255 raw, which does
     ///      not fit; the Huff returned MAX_UINT256 above 127 and wrapped at 127
-    ///      exactly). Returns 0 for x < -128, where the true value is below one
-    ///      ULP, exactly as the Huff did.
+    ///      exactly). v5: floor(x) and the fraction are split exactly, the
+    ///      fraction goes through the double-word kernel and the result is
+    ///      rounded once, so the answer is the nearest word (ties up: 2^-129 is
+    ///      one ULP). Exact for integer x.
     function exp2(int256 x) external pure returns (int256 r);
-    /// @notice e^x, computed as 2^(x * log2(e)).
+    /// @notice e^x, rounded to nearest.
     /// @dev Reverts with Overflow for x > 88 (the Huff returned MAX_UINT256).
-    ///      Returns 0 for x < -88 as the Huff did. exp(0) is exactly ONE.
+    ///      exp(0) is exactly ONE. v5: 2^(x log2 e) with log2 e to 2^-384, the
+    ///      integer part and the fraction split exactly and the fraction through
+    ///      the double-word kernel, rounded once: the nearest word on every
+    ///      input tested, where v4's one-word polynomial (2^-145 relative) was
+    ///      4e32 ULPs off near e^88. Below about -89.4 the value is under half
+    ///      an ULP and the result is 0; v4 returned 0 from -88, two ULPs early.
     function exp(int256 x) external pure returns (int256 r);
-    /// @notice 10^x, computed as 2^(x * log2(10)).
-    /// @dev The domain is decided by the checked 128-bit product x * log2(10),
-    ///      exactly as before (absurd x reverts with Overflow, the exp2 range
-    ///      checks then apply); the value is computed from the same product at
-    ///      2^-192 so no bits are lost before exp2.
+    /// @notice 10^x, rounded to nearest.
+    /// @dev v5: 2^(x log2 10) with log2 10 to 2^-384; the integer part of the
+    ///      exponent is formed exactly, so it alone decides Overflow (from 2^127)
+    ///      and underflow to 0 (below 2^-129), for any x.
     function exp10(int256 x) external pure returns (int256 r);
-    /// @notice log2(x) for x > 0.
+    /// @notice log2(x) for x > 0, rounded to nearest.
     /// @dev Reverts with OutOfRange for x <= 0 (the Huff returned 0). Exact for
-    ///      powers of two. Otherwise log2g at 2^-192, rounded to nearest.
+    ///      powers of two. v5: log2g at 2^-192 (error under 2^-145) is rounded
+    ///      when that cannot change the rounding; within 2^-145 of a midpoint
+    ///      (about one input in 2^17) the double-word l2p decides.
     function log2(int256 x) external pure returns (int256 r);
-    /// @notice ln(x) = log2(x) * ln(2) for x > 0, scaled at 2^-192 before one
-    ///         rounding. Reverts with OutOfRange otherwise.
+    /// @notice ln(x) = log2(x) * ln(2) for x > 0, rounded to nearest. Reverts
+    ///         with OutOfRange otherwise.
+    /// @dev The one-word log2 scaled at 2^-192, with the double-word fallback
+    ///      near a midpoint, as log2.
     function ln(int256 x) external pure returns (int256 r);
-    /// @notice log10(x) = log2(x) / log2(10) for x > 0, scaled at 2^-192 before
-    ///         one rounding. Reverts with OutOfRange otherwise.
+    /// @notice log10(x) = log2(x) / log2(10) for x > 0, rounded to nearest.
+    ///         Reverts with OutOfRange otherwise.
     function log10(int256 x) external pure returns (int256 r);
-    /// @notice ceil(log2(x)) for x > 0. Exact for powers of two.
-    /// @dev Reverts with OutOfRange for x <= 0 (the Huff read garbage).
+    /// @notice ceil(log2(x)) for x > 0: msb(x) - 128, plus one unless x is a
+    ///         power of two. Exact.
+    /// @dev Reverts with OutOfRange for x <= 0 (the Huff read garbage). v4 took
+    ///      ceil of the rounded log2, which is one low for x just above a power
+    ///      of two.
     function log2Up(int256 x) external pure returns (int256 r);
     /// @notice sqrt(x) for x >= 0.
     /// @dev Reverts with OutOfRange for x < 0 (the Huff read garbage). Initial
     ///      guess 2^floor((128 + msb)/2), times sqrt(2) when the exponent is
     ///      odd, then seven Newton steps. Verbatim port of FP127_SQRT.
     function sqrt(int256 x) external pure returns (int256 r);
-    /// @notice x^y = 2^(y * log2(x)) for x >= 0, with the product y * log2(x)
-    ///         formed at 2^-192 so the exponent keeps its guard bits.
+    /// @notice x^y = 2^(y * log2(x)) for x >= 0, rounded to nearest.
     /// @dev Special cases in Huff order: y == 0 gives 1 (including 0^0); x == 0
-    ///      gives 0; x == 1 gives 1; x < 0 reverts with OutOfRange. Exact
-    ///      shortcuts for y in {1, 2, 3, 4, 1/2, 1/4, -1} and for x in {2, 10}
-    ///      are kept because they are both cheaper and more accurate than the
-    ///      general path, and because the Huff had them. The general path (v4)
-    ///      takes log2 unrounded at 2^-192 and multiplies by y there; the
-    ///      domain is decided first by the checked 128-bit product, as exp10
-    ///      does, so an absurd y reverts with Overflow and the guard product
-    ///      cannot wrap. Through v3 the product was formed at 128 bits, which
-    ///      cost about seven bits on (1 + r)^n with a per-second r.
+    ///      gives 0; x == 1 gives 1; x < 0 reverts with OutOfRange. Shortcuts
+    ///      y == 1 (x itself), y == 2 (the 512-bit square, rounded), x == 2
+    ///      (exp2) and x == 10 (exp10), all correctly rounded. The general path
+    ///      (v5) takes log2(x) to 2^-299 in the double word (l2p), forms
+    ///      y log2(x) exactly from it, splits integer and fraction, and runs the
+    ///      fraction through the double-word kernel with one rounding. The error
+    ///      is under 2^-299 (1 + |y|) relative before that rounding: the
+    ///      nearest word whenever |y| x^y < 2^140 or so, faithful to
+    ///      |y| x^y < 2^170. v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored
+    ///      or truncated; they now take the general path, which is nearest.
     function pow(int256 x, int256 y) external pure returns (int256 r);
-    /// @notice x^floor(n) for an integer exponent, by binary exponentiation on
-    ///         a 256-bit mantissa with a separate binary exponent, rounded to
-    ///         nearest once at the end: within one ULP for every n, exact
-    ///         whenever the true value is representable. Negative n inverts
-    ///         the final mantissa, so x^-n is as accurate as x^n.
+    /// @notice x^floor(n) for an integer exponent, rounded to nearest: binary
+    ///         exponentiation on a 256-bit mantissa with a separate binary
+    ///         exponent, rounded once; when that mantissa's error bound
+    ///         (k + 5) 2^-255, k = |n|, straddles a rounding midpoint, the same
+    ///         product on a 512-bit mantissa decides. Exact whenever the true
+    ///         value is representable. Negative n inverts the mantissa, so x^-n
+    ///         is as accurate as x^n.
     /// @dev Maker's rpow and PRBMath's powu square at the format's own
     ///      precision and floor on every step, so each squaring loses a bit of
     ///      the fraction; here |x| is written as m 2^(e-255) with m in
     ///      [2^255, 2^256), every product keeps the top 256 bits of the 512-bit
-    ///      result (relative error 2^-255 a step, at most 254 steps), and the
-    ///      word is formed from (m, e) with one rounding. 0^0 = 1.
+    ///      result, and the word is formed from (m, e) with one rounding. v4
+    ///      stopped there and was up to 1.3e6 ULPs off for results near 2^127
+    ///      with n near 2^25. 0^0 = 1.
     function powu(int256 x, int256 n) external pure returns (int256 r);
     /// @notice (1 + rate)^floor(n): n periods of compounding at rate, through
     ///         powu, so a per-second rate over years keeps every bit the format
@@ -105,10 +143,12 @@ interface IFP127 {
     ///         so nothing is lost before the exponentiation; on an 18-decimal
     ///         grid the rate itself would have been the first loss.
     function compound(int256 rate, int256 n) external pure returns (int256 r);
-    /// @notice Cube root, defined for all x: cbrt(-x) = -cbrt(x).
-    /// @dev Shortcuts for 8, 27, 64. Otherwise pow(|x|, 1/3) with the sign
-    ///      restored, exactly as the Huff did (the negative path goes straight
-    ///      to pow and does not see the shortcuts).
+    /// @notice Cube root, defined for all x: cbrt(-x) = -cbrt(x). Rounded to
+    ///         nearest; exact for perfect cubes.
+    /// @dev v5: 2^(log2|x| / 3), with log2 from l2p (2^-299), the division by
+    ///      three done exactly on the 512-bit value and the fraction through the
+    ///      double-word kernel. v4 was pow(|x|, 1/3) with the exponent 1/3
+    ///      floored to 128 bits, which put large results 1.6e14 ULPs off.
     function cbrt(int256 x) external pure returns (int256 r);
     /// @notice Geometric mean sqrt(a * b). Reverts with OutOfRange if a * b < 0.
     function gavg(int256 a, int256 b) external pure returns (int256 r);
@@ -171,49 +211,57 @@ interface IFP127 {
     ///      The last two digits are the sqrt and the final reciprocal flooring.
     function pi(int256 terms) external pure returns (int256 r);
     /// @notice Principal branch of the Lambert W function, W(x) e^W(x) = x, for
-    ///         x >= -1/e.
-    /// @dev Reverts with OutOfRange below -1/e (the Huff returned 0). W(0) = 0
-    ///      and W(1..5) come from the table. Everything else is seeded to five
-    ///      to eight bits and refined by four FSC steps and one IB step, which
-    ///      measured at 126 to 128 correct bits across the domain. Seeds:
-    ///      Winitzki's L (1 - ln(1 + L) / (2 + L)) with L = ln(1 + x) for x > 0;
-    ///      the origin series x - x^2 + 3/2 x^3 for -1/4 < x < 0; the
-    ///      branch-point series -1 + p - p^2/3 + 11/72 p^3, p = sqrt(2 (1 + e x)),
-    ///      down to -1/e. The Huff used a 64-entry interpolation table with two
-    ///      steps, which gave 50 to 100 bits on (0, 64), read past the table
-    ///      above 64 and ran out of gas below 0.
+    ///         x >= -1/e, rounded to nearest.
+    /// @dev Reverts with OutOfRange below -1/e (the Huff returned 0). W(x) = x
+    ///      for |x| < 2^-65 (the nearest word), and W(1..5) come from the table. Within 2^-40 of the branch point in
+    ///      1 + e x, the branch-point series in p = sqrt(2 (1 + e x)) with
+    ///      1 + e x to 2^-254 seeds the final step directly. Everything else is
+    ///      seeded to five to eight bits and refined by four FSC steps and one IB
+    ///      step in one-word arithmetic (126 to 128 bits away from -1/e), then
+    ///      by the double-word Newton step lwfin. Seeds: Winitzki's
+    ///      L (1 - ln(1 + L) / (2 + L)) with L = ln(1 + x) for x > 0; the origin
+    ///      series x - x^2 + 3/2 x^3 for -1/4 < x < 0; the branch-point series
+    ///      -1 + p - p^2/3 + 11/72 p^3 down to -1/e. The Huff used a 64-entry
+    ///      interpolation table with two steps, which gave 50 to 100 bits on
+    ///      (0, 64), read past the table above 64 and ran out of gas below 0.
     function lambertW0(int256 x) external pure returns (int256 r);
     /// @notice Secondary real branch of the Lambert W function, W(x) e^W(x) = x
-    ///         with W(x) <= -1, for -1/e <= x < 0.
-    /// @dev Reverts with OutOfRange below -1/e and for x >= 0. Returns exactly
-    ///      -ONE at the branch point. Seeds: the branch-point series
-    ///      -1 - p - p^2/3 - 11/72 p^3, p = sqrt(2 (1 + e x)), for x < -1/4; the
-    ///      asymptotic L - ln(-L) + ln(-L) / L with L = ln(-x) for -1/4 <= x < 0.
-    ///      Five log-form Newton steps follow (seed 8 to 40 bits, each step
-    ///      doubles). Measured 126 to 128 correct bits across the domain; about
-    ///      65 bits within 2^-20 of -1/e, where the slope is infinite and one ULP
-    ///      of input moves W by 2^-63. The archived Huff lambertwm1 was never
-    ///      functional and is not the reference for this routine.
+    ///         with W(x) <= -1, for -1/e <= x < 0, rounded to nearest.
+    /// @dev Reverts with OutOfRange below -1/e and for x >= 0. Within 2^-40 of
+    ///      the branch point in 1 + e x, the series -1 - p - p^2/3 - 11/72 p^3
+    ///      - 43/540 p^4, p = sqrt(2 (1 + e x)) with 1 + e x to 2^-254, seeds the
+    ///      final step directly. Elsewhere: the branch-point series for x < -1/4,
+    ///      the asymptotic L - ln(-L) + ln(-L) / L with L = ln(-x) for
+    ///      -1/4 <= x < 0, five one-word log-form Newton steps, then the
+    ///      double-word step lwfin. The smallest input, -floor(2^128 / e), is
+    ///      2^-128 inside -1/e and its W is -1 - 2^-63.3, not -1, which v4
+    ///      returned. The archived Huff lambertwm1 was never functional and is
+    ///      not the reference for this routine.
     function lambertWm1(int256 x) external pure returns (int256 r);
-    /// @notice ln(1 + x). The sum 1 + x is exact in 127.128, so this is ln of
-    ///         an exact argument, rounded once; it exists because on an
-    ///         18-decimal grid the sum is where a small x loses its digits.
+    /// @notice ln(1 + x), rounded to nearest. The sum 1 + x is exact in 127.128,
+    ///         so this is ln of an exact argument, rounded once; it exists
+    ///         because on an 18-decimal grid the sum is where a small x loses
+    ///         its digits.
     function log1p(int256 x) external pure returns (int256 r);
-    /// @notice e^x - 1, with the one subtracted before rounding so a small x
-    ///         keeps its relative precision: a 27-term series at 2^-192 for
-    ///         |x| <= 1/16, the exp kernel at 2^-192 for |x| < 1, exp(x) - 1
-    ///         beyond, where the subtraction cannot cancel.
+    /// @notice e^x - 1, rounded to nearest, with the one subtracted before the
+    ///         rounding so a small x keeps its relative precision: a 27-term
+    ///         series at 2^-192 for |x| <= 1/16, the double-word exp beyond.
     function expm1(int256 x) external pure returns (int256 r);
-    /// @notice sinh(x). For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...))
-    ///         at 2^-192, 20 terms, rounded once; beyond, (e^x - e^-x) / 2 from
-    ///         the rounded exponentials, where the difference cannot cancel.
+    /// @notice sinh(x), rounded to nearest. For |x| < 1 the odd series
+    ///         x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms;
+    ///         beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the
+    ///         difference taken before the one rounding.
     function sinh(int256 x) external pure returns (int256 r);
-    /// @notice cosh(x) = (e^x + e^-x) / 2 from the rounded exponentials; both
-    ///         terms are positive, so nothing cancels. cosh(0) is exactly one.
+    /// @notice cosh(x) = (e^x + e^-x) / 2, rounded to nearest: both halves from
+    ///         the double-word kernel, summed before the one rounding. cosh(0) is
+    ///         exactly one.
     function cosh(int256 x) external pure returns (int256 r);
-    /// @notice tanh(x). For |x| < 1/4, u / (u + 2) with u = e^(2x) - 1 at
-    ///         2^-192; up to |x| < 44, 1 - 2 / (e^(2x) + 1); beyond, exactly
-    ///         +-1, which the format cannot distinguish from the truth.
+    /// @notice tanh(x), rounded to nearest. For |x| < 1/4, u / (u + 2) with
+    ///         u = e^(2|x|) - 1 at 2^-192; up to |x| < 46, (1 - w) / (1 + w) with
+    ///         w = e^(-2|x|) at 2^-192; beyond, exactly +-1, the nearest word.
+    /// @dev v5 takes the exponentials from the double-word kernel and divides
+    ///      once at 2^-192. v4 subtracted a rounded quotient from one and
+    ///      returned +-1 from |x| = 44, where 1 - tanh is still four ULPs.
     function tanh(int256 x) external pure returns (int256 r);
     /// @notice atanh(x) = (ln(1 + x) - ln(1 - x)) / 2, both logarithms taken
     ///         unrounded at 2^-192 and the difference scaled and rounded once.

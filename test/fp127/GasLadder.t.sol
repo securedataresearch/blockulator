@@ -134,6 +134,11 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("mul")) return FixedPointMathLib.sMulWad(a, b);
         if (h == keccak256("div")) return FixedPointMathLib.sDivWad(a, b);
         if (h == keccak256("pow")) return FixedPointMathLib.powWad(a, b);
+        // Solady's directed WAD ops are unsigned
+        if (h == keccak256("mulDown") && a >= 0 && b >= 0) return int256(FixedPointMathLib.mulWad(uint256(a), uint256(b)));
+        if (h == keccak256("mulUp") && a >= 0 && b >= 0) return int256(FixedPointMathLib.mulWadUp(uint256(a), uint256(b)));
+        if (h == keccak256("divDown") && a >= 0 && b > 0) return int256(FixedPointMathLib.divWad(uint256(a), uint256(b)));
+        if (h == keccak256("divUp") && a >= 0 && b > 0) return int256(FixedPointMathLib.divWadUp(uint256(a), uint256(b)));
         if (h == keccak256("add")) return a + b;
         if (h == keccak256("sub")) return a - b;
         revert("na");
@@ -302,6 +307,8 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("normCdf")) return FP127Lib.normCdf(x);
         if (h == keccak256("fromFixed18")) return FP127Lib.fromFixed18(x);
         if (h == keccak256("toFixed18")) return FP127Lib.toFixed18(x);
+        if (h == keccak256("toFixed18Down")) return FP127Lib.toFixed18Down(x);
+        if (h == keccak256("toFixed18Up")) return FP127Lib.toFixed18Up(x);
         revert("na");
     }
 
@@ -322,6 +329,10 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("dist")) return FP127Lib.dist(a, b);
         if (h == keccak256("zeroFloorSub")) return FP127Lib.zeroFloorSub(a, b);
         if (h == keccak256("gcd")) return FP127Lib.gcd(a, b);
+        if (h == keccak256("mulDown")) return FP127Lib.mulDown(a, b);
+        if (h == keccak256("mulUp")) return FP127Lib.mulUp(a, b);
+        if (h == keccak256("divDown")) return FP127Lib.divDown(a, b);
+        if (h == keccak256("divUp")) return FP127Lib.divUp(a, b);
         revert("na");
     }
 
@@ -431,6 +442,18 @@ contract GasLadder is FP127Harness {
         _run1("cosh", xs, false);
         _run1("tanh", xs, false);
         _run1("atanh", [R_SEC, ONE >> 60, -(ONE >> 40), ONE / 1000, -ONE / 100, ONE / 2, ONE - 1], false);
+    }
+
+    // v5: the directed edge ops, on the arithmetic ladder
+    function test_ladder_v5_directed() public view {
+        (int256[6] memory a, int256[6] memory b) = _binary();
+        _run2("mulDown", a, b, true);
+        _run2("mulUp", a, b, true);
+        _run2("divDown", a, b, true);
+        _run2("divUp", a, b, true);
+        int256[7] memory xs = _unary();
+        _run1("toFixed18Down", xs, false);
+        _run1("toFixed18Up", xs, false);
     }
 
     function test_ladder_v4_erf() public view {

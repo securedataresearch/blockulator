@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {FP256Harness} from "../base/FP256Harness.sol";
 import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
+import {IFP256X} from "../../contracts/src/fp256/IFP256X.sol";
 
 /// @title Equivalence256
 /// @notice The deployed object and the inline library return identical
@@ -11,7 +12,7 @@ import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
 ///         promises (section 15 of the design).
 contract Equivalence256 is FP256Harness {
     function _objLib(bytes memory call, string memory what) internal view {
-        _assertSame(_try(address(obj), call), _try(address(lib), call), what);
+        _assertSame(_try(_objFor(what), call), _try(address(lib), call), what);
     }
 
     function testFuzz_objEqLib_add(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.add, (a, b)), "add"); }
@@ -26,11 +27,11 @@ contract Equivalence256 is FP256Harness {
     function testFuzz_objEqLib_compound(int256 r, int256 n) public view { _objLib(abi.encodeCall(IFP256.compound, (r, n)), "compound"); }
     function testFuzz_objEqLib_log1p(int256 x) public view { _objLib(abi.encodeCall(IFP256.log1p, (x)), "log1p"); }
     function testFuzz_objEqLib_expm1(int256 x) public view { _objLib(abi.encodeCall(IFP256.expm1, (x)), "expm1"); }
-    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP256.erf, (x)), "erf"); }
-    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP256.erfc, (x)), "erfc"); }
-    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP256.normCdf, (x)), "normCdf"); }
-    function testFuzz_objEqLib_lambertW0(int256 x) public view { _objLib(abi.encodeCall(IFP256.lambertW0, (x)), "lambertW0"); }
-    function testFuzz_objEqLib_lambertWm1(int256 x) public view { _objLib(abi.encodeCall(IFP256.lambertWm1, (x)), "lambertWm1"); }
+    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP256X.erf, (x)), "erf"); }
+    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP256X.erfc, (x)), "erfc"); }
+    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP256X.normCdf, (x)), "normCdf"); }
+    function testFuzz_objEqLib_lambertW0(int256 x) public view { _objLib(abi.encodeCall(IFP256X.lambertW0, (x)), "lambertW0"); }
+    function testFuzz_objEqLib_lambertWm1(int256 x) public view { _objLib(abi.encodeCall(IFP256X.lambertWm1, (x)), "lambertWm1"); }
     function testFuzz_objEqLib_neg(int256 x) public view { _objLib(abi.encodeCall(IFP256.neg, (x)), "neg"); }
     function testFuzz_objEqLib_abs(int256 x) public view { _objLib(abi.encodeCall(IFP256.abs, (x)), "abs"); }
     function testFuzz_objEqLib_sign(int256 x) public view { _objLib(abi.encodeCall(IFP256.sign, (x)), "sign"); }
@@ -42,6 +43,20 @@ contract Equivalence256 is FP256Harness {
     function testFuzz_objEqLib_toFP127(int256 x) public view { _objLib(abi.encodeCall(IFP256.toFP127, (x)), "toFP127"); }
     function testFuzz_objEqLib_fromFixed18(int256 x) public view { _objLib(abi.encodeCall(IFP256.fromFixed18, (x)), "fromFixed18"); }
     function testFuzz_objEqLib_toFixed18(int256 x) public view { _objLib(abi.encodeCall(IFP256.toFixed18, (x)), "toFixed18"); }
+    function testFuzz_objEqLib_mulDown(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.mulDown, (a, b)), "mulDown"); }
+    function testFuzz_objEqLib_mulUp(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.mulUp, (a, b)), "mulUp"); }
+    function testFuzz_objEqLib_divDown(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.divDown, (a, b)), "divDown"); }
+    function testFuzz_objEqLib_divUp(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.divUp, (a, b)), "divUp"); }
+    function testFuzz_objEqLib_toUintDown(int256 x) public view { _objLib(abi.encodeCall(IFP256.toUintDown, (x)), "toUintDown"); }
+    function testFuzz_objEqLib_toUintUp(int256 x) public view { _objLib(abi.encodeCall(IFP256.toUintUp, (x)), "toUintUp"); }
+    function testFuzz_objEqLib_toIntDown(int256 x) public view { _objLib(abi.encodeCall(IFP256.toIntDown, (x)), "toIntDown"); }
+    function testFuzz_objEqLib_toIntUp(int256 x) public view { _objLib(abi.encodeCall(IFP256.toIntUp, (x)), "toIntUp"); }
+    function testFuzz_objEqLib_floor(int256 x) public view { _objLib(abi.encodeCall(IFP256.floor, (x)), "floor"); }
+    function testFuzz_objEqLib_ceil(int256 x) public view { _objLib(abi.encodeCall(IFP256.ceil, (x)), "ceil"); }
+    function testFuzz_objEqLib_fromUintDown(uint256 x) public view { _objLib(abi.encodeCall(IFP256.fromUintDown, (x)), "fromUintDown"); }
+    function testFuzz_objEqLib_fromUintUp(uint256 x) public view { _objLib(abi.encodeCall(IFP256.fromUintUp, (x)), "fromUintUp"); }
+    function testFuzz_objEqLib_toFixed18Down(int256 x) public view { _objLib(abi.encodeCall(IFP256.toFixed18Down, (x)), "toFixed18Down"); }
+    function testFuzz_objEqLib_toFixed18Up(int256 x) public view { _objLib(abi.encodeCall(IFP256.toFixed18Up, (x)), "toFixed18Up"); }
 
     // ---- a valid number from fuzz input -------------------------------------
 
@@ -129,6 +144,151 @@ contract Equivalence256 is FP256Harness {
         x = bound(x, -(int256(1) << 236), int256(1) << 236);
         // one rounding each way at 2^-236 relative cannot move an 18-decimal word
         assertEq(obj.toFixed18(obj.fromFixed18(x)), x, "toFixed18(fromFixed18(w))");
+    }
+
+    // ---- release four: directed rounding brackets the nearest word ------------
+
+    /// The next word above a positive x (one ULP up; the carry moves the exponent).
+    function _up1(int256 x) internal pure returns (int256) { return x + 1; }
+
+    function testFuzz_prop_mul_directed(int256 wa, int256 wb) public view {
+        int256 a = _num(wa, -1000, 1000);
+        int256 b = _num(wb, -1000, 1000);
+        int256 n = obj.mul(a, b);
+        int256 d = obj.mulDown(a, b);
+        int256 u = obj.mulUp(a, b);
+        // Down <= nearest <= Up, at most one ULP apart, equal exactly when the product is exact
+        assertEq(obj.lt(n, d), 0, "mulDown <= mul");
+        assertEq(obj.lt(u, n), 0, "mul <= mulUp");
+        assertTrue(d == u || n == d || n == u, "nearest is one of the two");
+        if (d != u) {
+            if (d >= 0) assertEq(u, _up1(d), "Up is Down plus one ULP");
+            else assertEq(d, _up1(u), "magnitudes one ULP apart");
+        }
+        // the sign rule: Up on -x is -(Down on x)
+        assertEq(obj.mulUp(obj.neg(a), b), obj.neg(d), "mulUp(-a, b) = -mulDown(a, b)");
+    }
+
+    function testFuzz_prop_div_directed(int256 wa, int256 wb) public view {
+        int256 a = _num(wa, -1000, 1000);
+        int256 b = _num(wb, -1000, 1000);
+        int256 n = obj.div(a, b);
+        int256 d = obj.divDown(a, b);
+        int256 u = obj.divUp(a, b);
+        assertEq(obj.lt(n, d), 0, "divDown <= div");
+        assertEq(obj.lt(u, n), 0, "div <= divUp");
+        assertTrue(d == u || n == d || n == u, "nearest is one of the two");
+        if (d != u) {
+            if (d >= 0) assertEq(u, _up1(d), "Up is Down plus one ULP");
+            else assertEq(d, _up1(u), "magnitudes one ULP apart");
+        }
+        // exact quotients: (a b) / b when a b is exact
+        if (obj.mulDown(a, b) == obj.mulUp(a, b)) {
+            int256 p = obj.mul(a, b);
+            assertEq(obj.divDown(p, b), a, "divDown of an exact product");
+            assertEq(obj.divUp(p, b), a, "divUp of an exact product");
+        }
+    }
+
+    function testFuzz_prop_toUint_directed(int256 w) public view {
+        int256 x = _num(w, -8, 254);
+        x = obj.abs(x);
+        uint256 d = obj.toUintDown(x);
+        uint256 u = obj.toUintUp(x);
+        assertTrue(u == d || u == d + 1, "ceil is floor or floor + 1");
+        // floor(x) as a number is at or below x, ceil(x) at or above (both exact below 2^237)
+        if (d < (uint256(1) << 237)) {
+            assertEq(obj.lt(x, obj.fromUint(d)), 0, "floor <= x");
+            assertEq(obj.lt(obj.fromUint(u), x), 0, "x <= ceil");
+            assertEq(u == d, obj.eq(obj.fromUint(d), x) == 1, "equal exactly for integers");
+        }
+        assertEq(obj.floor(x), d < (uint256(1) << 237) ? obj.fromUint(d) : x, "floor as a number");
+    }
+
+    function testFuzz_prop_toInt_directed(int256 w) public view {
+        int256 x = _num(w, -8, 250);
+        int256 d = obj.toIntDown(x);
+        int256 u = obj.toIntUp(x);
+        assertTrue(u == d || u == d + 1, "ceil is floor or floor + 1");
+        assertEq(obj.toIntUp(obj.neg(x)), -d, "ceil(-x) = -floor(x)");
+        assertEq(obj.ceil(obj.neg(x)), obj.neg(obj.floor(x)), "ceil(-x) = -floor(x) as numbers");
+    }
+
+    function testFuzz_prop_toFixed18_directed(int256 w) public view {
+        int256 x = _num(w, -80, 180);
+        int256 n = obj.toFixed18(x);
+        int256 d = obj.toFixed18Down(x);
+        int256 u = obj.toFixed18Up(x);
+        assertTrue(u == d || u == d + 1, "Up is Down or Down + 1");
+        assertTrue(n == d || n == u, "nearest is one of the two");
+        assertEq(obj.toFixed18Up(obj.neg(x)), -d, "Up(-x) = -Down(x)");
+        // exact 18-decimal words go through unchanged
+        int256 f = obj.fromFixed18(d);
+        if (obj.toFixed18Down(f) == obj.toFixed18Up(f)) assertEq(obj.toFixed18Down(f), d);
+    }
+
+    function testFuzz_prop_fromUint_directed(uint256 v) public view {
+        int256 d = obj.fromUintDown(v);
+        int256 u = obj.fromUintUp(v);
+        int256 n = obj.fromUint(v);
+        assertTrue(n == d || n == u, "nearest is one of the two");
+        if (v < (uint256(1) << 237)) assertTrue(d == u && d == n, "exact below 2^237");
+        else assertTrue(u == d || u == _up1(d), "one ULP apart");
+        assertLe(obj.toUintDown(d), v, "Down at or below");
+        if (v <= type(uint256).max - (uint256(1) << 19)) assertGe(obj.toUintUp(u), v, "Up at or above");
+    }
+
+    // ---- release four: exact ties round away from zero ------------------------
+
+    /// c^n for an odd c with c^n of exactly 238 bits: a tie, so the word is
+    /// fromUint(c^n), whose single rounding takes it away from zero.
+    function _tie(uint256 seed, uint256 n) internal pure returns (uint256 c, uint256 p) {
+        uint256 bits = (238 + n - 1) / n;
+        for (uint256 i; i < 64; i++) {
+            c = (uint256(keccak256(abi.encode(seed, i))) >> (256 - bits)) | (uint256(1) << (bits - 1)) | 1;
+            p = c;
+            for (uint256 j = 1; j < n; j++) p *= c;
+            if (p >> 237 == 1) return (c, p);
+        }
+        return (0, 0);
+    }
+
+    function testFuzz_ties_pow_powu(uint256 seed, uint8 nn, int16 sk) public view {
+        uint256 n = bound(uint256(nn), 2, 9);
+        (uint256 c, uint256 p) = _tie(seed, n);
+        vm.assume(c != 0);
+        int256 k = int256(bound(int256(sk), -200, 200));
+        int256 scale = _mk(false, k, uint256(1) << 236);
+        int256 x = obj.mul(obj.fromUint(c), scale);
+        int256 want = obj.mul(obj.fromUint(p), _mk(false, k * int256(n), uint256(1) << 236));
+        assertEq(obj.pow(x, obj.fromUint(n)), want, "pow(c 2^k, n) is the tie rounded away");
+        assertEq(obj.powu(x, int256(n)), want, "powu(c 2^k, n)");
+        if (n % 2 == 1) assertEq(obj.powu(obj.neg(x), int256(n)), obj.neg(want), "powu(-c, odd n)");
+        // c^2 to the n/2: the tie through a square root
+        if (n % 2 == 1 && n <= 5) {
+            int256 y = obj.div(obj.fromUint(n), TWO);
+            assertEq(obj.pow(obj.mul(x, x), y), want, "pow(c^2 2^2k, n/2)");
+        }
+    }
+
+    function testFuzz_ties_compound(uint256 seed, uint8 nn) public view {
+        uint256 n = bound(uint256(nn), 2, 9);
+        (uint256 c, uint256 p) = _tie(seed, n);
+        vm.assume(c != 0);
+        // 1 + rate = c, and 1 + rate = c 2^-b in [1/2, 1) (a negative rate)
+        assertEq(obj.compound(obj.fromUint(c - 1), int256(n)), obj.fromUint(p), "compound(c - 1, n)");
+        uint256 b = 256 - _lz(c);
+        int256 r = obj.sub(_mk(false, -1, c << (237 - b)), ONE);
+        int256 want = obj.mul(obj.fromUint(p), _mk(false, -int256(b * n), uint256(1) << 236));
+        assertEq(obj.compound(r, int256(n)), want, "compound(c 2^-b - 1, n)");
+        // (1 + 2^-79)^3 and 3^150
+        assertEq(obj.compound(_mk(false, -79, uint256(1) << 236), 3),
+                 obj.mul(obj.fromUint(((uint256(1) << 79) + 1) ** 3), _mk(false, -237, uint256(1) << 236)), "(1 + 2^-79)^3");
+    }
+
+    function _lz(uint256 x) internal pure returns (uint256 n) {
+        n = 256;
+        while (x != 0) { x >>= 1; n--; }
     }
 
     function testFuzz_invalid_words_revert(int256 w) public view {

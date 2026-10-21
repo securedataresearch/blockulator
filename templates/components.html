@@ -82,7 +82,7 @@
 </tbody>
 </table>
 </div>
-<p class="note">Relative correct bits of the 127.128 result, msb(|truth|) − msb(|truth − got|), against mpmath at 200 decimal places over the committed vectors in <code>test/fp127/vectors/</code>. "exact" is bit-identical, or within 2 ULP for an approximated op. Reverts counts vectors where the oracle and the Yul both reject the input with the same error. Source: <a href="/data/precision.json">precision.json</a>.</p>
+<p class="note">Relative correct bits of the 127.128 result, msb(|truth|) − msb(|truth − got|), against the real truth (mpmath at 200 decimal places) over the committed vectors in <code>test/fp127/vectors/</code>, for results of magnitude 1 or more. "exact" is bit-identical with the truth. Every op is also held to its rounding contract: nearest within half an ULP, floor, ceil and trunc within one; <code>maxErrUlp</code> in the data. Reverts counts vectors where the oracle and the Yul both reject the input with the same error. Source: <a href="/data/precision.json">precision.json</a>.</p>
 {%- endcomponent %}
 
 {#- One ladder cell: the digits that agree with the truth, then the rest in the error colour.

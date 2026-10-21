@@ -4,6 +4,69 @@ A release is the public name for a set of deployed contracts. Each contract
 keeps its own version in its CREATE2 salt, because the salt names the address;
 `contracts/deployments/RELEASE.json` maps the release to every address.
 
+## Unreleased
+
+FP127 v5: in source, not yet deployed (salt `FP127 v5`, 55 ops, 17,157
+bytes of runtime). v4 stays live at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`.
+
+- Every transcendental returns the nearest word. `exp`, `exp2`, `exp10`,
+  `expm1`, `sinh`, `cosh`, `tanh`, `pow` and `cbrt` round once from a
+  double-word kernel good to about 2^−300; `ln`, `log2`, `log10` and `log1p`
+  fall back to a double-word log within 2^−145 of a midpoint; `powu` and
+  `compound` settle ambiguous roundings on a 512-bit mantissa; Lambert W
+  ends with a double-word Newton step. Random-input sweep, max error in
+  ULPs, v4 → v5: `exp` 4.0e32 → 0.5, `pow` 4.8e34 → 0.5, `cbrt` 1.6e14 →
+  0.5, `expm1` 8.2e31 → 0.5, `compound` 1.3e6 → 0.5, `lambertW0` 1,153 →
+  0.5, `lambertWm1` 253 → 0.5, `ln` 1.31 → 0.5, `log2` 1.88 → 0.5. `pow`
+  is the exception at extreme exponents: error under 2^−299 (1 + |y|)
+  relative, nearest while |y| x^y < 2^140 or so.
+- Directed rounding for the token edge: `mulUp`, `mulDown`, `divUp`,
+  `divDown`, `toFixed18Up`, `toFixed18Down`. `mul`, `div`, `sqrt` and
+  `toFixed18` are unchanged.
+- Domain ends now round to nearest: `exp` returns 0 below −90 (v4: −88, two
+  ULPs early), `expm1` −1 below −90, `exp2` 0 below −129, `tanh` ±1 from 46
+  (v4: 44, four ULPs early); `exp10` decides Overflow on the exact
+  exponent; `log2Up` is exact (v4 was one low just above a power of two);
+  `lambertWm1` at −floor(2^128/e) is −1 − 2^−63.3 (v4: −1).
+- `pow` keeps the shortcuts y = 1, y = 2 (now the rounded square), x = 2,
+  x = 10; y ∈ {3, 4, ½, ¼, −1}, which floored, take the general path.
+- The precision test measures the true distance to the real truth and holds
+  each op to its rounding contract (v4: within 2 ULP of a floored reference).
+- Gas through the object, medians: `exp` 7,076 (+1,544), `exp2` 4,664
+  (−696), `pow` 5,742 (−352), `cbrt` 7,270 (+551), `lambertW0` 41,481
+  (+5,242), `lambertWm1` 31,764 (+2,402), `atanh` 7,646 (−1,055); six more
+  selectors add about 90 to the other ops' dispatch.
+
+FP256 release four, not yet deployed: correctly rounded, and the edge.
+
+| component | version | Sepolia |
+|---|---|---|
+| FP256 | FP256 v4, 37 ops, 24,250 bytes | not yet deployed |
+| FP256X | FP256X v4, 5 ops, 23,891 bytes | not yet deployed |
+
+- Every FP256 op is correctly rounded or exact: 0 misrounded of 281,821
+  random inputs, and 0 when every input is forced through the second stage
+  (`docs/benchmarks/sweep.md`); release three had pow 8 in 20,000 off by
+  one ULP, ln 1, normCdf 1 in 4,000, compound up to 4 ULP (291 of 3,853),
+  lambertW0 up to 2 (668 of 2,000). Each fast value carries a stated error
+  bound; when it reaches the rounding boundary a second stage recomputes the
+  value in two words at 2^−510. pow, compound and powu compute exact ties
+  exactly. The bounds are measured against the models in
+  `scripts/fp256/generators/bounds.py`: none reaches 0.67 of its value.
+- The edge, rounding toward minus or plus infinity once from the exact
+  value: `mulDown`, `mulUp`, `divDown`, `divUp`, `toUintDown`, `toUintUp`,
+  `toIntDown`, `toIntUp`, `toFixed18Down`, `toFixed18Up`, `floor`, `ceil`,
+  `fromUintDown`, `fromUintUp`; a positive Up result never underflows to
+  zero.
+- Two objects from one source: FP256 (arithmetic, the edge, exp, ln, log1p,
+  expm1, pow, powu, compound, conversions) and FP256X (erf, erfc, normCdf,
+  lambertW0, lambertWm1), salts `FP256 v4` and `FP256X v4`; the inline
+  library holds all 42. `make predict-fp256x`, `deploy-fp256x-sepolia`,
+  `verify-fp256x-sepolia`.
+- Gas: the fast paths cost a few hundred gas more; the second stage, when it
+  runs, 36k (exp) to 436k (erfc's continued fraction); Lambert W always
+  takes one wide step, 152k at the median (109k before).
+
 ## Blockulator 2.0 (2026-10-16)
 
 Two rulers in one word: FP127 for the money range, FP256 for everything.

@@ -704,7 +704,7 @@
    "kinds": [
     "x"
    ],
-   "why": "the last value above FP127's floor",
+   "why": "two ULPs on FP127's grid",
    "fp127": [
     "-29944848289042584784776965453995602608128"
    ],
@@ -742,7 +742,7 @@
    "kinds": [
     "x"
    ],
-   "why": "zero on FP127's grid",
+   "why": "0.76 ULP on FP127's grid, which rounds to one",
    "fp127": [
     "-30285130655963523248240340061427370819584"
    ],

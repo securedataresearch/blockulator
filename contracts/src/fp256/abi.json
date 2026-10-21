@@ -231,101 +231,6 @@
   },
   {
     "type": "function",
-    "name": "erf",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "erfc",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "normCdf",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "lambertW0",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "lambertWm1",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
     "name": "powu",
     "stateMutability": "pure",
     "inputs": [
@@ -586,6 +491,292 @@
         "type": "int256",
         "name": "x",
         "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "mulDown",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "mulUp",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "divDown",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "divUp",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "toUintDown",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "uint256",
+        "name": "r",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "toUintUp",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "uint256",
+        "name": "r",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "toIntDown",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "toIntUp",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "floor",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "ceil",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "toFixed18Down",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "toFixed18Up",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "fromUintDown",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "x",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "fromUintUp",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "x",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
