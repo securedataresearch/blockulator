@@ -157,3 +157,9 @@ html { scrollbar-gutter: stable; }
 /* tabular numerals: every figure on the site takes the same width, so columns of digits line up; headlines keep proportional figures */
 body, table, .mono, code, pre, kbd, .chart svg text, .kv dd, .bars, .stamp { font-variant-numeric: tabular-nums; }
 h1, .hero .sub, .block h2, .askcard h2, .doc h2, .step h3 { font-variant-numeric: proportional-nums; }
+
+/* vernier dividers: a 1px rule with a fine tick every 8px and a long one every 80px. Static, so nothing to reduce under prefers-reduced-motion; the ticks repeat, so any width works */
+:root { --vernier: linear-gradient(var(--g-300), var(--g-300)) 0 100% / 100% 1px no-repeat, repeating-linear-gradient(90deg, var(--g-300) 0 1px, transparent 1px 80px) 0 100% / 100% 9px no-repeat, repeating-linear-gradient(90deg, var(--g-300) 0 1px, transparent 1px 8px) 0 100% / 100% 4px no-repeat; }
+.doc hr { border: 0; height: 9px; margin: 2.4em 0; background: var(--vernier); }
+.home .block + .block, .home .block + .ask { position: relative; }
+.home .block + .block::before, .home .block + .ask::before { content: ""; position: absolute; left: 0; right: 0; top: calc(clamp(56px, 8vw, 96px) / 2 - 5px); height: 9px; background: var(--vernier); }
