@@ -3,12 +3,16 @@ pragma solidity ^0.8.24;
 
 import {FP127Lib} from "fp127/FP127Lib.sol";
 import {FP256Lib} from "fp256/FP256Lib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 // The snippets of the "Integrating" sections (README, /library/, /library/fp256/),
 // compiled and run against the replays in test/examples/Integrating.t.sol.
 //
 // Two rules. Store the state in the format. Round toward the protocol at the token
 // edge: floor what is paid out, ceil what is taken in.
+//
+// Two moves that take roundings out: divide last (one 512-bit mulDiv, one rounding), and
+// keep an index as its logarithm (each accrual an exact add, one exp when it is read).
 //
 // The directed ops (FP127 mulUp, mulDown, divUp, divDown, toFixed18Up, toFixed18Down;
 // FP256 mulUp, mulDown, divUp, divDown, toUintUp, toUintDown, toIntUp, toIntDown,
@@ -166,5 +170,64 @@ library SwapCharge256 {
     /// amount x rate / 1e18 kept in the format (BasePool.sol:680-686 truncates it to wei)
     function upscale(uint256 amount, uint256 rateWad) internal pure returns (int256) {
         return FP256Lib.div(FP256Lib.mul(FP256Lib.fromUint(amount), FP256Lib.fromUint(rateWad)), FP256Lib.fromUint(1e18));
+    }
+}
+
+// ---- Moving the maths: fewer roundings, not more digits ------------------------------------
+
+/// Divide last (Resupply). ResupplyPairCore.sol:573 divides first, `1e36 / price`, and the
+/// floor made the rate 0. Moved to the end, debt * 1e36 * 1e5 / (price * 1e18 * collateral)
+/// is one 512-bit product and one division: one rounding, in the protocol's direction.
+library DivideLast {
+    /// LTV in units of 1e-5, rounded up: it is held against the borrower.
+    /// 1e23 is 1e36 * 1e5 / 1e18. The checked `*` reverts rather than wraps.
+    function ltvUp(uint256 debt, uint256 price, uint256 collateral) internal pure returns (uint256) {
+        return FixedPointMathLib.fullMulDivUp(debt, 1e23, price * collateral);
+    }
+
+    /// The most the position may owe, in debt-token wei, rounded down: it is paid out.
+    function maxBorrow(uint256 collateral, uint256 maxLTV, uint256 price) internal pure returns (uint256) {
+        return FixedPointMathLib.fullMulDiv(collateral * maxLTV, price, 1e23);
+    }
+
+    /// The same move on FP127 words a, b >= 0, c > 0: the 2^128 scales cancel, so the word
+    /// a * b / c is fullMulDiv on the raw integers, rounded once, down.
+    /// FP127Lib.div(FP127Lib.mul(a, b), c) rounds twice.
+    function mulDiv127(int256 a, int256 b, int256 c) internal pure returns (int256) {
+        require(a >= 0 && b >= 0 && c > 0, "a, b >= 0, c > 0");
+        uint256 r = FixedPointMathLib.fullMulDiv(uint256(a), uint256(b), uint256(c));
+        require(r < 1 << 255, "FP127 range");
+        return int256(r);
+    }
+}
+
+/// The index stored as a product: every accrual is an exp and a mul, two roundings.
+contract Index127 {
+    int256 public index = 1 << 128; // 1.0
+
+    function accrue(int256 ratePerSecond, uint256 dt) external {
+        index = FP127Lib.mul(index, FP127Lib.exp(ratePerSecond * int256(dt)));
+    }
+}
+
+/// The index stored as its logarithm: every accrual is an add, which never rounds.
+/// ratePerSecond is a continuous rate (ln of the growth per second) as an FP127 word.
+contract LogIndex127 {
+    int256 public logIndex; // ln(index); 0 is an index of 1
+
+    function accrue(int256 ratePerSecond, uint256 dt) external {
+        // a word times a whole number is an integer product; add only checks overflow
+        logIndex = FP127Lib.add(logIndex, ratePerSecond * int256(dt));
+    }
+
+    /// The one rounding, at the read: e^L to the nearest word (v5). Reverts above L = 88.
+    function index() external view returns (int256) {
+        return FP127Lib.exp(logIndex);
+    }
+
+    /// The same read in FP256: fromFP127 is exact below 2^109 and exp is correctly rounded,
+    /// so this is e^L rounded once, and it is not capped at 88.
+    function index256() external view returns (int256) {
+        return FP256Lib.exp(FP256Lib.fromFP127(logIndex));
     }
 }
