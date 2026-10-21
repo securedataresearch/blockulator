@@ -531,6 +531,234 @@ def op_fromUintDown(x): return encode_dir(Fraction(x % TWO256), False)
 def op_fromUintUp(x): return encode_dir(Fraction(x % TWO256), True)
 
 
+# ---- release four, #79: the ops FP127 has (FP256X2) ----------------------------
+# Exact rationals and integer roots where the value is algebraic (cbrt, hypot,
+# gavg, avg, dist, lerp, frac, round, gcd, factorial, inv), exact powers and
+# logarithms at the points where they are rational, mpmath at 300 digits
+# elsewhere.
+
+def _sqrtq(q: Fraction) -> int:
+    """The word nearest sqrt(q) for an exact q >= 0, as op_sqrt."""
+    if q == 0:
+        return 0
+    n, d = q.numerator, q.denominator
+    e = (n.bit_length() - d.bit_length()) // 2 - 1
+    while Fraction(4) ** (e + 1) <= q:
+        e += 1
+    while Fraction(4) ** e > q:
+        e -= 1
+    s = 237 - e
+    T = math.isqrt((n << (2 * s)) // d) if s >= 0 else math.isqrt(n // (d << (-2 * s)))
+    return encode_tm(0, e, T)
+
+
+def _icbrt(n: int) -> int:
+    """floor(cbrt(n)) for an integer n >= 0."""
+    if n < 2:
+        return n
+    x = 1 << ((n.bit_length() + 2) // 3)
+    while True:
+        y = (2 * x + n // (x * x)) // 3
+        if y >= x:
+            break
+        x = y
+    while x ** 3 > n:
+        x -= 1
+    while (x + 1) ** 3 <= n:
+        x += 1
+    return x
+
+
+def op_exp2(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return ONE
+    if e - BIAS >= 19:
+        if s:
+            return 0
+        raise Revert("Overflow")
+    q = decode(x)
+    if q.denominator == 1:
+        return encode(Fraction(2) ** int(q))
+    return encode_mpf(power(2, to_mpf(x)))
+
+
+def op_exp10(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return ONE
+    if e - BIAS >= 17:
+        if s:
+            return 0
+        raise Revert("Overflow")
+    q = decode(x)
+    if q.denominator == 1:
+        return encode(Fraction(10) ** int(q))
+    return encode_mpf(power(10, to_mpf(x)))
+
+
+def op_log2(x):
+    s, e, m = unpack(x)
+    if s or e == 0:
+        raise Revert("OutOfRange")
+    if m == HIDDEN:
+        return encode(Fraction(e - BIAS))
+    return encode_mpf(log(to_mpf(x), 2))
+
+
+def op_log10(x):
+    s, e, m = unpack(x)
+    if s or e == 0:
+        raise Revert("OutOfRange")
+    q = decode(x)
+    if q.denominator == 1:
+        k, v = 0, q.numerator
+        while v % 10 == 0:
+            v //= 10
+            k += 1
+        if v == 1:
+            return encode(Fraction(k))
+    return encode_mpf(log(to_mpf(x), 10))
+
+
+def op_log2Up(x):
+    s, e, m = unpack(x)
+    if s or e == 0:
+        raise Revert("OutOfRange")
+    return encode(Fraction(e - BIAS + (m != HIDDEN)))
+
+
+def op_cbrt(x):
+    q = decode(x)
+    if q == 0:
+        return 0
+    s = 1 if q < 0 else 0
+    a = abs(q)
+    n, d = a.numerator, a.denominator
+    e = (n.bit_length() - d.bit_length()) // 3 - 1
+    while Fraction(8) ** (e + 1) <= a:
+        e += 1
+    while Fraction(8) ** e > a:
+        e -= 1
+    sh = 237 - e
+    T = _icbrt((n << (3 * sh)) // d) if sh >= 0 else _icbrt(n // (d << (-3 * sh)))
+    return encode_tm(s, e, T)
+
+
+def op_hypot(a, b):
+    qa, qb = decode(a), decode(b)
+    return _sqrtq(qa * qa + qb * qb)
+
+
+def op_gavg(a, b):
+    p = decode(a) * decode(b)
+    if p < 0:
+        raise Revert("OutOfRange")
+    return _sqrtq(p)
+
+
+def op_inv(x): return op_div(ONE, x)
+
+
+def op_frac(x):
+    q = decode(x)
+    return encode(q - _floorq(q))
+
+
+def op_round(x):
+    """The nearest integer, halves away from zero (FP256's tie rule)."""
+    q = decode(x)
+    r = _floorq(abs(q) + Fraction(1, 2))
+    return encode(Fraction(-r if q < 0 else r))
+
+
+def op_min(a, b): return a if _key(a) < _key(b) else b
+def op_max(a, b): return a if _key(a) > _key(b) else b
+def op_clamp(x, lo, hi): return op_min(hi, op_max(lo, x))
+def op_avg(a, b): return encode((decode(a) + decode(b)) / 2)
+def op_dist(a, b): return encode(abs(decode(a) - decode(b)))
+
+
+def op_zeroFloorSub(a, b):
+    r = op_sub(a, b)
+    return 0 if r >> 255 else r
+
+
+def op_lerp(a, b, t):
+    qa, qb, qt = decode(a), decode(b), decode(t)
+    return encode(qa + qt * (qb - qa))
+
+
+def op_gcd(a, b):
+    return encode(Fraction(math.gcd(abs(_floorq(decode(a))), abs(_floorq(decode(b))))))
+
+
+def op_factorial(x):
+    q = decode(x)
+    if q < 0:
+        raise Revert("OutOfRange")
+    n = _floorq(q)
+    if n > 30000:
+        raise Revert("Overflow")
+    return encode(Fraction(math.factorial(n)))
+
+
+PI_TERMS = 40          # Ramanujan's partial sums are pi's word from far fewer terms (_pi_word)
+_PI_CACHE: dict[int, int] = {}
+
+
+def _pi_word(n: int) -> int:
+    """The word nearest Ramanujan's partial sum with n terms: 9801 / (2 sqrt 2
+    S_n), S_n = sum_{k<n} (4k)! (1103 + 26390 k) / ((k!)^4 396^(4k)), exact."""
+    if n not in _PI_CACHE:
+        S = sum(Fraction(math.factorial(4 * k) * (1103 + 26390 * k), math.factorial(k) ** 4 * 396 ** (4 * k)) for k in range(n))
+        _PI_CACHE[n] = encode_mpf(mpf(9801) / (2 * mp.sqrt(2) * (mpf(S.numerator) / S.denominator)))
+    return _PI_CACHE[n]
+
+
+def op_pi(t):
+    q = decode(t)
+    if q < 1:
+        raise Revert("OutOfRange")
+    return _pi_word(min(_floorq(q), PI_TERMS))
+
+
+def op_sinh(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    if e - BIAS >= 18:
+        raise Revert("Overflow")
+    return encode_mpf(mp.sinh(to_mpf(x)))
+
+
+def op_cosh(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return ONE
+    if e - BIAS >= 18:
+        raise Revert("Overflow")
+    return encode_mpf(mp.cosh(to_mpf(x)))
+
+
+def op_tanh(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    if e - BIAS >= 9:
+        return NEGONE if s else ONE
+    return encode_mpf(mp.tanh(to_mpf(x)))
+
+
+def op_atanh(x):
+    s, e, m = unpack(x)
+    if e == 0:
+        return 0
+    if e - BIAS >= 0:
+        raise Revert("OutOfRange")
+    return encode_mpf(mp.atanh(to_mpf(x)))
+
+
 OPS = {name[3:]: fn for name, fn in globals().items() if name.startswith("op_")}
 OPS_LOWER = {k.lower(): k for k in OPS}
 
