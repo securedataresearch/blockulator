@@ -20,6 +20,8 @@ ABDK's 64.64 is the same budget drawn differently, 64 fractional bits and a
 64-bit integer part in an `int128`, which is why it reverts first when a
 balance grows [compound-annual, N = 365, abdk].
 
+{{ <wordstrip format="wad,6464" /> }}
+
 ## Where the bits go in FP127
 
 FP127 spends the word as 128 fractional bits, 127 integer bits and a sign.
@@ -27,6 +29,8 @@ FP127 spends the word as 128 fractional bits, 127 integer bits and a sign.
 the middle 256 bits, so no bits are reserved as overflow headroom. The
 result is about 38 decimal digits in the fraction against 18 for WAD, with
 a range of ±1.7·10^38.
+
+{{ <wordstrip format="fp127" /> }}
 
 ## Why iteration is what breaks it
 
