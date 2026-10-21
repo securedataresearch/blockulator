@@ -582,7 +582,10 @@ GAS_OPS = ["mul", "div", "exp", "ln", "pow"]
 def gas_medians() -> dict[str, dict[str, int]]:
     """Median gas per op: Solady, PRBMath and FP127Lib from gas.md, FP256Lib from gas256.md."""
     def table(path, want):
-        lines = [l for l in path.read_text().splitlines() if l.startswith("|")]
+        # the ladder table only: the file's first table (a typical-inputs table follows)
+        text = path.read_text()
+        block = text[text.index("\n|"):].split("\n\n")[0]
+        lines = [l for l in block.splitlines() if l.startswith("|")]
         head = [c.strip() for c in lines[0].strip("|").split("|")]
         idx = {k: head.index(h) for k, h in want.items()}
         out = {k: {} for k in want}

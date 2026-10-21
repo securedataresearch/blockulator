@@ -11,14 +11,19 @@ import {console} from "forge-std/console.sol";
 /// @notice Gas for every FP256 op across an input ladder, for the object
 ///         (staticcall), the inline library, the same op in FP127Lib on the
 ///         same value (where it is in range) and ABDKMathQuad, the other
-///         float. Prints GAS|op|idx|input|form|gas; scripts/fp127/gas_to_json.py
-///         --lib fp256 writes docs/benchmarks/gas256.{json,md}.
+///         float. Prints GAS|op|idx|input|form|gas (and |typical on the
+///         typical-input rows); scripts/fp127/gas_to_json.py --lib fp256
+///         writes docs/benchmarks/gas256.{json,md}. The internal forms are
+///         timed as test/fp127/GasLadder.t.sol times them (_timed).
 contract GasLadder256 is FP256Harness {
     int256 constant NA = type(int256).min;
 
-    function setUp() public override {
-        super.setUp();
+    /// Each test runs as its own transaction, so the accounts setUp touched
+    /// are cold again: touch both objects first, so no row pays the
+    /// 2,500-gas cold-account surcharge.
+    function _warm() internal view {
         obj.mul(ONE, ONE);
+        objX.erf(ONE);
     }
 
     // ---- conversions --------------------------------------------------
@@ -43,182 +48,201 @@ contract GasLadder256 is FP256Harness {
         return ok ? int256(g) : NA;
     }
 
-    function _emit(string memory op, uint256 idx, string memory input, string memory form, int256 g) internal pure {
-        console.log(string.concat("GAS|", op, "|", vm.toString(idx), "|", input, "|", form, "|", g == NA ? "NA" : vm.toString(uint256(g))));
+    function _emit(string memory op, uint256 idx, string memory input, string memory form, int256 g, string memory set) internal pure {
+        string memory line = string.concat("GAS|", op, "|", vm.toString(idx), "|", input, "|", form, "|", g == NA ? "NA" : vm.toString(uint256(g)));
+        console.log(bytes(set).length == 0 ? line : string.concat(line, "|", set));
     }
 
-    function _selfTry(bytes memory data) internal view returns (int256) {
-        uint256 g0 = gasleft();
-        (bool ok,) = address(this).staticcall(data);
-        uint256 g = g0 - gasleft();
-        return ok ? int256(g) : NA;
+    /// The entry point's own gasleft() window around the one library call,
+    /// minus the same window around a plain assignment (op "id"): dispatch
+    /// and ABI decoding stay outside, whatever the op's place in the list.
+    function _timed(bytes memory call, bytes memory idCall) internal view returns (int256) {
+        (bool ok, bytes memory out) = address(this).staticcall(call);
+        if (!ok) return NA;
+        (bool okId, bytes memory outId) = address(this).staticcall(idCall);
+        require(okId, "id");
+        return int256(abi.decode(out, (uint256))) - int256(abi.decode(outId, (uint256)));
     }
-
-    function cNoop(string calldata) external pure returns (int256) { return 0; }
-
-    function _baseline() internal view returns (uint256) {
-        uint256 g0 = gasleft();
-        (bool ok,) = address(this).staticcall(abi.encodeWithSelector(this.cNoop.selector, "x"));
-        uint256 g = g0 - gasleft();
-        require(ok);
-        return g;
-    }
-
-    function _net(int256 g, uint256 base) internal pure returns (int256) { return g == NA ? NA : g - int256(base); }
 
     // ---- entry points (external so reverts are catchable) ---------------
 
-    function cLib1(string calldata op, int256 x) external pure returns (int256) {
+    function cLib1(string calldata op, int256 x) external view returns (uint256 g) {
         bytes32 h = keccak256(bytes(op));
-        if (h == keccak256("sqrt")) return FP256Lib.sqrt(x);
-        if (h == keccak256("exp")) return FP256Lib.exp(x);
-        if (h == keccak256("ln")) return FP256Lib.ln(x);
-        if (h == keccak256("log1p")) return FP256Lib.log1p(x);
-        if (h == keccak256("expm1")) return FP256Lib.expm1(x);
-        if (h == keccak256("erf")) return FP256Lib.erf(x);
-        if (h == keccak256("erfc")) return FP256Lib.erfc(x);
-        if (h == keccak256("normCdf")) return FP256Lib.normCdf(x);
-        if (h == keccak256("lambertW0")) return FP256Lib.lambertW0(x);
-        if (h == keccak256("lambertWm1")) return FP256Lib.lambertWm1(x);
-        if (h == keccak256("neg")) return FP256Lib.neg(x);
-        if (h == keccak256("abs")) return FP256Lib.abs(x);
-        if (h == keccak256("sign")) return FP256Lib.sign(x);
-        if (h == keccak256("toFP127")) return FP256Lib.toFP127(x);
-        if (h == keccak256("fromFP127")) return FP256Lib.fromFP127(x);
-        if (h == keccak256("toFixed18")) return FP256Lib.toFixed18(x);
-        if (h == keccak256("fromFixed18")) return FP256Lib.fromFixed18(x);
-        if (h == keccak256("fromUint")) return FP256Lib.fromUint(uint256(x));
-        if (h == keccak256("fromUintDown")) return FP256Lib.fromUintDown(uint256(x));
-        if (h == keccak256("fromUintUp")) return FP256Lib.fromUintUp(uint256(x));
-        if (h == keccak256("toUintDown")) return int256(FP256Lib.toUintDown(x));
-        if (h == keccak256("toUintUp")) return int256(FP256Lib.toUintUp(x));
-        if (h == keccak256("toIntDown")) return FP256Lib.toIntDown(x);
-        if (h == keccak256("toIntUp")) return FP256Lib.toIntUp(x);
-        if (h == keccak256("floor")) return FP256Lib.floor(x);
-        if (h == keccak256("ceil")) return FP256Lib.ceil(x);
-        if (h == keccak256("toFixed18Down")) return FP256Lib.toFixed18Down(x);
-        if (h == keccak256("toFixed18Up")) return FP256Lib.toFixed18Up(x);
-        revert("na");
+        uint256 g0;
+        int256 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = x; g = gasleft(); }
+        if (h == keccak256("sqrt")) { g0 = gasleft(); r = FP256Lib.sqrt(x); g = gasleft(); }
+        if (h == keccak256("exp")) { g0 = gasleft(); r = FP256Lib.exp(x); g = gasleft(); }
+        if (h == keccak256("ln")) { g0 = gasleft(); r = FP256Lib.ln(x); g = gasleft(); }
+        if (h == keccak256("log1p")) { g0 = gasleft(); r = FP256Lib.log1p(x); g = gasleft(); }
+        if (h == keccak256("expm1")) { g0 = gasleft(); r = FP256Lib.expm1(x); g = gasleft(); }
+        if (h == keccak256("erf")) { g0 = gasleft(); r = FP256Lib.erf(x); g = gasleft(); }
+        if (h == keccak256("erfc")) { g0 = gasleft(); r = FP256Lib.erfc(x); g = gasleft(); }
+        if (h == keccak256("normCdf")) { g0 = gasleft(); r = FP256Lib.normCdf(x); g = gasleft(); }
+        if (h == keccak256("lambertW0")) { g0 = gasleft(); r = FP256Lib.lambertW0(x); g = gasleft(); }
+        if (h == keccak256("lambertWm1")) { g0 = gasleft(); r = FP256Lib.lambertWm1(x); g = gasleft(); }
+        if (h == keccak256("neg")) { g0 = gasleft(); r = FP256Lib.neg(x); g = gasleft(); }
+        if (h == keccak256("abs")) { g0 = gasleft(); r = FP256Lib.abs(x); g = gasleft(); }
+        if (h == keccak256("sign")) { g0 = gasleft(); r = FP256Lib.sign(x); g = gasleft(); }
+        if (h == keccak256("toFP127")) { g0 = gasleft(); r = FP256Lib.toFP127(x); g = gasleft(); }
+        if (h == keccak256("fromFP127")) { g0 = gasleft(); r = FP256Lib.fromFP127(x); g = gasleft(); }
+        if (h == keccak256("toFixed18")) { g0 = gasleft(); r = FP256Lib.toFixed18(x); g = gasleft(); }
+        if (h == keccak256("fromFixed18")) { g0 = gasleft(); r = FP256Lib.fromFixed18(x); g = gasleft(); }
+        if (h == keccak256("fromUint")) { g0 = gasleft(); r = FP256Lib.fromUint(uint256(x)); g = gasleft(); }
+        if (h == keccak256("fromUintDown")) { g0 = gasleft(); r = FP256Lib.fromUintDown(uint256(x)); g = gasleft(); }
+        if (h == keccak256("fromUintUp")) { g0 = gasleft(); r = FP256Lib.fromUintUp(uint256(x)); g = gasleft(); }
+        if (h == keccak256("toUintDown")) { g0 = gasleft(); r = int256(FP256Lib.toUintDown(x)); g = gasleft(); }
+        if (h == keccak256("toUintUp")) { g0 = gasleft(); r = int256(FP256Lib.toUintUp(x)); g = gasleft(); }
+        if (h == keccak256("toIntDown")) { g0 = gasleft(); r = FP256Lib.toIntDown(x); g = gasleft(); }
+        if (h == keccak256("toIntUp")) { g0 = gasleft(); r = FP256Lib.toIntUp(x); g = gasleft(); }
+        if (h == keccak256("floor")) { g0 = gasleft(); r = FP256Lib.floor(x); g = gasleft(); }
+        if (h == keccak256("ceil")) { g0 = gasleft(); r = FP256Lib.ceil(x); g = gasleft(); }
+        if (h == keccak256("toFixed18Down")) { g0 = gasleft(); r = FP256Lib.toFixed18Down(x); g = gasleft(); }
+        if (h == keccak256("toFixed18Up")) { g0 = gasleft(); r = FP256Lib.toFixed18Up(x); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
     }
 
-    function cLib2(string calldata op, int256 a, int256 b) external pure returns (int256) {
+    function cLib2(string calldata op, int256 a, int256 b) external view returns (uint256 g) {
         bytes32 h = keccak256(bytes(op));
-        if (h == keccak256("add")) return FP256Lib.add(a, b);
-        if (h == keccak256("sub")) return FP256Lib.sub(a, b);
-        if (h == keccak256("mul")) return FP256Lib.mul(a, b);
-        if (h == keccak256("div")) return FP256Lib.div(a, b);
-        if (h == keccak256("pow")) return FP256Lib.pow(a, b);
-        if (h == keccak256("powu")) return FP256Lib.powu(a, b);
-        if (h == keccak256("compound")) return FP256Lib.compound(a, b);
-        if (h == keccak256("cmp")) return FP256Lib.cmp(a, b);
-        if (h == keccak256("lt")) return FP256Lib.lt(a, b);
-        if (h == keccak256("eq")) return FP256Lib.eq(a, b);
-        if (h == keccak256("mulDown")) return FP256Lib.mulDown(a, b);
-        if (h == keccak256("mulUp")) return FP256Lib.mulUp(a, b);
-        if (h == keccak256("divDown")) return FP256Lib.divDown(a, b);
-        if (h == keccak256("divUp")) return FP256Lib.divUp(a, b);
-        revert("na");
+        uint256 g0;
+        int256 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = a; g = gasleft(); }
+        if (h == keccak256("add")) { g0 = gasleft(); r = FP256Lib.add(a, b); g = gasleft(); }
+        if (h == keccak256("sub")) { g0 = gasleft(); r = FP256Lib.sub(a, b); g = gasleft(); }
+        if (h == keccak256("mul")) { g0 = gasleft(); r = FP256Lib.mul(a, b); g = gasleft(); }
+        if (h == keccak256("div")) { g0 = gasleft(); r = FP256Lib.div(a, b); g = gasleft(); }
+        if (h == keccak256("pow")) { g0 = gasleft(); r = FP256Lib.pow(a, b); g = gasleft(); }
+        if (h == keccak256("powu")) { g0 = gasleft(); r = FP256Lib.powu(a, b); g = gasleft(); }
+        if (h == keccak256("compound")) { g0 = gasleft(); r = FP256Lib.compound(a, b); g = gasleft(); }
+        if (h == keccak256("cmp")) { g0 = gasleft(); r = FP256Lib.cmp(a, b); g = gasleft(); }
+        if (h == keccak256("lt")) { g0 = gasleft(); r = FP256Lib.lt(a, b); g = gasleft(); }
+        if (h == keccak256("eq")) { g0 = gasleft(); r = FP256Lib.eq(a, b); g = gasleft(); }
+        if (h == keccak256("mulDown")) { g0 = gasleft(); r = FP256Lib.mulDown(a, b); g = gasleft(); }
+        if (h == keccak256("mulUp")) { g0 = gasleft(); r = FP256Lib.mulUp(a, b); g = gasleft(); }
+        if (h == keccak256("divDown")) { g0 = gasleft(); r = FP256Lib.divDown(a, b); g = gasleft(); }
+        if (h == keccak256("divUp")) { g0 = gasleft(); r = FP256Lib.divUp(a, b); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
     }
 
-    function cFp127_1(string calldata op, int256 x) external pure returns (int256) {
+    function cFp127_1(string calldata op, int256 x) external view returns (uint256 g) {
         bytes32 h = keccak256(bytes(op));
-        if (h == keccak256("sqrt")) return FP127Lib.sqrt(x);
-        if (h == keccak256("exp")) return FP127Lib.exp(x);
-        if (h == keccak256("ln")) return FP127Lib.ln(x);
-        if (h == keccak256("log1p")) return FP127Lib.log1p(x);
-        if (h == keccak256("expm1")) return FP127Lib.expm1(x);
-        if (h == keccak256("erf")) return FP127Lib.erf(x);
-        if (h == keccak256("erfc")) return FP127Lib.erfc(x);
-        if (h == keccak256("normCdf")) return FP127Lib.normCdf(x);
-        if (h == keccak256("lambertW0")) return FP127Lib.lambertW0(x);
-        if (h == keccak256("lambertWm1")) return FP127Lib.lambertWm1(x);
-        if (h == keccak256("neg")) return FP127Lib.neg(x);
-        if (h == keccak256("abs")) return FP127Lib.abs(x);
-        if (h == keccak256("sign")) return FP127Lib.sign(x);
-        if (h == keccak256("toFixed18")) return FP127Lib.toFixed18(x);
-        if (h == keccak256("fromFixed18")) return FP127Lib.fromFixed18(x);
-        revert("na");
+        uint256 g0;
+        int256 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = x; g = gasleft(); }
+        if (h == keccak256("sqrt")) { g0 = gasleft(); r = FP127Lib.sqrt(x); g = gasleft(); }
+        if (h == keccak256("exp")) { g0 = gasleft(); r = FP127Lib.exp(x); g = gasleft(); }
+        if (h == keccak256("ln")) { g0 = gasleft(); r = FP127Lib.ln(x); g = gasleft(); }
+        if (h == keccak256("log1p")) { g0 = gasleft(); r = FP127Lib.log1p(x); g = gasleft(); }
+        if (h == keccak256("expm1")) { g0 = gasleft(); r = FP127Lib.expm1(x); g = gasleft(); }
+        if (h == keccak256("erf")) { g0 = gasleft(); r = FP127Lib.erf(x); g = gasleft(); }
+        if (h == keccak256("erfc")) { g0 = gasleft(); r = FP127Lib.erfc(x); g = gasleft(); }
+        if (h == keccak256("normCdf")) { g0 = gasleft(); r = FP127Lib.normCdf(x); g = gasleft(); }
+        if (h == keccak256("lambertW0")) { g0 = gasleft(); r = FP127Lib.lambertW0(x); g = gasleft(); }
+        if (h == keccak256("lambertWm1")) { g0 = gasleft(); r = FP127Lib.lambertWm1(x); g = gasleft(); }
+        if (h == keccak256("neg")) { g0 = gasleft(); r = FP127Lib.neg(x); g = gasleft(); }
+        if (h == keccak256("abs")) { g0 = gasleft(); r = FP127Lib.abs(x); g = gasleft(); }
+        if (h == keccak256("sign")) { g0 = gasleft(); r = FP127Lib.sign(x); g = gasleft(); }
+        if (h == keccak256("toFixed18")) { g0 = gasleft(); r = FP127Lib.toFixed18(x); g = gasleft(); }
+        if (h == keccak256("fromFixed18")) { g0 = gasleft(); r = FP127Lib.fromFixed18(x); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
     }
 
-    function cFp127_2(string calldata op, int256 a, int256 b) external pure returns (int256) {
+    function cFp127_2(string calldata op, int256 a, int256 b) external view returns (uint256 g) {
         bytes32 h = keccak256(bytes(op));
-        if (h == keccak256("add")) return FP127Lib.add(a, b);
-        if (h == keccak256("sub")) return FP127Lib.sub(a, b);
-        if (h == keccak256("mul")) return FP127Lib.mul(a, b);
-        if (h == keccak256("div")) return FP127Lib.div(a, b);
-        if (h == keccak256("pow")) return FP127Lib.pow(a, b);
-        revert("na");
+        uint256 g0;
+        int256 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = a; g = gasleft(); }
+        if (h == keccak256("add")) { g0 = gasleft(); r = FP127Lib.add(a, b); g = gasleft(); }
+        if (h == keccak256("sub")) { g0 = gasleft(); r = FP127Lib.sub(a, b); g = gasleft(); }
+        if (h == keccak256("mul")) { g0 = gasleft(); r = FP127Lib.mul(a, b); g = gasleft(); }
+        if (h == keccak256("div")) { g0 = gasleft(); r = FP127Lib.div(a, b); g = gasleft(); }
+        if (h == keccak256("pow")) { g0 = gasleft(); r = FP127Lib.pow(a, b); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
     }
 
-    function cQuad1(string calldata op, bytes16 x) external pure returns (bytes16) {
+    function cQuad1(string calldata op, bytes16 x) external view returns (uint256 g) {
         bytes32 h = keccak256(bytes(op));
-        if (h == keccak256("sqrt")) return Q.sqrt(x);
-        if (h == keccak256("exp")) return Q.exp(x);
-        if (h == keccak256("ln")) return Q.ln(x);
-        if (h == keccak256("neg")) return Q.neg(x);
-        if (h == keccak256("abs")) return Q.abs(x);
-        revert("na");
+        uint256 g0;
+        bytes16 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = x; g = gasleft(); }
+        if (h == keccak256("sqrt")) { g0 = gasleft(); r = Q.sqrt(x); g = gasleft(); }
+        if (h == keccak256("exp")) { g0 = gasleft(); r = Q.exp(x); g = gasleft(); }
+        if (h == keccak256("ln")) { g0 = gasleft(); r = Q.ln(x); g = gasleft(); }
+        if (h == keccak256("neg")) { g0 = gasleft(); r = Q.neg(x); g = gasleft(); }
+        if (h == keccak256("abs")) { g0 = gasleft(); r = Q.abs(x); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
     }
 
-    function cQuad2(string calldata op, bytes16 a, bytes16 b) external pure returns (bytes16) {
+    function cQuad2(string calldata op, bytes16 a, bytes16 b) external view returns (uint256 g) {
         bytes32 h = keccak256(bytes(op));
-        if (h == keccak256("add")) return Q.add(a, b);
-        if (h == keccak256("sub")) return Q.sub(a, b);
-        if (h == keccak256("mul")) return Q.mul(a, b);
-        if (h == keccak256("div")) return Q.div(a, b);
-        if (h == keccak256("pow")) return Q.exp(Q.mul(b, Q.ln(a)));
-        revert("na");
+        uint256 g0;
+        bytes16 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = a; g = gasleft(); }
+        if (h == keccak256("add")) { g0 = gasleft(); r = Q.add(a, b); g = gasleft(); }
+        if (h == keccak256("sub")) { g0 = gasleft(); r = Q.sub(a, b); g = gasleft(); }
+        if (h == keccak256("mul")) { g0 = gasleft(); r = Q.mul(a, b); g = gasleft(); }
+        if (h == keccak256("div")) { g0 = gasleft(); r = Q.div(a, b); g = gasleft(); }
+        if (h == keccak256("pow")) { g0 = gasleft(); r = Q.exp(Q.mul(b, Q.ln(a))); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
     }
 
     // ---- drivers --------------------------------------------------------
 
-    function _run1(string memory op, int256[6] memory xs, bool uintArg) internal view {
-        for (uint256 i; i < xs.length; i++) {
-            string memory label = vm.toString(xs[i]);
-            bytes memory call = abi.encodeWithSignature(string.concat(op, uintArg ? "(uint256)" : "(int256)"), xs[i]);
-            uint256 base = _baseline();
-            _emit(op, i, label, "yul", _ext(_objFor(op), call));
-            _emit(op, i, label, "lib", _net(_selfTry(abi.encodeWithSelector(this.cLib1.selector, op, xs[i])), base));
-            _emit(op, i, label, "fp127lib", _fp127Gas1(op, xs[i], base));
-            _emit(op, i, label, "quad", _quadGas1(op, xs[i], base));
-        }
+    function _row1(string memory op, uint256 i, int256 x, bool uintArg, string memory set) internal view {
+        string memory label = vm.toString(x);
+        bytes memory call = abi.encodeWithSignature(string.concat(op, uintArg ? "(uint256)" : "(int256)"), x);
+        _emit(op, i, label, "yul", _ext(_objFor(op), call), set);
+        _emit(op, i, label, "lib", _timed(abi.encodeCall(this.cLib1, (op, x)), abi.encodeCall(this.cLib1, ("id", x))), set);
+        _emit(op, i, label, "fp127lib", _fp127Gas1(op, x), set);
+        _emit(op, i, label, "quad", _quadGas1(op, x), set);
     }
 
-    function _fp127Gas1(string memory op, int256 x, uint256 base) internal view returns (int256) {
+    function _run1(string memory op, int256[6] memory xs, bool uintArg) internal view {
+        for (uint256 i; i < xs.length; i++) _row1(op, i, xs[i], uintArg, "");
+    }
+
+    function _fp127Gas1(string memory op, int256 x) internal view returns (int256) {
         (int256 f, bool ok) = _fp127(x);
         if (!ok) return NA;
-        return _net(_selfTry(abi.encodeWithSelector(this.cFp127_1.selector, op, f)), base);
+        return _timed(abi.encodeCall(this.cFp127_1, (op, f)), abi.encodeCall(this.cFp127_1, ("id", f)));
     }
 
-    function _quadGas1(string memory op, int256 x, uint256 base) internal view returns (int256) {
+    function _quadGas1(string memory op, int256 x) internal view returns (int256) {
         (bytes16 q, bool ok) = _quad(x);
         if (!ok) return NA;
-        return _net(_selfTry(abi.encodeWithSelector(this.cQuad1.selector, op, q)), base);
+        return _timed(abi.encodeCall(this.cQuad1, (op, q)), abi.encodeCall(this.cQuad1, ("id", q)));
+    }
+
+    function _row2(string memory op, uint256 i, int256 a, int256 b, string memory set) internal view {
+        string memory label = string.concat(vm.toString(a), ",", vm.toString(b));
+        _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256)"), a, b)), set);
+        _emit(op, i, label, "lib", _timed(abi.encodeCall(this.cLib2, (op, a, b)), abi.encodeCall(this.cLib2, ("id", a, b))), set);
+        _emit(op, i, label, "fp127lib", _fp127Gas2(op, a, b), set);
+        _emit(op, i, label, "quad", _quadGas2(op, a, b), set);
     }
 
     function _run2(string memory op, int256[6] memory a, int256[6] memory b) internal view {
-        for (uint256 i; i < a.length; i++) {
-            string memory label = string.concat(vm.toString(a[i]), ",", vm.toString(b[i]));
-            uint256 base = _baseline();
-            _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256)"), a[i], b[i])));
-            _emit(op, i, label, "lib", _net(_selfTry(abi.encodeWithSelector(this.cLib2.selector, op, a[i], b[i])), base));
-            _emit(op, i, label, "fp127lib", _fp127Gas2(op, a[i], b[i], base));
-            _emit(op, i, label, "quad", _quadGas2(op, a[i], b[i], base));
-        }
+        for (uint256 i; i < a.length; i++) _row2(op, i, a[i], b[i], "");
     }
 
-    function _fp127Gas2(string memory op, int256 a, int256 b, uint256 base) internal view returns (int256) {
+    function _fp127Gas2(string memory op, int256 a, int256 b) internal view returns (int256) {
         (int256 fa, bool okA) = _fp127(a);
         (int256 fb, bool okB) = _fp127(b);
         if (!(okA && okB)) return NA;
-        return _net(_selfTry(abi.encodeWithSelector(this.cFp127_2.selector, op, fa, fb)), base);
+        return _timed(abi.encodeCall(this.cFp127_2, (op, fa, fb)), abi.encodeCall(this.cFp127_2, ("id", fa, fb)));
     }
 
-    function _quadGas2(string memory op, int256 a, int256 b, uint256 base) internal view returns (int256) {
+    function _quadGas2(string memory op, int256 a, int256 b) internal view returns (int256) {
         (bytes16 qa, bool okA) = _quad(a);
         (bytes16 qb, bool okB) = _quad(b);
         if (!(okA && okB)) return NA;
-        return _net(_selfTry(abi.encodeWithSelector(this.cQuad2.selector, op, qa, qb)), base);
+        return _timed(abi.encodeCall(this.cQuad2, (op, qa, qb)), abi.encodeCall(this.cQuad2, ("id", qa, qb)));
     }
 
     // ---- the ladders ------------------------------------------------------
@@ -239,6 +263,7 @@ contract GasLadder256 is FP256Harness {
     }
 
     function test_ladder_arith() public view {
+        _warm();
         (int256[6] memory a, int256[6] memory b) = _posBinary();
         _run2("add", a, b);
         _run2("sub", a, b);
@@ -255,6 +280,7 @@ contract GasLadder256 is FP256Harness {
     }
 
     function test_ladder_unary() public view {
+        _warm();
         int256[6] memory xs = _unary();
         _run1("sqrt", xs, false);
         _run1("ln", xs, false);
@@ -274,19 +300,76 @@ contract GasLadder256 is FP256Harness {
     }
 
     function test_ladder_pow() public view {
+        _warm();
         _run2("pow", [_v(0, 0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c >> 20), _v(1, PI_F >> 20), TWO, _v(3, 0x4 << 232), HALF, _v(1, 0x8 << 232)],
                      [_v(8, 0x6d << 229), _v(1, E_F >> 20), _v(3, 0x4 << 232), _v(1, 0x4 << 232), _nv(1, 0x8 << 232), TWO]);
     }
 
     /// powu and compound take a plain integer n; the FP127 and Quad columns are blank.
     function test_ladder_powu() public view {
+        _warm();
         _run2("powu", [_v(0, 0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c >> 20), _v(1, PI_F >> 20), TWO, _v(0, 1 << 200), HALF, _v(-1, 0x8 << 232)],
                       [int256(2), int256(12), int256(365), int256(31536000), int256(-10000), int256(1) << 100]);
         _run2("compound", [_v(-30, 0), _v(-12, 0), _v(-4, 0x9999 << 220), _nv(-5, 0), _v(-8, 0x8 << 232), _v(-29, 0x5 << 232)],
                       [int256(365), int256(10000), int256(10), int256(100), int256(-365), int256(315360000)]);
     }
 
+    // ---- typical inputs -------------------------------------------------
+    // The ladder words are mostly integers and powers of two. The typical
+    // rows draw TYPICAL words per op from keccak256("typical", op, i): an
+    // exponent uniform in [elo, ehi] and 236 random fraction bits, the sign
+    // by sgn (1 positive, -1 negative, 0 either).
+
+    uint256 constant TYPICAL = 8;
+
+    function _rnd(string memory op, uint256 i) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encode("typical", op, i)));
+    }
+
+    function _typ(string memory op, uint256 i, int256 elo, int256 ehi, int256 sgn) internal pure returns (int256 x) {
+        uint256 h = _rnd(op, i);
+        int256 e = elo + int256(h % uint256(ehi - elo + 1));
+        uint256 f = uint256(keccak256(abi.encode(h))) >> 20;
+        bool neg = sgn < 0 || (sgn == 0 && (h >> 64) & 1 == 1);
+        x = _mk(neg, e, f);
+    }
+
+    function _typ1(string memory op, int256 elo, int256 ehi, int256 sgn) internal view {
+        for (uint256 i; i < TYPICAL; i++) _row1(op, i, _typ(op, i, elo, ehi, sgn), false, "typical");
+    }
+
+    /// A small rate r below 2^-k and a plain integer n of up to k bits, so
+    /// (1 + r)^n stays near one.
+    function _typRate(string memory op, uint256 i) internal pure returns (int256 r, int256 n) {
+        uint256 h = _rnd(op, i + 1000);
+        uint256 k = 1 + h % 20;
+        n = int256(2 + (h >> 64) % ((uint256(1) << k) - 1));
+        r = _typ(op, i, -40, -int256(k) - 1, 1);
+    }
+
+    function test_ladder_typical() public view {
+        _warm();
+        _typ1("sqrt", -300, 300, 1);
+        _typ1("exp", -6, 5, 0);
+        _typ1("ln", -60, 60, 1);
+        _typ1("log1p", -30, 4, 1);
+        _typ1("expm1", -30, 5, 0);
+        _typ1("erf", -6, 2, 0);
+        _typ1("erfc", -4, 3, 0);
+        _typ1("normCdf", -4, 3, 0);
+        _typ1("lambertW0", -10, 40, 1);
+        _typ1("lambertWm1", -60, -3, -1);
+        for (uint256 i; i < TYPICAL; i++) {
+            _row2("pow", i, _typ("pow", i, -4, 4, 1), _typ("pow", i + 100, -4, 3, 0), "typical");
+            (int256 r, int256 n) = _typRate("powu", i);
+            _row2("powu", i, FP256Lib.add(ONE, r), n, "typical");
+            (r, n) = _typRate("compound", i);
+            _row2("compound", i, r, n, "typical");
+        }
+    }
+
     function test_ladder_conversions() public view {
+        _warm();
         int256[6] memory xs = _unary();
         _run1("toFP127", xs, false);
         _run1("toFixed18", xs, false);
