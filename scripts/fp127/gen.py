@@ -8,6 +8,11 @@ Usage:
     uv run scripts/fp127/gen.py [--lib fp127|fp256] --check    # regenerate and diff
     uv run scripts/fp127/gen.py --lib fp256 --wide-lib <path>  # the test-only library whose
                                                                # rounding test always fails
+    uv run scripts/fp127/gen.py [--lib ...] --count-lib <path>  # test only: counts each
+                                                               # rounding-test fallback
+    uv run scripts/fp127/gen.py [--lib ...] --probe-lib <path>  # test only: gas probes on
+                                                               # the profiled helpers
+    (add --forced to either for the forced second stage, as --wide-lib)
 
 An export may carry `/// @object <Name>` to go into a second deployed object
 (FP256's release four splits FP256 and FP256X). Each object then holds only
@@ -430,10 +435,117 @@ interface {iface} {{
 """
 
 
-def emit_library(src: Source, lib_name: str | None = None, wide: bool = False) -> str:
+# ---------------------------------------------------------------------------
+# Test-only instrumented libraries (--count-lib, --probe-lib). Both keep every
+# result bit for bit: a named helper is renamed and wrapped by a function of
+# its old name that calls it and records into memory far above anything the
+# library or its caller allocates. The caller pre-expands that memory and
+# reads it after the call; a fresh external call starts it at zero.
+# ---------------------------------------------------------------------------
+
+# Where the records live. The fallback counter is one word. Probe i (in
+# PROBES order) keeps three words from PROBE_BASE + 0x60 i: its inclusive gas
+# (the call, net of the probes' own cost inside it), its call count, and its
+# exclusive gas (less the inclusive gas of the probed helpers it calls).
+# PROBE_OVH accumulates the probes' own cost and PROBE_INNER the inclusive gas
+# of finished probes, so an enclosing probe can take both out.
+COUNT_SLOT = 0x8000
+PROBE_OVH = 0x8020
+PROBE_INNER = 0x8040
+PROBE_BASE = 0x8060
+PROBE_STRIDE = 0x60
+# The part of a probe's own cost its gas() readings cannot see: the extra
+# call into the wrapper and the last mstore. Measured with make profile's
+# calibration (probe total - plain total over the recorded overhead).
+PROBE_RESIDUAL = 92
+
+# The rounding-test fallbacks, by helper: "ret" counts a call that returns
+# nonzero (the test said the fast value may round wrongly), "call" counts
+# every call (the helper is the fallback itself).
+COUNTS = {
+    "fp256": {"rbad": "ret"},
+    "fp127": {"nearmid": "ret", "powus": "call"},
+}
+
+# The helpers make profile measures, in slot order.
+PROBES = {
+    "fp256": ["log2m", "exp2frac", "wexpm1", "wlnw", "cfrun", "erfw", "lwfix",
+              "lwlog", "lwexp", "lwln", "powslow", "compslow", "wln1ps",
+              "erfser", "erfcxa", "erfcxcf", "expnegsq",
+              # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp
+              "hser", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cubegt",
+              "isqrtw", "lerp3"],
+    "fp127": ["expk", "log2m", "erfs", "erfcf", "lwfsc", "lwib", "lwm1", "lwfin",
+              "l2p", "powus"],
+}
+
+
+def _rename(f: Func, new: str) -> str:
+    return re.sub(rf"^function\s+{re.escape(f.name)}\s*\(", f"function {new}(", f.text, count=1)
+
+
+def _sig(f: Func) -> tuple[str, str, str]:
+    args = ", ".join(f.params)
+    rets = ", ".join(f.rets)
+    head = f"function {f.name}({args})" + (f" -> {rets}" if rets else "")
+    call = (f"{rets} := " if rets else "")
+    return head, args, call
+
+
+def count_wrap(f: Func, mode: str) -> str:
+    """The helper renamed <name>cnt, and a wrapper that adds one to the word
+    at COUNT_SLOT when the rounding test fires (or on every call)."""
+    head, args, call = _sig(f)
+    cond = f.rets[0] if mode == "ret" else "1"
+    return (f"{_rename(f, f.name + 'cnt')}\n\n"
+            f"{head} {{\n"
+            f"    {call}{f.name}cnt({args})\n"
+            f"    if {cond} {{ mstore({COUNT_SLOT:#x}, add(mload({COUNT_SLOT:#x}), 1)) }}\n"
+            f"}}")
+
+
+def probe_wrap(f: Func, slot: int) -> str:
+    """The helper renamed <name>prb, and a wrapper that times the call: its
+    gas net of the probes' own cost inside it (inclusive) goes to the word at
+    slot, one to the next word, the inclusive gas less that of the probed
+    helpers it called (exclusive) to the third; then its own cost to
+    PROBE_OVH, and PROBE_INNER is left at its entry value plus this call's
+    inclusive gas."""
+    head, args, call = _sig(f)
+    o, i = f"{PROBE_OVH:#x}", f"{PROBE_INNER:#x}"
+    s, n, x = (f"{slot + k:#x}" for k in (0, 0x20, 0x40))
+    return (f"{_rename(f, f.name + 'prb')}\n\n"
+            f"{head} {{\n"
+            f"    let prbt := gas()\n"
+            f"    let prbo := mload({o})\n"
+            f"    let prbi := mload({i})\n"
+            f"    let prbg := gas()\n"
+            f"    {call}{f.name}prb({args})\n"
+            f"    prbg := sub(prbg, gas())\n"
+            f"    prbo := sub(mload({o}), prbo)\n"
+            f"    prbg := sub(prbg, prbo)\n"
+            f"    mstore({s}, add(mload({s}), prbg))\n"
+            f"    mstore({n}, add(mload({n}), 1))\n"
+            f"    mstore({x}, add(mload({x}), sub(prbg, sub(mload({i}), prbi))))\n"
+            f"    mstore({i}, add(prbi, prbg))\n"
+            f"    mstore({o}, add(mload({o}), add(sub(sub(sub(prbt, gas()), prbg), prbo), {PROBE_RESIDUAL})))\n"
+            f"}}")
+
+
+def instrumented(lib: str, kind: str) -> dict[str, str]:
+    """name -> 'ret' | 'call' (count) or name -> slot (probe), for lib."""
+    if kind == "count":
+        return dict(COUNTS[lib])
+    return {n: PROBE_BASE + PROBE_STRIDE * i for i, n in enumerate(PROBES[lib])}
+
+
+def emit_library(src: Source, lib_name: str | None = None, wide: bool = False,
+                 count: dict | None = None, probe: dict | None = None) -> str:
     """The inline library. wide=True is the test-only variant: rbad (the
     rounding test of every correctly rounded op) always says the fast result
-    is too close to a tie, so every call takes the wide second stage."""
+    is too close to a tie, so every call takes the wide second stage.
+    count / probe (test only, never committed) wrap the named helpers to
+    record fallbacks or gas in memory; see count_wrap and probe_wrap."""
     lib_name = lib_name or LIB_NAME
     errs = "\n".join(f"    error {sig};" for sig in src.errors)
     fns = []
@@ -448,24 +560,49 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool = False) -
             t = f.text
             if wide and f.name == "rbad":
                 t = "function rbad(D, err) -> b {\n    b := 1\n}"
+            elif count and f.name in count:
+                t = count_wrap(f, count[f.name])
+            elif probe and f.name in probe:
+                t = probe_wrap(f, probe[f.name])
             texts.append(t)
         body = "\n\n".join(_indent(t, 12) for t in texts)
         doc = "\n".join(f"    {d}" for d in e.doc)
+        # the instrumented variants write above the free memory, so they do
+        # not claim memory safety
+        asm = "assembly" if (count or probe) else 'assembly ("memory-safe")'
+        mut = "view" if probe else "pure"   # the probes read gas()
         fns.append(
             f"{doc}\n"
-            f"    function {e.sol_name}({ins}) internal pure returns ({outs}) {{\n"
-            f"        assembly (\"memory-safe\") {{\n"
+            f"    function {e.sol_name}({ins}) internal {mut} returns ({outs}) {{\n"
+            f"        {asm} {{\n"
             f"{body}\n\n"
             f"            {ret_names} := {e.yul_name}({call_args})\n"
             f"        }}\n"
             f"    }}"
         )
+    if count or probe:
+        what = (f"counts each rounding-test fallback ({', '.join(sorted(count))}) in the word at {COUNT_SLOT:#x}"
+                if count else
+                f"adds the gas of each call of {', '.join(probe)} to the words from {PROBE_BASE:#x}")
+        if wide:
+            what += ", with the rounding test forced to fail (every call takes the second stage)"
+        notice = (f"TEST ONLY. {LIB_NAME} instrumented: {what}.\n///         "
+                  "Results are unchanged. Generated for make sweep / make profile; never\n///         deploy or import it.")
+    elif wide:
+        notice = "TEST ONLY. " + LIB_NAME + " with the rounding test forced to fail, so every\n///         correctly rounded op returns its wide second stage. Generated for\n///         make sweep's second-stage pass; never deploy or import it."
+    else:
+        notice = LIB["lib_notice"]
+    dev = LIB.get("lib_dev", "Blocks are memory-safe: the only memory touched is scratch space\n"
+                             "///      (0x00..0x3f) for revert selectors.")
+    if count or probe:
+        dev = (f"Not memory-safe: the records live at {COUNT_SLOT:#x} and above, which the\n"
+               "///      calling test pre-expands.")
     return f"""// SPDX-License-Identifier: MIT
 pragma solidity {SOLIDITY_PRAGMA};
 {banner()}
 /// @title {lib_name}
-/// @notice {LIB["lib_notice"] if not wide else "TEST ONLY. " + LIB_NAME + " with the rounding test forced to fail, so every\n///         correctly rounded op returns its wide second stage. Generated for\n///         make sweep's second-stage pass; never deploy or import it."}
-/// @dev {LIB.get("lib_dev", "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors.")}
+/// @notice {notice}
+/// @dev {dev}
 library {lib_name} {{
 {errs}
 
@@ -547,6 +684,9 @@ def main() -> int:
     ap.add_argument("--src", type=Path, default=None)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--wide-lib", type=Path, default=None, help="write only the test-only forced-second-stage library here")
+    ap.add_argument("--count-lib", type=Path, default=None, help="write only the test-only library that counts rounding-test fallbacks here")
+    ap.add_argument("--probe-lib", type=Path, default=None, help="write only the test-only library with gas probes on the profiled helpers here")
+    ap.add_argument("--forced", action="store_true", help="with --count-lib or --probe-lib: also force the rounding test to fail, as --wide-lib")
     args = ap.parse_args()
     global LIB, SRC, OUT_DIR, OBJECT_NAME, LIB_NAME, IFACE_NAME
     LIB = LIBS[args.lib]
@@ -563,6 +703,18 @@ def main() -> int:
         args.wide_lib.parent.mkdir(parents=True, exist_ok=True)
         args.wide_lib.write_text(emit_library(src, name, wide=True))
         print(f"wrote {args.wide_lib} ({name}: rbad forced to 1)")
+        return 0
+    for path, kind in ((args.count_lib, "count"), (args.probe_lib, "probe")):
+        if path:
+            names = instrumented(args.lib, kind)
+            missing = sorted(set(names) - set(src.funcs))
+            if missing:
+                sys.stderr.write(f"--{kind}-lib: no function {', '.join(missing)} in {SRC.name}\n")
+                return 1
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(emit_library(src, path.stem, wide=args.forced, **{kind: names}))
+            print(f"wrote {path} ({path.stem}: {kind} on {', '.join(names)}{', rbad forced to 1' if args.forced else ''})")
+    if args.count_lib or args.probe_lib:
         return 0
     outputs = emit_all(src)
 

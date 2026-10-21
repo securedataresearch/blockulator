@@ -1,4 +1,4 @@
-.PHONY: talk sweep replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia predict-fp256x deploy-fp256x-sepolia verify-fp256x-sepolia predict-fp256x2 deploy-fp256x2-sepolia verify-fp256x2-sepolia predict-fp256x3 deploy-fp256x3-sepolia verify-fp256x3-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia predict-fp256x deploy-fp256x-sepolia verify-fp256x-sepolia predict-fp256x2 deploy-fp256x2-sepolia verify-fp256x2-sepolia predict-fp256x3 deploy-fp256x3-sepolia verify-fp256x3-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
@@ -30,6 +30,7 @@ help:
 	@echo "  make accrual-verify   - (network) recompile the pinned Aave/Morpho sources, compare runtime bytecode to mainnet"
 	@echo "  make accrual-survey   - (network) refresh scripts/accrual/survey.json from mainnet at the current block"
 	@echo "  make sweep            - random-input accuracy of every FP127/FP256 op vs correctly rounded truth -> docs/benchmarks/sweep.{json,md}"
+	@echo "  make profile          - where the gas goes: per op gas, fallback rate and per-helper share on the sweep inputs, and the via_ir bench -> docs/benchmarks/profile.{json,md}"
 	@echo "  make replays          - four exploits replayed bit-exact from pinned chain data, then in FP127, FP256 and exact -> docs/benchmarks/replay-*.md"
 	@echo "  make replays-fetch    - (network, read-only) re-pin scripts/replays/*.json from the attack transactions"
 	@echo "  make predict-ladder   - CREATE2 addresses of the ladder adapters and runner"
@@ -175,6 +176,8 @@ replay-balancer-v1-fetch:
 
 sweep: build
 	@$(PY) scripts/sweep/sweep.py
+profile: build
+	@$(PY) scripts/sweep/gasprofile.py
 talk:
 	@uv run --with matplotlib --with weasyprint --with mpmath python scripts/talk/deck.py
 

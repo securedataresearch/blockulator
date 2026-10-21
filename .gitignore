@@ -29,3 +29,8 @@ zola
 out-accrual/
 cache-accrual/
 test/sweep/wide/
+test/sweep/count/
+test/sweep/probe/
+test/profile/gen/
+out-viair/
+cache-viair/

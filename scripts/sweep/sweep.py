@@ -11,15 +11,27 @@ rounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly
 rounded op returns its wide second stage. That pass is generated into
 test/sweep/wide/ (not committed) and removed after the run.
 
+A third pass runs every op on all its inputs through test-only copies of FP256Lib
+and FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:
+FP256's rbad firing, FP127's nearmid firing and powu's 512-bit powus), generated into
+test/sweep/count/ and removed after the run: the *fallback* column is the share of
+inputs that left the fast path. Its results must equal the plain pass's word for word.
+
+Gas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of
+the one call, after its dispatch, and subtracts the same window around an assignment.
+
 Inputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not
 committed. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:
 exact rationals and mpmath at 300 digits, half away from zero) returns, as a signed
 distance in ULPs. FP127 results are compared with the real truth at 200 digits, as
 |got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.
 """
+import importlib.util
 import json
 import multiprocessing as mpc
+import os
 import random
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -30,6 +42,11 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "fp256"))
 import oracle as O  # noqa: E402
 from mpmath import mp, mpf, e as E, lambertw, log  # noqa: E402
+
+_spec = importlib.util.spec_from_file_location("fpgen", ROOT / "scripts" / "fp127" / "gen.py")
+G = importlib.util.module_from_spec(_spec)
+sys.modules["fpgen"] = G
+_spec.loader.exec_module(G)
 
 D = ROOT / "cache" / "sweep"
 OUT = ROOT / "docs" / "benchmarks"
@@ -395,7 +412,7 @@ def score():
         for op in OPS256:
             data = load(f"fp256_{op}")
             res = pool.map(job256, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=64)
-            rows.append(dict(summarize256(op, res), **gasstats([g for *_, g in data])))
+            rows.append(dict(summarize256(op, res), **gasstats([g for *_, g in data]), **fallback("fp256", op, data)))
             print(json.dumps(rows[-1]), flush=True)
         for op in WIDE256:
             if not (D / f"wide_{op}.out").exists():
@@ -405,8 +422,9 @@ def score():
             rows.append(dict(summarize256(op, res), stage="second", **gasstats([g for *_, g in data])))
             print(json.dumps(rows[-1]), flush=True)
         for op in OPS127 + ["lambertW0", "lambertWm1"]:
-            res = pool.map(job127, [(op, a, b, o) for a, b, c, o, g in load(f"fp127_{op}")], chunksize=64)
-            rows.append(summarize127(op, res))
+            data = load(f"fp127_{op}")
+            res = pool.map(job127, [(op, a, b, o) for a, b, c, o, g in data], chunksize=64)
+            rows.append(dict(summarize127(op, res), **gasstats([g for *_, g in data]), **fallback("fp127", op, data)))
             print(json.dumps(rows[-1]), flush=True)
     doc = {"_doc": __doc__.strip(), "seed": SEED, "seedLambert": SEED_LW, "rows": rows}
     (OUT / "sweep.json").write_text(json.dumps(doc, indent=1) + "\n")
@@ -426,14 +444,15 @@ def score():
           "",
           "Gas is the inline library's (FP256Lib) own cost on these inputs, median / 99th "
           "percentile / largest, the second stage's runs included where the fast value's "
-          "error bound reached the rounding boundary.",
+          "error bound reached the rounding boundary. *Fallback* is the share of inputs whose "
+          "rounding test fired (a dash: the op has none; Lambert W runs its wide step always).",
           "",
-          "| op | inputs | correctly rounded | misrounded | max ULP | gas median / p99 / max |",
-          "|---|---:|---:|---:|---:|---:|"]
+          "| op | inputs | correctly rounded | misrounded | max ULP | gas median / p99 / max | fallback |",
+          "|---|---:|---:|---:|---:|---:|---:|"]
     for r in rows:
         if r["lib"] == "fp256" and "stage" not in r:
             md.append(f"| {r['op']} | {r['n']:,} | {r['correctlyRounded']:,} | {r['misrounded']:,} | {r['maxUlp']} | "
-                      f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} |")
+                      f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} | {pct(r)} |")
     if any(r.get("stage") for r in rows):
         md += ["",
                "### The second stage alone",
@@ -456,16 +475,19 @@ def score():
            "result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; "
            "for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, "
            "divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows "
-           "the direction; toFixed18Up is measured in its own unit, 10^-18.",
+           "the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, "
+           "median / p99 / largest; *fallback* is the share of inputs that took the double-word decider "
+           "(ln, log2, log10 near a midpoint; powu and compound on a 512-bit mantissa; a dash: the op has none).",
            "",
-           "| op | inputs | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth |",
-           "|---|---:|---:|---:|---:|---:|---:|---|"]
+           "| op | inputs | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |",
+           "|---|---:|---:|---:|---:|---:|---:|---|---:|---:|"]
     for r in rows:
         if r["lib"] == "fp127":
             near = r.get("minBitsWithin2^-20OfMinus1/e")
             mb = "—" if r["minBits"] is None else f"{r['minBits']}" + (f" ({near} near −1/e)" if near is not None else "")
             md.append(f"| {r['op']} | {r['n']:,} | {r['nearest']:,} | {r['faithful']:,} | {r['maxUlp']:.3g} | "
-                      f"{r['medianUlp']:.3g} | {mb} | {r['below']:,} / {r['above']:,} |")
+                      f"{r['medianUlp']:.3g} | {mb} | {r['below']:,} / {r['above']:,} | "
+                      f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} | {pct(r)} |")
     (OUT / "sweep.md").write_text("\n".join(md) + "\n")
     print("wrote docs/benchmarks/sweep.{json,md}")
 
@@ -480,16 +502,16 @@ import {FP256LibWide} from "./FP256LibWide.sol";
 contract SweepWide is Test {
     string constant DIR = "cache/sweep/";
 
-    function f(bytes32 op, int256 a, int256 b) external pure returns (int256) {
-        if (op == "noop") return 0;
+    function f(bytes32 op, int256 a, int256 b) external view returns (int256 r, uint256 g) {
+        uint256 g0;
+        if (op == "noop") { g0 = gasleft(); r = a; g = gasleft(); }
 %s
-        revert("op");
+        require(g0 != 0, "op");
+        g = g0 - g;
     }
 
-    function _base() internal view returns (uint256) {
-        uint256 g0 = gasleft();
-        try this.f("noop", 0, 0) returns (int256) {} catch {}
-        return g0 - gasleft();
+    function _base() internal view returns (uint256 g) {
+        (, g) = this.f("noop", 0, 0);
     }
 
     function runOne(string memory op, bool two) external {
@@ -508,9 +530,7 @@ contract SweepWide is Test {
         uint256 n = a.length < %d ? a.length : %d;
         uint256 base = _base();
         for (uint256 i; i < n; i++) {
-            uint256 g0 = gasleft();
-            try this.f(k, int256(uint256(a[i])), int256(uint256(b[i]))) returns (int256 r) {
-                uint256 g = g0 - gasleft();
+            try this.f(k, int256(uint256(a[i])), int256(uint256(b[i]))) returns (int256 r, uint256 g) {
                 vm.writeLine(outp, string.concat(vm.toString(bytes32(uint256(r))), " ", vm.toString(g > base ? g - base : 0)));
             } catch (bytes memory e) {
                 vm.writeLine(outp, string.concat("R", vm.toString(e), " 0"));
@@ -532,7 +552,7 @@ def run_wide():
                     str(wd / "FP256LibWide.sol")], cwd=ROOT, check=True)
     names = WIDE256 + [f"{op}x" for op in EXTRA]
     fn = {f"{op}x": op for op in EXTRA}
-    disp = "\n".join(f'        if (op == "{n}") return FP256LibWide.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""});'
+    disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = FP256LibWide.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
                       for n in names)
     runs = "\n".join(f'        this.runOne("{n}", {"true" if fn.get(n, n) in TWO else "false"});' for n in names)
     (wd / "SweepWide.t.sol").write_text(WIDE_TEST % (disp, WIDE_N, WIDE_N, runs))
@@ -544,11 +564,182 @@ def run_wide():
         wd.rmdir()
 
 
+# ---- the instrumented passes (count here, probe for make profile) ----------
+
+INSTR_TEST = """// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+// GENERATED by scripts/sweep/sweep.py for the %(tag)s pass; removed after the run.
+
+import {Test} from "forge-std/Test.sol";
+%(imports)s
+
+/// Test/sweep/Sweep.t.sol's dispatch on the instrumented libraries. The
+/// libraries record into memory from 0x8000 (scripts/fp127/gen.py: count_wrap,
+/// probe_wrap); f pre-expands it outside the timed window and returns the
+/// %(rec)d record words beside the result and the window's gas.
+contract Sweep%(Tag)s is Test {
+    string constant DIR = "cache/sweep/";
+    uint256 constant REC = %(rec)d;
+    uint256 constant LIMIT = %(limit)d;
+
+    function f(bytes32 op, int256 a, int256 b, int256 c) external view returns (int256 r, uint256 g, uint256[] memory rec) {
+        assembly { mstore(%(top)s, 0) }
+        uint256 g0;
+%(disp)s
+        require(g0 != 0, "op");
+        g = g0 - g;
+        rec = new uint256[](REC);
+        for (uint256 i; i < REC; i++) {
+            uint256 w;
+            assembly { w := mload(add(0x8000, mul(0x20, i))) }
+            rec[i] = w;
+        }
+    }
+
+    function runOne(string memory op, uint256 args) external {
+        string memory path = string.concat(DIR, op, ".json");
+        if (!vm.exists(path)) return;
+        string memory j = vm.readFile(path);
+        bytes32[] memory a = vm.parseJsonBytes32Array(j, ".a");
+        bytes32[] memory b = args > 1 ? vm.parseJsonBytes32Array(j, ".b") : new bytes32[](a.length);
+        bytes32[] memory c = args > 2 ? vm.parseJsonBytes32Array(j, ".c") : new bytes32[](a.length);
+        string memory outp = string.concat(DIR, "%(tag)s_", op, ".out");
+        if (vm.exists(outp)) vm.removeFile(outp);
+        bytes32 k = bytes32(bytes(op));
+        (, uint256 base,) = this.f("noop", 0, 0, 0);
+        uint256 n = a.length < LIMIT ? a.length : LIMIT;
+        for (uint256 i; i < n; i++) this.line(outp, k, [int256(uint256(a[i])), int256(uint256(b[i])), int256(uint256(c[i]))], base);
+    }
+
+    /// One input's line, in its own call so its memory is released.
+    function line(string memory outp, bytes32 k, int256[3] memory x, uint256 base) external {
+        try this.f(k, x[0], x[1], x[2]) returns (int256 r, uint256 g, uint256[] memory rec) {
+            string memory s = string.concat(vm.toString(bytes32(uint256(r))), " ", vm.toString(g > base ? g - base : 0));
+            for (uint256 w; w < rec.length; w++) s = string.concat(s, " ", vm.toString(rec[w]));
+            vm.writeLine(outp, s);
+        } catch (bytes memory e) {
+            vm.writeLine(outp, string.concat("R", vm.toString(e), " 0"));
+        }
+    }
+
+    function test_sweep_%(tag)s() public {
+%(runs)s
+    }
+}
+"""
+
+
+def sweep_dispatch() -> list[tuple[str, str]]:
+    """(name, expression) of every op in Sweep.t.sol's f, in order."""
+    src = (ROOT / "test" / "sweep" / "Sweep.t.sol").read_text()
+    return re.findall(r'if \(op == "(\w+)"\) \{ g0 = gasleft\(\); r = (.*?); g = gasleft\(\); \}', src)
+
+
+def rec_words(kind: str) -> int:
+    """Record words from 0x8000: the counter, or the probes' shared words and three per probe."""
+    if kind == "count":
+        return 1
+    return (G.PROBE_BASE - G.COUNT_SLOT + G.PROBE_STRIDE * max(len(v) for v in G.PROBES.values())) // 32
+
+
+def nargs(name: str) -> int:
+    op = name.split("_", 1)[1] if "_" in name else name
+    op = op[:-1] if name.startswith("fp256_") and op.endswith("x") and op[:-1] in EXTRA else op
+    return 3 if op in THREE else 2 if op in TWO else 1
+
+
+def wide_names() -> list[str]:
+    """The input files of the second-stage pass, as run_wide runs them."""
+    return [f"fp256_{op}" for op in WIDE256] + [f"fp256_{op}x" for op in EXTRA]
+
+
+def run_instrumented(kind: str, forced: bool = False):
+    """Generate the count or probe libraries and their runner, run them on the
+    swept inputs, remove them. forced: FP256 only, with the rounding test
+    forced to fail as in run_wide (gen.py --forced), on the same first WIDE_N
+    inputs of the ops with a second stage; the outputs are <kind>wide_*.out."""
+    tag = kind + ("wide" if forced else "")
+    Tag = tag.capitalize()
+    wd = ROOT / "test" / "sweep" / tag
+    libs = ("fp256",) if forced else ("fp256", "fp127")
+    for lib in libs:
+        subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", lib, f"--{kind}-lib",
+                        str(wd / f"{lib.upper()}Lib{Tag}.sol")] + (["--forced"] if forced else []), cwd=ROOT, check=True)
+    want = set(wide_names()) if forced else None
+    disp, runs = [], []
+    for name, expr in sweep_dispatch():
+        if forced and name != "noop" and name not in want:
+            continue
+        expr = expr.replace("FP256Lib.", f"FP256Lib{Tag}.").replace("FP127Lib.", f"FP127Lib{Tag}.")
+        disp.append(f'        if (op == "{name}") {{ g0 = gasleft(); r = {expr}; g = gasleft(); }}')
+        if name != "noop":
+            runs.append(f'        this.runOne("{name}", {nargs(name)});')
+    rec = rec_words(kind)
+    imports = "\n".join(f'import {{{lib.upper()}Lib{Tag}}} from "./{lib.upper()}Lib{Tag}.sol";' for lib in libs)
+    (wd / f"Sweep{Tag}.t.sol").write_text(INSTR_TEST % {
+        "tag": tag, "Tag": Tag, "rec": rec, "top": hex(G.COUNT_SLOT + 32 * rec), "imports": imports,
+        "limit": WIDE_N if forced else 1 << 32, "disp": "\n".join(disp), "runs": "\n".join(runs)})
+    keep = bool(os.environ.get("SWEEP_KEEP"))   # leave the generated files, show forge's output
+    try:
+        subprocess.run(["forge", "test", "--match-path", f"test/sweep/{tag}/Sweep{Tag}.t.sol"] + ([] if keep else ["-q"]),
+                       cwd=ROOT, check=True)
+    finally:
+        if not keep:
+            for f in wd.glob("*"):
+                f.unlink()
+            wd.rmdir()
+
+
+def load_rec(kind: str, name: str):
+    """The instrumented pass's lines for an input file (with the x rows, as
+    load): (out, gas, [record words]) per input."""
+    lib, op = name.split("_", 1)
+    names = [name] + ([name + "x"] if lib == "fp256" and op in EXTRA and (D / f"{name}x.json").exists() else [])
+    rows = []
+    for n in names:
+        path = D / f"{kind}_{n}.out"
+        if not path.exists():
+            return None
+        for ln in path.read_text().splitlines():
+            parts = ln.split()
+            rows.append((parts[0], int(parts[1]) if len(parts) > 1 else 0, [int(x) for x in parts[2:]]))
+    return rows
+
+
+def closures(lib: str) -> dict[str, set[str]]:
+    """Each export's Solidity name -> the Yul functions it runs."""
+    src = G.parse(G.LIBS[lib]["src"].read_text())
+    return {e.sol_name: {f.name for f in G.closure(src, e.yul_name)} for e in src.exports}
+
+
+def fallback(lib: str, op: str, data) -> dict:
+    """The count pass for one op: inputs whose rounding test fired, or {} when
+    the op has no counted fallback (or the pass did not run)."""
+    if not set(G.COUNTS[lib]) & closures(lib).get(op, set()):
+        return {}
+    rec = load_rec("count", f"{lib}_{op}")
+    if rec is None:
+        return {}
+    plain = [d[-2] for d in data]
+    got = [o for o, _, _ in rec]
+    assert got == plain, f"{lib} {op}: the count pass changed a result"
+    fired = [w[0] for o, _, w in rec if w]
+    return {"fallback": sum(1 for c in fired if c), "fallbackRuns": sum(fired), "fallbackPct": round(100 * sum(1 for c in fired if c) / len(rec), 3)}
+
+
+def pct(r) -> str:
+    if "fallbackPct" not in r:
+        return "—"
+    p = r["fallbackPct"]
+    return "0" if p == 0 else f"{p:.2f}%" if p >= 0.01 else f"{p:.3f}%"
+
+
 def main():
     if sys.argv[1:] != ["score"]:
         gen()
         subprocess.run(["forge", "test", "--match-path", "test/sweep/Sweep.t.sol", "-q"], cwd=ROOT, check=True)
         run_wide()
+        run_instrumented("count")
     score()
 
 

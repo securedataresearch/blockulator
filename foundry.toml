@@ -58,3 +58,15 @@ cache_path = "cache-accrual"
 skip = ["contracts/src/**/*.vy", "contracts/src/fp256/FP256.yul", "contracts/src/fp256/FP256X.yul", "contracts/src/fp256/FP256X2.yul", "contracts/src/fp256/FP256X3.yul", "contracts/src/tools/**", "contracts/src/games/**",
         "contracts/src/market/**", "contracts/src/content/**",
         "contracts/src/identity/**", "contracts/src/interfaces/**"]
+
+# make profile's build-setting bench: test/profile/ViaIr.t.sol alone, compiled
+# through the IR, in its own out/cache (it reads the objects from out/, which
+# make build writes under the default profile)
+[profile.viair]
+src = "test/profile"
+test = "test/profile"
+script = "test/profile"
+out = "out-viair"
+cache_path = "cache-viair"
+via_ir = true
+skip = ["test/profile/gen/**"]

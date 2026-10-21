@@ -11,7 +11,8 @@ Two regimes, both at 2^-192 (64 guard bits), rounded once at the end:
              summed forward until the term floors to zero at 2^-192.
   |x| >  T   erfc by the continued fraction
              erfc(x) = e^(-x^2) / (sqrt(pi) K),  K = x + (1/2)/(x + 1/(x + (3/2)/(x + ...)))
-             evaluated backward from depth N(x) = C / floor(x^2) + D.
+             as the convergents A_k / B_k of the forward recurrence
+             A_k = x A_(k-1) + (k/2) A_(k-2), to depth N(x) = C / floor(x^2) + D.
 e^(-x^2) is taken from the exp2 kernel at 2^-192 without rounding (exp2g),
 so a result far below one keeps its relative precision. This script reads
 the exp2 polynomial from FP127.yul.src so it models the deployed constants.

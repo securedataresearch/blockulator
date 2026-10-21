@@ -41,8 +41,17 @@ pi, the replays and the accrual are not diffed in CI.
   encoded arguments in `scripts/ladder/edge-inputs.json`.
 - [`sweep.md`](sweep.md) / [`sweep.json`](sweep.json): **per-op accuracy on
   random inputs.** Every FP256 op against the correctly rounded word and every
-  FP127 op against the real truth, 1,500 to 20,000 seeded inputs each
-  (`make sweep`).
+  FP127 op against the real truth, 1,500 to 20,000 seeded inputs each,
+  with each op's gas and the share of inputs whose rounding test fell back
+  to the second stage (`make sweep`).
+- [`profile.md`](profile.md) / [`profile.json`](profile.json): **where the
+  gas goes.** On the sweep's inputs: each op's gas (median, p99, max), its
+  fallback rate, and the share of its gas spent in each named helper,
+  measured by test-only probed copies of the libraries that are generated,
+  run and removed (`scripts/fp127/gen.py --count-lib`, `--probe-lib`);
+  and whether compiling the caller with `via_ir` closes the gap between the
+  inline libraries and the Yul objects (`test/profile/ViaIr.t.sol`). `make
+  profile`.
 - **Replays: four exploits, bit-exact.** Each one reproduces the deployed
   arithmetic from integers pinned out of the attack transaction and asserted
   against the chain, then prices the decisive step again under the
@@ -69,10 +78,13 @@ pi, the replays and the accrual are not diffed in CI.
   from `test/fp127/PiCompare.t.sol`.
 - [`gas.md`](gas.md) / [`gas.json`](gas.json): gas for every FP127 op across
   an input ladder, for the Huff baseline, the Yul object, `FP127Caller`,
-  `FP127Lib` and the five competitor libraries. `make bench`.
+  `FP127Lib` and the five competitor libraries, and a second table on
+  typical inputs (random, non-integer, no shortcut) for the transcendentals.
+  The inline forms are the library call alone, timed inside the harness's
+  entry point after its dispatch. `make bench`.
 - [`gas256.md`](gas256.md) / [`gas256.json`](gas256.json): gas for every FP256
   op (object, inline, the same op in FP127Lib on the same value, and
-  ABDKMathQuad). `make bench-fp256`.
+  ABDKMathQuad), the same way. `make bench-fp256`.
 - [`../fp256/precision.md`](../fp256/precision.md) / [`../fp256/precision.json`](../fp256/precision.json):
   correct bits of every FP256 op on the decoded values. `make test` then
   `make precision-report-fp256`.
