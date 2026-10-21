@@ -1021,6 +1021,37 @@ library FP127Lib {
                 rh := add(rh, lt(rl, a))
             }
 
+            function smul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
+            }
+
+            function l2py(x, ms, y0) -> lh, ll {
+                let m := shl(sub(255, ms), x)
+                lh := shl(128, sub(ms, 128))
+                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
+                if slt(y0, 1) { y0 := 1 }
+                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
+                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
+                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
+                let sh, sl := expk(rh, rl)
+                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
+                let qh, ql := mul512(m, sh)
+                let c := hmul(m, sl)
+                ql := add(ql, c)
+                qh := add(add(qh, m), lt(ql, c))
+                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
+                let d := or(shl(128, qh), shr(128, ql))
+                let ad := absw(d)
+                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let corr := or(shl(1, ph), shr(255, pl))
+                // log2(x) = (ms - 128) + y0 + corr
+                let y1 := shl(192, y0)
+                ll := add(y1, corr)
+                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+            }
+
             function log2poly(f) -> r {
                 // mulg(r, f) inline, both signs corrected: f is a hair below zero when a
                 // reduction stage lands just under one
@@ -1102,47 +1133,6 @@ library FP127Lib {
                 if iszero(lt(x, 0x2)) { r := add(r, 1) }
             }
 
-            function smul512(a, b) -> h, l {
-                l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
-            }
-
-            function l2p(x) -> lh, ll {
-                let ms := msb(x)
-                let m := shl(sub(255, ms), x)
-                lh := shl(128, sub(ms, 128))
-                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
-                let y0 := log2m(shr(63, m))
-                if slt(y0, 1) { y0 := 1 }
-                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
-                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
-                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
-                let sh, sl := expk(rh, rl)
-                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
-                let qh, ql := mul512(m, sh)
-                let c := hmul(m, sl)
-                ql := add(ql, c)
-                qh := add(add(qh, m), lt(ql, c))
-                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
-                let d := or(shl(128, qh), shr(128, ql))
-                let ad := absw(d)
-                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
-                let corr := or(shl(1, ph), shr(255, pl))
-                // log2(x) = (ms - 128) + y0 + corr
-                let y1 := shl(192, y0)
-                ll := add(y1, corr)
-                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
-            }
-
-            function log2g(x) -> r {
-                let m := msb(x)
-                if iszero(and(x, sub(x, 1))) { r := shl(192, sub(m, 128)) leave }
-                let mm := shl(sub(192, m), x)
-                if gt(m, 192) { mm := shr(sub(m, 192), x) }
-                r := add(shl(192, sub(m, 128)), log2m(mm))
-            }
-
             function nearmid(v) -> b {
                 b := lt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), 0x800000000000)
             }
@@ -1158,9 +1148,18 @@ library FP127Lib {
 
             function fp127_log2(x) -> r {
                 if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
-                let v := log2g(x)
+                // log2g, its msb and log2m kept for l2py
+                let ms := msb(x)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(x, sub(x, 1)) {
+                    let mm := shl(sub(192, ms), x)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
                 if nearmid(v) {
-                    let lh, ll := l2p(x)
+                    let lh, ll := l2py(x, ms, y0)
                     r := add(lh, shr(255, ll))
                     leave
                 }
@@ -1292,6 +1291,37 @@ library FP127Lib {
                 rh := add(rh, lt(rl, a))
             }
 
+            function smul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
+            }
+
+            function l2py(x, ms, y0) -> lh, ll {
+                let m := shl(sub(255, ms), x)
+                lh := shl(128, sub(ms, 128))
+                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
+                if slt(y0, 1) { y0 := 1 }
+                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
+                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
+                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
+                let sh, sl := expk(rh, rl)
+                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
+                let qh, ql := mul512(m, sh)
+                let c := hmul(m, sl)
+                ql := add(ql, c)
+                qh := add(add(qh, m), lt(ql, c))
+                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
+                let d := or(shl(128, qh), shr(128, ql))
+                let ad := absw(d)
+                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let corr := or(shl(1, ph), shr(255, pl))
+                // log2(x) = (ms - 128) + y0 + corr
+                let y1 := shl(192, y0)
+                ll := add(y1, corr)
+                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+            }
+
             function log2poly(f) -> r {
                 // mulg(r, f) inline, both signs corrected: f is a hair below zero when a
                 // reduction stage lands just under one
@@ -1373,47 +1403,6 @@ library FP127Lib {
                 if iszero(lt(x, 0x2)) { r := add(r, 1) }
             }
 
-            function smul512(a, b) -> h, l {
-                l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
-            }
-
-            function l2p(x) -> lh, ll {
-                let ms := msb(x)
-                let m := shl(sub(255, ms), x)
-                lh := shl(128, sub(ms, 128))
-                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
-                let y0 := log2m(shr(63, m))
-                if slt(y0, 1) { y0 := 1 }
-                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
-                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
-                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
-                let sh, sl := expk(rh, rl)
-                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
-                let qh, ql := mul512(m, sh)
-                let c := hmul(m, sl)
-                ql := add(ql, c)
-                qh := add(add(qh, m), lt(ql, c))
-                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
-                let d := or(shl(128, qh), shr(128, ql))
-                let ad := absw(d)
-                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
-                let corr := or(shl(1, ph), shr(255, pl))
-                // log2(x) = (ms - 128) + y0 + corr
-                let y1 := shl(192, y0)
-                ll := add(y1, corr)
-                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
-            }
-
-            function log2g(x) -> r {
-                let m := msb(x)
-                if iszero(and(x, sub(x, 1))) { r := shl(192, sub(m, 128)) leave }
-                let mm := shl(sub(192, m), x)
-                if gt(m, 192) { mm := shr(sub(m, 192), x) }
-                r := add(shl(192, sub(m, 128)), log2m(mm))
-            }
-
             function mulg(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -1447,9 +1436,19 @@ library FP127Lib {
             function fp127_ln(x) -> r {
                 if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
                 if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
-                let v := mulg(log2g(x), 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
+                // log2g, its msb and log2m kept for l2py
+                let ms := msb(x)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(x, sub(x, 1)) {
+                    let mm := shl(sub(192, ms), x)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
+                v := mulg(v, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
                 if nearmid(v) {
-                    let lh, ll := l2p(x)
+                    let lh, ll := l2py(x, ms, y0)
                     r := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
                     leave
                 }
@@ -1579,6 +1578,37 @@ library FP127Lib {
                 rh := add(rh, lt(rl, a))
             }
 
+            function smul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
+            }
+
+            function l2py(x, ms, y0) -> lh, ll {
+                let m := shl(sub(255, ms), x)
+                lh := shl(128, sub(ms, 128))
+                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
+                if slt(y0, 1) { y0 := 1 }
+                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
+                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
+                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
+                let sh, sl := expk(rh, rl)
+                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
+                let qh, ql := mul512(m, sh)
+                let c := hmul(m, sl)
+                ql := add(ql, c)
+                qh := add(add(qh, m), lt(ql, c))
+                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
+                let d := or(shl(128, qh), shr(128, ql))
+                let ad := absw(d)
+                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let corr := or(shl(1, ph), shr(255, pl))
+                // log2(x) = (ms - 128) + y0 + corr
+                let y1 := shl(192, y0)
+                ll := add(y1, corr)
+                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+            }
+
             function log2poly(f) -> r {
                 // mulg(r, f) inline, both signs corrected: f is a hair below zero when a
                 // reduction stage lands just under one
@@ -1660,47 +1690,6 @@ library FP127Lib {
                 if iszero(lt(x, 0x2)) { r := add(r, 1) }
             }
 
-            function smul512(a, b) -> h, l {
-                l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
-            }
-
-            function l2p(x) -> lh, ll {
-                let ms := msb(x)
-                let m := shl(sub(255, ms), x)
-                lh := shl(128, sub(ms, 128))
-                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
-                let y0 := log2m(shr(63, m))
-                if slt(y0, 1) { y0 := 1 }
-                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
-                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
-                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
-                let sh, sl := expk(rh, rl)
-                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
-                let qh, ql := mul512(m, sh)
-                let c := hmul(m, sl)
-                ql := add(ql, c)
-                qh := add(add(qh, m), lt(ql, c))
-                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
-                let d := or(shl(128, qh), shr(128, ql))
-                let ad := absw(d)
-                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
-                let corr := or(shl(1, ph), shr(255, pl))
-                // log2(x) = (ms - 128) + y0 + corr
-                let y1 := shl(192, y0)
-                ll := add(y1, corr)
-                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
-            }
-
-            function log2g(x) -> r {
-                let m := msb(x)
-                if iszero(and(x, sub(x, 1))) { r := shl(192, sub(m, 128)) leave }
-                let mm := shl(sub(192, m), x)
-                if gt(m, 192) { mm := shr(sub(m, 192), x) }
-                r := add(shl(192, sub(m, 128)), log2m(mm))
-            }
-
             function mulg(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -1734,9 +1723,19 @@ library FP127Lib {
             function fp127_log10(x) -> r {
                 if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
                 if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
-                let v := mulg(log2g(x), 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a5)
+                // log2g, its msb and log2m kept for l2py
+                let ms := msb(x)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(x, sub(x, 1)) {
+                    let mm := shl(sub(192, ms), x)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
+                v := mulg(v, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a5)
                 if nearmid(v) {
-                    let lh, ll := l2p(x)
+                    let lh, ll := l2py(x, ms, y0)
                     r := x384mul(lh, ll, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e6)
                     leave
                 }
@@ -4590,6 +4589,37 @@ library FP127Lib {
                 rh := add(rh, lt(rl, a))
             }
 
+            function smul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
+            }
+
+            function l2py(x, ms, y0) -> lh, ll {
+                let m := shl(sub(255, ms), x)
+                lh := shl(128, sub(ms, 128))
+                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
+                if slt(y0, 1) { y0 := 1 }
+                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
+                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
+                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
+                let sh, sl := expk(rh, rl)
+                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
+                let qh, ql := mul512(m, sh)
+                let c := hmul(m, sl)
+                ql := add(ql, c)
+                qh := add(add(qh, m), lt(ql, c))
+                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
+                let d := or(shl(128, qh), shr(128, ql))
+                let ad := absw(d)
+                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let corr := or(shl(1, ph), shr(255, pl))
+                // log2(x) = (ms - 128) + y0 + corr
+                let y1 := shl(192, y0)
+                ll := add(y1, corr)
+                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+            }
+
             function log2poly(f) -> r {
                 // mulg(r, f) inline, both signs corrected: f is a hair below zero when a
                 // reduction stage lands just under one
@@ -4671,47 +4701,6 @@ library FP127Lib {
                 if iszero(lt(x, 0x2)) { r := add(r, 1) }
             }
 
-            function smul512(a, b) -> h, l {
-                l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
-            }
-
-            function l2p(x) -> lh, ll {
-                let ms := msb(x)
-                let m := shl(sub(255, ms), x)
-                lh := shl(128, sub(ms, 128))
-                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
-                let y0 := log2m(shr(63, m))
-                if slt(y0, 1) { y0 := 1 }
-                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
-                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
-                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
-                let sh, sl := expk(rh, rl)
-                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
-                let qh, ql := mul512(m, sh)
-                let c := hmul(m, sl)
-                ql := add(ql, c)
-                qh := add(add(qh, m), lt(ql, c))
-                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
-                let d := or(shl(128, qh), shr(128, ql))
-                let ad := absw(d)
-                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
-                let corr := or(shl(1, ph), shr(255, pl))
-                // log2(x) = (ms - 128) + y0 + corr
-                let y1 := shl(192, y0)
-                ll := add(y1, corr)
-                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
-            }
-
-            function log2g(x) -> r {
-                let m := msb(x)
-                if iszero(and(x, sub(x, 1))) { r := shl(192, sub(m, 128)) leave }
-                let mm := shl(sub(192, m), x)
-                if gt(m, 192) { mm := shr(sub(m, 192), x) }
-                r := add(shl(192, sub(m, 128)), log2m(mm))
-            }
-
             function mulg(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -4740,9 +4729,19 @@ library FP127Lib {
             function fp127_ln(x) -> r {
                 if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
                 if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
-                let v := mulg(log2g(x), 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
+                // log2g, its msb and log2m kept for l2py
+                let ms := msb(x)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(x, sub(x, 1)) {
+                    let mm := shl(sub(192, ms), x)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
+                v := mulg(v, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
                 if nearmid(v) {
-                    let lh, ll := l2p(x)
+                    let lh, ll := l2py(x, ms, y0)
                     r := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
                     leave
                 }
