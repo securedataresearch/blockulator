@@ -408,8 +408,9 @@ object "FP256X" {
                 eh, el := wexpm1(rh, rl)
             }
 
-            function wlnw(mh, ml) -> lh, ll {
-                let y0 := mulwu(log2m(mh), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)
+            function wlnw(mh, ml, lg) -> lh, ll {
+                if iszero(lg) { lg := log2m(mh) }
+                let y0 := mulwu(lg, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)
                 let eh, el := wexpm1(y0, 0)
                 let dh, dl := wsub(eh, el, sub(mh, 0x4000000000000000000000000000000000000000000000000000000000000000), ml)
                 let ng := slt(dh, 0)
@@ -567,12 +568,9 @@ object "FP256X" {
                 k := shr512(p1, p0, add(sh, 254))
             }
 
-            function log2pair(e, m) -> Lm, Ls {
-                Lm, Ls := log2pairm(sub(e, 0x3ffff), shl(18, m))
-            }
-
-            function log2pairm(u, mm) -> Lm, Ls {
-                let lg := log2m(mm)
+            function log2pair(e, m) -> Lm, Ls, lg {
+                lg := log2m(shl(18, m))
+                let u := sub(e, 0x3ffff)
                 if iszero(u) { Lm := lg Ls := sub(0, 254) leave }
                 let sh := add(msb(absw(u)), 1)
                 Lm := add(shl(sub(254, sh), u), shr(sh, lg))
@@ -935,7 +933,7 @@ object "FP256X" {
             function lwln(x) -> r {
                 let s, e, m := unpack(x)
                 if eq(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000) { leave }
-                let Lm, Ls := log2pair(e, m)
+                let Lm, Ls, lg := log2pair(e, m)
                 let l := mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)
                 r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
             }
@@ -1256,7 +1254,7 @@ object "FP256X" {
                     qh, ql := wshl(qh, ql, 1)
                     u := sub(u, 1)
                 }
-                qh, ql := wlnw(qh, ql)
+                qh, ql := wlnw(qh, ql, 0)
                 z2, z1, z0 := kln2x(absw(u))
                 switch slt(u, 0)
                 case 0 { z2, z1, z0 := add3(z2, z1, z0, 0, qh, ql) }

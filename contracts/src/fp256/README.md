@@ -118,12 +118,17 @@ The second stage:
 - `wlnw`: ln of a mantissa in [1, 2) by one Newton step from the kernel's
   value (within 2^−249): y0 − (e^y0 − m)/e^y0, the residual at 2^−510 and
   its quotient at 2^−502; within 2^−497.
-- `wln1ps` and `em1w`: the series ln(1 + d)/d (64 terms below 2^−8, 128
-  below 2^−4) and (e^x − 1)/x in two words, relative, for the near-one
-  bands.
+- `wln1ps` and `em1w`: the series ln(1 + d)/d (⌈512/(−u − 1)⌉ terms for
+  |d| < 2^(u+1): 128 at most, 64 below 2^−8, 14 at 2^−40) and (e^x − 1)/x
+  in two words, relative, for the near-one bands.
 - pow and compound: log2 x (or log2(1 + rate)) in two words, its exact
   three-word product with y's significand (or with n, any int256), split at
-  2^−510, 2^f by `wexpm1`.
+  2^−510, 2^f by `wexpm1`. ln, log2 and log10 hand the second stage the
+  kernel's log2m they already have. powu, when its own bound misses, goes
+  straight to pow's second stage (pow's looser bound would miss too);
+  compound skips its fast value where its bound is sure to reach the
+  rounding boundary (`compsure`: a per-second rate with |n log2(1 + rate)|
+  from about 11,000 to 2^19).
 - The error function: below y = 7 the all-positive series erf(y) =
   (2/√π) y e^(−y²) Σ (2y²)^k/(2k+1)!! in two words at a scale 2^−σ
   (σ = ⌊1.4434 ⌊y²⌋⌋ + 9), and 1 − erf for erfc (at most 74 bits of
@@ -192,7 +197,7 @@ The bounds, and what they give:
 | ln | 40 | (log2m 37 + 1) ln 2 + 2 | 5.18 | 2^−489 rel. | 2^−252 ULP |
 | log1p | 44 | as ln, + 1 + x's normalisation | 6.73 | 2^−489 rel. | 2^−252 ULP |
 | pow, compound near one | 16 + 12(k + 1) | t within 8(k + 1) + 2 units | 0.42 of it | 2^−486 rel. | 2^−249 ULP |
-| pow, compound | 16 + 2·yb·(40 + 2\|u\|) | log2m 37, Lm's shift 2\|u\|; yb ≥ \|y\| (\|n\| + 1) | 0.38 of it | 2^−470 rel. | 2^−233 ULP |
+| pow, compound | 8 + yq·(39 + 2\|u\|)·355/2^16 | 6 + 1.3863·\|y\|·(log2m 37 + Lm's shift 2\|u\| + compound's dropped one 1.45); yq ≥ 2^8\|y\| (2^8(\|n\| + 1)) | 0.49 of it | 2^−470 rel. | 2^−233 ULP |
 | powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it | as pow | 2^−233 ULP |
 | erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 10.6 | 2^−499 rel. | 2^−262 ULP |
 | erf, erfc, Φ, ½ ≤ y < 6 | 192 | 2 × g's 81 + 8 | 11.3 | 2^−444 rel. | 2^−207 ULP |

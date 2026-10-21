@@ -29,8 +29,12 @@ analysis is not off by a missed term.
   log1p, series         8                    2 x series 3 + 1
   log1p, kernel         44                   as ln + 1 + x's normalisation + the dropped one
   pow, compound         16 + 12 (k + 1)      near one (series, relative 8 units of log2 x)
-                        16 + 2 yb (40 + 2|u|) off it (log2m 37 + Lm's shift 2^sh <= 2|u|),
-                                             yb >= |y| (|n| + 1); 6 + 1.39 x t's error
+                        8 + yq (39 + 2|u|) 355 / 2^16
+                                             off it (log2m 37 + Lm's shift 2^sh <= 2|u|, and
+                                             compound's dropped one 1.45), yq >= 2^8 |y|
+                                             (2^8 (|n| + 1)); 6 + 1.3863 x t's error
+  compsure              sure to miss         the bound reaches 2^17 for every input it
+                                             passes, and |t| < 2^19 (checked by sure() below)
   powu                  2 n + 8              each 256-bit product within 2^-255, squarings
                                              double it: (n + 1) 2^-255 of am, plus 2 for 1/am
   erf, erfc, normCdf    128 (y < 1/2)        2 x F's 52 (erfser's rounded terms, e^-y^2, products) + 1
@@ -90,6 +94,47 @@ class Meter:
 
 def rf(rng, lo, hi, s=None):
     return K.rand_float(rng, lo, hi, s)
+
+
+def powyb(y):
+    """The Yul's powyb: yq >= 2^8 |y|."""
+    _, ey, my = K.unpack(y)
+    uy = ey - BIAS
+    return 1 << 68 if uy > 60 else (my >> (228 - uy) if 228 - uy < 256 else 0) + 1
+
+
+def powerr0(u, yq):
+    """The Yul's powerr off the near-one band."""
+    return 8 + ((yq * (39 + 2 * abs(u)) * 355) >> 16)
+
+
+def compsure(u, n):
+    """The Yul's compsure: |n| in [2^(13 - u), 2^(17 - u)) on the series band."""
+    return u < -4 and 1 << (13 - u) <= abs(n) < 1 << (17 - u)
+
+
+def sure(n):
+    """compsure sends an input straight to compound's second stage: it claims
+    the fast bound would reach 2^17 (half an ULP of v, so rbad fires for any
+    v) and |t| < 2^19 (compslow's range, where the fast stage's overflow and
+    zero tests cannot fire). Checked on inputs that pass it, with t exact and
+    the bound 16 + 12 (k + 1) at k = floor|t| less one for the fast t's error."""
+    rng = random.Random(11)
+    bad = 0
+    seen = 0
+    for _ in range(n):
+        r = rf(rng, -60, -5)
+        s, e, m = K.unpack(r)
+        u = e - BIAS
+        nn = rng.randint(1, 1 << rng.randint(1, 70)) * rng.choice([1, -1])
+        if not compsure(u, nn):
+            continue
+        seen += 1
+        t = abs(nn * log(1 + dec(r), 2))
+        k = int(t) - 1
+        bad += t >= 2 ** 19 or 16 + 12 * (k + 1) < 1 << 17
+    print(f"compsure {seen} inputs: {'all hold' if not bad else f'{bad} FAIL'}")
+    return bad > 0
 
 
 def run(n):
@@ -196,8 +241,7 @@ def run(n):
         kk, v = ker.exp2kv(s, k, f)
         t = dec(y) * log(dec(x), 2)
         uy = ey - BIAS
-        yb = (my >> (236 - uy)) + 1 if uy <= 60 else 1 << 60
-        err = 16 + 12 * (k + 1) if band is not None else 16 + 2 * yb * (40 + 2 * abs(ex - BIAS))
+        err = 16 + 12 * (k + 1) if band is not None else powerr0(ex - BIAS, powyb(y))
         M.add("pow, near one" if band is not None else "pow, kernel", err, v, power(2, t - kk + 254))
     # powu: am against |x|^n 2^(255 - ae)
     for _ in range(n // 4):
@@ -442,5 +486,6 @@ def cf_depth(n):
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 2000
     bad = run(n)
+    bad |= sure(n * 4)
     bad |= cf_depth(max(n // 20, 50))
     sys.exit(1 if bad else 0)
