@@ -46,11 +46,32 @@
   </div>
 </section>
 
+{#- gas: the range of FP127Lib / Solady median gas over these ops, from gas.json (typical inputs where the op has them, else the ladder), so it follows every make bench -#}
+{%- set gas = load_data(path="static/data/gas.json") -%}
+{%- set_global glo = 1000000 %}{% set_global ghi = 0 -%}
+{%- for op in ["mul", "div", "exp", "ln", "pow"] %}{% set o = gas.ops[op] %}{% if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif -%}
+{%- set r = sm.lib.median / sm.solady.median %}{% if r < glo %}{% set_global glo = r %}{% endif %}{% if r > ghi %}{% set_global ghi = r %}{% endif %}{% endfor -%}
+{%- set gasr = glo | round(precision=1) ~ "–" ~ ghi | round(precision=1) %}
+<section class="block limits">
+  <h2>{{ x.limits_title }}</h2>
+  <div class="limitgrid">
+    {%- for s in x.limits %}
+    <div class="card step">
+      <span class="label">{{ s.label }}</span>
+      <h3>{{ s.title | replace(from="{gas}", to=gasr) }}</h3>
+      <p>{{ s.text }}</p>
+    </div>
+    {%- endfor %}
+  </div>
+</section>
+
 <section class="ask">
   <div class="card askcard">
+    <div class="askinner">
     <h2>{{ x.ask_title }}</h2>
     <p>{{ x.ask_text | safe }}</p>
     <p class="actions"><a class="btn primary" href="{{ x.ask_primary_href }}">{{ x.ask_primary_text }}</a> <a class="btn ghost" href="{{ x.ask_secondary_href }}">{{ x.ask_secondary_text }}</a></p>
+    </div>
   </div>
 </section>
 {% endblock content %}
