@@ -106,6 +106,7 @@ test: gen-check vectors-check
 	@forge test --match-path "test/fp256/*"
 	@forge test --match-path "test/ladder/*" -q
 	@forge test --match-path "test/replays/*" -q
+	@forge test --match-path "test/examples/*" -q
 
 size-fp256: build
 	@$(PY) python -c "import json;b=json.load(open('out/FP256.yul/FP256.json'))['deployedBytecode']['object'];print('FP256 runtime:', (len(b)-2)//2, 'bytes of 24576')"
