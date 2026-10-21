@@ -153,3 +153,7 @@ canvas.cloth.on { opacity: 1; }
 
 /* the scrollbar always has its gutter, so a short page and a long one line up and a page change never shifts the layout sideways */
 html { scrollbar-gutter: stable; }
+
+/* tabular numerals: every figure on the site takes the same width, so columns of digits line up; headlines keep proportional figures */
+body, table, .mono, code, pre, kbd, .chart svg text, .kv dd, .bars, .stamp { font-variant-numeric: tabular-nums; }
+h1, .hero .sub, .block h2, .askcard h2, .doc h2, .step h3 { font-variant-numeric: proportional-nums; }
