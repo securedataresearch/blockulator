@@ -38,19 +38,15 @@
 .chart polyline { fill: none; stroke-width: 2; stroke-linejoin: round; }
 .chart circle { stroke: var(--white); stroke-width: 2; }
 .chart .lbl { font-size: 12.5px; font-weight: 600; }
-.chart .s-fp127 { stroke: var(--emerald); } .chart circle.s-fp127, .chart text.s-fp127 { fill: var(--emerald); }
-.chart .s-solady { stroke: var(--gold); } .chart circle.s-solady, .chart text.s-solady { fill: var(--gold); }
-.chart .s-abdk { stroke: var(--sapphire); } .chart circle.s-abdk, .chart text.s-abdk { fill: var(--sapphire); }
-.chart .s-prb { stroke: var(--red); } .chart circle.s-prb, .chart text.s-prb { fill: var(--red); }
-:root { --violet: color-mix(in oklab, var(--sapphire) 55%, var(--red)); --teal: color-mix(in oklab, var(--emerald) 60%, var(--sapphire)); --orange: color-mix(in oklab, var(--red) 55%, var(--gold)); --plum: color-mix(in oklab, var(--red) 60%, var(--ink)); --slate: color-mix(in oklab, var(--sapphire) 50%, var(--g-500)); }
-.chart .s-quad { stroke: var(--violet); } .chart circle.s-quad, .chart text.s-quad { fill: var(--violet); }
-.chart .s-balancer { stroke: var(--teal); } .chart circle.s-balancer, .chart text.s-balancer { fill: var(--teal); }
-.chart .s-aave { stroke: var(--orange); } .chart circle.s-aave, .chart text.s-aave { fill: var(--orange); }
-.chart .s-morpho { stroke: var(--plum); } .chart circle.s-morpho, .chart text.s-morpho { fill: var(--plum); }
-.chart .s-maker { stroke: var(--slate); } .chart circle.s-maker, .chart text.s-maker { fill: var(--slate); }
-.chart .s-fp256 { stroke: var(--ink); } .chart circle.s-fp256, .chart text.s-fp256 { fill: var(--ink); } .chart polygon.s-fp256 { fill: var(--ink); }
-.chart polyline.s-quad { stroke-dasharray: 4 2; } .chart polyline.s-balancer { stroke-dasharray: 8 3; } .chart polyline.s-aave { stroke-dasharray: 1 3; } .chart polyline.s-morpho { stroke-dasharray: 6 2 2 2; } .chart polyline.s-maker { stroke-dasharray: 3 3; }
-.chart polyline.s-solady { stroke-dasharray: 6 4; } .chart polyline.s-abdk { stroke-dasharray: 2 3; } .chart polyline.s-prb { stroke-dasharray: 10 3 2 3; }
+/* one colour per family, the same in the deck (scripts/talk/deck.py): ours emerald and ink, the WAD libraries one gold told apart by dash, the protocols one slate */
+:root { --violet: color-mix(in oklab, var(--sapphire) 55%, var(--red)); --slate: color-mix(in oklab, var(--sapphire) 50%, var(--g-500)); }
+:root { --c-fp127: var(--emerald); --c-fp256: var(--ink); --c-wad: var(--gold); --c-quad: var(--violet); --c-6464: var(--sapphire); --c-protocol: var(--slate); }
+.s-fp127 { --c: var(--c-fp127); } .s-fp256 { --c: var(--c-fp256); } .s-quad { --c: var(--c-quad); } .s-abdk { --c: var(--c-6464); }
+.s-solady, .s-prb, .s-balancer { --c: var(--c-wad); } .s-aave, .s-morpho, .s-maker { --c: var(--c-protocol); }
+.chart polyline, .chart circle[class*="s-"] { stroke: var(--c); } .chart circle, .chart text[class*="s-"], .chart polygon { fill: var(--c); }
+.chart polyline.s-quad { stroke-dasharray: 4 2; } .chart polyline.s-abdk { stroke-dasharray: 2 3; }
+.chart polyline.s-solady { stroke-dasharray: 6 4; } .chart polyline.s-prb { stroke-dasharray: 10 3 2 3; } .chart polyline.s-balancer { stroke-dasharray: 8 3; }
+.chart polyline.s-aave { stroke-dasharray: 1 3; } .chart polyline.s-morpho { stroke-dasharray: 6 2 2 2; } .chart polyline.s-maker { stroke-dasharray: 3 3; }
 .ladder { min-width: 1400px; font-size: 13px; }
 .ladder td.val { font-family: var(--mono); font-size: 12.5px; line-height: 1.5; white-space: nowrap; }
 .ladder .ok { color: var(--emerald); } .ladder .wrong { color: var(--red); } .ladder .truth { color: var(--ink); }
@@ -79,8 +75,6 @@
 .toggle { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; margin: 0 0 10px; }
 .toggle label { cursor: pointer; }
 .chart .band { opacity: .14; stroke: none; }
-.chart polygon.s-fp127 { fill: var(--emerald); } .chart polygon.s-solady { fill: var(--gold); } .chart polygon.s-abdk { fill: var(--sapphire); } .chart polygon.s-prb { fill: var(--red); }
-.chart polygon.s-quad { fill: var(--violet); } .chart polygon.s-balancer { fill: var(--teal); } .chart polygon.s-aave { fill: var(--orange); } .chart polygon.s-morpho { fill: var(--plum); } .chart polygon.s-maker { fill: var(--slate); }
 .ladder { min-width: 2800px; }
 .summary { font-size: 14px; } .summary .meta { color: var(--g-500); font-size: 12px; }
 .inputs { margin: 1em 0 1.4em; } .inputs summary { cursor: pointer; font-weight: 600; }
@@ -117,13 +111,11 @@ canvas.cloth.on { opacity: 1; }
 
 /* home: digits after a year, one bar per library */
 .bars { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 8px; max-width: 760px; }
-.bar { --c: var(--g-300); display: grid; grid-template-columns: 7.5em 1fr 2.5em; align-items: center; gap: 12px; font-size: 15px; }
+.bar { display: grid; grid-template-columns: 7.5em 1fr 2.5em; align-items: center; gap: 12px; font-size: 15px; }
 .bar .track { height: 14px; background: var(--g-100); border-radius: 999px; overflow: hidden; }
 .bar .fill { display: block; height: 100%; background: var(--c); border-radius: 999px; }
 .bar .val { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
 .bar.ours .name, .bar.ours .val { font-weight: 600; color: var(--ink); }
-.bar.s-fp256 { --c: var(--ink); } .bar.s-fp127 { --c: var(--emerald); } .bar.s-quad { --c: var(--violet); } .bar.s-maker { --c: var(--slate); }
-.bar.s-abdk { --c: var(--sapphire); } .bar.s-solady { --c: var(--gold); } .bar.s-prb { --c: var(--red); } .bar.s-balancer { --c: var(--teal); }
 .block .note { margin: -16px 0 22px; }
 .block h2 { text-shadow: none; }
 .home .ask { padding-block: clamp(48px, 7vw, 80px); }
