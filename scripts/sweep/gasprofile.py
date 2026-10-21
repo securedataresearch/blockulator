@@ -192,8 +192,8 @@ def report():
           "script's docstring; in short:",
           "",
           "- **gas**: the committed library, median / 99th percentile / largest over the op's inputs;",
-          "- **fallback**: the share of inputs whose rounding test fired (FP256 `rbad`; FP127 `nearmid`, "
-          "and powu / compound's 512-bit `powus`), counted by a test-only copy of the library whose results "
+          "- **fallback**: the share of inputs whose rounding test fired (FP256 `rbad`; FP127 the double-word `l2p` "
+          "behind ln, log2, log10, pow and cbrt, and powu / compound's 512-bit `powus`), counted by a test-only copy of the library whose results "
           "match the committed one's word for word; a dash: the op has no such test (Lambert W in FP256 "
           "runs its wide step, `lwfix`, every time);",
           "- **helpers**: test-only gas probes around the named helpers. *exclusive* is a helper's gas without "

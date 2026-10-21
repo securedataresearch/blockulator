@@ -119,7 +119,10 @@ interface IFP127 {
     ///      fraction through the double-word kernel with one rounding. The error
     ///      is under 2^-299 (1 + |y|) relative before that rounding: the
     ///      nearest word whenever |y| x^y < 2^140 or so, faithful to
-    ///      |y| x^y < 2^170. v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored
+    ///      |y| x^y < 2^170. The one-word log2 and 2^t go first (pow2t) and
+    ///      decide when their error bound cannot change the rounding, as the
+    ///      logs do; the double word then gives the same word, so it runs only
+    ///      near a midpoint or for results from about 2^12. v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored
     ///      or truncated; they now take the general path, which is nearest.
     function pow(int256 x, int256 y) external pure returns (int256 r);
     /// @notice x^floor(n) for an integer exponent, rounded to nearest: binary
@@ -148,7 +151,9 @@ interface IFP127 {
     /// @dev v5: 2^(log2|x| / 3), with log2 from l2p (2^-299), the division by
     ///      three done exactly on the 512-bit value and the fraction through the
     ///      double-word kernel. v4 was pow(|x|, 1/3) with the exponent 1/3
-    ///      floored to 128 bits, which put large results 1.6e14 ULPs off.
+    ///      floored to 128 bits, which put large results 1.6e14 ULPs off. The
+    ///      one-word log2 and 2^t go first, as in pow (pow2t), and decide when
+    ///      their error bound cannot change the rounding.
     function cbrt(int256 x) external pure returns (int256 r);
     /// @notice Geometric mean sqrt(a * b). Reverts with OutOfRange if a * b < 0.
     function gavg(int256 a, int256 b) external pure returns (int256 r);

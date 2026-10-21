@@ -571,6 +571,30 @@ object "FP127" {
                 r := rnd192(vh, vl)
             }
 
+            function pow2t(t, ay) -> r, ok {
+                let at := t
+                let e := 0
+                if slt(t, 0) { at := sub(0, t) }
+                let k := shr(192, at)
+                switch slt(t, 0)
+                case 0 { e := add(k, 1) }
+                default { e := sub(0, k) }
+                // ay 2^(e+48) / 2^128 + 2^(e+48) + 6 (the shl is 0 for e < -48)
+                let eb := add(add(shr(sub(80, e), ay), shl(add(e, 48), 1)), 6)
+                if gt(eb, 0x2000000000000000) { leave }
+                let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                let v := 0
+                switch slt(t, 0)
+                case 0 { v := shl(k, exp2frac(f)) }
+                default {
+                    switch f
+                    case 0 { v := shr(k, 0x1000000000000000000000000000000000000000000000000) }
+                    default { v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f))) }
+                }
+                ok := gt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), eb)
+                r := shr(64, add(v, 0x8000000000000000))
+            }
+
             function fp127_exp2(x) -> r {
                 if iszero(slt(x, 0x7f00000000000000000000000000000000)) { rev(0x35278d12) }
                 if slt(x, sub(0, 0x8200000000000000000000000000000000)) { r := 0 leave }
@@ -670,34 +694,7 @@ object "FP127" {
                 b := lt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), 0x800000000000)
             }
 
-            function l2p(x) -> lh, ll {
-                let ms := msb(x)
-                let m := shl(sub(255, ms), x)
-                lh := shl(128, sub(ms, 128))
-                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
-                let y0 := log2m(shr(63, m))
-                if slt(y0, 1) { y0 := 1 }
-                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
-                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
-                let rh, rl := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
-                let sh, sl := expk(rh, rl)
-                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
-                let qh, ql := mul512(m, sh)
-                let c := hmul(m, sl)
-                ql := add(ql, c)
-                qh := add(add(qh, m), lt(ql, c))
-                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
-                let d := or(shl(128, qh), shr(128, ql))
-                let ad := absw(d)
-                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
-                let corr := or(shl(1, ph), shr(255, pl))
-                // log2(x) = (ms - 128) + y0 + corr
-                let y1 := shl(192, y0)
-                ll := add(y1, corr)
-                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
-            }
-
-            function l2py(x, ms, y0) -> lh, ll {
+            function l2p(x, ms, y0) -> lh, ll {
                 let m := shl(sub(255, ms), x)
                 lh := shl(128, sub(ms, 128))
                 if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
@@ -743,7 +740,7 @@ object "FP127" {
                     v := add(v, y0)
                 }
                 if nearmid(v) {
-                    let lh, ll := l2py(x, ms, y0)
+                    let lh, ll := l2p(x, ms, y0)
                     r := add(lh, shr(255, ll))
                     leave
                 }
@@ -765,7 +762,7 @@ object "FP127" {
                 }
                 v := mulg(v, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
                 if nearmid(v) {
-                    let lh, ll := l2py(x, ms, y0)
+                    let lh, ll := l2p(x, ms, y0)
                     r := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
                     leave
                 }
@@ -787,7 +784,7 @@ object "FP127" {
                 }
                 v := mulg(v, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a5)
                 if nearmid(v) {
-                    let lh, ll := l2py(x, ms, y0)
+                    let lh, ll := l2p(x, ms, y0)
                     r := x384mul(lh, ll, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e6)
                     leave
                 }
@@ -839,8 +836,26 @@ object "FP127" {
                     case 0x200000000000000000000000000000000 { r := fp127_exp2(y) }
                     case 0xa00000000000000000000000000000000 { r := fp127_exp10(y) }
                     default {
-                        let lh, ll := l2p(x)
-                        r := pow2r(y, lh, ll)
+                        // log2(x) at 2^-192 in one word (log2g), its msb and log2m kept for l2p
+                        let ms := msb(x)
+                        let y0 := 0
+                        let v := shl(192, sub(ms, 128))
+                        if and(x, sub(x, 1)) {
+                            let mm := shl(sub(192, ms), x)
+                            if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                            y0 := log2m(mm)
+                            v := add(v, y0)
+                        }
+                        // t = y log2(x) at 2^-192, the floor of the 512-bit product, while |t| < 2^198
+                        let ok := 0
+                        let p0 := mul(y, v)
+                        let pm := mulmod(y, v, not(0))
+                        let p1 := sub(sub(sub(sub(pm, p0), lt(pm, p0)), mul(slt(y, 0), v)), mul(slt(v, 0), y))
+                        if eq(sar(70, p1), sar(255, p1)) { r, ok := pow2t(or(shl(128, p1), shr(128, p0)), absw(y)) }
+                        if iszero(ok) {
+                            let lh, ll := l2p(x, ms, y0)
+                            r := pow2r(y, lh, ll)
+                        }
                     }
                 }
             }
@@ -986,7 +1001,28 @@ object "FP127" {
 
             function fp127_cbrt(x) -> r {
                 if iszero(x) { leave }
-                let lh, ll := l2p(fp127_abs(x))
+                let ax := fp127_abs(x)
+                // log2|x| at 2^-192 in one word (log2g), its msb and log2m kept for l2p
+                let ms := msb(ax)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(ax, sub(ax, 1)) {
+                    let mm := shl(sub(192, ms), ax)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), ax) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
+                // 2^(log2|x| / 3) in one word; the third's error is under 2^-145 / 3 + 2^-192
+                // (ay = 1). From |x| = 2^39 the result's 2^13 puts eb past 2^61: no try.
+                if lt(ms, 167) {
+                    let ok := 0
+                    r, ok := pow2t(sdiv(v, 3), 0x100000000000000000000000000000000)
+                    if ok {
+                        if slt(x, 0) { r := sub(0, r) }
+                        leave
+                    }
+                }
+                let lh, ll := l2p(ax, ms, y0)
                 // log2|x| = 3 q + rem + frac; the fraction of the third is (rem + frac) / 3
                 let li := sar(128, lh)
                 let q := sdiv(li, 3)

@@ -13,7 +13,7 @@ test/sweep/wide/ (not committed) and removed after the run.
 
 A third pass runs every op on all its inputs through test-only copies of FP256Lib
 and FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:
-FP256's rbad firing, FP127's nearmid firing and powu's 512-bit powus), generated into
+FP256's rbad firing, FP127's double-word l2p and powu's 512-bit powus), generated into
 test/sweep/count/ and removed after the run: the *fallback* column is the share of
 inputs that left the fast path. Its results must equal the plain pass's word for word.
 
@@ -477,7 +477,7 @@ def score():
            "divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows "
            "the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, "
            "median / p99 / largest; *fallback* is the share of inputs that took the double-word decider "
-           "(ln, log2, log10 near a midpoint; powu and compound on a 512-bit mantissa; a dash: the op has none).",
+           "(ln, log2, log10, pow and cbrt near a midpoint or, for pow and cbrt, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).",
            "",
            "| op | inputs | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |",
            "|---|---:|---:|---:|---:|---:|---:|---|---:|---:|"]

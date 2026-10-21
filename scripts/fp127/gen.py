@@ -464,7 +464,9 @@ PROBE_RESIDUAL = 92
 # every call (the helper is the fallback itself).
 COUNTS = {
     "fp256": {"rbad": "ret"},
-    "fp127": {"nearmid": "ret", "powus": "call"},
+    # FP127: the double-word log l2p runs exactly when the one-word log, pow or
+    # cbrt could not decide (nearmid, or pow2t not ok)
+    "fp127": {"l2p": "call", "powus": "call"},
 }
 
 # The helpers make profile measures, in slot order.
