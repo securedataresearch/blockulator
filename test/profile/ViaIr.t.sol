@@ -23,12 +23,16 @@ contract ViaIrBench is Test {
     address internal fp127;
     address internal fp256;
     address internal fp256x;
+    address internal fp256x2;
+    address internal fp256x3;
     uint256 constant N = 8;
 
     function setUp() public {
         fp127 = _deploy("out/FP127.yul/FP127.json");
         fp256 = _deploy("out/FP256.yul/FP256.json");
         fp256x = _deploy("out/FP256X.yul/FP256X.json");
+        fp256x2 = _deploy("out/FP256X2.yul/FP256X2.json");
+        fp256x3 = _deploy("out/FP256X3.yul/FP256X3.json");
     }
 
     function _deploy(string memory artifact) internal returns (address d) {
@@ -93,6 +97,14 @@ contract ViaIrBench is Test {
         if (op == "normCdf") { g0 = gasleft(); r = FP256Lib.normCdf(x); assembly { mstore(0, r) } g = gasleft(); }
         if (op == "lambertW0") { g0 = gasleft(); r = FP256Lib.lambertW0(x); assembly { mstore(0, r) } g = gasleft(); }
         if (op == "lambertWm1") { g0 = gasleft(); r = FP256Lib.lambertWm1(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "min") { g0 = gasleft(); r = FP256Lib.min(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "max") { g0 = gasleft(); r = FP256Lib.max(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "exp2") { g0 = gasleft(); r = FP256Lib.exp2(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "log2") { g0 = gasleft(); r = FP256Lib.log2(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "cbrt") { g0 = gasleft(); r = FP256Lib.cbrt(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "cosh") { g0 = gasleft(); r = FP256Lib.cosh(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "tanh") { g0 = gasleft(); r = FP256Lib.tanh(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "hypot") { g0 = gasleft(); r = FP256Lib.hypot(x, y); assembly { mstore(0, r) } g = gasleft(); }
         require(g0 != 0, "op");
         g = g0 - g;
     }
@@ -120,7 +132,7 @@ contract ViaIrBench is Test {
     }
 
     function _one(bool is127, string memory op, uint256 i, int256 x, int256 y, bool two) internal view {
-        address t = is127 ? fp127 : (_isX(op) ? fp256x : fp256);
+        address t = is127 ? fp127 : _obj256(op);
         bytes memory data = two ? abi.encodeWithSignature(string.concat(op, "(int256,int256)"), x, y)
                                 : abi.encodeWithSignature(string.concat(op, "(int256)"), x);
         string memory lib = is127 ? "fp127" : "fp256";
@@ -128,10 +140,14 @@ contract ViaIrBench is Test {
         _emit(lib, op, i, "object", _object(t, data));
     }
 
-    function _isX(string memory op) internal pure returns (bool) {
+    function _obj256(string memory op) internal view returns (address) {
         bytes32 h = keccak256(bytes(op));
-        return h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
-            || h == keccak256("lambertW0") || h == keccak256("lambertWm1");
+        if (h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
+            || h == keccak256("lambertW0") || h == keccak256("lambertWm1")) return fp256x;
+        if (h == keccak256("exp2") || h == keccak256("log2") || h == keccak256("cbrt")
+            || h == keccak256("cosh") || h == keccak256("tanh")) return fp256x2;
+        if (h == keccak256("min") || h == keccak256("max") || h == keccak256("hypot")) return fp256x3;
+        return fp256;
     }
 
     // ---- typical inputs, as the gas ladders draw them -------------------
@@ -204,6 +220,8 @@ contract ViaIrBench is Test {
     function test_viair_fp256() public view {
         _object(fp256, abi.encodeWithSignature("abs(int256)", int256(1)));
         _object(fp256x, abi.encodeWithSignature("erf(int256)", int256(1)));
+        _object(fp256x2, abi.encodeWithSignature("exp2(int256)", int256(1)));
+        _object(fp256x3, abi.encodeWithSignature("inv(int256)", int256(1)));
         _u256("abs", -8, 8, 0);
         _u256("neg", -8, 8, 0);
         _u256("sign", -8, 8, 0);
@@ -221,5 +239,13 @@ contract ViaIrBench is Test {
         _u256("normCdf", -4, 3, 0);
         _u256("lambertW0", -10, 40, 1);
         _u256("lambertWm1", -60, -3, -1);
+        _b256("min");
+        _b256("max");
+        _u256("exp2", -6, 6, 0);
+        _u256("log2", -60, 60, 1);
+        _u256("cbrt", -300, 300, 0);
+        _u256("cosh", -6, 5, 0);
+        _u256("tanh", -6, 4, 0);
+        _b256("hypot");
     }
 }

@@ -18,7 +18,11 @@ read inside the call's own window (test/sweep/Sweep.t.sol):
          as a share of the plain total, inclusive (with the probed helpers it
          calls) and exclusive (without them). The probes' own cost is taken
          out (PROBE_OVH, PROBE_RESIDUAL); the residual per probe call left
-         after that is reported as the calibration error.
+         after that is reported as the calibration error;
+  forced the probe pass again on FP256's first 4,000 inputs per op with a
+         second stage, the rounding test forced to fail (gen.py --forced),
+         against make sweep's second-stage pass (run_wide): what a fallback
+         costs and where, wexpm1's share first.
 
 Then the build-setting bench (test/profile/ViaIr.t.sol) twice, under the
 default profile (via_ir = false) and [profile.viair], beside the Yul objects.
@@ -42,9 +46,10 @@ D = S.D
 OUT = ROOT / "docs" / "benchmarks"
 OPS = [("fp256", op) for op in S.OPS256] + [("fp127", op) for op in S.OPS127 + ["lambertW0", "lambertWm1"]]
 TRIVIAL = {"fp127": ["abs", "neg", "sign", "floor", "ceil", "frac", "add", "sub", "min", "max"],
-           "fp256": ["abs", "neg", "sign", "cmp", "lt", "eq"]}
+           "fp256": ["abs", "neg", "sign", "cmp", "lt", "eq", "min", "max"]}
 HEAVY = {"fp127": ["mul", "div", "sqrt", "exp", "ln", "pow", "cbrt", "sinh", "cosh", "erf", "normCdf", "lambertW0", "lambertWm1"],
-         "fp256": ["add", "mul", "div", "sqrt", "exp", "ln", "pow", "erf", "normCdf", "lambertW0", "lambertWm1"]}
+         "fp256": ["add", "mul", "div", "sqrt", "exp", "ln", "pow", "erf", "normCdf", "lambertW0", "lambertWm1",
+                   "exp2", "log2", "cbrt", "cosh", "tanh", "hypot"]}
 
 
 def stats(gs):
@@ -54,20 +59,21 @@ def stats(gs):
 
 # ---- the probe pass ---------------------------------------------------------
 
-def probe_rows(lib, op, plain):
+def probe_rows(lib, op, plain, kind="probe"):
     """Per helper of the op's closure: calls per input, inclusive and
-    exclusive share of the plain total; and the calibration residual."""
-    rec = S.load_rec("probe", f"{lib}_{op}")
+    exclusive share of the plain total; and the calibration residual. kind
+    probewide: the forced second stage, against the wide pass's totals."""
+    rec = S.load_rec(kind, f"{lib}_{op}")
     if rec is None:
         return None
-    assert [o for o, _, _ in rec] == [o for _, _, o, _ in plain], f"{lib} {op}: the probe pass changed a result"
+    assert [o for o, _, _ in rec] == [d[-2] for d in plain], f"{lib} {op}: the {kind} pass changed a result"
     names = G.PROBES[lib]
     have = S.closures(lib).get(op, set())
     total = sum(g for *_, g in plain)
-    ok = [(r, p) for r, p in zip(rec, plain) if r[2] and p[3]]
+    ok = [(r, p) for r, p in zip(rec, plain) if r[2] and p[-1]]
     ovh = (G.PROBE_OVH - G.COUNT_SLOT) // 32
     calls_all = sum(sum(w[(G.PROBE_BASE - G.COUNT_SLOT) // 32 + 3 * i + 1] for i in range(len(names))) for (_, _, w), _ in ok)
-    resid = sum(g - w[ovh] - p[3] for (_, g, w), p in ok)
+    resid = sum(g - w[ovh] - p[-1] for (_, g, w), p in ok)
     helpers = {}
     for i, h in enumerate(names):
         if h not in have:
@@ -155,9 +161,19 @@ def report():
         if pr:
             row.update(pr)
         ops.append(row)
+    forced = []
+    for op in S.WIDE256:
+        if not (D / f"wide_{op}.out").exists():
+            continue
+        data = S.load(f"wide_{op}")
+        row = {"lib": "fp256", "op": op, "stage": "forced", "n": len(data), **stats([g for *_, g in data if g])}
+        pr = probe_rows("fp256", op, data, "probewide")
+        if pr:
+            row.update(pr)
+        forced.append(row)
     via, fits = viair_rows()
     doc = {"_doc": __doc__.strip(), "seed": S.SEED, "probeResidual": G.PROBE_RESIDUAL,
-           "probes": G.PROBES, "ops": ops, "viaIr": via, "objectCallFit": fits}
+           "probes": G.PROBES, "ops": ops, "forced": forced, "viaIr": via, "objectCallFit": fits}
     (OUT / "profile.json").write_text(json.dumps(doc, indent=1) + "\n")
 
     def fb(r):
@@ -208,7 +224,29 @@ def report():
                     md.append(f"| {r['op']} | `{h}` | {v['callsPerInput']:g} | {v['gasPerCall']:,} | "
                               f"{v['exclusivePct']:.1f}% | {v['inclusivePct']:.1f}% |")
         md.append("")
-    res = [r["residualPerCall"] for r in ops if r.get("residualPerCall") is not None and r.get("probeCalls")]
+    md += ["## FP256, the second stage forced",
+           "",
+           f"The first {S.WIDE_N:,} inputs of each op with a second stage (and of its wider rows), through the probed "
+           "library with the rounding test forced to fail (`gen.py --probe-lib --forced`), as `make sweep`'s "
+           "second-stage pass: what every fallback costs, and where. Gas is the plain forced pass's "
+           "(`FP256LibWide`); shares are of it.",
+           "",
+           "| op | inputs | forced gas median / p99 / max | `wexpm1` exclusive (calls / input) | largest helpers (exclusive share) |",
+           "|---|---:|---:|---:|---|"]
+    for r in forced:
+        w = r.get("helpers", {}).get("wexpm1")
+        wc = f"{w['exclusivePct']:.0f}% ({w['callsPerInput']:g})" if w and w["callsPerInput"] else "—"
+        md.append(f"| {r['op']} | {r['n']:,} | {r.get('median', 0):,} / {r.get('p99', 0):,} / {r.get('max', 0):,} | {wc} | {top(r, 4)} |")
+    md += ["", "### Forced second stage, helpers in detail", "",
+           "| op | helper | calls / input | gas / call | exclusive | inclusive |",
+           "|---|---|---:|---:|---:|---:|"]
+    for r in forced:
+        for h, v in sorted(r.get("helpers", {}).items(), key=lambda t: -t[1]["inclusivePct"]):
+            if v["callsPerInput"]:
+                md.append(f"| {r['op']} | `{h}` | {v['callsPerInput']:g} | {v['gasPerCall']:,} | "
+                          f"{v['exclusivePct']:.1f}% | {v['inclusivePct']:.1f}% |")
+    md.append("")
+    res = [r["residualPerCall"] for r in ops + forced if r.get("residualPerCall") is not None and r.get("probeCalls")]
     md += [f"Probe calibration: after the probes' recorded own cost (with a fixed {G.PROBE_RESIDUAL} gas per "
            f"call for the part their readings cannot see) is taken out, the probe pass's total differs from the "
            f"plain pass's by {min(res):+.1f} to {max(res):+.1f} gas per probe call across the ops.", ""]
@@ -237,6 +275,8 @@ def main():
         subprocess.run(["forge", "test", "--match-path", "test/sweep/Sweep.t.sol", "-q"], cwd=ROOT, check=True)
         S.run_instrumented("count")
         S.run_instrumented("probe")
+        S.run_wide()
+        S.run_instrumented("probe", forced=True)
         run_viair()
     report()
 
