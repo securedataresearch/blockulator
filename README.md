@@ -76,8 +76,8 @@ new adapters are deployed.
 What they say, in one line each: a fixed point maximises precision inside a
 band and has walls; a float maximises the band and rounds at every op; the
 protocols' accrual formulas are right for the interval they were built for
-and not beyond it. The talk that walks through it is
-[`docs/talks/war-on-dust.md`](docs/talks/war-on-dust.md); the
+and not beyond it. The talk that walks through it, "Dust is Over", is outlined in
+[`docs/talks/outline.md`](docs/talks/outline.md); the
 [write-up](https://blockulator.com/writeup/) is the story with sources.
 
 ## Use it
