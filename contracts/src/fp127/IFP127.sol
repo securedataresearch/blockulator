@@ -155,6 +155,8 @@ interface IFP127 {
     /// @notice sqrt(a^2 + b^2), checked.
     function hypot(int256 a, int256 b) external pure returns (int256 r);
     /// @notice 1 / x. Reverts with DivisionByZero for x == 0.
+    /// @dev div(2^128, x) in one word: floor(2^256 / |x|) is
+    ///      floor((2^256 - |x|) / |x|) + 1, and |x| = 1 overflows.
     function inv(int256 x) external pure returns (int256 r);
     /// @notice |x|. Reverts with Overflow for x == -2^255, which has no positive.
     function abs(int256 x) external pure returns (int256 r);

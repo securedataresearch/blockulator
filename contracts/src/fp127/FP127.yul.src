@@ -276,8 +276,27 @@ function fp127_div(a, b) -> r {
     let ng := xor(slt(a, 0), slt(b, 0))
     let ua := absw(a)
     let ub := absw(b)
-    if iszero(lt(shr(128, ua), ub)) { rev(0x35278d12) }
-    let q := divu(ua, ub)
+    let q := shr(128, ua)
+    switch q
+    case 0 { q := div(shl(128, ua), ub) }
+    default {
+        if iszero(lt(q, ub)) { rev(0x35278d12) }
+        let prod0 := shl(128, ua)
+        let rem := mulmod(ua, 0x100000000000000000000000000000000, ub)
+        q := sub(q, gt(rem, prod0))
+        prod0 := sub(prod0, rem)
+        let twos := and(sub(0, ub), ub)
+        let d := div(ub, twos)
+        prod0 := or(div(prod0, twos), mul(q, add(div(sub(0, twos), twos), 1)))
+        let iv := xor(mul(3, d), 2)
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        q := mul(prod0, iv)
+    }
     if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
     r := sub(xor(q, sub(0, ng)), sub(0, ng))
 }
@@ -1141,8 +1160,16 @@ function fp127_hypot(a, b) -> r {
 /// @domain x != 0
 /// @reverts DivisionByZero() for x == 0; Overflow() when 1/x does not fit
 /// @notice 1 / x. Reverts with DivisionByZero for x == 0.
+/// @dev div(2^128, x) in one word: floor(2^256 / |x|) is
+///      floor((2^256 - |x|) / |x|) + 1, and |x| = 1 overflows.
 function fp127_inv(x) -> r {
-    r := fp127_div(0x100000000000000000000000000000000, x)
+    if iszero(x) { rev(0x23d359a3) }
+    let ng := slt(x, 0)
+    let ux := absw(x)
+    if eq(ux, 1) { rev(0x35278d12) }
+    let q := add(div(sub(0, ux), ux), 1)
+    if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+    r := sub(xor(q, sub(0, ng)), sub(0, ng))
 }
 
 // ---------------------------------------------------------------------------
