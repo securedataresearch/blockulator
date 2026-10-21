@@ -43,12 +43,14 @@ FP256 release four, not yet deployed: correctly rounded, and the edge.
 |---|---|---|
 | FP256 | FP256 v4, 37 ops, 24,250 bytes | not yet deployed |
 | FP256X | FP256X v4, 5 ops, 23,891 bytes | not yet deployed |
+| FP256X2 | FP256X2 v4, 10 ops, 19,220 bytes | not yet deployed |
+| FP256X3 | FP256X3 v4, 15 ops, 6,844 bytes | not yet deployed |
 
-- Every FP256 op is correctly rounded or exact: 0 misrounded of 281,821
-  random inputs, and 0 when every input is forced through the second stage
-  (`docs/benchmarks/sweep.md`); release three had pow 8 in 20,000 off by
-  one ULP, ln 1, normCdf 1 in 4,000, compound up to 4 ULP (291 of 3,853),
-  lambertW0 up to 2 (668 of 2,000). Each fast value carries a stated error
+- Every FP256 op is correctly rounded or exact: 0 misrounded of 364,658
+  random inputs (281,821 before #79's ops), and 0 when every input is
+  forced through the second stage (`docs/benchmarks/sweep.md`); release
+  three had pow 8 in 20,000 off by one ULP, ln 1, normCdf 1 in 4,000,
+  compound up to 4 ULP (291 of 3,853), lambertW0 up to 2 (668 of 2,000). Each fast value carries a stated error
   bound; when it reaches the rounding boundary a second stage recomputes the
   value in two words at 2^−510. pow, compound and powu compute exact ties
   exactly. The bounds are measured against the models in
@@ -61,11 +63,24 @@ FP256 release four, not yet deployed: correctly rounded, and the edge.
 - Two objects from one source: FP256 (arithmetic, the edge, exp, ln, log1p,
   expm1, pow, powu, compound, conversions) and FP256X (erf, erfc, normCdf,
   lambertW0, lambertWm1), salts `FP256 v4` and `FP256X v4`; the inline
-  library holds all 42. `make predict-fp256x`, `deploy-fp256x-sepolia`,
+  library holds all of them. `make predict-fp256x`, `deploy-fp256x-sepolia`,
   `verify-fp256x-sepolia`.
 - Gas: the fast paths cost a few hundred gas more; the second stage, when it
   runs, 36k (exp) to 436k (erfc's continued fraction); Lambert W always
   takes one wide step, 152k at the median (109k before).
+- The ops FP127 has and FP256 lacked (#79), each correctly rounded or exact:
+  `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `sinh`, `cosh`,
+  `tanh`, `atanh` in FP256X2 (on the same kernels, each with a stated bound
+  and a two-word second stage) and `min`, `max`, `clamp`, `avg`, `dist`,
+  `zeroFloorSub`, `inv`, `lerp`, `frac`, `round`, `gcd`, `factorial`, `pi`,
+  `gavg`, `hypot` in FP256X3 (exact values, or one rounding of an exact
+  sum, product or root). `lerp` rounds a + t (b - a) once from the exact
+  value, summed in a 1,024-bit window just past the free memory pointer;
+  `hypot` rounds Pythagorean ties away from zero; `factorial` runs to 20,366
+  and is checked against the exact factorial at every n; `pi(terms)` is the
+  correctly rounded Ramanujan partial sum; `round` takes halves away from
+  zero. Salts `FP256X2 v4` and `FP256X3 v4`; `make predict-fp256x2`,
+  `-fp256x3` and their deploy and verify targets. 67 ops in all.
 
 ## Blockulator 2.0 (2026-10-16)
 

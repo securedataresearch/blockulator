@@ -26,10 +26,11 @@ from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
 # FP_LIB=fp256 selects the second library and FP_LIB=fp256x its second
-# object (release four); the proofs are otherwise identical
+# object (release four), fp256x2 and fp256x3 its third and fourth (#79);
+# the proofs are otherwise identical
 LIB = os.environ.get("FP_LIB", "fp127")
-CONTRACT = {"fp127": "FP127", "fp256": "FP256", "fp256x": "FP256X"}[LIB]
-LIB_DIR = {"fp256x": "fp256"}.get(LIB, LIB)
+CONTRACT = {"fp127": "FP127", "fp256": "FP256", "fp256x": "FP256X", "fp256x2": "FP256X2", "fp256x3": "FP256X3"}[LIB]
+LIB_DIR = {"fp256x": "fp256", "fp256x2": "fp256", "fp256x3": "fp256"}.get(LIB, LIB)
 SOURCE = ROOT / "contracts" / "src" / LIB_DIR / f"{CONTRACT}.yul"
 ARTIFACT = ROOT / "out" / f"{CONTRACT}.yul" / f"{CONTRACT}.json"
 SOURCE_UNIT = f"contracts/src/{LIB_DIR}/{CONTRACT}.yul"

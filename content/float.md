@@ -135,7 +135,42 @@ Radiant's empty-market exploit used the same half unit: its share burn rounded t
 
 Each rounds once from the exact value. A positive `Up` result never underflows to zero: `toUintUp` and `toFixed18Up` charge one unit for any positive dust. `toUintDown` and `toUintUp` revert with `OutOfRange` below zero.
 
-All fourteen are new in release four, which is the source you get with `forge install`. The deployed release three object does not have them yet; until release four is deployed, use the inline library. The snippets are compiled and run on the replays' own integers in [`test/examples/Integrating.t.sol`]({{ config.extra.repo }}/blob/master/test/examples/Integrating.t.sol).
+All fourteen are new in release four, which is the source you get with `forge install`. The deployed release three object does not have them yet; until release four is deployed, use the inline library. `round` and `frac` (#79, also release four) are not edge ops: `round` rounds to nearest, halves away from zero.
+
+### Divide last
+
+The rules say where to round. You can also move the maths so it rounds fewer times. The first move: multiply everything, then divide once.
+
+Resupply divided first. `1e36 / price` floored the rate to 0 before anything was multiplied by it. Put the division at the end and the LTV is `debt × 10^23 / (price × collateral)`: one product, one division, one rounding. Rounded up it is 500,000,000,000 and the borrow reverts; rounded down it is 499,999,999,999, the same verdict. This fix needs no new library ([`replay-resupply.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/replay-resupply.md)).
+
+```solidity
+import {FixedPointMathLib as M} from "solady/utils/FixedPointMathLib.sol";
+
+uint256 ltv = M.fullMulDivUp(debt, 1e23, price * collateral);         // 500,000,000,000
+uint256 maxBorrowWei = M.fullMulDiv(collateral * maxLTV, price, 1e23); // 1.9e18
+```
+
+Inside FP256 the order matters much less. A quotient keeps its 237 significant bits at any size inside the walls, so `div(a, c)` never floors to zero the way `1e36 / price` did. `mul(div(a, c), b)` still rounds twice, each time by at most half a unit in the last place. The cliff is in the integers, before they enter the format.
+
+### Keep an index as its logarithm
+
+An interest index multiplied by its growth each accrual rounds each accrual. Store L = ln(index) instead, and add rate × dt to it for a continuous rate. FP256's `add` rounds, like any float add. FP127's does not, so keep L as an FP127 word and read it through FP256. `fromFP127` is exact below 2^109, and `exp` is correctly rounded in release four, so the read is e^L rounded once. It is not capped at FP127's 88.
+
+```solidity
+int256 public logIndex; // an FP127 word: ln(index)
+
+function accrue(int256 ratePerSecond, uint256 dt) external {
+    logIndex = FP127Lib.add(logIndex, ratePerSecond * int256(dt)); // exact
+}
+
+function index() external view returns (int256) {
+    return FP256Lib.exp(FP256Lib.fromFP127(logIndex)); // the one rounding
+}
+```
+
+In FP256 the gain is gas more than digits. In the example test, an FP256 index multiplied 1,000 times ends 9.2 to 13.8 parts in 2^236 from the log read. Each `exp` and `mul` rounds to nearest at 237 bits, so the errors stay tiny and partly cancel. What you save is the `exp` and `mul` on every accrual (7,866 + 1,388 gas, median, in [`gas256.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas256.md)). You pay an `exp` on every read instead. This fits a continuous rate only. With a rate per period r, L gains n × log1p(r), and that rounding is added n times; use `compound(r, n)` there. The [FP127 page](/library/#keep-an-index-as-its-logarithm) has the measured numbers.
+
+The snippets are compiled and run on the replays' own integers in [`test/examples/Integrating.t.sol`]({{ config.extra.repo }}/blob/master/test/examples/Integrating.t.sol).
 
 ## Release three
 

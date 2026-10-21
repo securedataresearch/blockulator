@@ -18,15 +18,20 @@ ends: [blockulator.com](https://blockulator.com).
 - **FP256** is a 256-bit binary float: one `int256` holding a sign, a 19-bit
   exponent and a 236-bit fraction, about 71 digits at any magnitude from
   10^−78,900 to 10^78,900, no NaN, no infinity. Release four (not yet
-  deployed): 42 ops, every one correctly rounded or exact, 0 misrounded of
-  281,821 random inputs ([`docs/benchmarks/sweep.md`](docs/benchmarks/sweep.md));
+  deployed): 67 ops, every one correctly rounded or exact, 0 misrounded of
+  364,658 random inputs ([`docs/benchmarks/sweep.md`](docs/benchmarks/sweep.md));
   a fast value whose stated error bound reaches the rounding boundary is
   recomputed in two words, and exact ties of `pow`, `compound` and `powu`
   are computed exactly. The edge rounds toward the protocol: `mulDown`,
   `mulUp`, `divDown`, `divUp`, `toUintDown`, `toUintUp`, `toIntDown`,
   `toIntUp`, `toFixed18Down`, `toFixed18Up`, `floor`, `ceil`,
-  `fromUintDown`, `fromUintUp`. Two objects: FP256 (24,250 bytes) and
-  FP256X (23,891: erf, erfc, normCdf, Lambert W). Release three (28 ops,
+  `fromUintDown`, `fromUintUp`. With #79 FP256 has every op FP127 has:
+  `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `hypot`, `gavg`, `inv`,
+  the hyperbolics, `min`, `max`, `clamp`, `avg`, `lerp`, `dist`,
+  `zeroFloorSub`, `frac`, `round`, `gcd`, `factorial`, `pi`. Four objects:
+  FP256 (24,250 bytes), FP256X (23,891: erf, erfc, normCdf, Lambert W),
+  FP256X2 (19,220: the exponential family and cbrt) and FP256X3 (6,844: the
+  algebraic ops). Release three (28 ops,
   within 1 to 4 ULP on five of them) is live on Sepolia.
 
 Both are one Yul source each that generates two forms, fuzzed to agree bit
@@ -34,7 +39,7 @@ for bit across the full `int256` domain: a **deployed object** at a CREATE2
 address with a published salt, and an **inline library** with the same
 bodies in `memory-safe` assembly blocks.
 
-| | FP127 v4 (live; v5 in source) | FP256 v3 (live; v4 and FP256X v4 not yet deployed) |
+| | FP127 v4 (live; v5 in source) | FP256 v3 (live; release four's four objects not yet deployed) |
 |---|---|---|
 | Sepolia | `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` | `0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be` |
 | record | [`contracts/deployments/FP127.md`](contracts/deployments/FP127.md) | [`contracts/deployments/FP256.md`](contracts/deployments/FP256.md) |
@@ -173,17 +178,34 @@ do not have them until those releases are deployed; FP127's `floor` and
 snippets run on the replays' integers in
 [`test/examples/Integrating.t.sol`](test/examples/Integrating.t.sol).
 
+Two moves take roundings out altogether:
+
+- **Divide last.** Multiply everything, then divide once, with a 512-bit
+  `fullMulDiv` rounded in the protocol's direction. Resupply's LTV as
+  `debt × 10^23 / (price × collateral)`, rounded up, is 500,000,000,000 and
+  the borrow reverts; no new library is needed
+  ([`replay-resupply.md`](docs/benchmarks/replay-resupply.md)). The same
+  move works on FP127 words: for a, b ≥ 0 the word a·b/c is `fullMulDiv`
+  of the raw integers, one rounding, where `div(mul(a, b), c)` rounds twice.
+- **Keep an index as its logarithm.** Store L = ln(index) as an FP127 word.
+  With a continuous rate, each accrual adds rate × dt, and `add` never
+  rounds. `exp(L)` runs once, on the read. In the example test, after 1,000
+  accruals the multiplied index is 511 to 546 units of 2^−128 off; the log
+  read is within half a unit. The costs: an `exp` on every read, FP127's
+  `exp` stops at 88 (read through FP256 for more), and it only fits a
+  continuous rate. With a per-period rate, `compound` is better.
+
 ## Layout
 
 ```
 blockulator/
 ├── contracts/src/fp127/        FP127.yul.src and its five generated files (make gen)
-├── contracts/src/fp256/        FP256.yul.src and its eight generated files, two objects (make gen-fp256)
+├── contracts/src/fp256/        FP256.yul.src and its fourteen generated files, four objects (make gen-fp256)
 ├── contracts/src/ladder/       LadderRunner, EdgeRunner, one adapter per library, vendor/ (Balancer; the rest transcribed)
 ├── contracts/src/{identity,games,market,tools,content}/  Vyper: badges, and the archived apps
 ├── contracts/archive/huff/     the Huff implementation and its Sepolia bytecode (FP127's equivalence baseline)
 ├── contracts/deployments/      CREATE2 records: FP127, FP256, Ladder
-├── script/                     DeployFP127.s.sol, DeployFP256.s.sol, DeployFP256X.s.sol
+├── script/                     DeployFP127.s.sol, DeployFP256.s.sol, DeployFP256X.s.sol, DeployFP256X2.s.sol, DeployFP256X3.s.sol
 ├── scripts/fp127/              generator (both libraries), FP127 oracle, verification, gas report
 ├── scripts/fp256/              FP256 oracle, vector spec, kernel models and bounds.py
 ├── scripts/ladder/             scenarios, edges, inputs, datasets, deploy and live-check tooling
@@ -217,7 +239,7 @@ make ladder              # terminal-precision ladder -> docs/benchmarks/ladder.{
 make edges               # the edges -> docs/benchmarks/edges.{json,md}
 make pi-compare          # docs/benchmarks/pi.md
 make precision-report precision-report-fp256
-make size size-fp256     # runtime bytes against the 24,576 limit (FP256 and FP256X)
+make size size-fp256     # runtime bytes against the 24,576 limit (FP256, FP256X, FP256X2, FP256X3)
 make sweep               # random inputs through every op, both stages -> docs/benchmarks/sweep.{json,md}
 make site site-check     # zola build -> public/; zola check, the symlink test, deno task test
 ```
@@ -225,7 +247,7 @@ make site site-check     # zola build -> public/; zola check, the symlink test, 
 `make *-check` targets fail when a committed dataset no longer matches the
 code; CI runs them all. Deploying follows the records: `make predict`,
 `deploy-sepolia`, `verify-sepolia`, `smoke-sepolia` for FP127, the `-fp256`
-and `-fp256x` variants for FP256's two objects, and `predict-ladder` / `deploy-ladder-sepolia` /
+`-fp256x`, `-fp256x2` and `-fp256x3` variants for FP256's four objects, and `predict-ladder` / `deploy-ladder-sepolia` /
 `verify-ladder-sepolia` then `scripts/ladder/livecap.py` and `liveedges.py`
 for the runners. The deployer key is read from `DEPLOYER_KEY` and never
 stored.

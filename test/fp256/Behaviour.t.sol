@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 import {FP256Harness} from "../base/FP256Harness.sol";
 import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
 import {IFP256X} from "../../contracts/src/fp256/IFP256X.sol";
+import {IFP256X2} from "../../contracts/src/fp256/IFP256X2.sol";
+import {IFP256X3} from "../../contracts/src/fp256/IFP256X3.sol";
 
 /// @title Behaviour256
 /// @notice Known values and edges a reader can check by hand.
@@ -251,5 +253,143 @@ contract Behaviour256 is FP256Harness {
         assertEq(obj.compound(obj.fromUint(c - 1), 3), want, "compound(c - 1, 3)");
         assertEq(obj.compound(TWO, 150), obj.powu(obj.fromUint(3), 150), "3^150: 238 bits, a tie both ways");
         assertEq(obj.pow(obj.fromUint(9), obj.div(obj.fromUint(3), TWO)), obj.fromUint(27), "9^1.5 = 27 exactly");
+    }
+
+    // ---- #79: FP256X2 and FP256X3 -------------------------------------------
+
+    /// exp2, exp10, log2, log10, log2Up: exact where the value is a number.
+    function test_bases() public view {
+        assertEq(objX2.exp2(obj.fromUint(10)), obj.fromUint(1024), "2^10");
+        assertEq(objX2.exp2(obj.neg(obj.fromUint(3))), _mk(false, -3, uint256(1) << 236), "2^-3");
+        assertEq(objX2.exp2(HALF), obj.sqrt(TWO), "2^(1/2) = sqrt 2, both correctly rounded");
+        assertEq(objX2.exp2(obj.fromUint(262144)), _mk(false, 262144, uint256(1) << 236), "2^262144, the top binade");
+        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.exp2, (obj.fromUint(262145))), IFP256.Overflow.selector, "2^262145");
+        assertEq(objX2.exp2(obj.neg(obj.fromUint(262143))), 0, "2^-262143 is under the smallest number");
+        assertEq(objX2.exp2(obj.neg(obj.fromUint(262142))), MIN_NORMAL, "2^-262142 is the smallest number");
+        assertEq(objX2.exp10(obj.fromUint(18)), obj.fromUint(1e18), "10^18");
+        assertEq(objX2.exp10(obj.fromUint(102)), obj.mul(obj.powu(obj.fromUint(5), 102), obj.powu(TWO, 102)), "10^102, the largest exact power");
+        assertEq(objX2.exp10(0), ONE);
+        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.exp10, (obj.fromUint(78914))), IFP256.Overflow.selector, "10^78914");
+        assertEq(objX2.log2(obj.fromUint(1024)), obj.fromUint(10), "log2 1024");
+        assertEq(objX2.log2(_mk(false, -200, uint256(1) << 236)), obj.neg(obj.fromUint(200)), "log2 2^-200");
+        assertEq(objX2.log10(obj.fromUint(1e18)), obj.fromUint(18), "log10 10^18");
+        assertEq(objX2.log10(objX2.exp10(obj.fromUint(102))), obj.fromUint(102), "log10 10^102");
+        assertEq(objX2.log2(ONE), 0);
+        assertEq(objX2.log10(ONE), 0);
+        assertEq(objX2.log2Up(obj.fromUint(1024)), obj.fromUint(10), "a power of two");
+        assertEq(objX2.log2Up(obj.fromUint(1025)), obj.fromUint(11), "just above one");
+        assertEq(objX2.log2Up(obj.fromUint(3)), TWO);
+        assertEq(objX2.log2Up(_mk(false, -3, (uint256(1) << 236) + 1)), obj.neg(TWO), "ceil(log2(1/8 + ulp)) = -2");
+        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.log2, (0)), IFP256.OutOfRange.selector, "log2 0");
+        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.log10, (obj.neg(ONE))), IFP256.OutOfRange.selector, "log10 -1");
+        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.log2Up, (0)), IFP256.OutOfRange.selector, "log2Up 0");
+    }
+
+    /// cbrt, hypot, gavg: exact roots and the Pythagorean ties.
+    function test_roots() public view {
+        assertEq(objX2.cbrt(obj.fromUint(27)), obj.fromUint(3));
+        assertEq(objX2.cbrt(obj.neg(obj.fromUint(8))), obj.neg(TWO), "cbrt is odd");
+        assertEq(objX2.cbrt(_mk(false, -300, uint256(1) << 236)), _mk(false, -100, uint256(1) << 236), "cbrt 2^-300");
+        uint256 c = (uint256(1) << 78) + 1;
+        assertEq(objX2.cbrt(obj.fromUint(c * c * c)), obj.fromUint(c), "a 235-bit perfect cube");
+        assertEq(objX2.cbrt(0), 0);
+        assertEq(objX3.hypot(obj.fromUint(3), obj.neg(obj.fromUint(4))), obj.fromUint(5));
+        assertEq(objX3.hypot(MAX_WORD, 0), MAX_WORD);
+        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.hypot, (MAX_WORD, MAX_WORD)), IFP256.Overflow.selector, "hypot past the top");
+        assertEq(objX3.hypot(MIN_NORMAL, MIN_NORMAL), obj.mul(obj.sqrt(TWO), MIN_NORMAL), "no underflow in the squares");
+        // a leg of 237 bits and one of 238 with a trailing zero: the hypotenuse is odd, 238 bits, a tie
+        int256 a = obj.fromUint(172515734145674253010319939143083611287523444431489505247163561257635813);
+        int256 b = obj.fromUint(193167704401964411280697584076855416837658896158803056118667080491129084);
+        assertEq(objX3.hypot(a, b), obj.fromUint(258989267252034323335177606430475547371594691087344831270506651353571245), "the tie rounds up");
+        assertEq(objX3.gavg(obj.fromUint(4), obj.fromUint(9)), obj.fromUint(6));
+        assertEq(objX3.gavg(obj.neg(obj.fromUint(2)), obj.neg(obj.fromUint(8))), obj.fromUint(4), "two negatives");
+        assertEq(objX3.gavg(MAX_WORD, MAX_WORD), MAX_WORD, "no overflow in the product");
+        assertEq(objX3.gavg(0, obj.neg(ONE)), 0);
+        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.gavg, (obj.neg(ONE), ONE)), IFP256.OutOfRange.selector, "gavg(-1, 1)");
+    }
+
+    /// The hyperbolic functions: parity, the small band, the ends.
+    function test_hyperbolic() public view {
+        int256 x = _mk(false, -1, uint256(0x3) << 233);           // 0.6875
+        assertEq(objX2.sinh(obj.neg(x)), obj.neg(objX2.sinh(x)), "sinh is odd");
+        assertEq(objX2.cosh(obj.neg(x)), objX2.cosh(x), "cosh is even");
+        assertEq(objX2.tanh(obj.neg(x)), obj.neg(objX2.tanh(x)), "tanh is odd");
+        assertEq(objX2.atanh(obj.neg(x)), obj.neg(objX2.atanh(x)), "atanh is odd");
+        assertGe(_bits(objX2.atanh(objX2.tanh(x)), x), 235, "atanh(tanh x)");
+        int256 t = _mk(false, -300, uint256(1) << 236);
+        assertEq(objX2.sinh(t), t, "sinh(2^-300) = 2^-300");
+        assertEq(objX2.tanh(t), t);
+        assertEq(objX2.atanh(t), t);
+        assertEq(objX2.cosh(t), ONE);
+        assertEq(objX2.cosh(0), ONE);
+        assertEq(objX2.sinh(0), 0);
+        // cosh(2^-118) = 1 + 2^-237 + 2^-475/24: just above the tie, so up
+        assertEq(objX2.cosh(_mk(false, -118, uint256(1) << 236)), ONE + 1, "the tie the quartic breaks");
+        assertEq(objX2.tanh(obj.fromUint(84)), ONE, "tanh(84) = 1");
+        assertEq(objX2.tanh(obj.neg(obj.fromUint(1000))), obj.neg(ONE));
+        assertEq(obj.lt(objX2.tanh(obj.fromUint(82)), ONE), 1, "tanh(82) is below one");
+        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.sinh, (obj.fromUint(181706))), IFP256.Overflow.selector, "sinh past the top");
+        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.cosh, (obj.neg(obj.fromUint(181706)))), IFP256.Overflow.selector, "cosh past the top");
+        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.atanh, (ONE)), IFP256.OutOfRange.selector, "atanh(1)");
+        assertGt(objX2.atanh(obj.sub(ONE, _mk(false, -237, uint256(1) << 236))), obj.fromUint(82), "atanh next to one");
+    }
+
+    /// Selection, sums, lerp: exact or one rounding of the exact value.
+    function test_selection_and_sums() public view {
+        assertEq(objX3.min(ONE, obj.neg(ONE)), obj.neg(ONE));
+        assertEq(objX3.max(ONE, obj.neg(ONE)), ONE);
+        assertEq(objX3.clamp(obj.fromUint(5), ONE, obj.fromUint(3)), obj.fromUint(3));
+        assertEq(objX3.clamp(obj.fromUint(5), obj.fromUint(3), ONE), ONE, "lo > hi gives hi");
+        assertEq(objX3.avg(MAX_WORD, MAX_WORD), MAX_WORD, "no overflow");
+        assertEq(objX3.avg(MIN_NORMAL, MIN_NORMAL), MIN_NORMAL);
+        assertEq(objX3.avg(MIN_NORMAL, 0), 0, "half the smallest number rounds to zero, as mul does");
+        assertEq(objX3.avg(ONE, obj.neg(ONE)), 0);
+        assertEq(objX3.dist(obj.neg(ONE), TWO), obj.fromUint(3));
+        assertEq(objX3.zeroFloorSub(ONE, TWO), 0);
+        assertEq(objX3.zeroFloorSub(TWO, ONE), ONE);
+        assertEq(objX3.inv(obj.fromUint(4)), _mk(false, -2, uint256(1) << 236));
+        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.inv, (0)), IFP256.DivisionByZero.selector, "inv(0)");
+        int256 a = obj.fromUint(3);
+        int256 b = obj.fromUint(7);
+        assertEq(objX3.lerp(a, b, 0), a);
+        assertEq(objX3.lerp(a, b, ONE), b);
+        assertEq(objX3.lerp(a, b, HALF), obj.fromUint(5));
+        assertEq(objX3.lerp(a, b, obj.neg(ONE)), obj.neg(ONE), "t is not clamped");
+        // 1 + 2^-600 (-2^600 - 1) = -2^-600: a and t b cancel exactly, -t a is the value
+        int256 big = _mk(false, 600, uint256(1) << 236);
+        int256 small = _mk(false, -600, uint256(1) << 236);
+        assertEq(objX3.lerp(ONE, obj.neg(big), small), obj.neg(small), "everything but -t a cancels");
+        // a and b far apart: lerp(1, 2^-2000, 1) is b exactly
+        int256 far = _mk(false, -2000, uint256(1) << 236);
+        assertEq(objX3.lerp(ONE, far, ONE), far);
+        assertEq(objX3.lerp(MAX_WORD, obj.neg(MAX_WORD), HALF), 0, "no overflow in b - a");
+        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.lerp, (MAX_WORD, obj.neg(MAX_WORD), TWO)), IFP256.Overflow.selector, "the result past the top");
+    }
+
+    /// frac, round, gcd, factorial, pi.
+    function test_integral() public view {
+        int256 two5 = obj.add(TWO, HALF);
+        assertEq(objX3.frac(two5), HALF);
+        assertEq(objX3.frac(obj.neg(two5)), HALF, "frac(-2.5) = 0.5");
+        assertEq(objX3.frac(obj.neg(_mk(false, -300, uint256(1) << 236))), ONE, "within 2^-238 under an integer: one");
+        assertEq(objX3.round(two5), obj.fromUint(3), "halves away from zero");
+        assertEq(objX3.round(obj.neg(two5)), obj.neg(obj.fromUint(3)));
+        assertEq(objX3.round(_mk(false, -1, (uint256(1) << 237) - 1)), ONE, "just under one");
+        assertEq(objX3.round(obj.sub(HALF, _mk(false, -237, uint256(1) << 236))), 0, "just under a half");
+        assertEq(objX3.gcd(obj.fromUint(12), obj.neg(obj.fromUint(18))), obj.fromUint(6));
+        assertEq(objX3.gcd(obj.fromUint(12), 0), obj.fromUint(12));
+        assertEq(objX3.gcd(_mk(false, 300, uint256(3) << 235), _mk(false, 200, uint256(1) << 236)), _mk(false, 200, uint256(1) << 236), "gcd(3 2^299, 2^200)");
+        assertEq(objX3.factorial(obj.fromUint(5)), obj.fromUint(120));
+        assertEq(objX3.factorial(0), ONE);
+        assertEq(objX3.factorial(HALF), ONE, "floor(1/2)! = 0! = 1");
+        assertEq(objX3.factorial(obj.fromUint(34)), obj.fromUint(295232799039604140847618609643520000000), "34! is exact");
+        assertGt(objX3.factorial(obj.fromUint(20366)), 0, "20366! fits");
+        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.factorial, (obj.fromUint(20367))), IFP256.Overflow.selector, "20367!");
+        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.factorial, (obj.neg(ONE))), IFP256.OutOfRange.selector, "(-1)!");
+        int256 piWord = int256(0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c762);
+        assertEq(objX3.pi(obj.fromUint(10)), piWord, "ten terms: pi's word");
+        assertEq(objX3.pi(obj.fromUint(1000)), piWord);
+        assertEq(objX3.pi(obj.fromUint(9)), piWord + 1, "nine terms: one ULP above");
+        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.pi, (HALF)), IFP256.OutOfRange.selector, "no terms");
     }
 }

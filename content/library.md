@@ -176,6 +176,55 @@ All take and return `int256`. `ceil` reverts with `Overflow` when the integer is
 
 `mulUp`, `mulDown`, `divUp`, `divDown`, `toFixed18Up` and `toFixed18Down` are new in v5, which is the source you get with `forge install`. The deployed v4 object at the address above does not have them yet; until v5 is deployed, use the inline library for them. `floor` and `ceil` are in v4.
 
+### Divide last
+
+The rules say where to round. You can also move the maths so it rounds fewer times. The first move: multiply everything, then divide once.
+
+Resupply divided first. `1e36 / price` floored the rate to 0 before anything was multiplied by it. Put the division at the end and the LTV is `debt × 10^23 / (price × collateral)`, since 10^36 × 10^5 / 10^18 = 10^23. That is one product, one division and one rounding. Rounded up it is 500,000,000,000 and the borrow reverts. Rounded down it is 499,999,999,999: the same verdict. This fix needs no new library ([`replay-resupply.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/replay-resupply.md)).
+
+```solidity
+import {FixedPointMathLib as M} from "solady/utils/FixedPointMathLib.sol";
+
+uint256 ltv = M.fullMulDivUp(debt, 1e23, price * collateral);         // 500,000,000,000
+uint256 maxBorrowWei = M.fullMulDiv(collateral * maxLTV, price, 1e23); // 1.9e18
+```
+
+`fullMulDiv` keeps the whole 512-bit product, so `debt × 10^23` cannot overflow. The checked `*` reverts rather than wraps. `fullMulDivUp` rounds up, `fullMulDiv` down: pick the direction the protocol needs.
+
+The same holds inside FP127. `div(mul(a, b), c)` rounds twice, and a product of two small words can floor to zero before the division: 2^−100 × 2^−40 is below 2^−128, so `mul` returns 0 and the quotient by 2^−60 is 0, not 2^−80. For words a, b ≥ 0 and c > 0 the 2^128 scales cancel. The word a·b/c is `fullMulDiv(a, b, c)` on the raw integers, rounded once.
+
+```solidity
+uint256 r = M.fullMulDiv(uint256(a), uint256(b), uint256(c)); // the word a·b/c, rounded down
+require(r < 1 << 255);                                         // it must fit an int256
+```
+
+### Keep an index as its logarithm
+
+An interest index multiplied by its growth each accrual rounds each accrual. Store L = ln(index) instead. With a continuous rate (ln of the growth per second), an accrual adds rate × dt to L. A word times a whole number is an integer product, and `add` never rounds; it can only overflow. So every accrual is exact. `exp(L)` runs only when the index is read, and rounds once.
+
+```solidity
+contract LogIndex127 {
+    int256 public logIndex; // ln(index); 0 is an index of 1
+
+    function accrue(int256 ratePerSecond, uint256 dt) external {
+        logIndex = FP127Lib.add(logIndex, ratePerSecond * int256(dt)); // exact
+    }
+
+    function index() external view returns (int256) {
+        return FP127Lib.exp(logIndex); // the one rounding: the nearest word
+    }
+}
+```
+
+The example test runs both forms at random rates up to about 12% a year, with random gaps of up to a day, three times. After one accrual they are the same single `exp`, so they match. After 10, the multiplied index is 3.3 to 6.6 units of 2^−128 off, and after 1,000 it is 511 to 546 off: about half a unit per accrual. From 10 on, every run ends low, because `mul` floors. The log read stays within half a unit every time. The reference is e^L in FP256.
+
+The trade-offs:
+
+- **An `exp` on every read.** An accrual drops from an `exp` and a `mul` (6,605 + 543 gas, median) to an `add` (289). A read rises from a storage load to an `exp` ([`gas.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas.md)). If you read the index every time you accrue it, you save almost nothing.
+- **Nearest in v5.** `exp` returns the nearest word in v5. The deployed v4 does not promise that.
+- **A wall at 88.** FP127's `exp` reverts above 88, an index of about 1.65 × 10^38. For more room, read through FP256: `FP256Lib.exp(FP256Lib.fromFP127(logIndex))`.
+- **A continuous rate only.** With a rate per period, L gains n × `log1p(r)`. `log1p` rounds once, and that rounding is added n times. In two runs of 100 accruals, each of up to 86,400 periods, that read was 136,497 and 156,064 units off. `mul(index, compound(r, n))` was 47.6 and 48.4 off. For a rate per period, use `compound`.
+
 The snippets on this page are compiled and run on the replays' own integers in [`test/examples/Integrating.t.sol`]({{ config.extra.repo }}/blob/master/test/examples/Integrating.t.sol).
 
 ## The ops

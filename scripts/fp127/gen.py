@@ -12,6 +12,7 @@ Usage:
                                                                # rounding-test fallback
     uv run scripts/fp127/gen.py [--lib ...] --probe-lib <path>  # test only: gas probes on
                                                                # the profiled helpers
+    (add --forced to either for the forced second stage, as --wide-lib)
 
 An export may carry `/// @object <Name>` to go into a second deployed object
 (FP256's release four splits FP256 and FP256X). Each object then holds only
@@ -58,7 +59,13 @@ LIBS = {
             "FP256": {"iface": "IFP256", "abi": "abi.json"},
             "FP256X": {"iface": "IFP256X", "abi": "abiX.json",
                        "iface_notice": "Interface of the deployed FP256X object, FP256's extension: the\n///         error function family and Lambert W on the same 256-bit binary\n///         floating point words as IFP256 (sign bit 255, a 19-bit biased\n///         exponent, bias 262143, a 236-bit fraction; zero is the all-zero word)."},
+            # #79: the ops FP127 has, two more objects
+            "FP256X2": {"iface": "IFP256X2", "abi": "abiX2.json",
+                        "iface_notice": "Interface of the deployed FP256X2 object, FP256's second extension:\n///         exp2, exp10, log2, log10, log2Up, cbrt and the hyperbolic\n///         functions on the same 256-bit binary floating point words as IFP256."},
+            "FP256X3": {"iface": "IFP256X3", "abi": "abiX3.json",
+                        "iface_notice": "Interface of the deployed FP256X3 object, FP256's third extension:\n///         the algebraic ops FP127 has (min, max, clamp, avg, dist,\n///         zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg,\n///         hypot) on the same 256-bit binary floating point words as IFP256."},
         },
+        "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
     },
 }
 LIB = LIBS["fp127"]
@@ -273,6 +280,9 @@ def validate(src: Source, raw: str) -> None:
                 problems.append(f"{f.name}: forbidden builtin {pat}")
         for m in re.finditer(r"\b(mstore8?|mload)\(\s*([^,)]+)", body):
             arg = m.group(2).strip()
+            # reading the free memory pointer is how a block finds memory it may use
+            if m.group(1) == "mload" and arg.lower() == "0x40":
+                continue
             if re.fullmatch(r"0x[0-9a-fA-F]+|\d+", arg) and arg.lower() not in ALLOWED_LITERAL_MEM:
                 problems.append(
                     f"{f.name}: literal memory address {arg}; use mload(0x40)-relative"
@@ -461,7 +471,10 @@ COUNTS = {
 PROBES = {
     "fp256": ["log2m", "exp2frac", "wexpm1", "wlnw", "cfrun", "erfw", "lwfix",
               "lwlog", "lwexp", "lwln", "powslow", "compslow", "wln1ps",
-              "erfser", "erfcxa", "erfcxcf", "expnegsq"],
+              "erfser", "erfcxa", "erfcxcf", "expnegsq",
+              # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp
+              "hser", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cubegt",
+              "isqrtw", "lerp3"],
     "fp127": ["expk", "log2m", "erfs", "erfcf", "lwfsc", "lwib", "lwm1", "lwfin",
               "l2p", "powus"],
 }
@@ -571,14 +584,16 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool = False,
         what = (f"counts each rounding-test fallback ({', '.join(sorted(count))}) in the word at {COUNT_SLOT:#x}"
                 if count else
                 f"adds the gas of each call of {', '.join(probe)} to the words from {PROBE_BASE:#x}")
+        if wide:
+            what += ", with the rounding test forced to fail (every call takes the second stage)"
         notice = (f"TEST ONLY. {LIB_NAME} instrumented: {what}.\n///         "
                   "Results are unchanged. Generated for make sweep / make profile; never\n///         deploy or import it.")
     elif wide:
         notice = "TEST ONLY. " + LIB_NAME + " with the rounding test forced to fail, so every\n///         correctly rounded op returns its wide second stage. Generated for\n///         make sweep's second-stage pass; never deploy or import it."
     else:
         notice = LIB["lib_notice"]
-    dev = ("Blocks are memory-safe: the only memory touched is scratch space\n"
-           "///      (0x00..0x3f) for revert selectors.")
+    dev = LIB.get("lib_dev", "Blocks are memory-safe: the only memory touched is scratch space\n"
+                             "///      (0x00..0x3f) for revert selectors.")
     if count or probe:
         dev = (f"Not memory-safe: the records live at {COUNT_SLOT:#x} and above, which the\n"
                "///      calling test pre-expands.")
@@ -671,6 +686,7 @@ def main() -> int:
     ap.add_argument("--wide-lib", type=Path, default=None, help="write only the test-only forced-second-stage library here")
     ap.add_argument("--count-lib", type=Path, default=None, help="write only the test-only library that counts rounding-test fallbacks here")
     ap.add_argument("--probe-lib", type=Path, default=None, help="write only the test-only library with gas probes on the profiled helpers here")
+    ap.add_argument("--forced", action="store_true", help="with --count-lib or --probe-lib: also force the rounding test to fail, as --wide-lib")
     args = ap.parse_args()
     global LIB, SRC, OUT_DIR, OBJECT_NAME, LIB_NAME, IFACE_NAME
     LIB = LIBS[args.lib]
@@ -696,8 +712,8 @@ def main() -> int:
                 sys.stderr.write(f"--{kind}-lib: no function {', '.join(missing)} in {SRC.name}\n")
                 return 1
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(emit_library(src, path.stem, **{kind: names}))
-            print(f"wrote {path} ({path.stem}: {kind} on {', '.join(names)})")
+            path.write_text(emit_library(src, path.stem, wide=args.forced, **{kind: names}))
+            print(f"wrote {path} ({path.stem}: {kind} on {', '.join(names)}{', rbad forced to 1' if args.forced else ''})")
     if args.count_lib or args.probe_lib:
         return 0
     outputs = emit_all(src)

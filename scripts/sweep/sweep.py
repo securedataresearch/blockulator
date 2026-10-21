@@ -35,6 +35,7 @@ import re
 import subprocess
 import sys
 from collections import Counter
+from fractions import Fraction
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -56,15 +57,21 @@ SEED, SEED_LW = 20261020, 7
 OPS256 = ["add", "mul", "div", "sqrt", "exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf",
           "compound", "lambertW0", "lambertWm1", "powu",
           "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp",
-          "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up"]
+          "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up",
+          # #79: FP256X2 and FP256X3
+          "exp2", "exp10", "log2", "log10", "log2Up", "cbrt", "sinh", "cosh", "tanh", "atanh",
+          "min", "max", "clamp", "avg", "dist", "zeroFloorSub", "inv", "lerp", "frac", "round",
+          "gcd", "factorial", "pi", "gavg", "hypot"]
 # the ops with a wide second stage, swept again through FP256LibWide
 WIDE256 = ["exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf", "compound", "lambertW0",
-           "lambertWm1", "powu"]
+           "lambertWm1", "powu", "exp2", "exp10", "log2", "log10", "sinh", "cosh", "tanh", "atanh"]
 WIDE_N = 4000
 PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp", "toFixed18Down", "toFixed18Up"}
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "normCdf", "compound",
           "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up"]
-TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp"}
+TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
+       "min", "max", "avg", "dist", "zeroFloorSub", "gcd", "gavg", "hypot"}
+THREE = {"clamp", "lerp"}
 
 
 # ---- inputs ----------------------------------------------------------------
@@ -83,10 +90,12 @@ def f127(rng, lo_bits, hi_bits, neg=0.5):
     return (-m if rng.random() < neg else m) % T256
 
 
-def write(name, a, b=None):
+def write(name, a, b=None, c=None):
     d = {"a": ["0x%064x" % (x % T256) for x in a]}
     if b is not None:
         d["b"] = ["0x%064x" % (x % T256) for x in b]
+    if c is not None:
+        d["c"] = ["0x%064x" % (x % T256) for x in c]
     (D / f"{name}.json").write_text(json.dumps(d))
 
 
@@ -199,6 +208,67 @@ def gen4():
     write("fp256_normCdfx", [f256(rng, 4, 9, 0.8) for _ in range(E)])
     write("fp256_powux", [f256(rng, -40, 40) for _ in range(E)], [rng.choice([1, -1]) * rng.randint(2, 200) for _ in range(E)])
     write("fp256_lambertW0x", w0neg + [f256(rng, 8, 18, 0) for _ in range(E // 2)] + [f256(rng, 1000, 200000, 0) for _ in range(E // 2)])
+    gen79()
+
+
+def near_one(rng, n):
+    """Words within 2^-4 of one, on both sides, at every scale down to 2^-230."""
+    mp.dps = 120
+    return [O.encode_mpf(1 + mpf(2) ** -rng.uniform(4, 230) * rng.choice([1, -1])) for _ in range(n)]
+
+
+def gen79():
+    """#79's inputs (FP256X2 and FP256X3), from their own seed."""
+    rng = random.Random(SEED + 79)
+    S, N = 4000, 8000
+    write("fp256_exp2", [f256(rng, -40, 18) for _ in range(N)])
+    write("fp256_exp10", [f256(rng, -40, 16) for _ in range(N)])
+    for op in ("log2", "log10"):
+        write(f"fp256_{op}", [f256(rng, -300, 300, 0) for _ in range(N // 2)] + [f256(rng, -1, 0, 0) for _ in range(N // 4)]
+              + near_one(rng, N // 4))
+    write("fp256_log2Up", [f256(rng, -300, 300, 0.05) for _ in range(S)])
+    write("fp256_cbrt", [f256(rng, -1000, 1000) for _ in range(S)])
+    for op in ("sinh", "cosh", "tanh"):
+        write(f"fp256_{op}", [f256(rng, -130, 8) for _ in range(N // 2)] + [f256(rng, -3, 3) for _ in range(N // 2)])
+    write("fp256_atanh", [f256(rng, -130, -1) for _ in range(N // 2)] + [f256(rng, -5, -1) for _ in range(N // 2)])
+    pair = lambda lo, hi: ([f256(rng, lo, hi) for _ in range(S)], [f256(rng, lo, hi) for _ in range(S)])
+    for op in ("min", "max", "avg", "dist", "zeroFloorSub"):
+        write(f"fp256_{op}", *pair(-300, 300))
+    write("fp256_inv", [f256(rng, -400, 400) for _ in range(S)])
+    for op in ("frac", "round"):
+        write(f"fp256_{op}", [f256(rng, -4, 240) for _ in range(S)])
+    write("fp256_gcd", [f256(rng, -2, 300) for _ in range(S)], [f256(rng, -2, 300) for _ in range(S)])
+    # hypot near its own exponents (where the sum of squares is exact) and far apart
+    ha = [f256(rng, -400, 400) for _ in range(S)]
+    hb = [(((x >> 236) & 0x7FFFF) + rng.randint(-130, 130)) << 236 | rng.getrandbits(236) | (rng.getrandbits(1) << 255) for x in ha]
+    write("fp256_hypot", ha, hb)
+    write("fp256_gavg", [f256(rng, -400, 400, 0) for _ in range(S)], [f256(rng, -400, 400, 0) for _ in range(S)])
+    write("fp256_clamp", [f256(rng, -5, 5) for _ in range(S)], [f256(rng, -5, 5) for _ in range(S)], [f256(rng, -5, 5) for _ in range(S)])
+    # lerp, eight shapes: b near a (b - a cancels), t near -a/(b - a) (the sum
+    # cancels), t near one (a (1 - t) cancels), exponents spread by 600, by
+    # 200,000, a far under t b, and plain
+    la, lb, lt = [], [], []
+    for i in range(N):
+        a, b, t = f256(rng, -40, 40), f256(rng, -40, 40), f256(rng, -3, 3)
+        kind = i % 8
+        if kind == 0:
+            b = a ^ rng.getrandbits(rng.randint(1, 236))
+        elif kind == 1 and a != b:
+            qa, qb = O.decode(a), O.decode(b)
+            t = O.encode(-qa / (qb - qa)) ^ rng.getrandbits(rng.randint(0, 40))
+        elif kind == 2:
+            t = (BIAS << 236) ^ rng.getrandbits(rng.randint(1, 236)) ^ (rng.getrandbits(1) << 255) ^ (rng.getrandbits(1) << 236)
+        elif kind == 3:
+            a, b, t = f256(rng, -600, 600), f256(rng, -600, 600), f256(rng, -800, 800)
+        elif kind == 4:
+            a, b, t = f256(rng, -200000, 200000), f256(rng, -200000, 200000), f256(rng, -60000, 60000)
+        elif kind == 5:
+            a = f256(rng, -3000, -300)
+        la.append(a), lb.append(b), lt.append(t)
+    write("fp256_lerp", la, lb, lt)
+    # factorial over its whole domain, and past it; pi for every number of terms to 40
+    write("fp256_factorial", [O.encode(Fraction(n)) for n in range(0, 20370)])
+    write("fp256_pi", [O.encode(Fraction(n)) for n in range(1, 41)] + [O.encode(Fraction(n, 2)) for n in range(2, 30)])
 
 
 
@@ -229,20 +299,21 @@ def load1(name):
     j = json.loads((D / f"{src}.json").read_text())
     a = [int(x, 16) for x in j["a"]]
     b = [int(x, 16) for x in j.get("b", [])] or [0] * len(a)
+    c = [int(x, 16) for x in j.get("c", [])] or [0] * len(a)
     lines = (D / f"{name}.out").read_text().splitlines()
     outs = [ln.split()[0] for ln in lines]
     gas = [int(ln.split()[1]) if len(ln.split()) > 1 else 0 for ln in lines]
     if name.startswith("wide_"):
-        a, b = a[:len(outs)], b[:len(outs)]
+        a, b, c = a[:len(outs)], b[:len(outs)], c[:len(outs)]
     assert len(outs) == len(a), name
-    return list(zip(a, b, outs, gas))
+    return list(zip(a, b, c, outs, gas))
 
 
 def job256(args):
-    op, a, b, out = args
+    op, a, b, c, out = args
     mp.dps = 300        # the oracle's precision; gen() lowers it for the FP127 Lambert inputs
     try:
-        ref = O.OPS[op](*([a, b] if op in TWO else [a]))
+        ref = O.OPS[op](*([a, b, c] if op in THREE else [a, b] if op in TWO else [a]))
         ref = int(ref, 16) if isinstance(ref, str) else ref
     except O.Revert:
         return ("bothrev" if out.startswith("R") else "refrev", None)
@@ -340,19 +411,19 @@ def score():
     with mpc.Pool() as pool:
         for op in OPS256:
             data = load(f"fp256_{op}")
-            res = pool.map(job256, [(op, a, b, o) for a, b, o, g in data], chunksize=64)
+            res = pool.map(job256, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=64)
             rows.append(dict(summarize256(op, res), **gasstats([g for *_, g in data]), **fallback("fp256", op, data)))
             print(json.dumps(rows[-1]), flush=True)
         for op in WIDE256:
             if not (D / f"wide_{op}.out").exists():
                 continue
             data = load(f"wide_{op}")
-            res = pool.map(job256, [(op, a, b, o) for a, b, o, g in data], chunksize=16)
+            res = pool.map(job256, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=16)
             rows.append(dict(summarize256(op, res), stage="second", **gasstats([g for *_, g in data])))
             print(json.dumps(rows[-1]), flush=True)
         for op in OPS127 + ["lambertW0", "lambertWm1"]:
             data = load(f"fp127_{op}")
-            res = pool.map(job127, [(op, a, b, o) for a, b, o, g in data], chunksize=64)
+            res = pool.map(job127, [(op, a, b, o) for a, b, c, o, g in data], chunksize=64)
             rows.append(dict(summarize127(op, res), **gasstats([g for *_, g in data]), **fallback("fp127", op, data)))
             print(json.dumps(rows[-1]), flush=True)
     doc = {"_doc": __doc__.strip(), "seed": SEED, "seedLambert": SEED_LW, "rows": rows}
@@ -497,21 +568,21 @@ def run_wide():
 
 INSTR_TEST = """// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
-// GENERATED by scripts/sweep/sweep.py for the %(kind)s pass; removed after the run.
+// GENERATED by scripts/sweep/sweep.py for the %(tag)s pass; removed after the run.
 
 import {Test} from "forge-std/Test.sol";
-import {FP256Lib%(Kind)s} from "./FP256Lib%(Kind)s.sol";
-import {FP127Lib%(Kind)s} from "./FP127Lib%(Kind)s.sol";
+%(imports)s
 
 /// Test/sweep/Sweep.t.sol's dispatch on the instrumented libraries. The
 /// libraries record into memory from 0x8000 (scripts/fp127/gen.py: count_wrap,
 /// probe_wrap); f pre-expands it outside the timed window and returns the
 /// %(rec)d record words beside the result and the window's gas.
-contract Sweep%(Kind)s is Test {
+contract Sweep%(Tag)s is Test {
     string constant DIR = "cache/sweep/";
     uint256 constant REC = %(rec)d;
+    uint256 constant LIMIT = %(limit)d;
 
-    function f(bytes32 op, int256 a, int256 b) external view returns (int256 r, uint256 g, uint256[] memory rec) {
+    function f(bytes32 op, int256 a, int256 b, int256 c) external view returns (int256 r, uint256 g, uint256[] memory rec) {
         assembly { mstore(%(top)s, 0) }
         uint256 g0;
 %(disp)s
@@ -525,22 +596,24 @@ contract Sweep%(Kind)s is Test {
         }
     }
 
-    function runOne(string memory op, bool two) external {
+    function runOne(string memory op, uint256 args) external {
         string memory path = string.concat(DIR, op, ".json");
         if (!vm.exists(path)) return;
         string memory j = vm.readFile(path);
         bytes32[] memory a = vm.parseJsonBytes32Array(j, ".a");
-        bytes32[] memory b = two ? vm.parseJsonBytes32Array(j, ".b") : new bytes32[](a.length);
-        string memory outp = string.concat(DIR, "%(kind)s_", op, ".out");
+        bytes32[] memory b = args > 1 ? vm.parseJsonBytes32Array(j, ".b") : new bytes32[](a.length);
+        bytes32[] memory c = args > 2 ? vm.parseJsonBytes32Array(j, ".c") : new bytes32[](a.length);
+        string memory outp = string.concat(DIR, "%(tag)s_", op, ".out");
         if (vm.exists(outp)) vm.removeFile(outp);
         bytes32 k = bytes32(bytes(op));
-        (, uint256 base,) = this.f("noop", 0, 0);
-        for (uint256 i; i < a.length; i++) this.line(outp, k, int256(uint256(a[i])), int256(uint256(b[i])), base);
+        (, uint256 base,) = this.f("noop", 0, 0, 0);
+        uint256 n = a.length < LIMIT ? a.length : LIMIT;
+        for (uint256 i; i < n; i++) this.line(outp, k, [int256(uint256(a[i])), int256(uint256(b[i])), int256(uint256(c[i]))], base);
     }
 
     /// One input's line, in its own call so its memory is released.
-    function line(string memory outp, bytes32 k, int256 a, int256 b, uint256 base) external {
-        try this.f(k, a, b) returns (int256 r, uint256 g, uint256[] memory rec) {
+    function line(string memory outp, bytes32 k, int256[3] memory x, uint256 base) external {
+        try this.f(k, x[0], x[1], x[2]) returns (int256 r, uint256 g, uint256[] memory rec) {
             string memory s = string.concat(vm.toString(bytes32(uint256(r))), " ", vm.toString(g > base ? g - base : 0));
             for (uint256 w; w < rec.length; w++) s = string.concat(s, " ", vm.toString(rec[w]));
             vm.writeLine(outp, s);
@@ -549,7 +622,7 @@ contract Sweep%(Kind)s is Test {
         }
     }
 
-    function test_sweep_%(kind)s() public {
+    function test_sweep_%(tag)s() public {
 %(runs)s
     }
 }
@@ -569,29 +642,46 @@ def rec_words(kind: str) -> int:
     return (G.PROBE_BASE - G.COUNT_SLOT + G.PROBE_STRIDE * max(len(v) for v in G.PROBES.values())) // 32
 
 
-def run_instrumented(kind: str, names: list[str] | None = None):
+def nargs(name: str) -> int:
+    op = name.split("_", 1)[1] if "_" in name else name
+    op = op[:-1] if name.startswith("fp256_") and op.endswith("x") and op[:-1] in EXTRA else op
+    return 3 if op in THREE else 2 if op in TWO else 1
+
+
+def wide_names() -> list[str]:
+    """The input files of the second-stage pass, as run_wide runs them."""
+    return [f"fp256_{op}" for op in WIDE256] + [f"fp256_{op}x" for op in EXTRA]
+
+
+def run_instrumented(kind: str, forced: bool = False):
     """Generate the count or probe libraries and their runner, run them on the
-    swept inputs (names: the input files, default every op), remove them."""
-    Kind = kind.capitalize()
-    wd = ROOT / "test" / "sweep" / kind
-    for lib in ("fp256", "fp127"):
+    swept inputs, remove them. forced: FP256 only, with the rounding test
+    forced to fail as in run_wide (gen.py --forced), on the same first WIDE_N
+    inputs of the ops with a second stage; the outputs are <kind>wide_*.out."""
+    tag = kind + ("wide" if forced else "")
+    Tag = tag.capitalize()
+    wd = ROOT / "test" / "sweep" / tag
+    libs = ("fp256",) if forced else ("fp256", "fp127")
+    for lib in libs:
         subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", lib, f"--{kind}-lib",
-                        str(wd / f"{lib.upper()}Lib{Kind}.sol")], cwd=ROOT, check=True)
+                        str(wd / f"{lib.upper()}Lib{Tag}.sol")] + (["--forced"] if forced else []), cwd=ROOT, check=True)
+    want = set(wide_names()) if forced else None
     disp, runs = [], []
     for name, expr in sweep_dispatch():
-        expr = expr.replace("FP256Lib.", f"FP256Lib{Kind}.").replace("FP127Lib.", f"FP127Lib{Kind}.")
+        if forced and name != "noop" and name not in want:
+            continue
+        expr = expr.replace("FP256Lib.", f"FP256Lib{Tag}.").replace("FP127Lib.", f"FP127Lib{Tag}.")
         disp.append(f'        if (op == "{name}") {{ g0 = gasleft(); r = {expr}; g = gasleft(); }}')
-        base = name.split("_", 1)[1] if "_" in name else name
-        base = base[:-1] if name.startswith("fp256_") and base.endswith("x") and base[:-1] in EXTRA else base
-        if name != "noop" and (names is None or name in names):
-            runs.append(f'        this.runOne("{name}", {"true" if base in TWO else "false"});')
+        if name != "noop":
+            runs.append(f'        this.runOne("{name}", {nargs(name)});')
     rec = rec_words(kind)
-    (wd / f"Sweep{Kind}.t.sol").write_text(INSTR_TEST % {
-        "kind": kind, "Kind": Kind, "rec": rec, "top": hex(G.COUNT_SLOT + 32 * rec),
-        "disp": "\n".join(disp), "runs": "\n".join(runs)})
+    imports = "\n".join(f'import {{{lib.upper()}Lib{Tag}}} from "./{lib.upper()}Lib{Tag}.sol";' for lib in libs)
+    (wd / f"Sweep{Tag}.t.sol").write_text(INSTR_TEST % {
+        "tag": tag, "Tag": Tag, "rec": rec, "top": hex(G.COUNT_SLOT + 32 * rec), "imports": imports,
+        "limit": WIDE_N if forced else 1 << 32, "disp": "\n".join(disp), "runs": "\n".join(runs)})
     keep = bool(os.environ.get("SWEEP_KEEP"))   # leave the generated files, show forge's output
     try:
-        subprocess.run(["forge", "test", "--match-path", f"test/sweep/{kind}/Sweep{Kind}.t.sol"] + ([] if keep else ["-q"]),
+        subprocess.run(["forge", "test", "--match-path", f"test/sweep/{tag}/Sweep{Tag}.t.sol"] + ([] if keep else ["-q"]),
                        cwd=ROOT, check=True)
     finally:
         if not keep:
@@ -630,7 +720,7 @@ def fallback(lib: str, op: str, data) -> dict:
     rec = load_rec("count", f"{lib}_{op}")
     if rec is None:
         return {}
-    plain = [o for _, _, o, _ in data]
+    plain = [d[-2] for d in data]
     got = [o for o, _, _ in rec]
     assert got == plain, f"{lib} {op}: the count pass changed a result"
     fired = [w[0] for o, _, w in rec if w]

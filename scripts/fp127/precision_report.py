@@ -15,7 +15,10 @@ OUT = ROOT / "docs" / LIB / "precision.md"
 ORDER_FP256 = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "lambertW0", "lambertWm1", "powu", "compound", "neg", "abs", "sign", "cmp", "lt", "eq",
                "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18",
                "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "floor", "ceil",
-               "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up"]
+               "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up",
+               "exp2", "exp10", "log2", "log10", "log2Up", "cbrt", "sinh", "cosh", "tanh", "atanh",
+               "min", "max", "clamp", "avg", "dist", "zeroFloorSub", "inv", "lerp", "frac", "round",
+               "gcd", "factorial", "pi", "gavg", "hypot"]
 
 ORDER = [
     "add", "sub", "mul", "mulDown", "mulUp", "div", "divDown", "divUp",

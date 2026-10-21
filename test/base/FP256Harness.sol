@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
 import {IFP256X} from "../../contracts/src/fp256/IFP256X.sol";
+import {IFP256X2} from "../../contracts/src/fp256/IFP256X2.sol";
+import {IFP256X3} from "../../contracts/src/fp256/IFP256X3.sol";
 import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
 
 /// @notice External wrapper around the inline library so every call can be
@@ -51,12 +53,43 @@ contract LibUser256 {
     function fromUintUp(uint256 x) external pure returns (int256) { return FP256Lib.fromUintUp(x); }
     function toFixed18Down(int256 x) external pure returns (int256) { return FP256Lib.toFixed18Down(x); }
     function toFixed18Up(int256 x) external pure returns (int256) { return FP256Lib.toFixed18Up(x); }
+    // #79: FP256X2
+    function exp2(int256 x) external pure returns (int256) { return FP256Lib.exp2(x); }
+    function exp10(int256 x) external pure returns (int256) { return FP256Lib.exp10(x); }
+    function log2(int256 x) external pure returns (int256) { return FP256Lib.log2(x); }
+    function log10(int256 x) external pure returns (int256) { return FP256Lib.log10(x); }
+    function log2Up(int256 x) external pure returns (int256) { return FP256Lib.log2Up(x); }
+    function cbrt(int256 x) external pure returns (int256) { return FP256Lib.cbrt(x); }
+    function sinh(int256 x) external pure returns (int256) { return FP256Lib.sinh(x); }
+    function cosh(int256 x) external pure returns (int256) { return FP256Lib.cosh(x); }
+    function tanh(int256 x) external pure returns (int256) { return FP256Lib.tanh(x); }
+    function atanh(int256 x) external pure returns (int256) { return FP256Lib.atanh(x); }
+    // #79: FP256X3
+    function min(int256 a, int256 b) external pure returns (int256) { return FP256Lib.min(a, b); }
+    function max(int256 a, int256 b) external pure returns (int256) { return FP256Lib.max(a, b); }
+    function clamp(int256 x, int256 lo, int256 hi) external pure returns (int256) { return FP256Lib.clamp(x, lo, hi); }
+    function avg(int256 a, int256 b) external pure returns (int256) { return FP256Lib.avg(a, b); }
+    function dist(int256 a, int256 b) external pure returns (int256) { return FP256Lib.dist(a, b); }
+    function zeroFloorSub(int256 a, int256 b) external pure returns (int256) { return FP256Lib.zeroFloorSub(a, b); }
+    function inv(int256 x) external pure returns (int256) { return FP256Lib.inv(x); }
+    function lerp(int256 a, int256 b, int256 t) external pure returns (int256) { return FP256Lib.lerp(a, b, t); }
+    function frac(int256 x) external pure returns (int256) { return FP256Lib.frac(x); }
+    function round(int256 x) external pure returns (int256) { return FP256Lib.round(x); }
+    function gcd(int256 a, int256 b) external pure returns (int256) { return FP256Lib.gcd(a, b); }
+    function factorial(int256 n) external pure returns (int256) { return FP256Lib.factorial(n); }
+    function pi(int256 terms) external pure returns (int256) { return FP256Lib.pi(terms); }
+    function gavg(int256 a, int256 b) external pure returns (int256) { return FP256Lib.gavg(a, b); }
+    function hypot(int256 a, int256 b) external pure returns (int256) { return FP256Lib.hypot(a, b); }
 }
 
 abstract contract FP256Harness is Test {
     IFP256 internal obj;
     /// release four's second object: the error function family and Lambert W
     IFP256X internal objX;
+    /// #79's objects: the exponential family and roots on the kernels (FP256X2),
+    /// the algebraic ops (FP256X3)
+    IFP256X2 internal objX2;
+    IFP256X3 internal objX3;
     LibUser256 internal lib;
 
     uint256 internal constant BIAS = 0x3ffff;
@@ -72,6 +105,8 @@ abstract contract FP256Harness is Test {
     function setUp() public virtual {
         obj = IFP256(_deployYulObject("out/FP256.yul/FP256.json"));
         objX = IFP256X(_deployYulObject("out/FP256X.yul/FP256X.json"));
+        objX2 = IFP256X2(_deployYulObject("out/FP256X2.yul/FP256X2.json"));
+        objX3 = IFP256X3(_deployYulObject("out/FP256X3.yul/FP256X3.json"));
         lib = new LibUser256();
     }
 
@@ -164,14 +199,40 @@ abstract contract FP256Harness is Test {
             || h == keccak256("lambertW0") || h == keccak256("lambertWm1");
     }
 
+    /// #79's ops: FP256X2 for the exponential family, cbrt and the hyperbolics,
+    /// FP256X3 for the algebraic ones.
+    function _isX2(string memory op) internal pure returns (bool) {
+        bytes32 h = keccak256(bytes(op));
+        return h == keccak256("exp2") || h == keccak256("exp10") || h == keccak256("log2") || h == keccak256("log10")
+            || h == keccak256("log2Up") || h == keccak256("cbrt") || h == keccak256("sinh") || h == keccak256("cosh")
+            || h == keccak256("tanh") || h == keccak256("atanh");
+    }
+
+    function _isX3(string memory op) internal pure returns (bool) {
+        bytes32 h = keccak256(bytes(op));
+        return h == keccak256("min") || h == keccak256("max") || h == keccak256("clamp") || h == keccak256("avg")
+            || h == keccak256("dist") || h == keccak256("zeroFloorSub") || h == keccak256("inv") || h == keccak256("lerp")
+            || h == keccak256("frac") || h == keccak256("round") || h == keccak256("gcd") || h == keccak256("factorial")
+            || h == keccak256("pi") || h == keccak256("gavg") || h == keccak256("hypot");
+    }
+
     function _objFor(string memory op) internal view returns (address) {
-        return _isX(op) ? address(objX) : address(obj);
+        if (_isX(op)) return address(objX);
+        if (_isX2(op)) return address(objX2);
+        if (_isX3(op)) return address(objX3);
+        return address(obj);
     }
 
     function _expectRevertX(bytes memory call, bytes4 err, string memory what) internal view {
         Res memory o = _try(address(objX), call);
         assertFalse(o.ok, string.concat(what, ": expected revert"));
         assertEq(_sel(o.err), err, string.concat(what, ": wrong error"));
+    }
+
+    function _expectRevertAt(address o, bytes memory call, bytes4 err, string memory what) internal view {
+        Res memory r = _try(o, call);
+        assertFalse(r.ok, string.concat(what, ": expected revert"));
+        assertEq(_sel(r.err), err, string.concat(what, ": wrong error"));
     }
 
     function _expectRevert(bytes memory call, bytes4 err, string memory what) internal view {

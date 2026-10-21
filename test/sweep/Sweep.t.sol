@@ -17,7 +17,7 @@ contract Sweep is Test {
     /// on either side of the call, so the dispatch below (a chain of
     /// comparisons, longer for the later ops) stays outside the window. The
     /// same window around a plain assignment ("noop") is the baseline.
-    function f(bytes32 op, int256 a, int256 b) external view returns (int256 r, uint256 g) {
+    function f(bytes32 op, int256 a, int256 b, int256 c) external view returns (int256 r, uint256 g) {
         uint256 g0;
         if (op == "noop") { g0 = gasleft(); r = a; g = gasleft(); }
         if (op == "fp256_add") { g0 = gasleft(); r = FP256Lib.add(a, b); g = gasleft(); }
@@ -59,6 +59,29 @@ contract Sweep is Test {
         if (op == "fp256_fromUintUp") { g0 = gasleft(); r = FP256Lib.fromUintUp(uint256(a)); g = gasleft(); }
         if (op == "fp256_toFixed18Down") { g0 = gasleft(); r = FP256Lib.toFixed18Down(a); g = gasleft(); }
         if (op == "fp256_toFixed18Up") { g0 = gasleft(); r = FP256Lib.toFixed18Up(a); g = gasleft(); }
+        if (op == "fp256_exp2") { g0 = gasleft(); r = FP256Lib.exp2(a); g = gasleft(); }
+        if (op == "fp256_exp10") { g0 = gasleft(); r = FP256Lib.exp10(a); g = gasleft(); }
+        if (op == "fp256_log2") { g0 = gasleft(); r = FP256Lib.log2(a); g = gasleft(); }
+        if (op == "fp256_log10") { g0 = gasleft(); r = FP256Lib.log10(a); g = gasleft(); }
+        if (op == "fp256_log2Up") { g0 = gasleft(); r = FP256Lib.log2Up(a); g = gasleft(); }
+        if (op == "fp256_cbrt") { g0 = gasleft(); r = FP256Lib.cbrt(a); g = gasleft(); }
+        if (op == "fp256_sinh") { g0 = gasleft(); r = FP256Lib.sinh(a); g = gasleft(); }
+        if (op == "fp256_cosh") { g0 = gasleft(); r = FP256Lib.cosh(a); g = gasleft(); }
+        if (op == "fp256_tanh") { g0 = gasleft(); r = FP256Lib.tanh(a); g = gasleft(); }
+        if (op == "fp256_atanh") { g0 = gasleft(); r = FP256Lib.atanh(a); g = gasleft(); }
+        if (op == "fp256_min") { g0 = gasleft(); r = FP256Lib.min(a, b); g = gasleft(); }
+        if (op == "fp256_max") { g0 = gasleft(); r = FP256Lib.max(a, b); g = gasleft(); }
+        if (op == "fp256_avg") { g0 = gasleft(); r = FP256Lib.avg(a, b); g = gasleft(); }
+        if (op == "fp256_dist") { g0 = gasleft(); r = FP256Lib.dist(a, b); g = gasleft(); }
+        if (op == "fp256_zeroFloorSub") { g0 = gasleft(); r = FP256Lib.zeroFloorSub(a, b); g = gasleft(); }
+        if (op == "fp256_inv") { g0 = gasleft(); r = FP256Lib.inv(a); g = gasleft(); }
+        if (op == "fp256_frac") { g0 = gasleft(); r = FP256Lib.frac(a); g = gasleft(); }
+        if (op == "fp256_round") { g0 = gasleft(); r = FP256Lib.round(a); g = gasleft(); }
+        if (op == "fp256_gcd") { g0 = gasleft(); r = FP256Lib.gcd(a, b); g = gasleft(); }
+        if (op == "fp256_factorial") { g0 = gasleft(); r = FP256Lib.factorial(a); g = gasleft(); }
+        if (op == "fp256_pi") { g0 = gasleft(); r = FP256Lib.pi(a); g = gasleft(); }
+        if (op == "fp256_gavg") { g0 = gasleft(); r = FP256Lib.gavg(a, b); g = gasleft(); }
+        if (op == "fp256_hypot") { g0 = gasleft(); r = FP256Lib.hypot(a, b); g = gasleft(); }
         if (op == "fp127_mul") { g0 = gasleft(); r = FP127Lib.mul(a, b); g = gasleft(); }
         if (op == "fp127_div") { g0 = gasleft(); r = FP127Lib.div(a, b); g = gasleft(); }
         if (op == "fp127_sqrt") { g0 = gasleft(); r = FP127Lib.sqrt(a); g = gasleft(); }
@@ -84,27 +107,34 @@ contract Sweep is Test {
         if (op == "fp127_divUp") { g0 = gasleft(); r = FP127Lib.divUp(a, b); g = gasleft(); }
         if (op == "fp127_divDown") { g0 = gasleft(); r = FP127Lib.divDown(a, b); g = gasleft(); }
         if (op == "fp127_toFixed18Up") { g0 = gasleft(); r = FP127Lib.toFixed18Up(a); g = gasleft(); }
+        if (op == "fp256_clamp") { g0 = gasleft(); r = FP256Lib.clamp(a, b, c); g = gasleft(); }
+        if (op == "fp256_lerp") { g0 = gasleft(); r = FP256Lib.lerp(a, b, c); g = gasleft(); }
         require(g0 != 0, "op");
         g = g0 - g;
     }
 
     /// One op per external call, so its memory is released before the next.
     function runOne(string memory op, bool two) external {
-        _run(op, two);
+        _run(op, two ? 2 : 1);
     }
 
-    function _run(string memory op, bool two) internal {
+    function runOne3(string memory op) external {
+        _run(op, 3);
+    }
+
+    function _run(string memory op, uint256 args) internal {
         string memory path = string.concat(DIR, op, ".json");
         if (!vm.exists(path)) return;
         string memory j = vm.readFile(path);
         bytes32[] memory a = vm.parseJsonBytes32Array(j, ".a");
-        bytes32[] memory b = two ? vm.parseJsonBytes32Array(j, ".b") : new bytes32[](a.length);
+        bytes32[] memory b = args > 1 ? vm.parseJsonBytes32Array(j, ".b") : new bytes32[](a.length);
+        bytes32[] memory c = args > 2 ? vm.parseJsonBytes32Array(j, ".c") : new bytes32[](a.length);
         string memory outp = string.concat(DIR, op, ".out");
         if (vm.exists(outp)) vm.removeFile(outp);
         bytes32 k = bytes32(bytes(op));
         uint256 base = _base();
         for (uint256 i; i < a.length; i++) {
-            try this.f(k, int256(uint256(a[i])), int256(uint256(b[i]))) returns (int256 r, uint256 g) {
+            try this.f(k, int256(uint256(a[i])), int256(uint256(b[i])), int256(uint256(c[i]))) returns (int256 r, uint256 g) {
                 vm.writeLine(outp, string.concat(vm.toString(bytes32(uint256(r))), " ", vm.toString(g > base ? g - base : 0)));
             } catch (bytes memory e) {
                 vm.writeLine(outp, string.concat("R", vm.toString(e), " 0"));
@@ -115,7 +145,7 @@ contract Sweep is Test {
     /// The window around a plain assignment, subtracted from every row: what
     /// is left is the inline library call's own cost.
     function _base() internal view returns (uint256 g) {
-        (, g) = this.f("noop", 0, 0);
+        (, g) = this.f("noop", 0, 0, 0);
     }
 
     function test_sweep_fp256() public {
@@ -131,6 +161,14 @@ contract Sweep is Test {
         this.runOne("fp256_toUintDown", false); this.runOne("fp256_toUintUp", false); this.runOne("fp256_toIntDown", false); this.runOne("fp256_toIntUp", false);
         this.runOne("fp256_floor", false); this.runOne("fp256_ceil", false); this.runOne("fp256_fromUintDown", false); this.runOne("fp256_fromUintUp", false);
         this.runOne("fp256_toFixed18Down", false); this.runOne("fp256_toFixed18Up", false);
+        // #79
+        this.runOne("fp256_exp2", false); this.runOne("fp256_exp10", false); this.runOne("fp256_log2", false); this.runOne("fp256_log10", false);
+        this.runOne("fp256_log2Up", false); this.runOne("fp256_cbrt", false); this.runOne("fp256_sinh", false); this.runOne("fp256_cosh", false);
+        this.runOne("fp256_tanh", false); this.runOne("fp256_atanh", false); this.runOne("fp256_min", true); this.runOne("fp256_max", true);
+        this.runOne("fp256_avg", true); this.runOne("fp256_dist", true); this.runOne("fp256_zeroFloorSub", true); this.runOne("fp256_inv", false);
+        this.runOne("fp256_frac", false); this.runOne("fp256_round", false); this.runOne("fp256_gcd", true); this.runOne("fp256_factorial", false);
+        this.runOne("fp256_pi", false); this.runOne("fp256_gavg", true); this.runOne("fp256_hypot", true);
+        this.runOne3("fp256_clamp"); this.runOne3("fp256_lerp");
     }
 
     function test_sweep_fp127() public {

@@ -19,11 +19,13 @@ contract GasLadder256 is FP256Harness {
     int256 constant NA = type(int256).min;
 
     /// Each test runs as its own transaction, so the accounts setUp touched
-    /// are cold again: touch both objects first, so no row pays the
+    /// are cold again: touch every object first, so no row pays the
     /// 2,500-gas cold-account surcharge.
     function _warm() internal view {
         obj.mul(ONE, ONE);
         objX.erf(ONE);
+        objX2.exp2(ONE);
+        objX3.inv(ONE);
     }
 
     // ---- conversions --------------------------------------------------
@@ -99,6 +101,21 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("ceil")) { g0 = gasleft(); r = FP256Lib.ceil(x); g = gasleft(); }
         if (h == keccak256("toFixed18Down")) { g0 = gasleft(); r = FP256Lib.toFixed18Down(x); g = gasleft(); }
         if (h == keccak256("toFixed18Up")) { g0 = gasleft(); r = FP256Lib.toFixed18Up(x); g = gasleft(); }
+        if (h == keccak256("exp2")) { g0 = gasleft(); r = FP256Lib.exp2(x); g = gasleft(); }
+        if (h == keccak256("exp10")) { g0 = gasleft(); r = FP256Lib.exp10(x); g = gasleft(); }
+        if (h == keccak256("log2")) { g0 = gasleft(); r = FP256Lib.log2(x); g = gasleft(); }
+        if (h == keccak256("log10")) { g0 = gasleft(); r = FP256Lib.log10(x); g = gasleft(); }
+        if (h == keccak256("log2Up")) { g0 = gasleft(); r = FP256Lib.log2Up(x); g = gasleft(); }
+        if (h == keccak256("cbrt")) { g0 = gasleft(); r = FP256Lib.cbrt(x); g = gasleft(); }
+        if (h == keccak256("sinh")) { g0 = gasleft(); r = FP256Lib.sinh(x); g = gasleft(); }
+        if (h == keccak256("cosh")) { g0 = gasleft(); r = FP256Lib.cosh(x); g = gasleft(); }
+        if (h == keccak256("tanh")) { g0 = gasleft(); r = FP256Lib.tanh(x); g = gasleft(); }
+        if (h == keccak256("atanh")) { g0 = gasleft(); r = FP256Lib.atanh(x); g = gasleft(); }
+        if (h == keccak256("inv")) { g0 = gasleft(); r = FP256Lib.inv(x); g = gasleft(); }
+        if (h == keccak256("frac")) { g0 = gasleft(); r = FP256Lib.frac(x); g = gasleft(); }
+        if (h == keccak256("round")) { g0 = gasleft(); r = FP256Lib.round(x); g = gasleft(); }
+        if (h == keccak256("factorial")) { g0 = gasleft(); r = FP256Lib.factorial(x); g = gasleft(); }
+        if (h == keccak256("pi")) { g0 = gasleft(); r = FP256Lib.pi(x); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -122,6 +139,14 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("mulUp")) { g0 = gasleft(); r = FP256Lib.mulUp(a, b); g = gasleft(); }
         if (h == keccak256("divDown")) { g0 = gasleft(); r = FP256Lib.divDown(a, b); g = gasleft(); }
         if (h == keccak256("divUp")) { g0 = gasleft(); r = FP256Lib.divUp(a, b); g = gasleft(); }
+        if (h == keccak256("min")) { g0 = gasleft(); r = FP256Lib.min(a, b); g = gasleft(); }
+        if (h == keccak256("max")) { g0 = gasleft(); r = FP256Lib.max(a, b); g = gasleft(); }
+        if (h == keccak256("avg")) { g0 = gasleft(); r = FP256Lib.avg(a, b); g = gasleft(); }
+        if (h == keccak256("dist")) { g0 = gasleft(); r = FP256Lib.dist(a, b); g = gasleft(); }
+        if (h == keccak256("zeroFloorSub")) { g0 = gasleft(); r = FP256Lib.zeroFloorSub(a, b); g = gasleft(); }
+        if (h == keccak256("gcd")) { g0 = gasleft(); r = FP256Lib.gcd(a, b); g = gasleft(); }
+        if (h == keccak256("gavg")) { g0 = gasleft(); r = FP256Lib.gavg(a, b); g = gasleft(); }
+        if (h == keccak256("hypot")) { g0 = gasleft(); r = FP256Lib.hypot(a, b); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -146,6 +171,21 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("sign")) { g0 = gasleft(); r = FP127Lib.sign(x); g = gasleft(); }
         if (h == keccak256("toFixed18")) { g0 = gasleft(); r = FP127Lib.toFixed18(x); g = gasleft(); }
         if (h == keccak256("fromFixed18")) { g0 = gasleft(); r = FP127Lib.fromFixed18(x); g = gasleft(); }
+        if (h == keccak256("exp2")) { g0 = gasleft(); r = FP127Lib.exp2(x); g = gasleft(); }
+        if (h == keccak256("exp10")) { g0 = gasleft(); r = FP127Lib.exp10(x); g = gasleft(); }
+        if (h == keccak256("log2")) { g0 = gasleft(); r = FP127Lib.log2(x); g = gasleft(); }
+        if (h == keccak256("log10")) { g0 = gasleft(); r = FP127Lib.log10(x); g = gasleft(); }
+        if (h == keccak256("log2Up")) { g0 = gasleft(); r = FP127Lib.log2Up(x); g = gasleft(); }
+        if (h == keccak256("cbrt")) { g0 = gasleft(); r = FP127Lib.cbrt(x); g = gasleft(); }
+        if (h == keccak256("sinh")) { g0 = gasleft(); r = FP127Lib.sinh(x); g = gasleft(); }
+        if (h == keccak256("cosh")) { g0 = gasleft(); r = FP127Lib.cosh(x); g = gasleft(); }
+        if (h == keccak256("tanh")) { g0 = gasleft(); r = FP127Lib.tanh(x); g = gasleft(); }
+        if (h == keccak256("atanh")) { g0 = gasleft(); r = FP127Lib.atanh(x); g = gasleft(); }
+        if (h == keccak256("inv")) { g0 = gasleft(); r = FP127Lib.inv(x); g = gasleft(); }
+        if (h == keccak256("frac")) { g0 = gasleft(); r = FP127Lib.frac(x); g = gasleft(); }
+        if (h == keccak256("round")) { g0 = gasleft(); r = FP127Lib.round(x); g = gasleft(); }
+        if (h == keccak256("factorial")) { g0 = gasleft(); r = FP127Lib.factorial(x); g = gasleft(); }
+        if (h == keccak256("pi")) { g0 = gasleft(); r = FP127Lib.pi(x); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -160,6 +200,14 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("mul")) { g0 = gasleft(); r = FP127Lib.mul(a, b); g = gasleft(); }
         if (h == keccak256("div")) { g0 = gasleft(); r = FP127Lib.div(a, b); g = gasleft(); }
         if (h == keccak256("pow")) { g0 = gasleft(); r = FP127Lib.pow(a, b); g = gasleft(); }
+        if (h == keccak256("min")) { g0 = gasleft(); r = FP127Lib.min(a, b); g = gasleft(); }
+        if (h == keccak256("max")) { g0 = gasleft(); r = FP127Lib.max(a, b); g = gasleft(); }
+        if (h == keccak256("avg")) { g0 = gasleft(); r = FP127Lib.avg(a, b); g = gasleft(); }
+        if (h == keccak256("dist")) { g0 = gasleft(); r = FP127Lib.dist(a, b); g = gasleft(); }
+        if (h == keccak256("zeroFloorSub")) { g0 = gasleft(); r = FP127Lib.zeroFloorSub(a, b); g = gasleft(); }
+        if (h == keccak256("gcd")) { g0 = gasleft(); r = FP127Lib.gcd(a, b); g = gasleft(); }
+        if (h == keccak256("gavg")) { g0 = gasleft(); r = FP127Lib.gavg(a, b); g = gasleft(); }
+        if (h == keccak256("hypot")) { g0 = gasleft(); r = FP127Lib.hypot(a, b); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -174,6 +222,8 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("ln")) { g0 = gasleft(); r = Q.ln(x); g = gasleft(); }
         if (h == keccak256("neg")) { g0 = gasleft(); r = Q.neg(x); g = gasleft(); }
         if (h == keccak256("abs")) { g0 = gasleft(); r = Q.abs(x); g = gasleft(); }
+        if (h == keccak256("exp2")) { g0 = gasleft(); r = Q.pow_2(x); g = gasleft(); }
+        if (h == keccak256("log2")) { g0 = gasleft(); r = Q.log_2(x); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -188,6 +238,29 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("mul")) { g0 = gasleft(); r = Q.mul(a, b); g = gasleft(); }
         if (h == keccak256("div")) { g0 = gasleft(); r = Q.div(a, b); g = gasleft(); }
         if (h == keccak256("pow")) { g0 = gasleft(); r = Q.exp(Q.mul(b, Q.ln(a))); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
+    }
+
+    /// The three-argument ops (#79): clamp and lerp.
+    function cLib3(string calldata op, int256 a, int256 b, int256 c) external view returns (uint256 g) {
+        bytes32 h = keccak256(bytes(op));
+        uint256 g0;
+        int256 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = a; g = gasleft(); }
+        if (h == keccak256("clamp")) { g0 = gasleft(); r = FP256Lib.clamp(a, b, c); g = gasleft(); }
+        if (h == keccak256("lerp")) { g0 = gasleft(); r = FP256Lib.lerp(a, b, c); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
+    }
+
+    function cFp127_3(string calldata op, int256 a, int256 b, int256 c) external view returns (uint256 g) {
+        bytes32 h = keccak256(bytes(op));
+        uint256 g0;
+        int256 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = a; g = gasleft(); }
+        if (h == keccak256("clamp")) { g0 = gasleft(); r = FP127Lib.clamp(a, b, c); g = gasleft(); }
+        if (h == keccak256("lerp")) { g0 = gasleft(); r = FP127Lib.lerp(a, b, c); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -314,6 +387,26 @@ contract GasLadder256 is FP256Harness {
                       [int256(365), int256(10000), int256(10), int256(100), int256(-365), int256(315360000)]);
     }
 
+    function _row3(string memory op, uint256 i, int256 a, int256 b, int256 c, string memory set) internal view {
+        string memory label = string.concat(vm.toString(a), ",", vm.toString(b), ",", vm.toString(c));
+        _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256,int256)"), a, b, c)), set);
+        _emit(op, i, label, "lib", _timed(abi.encodeCall(this.cLib3, (op, a, b, c)), abi.encodeCall(this.cLib3, ("id", a, b, c))), set);
+        _emit(op, i, label, "fp127lib", _fp127Gas3(op, a, b, c), set);
+        _emit(op, i, label, "quad", NA, set);
+    }
+
+    function _run3(string memory op, int256[6] memory a, int256[6] memory b, int256[6] memory c) internal view {
+        for (uint256 i; i < a.length; i++) _row3(op, i, a[i], b[i], c[i], "");
+    }
+
+    function _fp127Gas3(string memory op, int256 a, int256 b, int256 c) internal view returns (int256) {
+        (int256 fa, bool okA) = _fp127(a);
+        (int256 fb, bool okB) = _fp127(b);
+        (int256 fc, bool okC) = _fp127(c);
+        if (!(okA && okB && okC)) return NA;
+        return _timed(abi.encodeCall(this.cFp127_3, (op, fa, fb, fc)), abi.encodeCall(this.cFp127_3, ("id", fa, fb, fc)));
+    }
+
     // ---- typical inputs -------------------------------------------------
     // The ladder words are mostly integers and powers of two. The typical
     // rows draw TYPICAL words per op from keccak256("typical", op, i): an
@@ -359,12 +452,25 @@ contract GasLadder256 is FP256Harness {
         _typ1("normCdf", -4, 3, 0);
         _typ1("lambertW0", -10, 40, 1);
         _typ1("lambertWm1", -60, -3, -1);
+        // #79
+        _typ1("exp2", -6, 6, 0);
+        _typ1("exp10", -6, 5, 0);
+        _typ1("log2", -60, 60, 1);
+        _typ1("log10", -60, 60, 1);
+        _typ1("cbrt", -300, 300, 0);
+        _typ1("sinh", -6, 5, 0);
+        _typ1("cosh", -6, 5, 0);
+        _typ1("tanh", -6, 4, 0);
+        _typ1("atanh", -12, -1, 0);
         for (uint256 i; i < TYPICAL; i++) {
             _row2("pow", i, _typ("pow", i, -4, 4, 1), _typ("pow", i + 100, -4, 3, 0), "typical");
             (int256 r, int256 n) = _typRate("powu", i);
             _row2("powu", i, FP256Lib.add(ONE, r), n, "typical");
             (r, n) = _typRate("compound", i);
             _row2("compound", i, r, n, "typical");
+            _row2("hypot", i, _typ("hypot", i, -60, 60, 0), _typ("hypot", i + 100, -60, 60, 0), "typical");
+            _row2("gavg", i, _typ("gavg", i, -60, 60, 1), _typ("gavg", i + 100, -60, 60, 1), "typical");
+            _row3("lerp", i, _typ("lerp", i, -8, 8, 0), _typ("lerp", i + 100, -8, 8, 0), _typ("lerp", i + 200, -4, -1, 1), "typical");
         }
     }
 
@@ -388,5 +494,46 @@ contract GasLadder256 is FP256Harness {
         _run1("ceil", amts, false);
         _run1("toFixed18Down", xs, false);
         _run1("toFixed18Up", xs, false);
+    }
+
+    // ---- #79: FP256X2 and FP256X3 ------------------------------------------
+
+    function test_ladder_x2() public view {
+        _warm();
+        int256[6] memory xs = _unary();
+        // integral x skip the kernel; the rest take it
+        _run1("exp2", [_nv(-30, 0x1234 << 220), _nv(2, PI_F >> 20), _v(-1, 0), ONE, _v(4, E_F >> 20), _v(14, PI_F >> 20)], false);
+        _run1("exp10", [_nv(-30, 0x1234 << 220), _nv(2, PI_F >> 20), _v(-1, 0), ONE, _v(4, E_F >> 20), _v(14, PI_F >> 20)], false);
+        _run1("log2", xs, false);
+        _run1("log10", xs, false);
+        _run1("log2Up", xs, false);
+        _run1("cbrt", xs, false);
+        // the hyperbolics: the series below 1/2, the kernel above, the far end
+        _run1("sinh", [_v(-60, 0), _v(-2, 0), _nv(-1, 0x8 << 232), ONE, _v(4, 0x4 << 232), _v(17, 0x6 << 232)], false);
+        _run1("cosh", [_v(-60, 0), _v(-2, 0), _nv(-1, 0x8 << 232), ONE, _v(4, 0x4 << 232), _v(17, 0x6 << 232)], false);
+        _run1("tanh", [_v(-60, 0), _v(-2, 0), _nv(-1, 0x8 << 232), ONE, _v(4, 0x4 << 232), _v(7, 0)], false);
+        _run1("atanh", [_v(-60, 0), _v(-6, 0), _nv(-4, 0), _v(-2, 0), _v(-1, 0x8 << 232), _nv(-1, (uint256(1) << 236) - 1)], false);
+    }
+
+    function test_ladder_x3() public view {
+        _warm();
+        int256[6] memory xs = _unary();
+        (int256[6] memory a, int256[6] memory b) = _posBinary();
+        _run2("min", a, b);
+        _run2("max", a, b);
+        _run2("avg", a, b);
+        _run2("dist", a, b);
+        _run2("zeroFloorSub", a, b);
+        _run2("gavg", a, b);
+        _run2("hypot", a, b);
+        _run1("inv", xs, false);
+        _run1("frac", [_v(-60, 0), _v(-1, 0), _nv(1, PI_F >> 20), _v(1, PI_F >> 20), _v(59, 0xf4240 << 216), _v(200, 1)], false);
+        _run1("round", [_v(-60, 0), _v(-1, 0), _nv(1, PI_F >> 20), _v(1, PI_F >> 20), _v(59, 0xf4240 << 216), _v(200, 1)], false);
+        _run2("gcd", [_v(3, 0), _v(10, 0x1234 << 220), _v(60, 0), _v(100, 1 << 120), _v(200, 1), _v(236, 0x5555 << 220)],
+                     [_v(2, 0), _v(9, 0x4321 << 220), _v(40, 3 << 230), _v(80, 5 << 220), _v(150, 7 << 200), _v(236, 0x3333 << 220)]);
+        _run1("factorial", [ONE, _v(2, 0x4 << 232), _v(4, 0), _v(6, 0x9 << 230), _v(9, 0xf4 << 228), _v(14, 0x3e << 230)], false);
+        _run1("pi", [ONE, _v(1, 0x8 << 232), _v(2, 0x4 << 232), _v(3, 0), _v(3, 0x2 << 232), _v(10, 0)], false);
+        _run3("clamp", xs, [_v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0)], [TWO, TWO, TWO, TWO, TWO, TWO]);
+        _run3("lerp", a, b, [HALF, _v(-2, 0), _nv(0, 0), _v(3, 0), _v(-100, 0), _v(100, 0)]);
     }
 }
