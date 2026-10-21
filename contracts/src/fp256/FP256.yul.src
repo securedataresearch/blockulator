@@ -56,6 +56,9 @@
 // doublings), wln (one Newton step on the kernel's ln, residual at 2^-510),
 // wide series near one, the erf series and continued fraction, and one wide
 // Newton step for Lambert W. pow, compound and powu detect exact ties. The
+// optimisation pass after it (fp256-faster) gives Lambert W fourth-order
+// steps at word precision with a bound and the same test, the wide step only
+// on a miss. The
 // directed ops (mulDown, mulUp, divDown, divUp, toUintDown, toUintUp,
 // toIntDown, toIntUp, toFixed18Down, toFixed18Up, floor, ceil, fromUintDown,
 // fromUintUp) round once
@@ -2003,46 +2006,136 @@ function lwq(m) -> q {
     q := normround(0, sub(add(0x3ffff, n), 492), d)
 }
 
-/// The branch-point series W = -1 + sum_(k>=1) mu_k p^k, p = +-sqrt(2(1 + e x)),
-/// ten terms (Corless et al.), by Horner on the float ops; its error is about
-/// 0.004 p^10, under the last bit for |p| < 2^-21.
-function lwser(p) -> r {
-    r := 0x3fff78a2b4a92630e73c3e874bf9fb1c7fb474ec251c5bbed9eaf374b634b3da
-    r := fp256_add(0xbfff83b20565de449b98bcb4e16db1b857921d7a5610d5fd926a88a237f7403e, fp256_mul(p, r))
-    r := fp256_add(0x3fff9002c98983bc435a045285a1b7069470dcdc800879e4896c9e5fb4ad8b52, fp256_mul(p, r))
-    r := fp256_add(0xbfff9a9bbcb24fe29f595de1b82e796c546675cfa8d4a04088c62d92416ff112, fp256_mul(p, r))
-    r := fp256_add(0x3fffa6c901e573ac901e573ac901e573ac901e573ac901e573ac901e573ac902, fp256_mul(p, r))
-    r := fp256_add(0xbfffb4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b7f0d4629b, fp256_mul(p, r))
-    r := fp256_add(0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39, fp256_mul(p, r))
-    r := fp256_add(0xbfffd55555555555555555555555555555555555555555555555555555555555, fp256_mul(p, r))
-    r := fp256_add(0x3ffff00000000000000000000000000000000000000000000000000000000000, fp256_mul(p, r))
-    r := fp256_add(0xbffff00000000000000000000000000000000000000000000000000000000000, fp256_mul(p, r))
+/// W(x) near the branch point from p = +-sqrt(2(1 + e x)), |p| < 2^-21 (+
+/// for W0, - for W-1): the series W = -1 + sum_(k=1..11) mu_k p^k (Corless et
+/// al.; the next term is below 2^-261) as D = |W| 2^254 = 2^254 - P S, S by
+/// Horner on P = p 2^254 (|p| floored) with the mu_k rounded at 2^-254: each
+/// step within a unit and shrunk by |p| after it, P's floor one unit, the
+/// last product's floor one, p's own rounding (1.5 2^-237 relative) under
+/// 2^-257, so D within 2.2 units (bounds.py's lambert). Rounded once when
+/// that clears the rounding boundary, else lwfix from the rounded value.
+function lwser(x, p) -> r {
+    let P := shr(sub(0x3ffed, and(shr(236, p), 0x7ffff)), or(and(p, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000))
+    if shr(255, p) { P := sub(0, P) }
+    let S := 0x27fdc8c94fb38a69e89d4e4ab38ccc029656fdeb59fa04815ade5a7cb38240
+    S := add(sub(0, 0x3e71be1a92260ba70af38553d309a99b8cd446298c481991d887214da438ee), mulw(P, S))
+    S := add(0x628ad2a498c39cf0fa1d2fe7ec71fed1d3b094716efb67abcdd2d8d2cf67d1, mulw(P, S))
+    S := add(sub(0, 0x9d902b2ef224dcc5e5a70b6d8dc2bc90ebd2b086afec93544511bfba01f24b), mulw(P, S))
+    S := add(0x1002c98983bc435a045285a1b7069470dcdc800879e4896c9e5fb4ad8b52121, mulw(P, S))
+    S := add(sub(0, 0x1a9bbcb24fe29f595de1b82e796c546675cfa8d4a04088c62d92416ff11207a), mulw(P, S))
+    S := add(0x2d9203cae759203cae759203cae759203cae759203cae759203cae759203cae, mulw(P, S))
+    S := add(sub(0, 0x518a6dfc3518a6dfc3518a6dfc3518a6dfc3518a6dfc3518a6dfc3518a6dfc3), mulw(P, S))
+    S := add(0x9c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c7, mulw(P, S))
+    S := add(sub(0, 0x1555555555555555555555555555555555555555555555555555555555555555), mulw(P, S))
+    S := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(P, S))
+    let D := sub(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(P, S))
+    r := normround(1, 0x3ffff, D)
+    if rbad(D, 4) { r := lwfix(x, r) }
 }
 
-/// e^w for Lambert W's float Newton steps: exp's kernel path and one
-/// rounding, no second stage (2^-66 < |w| < 2^18 there).
+/// e^w for Lambert W's former float Newton steps: exp's kernel path and one
+/// rounding. No op calls it since the steps moved to lwlog; it stays because
+/// make profile's probe list (scripts/fp127/gen.py PROBES) names it, and
+/// nothing outside an export's closure reaches the bytecode.
 function lwexp(w) -> r {
     let s, e, m := unpack(w)
     let k, f := explog2(sub(e, 0x3ffff), m)
     r := exp2kf(s, k, f)
 }
 
-/// ln x for x > 0 in Lambert W's seeds and float Newton steps: ln's kernel
-/// path (absolute error under 2^-248, which is all a Newton residual
-/// needs), no series near one and no second stage.
+/// ln x for x > 0 within about 2^-21, for Lambert W's seeds only (which
+/// are within 2^-5 of W anyway): log2(1 + f) for the top 64 fraction bits f
+/// by a degree-7 Chebyshev fit at 2^-64 (2^-21.4, lwlnfit in bounds.py),
+/// plus the exponent, times ln 2, rounded once.
 function lwln(x) -> r {
-    let s, e, m := unpack(x)
-    if eq(x, 0x3ffff00000000000000000000000000000000000000000000000000000000000) { leave }
-    let Lm, Ls, lg := log2pair(e, m)
-    let l := mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)
-    r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
+    // (u + p 2^-64) ln 2 at 2^-128
+    let t := mul(add(shl(64, sub(and(shr(236, x), 0x7ffff), 0x3ffff)), lw2q(and(shr(172, x), 0xffffffffffffffff))), 0xb17217f7d1cf79ac)
+    r := normround(slt(t, 0), 0x4007d, absw(t))
 }
 
-/// One log-form Newton step for w + ln|w| = lx: w' = w - w (w + ln|w| - lx) / (w + 1).
-/// It never forms e^w, which leaves the format at both ends of the domain.
-function lwlog(w, lx) -> wn {
-    let f := fp256_sub(fp256_add(w, lwln(fp256_abs(w))), lx)
-    wn := fp256_sub(w, fp256_div(fp256_mul(w, f), fp256_add(w, 0x3ffff00000000000000000000000000000000000000000000000000000000000)))
+/// log2(1 + f 2^-64) at 2^-64 for 0 <= f < 2^64, within 2^-21.4 (lwln).
+function lw2q(f) -> p {
+    p := 266377486799641577
+    p := add(sub(0, 1395521547598861468), sar(64, mul(p, f)))
+    p := add(3481873446185410082, sar(64, mul(p, f)))
+    p := add(sub(0, 5939118987770338793), sar(64, mul(p, f)))
+    p := add(8708466524488688751, sar(64, mul(p, f)))
+    p := add(sub(0, 13287486091412030003), sar(64, mul(p, f)))
+    p := add(26612150119985157926, sar(64, mul(p, f)))
+    p := add(6798757998674, sar(64, mul(p, f)))
+}
+
+/// a / b at 2^-254 for signed words, |a / b| < 4: the quotient of the
+/// magnitudes floored, then the sign.
+function sdiv254(a, b) -> q {
+    q := div254(absw(a), absw(b))
+    if xor(slt(a, 0), slt(b, 0)) { q := sub(0, q) }
+}
+
+/// One fourth-order step on f(w) = w + ln(w / x) = 0 (W e^W = x, so W and x
+/// share a sign) from the float w, at word precision; never forms e^w, which
+/// leaves the format at both ends of the domain. With h = w + 1, u = f / h
+/// and v = u / h at 2^-254, the root is w (1 - u + uv/2 - uv^2/2 + u^2 v/3)
+/// up to w u v^3 (6w^2 - 8w + 1)/24 (the series reversion of f to third
+/// order), returned unrounded as D 2^(ew - bias - 254). ln(w / x) is log2m
+/// of the ratio of the significands (floored, so within 37 + 1.45 units)
+/// plus the exponent difference, packed as log2pair does (the shift's floor
+/// one unit of 2^Ls) and times ln 2: f within 31.4 units of 2^Ls, so u
+/// within du = 1 + 32 2^254 / |h 2^-Ls| units; D within 2 (1.01 du + 5) + 1
+/// once max(|u|, |v|) <= 2^-66 (cv = 1), where the truncation is below 2^-8
+/// of a unit (bounds.py's lambert measures it).
+function lwlog(x, w, q2) -> D, err, cv {
+    let mx := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+    let mw := or(and(w, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+    let ew := and(shr(236, w), 0x7ffff)
+    let k := sub(ew, and(shr(236, x), 0x7ffff))
+    let q := 0
+    switch lt(mw, mx)
+    case 1 {
+        q := div254(shl(1, mw), mx)
+        k := sub(k, 1)
+    }
+    default { q := div254(mw, mx) }
+    // q2: a first step with lw2q's log (to 2^-21, so its D only seeds the next)
+    let lg := 0
+    switch q2
+    case 0 { lg := log2m(q) }
+    default { lg := shl(190, lw2q(shr(190, sub(q, 0x4000000000000000000000000000000000000000000000000000000000000000)))) }
+    let Lm, Ls := log2pairg(k, lg)
+    // w at 2^Ls (|w| < 2^(255 + Ls)); f = w + ln(w / x) and h = w + 1 there
+    let n := sub(sub(ew, 0x400eb), Ls)
+    let wf := shl(n, mw)
+    if slt(n, 0) { wf := shr(sub(0, n), mw) }
+    if shr(255, w) { wf := sub(0, wf) }
+    let hf := add(wf, shl(sub(0, Ls), 1))
+    let u := sdiv254(add(wf, mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)), hf)
+    let v := sar(add(Ls, 254), sdiv254(u, hf))
+    let uv := mulw(u, v)
+    D := mulwu(shl(18, mw), add(sub(add(sub(0x4000000000000000000000000000000000000000000000000000000000000000, u), sar(1, uv)), sar(1, mulw(uv, v))), sdiv(mulw(mulw(u, u), v), 3)))
+    let du := add(17, shl(4, div(0x8000000000000000000000000000000000000000000000000000000000000000, absw(hf))))
+    err := add(add(shl(1, du), shr(4, du)), 12)
+    if iszero(hf) { err := not(0) }
+    cv := iszero(shr(188, or(absw(u), absw(v))))
+}
+
+/// W(x) from the seed w: lwlog steps (at most six; one to three from FP127's
+/// seeds) until one starts within 2^-66, then its unrounded value rounded
+/// once when its bound clears the rounding boundary, else lwfix from it.
+function lwiter(x, w, q2) -> r {
+    for { let i := 0 } lt(i, 6) { i := add(i, 1) } {
+        let D, err, cv := lwlog(x, w, q2)
+        w := normround(shr(255, w), and(shr(236, w), 0x7ffff), D)
+        cv := and(cv, iszero(q2))
+        q2 := 0
+        if cv {
+            if iszero(rbad(D, err)) {
+                r := w
+                leave
+            }
+            break
+        }
+    }
+    r := lwfix(x, w)
 }
 
 /// @object FP256X
@@ -2051,56 +2144,48 @@ function lwlog(w, lx) -> wn {
 /// @reverts OutOfRange() below -1/e or for a word that is not a number
 /// @notice The principal branch of Lambert W, W(x) e^W(x) = x, W >= -1.
 ///         Seeds as FP127's: the branch-point series in p = sqrt(2(1 + e x))
-///         with 1 + e x exact, x - x^2 + 3/2 x^3 on (-1/4, 0), Winitzki's
-///         L (1 - ln(1 + L)/(2 + L)), L = ln(1 + x), above. Six Newton steps
-///         on the float ops: w e^w = x up to 3, the log form w + ln w = ln x
-///         above (no e^w, so the whole range up to W = 181,700 works); near
-///         -1/e, below p = 2^-21, the ten-term series. Then one Newton step
-///         at 2^-510 on w + ln|w| = ln|x| (the residual in three words) and
-///         one rounding: correctly rounded.
+///         with 1 + e x exact, x - x^2 + 3/2 x^3 on (-1/4, 1/8), Winitzki's
+///         L (1 - ln(1 + L)/(2 + L)), L = ln(1 + x), above (the logarithms
+///         to 2^-21, enough for a seed). Then fourth-order
+///         steps at word precision on the log form w + ln(w/x) = 0 (no e^w,
+///         so the whole range up to W = 181,700 works; one to three from
+///         these seeds) until one starts within 2^-66, and one rounding when
+///         its error bound clears the rounding boundary; below p = 2^-21 the
+///         branch-point series to p^11 at word precision, tested the same
+///         way. On a miss one Newton step at 2^-510 (the residual in three
+///         words) and one rounding: correctly rounded.
 function fp256_lambertW0(x) -> r {
     let s, e, m := unpack(x)
     if iszero(e) { r := 0 leave }
     let u := sub(e, 0x3ffff)
     let one := 0x3ffff00000000000000000000000000000000000000000000000000000000000
     let w := 0
-    switch s
+    if s { if sgt(u, sub(0, 2)) { rev(0x7db3aba7) } }
+    switch or(slt(u, sub(0, 3)), and(s, eq(u, sub(0, 3))))
     case 1 {
-        if sgt(u, sub(0, 2)) { rev(0x7db3aba7) }
-        switch eq(u, sub(0, 2))
-        case 1 {
+        let x2 := fp256_mul(x, x)
+        w := fp256_add(fp256_sub(x, x2), fp256_mul(x2, fp256_mul(x, 0x3ffff80000000000000000000000000000000000000000000000000000000000)))
+    }
+    default {
+        if s {
             let q := lwq(m)
             if iszero(q) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
             let p := fp256_sqrt(fp256_add(q, q))
             if slt(p, 0x3ffea00000000000000000000000000000000000000000000000000000000000) {
-                r := lwfix(x, lwser(p))
+                r := lwser(x, p)
                 leave
             }
             let p2 := fp256_mul(p, p)
-            w := fp256_add(fp256_sub(fp256_sub(p, one), fp256_mul(p2, 0x3fffd55555555555555555555555555555555555555555555555555555555555)),
-                           fp256_mul(fp256_mul(p2, p), 0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39))
+            r := lwiter(x, fp256_add(fp256_sub(fp256_sub(p, one), fp256_mul(p2, 0x3fffd55555555555555555555555555555555555555555555555555555555555)),
+                           fp256_mul(fp256_mul(p2, p), 0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39)), 0)
+            leave
         }
-        default {
-            let x2 := fp256_mul(x, x)
-            w := fp256_add(fp256_sub(x, x2), fp256_mul(x2, fp256_mul(x, 0x3ffff80000000000000000000000000000000000000000000000000000000000)))
-        }
-    }
-    default {
         let l := lwln(fp256_add(x, one))
         w := fp256_mul(l, fp256_sub(one, fp256_div(lwln(fp256_add(l, one)), fp256_add(l, 0x4000000000000000000000000000000000000000000000000000000000000000))))
     }
-    switch and(iszero(s), sgt(x, 0x4000080000000000000000000000000000000000000000000000000000000000))
-    case 1 {
-        let lx := lwln(x)
-        for { let i := 0 } lt(i, 6) { i := add(i, 1) } { w := lwlog(w, lx) }
-    }
-    default {
-        // w' = w - (w - x e^-w) / (w + 1)
-        for { let i := 0 } lt(i, 6) { i := add(i, 1) } {
-            w := fp256_sub(w, fp256_div(fp256_sub(w, fp256_div(x, lwexp(w))), fp256_add(w, one)))
-        }
-    }
-    r := lwfix(x, w)
+    // Winitzki's seed (within 2^-5.7 up to x = 2^64, better above) takes a
+    // first step on lw2q's log
+    r := lwiter(x, w, and(iszero(or(s, slt(u, sub(0, 3)))), slt(u, 64)))
 }
 
 /// @object FP256X
@@ -2108,16 +2193,16 @@ function fp256_lambertW0(x) -> r {
 /// @domain -1/e <= x < 0
 /// @reverts OutOfRange() outside that or for a word that is not a number
 /// @notice The secondary real branch of Lambert W, W(x) <= -1. Seeds as
-///         FP127's: the branch-point series in -p for x < -1/4, the
-///         asymptotic L - ln(-L) + ln(-L)/L, L = ln(-x), above; seven
-///         log-form Newton steps (w + ln(-w) = ln(-x), no e^w: W reaches
-///         about -181,700 at the bottom of the format), then one log-form
-///         Newton step at 2^-510 and one rounding: correctly rounded.
+///         FP127's: the branch-point series in -p for x < -1/4 (below
+///         p = 2^-21 the result, as in lambertW0), the
+///         asymptotic L - ln(-L) + ln(-L)/L, L = ln(-x), above; then
+///         lambertW0's fourth-order log-form steps (no e^w: W reaches about
+///         -181,700 at the bottom of the format), its rounding test and, on
+///         a miss, its Newton step at 2^-510: correctly rounded.
 function fp256_lambertWm1(x) -> r {
     let s, e, m := unpack(x)
     let u := sub(e, 0x3ffff)
     if or(iszero(s), sgt(u, sub(0, 2))) { rev(0x7db3aba7) }
-    let lx := lwln(and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
     let w := 0
     switch eq(u, sub(0, 2))
     case 1 {
@@ -2125,7 +2210,7 @@ function fp256_lambertWm1(x) -> r {
         if iszero(q) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
         let p := fp256_sqrt(fp256_add(q, q))
         if slt(p, 0x3ffea00000000000000000000000000000000000000000000000000000000000) {
-            r := lwfix(x, lwser(fp256_neg(p)))
+            r := lwser(x, fp256_neg(p))
             leave
         }
         let p2 := fp256_mul(p, p)
@@ -2133,11 +2218,11 @@ function fp256_lambertWm1(x) -> r {
                        fp256_mul(fp256_mul(p2, p), 0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39))
     }
     default {
+        let lx := lwln(and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
         let ll := lwln(fp256_neg(lx))
         w := fp256_add(fp256_sub(lx, ll), fp256_div(ll, lx))
     }
-    for { let i := 0 } lt(i, 7) { i := add(i, 1) } { w := lwlog(w, lx) }
-    r := lwfix(x, w)
+    r := lwiter(x, w, 0)
 }
 
 // ---------------------------------------------------------------------------

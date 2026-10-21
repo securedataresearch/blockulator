@@ -136,10 +136,19 @@ The second stage:
   …))) (x and k for normCdf), numerator and denominator by two scaled
   recurrences of depth 1700/⌊|x|⌋ + 28 (2404 for normCdf): truncation below
   2^−402 from y = 7 to 430 (`bounds.py`).
-- Lambert W: after the float Newton steps, always one log-form Newton step
-  at 2^−510, w − (w + ln(|w|/|x|))·w/(1 + w). W and x share a sign, so the
-  form holds for every x ≠ 0, and the ratio's one wide ln keeps the
-  correction's relative precision down to the smallest x.
+- Lambert W: from FP127's seeds (their logarithms by a degree-7 fit, 2^−21),
+  fourth-order steps at word precision on w + ln(w/x) = 0, the series
+  reversion w(1 − u + uv/2 − uv²/2 + u²v/3) with u = f/(1 + w), v =
+  u/(1 + w), the logarithm of the ratio of the significands by the log2
+  kernel (one or two steps, three from Winitzki's seed below 2^64, of which
+  the first runs on the fitted logarithm); the step that starts within
+  2^−66 has a bound, 2·(1.01·du + 5) + 1 with du = 1 + 32·2^254/|h|, and
+  `rbad`. Below p = 2^−21 the branch-point series W = −1 + Σ μ_k p^k to
+  k = 11 (the next term under 2^−261) by Horner at 2^−254, within 2.2
+  units, and `rbad(D, 4)`. On a miss one log-form Newton step at 2^−510, w − (w + ln(|w|/|x|))·w/(1 + w). W and x
+  share a sign, so the form holds for every x ≠ 0, and the ratio's one
+  wide ln keeps the correction's relative precision down to the smallest
+  x.
 
 #79's second stages:
 
@@ -202,7 +211,7 @@ The bounds, and what they give:
 | erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 10.6 | 2^−499 rel. | 2^−262 ULP |
 | erf, erfc, Φ, ½ ≤ y < 6 | 192 | 2 × g's 81 + 8 | 11.3 | 2^−444 rel. | 2^−207 ULP |
 | erfc, Φ, y ≥ 6 | 32n + 64 | A and B gain 2^−251 a step | 186 | 2^−392 rel. | 2^−155 ULP |
-| lambertW0, lambertWm1 | (always wide) | Newton δ²/(2\|1 + W\|), δ ≤ 2^−218 | | 2^−415; 2^−354 near −1/e | 2^−178; 2^−117 near −1/e |
+| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 17 + 16·⌊2^255/\|h\|⌋; 4 on the branch series | f within 31.4 units of its scale, the reversion's truncation under 2^−8; the series' Horner floors and p's rounding, 2.2 | 0.15, 0.49 of it | 2^−415; 2^−354 near −1/e | 2^−178; 2^−117 near −1/e |
 | exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.54 | 2^−492 rel. | 2^−255 ULP |
 | log2, near one | 8 | d P within 3, times log2 e: 3 log2 e + 2 | 4.64 | 2^−497 rel. | 2^−260 ULP |
 | log2 | 38 | log2m 37, the shift into Lm 1 | 2.25 | 2^−489 rel. | 2^−252 ULP |
@@ -241,8 +250,8 @@ Lambert W's branch point). None is known.
 | `erf` | FP256X | below ½, x (2/√π) e^(−x²) Σ (2x²)^k/(2k+1)!!; above, 1 − erfc; ±1 from \|x\| ≥ 13 | never |
 | `erfc` | FP256X | e^(−x²)·g(x), g from 45 Taylor anchors on [½, 6] and a continued fraction beyond, e^(−x²) from the exact square: 71 digits to the underflow near x = 427 | never |
 | `normCdf` | FP256X | Φ(x) = erfc(−x/√2)/2, the left tail to about x = −603; exactly one from x ≥ 13√2 | never |
-| `lambertW0` | FP256X | W e^W = x, W ≥ −1: FP127's seeds, six float Newton steps (w e^w = x up to 3, w + ln w = ln x above), the branch-point series below p = 2^−21, then the wide step | `OutOfRange` below −1/e |
-| `lambertWm1` | FP256X | W ≤ −1 on [−1/e, 0): seeds, seven float log-form steps, the wide step | `OutOfRange` outside [−1/e, 0) |
+| `lambertW0` | FP256X | W e^W = x, W ≥ −1: FP127's seeds, fourth-order log-form steps at word precision (one to three) with a bound and the rounding test, the branch-point series at word precision below p = 2^−21; the wide step on a miss | `OutOfRange` below −1/e |
+| `lambertWm1` | FP256X | W ≤ −1 on [−1/e, 0): seeds, the same steps and test, the wide step on a miss | `OutOfRange` outside [−1/e, 0) |
 | `neg`, `abs`, `sign` | FP256 | bit operations; −0 is 0 | `OutOfRange` |
 | `cmp`, `lt`, `eq` | FP256 | through a monotone key (negatives mirrored); `eq` is bit equality; plain integers | `OutOfRange` |
 | `floor`, `ceil` | FP256 | the integral number at or below / above x, exact | `OutOfRange` |
