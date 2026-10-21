@@ -281,11 +281,13 @@ interface IFP127 {
     function atanh(int256 x) external pure returns (int256 r);
     /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
     ///         1 - erfc(x) by the continued fraction, both at 2^-192 and rounded
-    ///         once; +-1 exactly from |x| >= 10, where 1 - erf is below one ULP.
+    ///         once; +-1 exactly from |x| >= 9.375, where 1 - erf is below
+    ///         2^-130.8 and the subtraction rounds to one.
     function erf(int256 x) external pure returns (int256 r);
     /// @notice The complementary error function 1 - erf(x), computed directly
     ///         for x > 4 so the tail keeps its digits down to the format's
-    ///         floor (erfc(9.3) is one ULP; zero beyond); 2 - erfc(-x) for x < 0.
+    ///         floor (erfc(9.3) is one ULP; zero from 9.375, where it is below
+    ///         2^-130.8); 2 - erfc(-x) for x < 0.
     function erfc(int256 x) external pure returns (int256 r);
     /// @notice The standard normal distribution function
     ///         Phi(x) = erfc(-x / sqrt2) / 2, the argument scaled at 2^-192. The

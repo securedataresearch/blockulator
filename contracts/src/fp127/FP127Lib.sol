@@ -5915,7 +5915,8 @@ library FP127Lib {
     }
     /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
     ///         1 - erfc(x) by the continued fraction, both at 2^-192 and rounded
-    ///         once; +-1 exactly from |x| >= 10, where 1 - erf is below one ULP.
+    ///         once; +-1 exactly from |x| >= 9.375, where 1 - erf is below
+    ///         2^-130.8 and the subtraction rounds to one.
     function erf(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
@@ -6012,19 +6013,52 @@ library FP127Lib {
                 let an := xg
                 let bm := 0
                 let bn := 0x1000000000000000000000000000000000000000000000000
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    let a2 := add(mulg(xg, an), shr(1, mul(k, am)))
-                    let b2 := add(mulg(xg, bn), shr(1, mul(k, bm)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
+                let l := 0
+                let h := 0
+                // two steps a turn, the newest convergent alternating between (am, bm)
+                // and (an, bn), so nothing is copied: the same values as one step a turn
+                let k := 1
+                for {} lt(k, n) { k := add(k, 2) } {
+                    l := mul(xg, an)
+                    h := mulmod(xg, an, not(0))
+                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
+                    l := mul(xg, bn)
+                    h := mulmod(xg, bn, not(0))
+                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
+                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                    l := mul(xg, am)
+                    h := mulmod(xg, am, not(0))
+                    an := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), an)))
+                    l := mul(xg, bm)
+                    h := mulmod(xg, bm, not(0))
+                    bn := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), bn)))
                     if gt(an, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
                         am := shr(64, am)
                         an := shr(64, an)
                         bm := shr(64, bm)
                         bn := shr(64, bn)
                     }
+                }
+                if eq(k, n) {
+                    l := mul(xg, an)
+                    h := mulmod(xg, an, not(0))
+                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
+                    l := mul(xg, bn)
+                    h := mulmod(xg, bn, not(0))
+                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
+                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                    an := am
+                    bn := bm
                 }
                 v := divg(mulg(expg(sub(0, x2)), bn), mulg(an, 0x1c5bf891b4ef6aa79c3b0520d5db9383fe3921546f63b252e))
             }
@@ -6034,8 +6068,12 @@ library FP127Lib {
                 let d := shl(1, x2)
                 let term := 0x1000000000000000000000000000000000000000000000000
                 let s := term
-                for { let k := 1 } term { k := add(k, 1) } {
-                    term := div(mulg(term, d), add(shl(1, k), 1))
+                let l := 0
+                let h := 0
+                for { let k := 3 } term { k := add(k, 2) } {
+                    l := mul(term, d)
+                    h := mulmod(term, d, not(0))
+                    term := div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), k)
                     s := add(s, term)
                 }
                 v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
@@ -6049,7 +6087,7 @@ library FP127Lib {
                 if iszero(x) { r := 0 leave }
                 let one := 0x100000000000000000000000000000000
                 let ax := absw(x)
-                switch lt(ax, 0xa00000000000000000000000000000000)
+                switch lt(ax, 0x960000000000000000000000000000000)
                 case 1 {
                     let xg := shl(64, ax)
                     switch gt(ax, 0x400000000000000000000000000000000)
@@ -6065,7 +6103,8 @@ library FP127Lib {
     }
     /// @notice The complementary error function 1 - erf(x), computed directly
     ///         for x > 4 so the tail keeps its digits down to the format's
-    ///         floor (erfc(9.3) is one ULP; zero beyond); 2 - erfc(-x) for x < 0.
+    ///         floor (erfc(9.3) is one ULP; zero from 9.375, where it is below
+    ///         2^-130.8); 2 - erfc(-x) for x < 0.
     function erfc(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
@@ -6162,19 +6201,52 @@ library FP127Lib {
                 let an := xg
                 let bm := 0
                 let bn := 0x1000000000000000000000000000000000000000000000000
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    let a2 := add(mulg(xg, an), shr(1, mul(k, am)))
-                    let b2 := add(mulg(xg, bn), shr(1, mul(k, bm)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
+                let l := 0
+                let h := 0
+                // two steps a turn, the newest convergent alternating between (am, bm)
+                // and (an, bn), so nothing is copied: the same values as one step a turn
+                let k := 1
+                for {} lt(k, n) { k := add(k, 2) } {
+                    l := mul(xg, an)
+                    h := mulmod(xg, an, not(0))
+                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
+                    l := mul(xg, bn)
+                    h := mulmod(xg, bn, not(0))
+                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
+                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                    l := mul(xg, am)
+                    h := mulmod(xg, am, not(0))
+                    an := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), an)))
+                    l := mul(xg, bm)
+                    h := mulmod(xg, bm, not(0))
+                    bn := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), bn)))
                     if gt(an, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
                         am := shr(64, am)
                         an := shr(64, an)
                         bm := shr(64, bm)
                         bn := shr(64, bn)
                     }
+                }
+                if eq(k, n) {
+                    l := mul(xg, an)
+                    h := mulmod(xg, an, not(0))
+                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
+                    l := mul(xg, bn)
+                    h := mulmod(xg, bn, not(0))
+                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
+                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                    an := am
+                    bn := bm
                 }
                 v := divg(mulg(expg(sub(0, x2)), bn), mulg(an, 0x1c5bf891b4ef6aa79c3b0520d5db9383fe3921546f63b252e))
             }
@@ -6184,8 +6256,12 @@ library FP127Lib {
                 let d := shl(1, x2)
                 let term := 0x1000000000000000000000000000000000000000000000000
                 let s := term
-                for { let k := 1 } term { k := add(k, 1) } {
-                    term := div(mulg(term, d), add(shl(1, k), 1))
+                let l := 0
+                let h := 0
+                for { let k := 3 } term { k := add(k, 2) } {
+                    l := mul(term, d)
+                    h := mulmod(term, d, not(0))
+                    term := div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), k)
                     s := add(s, term)
                 }
                 v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
@@ -6200,7 +6276,7 @@ library FP127Lib {
                 if iszero(x) { r := one leave }
                 let ax := absw(x)
                 let v := 0
-                if lt(ax, 0xa00000000000000000000000000000000) {
+                if lt(ax, 0x960000000000000000000000000000000) {
                     let xg := shl(64, ax)
                     switch gt(ax, 0x400000000000000000000000000000000)
                     case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(xg)) }
@@ -6315,19 +6391,52 @@ library FP127Lib {
                 let an := xg
                 let bm := 0
                 let bn := 0x1000000000000000000000000000000000000000000000000
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    let a2 := add(mulg(xg, an), shr(1, mul(k, am)))
-                    let b2 := add(mulg(xg, bn), shr(1, mul(k, bm)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
+                let l := 0
+                let h := 0
+                // two steps a turn, the newest convergent alternating between (am, bm)
+                // and (an, bn), so nothing is copied: the same values as one step a turn
+                let k := 1
+                for {} lt(k, n) { k := add(k, 2) } {
+                    l := mul(xg, an)
+                    h := mulmod(xg, an, not(0))
+                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
+                    l := mul(xg, bn)
+                    h := mulmod(xg, bn, not(0))
+                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
+                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                    l := mul(xg, am)
+                    h := mulmod(xg, am, not(0))
+                    an := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), an)))
+                    l := mul(xg, bm)
+                    h := mulmod(xg, bm, not(0))
+                    bn := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), bn)))
                     if gt(an, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
                         am := shr(64, am)
                         an := shr(64, an)
                         bm := shr(64, bm)
                         bn := shr(64, bn)
                     }
+                }
+                if eq(k, n) {
+                    l := mul(xg, an)
+                    h := mulmod(xg, an, not(0))
+                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
+                    l := mul(xg, bn)
+                    h := mulmod(xg, bn, not(0))
+                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
+                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                    an := am
+                    bn := bm
                 }
                 v := divg(mulg(expg(sub(0, x2)), bn), mulg(an, 0x1c5bf891b4ef6aa79c3b0520d5db9383fe3921546f63b252e))
             }
@@ -6337,8 +6446,12 @@ library FP127Lib {
                 let d := shl(1, x2)
                 let term := 0x1000000000000000000000000000000000000000000000000
                 let s := term
-                for { let k := 1 } term { k := add(k, 1) } {
-                    term := div(mulg(term, d), add(shl(1, k), 1))
+                let l := 0
+                let h := 0
+                for { let k := 3 } term { k := add(k, 2) } {
+                    l := mul(term, d)
+                    h := mulmod(term, d, not(0))
+                    term := div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), k)
                     s := add(s, term)
                 }
                 v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
@@ -6353,7 +6466,8 @@ library FP127Lib {
                 let one := 0x100000000000000000000000000000000
                 let ax := absw(x)
                 let v := 0
-                if lt(ax, 0xe00000000000000000000000000000000) {
+                // from |x| = 13.3125 (|x| / sqrt2 > 9.41) erfc is below 2^-130.8: Phi is 0 or 1
+                if lt(ax, 0xd50000000000000000000000000000000) {
                     let yg := mulg(shl(64, ax), 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
                     switch gt(yg, 0x4000000000000000000000000000000000000000000000000)
                     case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(yg)) }
