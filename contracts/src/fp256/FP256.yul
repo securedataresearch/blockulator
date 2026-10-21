@@ -580,10 +580,32 @@ object "FP256" {
                     t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
                 }
                 eh, el := wmul(rh, rl, t, tl)
+                eh, el := wdbl(eh, el)
+            }
+
+            function wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
                 for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
-                    let sh, sl := wmul(eh, el, eh, el)
-                    sh, sl := wshr(sh, sl, i)
-                    eh, el := wadd(eh, el, sh, sl)
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
                 }
             }
 

@@ -112,7 +112,9 @@ The second stage:
 - `wexpm1`: e^r − 1 for r in [0, 1): z = r/2^24, e^z − 1 = z·T(z) by 19
   Horner terms (k = 20..12 in one word, k = 11..2 in two), then 24
   doublings E ← 2E + E² on the value scaled by 2^24, which keep its
-  relative precision; within 2^−503.
+  relative precision; within 2^−503. The doublings run in one loop without
+  calls, each square with its cross term formed once (`wdbl`, bit for bit
+  the same as `wmul`'s), so a call costs about 21k gas, not 27k.
 - `wexp`: e^x = 2^k(1 + E), r = x − k ln 2 exact modulo 4 at 2^−510 with
   ln 2 in three words.
 - `wlnw`: ln of a mantissa in [1, 2) by one Newton step from the kernel's
