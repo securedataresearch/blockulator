@@ -33,16 +33,50 @@ BENCH = ROOT / "docs" / "benchmarks"
 DEPLOY = ROOT / "contracts" / "deployments"
 REPLAYS = ROOT / "scripts" / "replays"
 
-# One identity per ruler, fixed for the whole deck (validated categorical
-# order on the light surface). The two rulers the talk is about take the
-# first two slots; the WAD libraries are one class, drawn in gray. In the
-# replays, the deployed code is ink and its one-word fix (mulDivUp, mulUp)
-# is the WAD gray: it is still the 18-decimal ruler, rounded the other way.
+def mix(a: str, b: str, p: float) -> str:
+    """CSS color-mix(in oklab, a p, b): the site derives its extra colours this way
+    (static/css/blockulator.css), so the deck computes the same blend once here."""
+    def lin(c): return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    def gam(c): return 12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+    def oklab(h):
+        r, g, b = (lin(int(h[i:i + 2], 16) / 255) for i in (1, 3, 5))
+        l, m, s = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
+                   0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
+                   0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+        l, m, s = (math.copysign(abs(v) ** (1 / 3), v) for v in (l, m, s))
+        return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
+    L, A, B = (p * x + (1 - p) * y for x, y in zip(oklab(a), oklab(b)))
+    l, m, s = ((L + 0.3963377774 * A + 0.2158037573 * B) ** 3, (L - 0.1055613458 * A - 0.0638541728 * B) ** 3,
+               (L - 0.0894841775 * A - 1.2914855480 * B) ** 3)
+    rgb = (4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+           -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+           -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+    return "#" + "".join(f"{round(min(1, max(0, gam(c))) * 255):02x}" for c in rgb)
+
+
+# The site's palette (static/css/site.css, synced from securedataresearch.net).
+SITE_INK, SITE_G500, SITE_EMERALD, SITE_RED, SITE_GOLD, SITE_SAPPHIRE = (
+    "#0a0a0a", "#737373", "#00694e", "#e4002b", "#a09860", "#4070a0")
+
+# One colour per family, the same as the site's charts (blockulator.css --c-*):
+# ours emerald and ink, the WAD libraries one gold, the protocols one slate.
+# In the replays, the deployed protocol code is the protocol slate and its
+# one-word fix (mulDivUp, mulUp) is WAD gold: it is still the 18-decimal
+# ruler, rounded the other way.
 INK, MUTED, FAINT, GRID, SURFACE = "#0b0b0b", "#52514e", "#a9a8a2", "#e4e3df", "#fcfcfb"
-SERIES = {"FP256": "#2a78d6", "FP127": "#eb6834", "binary128": "#1baf7a", "64.64": "#6250d6", "WAD": "#8a8984"}
+SERIES = {
+    "FP256": SITE_INK,                               # --c-fp256: var(--ink)
+    "FP127": SITE_EMERALD,                           # --c-fp127: var(--emerald)
+    "binary128": mix(SITE_SAPPHIRE, SITE_RED, .55),  # --c-quad: --violet, color-mix(in oklab, sapphire 55%, red)
+    "64.64": SITE_SAPPHIRE,                          # --c-6464: var(--sapphire)
+    "WAD": SITE_GOLD,                                # --c-wad: var(--gold)
+}
+WAD_DARK = mix(SITE_GOLD, SITE_INK, .7)  # a second WAD library beside the first (gas slide): the gold, darker (5.4:1 on SURFACE)
 RULERS = ["WAD", "64.64", "binary128", "FP127", "FP256"]
 FORM = {"WAD": "solady", "64.64": "abdk", "binary128": "quad", "FP127": "fp127lib", "FP256": "fp256"}
-DEPLOYED = "#0b0b0b"
+DEPLOYED = mix(SITE_SAPPHIRE, SITE_G500, .5)  # --c-protocol: --slate, color-mix(in oklab, sapphire 50%, g-500)
 FIX = SERIES["WAD"]
 
 plt.rcParams.update({
@@ -500,7 +534,7 @@ def plot_release() -> str:
     for x, op in enumerate(ops):
         a, b = one[op], now[op]
         ax.plot([x, x], [a, b], color=GRID, lw=3, zorder=2)
-        ax.plot(x, a, "o", ms=13, color=SERIES["FP127"], mec=SURFACE, mew=2, zorder=3,
+        ax.plot(x, a, "o", ms=13, color=MUTED, mec=SURFACE, mew=2, zorder=3,
                 label="release one" if x == 0 else None)
         ax.plot(x, b, "o", ms=13, color=SERIES["FP256"], mec=SURFACE, mew=2, zorder=4,
                 label="now" if x == 0 else None)
@@ -534,7 +568,7 @@ def plot_format_ceiling() -> str:
     ax.plot(es, [dig(e) for e in es], color=MUTED, lw=2, zorder=3)
     marks = {9: "just covers uint256", 11: "", 13: "", 19: "FP256"}
     for e, note in marks.items():
-        col = SERIES["FP256"] if e == 19 else INK
+        col = SERIES["FP256"] if e == 19 else MUTED
         ax.plot(e, dig(e), "o", ms=12, color=col, mec=SURFACE, mew=2, zorder=4)
         lab = f"{e} bits: {dig(e):.1f} digits, 10^±{rng(e):,}" + (f"\n{note}" if note else "")
         ax.annotate(lab, (e, dig(e)), xytext=(10, 12), textcoords="offset points", fontsize=12, color=INK)
@@ -602,7 +636,7 @@ def gas_medians() -> dict[str, dict[str, int]]:
 
 def plot_gas() -> str:
     g = gas_medians()
-    libs = [("Solady", MUTED), ("PRBMath", FAINT), ("FP127", SERIES["FP127"]), ("FP256", SERIES["FP256"])]
+    libs = [("Solady", SERIES["WAD"]), ("PRBMath", WAD_DARK), ("FP127", SERIES["FP127"]), ("FP256", SERIES["FP256"])]
     fig, ax = figure()
     w = 0.2
     for i, (lib, col) in enumerate(libs):

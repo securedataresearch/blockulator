@@ -21,17 +21,17 @@
 {%- set ref = sc.inputs[0] -%}
 {%- set_global n_inputs = 0 %}{% for s in d.scenarios %}{% set_global n_inputs = n_inputs + s.inputs | length %}{% endfor -%}
 {%- set_global n_others = 0 %}{% for f in d.forms %}{% if f.id not in ["fp127", "fp127lib", "fp256"] %}{% set_global n_others = n_others + 1 %}{% endif %}{% endfor -%}
-{%- set bars = ["fp256", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer"] -%}
-{%- set short = {"fp127": "FP127", "abdk": "ABDK 64.64", "solady": "Solady", "prb": "PRBMath", "quad": "ABDK Quad", "balancer": "Balancer", "maker": "Maker rpow", "fp256": "FP256"} -%}
+{%- set yr = ref.cells -%}
+{%- set_global wlo = 999 %}{% set_global whi = 0 %}{% for f in ["solady", "prb", "balancer"] %}{% set v = yr[f]["365"].digits %}{% if v < wlo %}{% set_global wlo = v %}{% endif %}{% if v > whi %}{% set_global whi = v %}{% endif %}{% endfor -%}
+{%- if wlo == whi %}{% set wad = wlo ~ "" %}{% else %}{% set wad = wlo ~ "–" ~ whi %}{% endif -%}
 <section class="block">
   <h2>{{ x.chart_title }}</h2>
-  <p class="note">{{ x.chart_note }}</p>
-  <ol class="bars" aria-label="Correct digits after 365 daily compounding steps">
-    {%- for f in bars %}{% set c = ref.cells[f]["365"] %}
-    <li class="bar s-{{ f }}{% if f == 'fp127' or f == 'fp256' %} ours{% endif %}"><span class="name">{{ short[f] }}</span><span class="track"><span class="fill" style="width:{{ c.digits / 70 * 100 | round(precision=1) }}%"></span></span><span class="val">{{ c.digits }}</span></li>
-    {%- endfor %}
-  </ol>
-  <p class="small">Reference input of the <a href="/results/ladder/#compound">compound scenario</a>, N = 365, digits against exact arithmetic. Full data: <a href="/data/ladder.json">ladder.json</a>.</p>
+  <p class="note">{{ x.chart_note | replace(from="{fp256}", to=yr.fp256["365"].digits ~ "") | replace(from="{fp127}", to=yr.fp127["365"].digits ~ "") | replace(from="{wad}", to=wad) }}</p>
+  <figure class="figure chart digitchart" role="img" aria-label="Correct digits against N, 1 to 10,000 steps. At N = 365: FP256 {{ yr.fp256['365'].digits }}, FP127 {{ yr.fp127['365'].digits }}, binary128 {{ yr.quad['365'].digits }}, 64.64 {{ yr.abdk['365'].digits }}, Maker rpow (RAY) {{ yr.maker['365'].digits }}, Solady, PRBMath and Balancer (WAD) {{ wad }}.">
+    <div class="wide">{{ <ladderchart cells={yr} ladder={d.ladder} log10={d.ladderLog10} W={720} H={340} /> }}</div>
+    <div class="narrow">{{ <ladderchart cells={yr} ladder={d.ladder} log10={d.ladderLog10} W={360} H={300} /> }}</div>
+  </figure>
+  <p class="small">Reference input of the <a href="/results/ladder/#compound">compound scenario</a>, digits against exact arithmetic. Band: the WAD libraries (Solady, PRBMath, Balancer) up to Maker's RAY rpow. Full data: <a href="/data/ladder.json">ladder.json</a>.</p>
 </section>
 
 <section class="block">
@@ -39,18 +39,39 @@
     {% for s in x.steps %}
     <div class="card step">
       <span class="label">{{ s.label }}</span>
-      <h3>{{ s.title }}</h3>
+      <h3>{% if s.href %}<a href="{{ s.href }}">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}</h3>
       <p>{{ s.text | replace(from="{scenarios}", to=d.scenarios | length ~ "") | replace(from="{inputs}", to=n_inputs ~ "") | replace(from="{others}", to=n_others ~ "") }}</p>
     </div>
     {% endfor %}
   </div>
 </section>
 
+{#- gas: the range of FP127Lib / Solady median gas over these ops, from gas.json (typical inputs where the op has them, else the ladder), so it follows every make bench -#}
+{%- set gas = load_data(path="static/data/gas.json") -%}
+{%- set_global glo = 1000000 %}{% set_global ghi = 0 -%}
+{%- for op in ["mul", "div", "exp", "ln", "pow"] %}{% set o = gas.ops[op] %}{% if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif -%}
+{%- set r = sm.lib.median / sm.solady.median %}{% if r < glo %}{% set_global glo = r %}{% endif %}{% if r > ghi %}{% set_global ghi = r %}{% endif %}{% endfor -%}
+{%- set gasr = glo | round(precision=1) ~ "–" ~ ghi | round(precision=1) %}
+<section class="block limits">
+  <h2>{{ x.limits_title }}</h2>
+  <div class="limitgrid">
+    {%- for s in x.limits %}
+    <div class="card step">
+      <span class="label">{{ s.label }}</span>
+      <h3>{{ s.title | replace(from="{gas}", to=gasr) }}</h3>
+      <p>{{ s.text }}</p>
+    </div>
+    {%- endfor %}
+  </div>
+</section>
+
 <section class="ask">
   <div class="card askcard">
+    <div class="askinner">
     <h2>{{ x.ask_title }}</h2>
     <p>{{ x.ask_text | safe }}</p>
     <p class="actions"><a class="btn primary" href="{{ x.ask_primary_href }}">{{ x.ask_primary_text }}</a> <a class="btn ghost" href="{{ x.ask_secondary_href }}">{{ x.ask_secondary_text }}</a></p>
+    </div>
   </div>
 </section>
 {% endblock content %}

@@ -14,9 +14,9 @@ FP127 has 38 digits at 1, 8 at 10^−30 and nothing outside 2^−128 to 2^127; t
 
 Sign in bit 255, a 19-bit exponent (bias 262,143), a 236-bit fraction with an implicit one: 237 significant bits, about 71 digits, from 10^−78,900 to 10^78,900. No NaN, no infinity, no subnormals, no negative zero. Zero is the all-zero word; any other word with exponent 0 reverts `OutOfRange`. Equality is bit equality.
 
-```
-[ s | E, 19 bits | F, 236 bits ]      value = (-1)^s (1 + F / 2^236) 2^(E - 262143)
-```
+{{ <wordstrip format="fp256" /> }}
+
+`value = (-1)^s (1 + F / 2^236) 2^(E - 262143)`, with s the sign, E the exponent and F the significand field.
 
 Rounding: once per op (Lambert W iterates), ties away from zero. Overflow reverts; underflow rounds to zero. `ONE` is `0x3ffff << 236`.
 

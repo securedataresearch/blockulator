@@ -12,6 +12,8 @@ Both forms are generated from one file and fuzzed equal across the full `int256`
 
 `value × 2^128` in an `int256`, two's complement. `ONE` is `2^128`. Range ±1.7 × 10^38, 128 fractional bits: 38 digits at 1, 32 at 10^−6, 8 at 10^−30. Every op takes and returns this one type. `fromFixed18` and `toFixed18` convert to and from WAD.
 
+{{ <wordstrip format="fp127,wad" /> }}
+
 Errors: `Overflow()`, `DivisionByZero()`, `OutOfRange()`. Nothing wraps.
 
 ## Deployed form
