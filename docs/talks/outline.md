@@ -271,9 +271,13 @@ Say first:
 
   - Lambert W always takes the wide step, at about 152k.
 - Budget gas for the p99 if an attacker can choose your inputs.
+- **Store ln(index) and each accrual is an exact FP127 `add` (289 gas), with one `exp`
+  (6,605) on each read.** After 1,000 accruals the read is within half a unit of 2^-128,
+  and the multiplied index is 511 to 546 off. It fits a continuous rate only.
 
 Source: `docs/benchmarks/gas.md` and `gas256.md` (FP127 v5 and FP256 release four); the gas columns of
-`docs/benchmarks/sweep.md` (release four).
+`docs/benchmarks/sweep.md` (release four); the log-domain run in `test/examples/Integrating.t.sol`
+(`forge test --match-test logIndex -vv`).
 
 ### 3.5 Why nothing else needs writing (0.5 min)
 

@@ -178,6 +178,23 @@ do not have them until those releases are deployed; FP127's `floor` and
 snippets run on the replays' integers in
 [`test/examples/Integrating.t.sol`](test/examples/Integrating.t.sol).
 
+Two moves take roundings out altogether:
+
+- **Divide last.** Multiply everything, then divide once, with a 512-bit
+  `fullMulDiv` rounded in the protocol's direction. Resupply's LTV as
+  `debt × 10^23 / (price × collateral)`, rounded up, is 500,000,000,000 and
+  the borrow reverts; no new library is needed
+  ([`replay-resupply.md`](docs/benchmarks/replay-resupply.md)). The same
+  move works on FP127 words: for a, b ≥ 0 the word a·b/c is `fullMulDiv`
+  of the raw integers, one rounding, where `div(mul(a, b), c)` rounds twice.
+- **Keep an index as its logarithm.** Store L = ln(index) as an FP127 word.
+  With a continuous rate, each accrual adds rate × dt, and `add` never
+  rounds. `exp(L)` runs once, on the read. In the example test, after 1,000
+  accruals the multiplied index is 511 to 546 units of 2^−128 off; the log
+  read is within half a unit. The costs: an `exp` on every read, FP127's
+  `exp` stops at 88 (read through FP256 for more), and it only fits a
+  continuous rate. With a per-period rate, `compound` is better.
+
 ## Layout
 
 ```

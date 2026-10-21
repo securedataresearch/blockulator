@@ -4,11 +4,15 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import {FP127Lib} from "fp127/FP127Lib.sol";
 import {FP256Lib} from "fp256/FP256Lib.sol";
-import {IdleBalance127, IdleBalance256, Solvency127, Solvency256, JoinExit256, SwapCharge256} from "./Integrating.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {IdleBalance127, IdleBalance256, Solvency127, Solvency256, JoinExit256, SwapCharge256, DivideLast, Index127, LogIndex127} from "./Integrating.sol";
 
 /// @notice The "Integrating" snippets, run on the replays' own integers. Every expected
 ///         value here is a number in docs/benchmarks/replay-*.md, from the data in
 ///         scripts/replays/*.json; the replay tests in test/replays/ assert them first.
+///         The mulDiv127 and logIndex tests have no replay. mulDiv127 uses exact powers of
+///         two; the logIndex tests measure both forms of an index against e^L in FP256, and
+///         the pages quote what they log (`forge test --match-test logIndex -vv`).
 contract IntegratingTest is Test {
     // ---- Rule 1: Bunni (docs/benchmarks/replay-bunni.md, scripts/replays/bunni.json) -------------
 
@@ -131,5 +135,141 @@ contract IntegratingTest is Test {
         assertEq(SwapCharge256.chargeIn(above, 1e14), 1_000_001);
         // dust is charged one wei, never zero
         assertEq(SwapCharge256.chargeIn(FP256Lib.div(FP256Lib.ONE, FP256Lib.fromUint(1e30)), 1e14), 1);
+    }
+
+    // ---- Divide last: Resupply (docs/benchmarks/replay-resupply.md, "divide by the price at the end") --
+
+    function test_resupply_divideLast() public view {
+        string memory json = vm.readFile("scripts/replays/resupply.json");
+        uint256 price = _pin(json, "price");
+        uint256 debt = _pin(json, "borrowAmount");
+        uint256 collateral = _pin(json, "collateral");
+        uint256 maxLTV = _pin(json, "maxLTV");
+        // divide first, as deployed: the rate floors to 0 and so does the LTV
+        assertEq(debt * (1e36 / price) * 1e5 / 1e18 / collateral, 0);
+        // divide last, rounded up: 500,000,000,000 against a cap of 95,000; the borrow reverts
+        assertEq(DivideLast.ltvUp(debt, price, collateral), 500_000_000_000);
+        // rounded down instead: 499,999,999,999, the same verdict
+        assertEq(FixedPointMathLib.fullMulDiv(debt, 1e23, price * collateral), 499_999_999_999);
+        // the most the 1-wei position may owe at maxLTV: 1.9 reUSD
+        assertEq(DivideLast.maxBorrow(collateral, maxLTV, price), 1.9e18);
+    }
+
+    function test_mulDiv127_oneRounding() public pure {
+        // 2^-100 x 2^-40 / 2^-60 = 2^-80, a word of 2^48 raw units. Every input is an exact word.
+        int256 a = 1 << 28;
+        int256 b = 1 << 88;
+        int256 c = 1 << 68;
+        // the product 2^-140 is below 2^-128, so mul floors it to 0 before the division
+        assertEq(FP127Lib.mul(a, b), 0);
+        assertEq(FP127Lib.div(FP127Lib.mul(a, b), c), 0);
+        // one 512-bit product, one division: exact here
+        assertEq(DivideLast.mulDiv127(a, b, c), 1 << 48);
+    }
+
+    // ---- Accrue in the log: N accruals of a continuous rate, both ways --------------------------
+    //
+    // Rates are uniform below 2^-28 per second (up to about 12% a year), dt uniform in 1..86,400 s.
+    // The reference is e^L in FP256: L is exact, fromFP127 is exact, exp is correctly rounded to 237
+    // bits, so its own error is about 2^-109 units of 2^-128. Errors are in millionths of 2^-128.
+
+    function _rate(uint256 seed, uint256 k) internal pure returns (int256) {
+        return int256(uint256(keccak256(abi.encode(seed, k, "r"))) % (1 << 100));
+    }
+
+    function _dt(uint256 seed, uint256 k) internal pure returns (uint256) {
+        return 1 + uint256(keccak256(abi.encode(seed, k, "t"))) % 86_400;
+    }
+
+    /// (w - ref) in millionths of 2^-128
+    function _err(int256 w, int256 ref) internal pure returns (int256) {
+        return FP256Lib.toFixed18(FP256Lib.mul(FP256Lib.sub(FP256Lib.fromFP127(w), ref), FP256Lib.fromUint(1 << 128))) / 1e12;
+    }
+
+    function _abs(int256 x) internal pure returns (int256) {
+        return x < 0 ? -x : x;
+    }
+
+    function _accrue(uint256 n, uint256 seed) internal returns (int256 logErr, int256 mulErr) {
+        Index127 m = new Index127();
+        LogIndex127 l = new LogIndex127();
+        for (uint256 k; k < n; k++) {
+            m.accrue(_rate(seed, k), _dt(seed, k));
+            l.accrue(_rate(seed, k), _dt(seed, k));
+        }
+        int256 ref = FP256Lib.exp(FP256Lib.fromFP127(l.logIndex()));
+        logErr = _err(l.index(), ref);
+        mulErr = _err(m.index(), ref);
+        // the FP256 read, rounded to FP127, is the same word
+        assertEq(FP256Lib.toFP127(l.index256()), l.index());
+        console.log(string.concat("accrual N=", vm.toString(n), " seed=", vm.toString(seed),
+            " log read err=", vm.toString(logErr), " multiplied err=", vm.toString(mulErr), " (1e-6 x 2^-128)"));
+    }
+
+    function test_logIndex_accrual() public {
+        for (uint256 seed; seed < 3; seed++) {
+            // one accrual: both are the same single exp
+            (int256 l1, int256 m1) = _accrue(1, seed);
+            assertEq(l1, m1);
+            assertLe(_abs(l1), 500_001);
+            // more: the log read stays within half a unit; the product drifts about half a unit per accrual
+            (int256 l10, int256 m10) = _accrue(10, seed);
+            assertLe(_abs(l10), 500_001);
+            assertGt(_abs(m10), 1_000_000);
+            (int256 l1000, int256 m1000) = _accrue(1000, seed);
+            assertLe(_abs(l1000), 500_001);
+            assertGt(_abs(m1000), 500_000_000);
+        }
+    }
+
+    /// The limit: a per-period rate r over n periods. log1p(r) rounds once, and that rounding is
+    /// added n times; compound(r, n) rounds once for the whole run.
+    function test_logIndex_perPeriodRateLoses() public pure {
+        for (uint256 seed; seed < 2; seed++) {
+            int256 L;
+            int256 idx = 1 << 128;
+            int256 ref = FP256Lib.ONE;
+            for (uint256 k; k < 100; k++) {
+                int256 r = _rate(seed, k);
+                uint256 n = _dt(seed, k);
+                L = FP127Lib.add(L, FP127Lib.log1p(r) * int256(n));
+                idx = FP127Lib.mul(idx, FP127Lib.compound(r, int256(n) << 128));
+                ref = FP256Lib.mul(ref, FP256Lib.compound(FP256Lib.fromFP127(r), int256(n)));
+            }
+            int256 logErr = _err(FP127Lib.exp(L), ref);
+            int256 mulErr = _err(idx, ref);
+            console.log(string.concat("per-period N=100 seed=", vm.toString(seed), " log1p x n err=", vm.toString(logErr),
+                " compound err=", vm.toString(mulErr), " (1e-6 x 2^-128)"));
+            assertGt(_abs(logErr), 100_000_000_000); // over 100,000 units of 2^-128
+            assertLt(_abs(mulErr), 100_000_000); // under 100
+        }
+    }
+
+    /// In FP256 the product drifts too, at FP256's scale: each exp and mul rounds to nearest,
+    /// so the drift is a random walk of 2^-237-sized steps. Measured in parts of 2^236.
+    function test_logIndex_fp256Drift() public {
+        for (uint256 seed; seed < 3; seed++) {
+            LogIndex127 l = new LogIndex127();
+            int256 idx = FP256Lib.ONE;
+            for (uint256 k; k < 1000; k++) {
+                l.accrue(_rate(seed, k), _dt(seed, k));
+                idx = FP256Lib.mul(idx, FP256Lib.exp(FP256Lib.fromFP127(_rate(seed, k) * int256(_dt(seed, k)))));
+            }
+            int256 rd = l.index256();
+            int256 rel = FP256Lib.div(FP256Lib.sub(idx, rd), rd);
+            int256 parts = FP256Lib.toFixed18(FP256Lib.mul(rel, FP256Lib.pow(FP256Lib.fromUint(2), FP256Lib.fromUint(236)))) / 1e12;
+            console.log(string.concat("fp256 N=1000 seed=", vm.toString(seed), " multiplied vs log read=", vm.toString(parts), " (1e-6 x 2^-236)"));
+            assertGt(_abs(parts), 0);
+            assertLt(_abs(parts), 100_000_000); // under 100 parts in 2^236
+        }
+    }
+
+    function test_logIndex_readPast88() public {
+        LogIndex127 l = new LogIndex127();
+        l.accrue(int256(1) << 128, 100); // L = 100
+        vm.expectRevert();
+        l.index(); // FP127's exp stops at 88
+        // FP256 reads e^100, about 2.7e43, past FP127's 2^127
+        assertGt(FP256Lib.cmp(l.index256(), FP256Lib.fromUint(1 << 127)), 0);
     }
 }
