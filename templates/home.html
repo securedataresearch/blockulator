@@ -19,6 +19,8 @@
 {%- set d = load_data(path="static/data/ladder.json") -%}
 {%- for s in d.scenarios %}{% if s.id == "compound" %}{% set_global sc = s %}{% endif %}{% endfor -%}
 {%- set ref = sc.inputs[0] -%}
+{%- set_global n_inputs = 0 %}{% for s in d.scenarios %}{% set_global n_inputs = n_inputs + s.inputs | length %}{% endfor -%}
+{%- set_global n_others = 0 %}{% for f in d.forms %}{% if f.id not in ["fp127", "fp127lib", "fp256"] %}{% set_global n_others = n_others + 1 %}{% endif %}{% endfor -%}
 {%- set bars = ["fp256", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer"] -%}
 {%- set short = {"fp127": "FP127", "abdk": "ABDK 64.64", "solady": "Solady", "prb": "PRBMath", "quad": "ABDK Quad", "balancer": "Balancer", "maker": "Maker rpow", "fp256": "FP256"} -%}
 <section class="block">
@@ -38,7 +40,7 @@
     <div class="card step">
       <span class="label">{{ s.label }}</span>
       <h3>{{ s.title }}</h3>
-      <p>{{ s.text }}</p>
+      <p>{{ s.text | replace(from="{scenarios}", to=d.scenarios | length ~ "") | replace(from="{inputs}", to=n_inputs ~ "") | replace(from="{others}", to=n_others ~ "") }}</p>
     </div>
     {% endfor %}
   </div>
