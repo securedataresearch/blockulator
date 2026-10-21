@@ -5,6 +5,7 @@ the constants they need and a measurement against mpmath.
     uv run scripts/fp127/generators/precise_model.py constants   # print the Yul constants
     uv run scripts/fp127/generators/precise_model.py measure [n] # kernel errors on n random inputs
     uv run scripts/fp127/generators/precise_model.py fastpow [n] # pow / cbrt's one-word test (pow2t)
+    uv run scripts/fp127/generators/precise_model.py lambertw [d] # Lambert W's seeds and Halley step counts
 
 The v5 kernels work on a double word (DW): a pair (hi, lo) read as
 (hi * 2^256 + lo) * 2^-512, a fraction in [0, 1) held to 2^-512.
@@ -28,6 +29,14 @@ The v5 kernels work on a double word (DW): a pair (hi, lo) read as
             are more than eb from the midpoint, both round alike and the
             double word is skipped. fastpow checks the bound against the
             true error and the result against op_pow / op_cbrt.
+
+  lambertw  Lambert W's one-word iterations in real arithmetic: each seed,
+            the Halley steps the Yul gives it, and the correct bits left for
+            the double-word step lwfin, -log2(|w - W| max(1, 1/|1 + W|) /
+            max(1, |W|)), worst over a grid of d points per octave. The
+            one-word arithmetic itself stops near 126 bits; every region must
+            reach 120 so lwfin, which squares the error, lands far below the
+            grid (v4 ran four doubling FSC steps and an Iacono-Boyd step).
 
 Every product floors, every shift drops bits below the grid, exactly as the
 Yul; Python's >> floors signed integers as Yul's sar does.
@@ -389,6 +398,80 @@ def fastpow(n=20000):
 
 
 # ---------------------------------------------------------------------------
+# Lambert W: seeds and Halley step counts (real arithmetic)
+# ---------------------------------------------------------------------------
+
+def lw_w0(x):
+    """W0's seed and Halley step count, as fp127_lambertW0 chooses them."""
+    ax = abs(x)
+    if ax < mpf(2) ** -5 or -mpf(1) / 4 < x < 0:
+        w = x - x * x + x * x * (x + x / 2)
+        n = 3 if ax >= mpf(2) ** -5 else 2 if ax >= mpf(2) ** -13 else 1 if ax >= mpf(2) ** -33 else 0
+        return w, n
+    if x < 0:
+        q = 1 + E_ * x
+        p = msqrt(2 * q)
+        n = 3 if q >= mpf(2) ** -8 else 2 if q >= mpf(2) ** -28 else 1
+        return -1 + p - p * p / 3 + p ** 3 * 11 / 72, n
+    lg = log(1 + x)
+    return lg * (1 - log(1 + lg) / (lg + 2)), 3
+
+
+def lw_wm1(x):
+    """W-1's seed and Halley step count, as fp127_lambertWm1 chooses them."""
+    if x < -mpf(1) / 4:
+        q = 1 + E_ * x
+        p = msqrt(2 * q)
+        n = 3 if q >= mpf(2) ** -8 else 2 if q >= mpf(2) ** -28 else 1
+        return -1 - p - p * p / 3 - p ** 3 * 11 / 72, n
+    lx = log(-x)
+    ll = log(-lx)
+    return lx - ll + ll / lx, 4 if x < -mpf(2) ** -4 else 3 if x <= -mpf(2) ** -8 else 2
+
+
+def lw_halley0(x, w):
+    """lwfsc: Halley on w e^w - x, f''/f' = (w + 2)/(w + 1)."""
+    iv = 1 / (w + 1)
+    r = (w - x * exp(-w)) * iv
+    return w - r * (1 + r * (w + 2) * iv / 2)
+
+
+def lw_halleym1(lx, w):
+    """lwm1: Halley on w + ln(-w) - ln(-x)."""
+    f = w + log(-w) - lx
+    iv = 1 / (w + 1)
+    return w - f * w * iv * (1 - f * iv * iv / 2)
+
+
+def lw_measure(d=8):
+    mp.dps = 300
+    nie = -1 / E_
+    pos = [mpf(2) ** (k / d) for k in range(-65 * d, 127 * d)]
+    neg = [-mpf(2) ** (-k / d) for k in range(2 * d, 65 * d)]
+    mid = [-mpf(1) / 4 + (nie + mpf(1) / 4) * (1 - mpf(2) ** -(k / d)) for k in range(1, 40 * d)]
+    near = [x for x in ((mpf(2) ** (-k / d) - 1) / E_ for k in range(1, 40 * d)) if x < -mpf(1) / 4]
+    small = [-mpf(2) ** (-k / d) for k in range(2 * d, 128 * d)]
+    for name, xs, seed, step, br in (
+            ("W0, x > 0", pos, lw_w0, lw_halley0, 0), ("W0, -1/4 < x < 0", neg, lw_w0, lw_halley0, 0),
+            ("W0, -1/e < x <= -1/4", mid + near, lw_w0, lw_halley0, 0),
+            ("W-1, -1/4 <= x < 0", small, lw_wm1, lw_halleym1, -1),
+            ("W-1, -1/e < x < -1/4", mid + near, lw_wm1, lw_halleym1, -1)):
+        by = {}
+        for x in xs:
+            W = lambertw(x, br).real
+            w, n = seed(x)
+            arg = log(-x) if br else x
+            for _ in range(n):
+                w = step(arg, w)
+            err = abs(w - W) * max(1, 1 / abs(1 + W)) / max(1, abs(W))
+            b = 999.0 if err == 0 else float(-log(err, 2))
+            by[n] = min(by.get(n, 999.0), b)
+        print(f"{name:22s} worst bits before lwfin, by Halley steps: "
+              + ", ".join(f"{n}: {b:.1f}" for n, b in sorted(by.items())))
+    mp.dps = 220
+
+
+# ---------------------------------------------------------------------------
 # measurement
 # ---------------------------------------------------------------------------
 
@@ -462,6 +545,8 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "measure"
     if cmd == "constants":
         constants()
+    elif cmd == "lambertw":
+        lw_measure(int(sys.argv[2]) if len(sys.argv) > 2 else 8)
     elif cmd == "fastpow":
         fastpow(int(sys.argv[2]) if len(sys.argv) > 2 else 20000)
     else:

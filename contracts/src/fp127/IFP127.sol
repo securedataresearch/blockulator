@@ -223,12 +223,14 @@ interface IFP127 {
     ///      for |x| < 2^-65 (the nearest word), and W(1..5) come from the table. Within 2^-40 of the branch point in
     ///      1 + e x, the branch-point series in p = sqrt(2 (1 + e x)) with
     ///      1 + e x to 2^-254 seeds the final step directly. Everything else is
-    ///      seeded to five to eight bits and refined by four FSC steps and one IB
-    ///      step in one-word arithmetic (126 to 128 bits away from -1/e), then
-    ///      by the double-word Newton step lwfin. Seeds: Winitzki's
-    ///      L (1 - ln(1 + L) / (2 + L)) with L = ln(1 + x) for x > 0; the origin
-    ///      series x - x^2 + 3/2 x^3 for -1/4 < x < 0; the branch-point series
-    ///      -1 + p - p^2/3 + 11/72 p^3 down to -1/e. The Huff used a 64-entry
+    ///      seeded and refined by as many one-word Halley steps as the seed
+    ///      needs for 120 bits or more before the double-word Newton step lwfin
+    ///      (none to three; each triples the correct bits). Seeds: the origin
+    ///      series x - x^2 + 3/2 x^3 for -1/4 < x < 2^-5 (none from |x| < 2^-33,
+    ///      one to 2^-13, two to 2^-5, three beyond); Winitzki's
+    ///      L (1 - ln(1 + L) / (2 + L)) with L = ln(1 + x) above, five to eleven
+    ///      bits, three steps; the branch-point series -1 + p - p^2/3 + 11/72 p^3
+    ///      down to -1/e, one to three steps as 1 + e x falls from 1/4 to 2^-40. The Huff used a 64-entry
     ///      interpolation table with two steps, which gave 50 to 100 bits on
     ///      (0, 64), read past the table above 64 and ran out of gas below 0.
     function lambertW0(int256 x) external pure returns (int256 r);
@@ -239,8 +241,11 @@ interface IFP127 {
     ///      - 43/540 p^4, p = sqrt(2 (1 + e x)) with 1 + e x to 2^-254, seeds the
     ///      final step directly. Elsewhere: the branch-point series for x < -1/4,
     ///      the asymptotic L - ln(-L) + ln(-L) / L with L = ln(-x) for
-    ///      -1/4 <= x < 0, five one-word log-form Newton steps, then the
-    ///      double-word step lwfin. The smallest input, -floor(2^128 / e), is
+    ///      -1/4 <= x < 0, then as many one-word log-form Halley steps as the
+    ///      seed needs for 120 bits or more (two to four for the asymptotic seed
+    ///      as -x grows past 2^-8 and 2^-4; one to three for the branch-point
+    ///      series as 1 + e x falls past 2^-8 and 2^-28), then the double-word
+    ///      step lwfin. The smallest input, -floor(2^128 / e), is
     ///      2^-128 inside -1/e and its W is -1 - 2^-63.3, not -1, which v4
     ///      returned. The archived Huff lambertwm1 was never functional and is
     ///      not the reference for this routine.

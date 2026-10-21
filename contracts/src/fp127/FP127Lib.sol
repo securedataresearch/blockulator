@@ -3654,12 +3654,14 @@ library FP127Lib {
     ///      for |x| < 2^-65 (the nearest word), and W(1..5) come from the table. Within 2^-40 of the branch point in
     ///      1 + e x, the branch-point series in p = sqrt(2 (1 + e x)) with
     ///      1 + e x to 2^-254 seeds the final step directly. Everything else is
-    ///      seeded to five to eight bits and refined by four FSC steps and one IB
-    ///      step in one-word arithmetic (126 to 128 bits away from -1/e), then
-    ///      by the double-word Newton step lwfin. Seeds: Winitzki's
-    ///      L (1 - ln(1 + L) / (2 + L)) with L = ln(1 + x) for x > 0; the origin
-    ///      series x - x^2 + 3/2 x^3 for -1/4 < x < 0; the branch-point series
-    ///      -1 + p - p^2/3 + 11/72 p^3 down to -1/e. The Huff used a 64-entry
+    ///      seeded and refined by as many one-word Halley steps as the seed
+    ///      needs for 120 bits or more before the double-word Newton step lwfin
+    ///      (none to three; each triples the correct bits). Seeds: the origin
+    ///      series x - x^2 + 3/2 x^3 for -1/4 < x < 2^-5 (none from |x| < 2^-33,
+    ///      one to 2^-13, two to 2^-5, three beyond); Winitzki's
+    ///      L (1 - ln(1 + L) / (2 + L)) with L = ln(1 + x) above, five to eleven
+    ///      bits, three steps; the branch-point series -1 + p - p^2/3 + 11/72 p^3
+    ///      down to -1/e, one to three steps as 1 + e x falls from 1/4 to 2^-40. The Huff used a 64-entry
     ///      interpolation table with two steps, which gave 50 to 100 bits on
     ///      (0, 64), read past the table above 64 and ran out of gas below 0.
     function lambertW0(int256 _x) internal pure returns (int256 _r) {
@@ -4107,17 +4109,21 @@ library FP127Lib {
                 r := exp2core(mulg(shl(64, x), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
             }
 
-            function lwfsc(x, w) -> wn {
-                let wp1 := add(w, 0x100000000000000000000000000000000)
-                let ew := expf(w)
-                let rr := fp127_div(sub(w, fp127_div(x, ew)), wp1)
-                let corr := mulraw(rr, add(fp127_div(rr, shl(1, wp1)), 0x100000000000000000000000000000000))
-                wn := sub(w, corr)
+            function fp127_inv(x) -> r {
+                if iszero(x) { rev(0x23d359a3) }
+                let ng := slt(x, 0)
+                let ux := absw(x)
+                if eq(ux, 1) { rev(0x35278d12) }
+                let q := add(div(sub(0, ux), ux), 1)
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+                r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
 
-            function lwib(x, w) -> wn {
-                let num := mulraw(w, add(0x100000000000000000000000000000000, lnf(fp127_div(x, w))))
-                wn := fp127_div(num, add(0x100000000000000000000000000000000, w))
+            function lwfsc(x, w) -> wn {
+                let wp1 := add(w, 0x100000000000000000000000000000000)
+                let iv := fp127_inv(wp1)
+                let rr := mulraw(sub(w, fp127_div(x, expf(w))), iv)
+                wn := sub(w, mulraw(rr, add(0x100000000000000000000000000000000, sar(1, mulraw(mulraw(rr, add(wp1, 0x100000000000000000000000000000000)), iv)))))
             }
 
             function lwq(x) -> q {
@@ -4135,14 +4141,22 @@ library FP127Lib {
                     leave
                 }
                 let w := 0
-                switch slt(x, 0)
+                // the Halley steps the seed needs (scripts/fp127/generators/precise_model.py lambertw)
+                let n := 3
+                switch or(lt(absw(x), 0x8000000000000000000000000000000), and(slt(x, 0), sgt(x, sub(0, 0x40000000000000000000000000000000))))
                 case 1 {
-                    switch sgt(x, sub(0, 0x40000000000000000000000000000000))
-                    case 1 {
-                        let x2 := mulraw(x, x)
-                        w := add(sub(x, x2), mulraw(x2, add(x, sar(1, x))))
+                    // the origin series, -1/4 < x < 2^-5; its error is about 8/3 x^4
+                    let x2 := mulraw(x, x)
+                    w := add(sub(x, x2), mulraw(x2, add(x, sar(1, x))))
+                    if lt(absw(x), 0x8000000000000000000000000000000) {
+                        n := 2
+                        if lt(absw(x), 0x80000000000000000000000000000) { n := 1 }
+                        if lt(absw(x), 0x800000000000000000000000) { n := 0 }
                     }
-                    default {
+                }
+                default {
+                    switch slt(x, 0)
+                    case 1 {
                         let qq := lwq(x)
                         if lt(qq, 0x1000000000000000000000000000000000000000000000000000000) {
                             r := lwfin(x, lwbp(qq, 1))
@@ -4155,22 +4169,24 @@ library FP127Lib {
                         w := sub(p, 0x100000000000000000000000000000000)
                         w := sub(w, div(p2, 3))
                         w := add(w, div(mul(mulraw(p2, p), 11), 72))
+                        // 1 + e x below 2^-8: two steps; below 2^-28: one
+                        if lt(qq, 0x100000000000000000000000000000000000000000000000000000000000000) {
+                            n := 2
+                            if lt(qq, 0x1000000000000000000000000000000000000000000000000000000000) { n := 1 }
+                        }
+                    }
+                    default {
+                        // ln(1 + x); for x within ONE of the top of the range 1 + x would
+                        // wrap, and ln(x) is the same seed to far more bits than needed.
+                        let xp := x
+                        if slt(x, 0x7ffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffff) { xp := add(x, 0x100000000000000000000000000000000) }
+                        let l := lnf(xp)
+                        let l1 := lnf(add(l, 0x100000000000000000000000000000000))
+                        w := mulraw(l, sub(0x100000000000000000000000000000000, fp127_div(l1, add(l, 0x200000000000000000000000000000000))))
                     }
                 }
-                default {
-                    // ln(1 + x); for x within ONE of the top of the range 1 + x would
-                    // wrap, and ln(x) is the same seed to far more bits than needed.
-                    let xp := x
-                    if slt(x, 0x7ffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffff) { xp := add(x, 0x100000000000000000000000000000000) }
-                    let l := lnf(xp)
-                    let l1 := lnf(add(l, 0x100000000000000000000000000000000))
-                    w := mulraw(l, sub(0x100000000000000000000000000000000, fp127_div(l1, add(l, 0x200000000000000000000000000000000))))
-                }
-                w := lwfsc(x, w)
-                w := lwfsc(x, w)
-                w := lwfsc(x, w)
-                w := lwfsc(x, w)
-                r := lwfin(x, lwib(x, w))
+                for {} n { n := sub(n, 1) } { w := lwfsc(x, w) }
+                r := lwfin(x, w)
             }
 
             _r := fp127_lambertW0(_x)
@@ -4183,8 +4199,11 @@ library FP127Lib {
     ///      - 43/540 p^4, p = sqrt(2 (1 + e x)) with 1 + e x to 2^-254, seeds the
     ///      final step directly. Elsewhere: the branch-point series for x < -1/4,
     ///      the asymptotic L - ln(-L) + ln(-L) / L with L = ln(-x) for
-    ///      -1/4 <= x < 0, five one-word log-form Newton steps, then the
-    ///      double-word step lwfin. The smallest input, -floor(2^128 / e), is
+    ///      -1/4 <= x < 0, then as many one-word log-form Halley steps as the
+    ///      seed needs for 120 bits or more (two to four for the asymptotic seed
+    ///      as -x grows past 2^-8 and 2^-4; one to three for the branch-point
+    ///      series as 1 + e x falls past 2^-8 and 2^-28), then the double-word
+    ///      step lwfin. The smallest input, -floor(2^128 / e), is
     ///      2^-128 inside -1/e and its W is -1 - 2^-63.3, not -1, which v4
     ///      returned. The archived Huff lambertwm1 was never functional and is
     ///      not the reference for this routine.
@@ -4567,9 +4586,21 @@ library FP127Lib {
                 r := add(w, sar(172, add(sub(0, d), 0x8000000000000000000000000000000000000000000)))
             }
 
+            function fp127_inv(x) -> r {
+                if iszero(x) { rev(0x23d359a3) }
+                let ng := slt(x, 0)
+                let ux := absw(x)
+                if eq(ux, 1) { rev(0x35278d12) }
+                let q := add(div(sub(0, ux), ux), 1)
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+                r := sub(xor(q, sub(0, ng)), sub(0, ng))
+            }
+
             function lwm1(lx, w) -> wn {
                 let f := sub(add(w, lnf(sub(0, w))), lx)
-                wn := sub(w, fp127_div(mulraw(w, f), add(w, 0x100000000000000000000000000000000)))
+                let iv := fp127_inv(add(w, 0x100000000000000000000000000000000))
+                let sn := mulraw(mulraw(w, f), iv)
+                wn := sub(w, mulraw(sn, sub(0x100000000000000000000000000000000, sar(1, mulraw(mulraw(f, iv), iv)))))
             }
 
             function lwq(x) -> q {
@@ -4581,6 +4612,7 @@ library FP127Lib {
                 if slt(x, sub(0, 0x5e2d58d8b3bcdf1abadec7829054f90d)) { rev(0x7db3aba7) }
                 if iszero(slt(x, 0)) { rev(0x7db3aba7) }
                 let w := 0
+                let n := 3
                 let lx := lnf(sub(0, x))
                 switch slt(x, sub(0, 0x40000000000000000000000000000000))
                 case 1 {
@@ -4595,16 +4627,21 @@ library FP127Lib {
                     w := sub(sub(0, 0x100000000000000000000000000000000), p)
                     w := sub(w, div(p2, 3))
                     w := sub(w, div(mul(mulraw(p2, p), 11), 72))
+                    // 1 + e x below 2^-8: two steps; below 2^-28: one
+                    if lt(qq, 0x100000000000000000000000000000000000000000000000000000000000000) {
+                        n := 2
+                        if lt(qq, 0x1000000000000000000000000000000000000000000000000000000000) { n := 1 }
+                    }
                 }
                 default {
                     let ll := lnf(sub(0, lx))
                     w := add(sub(lx, ll), fp127_div(ll, lx))
+                    // the asymptotic seed: two steps for -x below 2^-8, four from 2^-4
+                    if sgt(x, sub(0, 0x1000000000000000000000000000000)) { n := 2 }
+                    if slt(x, sub(0, 0x10000000000000000000000000000000)) { n := 4 }
                 }
-                w := lwm1(lx, w)
-                w := lwm1(lx, w)
-                w := lwm1(lx, w)
-                w := lwm1(lx, w)
-                r := lwfin(x, lwm1(lx, w))
+                for {} n { n := sub(n, 1) } { w := lwm1(lx, w) }
+                r := lwfin(x, w)
             }
 
             _r := fp127_lambertWm1(_x)
