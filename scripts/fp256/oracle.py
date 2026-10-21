@@ -26,6 +26,7 @@ import math
 import random
 import sys
 import tempfile
+from collections.abc import Sequence
 from fractions import Fraction
 from pathlib import Path
 
@@ -824,12 +825,33 @@ def _build_rows(spec: dict, sets: dict[str, list[int]], rng: random.Random) -> l
     if spec.get("pairing", "cartesian") == "zip":
         n = max(len(c) for c in cols)
         return [[cols[j][i % len(cols[j])] for j in range(len(cols))] for i in range(n)]
-    import itertools
-    combos = list(itertools.product(*cols))
+    combos = _Product(cols)
     cap = spec.get("cap", 400)
     if len(combos) > cap:
-        combos = rng.sample(combos, cap)
+        return [list(c) for c in rng.sample(combos, cap)]
     return [list(c) for c in combos]
+
+
+class _Product(Sequence):
+    """itertools.product(*cols) as an indexable sequence, in the same order, without
+    building it: rng.sample draws the same tuples from it as from the full list, and a
+    three-way product of the larger sets would not fit in memory."""
+
+    def __init__(self, cols):
+        self.cols = cols
+        self.n = math.prod(len(c) for c in cols)
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, i):
+        if not 0 <= i < self.n:
+            raise IndexError(i)
+        out = []
+        for c in reversed(self.cols):
+            i, r = divmod(i, len(c))
+            out.append(c[r])
+        return tuple(reversed(out))
 
 
 def gen_vectors(out_dir: Path) -> dict[str, int]:
