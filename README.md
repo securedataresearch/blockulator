@@ -102,6 +102,77 @@ Through the deployed objects: `IFP127(0x6cFb…c1d1).ln(x)` and
 an agent it is a free `eth_call`: [`/llms.txt`](https://blockulator.com/llms.txt),
 [`/.well-known/agent.json`](https://blockulator.com/.well-known/agent.json).
 
+## Integrating
+
+A better ruler only helps if you follow two rules. Each comes from a replay
+of a real exploit, bit for bit from the attack transaction, then the same
+step in FP127, FP256 and exact arithmetic
+([`docs/benchmarks/replay-*.md`](docs/benchmarks/README.md), data in
+[`scripts/replays/`](scripts/replays/)).
+
+**1. Store the state in the format.** Keep the running quantity as an FP127
+or FP256 word. Do not round it to token units before you store it. In Bunni
+v2, 44 withdrawals each took their share of an idle USDC balance kept in
+whole wei, and the active balance fell from 28 wei to 4. The fix
+(`mulDivUp`) ends at 48. With the idle balance stored as an FP127 word the
+active balance ends at 35.6278… wei, within 10^−37 of exact, and floors
+once to 35. Rounded to wei
+before each store, the FP127 word gives 4 or 48 again
+([`replay-bunni.md`](docs/benchmarks/replay-bunni.md)).
+
+**2. Round toward the protocol at the token edge.** Floor what the protocol
+pays out, ceil what it takes in. Not to nearest.
+
+- Resupply: `1e36 / price` floored a rate of one half to 0, and 10,000,000
+  reUSD were borrowed against 1 wei of collateral. In FP127 or FP256 the LTV
+  is 499,999,999,999.99… (×10^−5) against a cap of 95,000, and the borrow
+  reverts. On the integer grid the LTV rounds up (500,000,000,000) and the
+  borrow limit rounds down (1.9 reUSD)
+  ([`replay-resupply.md`](docs/benchmarks/replay-resupply.md)). This fixes
+  one division, not a market opened against an empty vault.
+- Balancer V2: `_upscale` read 17 × 1.058132408689971699 as 17, and the pool
+  charged 625,492 WETH-wei where the exact charge is 957,169. Kept in the
+  format and rounded up to wei once, the charge equals the exact one on all
+  90 + 75 calls. The same exact maths rounded to nearest at the wei boundary
+  still lets 14 + 5 calls lower the invariant
+  ([`replay-balancer.md`](docs/benchmarks/replay-balancer.md)).
+- Balancer V1, the counter-example: the ratio had 18 correct digits and the
+  loss was one rounding to nearest. With the exact formula, rounded to
+  nearest once, a re-tuned join/exit cycle still nets 6.987% of the BPT
+  supply (deployed: 7.035%); rounded toward the pool, −0.05482%
+  ([`replay-balancer-v1.md`](docs/benchmarks/replay-balancer-v1.md)).
+  Radiant's empty-market exploit used the same half unit at its share burn;
+  neither library would have stopped that exploit, but the direction rule
+  applies.
+
+The edge ops:
+
+| | paid out: round down | taken in: round up |
+|---|---|---|
+| FP127, 18-decimal | `toFixed18Down` | `toFixed18Up` |
+| FP127, raw units | `FP127Lib.floor(x) >> 128` | `FP127Lib.ceil(x) >> 128` |
+| FP127, last product or quotient | `mulDown`, `divDown` | `mulUp`, `divUp` |
+| FP256, raw units | `toUintDown`, `toIntDown` | `toUintUp`, `toIntUp` |
+| FP256, 18-decimal | `toFixed18Down` | `toFixed18Up` |
+| FP256, in the format | `floor`, `mulDown`, `divDown` | `ceil`, `mulUp`, `divUp` |
+
+```solidity
+uint256 paid    = FP256Lib.toUintDown(owed);   // to the user: floor
+uint256 charged = FP256Lib.toUintUp(cost);     // from the user: ceil
+int256  ltv     = FP127Lib.divUp(FP127Lib.mulUp(debt, rate), collateral); // a limit check: never below the truth
+```
+
+FP127's plain `mul` and `div` round down (`div` toward zero); FP256's plain
+ops, `toFixed18` included, round to nearest. Neither is a direction you
+chose. The directed ops are in the source (`forge install`): FP127 v5 and
+FP256 release four. The deployed FP127 v4 and FP256 release three objects
+do not have them until those releases are deployed; FP127's `floor` and
+`ceil` are in v4. The worked examples, with every number above, are on the
+[FP127](https://blockulator.com/library/#integrating) and
+[FP256](https://blockulator.com/library/fp256/#integrating) pages, and the
+snippets run on the replays' integers in
+[`test/examples/Integrating.t.sol`](test/examples/Integrating.t.sol).
+
 ## Layout
 
 ```
@@ -140,7 +211,7 @@ uv sync                                   # mpmath, keccak
 
 make gen gen-fp256       # regenerate each library's generated files from its .yul.src
 make build               # forge build; FP256.yul is compiled by solc standard-json (make build-fp256)
-make test                # gen-check, vectors-check, every suite under test/fp127, test/fp256, test/ladder
+make test                # gen-check, vectors-check, every suite under test/fp127, test/fp256, test/ladder, test/replays, test/examples
 make bench bench-fp256   # gas ladders -> docs/benchmarks/gas.{json,md}, gas256.{json,md}
 make ladder              # terminal-precision ladder -> docs/benchmarks/ladder.{json,md}
 make edges               # the edges -> docs/benchmarks/edges.{json,md}
