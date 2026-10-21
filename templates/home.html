@@ -39,7 +39,7 @@
     {% for s in x.steps %}
     <div class="card step">
       <span class="label">{{ s.label }}</span>
-      <h3>{{ s.title }}</h3>
+      <h3>{% if s.href %}<a href="{{ s.href }}">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}</h3>
       <p>{{ s.text | replace(from="{scenarios}", to=d.scenarios | length ~ "") | replace(from="{inputs}", to=n_inputs ~ "") | replace(from="{others}", to=n_others ~ "") }}</p>
     </div>
     {% endfor %}

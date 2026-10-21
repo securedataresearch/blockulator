@@ -169,3 +169,40 @@
 <p class="stamp pending"><strong>Not re-checked on Sepolia since this data was generated ({{ d.generated }}).</strong> Check every cell against the live runner with <code>uv run scripts/ladder/{{ script }}</code></p>
 {%- endif %}
 {%- endcomponent %}
+
+{#- Where a format spends its 256-bit word: one bar per format, segments proportional to bit width,
+    most significant bit on the left. format is a comma list of wad, fp127, fp256, quad, 6464.
+    Segment kinds: un (unused by the format), sg (sign), rg (integer or exponent: the range),
+    pr (fraction or significand: the precision). FP127 has a red tick at its binary point.
+    The bar is SVG stretched to the width; the bit counts are HTML over it, so they stay legible on a phone. -#}
+{% component wordstrip(format: string = "wad,fp127,fp256") -%}
+{%- set segs = {
+  "wad": [["sign", 1, "sg", "1"], ["integer", 195.21, "rg", "≈195"], ["fraction", 59.79, "pr", "≈60"]],
+  "6464": [["unused", 128, "un", "128"], ["sign", 1, "sg", "1"], ["integer", 63, "rg", "63"], ["fraction", 64, "pr", "64"]],
+  "quad": [["unused", 128, "un", "128"], ["sign", 1, "sg", "1"], ["exponent", 15, "rg", "15"], ["significand", 112, "pr", "112"]],
+  "fp127": [["sign", 1, "sg", "1"], ["integer", 127, "rg", "127"], ["fraction", 128, "pr", "128"]],
+  "fp256": [["sign", 1, "sg", "1"], ["exponent", 19, "rg", "19"], ["significand", 236, "pr", "236"]]
+} -%}
+{%- set names = {"wad": "WAD", "6464": "64.64", "quad": "binary128", "fp127": "FP127", "fp256": "FP256"} -%}
+{%- set cls = {"wad": "s-wad", "6464": "s-abdk", "quad": "s-quad", "fp127": "s-fp127", "fp256": "s-fp256"} -%}
+{%- set notes = {
+  "wad": "int256 × 10^18. 10^18 ≈ 2^59.8: the integer bits are headroom for x·y before the divide.",
+  "6464": "int128 × 2^64 (ABDK). Half the word is unused.",
+  "quad": "IEEE binary128 in a bytes16 (ABDK Quad), 113 significant bits with the hidden one.",
+  "fp127": "int256 × 2^128. Red: the binary point.",
+  "fp256": "Binary float, 237 significant bits with the hidden one."
+} -%}
+<div class="wordstrip">
+{%- for f in format | split(pat=",") %}{% set f = f | trim %}{% set_global x = 0 %}
+<div class="ws-row {{ cls[f] }}" role="img" aria-label="{{ names[f] }}: {% for s in segs[f] %}{{ s[0] }} {{ s[3] }} bits{% if not loop.last %}, {% endif %}{% endfor %}.">
+<span class="ws-name">{{ names[f] }}</span>
+<div class="ws-bar" aria-hidden="true"><svg viewBox="0 -2 256 14" preserveAspectRatio="none">
+{%- for s in segs[f] %}<rect class="{{ s[2] }}" x="{{ x }}" y="0" width="{{ s[1] - 0.6 }}" height="10"/>{% set_global x = x + s[1] %}{% endfor %}
+{%- if f == "fp127" %}<line class="radix" x1="128" x2="128" y1="-2" y2="12" vector-effect="non-scaling-stroke"/>{% endif %}</svg>
+{%- set_global x = 0 %}{% for s in segs[f] %}{% if s[1] >= 15 %}<span class="n {{ s[2] }}" style="left:{{ x / 2.56 }}%;width:{{ s[1] / 2.56 }}%">{{ s[3] }}</span>{% endif %}{% set_global x = x + s[1] %}{% endfor %}
+</div>
+<span class="ws-key">{% for s in segs[f] %}{% if s[2] != "un" %}{{ s[0] }} {{ s[3] }}{% if not loop.last %} · {% endif %}{% endif %}{% endfor %}. {{ notes[f] }}</span>
+</div>
+{%- endfor %}
+</div>
+{%- endcomponent %}

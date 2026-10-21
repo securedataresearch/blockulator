@@ -23,6 +23,7 @@ ask_secondary_href = "/writeup/"
 [[extra.steps]]
 label = "the word"
 title = "128 fixed bits, 237 floating"
+href = "/why/#where-the-bits-go-in-wad"
 text = "WAD gives the fraction 60 bits. FP127 gives it 128. FP256 floats 237 significant bits out to 10^±78,913."
 
 [[extra.steps]]

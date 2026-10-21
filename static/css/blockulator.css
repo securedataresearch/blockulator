@@ -162,3 +162,20 @@ h1, .hero .sub, .block h2, .askcard h2, .doc h2, .step h3 { font-variant-numeric
 .doc hr { border: 0; height: 9px; margin: 2.4em 0; background: var(--vernier); }
 .home .block + .block, .home .block + .ask { position: relative; }
 .home .block + .block::before, .home .block + .ask::before { content: ""; position: absolute; left: 0; right: 0; top: calc(clamp(56px, 8vw, 96px) / 2 - 5px); height: 9px; background: var(--vernier); }
+
+/* word strip: where a format spends its 256-bit word (components.html wordstrip) */
+.s-wad { --c: var(--c-wad); }
+.wordstrip { display: grid; gap: 16px; margin: 1.2em 0 1.6em; }
+.ws-row { display: grid; grid-template-columns: 6.5em 1fr; gap: 5px 12px; align-items: center; }
+.ws-name { font-family: var(--mono); font-size: 12.5px; font-weight: 500; color: var(--ink); }
+.ws-bar { position: relative; height: 26px; }
+.ws-bar svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ws-bar rect.pr { fill: var(--c); } .ws-bar rect.rg { fill: color-mix(in oklab, var(--c) 30%, var(--white)); }
+.ws-bar rect.sg { fill: var(--g-500); } .ws-bar rect.un { fill: var(--g-100); }
+.ws-bar .radix { stroke: var(--red); stroke-width: 3; }
+.ws-bar .n { position: absolute; top: 0; height: 100%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11.5px; color: var(--ink); pointer-events: none; white-space: nowrap; }
+.ws-bar .n.pr { color: var(--white); } .s-wad .ws-bar .n.pr { color: var(--ink); } .ws-bar .n.un { color: var(--g-500); }
+.ws-key { grid-column: 2; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--g-500); }
+@media (max-width: 560px) { .ws-row { grid-template-columns: 1fr; } .ws-key { grid-column: 1; } }
+.step h3 a { color: inherit; text-decoration-color: var(--g-300); text-underline-offset: 3px; }
+.step h3 a:hover { text-decoration-color: var(--ink); }
