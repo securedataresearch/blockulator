@@ -66,7 +66,9 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
   inputs; the methodology key says how each number is defined. Daily
   compounding, reference input, N = 365: FP127 36 digits (40 against the
   format truth), Solady and PRBMath 16, ABDK 17.
-- Any cell can be re-run on chain: LadderRunner at
+- Any cell of the deployed release (FP127 v4, FP256 release three; the
+  datasets here describe FP127 v5 and FP256 release four, not yet deployed)
+  can be re-run on chain: LadderRunner at
   0xEf689d3782490066fE911a6dD33357f59caE40fE (salt "FP127 ladder v8"),
   run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok,
   int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal), with p

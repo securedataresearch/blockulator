@@ -7,9 +7,9 @@ cache_path = "cache"
 
 # Only Solidity and Yul under contracts/src are compiled. Vyper sources and
 # archived Huff live beside them and are skipped.
-# FP256.yul is compiled by scripts/fp127/stdjson.py (make build-fp256): Foundry
+# FP256.yul and FP256X.yul are compiled by scripts/fp127/stdjson.py (make build-fp256): Foundry
 # 1.8 hands every Yul source to one solc call, and Yul mode takes exactly one.
-skip = ["contracts/src/**/*.vy", "contracts/src/fp256/FP256.yul", "contracts/src/tools/**", "contracts/src/games/**",
+skip = ["contracts/src/**/*.vy", "contracts/src/fp256/FP256.yul", "contracts/src/fp256/FP256X.yul", "contracts/src/tools/**", "contracts/src/games/**",
         "contracts/src/market/**", "contracts/src/content/**",
         "contracts/src/identity/**", "contracts/src/interfaces/**",
         # the deployed-accrual suite imports lib/aave-v3-origin and lib/morpho-blue,
@@ -55,6 +55,6 @@ lint_on_build = false
 [profile.accrual]
 out = "out-accrual"
 cache_path = "cache-accrual"
-skip = ["contracts/src/**/*.vy", "contracts/src/fp256/FP256.yul", "contracts/src/tools/**", "contracts/src/games/**",
+skip = ["contracts/src/**/*.vy", "contracts/src/fp256/FP256.yul", "contracts/src/fp256/FP256X.yul", "contracts/src/tools/**", "contracts/src/games/**",
         "contracts/src/market/**", "contracts/src/content/**",
         "contracts/src/identity/**", "contracts/src/interfaces/**"]

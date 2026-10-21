@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""FP127 reference oracle, version 2.
+"""FP127 reference oracle, version 3 (FP127 v5).
 
-Exact reference values for every FP127 op in native 127.128 (one int256,
-value = raw / 2^128), with the same rounding the Yul uses and the same
+Reference values for every FP127 op in native 127.128 (one int256,
+value = raw / 2^128), with the rounding each op promises and the same
 domain: where the Yul reverts, the oracle says `REVERT:<ErrorName>`.
+Every vector also carries the real truth, so the precision test measures
+the true distance in ULPs, not the distance to a rounded reference.
 
     uv run scripts/fp127/oracle.py one <op> <arg>...      one word (hex) or REVERT:<Error>
     uv run scripts/fp127/oracle.py vectors                write test/fp127/vectors/<op>.json
@@ -13,11 +15,15 @@ Arguments are decimal or 0x-hex, two's complement for negatives (a value
 at or above 2^255 is negative).
 
 Rounding, matching contracts/src/fp127/README.md:
-    mul, polynomials, toFixed18   floor toward -inf
-    div, fromFixed18, inv          truncate toward 0
-    transcendentals                mpmath at 200 digits, then floor
-The Yul floors every Horner step, so floor is the right reference and
-the tests allow a few ULP on top.
+    mul, mulDown, sqrt, toFixed18(Down), avg   floor toward -inf
+    mulUp, divUp, toFixed18Up                  ceil toward +inf
+    div, inv, fromFixed18                      truncate toward 0
+    divDown                                    floor toward -inf
+    transcendentals                            nearest, ties up (powu, cbrt and the odd
+                                               functions round the magnitude)
+mpmath at 200 digits. Each vector file holds in0.. (inputs), out (the
+reference word) and t: round((truth - out) 2^64), the truth's offset from
+out in units of 2^-64 ULP ("0" where out is exact or a revert).
 """
 from __future__ import annotations
 
@@ -88,13 +94,40 @@ def mfloor(x) -> int:
     return fit(floor_raw(x))
 
 
+HALF_MPF = mpf(1) / 2
+
+
+def T(out: int, truth):
+    """A result with its real truth (raw units, or WAD units for toFixed18*)."""
+    return (out, truth)
+
+
+def near(v, signed_magnitude: bool = False):
+    """Nearest word to v (raw units), ties up; with signed_magnitude, the
+    magnitude is rounded and the sign applied (ties away from zero)."""
+    if signed_magnitude and v < 0:
+        out = -int(mp.floor(-v + HALF_MPF))
+    else:
+        out = int(mp.floor(v + HALF_MPF))
+    return T(fit(out), v)
+
+
+def nearv(x, signed_magnitude: bool = False):
+    """near() of a value (not raw)."""
+    return near(x * mpf(ONE), signed_magnitude)
+
+
 # ---------------------------------------------------------------------------
 # Integer-exact ops
 # ---------------------------------------------------------------------------
 
 def op_add(a, b): return fit(a + b)
 def op_sub(a, b): return fit(a - b)
-def op_mul(a, b): return fit((a * b) >> 128)          # Python >> floors
+def op_mul(a, b): return T(fit((a * b) >> 128), mpf(a * b) / ONE)   # Python >> floors
+def op_mulDown(a, b): return op_mul(a, b)
+def op_mulUp(a, b):
+    op_mul(a, b)                                   # the floor must fit first, as in the Yul
+    return T(fit(-((-a * b) >> 128)), mpf(a * b) / ONE)
 
 
 def _trunc_div(n: int, d: int) -> int:
@@ -102,20 +135,45 @@ def _trunc_div(n: int, d: int) -> int:
     return -q if (n < 0) != (d < 0) else q
 
 
+def _divtruth(a, b):
+    return mpf(a) * ONE / b
+
+
 def op_div(a, b):
     if b == 0:
         raise Revert("DivisionByZero")
-    return fit(_trunc_div(a << 128, b))
+    return T(fit(_trunc_div(a << 128, b)), _divtruth(a, b))
+
+
+def op_divDown(a, b):
+    if b == 0:
+        raise Revert("DivisionByZero")
+    op_div(a, b)                                   # the same Overflow decision as div
+    return T(fit((a << 128) // b), _divtruth(a, b))
+
+
+def op_divUp(a, b):
+    if b == 0:
+        raise Revert("DivisionByZero")
+    op_div(a, b)
+    return T(fit(-((-a << 128) // b)), _divtruth(a, b))
 
 
 def op_fromFixed18(x):
     if x < -(1 << 127) or x >= (1 << 127):
         raise Revert("OutOfRange")
-    return _trunc_div(x << 128, E18)
+    return T(_trunc_div(x << 128, E18), mpf(x) * ONE / E18)
 
 
 def op_toFixed18(x):
-    return (x * E18) >> 128
+    return T((x * E18) >> 128, mpf(x) * E18 / ONE)
+
+
+def op_toFixed18Down(x): return op_toFixed18(x)
+
+
+def op_toFixed18Up(x):
+    return T(-((-x * E18) >> 128), mpf(x) * E18 / ONE)
 
 
 def op_abs(x):
@@ -135,7 +193,7 @@ def op_sign(x): return (1 if x > 0 else -1 if x < 0 else 0) * ONE
 def op_min(a, b): return min(a, b)
 def op_max(a, b): return max(a, b)
 def op_clamp(x, lo, hi): return min(hi, max(lo, x))
-def op_avg(a, b): return (a + b) >> 1
+def op_avg(a, b): return T((a + b) >> 1, mpf(a + b) / 2)
 
 
 def op_zeroFloorSub(a, b):
@@ -144,7 +202,12 @@ def op_zeroFloorSub(a, b):
 
 
 def op_dist(a, b): return op_abs(op_sub(a, b))
-def op_lerp(a, b, t): return op_add(a, op_mul(t, op_sub(b, a)))
+
+
+def op_lerp(a, b, t):
+    d = op_sub(b, a)
+    out = op_add(a, op_mul(t, d)[0])
+    return T(out, a + mpf(t) * d / ONE)
 
 
 def op_floor(x):
@@ -175,7 +238,7 @@ def op_factorial(n):
 
 
 # ---------------------------------------------------------------------------
-# Transcendentals (mpmath, then floor)
+# Transcendentals: nearest to the 200-digit truth, ties up
 # ---------------------------------------------------------------------------
 
 def op_exp(x):
@@ -183,27 +246,29 @@ def op_exp(x):
         return ONE
     if x > 88 * ONE:
         raise Revert("Overflow")
-    if x < -88 * ONE:
-        return 0
-    return mfloor(mp.exp(to_mpf(x)))
+    if x < -90 * ONE:
+        return T(0, mp.exp(to_mpf(x)) * ONE)
+    return nearv(mp.exp(to_mpf(x)))
+
+
+def _pow2_domain(v):
+    """the exp2/exp10/pow rule: Overflow from 2^127, nearest otherwise"""
+    if v >= mpf(2) ** 127:
+        raise Revert("Overflow")
+    return nearv(v)
 
 
 def op_exp2(x):
     if x >= 127 * ONE:
         raise Revert("Overflow")
-    if x < -128 * ONE:
-        return 0
-    return mfloor(mp.power(2, to_mpf(x)))
+    v = mp.power(2, to_mpf(x))
+    if x < -130 * ONE:
+        return T(0, v * ONE)
+    return _pow2_domain(v)
 
 
 def op_exp10(x):
-    # the Yul computes exp2(mul(x, log2(10))) with checked mul
-    y = op_mul(x, 0x35269E12F346E2BF924AFDBFD36BF6D33)
-    if y >= 127 * ONE:
-        raise Revert("Overflow")
-    if y < -128 * ONE:
-        return 0
-    return mfloor(mp.power(10, to_mpf(x)))
+    return _pow2_domain(mp.power(10, to_mpf(x)))
 
 
 def op_pi(terms):
@@ -217,7 +282,8 @@ def op_pi(terms):
     s = mpf(0)
     for k in range(n):
         s += mp.factorial(4 * k) * (1103 + 26390 * k) / (mp.factorial(k) ** 4 * mpf(396) ** (4 * k))
-    return mfloor(1 / (2 * mp.sqrt(2) / 9801 * s))
+    v = 1 / (2 * mp.sqrt(2) / 9801 * s)
+    return T(mfloor(v), v * ONE)
 
 
 def _pos(x):
@@ -227,42 +293,39 @@ def _pos(x):
 
 def op_ln(x):
     _pos(x)
-    return mfloor(mp.log(to_mpf(x)))
+    return nearv(mp.log(to_mpf(x)))
 
 
 def op_log2(x):
     _pos(x)
-    return mfloor(mp.log(to_mpf(x), 2))
+    return nearv(mp.log(to_mpf(x), 2))
 
 
 def op_log10(x):
     _pos(x)
-    return mfloor(mp.log(to_mpf(x), 10))
+    return nearv(mp.log(to_mpf(x), 10))
 
 
 def op_log2Up(x):
     _pos(x)
-    if x & (x - 1) == 0:
-        return (x.bit_length() - 1 - 128) * ONE
-    return op_ceil(op_log2(x))
+    k = x.bit_length() - 1 - 128
+    return (k + (0 if x & (x - 1) == 0 else 1)) * ONE
 
 
 def op_sqrt(x):
     if x < 0:
         raise Revert("OutOfRange")
     import math
-    return math.isqrt(x << 128)
+    return T(math.isqrt(x << 128), mp.sqrt(mpf(x) * ONE))
 
 
 def op_cbrt(x):
     if x == 0:
         return 0
-    neg = x < 0
-    if neg:
-        x = op_abs(x)
-    v = mp.cbrt(to_mpf(x))
-    r = mfloor(v)
-    return -r if neg else r
+    if x == MIN:
+        raise Revert("Overflow")
+    v = mp.cbrt(to_mpf(abs(x)))
+    return nearv(v if x > 0 else -v, True)
 
 
 def op_pow(x, y):
@@ -274,32 +337,25 @@ def op_pow(x, y):
         return ONE
     if x < 0:
         raise Revert("OutOfRange")
-    # exact shortcuts mirror the Yul so that the reference is what the
-    # library can actually hit
     if y == ONE:
         return x
     if y == 2 * ONE:
-        return op_mul(x, x)
-    if y == 3 * ONE:
-        return op_mul(op_mul(x, x), x)
-    if y == 4 * ONE:
-        x2 = op_mul(x, x)
-        return op_mul(x2, x2)
-    if y == HALF:
-        return op_sqrt(x)
-    if y == ONE // 4:
-        return op_sqrt(op_sqrt(x))
-    if y == -ONE:
-        return op_inv(x)
-    v = mp.power(to_mpf(x), to_mpf(y))
-    r = floor_raw(v)
-    if r >= TWO255:
-        raise Revert("Overflow")
-    return r
+        return near(mpf(x) * x / ONE)
+    if x == 2 * ONE:
+        return op_exp2(y)
+    if x == 10 * ONE:
+        return op_exp10(y)
+    return _pow2_domain(mp.power(to_mpf(x), to_mpf(y)))
 
 
-def op_gavg(a, b): return op_sqrt(op_mul(a, b))
-def op_hypot(a, b): return op_sqrt(op_add(op_mul(a, a), op_mul(b, b)))
+def op_gavg(a, b):
+    p = op_mul(a, b)[0]
+    return T(op_sqrt(p)[0], mp.sqrt(mpf(a) * b))
+
+
+def op_hypot(a, b):
+    s = op_add(op_mul(a, a)[0], op_mul(b, b)[0])
+    return T(op_sqrt(s)[0], mp.sqrt(mpf(a) * a + mpf(b) * b))
 
 
 def op_lambertW0(x):
@@ -310,7 +366,7 @@ def op_lambertW0(x):
     w = lambertw(to_mpf(x), k=0)
     if isinstance(w, mpc):
         w = w.real
-    return mfloor(w)
+    return nearv(w)
 
 
 def op_lambertWm1(x):
@@ -319,7 +375,7 @@ def op_lambertWm1(x):
     w = lambertw(to_mpf(x), k=-1)
     if isinstance(w, mpc):
         w = w.real
-    return mfloor(w)
+    return nearv(w)
 
 
 # ---------------------------------------------------------------------------
@@ -327,8 +383,7 @@ def op_lambertWm1(x):
 # ---------------------------------------------------------------------------
 
 def op_powu(x, n):
-    """x^floor(n): exact rational when the exponent is small, mpmath beyond.
-    The Yul rounds to nearest; the oracle floors, as for every other op."""
+    """x^floor(n), rounded to nearest on the magnitude (ties away from zero)."""
     k = n >> 128
     if k == 0:
         return ONE
@@ -342,13 +397,20 @@ def op_powu(x, n):
     mag = k * mp.log(to_mpf(ax), 2)
     if mag > 256:
         raise Revert("Overflow")
-    if mag < -130:
-        return 0
-    v = mp.power(to_mpf(ax), k)
-    r = floor_raw(v)
-    if r >= TWO255:
+    if mag < -140:
+        return T(0, mp.power(to_mpf(ax), k) * ONE * (-1 if neg else 1))
+    if abs(k) <= 4096:
+        from fractions import Fraction
+        v = Fraction(ax, ONE) ** k * ONE
+        out = (v.numerator * 2 + v.denominator) // (2 * v.denominator)
+        tv = mpf(v.numerator) / v.denominator
+    else:
+        with mp.workdps(260):
+            tv = mp.exp(k * mp.log(mpf(ax) / ONE)) * ONE
+        out = int(mp.floor(tv + HALF_MPF))
+    if out >= TWO255:
         raise Revert("Overflow")
-    return -r if neg else r
+    return T(-out, -tv) if neg else T(out, tv)
 
 
 def op_compound(rate, n):
@@ -366,55 +428,66 @@ def op_expm1(x):
         return 0
     if x > 88 * ONE:
         raise Revert("Overflow")
-    if x < -88 * ONE:
-        return -ONE
-    return mfloor(mp.expm1(to_mpf(x)))
+    v = mp.expm1(to_mpf(x))
+    if x < -90 * ONE:
+        return T(-ONE, v * ONE)
+    return nearv(v)
 
 
 def op_sinh(x):
     if abs(x) > 88 * ONE:
         raise Revert("Overflow")
-    return mfloor(mp.sinh(to_mpf(x)))
+    return nearv(mp.sinh(to_mpf(x)), True)
 
 
 def op_cosh(x):
     if abs(x) > 88 * ONE:
         raise Revert("Overflow")
-    return mfloor(mp.cosh(to_mpf(x)))
+    return nearv(mp.cosh(to_mpf(x)))
 
 
 def op_tanh(x):
-    return mfloor(mp.tanh(to_mpf(x)))
+    return nearv(mp.tanh(to_mpf(x)), True)
 
 
 def op_atanh(x):
     if abs(x) >= ONE:
         raise Revert("OutOfRange")
-    return mfloor(mp.atanh(to_mpf(x)))
+    return nearv(mp.atanh(to_mpf(x)))
 
 
 def op_erf(x):
-    return mfloor(mp.erf(to_mpf(x)))
+    return nearv(mp.erf(to_mpf(x)), True)
 
 
 def op_erfc(x):
-    return mfloor(mp.erfc(to_mpf(x)))
+    return nearv(mp.erfc(to_mpf(x)))
 
 
 def op_normCdf(x):
-    return mfloor(mp.ncdf(to_mpf(x)))
+    return nearv(mp.ncdf(to_mpf(x)))
 
 
 OPS = {name[3:]: fn for name, fn in globals().items() if name.startswith("op_")}
 OPS_LOWER = {k.lower(): k for k in OPS}
 
 
-def compute(op: str, args: list[int]) -> str:
+def evaluate(op: str, args: list[int]) -> tuple[str, str]:
+    """(reference word or REVERT:<Error>, truth offset in 2^-64 ULP as a decimal string)"""
     fn = OPS[OPS_LOWER[op.lower()]]
     try:
-        return word(fn(*args))
+        res = fn(*args)
     except Revert as r:
-        return f"REVERT:{r.name}"
+        return f"REVERT:{r.name}", "0"
+    if isinstance(res, tuple):
+        out, truth = res
+        t = int(mp.floor((truth - out) * mpf(2) ** 64 + HALF_MPF))
+        return word(out), str(t)
+    return word(res), "0"
+
+
+def compute(op: str, args: list[int]) -> str:
+    return evaluate(op, args)[0]
 
 
 # ---------------------------------------------------------------------------
@@ -496,7 +569,9 @@ def gen_vectors(out_dir: Path) -> dict[str, int]:
         inputs = build_inputs(entry, sets, rng)
         arity = len(entry["args"])
         cols = {f"in{j}": [word(a[j]) for a in inputs] for j in range(arity)}
-        cols["out"] = [compute(op, a) for a in inputs]
+        res = [evaluate(op, a) for a in inputs]
+        cols["out"] = [r[0] for r in res]
+        cols["t"] = [r[1] for r in res]
         # flat parallel arrays: Foundry's vm.parseJsonStringArray reads each
         # column without an ABI struct decoder (which hits stack-too-deep on
         # nested string arrays)

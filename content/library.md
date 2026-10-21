@@ -1,6 +1,6 @@
 +++
 title = "FP127"
-description = "Signed 127.128 fixed point. One int256, 128 fractional bits (38 digits at 1), 49 ops. One Yul source, two forms: a deployed object and an inline library."
+description = "Signed 127.128 fixed point. One int256, 128 fractional bits (38 digits at 1), 55 ops in v5, every transcendental the nearest word. One Yul source, two forms: a deployed object and an inline library."
 
 [extra]
 group = "library"
@@ -18,7 +18,7 @@ Errors: `Overflow()`, `DivisionByZero()`, `OutOfRange()`. Nothing wraps.
 
 {{ <deployment /> }}
 
-No storage, no owner, no upgrade path. A new version is a new salt and a new address.
+No storage, no owner, no upgrade path. A new version is a new salt and a new address. The address above is v4 (49 ops); v5, the source the op table below is generated from, adds the directed `mulUp`, `mulDown`, `divUp`, `divDown`, `toFixed18Up` and `toFixed18Down` and rounds every transcendental to the nearest word, and is not yet deployed.
 
 `sqrt(2)` from the command line:
 
@@ -53,7 +53,7 @@ contract StaticcallExample {
 
 ## Inline form
 
-`FP127Lib.sol`: the same Yul in `memory-safe` assembly, one `internal pure` function per op. No external call: about 1,200 gas cheaper than the `staticcall` on `add` and `mul`, 170 on `exp` and `sqrt`; on `pow`, the erf family and Lambert W the deployed object is cheaper.
+`FP127Lib.sol`: the same Yul in `memory-safe` assembly, one `internal pure` function per op. No external call: about 1,300 gas cheaper than the `staticcall` on `add` and `mul`, 240 on `sqrt` and 470 on `exp`; on `pow`, the erf family and Lambert W the deployed object is cheaper.
 
 ```sh
 forge install securedataresearch/blockulator

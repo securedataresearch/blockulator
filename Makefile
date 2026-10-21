@@ -1,4 +1,4 @@
-.PHONY: sweep replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: sweep replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia predict-fp256x deploy-fp256x-sepolia verify-fp256x-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
@@ -38,6 +38,11 @@ help:
 	@echo "  make verify-ladder-sepolia - Verify them on Sourcify (and Etherscan if ETHERSCAN_API_KEY is set)"
 	@echo "  make fetch-baseline   - Re-fetch the legacy Huff runtime bytecode from Sepolia"
 	@echo "  make predict          - Print the CREATE2 address of the current FP127 object"
+	@echo "  make predict-fp256 / predict-fp256x - CREATE2 addresses of FP256 and FP256X (release four)"
+	@echo "  make deploy-fp256-sepolia / deploy-fp256x-sepolia - Deploy them (reads DEPLOYER_KEY; DEPLOY_GAS256, default 40M)"
+	@echo "  make verify-fp256-sepolia / verify-fp256x-sepolia - Prove runtime = artifact, verify on Sourcify + Blockscout"
+	@echo "  make smoke-fp256-sepolia - Every committed FP256 vector against both live objects"
+	@echo "  make size-fp256       - FP256 and FP256X runtime sizes"
 	@echo "  make deploy-sepolia   - Deploy via the CREATE2 proxy (reads DEPLOYER_KEY)"
 	@echo "  make verify-sepolia   - Prove the live runtime equals the artifact, then verify on Sourcify + Blockscout"
 	@echo "  make smoke-sepolia    - Run every committed vector against the live Sepolia contract"
@@ -71,6 +76,7 @@ build: gen-check gen-inputs-check
 # and Yul mode takes one file); the artifact has the Foundry shape.
 build-fp256:
 	@test ! -f contracts/src/fp256/FP256.yul || FP_LIB=fp256 $(PY) scripts/fp127/stdjson.py artifact
+	@test ! -f contracts/src/fp256/FP256X.yul || FP_LIB=fp256x $(PY) scripts/fp127/stdjson.py artifact
 
 gen-inputs:
 	@$(PY) scripts/ladder/gen_inputs.py
@@ -101,6 +107,7 @@ test: gen-check vectors-check
 
 size-fp256: build
 	@$(PY) python -c "import json;b=json.load(open('out/FP256.yul/FP256.json'))['deployedBytecode']['object'];print('FP256 runtime:', (len(b)-2)//2, 'bytes of 24576')"
+	@$(PY) python -c "import json;b=json.load(open('out/FP256X.yul/FP256X.json'))['deployedBytecode']['object'];print('FP256X runtime:', (len(b)-2)//2, 'bytes of 24576')"
 
 ladder: build
 	@forge test --match-contract "^Ladder$$" -vv | $(PY) scripts/ladder/ladder.py
@@ -175,7 +182,7 @@ fetch-baseline:
 
 DEPLOY_SCRIPT := script/DeployFP127.s.sol
 CREATE2_PROXY := 0x4e59b44847b379578588920cA78FbF26c0B4956C
-SALT := 0x4650313237207634000000000000000000000000000000000000000000000000
+SALT := 0x4650313237207635000000000000000000000000000000000000000000000000
 # Sepolia (Amsterdam fork) charges about 1,550 gas per byte of deposited code,
 # not 200: the node estimates ~10.45M gas for this deployment where forge
 # 1.7.1's local EVM says 1.46M, so the transaction is sent with an explicit limit.
@@ -206,9 +213,16 @@ smoke-sepolia: build
 	@forge test --match-contract Deployed --fork-url $(SEPOLIA_RPC) -vv
 
 # ---- FP256 (the second ruler): same procedure, its own artifact, salt and record
+# Release four is two objects from one source: FP256 (arithmetic, the edge, exp,
+# ln, log1p, expm1, pow, powu, compound, conversions) and FP256X (erf, erfc,
+# normCdf, lambertW0, lambertWm1), each below 24,576 bytes, each with its own
+# salt and record. At ~1,550 gas per deposited byte each needs about 37.5M gas.
 
 DEPLOY_SCRIPT256 := script/DeployFP256.s.sol
-SALT256 := 0x4650323536207633000000000000000000000000000000000000000000000000
+SALT256 := 0x4650323536207634000000000000000000000000000000000000000000000000
+DEPLOY_SCRIPT256X := script/DeployFP256X.s.sol
+SALT256X := 0x4650323536582076340000000000000000000000000000000000000000000000
+DEPLOY_GAS256 ?= 40000000
 
 predict-fp256: build
 	@forge script $(DEPLOY_SCRIPT256) --sig "predict()" --rpc-url $(SEPOLIA_RPC) 2>&1 | grep -E "deployer|salt|hash|keccak|bytes|address|deployed"
@@ -221,7 +235,7 @@ deploy-fp256-sepolia: build
 	echo "address $$ADDR"; \
 	if [ "$$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC))" != "0x" ]; then echo "already deployed"; exit 0; fi; \
 	INIT=$$($(PY) python -c "import json;print(json.load(open('out/FP256.yul/FP256.json'))['bytecode']['object'][2:])"); \
-	cast send $(CREATE2_PROXY) "$(SALT256)$$INIT" --rpc-url $(SEPOLIA_RPC) --private-key "$$DEPLOYER_KEY" --gas-limit $(DEPLOY_GAS) --json \
+	cast send $(CREATE2_PROXY) "$(SALT256)$$INIT" --rpc-url $(SEPOLIA_RPC) --private-key "$$DEPLOYER_KEY" --gas-limit $(DEPLOY_GAS256) --json \
 		| tee contracts/deployments/FP256.sepolia.receipt.json \
 		| $(PY) python -c "import json,sys;r=json.load(sys.stdin);print('status',r['status'],'tx',r['transactionHash'],'block',int(r['blockNumber'],16),'gasUsed',int(r['gasUsed'],16))"; \
 	echo "code at $$ADDR: $$(( ($$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC) | wc -c) - 3) / 2 )) bytes"
@@ -231,6 +245,29 @@ verify-fp256-sepolia: build
 	@FP_LIB=fp256 $(PY) scripts/fp127/stdjson.py onchain $(SEPOLIA_RPC) $$($(PY) python -c "import json;print(json.load(open('contracts/deployments/FP256.json'))['address'])")
 	@FP_LIB=fp256 $(PY) scripts/fp127/verify.py 11155111 $$($(PY) python -c "import json;print(json.load(open('contracts/deployments/FP256.json'))['address'])")
 
+predict-fp256x: build
+	@forge script $(DEPLOY_SCRIPT256X) --sig "predict()" --rpc-url $(SEPOLIA_RPC) 2>&1 | grep -E "deployer|salt|hash|keccak|bytes|address|deployed"
+
+deploy-fp256x-sepolia: build
+	@test -n "$$DEPLOYER_KEY" || (echo "DEPLOYER_KEY is not set" && exit 1)
+	@FP_LIB=fp256x $(PY) scripts/fp127/stdjson.py check
+	@set -e; \
+	ADDR=$$(forge script $(DEPLOY_SCRIPT256X) --sig "predict()" --rpc-url $(SEPOLIA_RPC) 2>&1 | grep -E '^\s+address' | awk '{print $$2}'); \
+	echo "address $$ADDR"; \
+	if [ "$$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC))" != "0x" ]; then echo "already deployed"; exit 0; fi; \
+	INIT=$$($(PY) python -c "import json;print(json.load(open('out/FP256X.yul/FP256X.json'))['bytecode']['object'][2:])"); \
+	cast send $(CREATE2_PROXY) "$(SALT256X)$$INIT" --rpc-url $(SEPOLIA_RPC) --private-key "$$DEPLOYER_KEY" --gas-limit $(DEPLOY_GAS256) --json \
+		| tee contracts/deployments/FP256X.sepolia.receipt.json \
+		| $(PY) python -c "import json,sys;r=json.load(sys.stdin);print('status',r['status'],'tx',r['transactionHash'],'block',int(r['blockNumber'],16),'gasUsed',int(r['gasUsed'],16))"; \
+	echo "code at $$ADDR: $$(( ($$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC) | wc -c) - 3) / 2 )) bytes"
+
+verify-fp256x-sepolia: build
+	@FP_LIB=fp256x $(PY) scripts/fp127/stdjson.py check
+	@FP_LIB=fp256x $(PY) scripts/fp127/stdjson.py onchain $(SEPOLIA_RPC) $$($(PY) python -c "import json;print(json.load(open('contracts/deployments/FP256X.json'))['address'])")
+	@FP_LIB=fp256x $(PY) scripts/fp127/verify.py 11155111 $$($(PY) python -c "import json;print(json.load(open('contracts/deployments/FP256X.json'))['address'])")
+
+# both objects: every committed vector against FP256.json's address and, when
+# it exists, FP256X.json's
 smoke-fp256-sepolia: build
 	@forge test --match-contract Deployed256 --fork-url $(SEPOLIA_RPC) -vv
 

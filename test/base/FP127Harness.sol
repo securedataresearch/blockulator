@@ -28,6 +28,12 @@ contract LibUser {
     function div(int256 a, int256 b) external pure returns (int256) { return FP127Lib.div(a, b); }
     function fromFixed18(int256 x) external pure returns (int256) { return FP127Lib.fromFixed18(x); }
     function toFixed18(int256 x) external pure returns (int256) { return FP127Lib.toFixed18(x); }
+    function toFixed18Down(int256 x) external pure returns (int256) { return FP127Lib.toFixed18Down(x); }
+    function toFixed18Up(int256 x) external pure returns (int256) { return FP127Lib.toFixed18Up(x); }
+    function mulDown(int256 a, int256 b) external pure returns (int256) { return FP127Lib.mulDown(a, b); }
+    function mulUp(int256 a, int256 b) external pure returns (int256) { return FP127Lib.mulUp(a, b); }
+    function divDown(int256 a, int256 b) external pure returns (int256) { return FP127Lib.divDown(a, b); }
+    function divUp(int256 a, int256 b) external pure returns (int256) { return FP127Lib.divUp(a, b); }
     function exp(int256 x) external pure returns (int256) { return FP127Lib.exp(x); }
     function exp2(int256 x) external pure returns (int256) { return FP127Lib.exp2(x); }
     function exp10(int256 x) external pure returns (int256) { return FP127Lib.exp10(x); }

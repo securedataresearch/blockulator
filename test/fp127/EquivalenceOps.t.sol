@@ -65,13 +65,14 @@ contract EquivalenceOps is FP127Harness {
     /// The transcendentals now run with 64 guard bits and round to nearest,
     /// where the Huff floored every step: the two agree to the Huff's own
     /// precision, not bit for bit. Both must succeed and the Yul must be
-    /// within 2^-100 relative (plus 4 ULP) of the Huff.
+    /// within 2^-100 relative (plus 16 ULP) of the Huff: near a result of
+    /// zero the Huff's own floors reach 11 ULPs (ln and log2 at 1 - 2^-128).
     function _objHuffClose(bytes memory newCall, bytes memory huffCall, string memory what) internal view {
         Res memory o = _try(address(obj), newCall);
         Res memory h = _try(address(huff), huffCall);
         assertTrue(h.ok, string.concat(what, ": huff reverted"));
         assertTrue(o.ok, string.concat(what, ": obj reverted"));
-        assertLe(_absd(o.value, h.value), (_absd(h.value, 0) >> 100) + 4, string.concat(what, ": obj not within 2^-100 of huff"));
+        assertLe(_absd(o.value, h.value), (_absd(h.value, 0) >> 100) + 16, string.concat(what, ": obj not within 2^-100 of huff"));
     }
 
     // ------------------------------------------------------------------
@@ -118,6 +119,24 @@ contract EquivalenceOps is FP127Harness {
     function testFuzz_objEqLib_atanh(int256 x) public view { _objLib(abi.encodeCall(IFP127.atanh, (x)), "atanh"); }
     function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP127.erf, (x)), "erf"); }
     function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP127.erfc, (x)), "erfc"); }
+    // v5: the directed edge ops
+    function testFuzz_objEqLib_mulDown(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP127.mulDown, (a, b)), "mulDown"); }
+    function testFuzz_objEqLib_mulUp(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP127.mulUp, (a, b)), "mulUp"); }
+    function testFuzz_objEqLib_divDown(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP127.divDown, (a, b)), "divDown"); }
+    function testFuzz_objEqLib_divUp(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP127.divUp, (a, b)), "divUp"); }
+    function testFuzz_objEqLib_toFixed18Down(int256 x) public view { _objLib(abi.encodeCall(IFP127.toFixed18Down, (x)), "toFixed18Down"); }
+    function testFuzz_objEqLib_toFixed18Up(int256 x) public view { _objLib(abi.encodeCall(IFP127.toFixed18Up, (x)), "toFixed18Up"); }
+    /// In range, so the fuzzer exercises the result and not only the reverts.
+    function testFuzz_objEqLib_directed_inRange(int256 a, int256 b) public view {
+        a = bound(a, -B190, B190);
+        b = bound(b, -B190, B190);
+        _objLib(abi.encodeCall(IFP127.mulUp, (a, b)), "mulUp in range");
+        _objLib(abi.encodeCall(IFP127.mulDown, (a, b)), "mulDown in range");
+        if (b != 0 && (b > int256(1) << 64 || b < -(int256(1) << 64))) {
+            _objLib(abi.encodeCall(IFP127.divUp, (a, b)), "divUp in range");
+            _objLib(abi.encodeCall(IFP127.divDown, (a, b)), "divDown in range");
+        }
+    }
     function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP127.normCdf, (x)), "normCdf"); }
     function testFuzz_objEqLib_lambertW0(int256 x) public view {
         x = bound(x, -int256(0x5e2d58d8b3bcdf1abadec7829054f90d), int256(1) << 200);
@@ -162,9 +181,29 @@ contract EquivalenceOps is FP127Harness {
         _objHuffClose(abi.encodeCall(IFP127.log10, (x)), abi.encodeCall(IHuffOps.log10Raw, (_u(x))), "log10");
     }
 
+    /// v5 computes ceil(log2 x) exactly from the msb. The Huff (and v4) took
+    /// ceil of a rounded log2, which is one low when x sits just above a
+    /// power of two and the log2 rounds down onto the integer; there the Yul
+    /// is one higher, and right.
     function testFuzz_huff_log2Up(int256 x) public view {
         x = bound(x, 1, MAX);
-        _objHuff(abi.encodeCall(IFP127.log2Up, (x)), abi.encodeCall(IHuffOps.log2UpRaw, (_u(x))), "log2Up");
+        Res memory o = _try(address(obj), abi.encodeCall(IFP127.log2Up, (x)));
+        Res memory h = _try(address(huff), abi.encodeCall(IHuffOps.log2UpRaw, (_u(x))));
+        assertTrue(o.ok && h.ok, "log2Up: both succeed");
+        uint256 m;
+        for (uint256 t = uint256(x); t > 1; t >>= 1) m++;
+        if (o.value == h.value + ONE) {
+            // x = 2^m (1 + e) with e below 2^-120: the rounded log2 is m - 128 exactly
+            assertLt(uint256(x) - (uint256(1) << m), (uint256(1) << m) >> 120, "log2Up: Huff low only just above a power of two");
+        } else {
+            assertEq(o.value, h.value, "log2Up: obj != huff");
+        }
+    }
+
+    function test_divergence_log2Up_above_power_of_two() public view {
+        int256 x = (ONE << 64) + 0x5fc97a4a9078;     // 2^64 (1 + 2^-152): log2 rounds to 64
+        assertEq(obj.log2Up(x), 65 * ONE);
+        assertEq(int256(IHuffOps(address(huff)).log2UpRaw(_u(x))), 64 * ONE);
     }
 
     function testFuzz_huff_sqrt(int256 x) public view {
@@ -205,7 +244,10 @@ contract EquivalenceOps is FP127Harness {
         else if (k == 5) { y = ONE / 4; direct = obj.sqrt(obj.sqrt(x)); }
         else { y = -ONE; direct = obj.inv(x); }
         int256 got = obj.pow(x, y);
-        assertEq(got, direct, "shortcut == direct op");
+        // v5: y = 1 is exact and y = 2 the rounded square; the rest take the
+        // general path, the nearest word, within the floored composite's error
+        if (k == 0) assertEq(got, direct, "y = 1");
+        else assertLe(_absd(got, direct), (_absd(direct, 0) >> 100) + 4, "pow within the composite's error");
         int256 h = int256(IHuffOps(address(huff)).powRaw(_u(x), _u(y)));
         assertLe(_absd(got, h), (_absd(got, 0) >> 100) + 4, "huff general path within 2^-100");
 
@@ -385,7 +427,7 @@ contract EquivalenceOps is FP127Harness {
         assertEq(obj.sqrt(4 * ONE), 2 * ONE);
         assertEq(obj.sqrt(ONE / 4), ONE / 2);
         assertEq(obj.cbrt(27 * ONE), 3 * ONE);
-        assertEq(obj.cbrt(-27 * ONE), -obj.pow(27 * ONE, obj.div(ONE, 3 * ONE)));
+        assertEq(obj.cbrt(-27 * ONE), -3 * ONE);
         assertEq(obj.pow(3 * ONE, 2 * ONE), 9 * ONE);
         assertEq(obj.pow(2 * ONE, 10 * ONE), 1024 * ONE);
         assertEq(obj.pow(10 * ONE, 2 * ONE), 100 * ONE);

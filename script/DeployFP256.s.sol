@@ -18,8 +18,10 @@ import {Script, console} from "forge-std/Script.sol";
 contract DeployFP256 is Script {
     /// Arachnid's deterministic-deployment-proxy, present on every major chain.
     address constant DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
-    /// Published salt. ASCII "FP256 v3", right-padded with zeros (release three: 28 ops, adding log1p, expm1, erf, erfc, normCdf, lambertW0, lambertWm1, powu and compound; release two was "FP256 v2", release one "FP256 v1").
-    bytes32 constant SALT = bytes32("FP256 v3");
+    /// Published salt. ASCII "FP256 v4", right-padded with zeros (release four: correctly rounded, the
+    /// directed ops, the error function family and Lambert W moved to FP256X; release three was
+    /// "FP256 v3", 28 ops in one object; release two "FP256 v2", release one "FP256 v1").
+    bytes32 constant SALT = bytes32("FP256 v4");
     string constant ARTIFACT = "out/FP256.yul/FP256.json";
 
     function _artifact() internal view returns (bytes memory initCode, bytes memory runtime) {
