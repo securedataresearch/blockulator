@@ -1349,11 +1349,25 @@ object "FP127" {
                 r := add(shl(64, qh), shr(64, ql))
             }
 
-            function expm1s(x) -> v {
+            function expm1s(x, ax) -> v {
                 let xs := shl(64, x)
+                let k := 27
+                if lt(ax, 0x4000000000000000000000000000000) {
+                    k := 22
+                    if lt(ax, 0x1000000000000000000000000000000) { k := 18 }
+                    if lt(ax, 0x100000000000000000000000000000) { k := 14 }
+                    if lt(ax, 0x10000000000000000000000000000) { k := 11 }
+                    if lt(ax, 0x100000000000000000000000000) { k := 8 }
+                    if lt(ax, 0x1000000000000000000000000) { k := 6 }
+                    if lt(ax, 0x100000000000000000000) { k := 5 }
+                }
                 v := 0x1000000000000000000000000000000000000000000000000
-                for { let k := 27 } gt(k, 1) { k := sub(k, 1) } {
-                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(mulg(xs, v), k))
+                let l := 0
+                let h := 0
+                for {} gt(k, 1) { k := sub(k, 1) } {
+                    l := mul(xs, v)
+                    h := mulmod(xs, v, not(0))
+                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(or(shl(64, sub(sub(sub(h, l), lt(h, l)), mul(slt(xs, 0), v))), shr(192, l)), k))
                 }
                 v := mulg(xs, v)
             }
@@ -1372,7 +1386,12 @@ object "FP127" {
                 if iszero(x) { r := 0 leave }
                 if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
                 if slt(x, sub(0, 0x5a00000000000000000000000000000000)) { r := sub(0, 0x100000000000000000000000000000000) leave }
-                if iszero(gt(absw(x), 0x10000000000000000000000000000000)) { r := round64(expm1s(x)) leave }
+                let ax := absw(x)
+                if iszero(gt(ax, 0x10000000000000000000000000000000)) {
+                    r := x
+                    if iszero(lt(ax, 0x8000000000000000)) { r := round64(expm1s(x, ax)) }
+                    leave
+                }
                 let n, sh, sl := expx(x)
                 let vh, vl := sc192(n, sh, sl)
                 switch slt(x, 0)
@@ -1388,12 +1407,26 @@ object "FP127" {
                 let ax := absw(x)
                 if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
                 if lt(ax, 0x100000000000000000000000000000000) {
+                    if lt(ax, 0x8000000000000000) { r := x leave }
                     let xs := shl(64, x)
                     let x2 := mulg(xs, xs)
                     let v := 0x1000000000000000000000000000000000000000000000000
-                    for { let k := 20 } k { k := sub(k, 1) } {
+                    let k := 20
+                    if lt(ax, 0x80000000000000000000000000000000) {
+                        k := 19
+                        if lt(ax, 0x40000000000000000000000000000000) { k := 16 }
+                        if lt(ax, 0x10000000000000000000000000000000) { k := 13 }
+                        if lt(ax, 0x1000000000000000000000000000000) { k := 8 }
+                        if lt(ax, 0x10000000000000000000000000000) { k := 5 }
+                        if lt(ax, 0x1000000000000000000000000) { k := 2 }
+                    }
+                    let l := 0
+                    let h := 0
+                    for {} k { k := sub(k, 1) } {
                         let k2 := shl(1, k)
-                        v := add(0x1000000000000000000000000000000000000000000000000, div(mulg(x2, v), mul(k2, add(k2, 1))))
+                        l := mul(x2, v)
+                        h := mulmod(x2, v, not(0))
+                        v := add(0x1000000000000000000000000000000000000000000000000, div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), mul(k2, add(k2, 1))))
                     }
                     r := round64(mulg(xs, v))
                     leave
@@ -1426,7 +1459,14 @@ object "FP127" {
                         let vh, vl := sc192(n, sh, sl)
                         u := sub(vl, 0x1000000000000000000000000000000000000000000000000)
                     }
-                    default { u := expm1s(shl(1, ax)) }
+                    default {
+                        // below 2^-65, x itself: x^3/3 is under one unit of 2^-192
+                        if lt(ax, 0x8000000000000000) {
+                            r := x
+                            leave
+                        }
+                        u := expm1s(shl(1, ax), shl(1, ax))
+                    }
                     r := round64(divg(u, add(u, 0x2000000000000000000000000000000000000000000000000)))
                 }
                 default {

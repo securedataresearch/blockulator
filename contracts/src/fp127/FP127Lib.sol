@@ -4949,6 +4949,8 @@ library FP127Lib {
     /// @notice e^x - 1, rounded to nearest, with the one subtracted before the
     ///         rounding so a small x keeps its relative precision: a 27-term
     ///         series at 2^-192 for |x| <= 1/16, the double-word exp beyond.
+    /// @dev Below 2^-65, x itself: x^2/2 is under a quarter ULP and the series'
+    ///      value is x 2^192 plus less than 2^62 units, which rounds to x.
     function expm1(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
@@ -4965,11 +4967,25 @@ library FP127Lib {
                 r := or(shl(64, p1), shr(192, p0))
             }
 
-            function expm1s(x) -> v {
+            function expm1s(x, ax) -> v {
                 let xs := shl(64, x)
+                let k := 27
+                if lt(ax, 0x4000000000000000000000000000000) {
+                    k := 22
+                    if lt(ax, 0x1000000000000000000000000000000) { k := 18 }
+                    if lt(ax, 0x100000000000000000000000000000) { k := 14 }
+                    if lt(ax, 0x10000000000000000000000000000) { k := 11 }
+                    if lt(ax, 0x100000000000000000000000000) { k := 8 }
+                    if lt(ax, 0x1000000000000000000000000) { k := 6 }
+                    if lt(ax, 0x100000000000000000000) { k := 5 }
+                }
                 v := 0x1000000000000000000000000000000000000000000000000
-                for { let k := 27 } gt(k, 1) { k := sub(k, 1) } {
-                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(mulg(xs, v), k))
+                let l := 0
+                let h := 0
+                for {} gt(k, 1) { k := sub(k, 1) } {
+                    l := mul(xs, v)
+                    h := mulmod(xs, v, not(0))
+                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(or(shl(64, sub(sub(sub(h, l), lt(h, l)), mul(slt(xs, 0), v))), shr(192, l)), k))
                 }
                 v := mulg(xs, v)
             }
@@ -5140,7 +5156,12 @@ library FP127Lib {
                 if iszero(x) { r := 0 leave }
                 if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
                 if slt(x, sub(0, 0x5a00000000000000000000000000000000)) { r := sub(0, 0x100000000000000000000000000000000) leave }
-                if iszero(gt(absw(x), 0x10000000000000000000000000000000)) { r := round64(expm1s(x)) leave }
+                let ax := absw(x)
+                if iszero(gt(ax, 0x10000000000000000000000000000000)) {
+                    r := x
+                    if iszero(lt(ax, 0x8000000000000000)) { r := round64(expm1s(x, ax)) }
+                    leave
+                }
                 let n, sh, sl := expx(x)
                 let vh, vl := sc192(n, sh, sl)
                 switch slt(x, 0)
@@ -5155,9 +5176,13 @@ library FP127Lib {
         }
     }
     /// @notice sinh(x), rounded to nearest. For |x| < 1 the odd series
-    ///         x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms;
-    ///         beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the
-    ///         difference taken before the one rounding.
+    ///         x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms
+    ///         (fewer for a smaller |x|); beyond, (e^|x| - e^-|x|) / 2 from the
+    ///         double-word kernel, the difference taken before the one rounding.
+    /// @dev Below 2^-65, x itself (x^3/6 is under one unit of 2^-192). The
+    ///      series takes K = 19, 16, 13, 8, 5, 2 terms below 1/2, 1/4, 1/16,
+    ///      2^-8, 2^-16, 2^-32, where x^(2K+2) / (2K+3)! <= 2^-200; its mulg is
+    ///      inline and unsigned.
     function sinh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
@@ -5346,12 +5371,26 @@ library FP127Lib {
                 let ax := absw(x)
                 if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
                 if lt(ax, 0x100000000000000000000000000000000) {
+                    if lt(ax, 0x8000000000000000) { r := x leave }
                     let xs := shl(64, x)
                     let x2 := mulg(xs, xs)
                     let v := 0x1000000000000000000000000000000000000000000000000
-                    for { let k := 20 } k { k := sub(k, 1) } {
+                    let k := 20
+                    if lt(ax, 0x80000000000000000000000000000000) {
+                        k := 19
+                        if lt(ax, 0x40000000000000000000000000000000) { k := 16 }
+                        if lt(ax, 0x10000000000000000000000000000000) { k := 13 }
+                        if lt(ax, 0x1000000000000000000000000000000) { k := 8 }
+                        if lt(ax, 0x10000000000000000000000000000) { k := 5 }
+                        if lt(ax, 0x1000000000000000000000000) { k := 2 }
+                    }
+                    let l := 0
+                    let h := 0
+                    for {} k { k := sub(k, 1) } {
                         let k2 := shl(1, k)
-                        v := add(0x1000000000000000000000000000000000000000000000000, div(mulg(x2, v), mul(k2, add(k2, 1))))
+                        l := mul(x2, v)
+                        h := mulmod(x2, v, not(0))
+                        v := add(0x1000000000000000000000000000000000000000000000000, div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), mul(k2, add(k2, 1))))
                     }
                     r := round64(mulg(xs, v))
                     leave
@@ -5598,11 +5637,25 @@ library FP127Lib {
                 r := or(shl(64, p1), shr(192, p0))
             }
 
-            function expm1s(x) -> v {
+            function expm1s(x, ax) -> v {
                 let xs := shl(64, x)
+                let k := 27
+                if lt(ax, 0x4000000000000000000000000000000) {
+                    k := 22
+                    if lt(ax, 0x1000000000000000000000000000000) { k := 18 }
+                    if lt(ax, 0x100000000000000000000000000000) { k := 14 }
+                    if lt(ax, 0x10000000000000000000000000000) { k := 11 }
+                    if lt(ax, 0x100000000000000000000000000) { k := 8 }
+                    if lt(ax, 0x1000000000000000000000000) { k := 6 }
+                    if lt(ax, 0x100000000000000000000) { k := 5 }
+                }
                 v := 0x1000000000000000000000000000000000000000000000000
-                for { let k := 27 } gt(k, 1) { k := sub(k, 1) } {
-                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(mulg(xs, v), k))
+                let l := 0
+                let h := 0
+                for {} gt(k, 1) { k := sub(k, 1) } {
+                    l := mul(xs, v)
+                    h := mulmod(xs, v, not(0))
+                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(or(shl(64, sub(sub(sub(h, l), lt(h, l)), mul(slt(xs, 0), v))), shr(192, l)), k))
                 }
                 v := mulg(xs, v)
             }
@@ -5770,7 +5823,14 @@ library FP127Lib {
                         let vh, vl := sc192(n, sh, sl)
                         u := sub(vl, 0x1000000000000000000000000000000000000000000000000)
                     }
-                    default { u := expm1s(shl(1, ax)) }
+                    default {
+                        // below 2^-65, x itself: x^3/3 is under one unit of 2^-192
+                        if lt(ax, 0x8000000000000000) {
+                            r := x
+                            leave
+                        }
+                        u := expm1s(shl(1, ax), shl(1, ax))
+                    }
                     r := round64(divg(u, add(u, 0x2000000000000000000000000000000000000000000000000)))
                 }
                 default {

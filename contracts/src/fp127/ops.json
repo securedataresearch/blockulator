@@ -563,7 +563,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "sinh(x), rounded to nearest. For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms; beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the difference taken before the one rounding.",
+      "notice": "sinh(x), rounded to nearest. For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms (fewer for a smaller |x|); beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the difference taken before the one rounding.",
       "domain": "|x| <= 88",
       "reverts": "Overflow() beyond that"
     },

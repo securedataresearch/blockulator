@@ -258,11 +258,17 @@ interface IFP127 {
     /// @notice e^x - 1, rounded to nearest, with the one subtracted before the
     ///         rounding so a small x keeps its relative precision: a 27-term
     ///         series at 2^-192 for |x| <= 1/16, the double-word exp beyond.
+    /// @dev Below 2^-65, x itself: x^2/2 is under a quarter ULP and the series'
+    ///      value is x 2^192 plus less than 2^62 units, which rounds to x.
     function expm1(int256 x) external pure returns (int256 r);
     /// @notice sinh(x), rounded to nearest. For |x| < 1 the odd series
-    ///         x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms;
-    ///         beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the
-    ///         difference taken before the one rounding.
+    ///         x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms
+    ///         (fewer for a smaller |x|); beyond, (e^|x| - e^-|x|) / 2 from the
+    ///         double-word kernel, the difference taken before the one rounding.
+    /// @dev Below 2^-65, x itself (x^3/6 is under one unit of 2^-192). The
+    ///      series takes K = 19, 16, 13, 8, 5, 2 terms below 1/2, 1/4, 1/16,
+    ///      2^-8, 2^-16, 2^-32, where x^(2K+2) / (2K+3)! <= 2^-200; its mulg is
+    ///      inline and unsigned.
     function sinh(int256 x) external pure returns (int256 r);
     /// @notice cosh(x) = (e^x + e^-x) / 2, rounded to nearest: both halves from
     ///         the double-word kernel, summed before the one rounding. cosh(0) is
