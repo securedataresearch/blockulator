@@ -13,73 +13,79 @@ import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
 contract Sweep is Test {
     string constant DIR = "cache/sweep/";
 
-    function f(bytes32 op, int256 a, int256 b) external pure returns (int256) {
-        if (op == "noop") return 0;
-        if (op == "fp256_add") return FP256Lib.add(a, b);
-        if (op == "fp256_mul") return FP256Lib.mul(a, b);
-        if (op == "fp256_div") return FP256Lib.div(a, b);
-        if (op == "fp256_sqrt") return FP256Lib.sqrt(a);
-        if (op == "fp256_exp") return FP256Lib.exp(a);
-        if (op == "fp256_ln") return FP256Lib.ln(a);
-        if (op == "fp256_log1p") return FP256Lib.log1p(a);
-        if (op == "fp256_expm1") return FP256Lib.expm1(a);
-        if (op == "fp256_pow") return FP256Lib.pow(a, b);
-        if (op == "fp256_erf") return FP256Lib.erf(a);
-        if (op == "fp256_erfc") return FP256Lib.erfc(a);
-        if (op == "fp256_normCdf") return FP256Lib.normCdf(a);
-        if (op == "fp256_compound") return FP256Lib.compound(a, b);
-        if (op == "fp256_lambertW0") return FP256Lib.lambertW0(a);
-        if (op == "fp256_lambertWm1") return FP256Lib.lambertWm1(a);
-        if (op == "fp256_lambertW0x") return FP256Lib.lambertW0(a);
-        if (op == "fp256_expx") return FP256Lib.exp(a);
-        if (op == "fp256_expm1x") return FP256Lib.expm1(a);
-        if (op == "fp256_log1px") return FP256Lib.log1p(a);
-        if (op == "fp256_powx") return FP256Lib.pow(a, b);
-        if (op == "fp256_compoundx") return FP256Lib.compound(a, b);
-        if (op == "fp256_erfcx") return FP256Lib.erfc(a);
-        if (op == "fp256_normCdfx") return FP256Lib.normCdf(a);
-        if (op == "fp256_powux") return FP256Lib.powu(a, b);
-        if (op == "fp256_powu") return FP256Lib.powu(a, b);
-        if (op == "fp256_mulDown") return FP256Lib.mulDown(a, b);
-        if (op == "fp256_mulUp") return FP256Lib.mulUp(a, b);
-        if (op == "fp256_divDown") return FP256Lib.divDown(a, b);
-        if (op == "fp256_divUp") return FP256Lib.divUp(a, b);
-        if (op == "fp256_toUintDown") return int256(FP256Lib.toUintDown(a));
-        if (op == "fp256_toUintUp") return int256(FP256Lib.toUintUp(a));
-        if (op == "fp256_toIntDown") return FP256Lib.toIntDown(a);
-        if (op == "fp256_toIntUp") return FP256Lib.toIntUp(a);
-        if (op == "fp256_floor") return FP256Lib.floor(a);
-        if (op == "fp256_ceil") return FP256Lib.ceil(a);
-        if (op == "fp256_fromUintDown") return FP256Lib.fromUintDown(uint256(a));
-        if (op == "fp256_fromUintUp") return FP256Lib.fromUintUp(uint256(a));
-        if (op == "fp256_toFixed18Down") return FP256Lib.toFixed18Down(a);
-        if (op == "fp256_toFixed18Up") return FP256Lib.toFixed18Up(a);
-        if (op == "fp127_mul") return FP127Lib.mul(a, b);
-        if (op == "fp127_div") return FP127Lib.div(a, b);
-        if (op == "fp127_sqrt") return FP127Lib.sqrt(a);
-        if (op == "fp127_exp") return FP127Lib.exp(a);
-        if (op == "fp127_ln") return FP127Lib.ln(a);
-        if (op == "fp127_log2") return FP127Lib.log2(a);
-        if (op == "fp127_pow") return FP127Lib.pow(a, b);
-        if (op == "fp127_cbrt") return FP127Lib.cbrt(a);
-        if (op == "fp127_expm1") return FP127Lib.expm1(a);
-        if (op == "fp127_erf") return FP127Lib.erf(a);
-        if (op == "fp127_normCdf") return FP127Lib.normCdf(a);
-        if (op == "fp127_compound") return FP127Lib.compound(a, b);
-        if (op == "fp127_lambertW0") return FP127Lib.lambertW0(a);
-        if (op == "fp127_lambertWm1") return FP127Lib.lambertWm1(a);
-        if (op == "fp127_exp2") return FP127Lib.exp2(a);
-        if (op == "fp127_exp10") return FP127Lib.exp10(a);
-        if (op == "fp127_log10") return FP127Lib.log10(a);
-        if (op == "fp127_sinh") return FP127Lib.sinh(a);
-        if (op == "fp127_cosh") return FP127Lib.cosh(a);
-        if (op == "fp127_tanh") return FP127Lib.tanh(a);
-        if (op == "fp127_powu") return FP127Lib.powu(a, b);
-        if (op == "fp127_mulUp") return FP127Lib.mulUp(a, b);
-        if (op == "fp127_divUp") return FP127Lib.divUp(a, b);
-        if (op == "fp127_divDown") return FP127Lib.divDown(a, b);
-        if (op == "fp127_toFixed18Up") return FP127Lib.toFixed18Up(a);
-        revert("op");
+    /// The op's result and the gas of its one library call: gasleft() is read
+    /// on either side of the call, so the dispatch below (a chain of
+    /// comparisons, longer for the later ops) stays outside the window. The
+    /// same window around a plain assignment ("noop") is the baseline.
+    function f(bytes32 op, int256 a, int256 b) external view returns (int256 r, uint256 g) {
+        uint256 g0;
+        if (op == "noop") { g0 = gasleft(); r = a; g = gasleft(); }
+        if (op == "fp256_add") { g0 = gasleft(); r = FP256Lib.add(a, b); g = gasleft(); }
+        if (op == "fp256_mul") { g0 = gasleft(); r = FP256Lib.mul(a, b); g = gasleft(); }
+        if (op == "fp256_div") { g0 = gasleft(); r = FP256Lib.div(a, b); g = gasleft(); }
+        if (op == "fp256_sqrt") { g0 = gasleft(); r = FP256Lib.sqrt(a); g = gasleft(); }
+        if (op == "fp256_exp") { g0 = gasleft(); r = FP256Lib.exp(a); g = gasleft(); }
+        if (op == "fp256_ln") { g0 = gasleft(); r = FP256Lib.ln(a); g = gasleft(); }
+        if (op == "fp256_log1p") { g0 = gasleft(); r = FP256Lib.log1p(a); g = gasleft(); }
+        if (op == "fp256_expm1") { g0 = gasleft(); r = FP256Lib.expm1(a); g = gasleft(); }
+        if (op == "fp256_pow") { g0 = gasleft(); r = FP256Lib.pow(a, b); g = gasleft(); }
+        if (op == "fp256_erf") { g0 = gasleft(); r = FP256Lib.erf(a); g = gasleft(); }
+        if (op == "fp256_erfc") { g0 = gasleft(); r = FP256Lib.erfc(a); g = gasleft(); }
+        if (op == "fp256_normCdf") { g0 = gasleft(); r = FP256Lib.normCdf(a); g = gasleft(); }
+        if (op == "fp256_compound") { g0 = gasleft(); r = FP256Lib.compound(a, b); g = gasleft(); }
+        if (op == "fp256_lambertW0") { g0 = gasleft(); r = FP256Lib.lambertW0(a); g = gasleft(); }
+        if (op == "fp256_lambertWm1") { g0 = gasleft(); r = FP256Lib.lambertWm1(a); g = gasleft(); }
+        if (op == "fp256_lambertW0x") { g0 = gasleft(); r = FP256Lib.lambertW0(a); g = gasleft(); }
+        if (op == "fp256_expx") { g0 = gasleft(); r = FP256Lib.exp(a); g = gasleft(); }
+        if (op == "fp256_expm1x") { g0 = gasleft(); r = FP256Lib.expm1(a); g = gasleft(); }
+        if (op == "fp256_log1px") { g0 = gasleft(); r = FP256Lib.log1p(a); g = gasleft(); }
+        if (op == "fp256_powx") { g0 = gasleft(); r = FP256Lib.pow(a, b); g = gasleft(); }
+        if (op == "fp256_compoundx") { g0 = gasleft(); r = FP256Lib.compound(a, b); g = gasleft(); }
+        if (op == "fp256_erfcx") { g0 = gasleft(); r = FP256Lib.erfc(a); g = gasleft(); }
+        if (op == "fp256_normCdfx") { g0 = gasleft(); r = FP256Lib.normCdf(a); g = gasleft(); }
+        if (op == "fp256_powux") { g0 = gasleft(); r = FP256Lib.powu(a, b); g = gasleft(); }
+        if (op == "fp256_powu") { g0 = gasleft(); r = FP256Lib.powu(a, b); g = gasleft(); }
+        if (op == "fp256_mulDown") { g0 = gasleft(); r = FP256Lib.mulDown(a, b); g = gasleft(); }
+        if (op == "fp256_mulUp") { g0 = gasleft(); r = FP256Lib.mulUp(a, b); g = gasleft(); }
+        if (op == "fp256_divDown") { g0 = gasleft(); r = FP256Lib.divDown(a, b); g = gasleft(); }
+        if (op == "fp256_divUp") { g0 = gasleft(); r = FP256Lib.divUp(a, b); g = gasleft(); }
+        if (op == "fp256_toUintDown") { g0 = gasleft(); r = int256(FP256Lib.toUintDown(a)); g = gasleft(); }
+        if (op == "fp256_toUintUp") { g0 = gasleft(); r = int256(FP256Lib.toUintUp(a)); g = gasleft(); }
+        if (op == "fp256_toIntDown") { g0 = gasleft(); r = FP256Lib.toIntDown(a); g = gasleft(); }
+        if (op == "fp256_toIntUp") { g0 = gasleft(); r = FP256Lib.toIntUp(a); g = gasleft(); }
+        if (op == "fp256_floor") { g0 = gasleft(); r = FP256Lib.floor(a); g = gasleft(); }
+        if (op == "fp256_ceil") { g0 = gasleft(); r = FP256Lib.ceil(a); g = gasleft(); }
+        if (op == "fp256_fromUintDown") { g0 = gasleft(); r = FP256Lib.fromUintDown(uint256(a)); g = gasleft(); }
+        if (op == "fp256_fromUintUp") { g0 = gasleft(); r = FP256Lib.fromUintUp(uint256(a)); g = gasleft(); }
+        if (op == "fp256_toFixed18Down") { g0 = gasleft(); r = FP256Lib.toFixed18Down(a); g = gasleft(); }
+        if (op == "fp256_toFixed18Up") { g0 = gasleft(); r = FP256Lib.toFixed18Up(a); g = gasleft(); }
+        if (op == "fp127_mul") { g0 = gasleft(); r = FP127Lib.mul(a, b); g = gasleft(); }
+        if (op == "fp127_div") { g0 = gasleft(); r = FP127Lib.div(a, b); g = gasleft(); }
+        if (op == "fp127_sqrt") { g0 = gasleft(); r = FP127Lib.sqrt(a); g = gasleft(); }
+        if (op == "fp127_exp") { g0 = gasleft(); r = FP127Lib.exp(a); g = gasleft(); }
+        if (op == "fp127_ln") { g0 = gasleft(); r = FP127Lib.ln(a); g = gasleft(); }
+        if (op == "fp127_log2") { g0 = gasleft(); r = FP127Lib.log2(a); g = gasleft(); }
+        if (op == "fp127_pow") { g0 = gasleft(); r = FP127Lib.pow(a, b); g = gasleft(); }
+        if (op == "fp127_cbrt") { g0 = gasleft(); r = FP127Lib.cbrt(a); g = gasleft(); }
+        if (op == "fp127_expm1") { g0 = gasleft(); r = FP127Lib.expm1(a); g = gasleft(); }
+        if (op == "fp127_erf") { g0 = gasleft(); r = FP127Lib.erf(a); g = gasleft(); }
+        if (op == "fp127_normCdf") { g0 = gasleft(); r = FP127Lib.normCdf(a); g = gasleft(); }
+        if (op == "fp127_compound") { g0 = gasleft(); r = FP127Lib.compound(a, b); g = gasleft(); }
+        if (op == "fp127_lambertW0") { g0 = gasleft(); r = FP127Lib.lambertW0(a); g = gasleft(); }
+        if (op == "fp127_lambertWm1") { g0 = gasleft(); r = FP127Lib.lambertWm1(a); g = gasleft(); }
+        if (op == "fp127_exp2") { g0 = gasleft(); r = FP127Lib.exp2(a); g = gasleft(); }
+        if (op == "fp127_exp10") { g0 = gasleft(); r = FP127Lib.exp10(a); g = gasleft(); }
+        if (op == "fp127_log10") { g0 = gasleft(); r = FP127Lib.log10(a); g = gasleft(); }
+        if (op == "fp127_sinh") { g0 = gasleft(); r = FP127Lib.sinh(a); g = gasleft(); }
+        if (op == "fp127_cosh") { g0 = gasleft(); r = FP127Lib.cosh(a); g = gasleft(); }
+        if (op == "fp127_tanh") { g0 = gasleft(); r = FP127Lib.tanh(a); g = gasleft(); }
+        if (op == "fp127_powu") { g0 = gasleft(); r = FP127Lib.powu(a, b); g = gasleft(); }
+        if (op == "fp127_mulUp") { g0 = gasleft(); r = FP127Lib.mulUp(a, b); g = gasleft(); }
+        if (op == "fp127_divUp") { g0 = gasleft(); r = FP127Lib.divUp(a, b); g = gasleft(); }
+        if (op == "fp127_divDown") { g0 = gasleft(); r = FP127Lib.divDown(a, b); g = gasleft(); }
+        if (op == "fp127_toFixed18Up") { g0 = gasleft(); r = FP127Lib.toFixed18Up(a); g = gasleft(); }
+        require(g0 != 0, "op");
+        g = g0 - g;
     }
 
     /// One op per external call, so its memory is released before the next.
@@ -98,9 +104,7 @@ contract Sweep is Test {
         bytes32 k = bytes32(bytes(op));
         uint256 base = _base();
         for (uint256 i; i < a.length; i++) {
-            uint256 g0 = gasleft();
-            try this.f(k, int256(uint256(a[i])), int256(uint256(b[i]))) returns (int256 r) {
-                uint256 g = g0 - gasleft();
+            try this.f(k, int256(uint256(a[i])), int256(uint256(b[i]))) returns (int256 r, uint256 g) {
                 vm.writeLine(outp, string.concat(vm.toString(bytes32(uint256(r))), " ", vm.toString(g > base ? g - base : 0)));
             } catch (bytes memory e) {
                 vm.writeLine(outp, string.concat("R", vm.toString(e), " 0"));
@@ -108,12 +112,10 @@ contract Sweep is Test {
         }
     }
 
-    /// Gas of the self-call with a no-op, subtracted from every row: what is
-    /// left is the inline library's own cost.
-    function _base() internal view returns (uint256) {
-        uint256 g0 = gasleft();
-        try this.f("noop", 0, 0) returns (int256) {} catch {}
-        return g0 - gasleft();
+    /// The window around a plain assignment, subtracted from every row: what
+    /// is left is the inline library call's own cost.
+    function _base() internal view returns (uint256 g) {
+        (, g) = this.f("noop", 0, 0);
     }
 
     function test_sweep_fp256() public {
