@@ -135,7 +135,7 @@ Radiant's empty-market exploit used the same half unit: its share burn rounded t
 
 Each rounds once from the exact value. A positive `Up` result never underflows to zero: `toUintUp` and `toFixed18Up` charge one unit for any positive dust. `toUintDown` and `toUintUp` revert with `OutOfRange` below zero.
 
-All fourteen are new in release four, which is the source you get with `forge install`. The deployed release three object does not have them yet; until release four is deployed, use the inline library. The snippets are compiled and run on the replays' own integers in [`test/examples/Integrating.t.sol`]({{ config.extra.repo }}/blob/master/test/examples/Integrating.t.sol).
+All fourteen are new in release four, which is the source you get with `forge install`. The deployed release three object does not have them yet; until release four is deployed, use the inline library. `round` and `frac` (#79, also release four) are not edge ops: `round` rounds to nearest, halves away from zero. The snippets are compiled and run on the replays' own integers in [`test/examples/Integrating.t.sol`]({{ config.extra.repo }}/blob/master/test/examples/Integrating.t.sol).
 
 ## Release three
 

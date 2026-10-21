@@ -93,7 +93,18 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
   or subnormals (invalid words revert OutOfRange); 28 ops: add, sub, mul, div, sqrt, exp, ln, pow, log1p, expm1, erf, erfc, normCdf, lambertW0, lambertWm1, powu, compound, neg, abs, sign, cmp, lt, eq, fromUint, fromFP127, toFP127, fromFixed18, toFixed18. Ops table /data/fp256/ops.json, ABI
   /data/fp256/abi.json, record /data/fp256/fp256.json; live on Sepolia at
   0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be (salt "FP256 v3", the same
-  CREATE2 proxy), Sourcify and Blockscout verified.
+  CREATE2 proxy), Sourcify and Blockscout verified. Release four (in the
+  source, not yet deployed) has 67 ops, each correctly rounded or exact, in
+  four objects: FP256 (arithmetic, the edge, exp, ln, pow, conversions),
+  FP256X (erf family, Lambert W), FP256X2 (exp2, exp10, log2, log10,
+  log2Up, cbrt, sinh, cosh, tanh, atanh) and FP256X3 (min, max, clamp, avg,
+  dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg,
+  hypot); predicted CREATE2 addresses
+  0x7471C249ebaE6ddA9892bc18DA45FE1D6B44897c,
+  0xeE62FB72b4029AD723C691095338CF51919C5B73,
+  0x7D5423c4c789f3Ac27E106643E7C32f45f8a058d and
+  0x59D51481cb2EA924EC17FE263cd05b90CEF22383 (salts "FP256 v4",
+  "FP256X v4", "FP256X2 v4", "FP256X3 v4").
 - /results/ the headline numbers, /results/ladder/ the ladder, /results/edges/ the cliffs,
   /results/ops/ gas and precision per op, /library/ address, ABI and the op table,
   /why/ the mechanism, /writeup/ the story.
