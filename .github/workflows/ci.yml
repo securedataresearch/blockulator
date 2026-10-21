@@ -51,6 +51,9 @@ jobs:
           git diff --exit-code docs/fp256/precision.json docs/fp256/precision.md
           make size-fp256
 
+      - name: Library-page examples
+        run: forge test --match-path "test/examples/*"
+
       - name: Gas ladder
         run: make bench && cat docs/benchmarks/gas.md
 
