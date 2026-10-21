@@ -522,6 +522,318 @@
       "notice": "The smallest number at or above x: x itself below 2^237, x rounded up to 237 significant bits above (2^256 for the largest).",
       "domain": "any x",
       "reverts": "never"
+    },
+    {
+      "object": "FP256X3",
+      "name": "min",
+      "signature": "min(int256,int256)",
+      "selector": "0x29aa9cbe",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "The smaller of a and b: one of the two words, exact.",
+      "domain": "any two numbers",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "max",
+      "signature": "max(int256,int256)",
+      "selector": "0x81fe5786",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "The larger of a and b: one of the two words, exact.",
+      "domain": "any two numbers",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "clamp",
+      "signature": "clamp(int256,int256,int256)",
+      "selector": "0x7b8d0f0c",
+      "inputs": [
+        "x",
+        "lo",
+        "hi"
+      ],
+      "notice": "min(hi, max(lo, x)), exact. When lo > hi the result is hi, as FP127's.",
+      "domain": "any three numbers",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "avg",
+      "signature": "avg(int256,int256)",
+      "selector": "0xebf274be",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "(a + b) / 2 rounded once from the exact sum: never overflows, and below the format it rounds as every op does.",
+      "domain": "any two numbers",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "dist",
+      "signature": "dist(int256,int256)",
+      "selector": "0x2110b689",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "|a - b|, rounded once (sub's rounding is symmetric, so its magnitude is the rounded distance).",
+      "domain": "any two numbers",
+      "reverts": "Overflow() when |a - b| does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "zeroFloorSub",
+      "signature": "zeroFloorSub(int256,int256)",
+      "selector": "0xff78cf2d",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "max(0, a - b), rounded once.",
+      "domain": "any two numbers",
+      "reverts": "Overflow() when a - b does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "inv",
+      "signature": "inv(int256)",
+      "selector": "0x3a02c983",
+      "inputs": [
+        "x"
+      ],
+      "notice": "1 / x: div's exact quotient, rounded once.",
+      "domain": "x != 0",
+      "reverts": "DivisionByZero() for x == 0; Overflow() when 1/x does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "lerp",
+      "signature": "lerp(int256,int256,int256)",
+      "selector": "0x84e13b60",
+      "inputs": [
+        "a",
+        "b",
+        "t"
+      ],
+      "notice": "a + t (b - a), rounded once from the exact value: a, t b and -t a summed exactly in a 1,024-bit window (terms far under it enter as their floor or their sign), so cancellation costs nothing and no intermediate can overflow. t is not clamped.",
+      "domain": "any three numbers; the result must fit",
+      "reverts": "Overflow() when the result does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "frac",
+      "signature": "frac(int256)",
+      "selector": "0xae2785ac",
+      "inputs": [
+        "x"
+      ],
+      "notice": "x - floor(x), rounded once: in [0, 1), and exact for x >= 0; a negative x within 2^-238 of an integer gives exactly 1, the nearest word to 1 - |x - ceil(x)|.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "round",
+      "signature": "round(int256)",
+      "selector": "0x58b4370b",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The nearest integral number, halves away from zero (FP256's tie rule; FP127's round takes halves up), exact.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "log2Up",
+      "signature": "log2Up(int256)",
+      "selector": "0xa1985bb6",
+      "inputs": [
+        "x"
+      ],
+      "notice": "ceil(log2 x) as a number: the exponent, plus one unless x is a power of two. Exact.",
+      "domain": "x > 0",
+      "reverts": "OutOfRange() for x <= 0 or a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "gcd",
+      "signature": "gcd(int256,int256)",
+      "selector": "0x63b03896",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "The greatest common divisor of |floor(a)| and |floor(b)| as a number, exact at any magnitude: the odd parts by Euclid's algorithm times the smaller power of two. gcd(0, 0) = 0.",
+      "domain": "any two numbers",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "factorial",
+      "signature": "factorial(int256)",
+      "selector": "0x5ad78e8a",
+      "inputs": [
+        "n"
+      ],
+      "notice": "floor(n)! rounded once: the exact product while its odd part fits 512 bits (every exact tie), a 512-bit running product within 2^-500 above that; every n in the domain is checked against the exact factorial (make sweep). 0! = 1.",
+      "domain": "0 <= n < 20367 (floor(n)! fits below 2^262145)",
+      "reverts": "OutOfRange() for n < 0 or a word that is not a number; Overflow() from 20367"
+    },
+    {
+      "object": "FP256X3",
+      "name": "pi",
+      "signature": "pi(int256)",
+      "selector": "0x929edbfb",
+      "inputs": [
+        "terms"
+      ],
+      "notice": "The word nearest Ramanujan's 1914 series with floor(terms) terms, 1/pi = (2 sqrt 2 / 9801) sum_k (4k)! (1103 + 26390 k) / ((k!)^4 396^(4k)): each partial sum rounded once from 300 digits and tabulated, about eight digits a term; nine terms is one ULP above pi, and from ten on every partial sum rounds to pi's word.",
+      "domain": "terms >= 1 (its floor is the number of terms)",
+      "reverts": "OutOfRange() below 1 or for a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "cbrt",
+      "signature": "cbrt(int256)",
+      "selector": "0xd4b6188c",
+      "inputs": [
+        "x"
+      ],
+      "notice": "The cube root, cbrt(-x) = -cbrt(x): floor(cbrt(N)) of the significand scaled to N = m 2^(477 + rr), 714 to 716 bits, from a kernel seed corrected by exact three-word cubes, then rounded once. Exact for perfect cubes; never overflows.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "gavg",
+      "signature": "gavg(int256,int256)",
+      "selector": "0xa13ed853",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "The geometric mean sqrt(a b) of the exact 474-bit product, rounded once; never overflows. Two negatives give the positive root.",
+      "domain": "a b >= 0",
+      "reverts": "OutOfRange() if a and b have opposite signs (both nonzero) or for a word that is not a number"
+    },
+    {
+      "object": "FP256X3",
+      "name": "hypot",
+      "signature": "hypot(int256,int256)",
+      "selector": "0xc479210c",
+      "inputs": [
+        "a",
+        "b"
+      ],
+      "notice": "sqrt(a^2 + b^2) rounded once from the exact sum of squares (floored only at a grid far under the root's), so ties of Pythagorean triples round away from zero; |a| when b is more than 2^120 smaller. No intermediate overflows.",
+      "domain": "any two numbers; the result must fit",
+      "reverts": "Overflow() when sqrt(a^2 + b^2) does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "exp2",
+      "signature": "exp2(int256)",
+      "selector": "0xdbbb06d2",
+      "inputs": [
+        "x"
+      ],
+      "notice": "2^x: the integer part of x to the exponent, its fraction (exact at 2^-254 from 2^-18 up) through the 2^f kernel, one rounding when the bound clears the rounding boundary, else e^(f ln 2) by wexpm1 in two words: correctly rounded, exact for integral x. Exactly one below 2^-238; zero below -262,142.",
+      "domain": "x < 262145",
+      "reverts": "Overflow() when 2^x does not fit (x at or above 262,145); OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "exp10",
+      "signature": "exp10(int256)",
+      "selector": "0x4c0dafa2",
+      "inputs": [
+        "x"
+      ],
+      "notice": "10^x = 2^(x log2 10): the 512-bit product with log2 10 split as exp's, the 2^f kernel and one rounding when the bound clears the rounding boundary, else x log2 10 in three words and 2^f by wexpm1: correctly rounded, so 10^n is exact for n = 0 to 102. Exactly one below 2^-240.",
+      "domain": "x below about 78,913.4",
+      "reverts": "Overflow() when 10^x does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "log2",
+      "signature": "log2(int256)",
+      "selector": "0xe0d68737",
+      "inputs": [
+        "x"
+      ],
+      "notice": "log2(x) = (E - bias) + log2(M / 2^236): the exponent exactly and the mantissa through the log2 kernel, one rounding when its 38 units clear the rounding boundary; within 2^-8 of one, d = x - 1 exact and d series(d) log2 e. Else the same in two words (pow's wide log2): correctly rounded, exact at powers of two.",
+      "domain": "x > 0",
+      "reverts": "OutOfRange() for x <= 0 or a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "log10",
+      "signature": "log10(int256)",
+      "selector": "0xb47ca3c7",
+      "inputs": [
+        "x"
+      ],
+      "notice": "log10(x) = log2(x) log10 2: the exponent exactly, the mantissa through the log2 kernel, one product and one rounding when its 16 units clear the rounding boundary; within 2^-8 of one, ln's series times log10 e. Else u log10 2 + ln(mantissa) log10 e in three words: correctly rounded, exact at the powers of ten that are numbers (10^0 to 10^102).",
+      "domain": "x > 0",
+      "reverts": "OutOfRange() for x <= 0 or a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "sinh",
+      "signature": "sinh(int256)",
+      "selector": "0x17cdc976",
+      "inputs": [
+        "x"
+      ],
+      "notice": "sinh(x). Below 1/2, x sum x^2k / (2k + 1)! at 2^-254 (no cancellation, so the relative precision holds all the way down); above, (e^|x| - e^-|x|) / 2 from exp's unrounded kernel and its reciprocal. One rounding when the bound clears the rounding boundary, else the series or both exponentials in two words: correctly rounded.",
+      "domain": "|x| below about 181,705",
+      "reverts": "Overflow() when sinh(x) does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "cosh",
+      "signature": "cosh(int256)",
+      "selector": "0xaa13e96a",
+      "inputs": [
+        "x"
+      ],
+      "notice": "cosh(x) = (e^|x| + e^-|x|) / 2 from exp's unrounded kernel and its reciprocal, summed before the one rounding (no cancellation); else both exponentials in two words: correctly rounded. Exactly one below 2^-118.",
+      "domain": "|x| below about 181,705",
+      "reverts": "Overflow() when cosh(x) does not fit; OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "tanh",
+      "signature": "tanh(int256)",
+      "selector": "0x5e1f05c7",
+      "inputs": [
+        "x"
+      ],
+      "notice": "tanh(x). Below 1/2, x times sinh's series over cosh's (both at 2^-254, all terms positive); above, 1 - 2/(e^2|x| + 1) from exp's unrounded kernel. One rounding when the bound clears the rounding boundary, else the same in two words: correctly rounded. Exactly +-1 once 2|x| log2 e passes 240.",
+      "domain": "any number",
+      "reverts": "OutOfRange() for a word that is not a number"
+    },
+    {
+      "object": "FP256X2",
+      "name": "atanh",
+      "signature": "atanh(int256)",
+      "selector": "0xc6285a68",
+      "inputs": [
+        "x"
+      ],
+      "notice": "atanh(x). Below 2^-4, x times the mean of log1p's series at x and -x (the even terms, sum x^2k / (2k + 1)); above, (log2(1 + |x|) - log2(1 - |x|)) ln 2 / 2 with both arguments exact under their leading bits (no cancellation: the logarithms have opposite signs). One rounding when the bound clears the rounding boundary, else the same in two words: correctly rounded.",
+      "domain": "|x| < 1",
+      "reverts": "OutOfRange() for |x| >= 1 or a word that is not a number"
     }
   ]
 }

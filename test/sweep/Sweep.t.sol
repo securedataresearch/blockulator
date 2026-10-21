@@ -54,6 +54,29 @@ contract Sweep is Test {
         if (op == "fp256_fromUintUp") return FP256Lib.fromUintUp(uint256(a));
         if (op == "fp256_toFixed18Down") return FP256Lib.toFixed18Down(a);
         if (op == "fp256_toFixed18Up") return FP256Lib.toFixed18Up(a);
+        if (op == "fp256_exp2") return FP256Lib.exp2(a);
+        if (op == "fp256_exp10") return FP256Lib.exp10(a);
+        if (op == "fp256_log2") return FP256Lib.log2(a);
+        if (op == "fp256_log10") return FP256Lib.log10(a);
+        if (op == "fp256_log2Up") return FP256Lib.log2Up(a);
+        if (op == "fp256_cbrt") return FP256Lib.cbrt(a);
+        if (op == "fp256_sinh") return FP256Lib.sinh(a);
+        if (op == "fp256_cosh") return FP256Lib.cosh(a);
+        if (op == "fp256_tanh") return FP256Lib.tanh(a);
+        if (op == "fp256_atanh") return FP256Lib.atanh(a);
+        if (op == "fp256_min") return FP256Lib.min(a, b);
+        if (op == "fp256_max") return FP256Lib.max(a, b);
+        if (op == "fp256_avg") return FP256Lib.avg(a, b);
+        if (op == "fp256_dist") return FP256Lib.dist(a, b);
+        if (op == "fp256_zeroFloorSub") return FP256Lib.zeroFloorSub(a, b);
+        if (op == "fp256_inv") return FP256Lib.inv(a);
+        if (op == "fp256_frac") return FP256Lib.frac(a);
+        if (op == "fp256_round") return FP256Lib.round(a);
+        if (op == "fp256_gcd") return FP256Lib.gcd(a, b);
+        if (op == "fp256_factorial") return FP256Lib.factorial(a);
+        if (op == "fp256_pi") return FP256Lib.pi(a);
+        if (op == "fp256_gavg") return FP256Lib.gavg(a, b);
+        if (op == "fp256_hypot") return FP256Lib.hypot(a, b);
         if (op == "fp127_mul") return FP127Lib.mul(a, b);
         if (op == "fp127_div") return FP127Lib.div(a, b);
         if (op == "fp127_sqrt") return FP127Lib.sqrt(a);
@@ -82,9 +105,41 @@ contract Sweep is Test {
         revert("op");
     }
 
+    /// The three-argument ops (#79).
+    function f3(bytes32 op, int256 a, int256 b, int256 c) external pure returns (int256) {
+        if (op == "noop") return 0;
+        if (op == "fp256_clamp") return FP256Lib.clamp(a, b, c);
+        if (op == "fp256_lerp") return FP256Lib.lerp(a, b, c);
+        revert("op");
+    }
+
     /// One op per external call, so its memory is released before the next.
     function runOne(string memory op, bool two) external {
         _run(op, two);
+    }
+
+    function runOne3(string memory op) external {
+        string memory path = string.concat(DIR, op, ".json");
+        if (!vm.exists(path)) return;
+        string memory j = vm.readFile(path);
+        bytes32[] memory a = vm.parseJsonBytes32Array(j, ".a");
+        bytes32[] memory b = vm.parseJsonBytes32Array(j, ".b");
+        bytes32[] memory c = vm.parseJsonBytes32Array(j, ".c");
+        string memory outp = string.concat(DIR, op, ".out");
+        if (vm.exists(outp)) vm.removeFile(outp);
+        bytes32 k = bytes32(bytes(op));
+        uint256 g0 = gasleft();
+        try this.f3("noop", 0, 0, 0) returns (int256) {} catch {}
+        uint256 base = g0 - gasleft();
+        for (uint256 i; i < a.length; i++) {
+            g0 = gasleft();
+            try this.f3(k, int256(uint256(a[i])), int256(uint256(b[i])), int256(uint256(c[i]))) returns (int256 r) {
+                uint256 g = g0 - gasleft();
+                vm.writeLine(outp, string.concat(vm.toString(bytes32(uint256(r))), " ", vm.toString(g > base ? g - base : 0)));
+            } catch (bytes memory e) {
+                vm.writeLine(outp, string.concat("R", vm.toString(e), " 0"));
+            }
+        }
     }
 
     function _run(string memory op, bool two) internal {
@@ -129,6 +184,14 @@ contract Sweep is Test {
         this.runOne("fp256_toUintDown", false); this.runOne("fp256_toUintUp", false); this.runOne("fp256_toIntDown", false); this.runOne("fp256_toIntUp", false);
         this.runOne("fp256_floor", false); this.runOne("fp256_ceil", false); this.runOne("fp256_fromUintDown", false); this.runOne("fp256_fromUintUp", false);
         this.runOne("fp256_toFixed18Down", false); this.runOne("fp256_toFixed18Up", false);
+        // #79
+        this.runOne("fp256_exp2", false); this.runOne("fp256_exp10", false); this.runOne("fp256_log2", false); this.runOne("fp256_log10", false);
+        this.runOne("fp256_log2Up", false); this.runOne("fp256_cbrt", false); this.runOne("fp256_sinh", false); this.runOne("fp256_cosh", false);
+        this.runOne("fp256_tanh", false); this.runOne("fp256_atanh", false); this.runOne("fp256_min", true); this.runOne("fp256_max", true);
+        this.runOne("fp256_avg", true); this.runOne("fp256_dist", true); this.runOne("fp256_zeroFloorSub", true); this.runOne("fp256_inv", false);
+        this.runOne("fp256_frac", false); this.runOne("fp256_round", false); this.runOne("fp256_gcd", true); this.runOne("fp256_factorial", false);
+        this.runOne("fp256_pi", false); this.runOne("fp256_gavg", true); this.runOne("fp256_hypot", true);
+        this.runOne3("fp256_clamp"); this.runOne3("fp256_lerp");
     }
 
     function test_sweep_fp127() public {

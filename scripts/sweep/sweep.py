@@ -23,6 +23,7 @@ import random
 import subprocess
 import sys
 from collections import Counter
+from fractions import Fraction
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -39,15 +40,21 @@ SEED, SEED_LW = 20261020, 7
 OPS256 = ["add", "mul", "div", "sqrt", "exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf",
           "compound", "lambertW0", "lambertWm1", "powu",
           "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp",
-          "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up"]
+          "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up",
+          # #79: FP256X2 and FP256X3
+          "exp2", "exp10", "log2", "log10", "log2Up", "cbrt", "sinh", "cosh", "tanh", "atanh",
+          "min", "max", "clamp", "avg", "dist", "zeroFloorSub", "inv", "lerp", "frac", "round",
+          "gcd", "factorial", "pi", "gavg", "hypot"]
 # the ops with a wide second stage, swept again through FP256LibWide
 WIDE256 = ["exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf", "compound", "lambertW0",
-           "lambertWm1", "powu"]
+           "lambertWm1", "powu", "exp2", "exp10", "log2", "log10", "sinh", "cosh", "tanh", "atanh"]
 WIDE_N = 4000
 PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp", "toFixed18Down", "toFixed18Up"}
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "normCdf", "compound",
           "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up"]
-TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp"}
+TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
+       "min", "max", "avg", "dist", "zeroFloorSub", "gcd", "gavg", "hypot"}
+THREE = {"clamp", "lerp"}
 
 
 # ---- inputs ----------------------------------------------------------------
@@ -66,10 +73,12 @@ def f127(rng, lo_bits, hi_bits, neg=0.5):
     return (-m if rng.random() < neg else m) % T256
 
 
-def write(name, a, b=None):
+def write(name, a, b=None, c=None):
     d = {"a": ["0x%064x" % (x % T256) for x in a]}
     if b is not None:
         d["b"] = ["0x%064x" % (x % T256) for x in b]
+    if c is not None:
+        d["c"] = ["0x%064x" % (x % T256) for x in c]
     (D / f"{name}.json").write_text(json.dumps(d))
 
 
@@ -182,6 +191,67 @@ def gen4():
     write("fp256_normCdfx", [f256(rng, 4, 9, 0.8) for _ in range(E)])
     write("fp256_powux", [f256(rng, -40, 40) for _ in range(E)], [rng.choice([1, -1]) * rng.randint(2, 200) for _ in range(E)])
     write("fp256_lambertW0x", w0neg + [f256(rng, 8, 18, 0) for _ in range(E // 2)] + [f256(rng, 1000, 200000, 0) for _ in range(E // 2)])
+    gen79()
+
+
+def near_one(rng, n):
+    """Words within 2^-4 of one, on both sides, at every scale down to 2^-230."""
+    mp.dps = 120
+    return [O.encode_mpf(1 + mpf(2) ** -rng.uniform(4, 230) * rng.choice([1, -1])) for _ in range(n)]
+
+
+def gen79():
+    """#79's inputs (FP256X2 and FP256X3), from their own seed."""
+    rng = random.Random(SEED + 79)
+    S, N = 4000, 8000
+    write("fp256_exp2", [f256(rng, -40, 18) for _ in range(N)])
+    write("fp256_exp10", [f256(rng, -40, 16) for _ in range(N)])
+    for op in ("log2", "log10"):
+        write(f"fp256_{op}", [f256(rng, -300, 300, 0) for _ in range(N // 2)] + [f256(rng, -1, 0, 0) for _ in range(N // 4)]
+              + near_one(rng, N // 4))
+    write("fp256_log2Up", [f256(rng, -300, 300, 0.05) for _ in range(S)])
+    write("fp256_cbrt", [f256(rng, -1000, 1000) for _ in range(S)])
+    for op in ("sinh", "cosh", "tanh"):
+        write(f"fp256_{op}", [f256(rng, -130, 8) for _ in range(N // 2)] + [f256(rng, -3, 3) for _ in range(N // 2)])
+    write("fp256_atanh", [f256(rng, -130, -1) for _ in range(N // 2)] + [f256(rng, -5, -1) for _ in range(N // 2)])
+    pair = lambda lo, hi: ([f256(rng, lo, hi) for _ in range(S)], [f256(rng, lo, hi) for _ in range(S)])
+    for op in ("min", "max", "avg", "dist", "zeroFloorSub"):
+        write(f"fp256_{op}", *pair(-300, 300))
+    write("fp256_inv", [f256(rng, -400, 400) for _ in range(S)])
+    for op in ("frac", "round"):
+        write(f"fp256_{op}", [f256(rng, -4, 240) for _ in range(S)])
+    write("fp256_gcd", [f256(rng, -2, 300) for _ in range(S)], [f256(rng, -2, 300) for _ in range(S)])
+    # hypot near its own exponents (where the sum of squares is exact) and far apart
+    ha = [f256(rng, -400, 400) for _ in range(S)]
+    hb = [(((x >> 236) & 0x7FFFF) + rng.randint(-130, 130)) << 236 | rng.getrandbits(236) | (rng.getrandbits(1) << 255) for x in ha]
+    write("fp256_hypot", ha, hb)
+    write("fp256_gavg", [f256(rng, -400, 400, 0) for _ in range(S)], [f256(rng, -400, 400, 0) for _ in range(S)])
+    write("fp256_clamp", [f256(rng, -5, 5) for _ in range(S)], [f256(rng, -5, 5) for _ in range(S)], [f256(rng, -5, 5) for _ in range(S)])
+    # lerp, eight shapes: b near a (b - a cancels), t near -a/(b - a) (the sum
+    # cancels), t near one (a (1 - t) cancels), exponents spread by 600, by
+    # 200,000, a far under t b, and plain
+    la, lb, lt = [], [], []
+    for i in range(N):
+        a, b, t = f256(rng, -40, 40), f256(rng, -40, 40), f256(rng, -3, 3)
+        kind = i % 8
+        if kind == 0:
+            b = a ^ rng.getrandbits(rng.randint(1, 236))
+        elif kind == 1 and a != b:
+            qa, qb = O.decode(a), O.decode(b)
+            t = O.encode(-qa / (qb - qa)) ^ rng.getrandbits(rng.randint(0, 40))
+        elif kind == 2:
+            t = (BIAS << 236) ^ rng.getrandbits(rng.randint(1, 236)) ^ (rng.getrandbits(1) << 255) ^ (rng.getrandbits(1) << 236)
+        elif kind == 3:
+            a, b, t = f256(rng, -600, 600), f256(rng, -600, 600), f256(rng, -800, 800)
+        elif kind == 4:
+            a, b, t = f256(rng, -200000, 200000), f256(rng, -200000, 200000), f256(rng, -60000, 60000)
+        elif kind == 5:
+            a = f256(rng, -3000, -300)
+        la.append(a), lb.append(b), lt.append(t)
+    write("fp256_lerp", la, lb, lt)
+    # factorial over its whole domain, and past it; pi for every number of terms to 40
+    write("fp256_factorial", [O.encode(Fraction(n)) for n in range(0, 20370)])
+    write("fp256_pi", [O.encode(Fraction(n)) for n in range(1, 41)] + [O.encode(Fraction(n, 2)) for n in range(2, 30)])
 
 
 
@@ -212,20 +282,21 @@ def load1(name):
     j = json.loads((D / f"{src}.json").read_text())
     a = [int(x, 16) for x in j["a"]]
     b = [int(x, 16) for x in j.get("b", [])] or [0] * len(a)
+    c = [int(x, 16) for x in j.get("c", [])] or [0] * len(a)
     lines = (D / f"{name}.out").read_text().splitlines()
     outs = [ln.split()[0] for ln in lines]
     gas = [int(ln.split()[1]) if len(ln.split()) > 1 else 0 for ln in lines]
     if name.startswith("wide_"):
-        a, b = a[:len(outs)], b[:len(outs)]
+        a, b, c = a[:len(outs)], b[:len(outs)], c[:len(outs)]
     assert len(outs) == len(a), name
-    return list(zip(a, b, outs, gas))
+    return list(zip(a, b, c, outs, gas))
 
 
 def job256(args):
-    op, a, b, out = args
+    op, a, b, c, out = args
     mp.dps = 300        # the oracle's precision; gen() lowers it for the FP127 Lambert inputs
     try:
-        ref = O.OPS[op](*([a, b] if op in TWO else [a]))
+        ref = O.OPS[op](*([a, b, c] if op in THREE else [a, b] if op in TWO else [a]))
         ref = int(ref, 16) if isinstance(ref, str) else ref
     except O.Revert:
         return ("bothrev" if out.startswith("R") else "refrev", None)
@@ -323,18 +394,18 @@ def score():
     with mpc.Pool() as pool:
         for op in OPS256:
             data = load(f"fp256_{op}")
-            res = pool.map(job256, [(op, a, b, o) for a, b, o, g in data], chunksize=64)
+            res = pool.map(job256, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=64)
             rows.append(dict(summarize256(op, res), **gasstats([g for *_, g in data])))
             print(json.dumps(rows[-1]), flush=True)
         for op in WIDE256:
             if not (D / f"wide_{op}.out").exists():
                 continue
             data = load(f"wide_{op}")
-            res = pool.map(job256, [(op, a, b, o) for a, b, o, g in data], chunksize=16)
+            res = pool.map(job256, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=16)
             rows.append(dict(summarize256(op, res), stage="second", **gasstats([g for *_, g in data])))
             print(json.dumps(rows[-1]), flush=True)
         for op in OPS127 + ["lambertW0", "lambertWm1"]:
-            res = pool.map(job127, [(op, a, b, o) for a, b, o, g in load(f"fp127_{op}")], chunksize=64)
+            res = pool.map(job127, [(op, a, b, o) for a, b, c, o, g in load(f"fp127_{op}")], chunksize=64)
             rows.append(summarize127(op, res))
             print(json.dumps(rows[-1]), flush=True)
     doc = {"_doc": __doc__.strip(), "seed": SEED, "seedLambert": SEED_LW, "rows": rows}

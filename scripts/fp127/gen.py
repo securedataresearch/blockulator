@@ -54,7 +54,13 @@ LIBS = {
             "FP256": {"iface": "IFP256", "abi": "abi.json"},
             "FP256X": {"iface": "IFP256X", "abi": "abiX.json",
                        "iface_notice": "Interface of the deployed FP256X object, FP256's extension: the\n///         error function family and Lambert W on the same 256-bit binary\n///         floating point words as IFP256 (sign bit 255, a 19-bit biased\n///         exponent, bias 262143, a 236-bit fraction; zero is the all-zero word)."},
+            # #79: the ops FP127 has, two more objects
+            "FP256X2": {"iface": "IFP256X2", "abi": "abiX2.json",
+                        "iface_notice": "Interface of the deployed FP256X2 object, FP256's second extension:\n///         exp2, exp10, log2, log10, log2Up, cbrt and the hyperbolic\n///         functions on the same 256-bit binary floating point words as IFP256."},
+            "FP256X3": {"iface": "IFP256X3", "abi": "abiX3.json",
+                        "iface_notice": "Interface of the deployed FP256X3 object, FP256's third extension:\n///         the algebraic ops FP127 has (min, max, clamp, avg, dist,\n///         zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg,\n///         hypot) on the same 256-bit binary floating point words as IFP256."},
         },
+        "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
     },
 }
 LIB = LIBS["fp127"]
@@ -269,6 +275,9 @@ def validate(src: Source, raw: str) -> None:
                 problems.append(f"{f.name}: forbidden builtin {pat}")
         for m in re.finditer(r"\b(mstore8?|mload)\(\s*([^,)]+)", body):
             arg = m.group(2).strip()
+            # reading the free memory pointer is how a block finds memory it may use
+            if m.group(1) == "mload" and arg.lower() == "0x40":
+                continue
             if re.fullmatch(r"0x[0-9a-fA-F]+|\d+", arg) and arg.lower() not in ALLOWED_LITERAL_MEM:
                 problems.append(
                     f"{f.name}: literal memory address {arg}; use mload(0x40)-relative"
@@ -456,8 +465,7 @@ pragma solidity {SOLIDITY_PRAGMA};
 {banner()}
 /// @title {lib_name}
 /// @notice {LIB["lib_notice"] if not wide else "TEST ONLY. " + LIB_NAME + " with the rounding test forced to fail, so every\n///         correctly rounded op returns its wide second stage. Generated for\n///         make sweep's second-stage pass; never deploy or import it."}
-/// @dev Blocks are memory-safe: the only memory touched is scratch space
-///      (0x00..0x3f) for revert selectors.
+/// @dev {LIB.get("lib_dev", "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors.")}
 library {lib_name} {{
 {errs}
 

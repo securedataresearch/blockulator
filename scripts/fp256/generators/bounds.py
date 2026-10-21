@@ -263,7 +263,153 @@ def run(n):
             M.add(f"{nm}, {region}", err, D, erfc(y) * power(2, 254 - ee))
             D2 = WS - (D >> -ee)
             M.add(f"1 - {nm}, {region}", (err >> -ee) + 2, D2, (1 - erfc(y)) * power(2, 254))
+    run79(ker, rng, M, n)
     return M.report()
+
+
+# ---- #79: FP256X2's fast values, as the Yul forms them ---------------------------
+
+L10_HI = 0xd49a784bcd1b8afe492bf6ff4dafdb4cd96c55fe37b3ad4e91b6ac8082e7859d
+L10_LO = 0x19943f7a77547ce8f892faad8eb42f5850d7b920159729533fc58b353d80ce0
+LOG10_2 = 0x134413509f79fef311f12b35816f922f04d5a618a87a3e69314bcde4d6f98c79
+LOG10E = 0x1bcb7b1526e50e32a6ab7555f5a67b8647dc68c048b934404747e5a89ef1d4a8
+LN2_FLOOR = 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a
+
+
+def div254(a, b):
+    return (a << 254) // b
+
+
+def hser(x2, b):
+    t = WS
+    for k in range(25, 0, -1):
+        j = 2 * k + b
+        t = WS + K.mulwu(x2, t) // (j * (j - 1))
+    return t
+
+
+def onep(s, u, m):
+    """1 + x as (uu, a), a in [2^254, 2^255), for -4 <= u < 0 (the Yul's onep)."""
+    a = WS - (m << (18 + u)) if s else WS + (m << (18 + u))
+    n = K.msb(a)
+    a = a << (254 - n) if n < 254 else a >> (n - 254)
+    return n - 254, a
+
+
+def run79(ker, rng, M, n):
+    """exp2, exp10, log2, log10, sinh, cosh, tanh, atanh: each fast value D
+    against the exact value on D's grid. The analytic bounds:
+
+      exp2, exp10           8    as exp: the 2^f kernel 4.1 and f's floor 1.4 (log2 10's
+                                 tail under 2^-490 of a unit)
+      log2, near one        8    d P within 3 (the series 2, the floor 1), times log2 e:
+                                 3 log2 e + 2
+      log2, kernel          38   log2m 37, the shift into Lm 1
+      log10, near one       8    ln's D within 5, times log10 e: 5 log10 e + 2
+      log10, kernel         16   (37 + 1) log10 2 + 2
+      sinh, |x| < 1/2       8    the series within 3 units: 2 x 3 + 1
+      sinh, cosh, kernel    16   v within 6; 2^508/v within 7, one more for the shift
+      tanh, |x| < 1/2       16   each series within 3, the quotient within 7: 2 x 7 + 1
+      tanh, kernel          8    2/(V + 1) within 6 x 0.54 + 2
+      atanh, |x| < 2^-4     12   each series within 3, the mean 3.5: 2 x 3.5 + 1
+      atanh, kernel         32   two log2m within 37 each, the shift halves: 38 ln 2 + 2
+      cbrt seed             2    the seed within two of floor(cbrt N); exact cubes then fix it
+    """
+    for _ in range(n):
+        x = rf(rng, -30, 18)
+        s, e, m = K.unpack(x)
+        u = e - BIAS
+        if u >= 19 or u < -238:
+            continue
+        P = m << 254
+        q = 490 - u
+        k, f = K.shr512(P, q), K.shr512(P, q - 254) & K.M254
+        if k >= 1 << 19:
+            continue
+        kk, v = ker.exp2kv(s, k, f)
+        M.add("exp2", 8, v, power(2, dec(x) - kk) * power(2, 254))
+        if u <= 16:
+            P = m * L10_HI + K.mulwu(m, L10_LO)
+            k, f = K.shr512(P, 236 - u + 254), K.shr512(P, 236 - u) & K.M254
+            kk, v = ker.exp2kv(s, k, f)
+            M.add("exp10", 8, v, power(10, dec(x)) * power(2, 254 - kk))
+    for _ in range(n):
+        if rng.random() < 0.5:
+            x = K.encode(1 + mpf(2) ** -rng.uniform(9, 230) * (1 if rng.getrandbits(1) else -1))
+        else:
+            x = rf(rng, -1000, 1000, 0)
+        if x == BIAS << 236:
+            continue
+        s, e, m = K.unpack(x)
+        band = ker.nearone(x)
+        xv = dec(x)
+        if band is not None:
+            sd, ud, md = band
+            p = ker.ln1pseries(ker.tofixed254(sd, ud, md))
+            D = K.mulwu(K.mulwu(md << 17, p), ker.LOG2E_HI)
+            M.add("log2, near one", 8, D, abs(log(xv, 2)) * power(2, 253 - ud))
+            D = K.mulwu((md * p) >> 236, LOG10E)
+            M.add("log10, near one", 8, D, abs(log(xv, 10)) * power(2, 254 - ud))
+        else:
+            Lm, Ls = ker.log2pair(e, m)
+            M.add("log2, kernel", 38, abs(K.signed(Lm)), abs(log(xv, 2)) * power(2, -Ls))
+            l = K.signed(K.mulw(Lm, LOG10_2))
+            M.add("log10, kernel", 16, abs(l), abs(log(xv, 10)) * power(2, -Ls))
+    for _ in range(n):
+        x = rf(rng, -120, -2) if rng.random() < 0.5 else rf(rng, -1, 8)
+        s, e, m = K.unpack(x)
+        u = e - BIAS
+        xv = abs(dec(x))
+        if u < -1:
+            x2 = (m * m) >> (218 - 2 * u)
+            S, C = hser(x2, 1), hser(x2, 0)
+            M.add("sinh, |x| < 1/2", 8, (m * S) >> 236, mp.sinh(xv) * power(2, 254 - u))
+            M.add("tanh, |x| < 1/2", 16, (m * div254(S, C)) >> 236, mp.tanh(xv) * power(2, 254 - u))
+            continue
+        k, f = ker.explog2(u, m)
+        kk, v = ker.exp2kv(0, k, f)
+        qv = div254(WS, v) >> (2 * kk)
+        M.add("sinh, kernel", 16, v - qv, mp.sinh(xv) * power(2, 255 - kk))
+        M.add("cosh, kernel", 16, v + qv, mp.cosh(xv) * power(2, 255 - kk))
+        k, f = ker.explog2(u + 1, m)
+        if k > 239:
+            continue
+        kk, v = ker.exp2kv(0, k, f)
+        D = WS - div254(1 << (255 - kk), v + (1 << (254 - kk)))
+        M.add("tanh, kernel", 8, D, mp.tanh(xv) * power(2, 254))
+    for _ in range(n):
+        x = rf(rng, -120, -5) if rng.random() < 0.4 else rf(rng, -4, -1)
+        s, e, m = K.unpack(x)
+        u = e - BIAS
+        xv = abs(dec(x))
+        if u < -4:
+            df = ker.tofixed254(0, u, m)
+            t = K.SERIES_TERMS if u < -8 else K.WIDE_TERMS
+            p = ker.ln1pseries(df, t) + ker.ln1pseries((-df) & K.MASK, t)
+            M.add("atanh, |x| < 2^-4", 12, (m * (p >> 1)) >> 236, mp.atanh(xv) * power(2, 254 - u))
+            continue
+        uu1, a1 = onep(0, u, m)
+        uu2, a2 = onep(1, u, m)
+        i = uu1 - uu2
+        sh = K.msb(i) + 1
+        T = (i << (254 - sh)) + ((ker.log2m(a1) - ker.log2m(a2)) >> sh)
+        M.add("atanh, kernel", 32, K.mulwu(T, LN2_FLOOR), mp.atanh(xv) * power(2, 255 - sh))
+    for _ in range(n):
+        x = rf(rng, -2000, 2000)
+        s, e, m = K.unpack(x)
+        v = e - 0x400EB
+        q, rr = v // 3, v % 3
+        g = (((2 + rr) << 253) + (ker.log2m(m << 18) >> 1)) // 3
+        ip = 1 if g >= 1 << 253 else 0
+        g -= ip << 253
+        y = ker.exp2frac(g << 1) >> (17 - ip)
+        N = m << (rr + 477)
+        r = int(mp.floor(mp.cbrt(mpf(N))))
+        while r ** 3 > N:
+            r -= 1
+        while (r + 1) ** 3 <= N:
+            r += 1
+        M.add("cbrt seed", 3, y, mpf(r))
 
 
 def cf_depth(n):

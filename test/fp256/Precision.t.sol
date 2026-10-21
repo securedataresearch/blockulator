@@ -14,16 +14,19 @@ import {console} from "forge-std/console.sol";
 ///         floor is 256 for every op, so every word must equal the oracle's
 ///         (correct rounding, ties away from zero, or the exact value rounded
 ///         in the op's direction). The error function family and Lambert W
-///         run on FP256X, everything else on FP256.
+///         run on FP256X, #79's exponential family on FP256X2 and its
+///         algebraic ops on FP256X3, everything else on FP256.
 ///         Prints PREC|op|n|min|mean|worstInput and writes
 ///         docs/fp256/precision.json.
 contract Precision256 is FP256Harness {
     function _out() internal pure virtual returns (string memory) { return "docs/fp256/precision.json"; }
 
-    function _ops() internal pure returns (string[42] memory o) {
+    function _ops() internal pure returns (string[67] memory o) {
         o = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", "expm1", "erf", "erfc", "normCdf", "lambertW0", "lambertWm1", "neg", "abs", "sign", "cmp", "lt", "eq",
              "fromUint", "fromFP127", "toFP127", "fromFixed18", "toFixed18", "powu", "compound",
-             "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up"];
+             "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up",
+             "exp2", "exp10", "log2", "log10", "log2Up", "cbrt", "sinh", "cosh", "tanh", "atanh",
+             "min", "max", "clamp", "avg", "dist", "zeroFloorSub", "inv", "lerp", "frac", "round", "gcd", "factorial", "pi", "gavg", "hypot"];
     }
 
     /// Minimum relative correct bits per op. 256 means bit-exact, and since
@@ -67,6 +70,7 @@ contract Precision256 is FP256Harness {
         bytes32 oh = keccak256(bytes(op));
         bool u = oh == keccak256("fromUint") || oh == keccak256("fromUintDown") || oh == keccak256("fromUintUp");
         if (inp.length == 1) return abi.encodeWithSignature(string.concat(op, u ? "(uint256)" : "(int256)"), int256(vm.parseUint(inp[0])));
+        if (inp.length == 3) return abi.encodeWithSignature(string.concat(op, "(int256,int256,int256)"), int256(vm.parseUint(inp[0])), int256(vm.parseUint(inp[1])), int256(vm.parseUint(inp[2])));
         return abi.encodeWithSignature(string.concat(op, "(int256,int256)"), int256(vm.parseUint(inp[0])), int256(vm.parseUint(inp[1])));
     }
 
@@ -83,12 +87,14 @@ contract Precision256 is FP256Harness {
         string[] memory outs = vm.parseJsonStringArray(json, ".out");
         string[] memory in0 = vm.parseJsonStringArray(json, ".in0");
         string[] memory in1 = arity > 1 ? vm.parseJsonStringArray(json, ".in1") : new string[](0);
+        string[] memory in2 = arity > 2 ? vm.parseJsonStringArray(json, ".in2") : new string[](0);
         uint256 floorBits = _floorBits(op);
         st.minBits = 256;
         for (uint256 i; i < outs.length; i++) {
             string[] memory inp = new string[](arity);
             inp[0] = in0[i];
             if (arity > 1) inp[1] = in1[i];
+            if (arity > 2) inp[2] = in2[i];
             _one(op, inp, outs[i], floorBits, st);
         }
     }
@@ -126,7 +132,7 @@ contract Precision256 is FP256Harness {
     }
 
     function test_precision_all() public virtual {
-        string[42] memory ops = _ops();
+        string[67] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));

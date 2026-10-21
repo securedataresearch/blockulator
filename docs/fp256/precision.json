@@ -13,11 +13,39 @@
     "reverts": 3,
     "worstInput": ""
   },
+  "atanh": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 261,
+    "reverts": 6,
+    "worstInput": ""
+  },
+  "avg": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 501,
+    "reverts": 3,
+    "worstInput": ""
+  },
+  "cbrt": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 317,
+    "reverts": 3,
+    "worstInput": ""
+  },
   "ceil": {
     "meanBits": 256,
     "minBits": 256,
     "n": 154,
     "reverts": 0,
+    "worstInput": ""
+  },
+  "clamp": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 295,
+    "reverts": 5,
     "worstInput": ""
   },
   "cmp": {
@@ -32,6 +60,20 @@
     "minBits": 256,
     "n": 421,
     "reverts": 87,
+    "worstInput": ""
+  },
+  "cosh": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 253,
+    "reverts": 8,
+    "worstInput": ""
+  },
+  "dist": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 399,
+    "reverts": 1,
     "worstInput": ""
   },
   "div": {
@@ -83,6 +125,20 @@
     "reverts": 5,
     "worstInput": ""
   },
+  "exp10": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 267,
+    "reverts": 7,
+    "worstInput": ""
+  },
+  "exp2": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 268,
+    "reverts": 8,
+    "worstInput": ""
+  },
   "expm1": {
     "meanBits": 256,
     "minBits": 256,
@@ -90,7 +146,21 @@
     "reverts": 5,
     "worstInput": ""
   },
+  "factorial": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 39,
+    "reverts": 39,
+    "worstInput": ""
+  },
   "floor": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 154,
+    "reverts": 0,
+    "worstInput": ""
+  },
+  "frac": {
     "meanBits": 256,
     "minBits": 256,
     "n": 154,
@@ -132,6 +202,34 @@
     "reverts": 0,
     "worstInput": ""
   },
+  "gavg": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 258,
+    "reverts": 242,
+    "worstInput": ""
+  },
+  "gcd": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 380,
+    "reverts": 23,
+    "worstInput": ""
+  },
+  "hypot": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 475,
+    "reverts": 32,
+    "worstInput": ""
+  },
+  "inv": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1345,
+    "reverts": 4,
+    "worstInput": ""
+  },
   "lambertW0": {
     "meanBits": 256,
     "minBits": 256,
@@ -146,11 +244,25 @@
     "reverts": 677,
     "worstInput": ""
   },
+  "lerp": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 1144,
+    "reverts": 71,
+    "worstInput": ""
+  },
   "ln": {
     "meanBits": 256,
     "minBits": 256,
     "n": 2118,
     "reverts": 96,
+    "worstInput": ""
+  },
+  "log10": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 759,
+    "reverts": 115,
     "worstInput": ""
   },
   "log1p": {
@@ -160,11 +272,39 @@
     "reverts": 11,
     "worstInput": ""
   },
+  "log2": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 759,
+    "reverts": 115,
+    "worstInput": ""
+  },
+  "log2Up": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 759,
+    "reverts": 115,
+    "worstInput": ""
+  },
   "lt": {
     "meanBits": 256,
     "minBits": 256,
     "n": 297,
     "reverts": 3,
+    "worstInput": ""
+  },
+  "max": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 200,
+    "reverts": 0,
+    "worstInput": ""
+  },
+  "min": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 200,
+    "reverts": 0,
     "worstInput": ""
   },
   "mul": {
@@ -202,6 +342,13 @@
     "reverts": 3,
     "worstInput": ""
   },
+  "pi": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 19,
+    "reverts": 7,
+    "worstInput": ""
+  },
   "pow": {
     "meanBits": 256,
     "minBits": 256,
@@ -216,11 +363,25 @@
     "reverts": 125,
     "worstInput": ""
   },
+  "round": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 154,
+    "reverts": 0,
+    "worstInput": ""
+  },
   "sign": {
     "meanBits": 256,
     "minBits": 256,
     "n": 1346,
     "reverts": 3,
+    "worstInput": ""
+  },
+  "sinh": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 253,
+    "reverts": 8,
     "worstInput": ""
   },
   "sqrt": {
@@ -235,6 +396,13 @@
     "minBits": 256,
     "n": 499,
     "reverts": 1,
+    "worstInput": ""
+  },
+  "tanh": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 258,
+    "reverts": 3,
     "worstInput": ""
   },
   "toFP127": {
@@ -291,6 +459,13 @@
     "minBits": 256,
     "n": 77,
     "reverts": 77,
+    "worstInput": ""
+  },
+  "zeroFloorSub": {
+    "meanBits": 256,
+    "minBits": 256,
+    "n": 398,
+    "reverts": 2,
     "worstInput": ""
   }
 }

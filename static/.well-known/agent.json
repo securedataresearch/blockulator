@@ -105,7 +105,7 @@
     "abi": "https://blockulator.com/data/fp256/abi.json",
     "ops": "https://blockulator.com/data/fp256/ops.json",
     "source": "https://github.com/securedataresearch/blockulator/blob/master/contracts/src/fp256/FP256.yul.src",
-    "version": "FP256 v3 (2026-10-16: 28 ops, adding log1p, expm1, erf, erfc, normCdf, lambertW0, lambertWm1, powu and compound); v2 and v1 stay live and verified at 0x2776d2BEE09683F95016eaF512939a7E21751C27 and 0x628b8dfC82954983a9E8E22056ffc767B4a26077"
+    "version": "FP256 v3 (2026-10-16: 28 ops, adding log1p, expm1, erf, erfc, normCdf, lambertW0, lambertWm1, powu and compound); v2 and v1 stay live and verified at 0x2776d2BEE09683F95016eaF512939a7E21751C27 and 0x628b8dfC82954983a9E8E22056ffc767B4a26077. Release four is in the source, not yet deployed: 67 ops, each correctly rounded or exact, in four objects at predicted CREATE2 addresses FP256 0x7471C249ebaE6ddA9892bc18DA45FE1D6B44897c, FP256X 0xeE62FB72b4029AD723C691095338CF51919C5B73 (erf family, Lambert W), FP256X2 0x7D5423c4c789f3Ac27E106643E7C32f45f8a058d (exp2, exp10, log2, log10, log2Up, cbrt, the hyperbolics) and FP256X3 0x59D51481cb2EA924EC17FE263cd05b90CEF22383 (min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg, hypot)"
   },
   "ladderRunner": {
     "id": "ladder-runner",

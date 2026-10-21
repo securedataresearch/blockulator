@@ -98,6 +98,21 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("ceil")) return FP256Lib.ceil(x);
         if (h == keccak256("toFixed18Down")) return FP256Lib.toFixed18Down(x);
         if (h == keccak256("toFixed18Up")) return FP256Lib.toFixed18Up(x);
+        if (h == keccak256("exp2")) return FP256Lib.exp2(x);
+        if (h == keccak256("exp10")) return FP256Lib.exp10(x);
+        if (h == keccak256("log2")) return FP256Lib.log2(x);
+        if (h == keccak256("log10")) return FP256Lib.log10(x);
+        if (h == keccak256("log2Up")) return FP256Lib.log2Up(x);
+        if (h == keccak256("cbrt")) return FP256Lib.cbrt(x);
+        if (h == keccak256("sinh")) return FP256Lib.sinh(x);
+        if (h == keccak256("cosh")) return FP256Lib.cosh(x);
+        if (h == keccak256("tanh")) return FP256Lib.tanh(x);
+        if (h == keccak256("atanh")) return FP256Lib.atanh(x);
+        if (h == keccak256("inv")) return FP256Lib.inv(x);
+        if (h == keccak256("frac")) return FP256Lib.frac(x);
+        if (h == keccak256("round")) return FP256Lib.round(x);
+        if (h == keccak256("factorial")) return FP256Lib.factorial(x);
+        if (h == keccak256("pi")) return FP256Lib.pi(x);
         revert("na");
     }
 
@@ -117,6 +132,14 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("mulUp")) return FP256Lib.mulUp(a, b);
         if (h == keccak256("divDown")) return FP256Lib.divDown(a, b);
         if (h == keccak256("divUp")) return FP256Lib.divUp(a, b);
+        if (h == keccak256("min")) return FP256Lib.min(a, b);
+        if (h == keccak256("max")) return FP256Lib.max(a, b);
+        if (h == keccak256("avg")) return FP256Lib.avg(a, b);
+        if (h == keccak256("dist")) return FP256Lib.dist(a, b);
+        if (h == keccak256("zeroFloorSub")) return FP256Lib.zeroFloorSub(a, b);
+        if (h == keccak256("gcd")) return FP256Lib.gcd(a, b);
+        if (h == keccak256("gavg")) return FP256Lib.gavg(a, b);
+        if (h == keccak256("hypot")) return FP256Lib.hypot(a, b);
         revert("na");
     }
 
@@ -137,6 +160,21 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("sign")) return FP127Lib.sign(x);
         if (h == keccak256("toFixed18")) return FP127Lib.toFixed18(x);
         if (h == keccak256("fromFixed18")) return FP127Lib.fromFixed18(x);
+        if (h == keccak256("exp2")) return FP127Lib.exp2(x);
+        if (h == keccak256("exp10")) return FP127Lib.exp10(x);
+        if (h == keccak256("log2")) return FP127Lib.log2(x);
+        if (h == keccak256("log10")) return FP127Lib.log10(x);
+        if (h == keccak256("log2Up")) return FP127Lib.log2Up(x);
+        if (h == keccak256("cbrt")) return FP127Lib.cbrt(x);
+        if (h == keccak256("sinh")) return FP127Lib.sinh(x);
+        if (h == keccak256("cosh")) return FP127Lib.cosh(x);
+        if (h == keccak256("tanh")) return FP127Lib.tanh(x);
+        if (h == keccak256("atanh")) return FP127Lib.atanh(x);
+        if (h == keccak256("inv")) return FP127Lib.inv(x);
+        if (h == keccak256("frac")) return FP127Lib.frac(x);
+        if (h == keccak256("round")) return FP127Lib.round(x);
+        if (h == keccak256("factorial")) return FP127Lib.factorial(x);
+        if (h == keccak256("pi")) return FP127Lib.pi(x);
         revert("na");
     }
 
@@ -147,6 +185,14 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("mul")) return FP127Lib.mul(a, b);
         if (h == keccak256("div")) return FP127Lib.div(a, b);
         if (h == keccak256("pow")) return FP127Lib.pow(a, b);
+        if (h == keccak256("min")) return FP127Lib.min(a, b);
+        if (h == keccak256("max")) return FP127Lib.max(a, b);
+        if (h == keccak256("avg")) return FP127Lib.avg(a, b);
+        if (h == keccak256("dist")) return FP127Lib.dist(a, b);
+        if (h == keccak256("zeroFloorSub")) return FP127Lib.zeroFloorSub(a, b);
+        if (h == keccak256("gcd")) return FP127Lib.gcd(a, b);
+        if (h == keccak256("gavg")) return FP127Lib.gavg(a, b);
+        if (h == keccak256("hypot")) return FP127Lib.hypot(a, b);
         revert("na");
     }
 
@@ -157,6 +203,8 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("ln")) return Q.ln(x);
         if (h == keccak256("neg")) return Q.neg(x);
         if (h == keccak256("abs")) return Q.abs(x);
+        if (h == keccak256("exp2")) return Q.pow_2(x);
+        if (h == keccak256("log2")) return Q.log_2(x);
         revert("na");
     }
 
@@ -167,6 +215,21 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("mul")) return Q.mul(a, b);
         if (h == keccak256("div")) return Q.div(a, b);
         if (h == keccak256("pow")) return Q.exp(Q.mul(b, Q.ln(a)));
+        revert("na");
+    }
+
+    /// The three-argument ops (#79): clamp and lerp.
+    function cLib3(string calldata op, int256 a, int256 b, int256 c) external pure returns (int256) {
+        bytes32 h = keccak256(bytes(op));
+        if (h == keccak256("clamp")) return FP256Lib.clamp(a, b, c);
+        if (h == keccak256("lerp")) return FP256Lib.lerp(a, b, c);
+        revert("na");
+    }
+
+    function cFp127_3(string calldata op, int256 a, int256 b, int256 c) external pure returns (int256) {
+        bytes32 h = keccak256(bytes(op));
+        if (h == keccak256("clamp")) return FP127Lib.clamp(a, b, c);
+        if (h == keccak256("lerp")) return FP127Lib.lerp(a, b, c);
         revert("na");
     }
 
@@ -219,6 +282,25 @@ contract GasLadder256 is FP256Harness {
         (bytes16 qb, bool okB) = _quad(b);
         if (!(okA && okB)) return NA;
         return _net(_selfTry(abi.encodeWithSelector(this.cQuad2.selector, op, qa, qb)), base);
+    }
+
+    function _run3(string memory op, int256[6] memory a, int256[6] memory b, int256[6] memory c) internal view {
+        for (uint256 i; i < a.length; i++) {
+            string memory label = string.concat(vm.toString(a[i]), ",", vm.toString(b[i]), ",", vm.toString(c[i]));
+            uint256 base = _baseline();
+            _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256,int256)"), a[i], b[i], c[i])));
+            _emit(op, i, label, "lib", _net(_selfTry(abi.encodeWithSelector(this.cLib3.selector, op, a[i], b[i], c[i])), base));
+            _emit(op, i, label, "fp127lib", _fp127Gas3(op, a[i], b[i], c[i], base));
+            _emit(op, i, label, "quad", NA);
+        }
+    }
+
+    function _fp127Gas3(string memory op, int256 a, int256 b, int256 c, uint256 base) internal view returns (int256) {
+        (int256 fa, bool okA) = _fp127(a);
+        (int256 fb, bool okB) = _fp127(b);
+        (int256 fc, bool okC) = _fp127(c);
+        if (!(okA && okB && okC)) return NA;
+        return _net(_selfTry(abi.encodeWithSelector(this.cFp127_3.selector, op, fa, fb, fc)), base);
     }
 
     // ---- the ladders ------------------------------------------------------
@@ -305,5 +387,44 @@ contract GasLadder256 is FP256Harness {
         _run1("ceil", amts, false);
         _run1("toFixed18Down", xs, false);
         _run1("toFixed18Up", xs, false);
+    }
+
+    // ---- #79: FP256X2 and FP256X3 ------------------------------------------
+
+    function test_ladder_x2() public view {
+        int256[6] memory xs = _unary();
+        // integral x skip the kernel; the rest take it
+        _run1("exp2", [_nv(-30, 0x1234 << 220), _nv(2, PI_F >> 20), _v(-1, 0), ONE, _v(4, E_F >> 20), _v(14, PI_F >> 20)], false);
+        _run1("exp10", [_nv(-30, 0x1234 << 220), _nv(2, PI_F >> 20), _v(-1, 0), ONE, _v(4, E_F >> 20), _v(14, PI_F >> 20)], false);
+        _run1("log2", xs, false);
+        _run1("log10", xs, false);
+        _run1("log2Up", xs, false);
+        _run1("cbrt", xs, false);
+        // the hyperbolics: the series below 1/2, the kernel above, the far end
+        _run1("sinh", [_v(-60, 0), _v(-2, 0), _nv(-1, 0x8 << 232), ONE, _v(4, 0x4 << 232), _v(17, 0x6 << 232)], false);
+        _run1("cosh", [_v(-60, 0), _v(-2, 0), _nv(-1, 0x8 << 232), ONE, _v(4, 0x4 << 232), _v(17, 0x6 << 232)], false);
+        _run1("tanh", [_v(-60, 0), _v(-2, 0), _nv(-1, 0x8 << 232), ONE, _v(4, 0x4 << 232), _v(7, 0)], false);
+        _run1("atanh", [_v(-60, 0), _v(-6, 0), _nv(-4, 0), _v(-2, 0), _v(-1, 0x8 << 232), _nv(-1, (uint256(1) << 236) - 1)], false);
+    }
+
+    function test_ladder_x3() public view {
+        int256[6] memory xs = _unary();
+        (int256[6] memory a, int256[6] memory b) = _posBinary();
+        _run2("min", a, b);
+        _run2("max", a, b);
+        _run2("avg", a, b);
+        _run2("dist", a, b);
+        _run2("zeroFloorSub", a, b);
+        _run2("gavg", a, b);
+        _run2("hypot", a, b);
+        _run1("inv", xs, false);
+        _run1("frac", [_v(-60, 0), _v(-1, 0), _nv(1, PI_F >> 20), _v(1, PI_F >> 20), _v(59, 0xf4240 << 216), _v(200, 1)], false);
+        _run1("round", [_v(-60, 0), _v(-1, 0), _nv(1, PI_F >> 20), _v(1, PI_F >> 20), _v(59, 0xf4240 << 216), _v(200, 1)], false);
+        _run2("gcd", [_v(3, 0), _v(10, 0x1234 << 220), _v(60, 0), _v(100, 1 << 120), _v(200, 1), _v(236, 0x5555 << 220)],
+                     [_v(2, 0), _v(9, 0x4321 << 220), _v(40, 3 << 230), _v(80, 5 << 220), _v(150, 7 << 200), _v(236, 0x3333 << 220)]);
+        _run1("factorial", [ONE, _v(2, 0x4 << 232), _v(4, 0), _v(6, 0x9 << 230), _v(9, 0xf4 << 228), _v(14, 0x3e << 230)], false);
+        _run1("pi", [ONE, _v(1, 0x8 << 232), _v(2, 0x4 << 232), _v(3, 0), _v(3, 0x2 << 232), _v(10, 0)], false);
+        _run3("clamp", xs, [_v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0)], [TWO, TWO, TWO, TWO, TWO, TWO]);
+        _run3("lerp", a, b, [HALF, _v(-2, 0), _nv(0, 0), _v(3, 0), _v(-100, 0), _v(100, 0)]);
     }
 }
