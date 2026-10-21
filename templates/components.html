@@ -96,33 +96,41 @@
 {%- if k >= value | length %}<span class="ok">{{ value }}</span>{% else %}<span class="ok">{{ value[:k] }}</span><span class="wrong">{{ value[k:] }}</span>{% endif -%}
 {%- endcomponent %}
 
-{#- Correct digits against N, one line per library, log x axis. Inline SVG, site tokens only. -#}
-{% component ladderchart(sc: map, ladder: array) -%}
-{%- set xs = {"1": 0, "2": 0.30103, "5": 0.69897, "10": 1, "20": 1.30103, "50": 1.69897, "100": 2, "365": 2.56229, "1000": 3, "10000": 4} -%}
-{%- set series = ["fp127", "solady", "abdk", "prb"] -%}
-{%- set labels = {"fp127": "FP127", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath"} -%}
-{%- set dy = {"fp127": 0, "solady": -11, "abdk": 0, "prb": 11} -%}
-{%- set W = 640 %}{% set H = 300 %}{% set L = 44 %}{% set R = 86 %}{% set T = 16 %}{% set B = 40 -%}
+{#- Correct digits against N for one input, one line per family, log N axis to 10,000, digits to 72.
+    The WAD libraries and Maker's RAY rpow are one band (lowest to highest of the four at each N);
+    every point carries its number in a <title>. Inline SVG, site tokens only. W and H set the viewBox:
+    the home page draws it twice, wide and narrow, and CSS shows one, so the text stays legible on a phone. -#}
+{% component ladderchart(cells: map, ladder: array, log10: map, W: integer = 720, H: integer = 340) -%}
+{%- set lines = ["fp256", "fp127", "quad", "abdk"] -%}
+{%- set band = ["solady", "prb", "balancer", "maker"] -%}
+{%- set names = {"fp256": "FP256", "fp127": "FP127", "quad": "binary128", "abdk": "64.64"} -%}
+{%- set cap = 72 %}{% set L = 30 %}{% if W > 500 %}{% set R = 120 %}{% else %}{% set R = 100 %}{% endif %}{% set T = 12 %}{% set B = 40 -%}
 {%- set pw = W - L - R %}{% set ph = H - T - B -%}
-<figure class="figure chart" role="img" aria-label="Correct significant digits against N for the reference input. FP127 stays near its starting count; the WAD libraries sit about twenty digits lower at every N.">
-<svg viewBox="0 0 {{ W }} {{ H }}" width="100%" style="max-width:{{ W }}px;display:block">
-{%- for g in [0, 10, 20, 30, 40] %}{% set y = T + ph - ph * g / 40 %}
-<line class="grid" x1="{{ L }}" x2="{{ L + pw }}" y1="{{ y }}" y2="{{ y }}"/><text class="tick" x="{{ L - 8 }}" y="{{ y + 4 }}" text-anchor="end">{{ g }}</text>
+<svg viewBox="0 0 {{ W }} {{ H }}" width="100%" aria-hidden="true">
+{%- for g in [0, 18, 36, 54, 72] %}{% set y = T + ph - ph * g / cap %}
+<line class="grid" x1="{{ L }}" x2="{{ L + pw }}" y1="{{ y }}" y2="{{ y }}"/><text class="tick" x="{{ L - 7 }}" y="{{ y + 4 }}" text-anchor="end">{{ g }}</text>
 {%- endfor %}
-{%- for n in [1, 10, 100, 1000, 10000] %}{% set x = L + pw * xs[n | str] / 4 %}
-<text class="tick" x="{{ x }}" y="{{ H - 14 }}" text-anchor="middle">{{ n }}</text>
+{%- for n in [1, 10, 100, 1000, 10000] %}{% set x = L + pw * (log10[n | str] | float) / 4 %}
+<text class="tick" x="{{ x }}" y="{{ H - 22 }}" text-anchor="middle">{{ n | num_format }}</text>
 {%- endfor %}
-<text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 1 }}" text-anchor="middle">N steps</text>
-<text class="tick" transform="translate(11 {{ T + ph / 2 }}) rotate(-90)" text-anchor="middle">correct digits</text>
-{%- for f in series %}{% set_global pts = "" %}{% set_global lastx = 0 %}{% set_global lasty = 0 %}
-{%- for n in ladder %}{% set c = sc.cells[f][n | str] %}{% if c.digits is defined %}{% set d = c.digits %}{% if d > 40 %}{% set d = 40 %}{% endif %}{% set x = L + pw * xs[n | str] / 4 %}{% set y = T + ph - ph * d / 40 %}{% set_global pts = pts ~ x ~ "," ~ y ~ " " %}{% set_global lastx = x %}{% set_global lasty = y %}{% endif %}{% endfor %}
-<polyline class="s-{{ f }}" points="{{ pts }}"/>
-{%- for n in ladder %}{% set c = sc.cells[f][n | str] %}{% if c.digits is defined %}{% set d = c.digits %}{% if d > 40 %}{% set d = 40 %}{% endif %}<circle class="s-{{ f }}" cx="{{ L + pw * xs[n | str] / 4 }}" cy="{{ T + ph - ph * d / 40 }}" r="3.5"/>{% endif %}{% endfor %}
-<text class="s-{{ f }} lbl" x="{{ lastx + 8 }}" y="{{ lasty + 4 + dy[f] }}">{{ labels[f] }}</text>
+<text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 4 }}" text-anchor="middle">N steps, log scale</text>
+{%- set yr = L + pw * (log10["365"] | float) / 4 %}
+<line class="guide" x1="{{ yr }}" x2="{{ yr }}" y1="{{ T }}" y2="{{ T + ph }}"/><text class="tick" x="{{ yr + 5 }}" y="{{ T + ph - 6 }}">365</text>
+{%- set_global top = "" %}{% set_global bot = "" %}{% set_global lowl = "" %}{% set_global highl = "" %}{% set_global hi = 0 %}{% set_global lo = 0 %}{% set_global ex = 0 %}{% set_global tip = "" -%}
+{%- for n in ladder %}{% set_global mx = -1 %}{% set_global mn = 999 -%}
+{%- for f in band %}{% set c = cells[f][n | str] %}{% if c.digits is defined %}{% if c.digits > mx %}{% set_global mx = c.digits %}{% endif %}{% if c.digits < mn %}{% set_global mn = c.digits %}{% endif %}{% endif %}{% endfor -%}
+{%- if mx >= 0 %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global top = top ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global bot = x ~ "," ~ (T + ph - ph * mn / cap) ~ " " ~ bot %}{% set_global lowl = lowl ~ x ~ "," ~ (T + ph - ph * mn / cap) ~ " " %}{% set_global highl = highl ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global hi = mx %}{% set_global lo = mn %}{% set_global ex = x %}{% if n == 365 %}{% set_global tip = mn ~ "–" ~ mx %}{% endif %}{% endif -%}
+{%- endfor %}
+<g class="s-solady"><polygon class="wband" points="{{ top }}{{ bot }}"><title>WAD/RAY (Solady, PRBMath, Balancer, Maker rpow) at N = 365: {{ tip }} digits</title></polygon>
+<polyline class="hi" points="{{ highl }}"/><polyline class="lo" points="{{ lowl }}"/>
+<text class="lbl" x="{{ ex + 8 }}" y="{{ T + ph - ph * hi / cap + 4 }}">WAD/RAY {{ lo }}–{{ hi }}</text></g>
+{%- for f in lines %}{% set_global pts = "" %}{% set_global lastx = 0 %}{% set_global lastd = 0 %}
+{%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digits is defined %}{% set d = c.digits %}{% if d > cap %}{% set d = cap %}{% endif %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global pts = pts ~ x ~ "," ~ (T + ph - ph * d / cap) ~ " " %}{% set_global lastx = x %}{% set_global lastd = c.digits %}{% endif %}{% endfor %}
+<g class="s-{{ f }}{% if f == 'fp127' or f == 'fp256' %} ours{% endif %}"><polyline points="{{ pts }}"/>
+{%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digits is defined %}{% set d = c.digits %}{% if d > cap %}{% set d = cap %}{% endif %}<circle cx="{{ L + pw * (log10[n | str] | float) / 4 }}" cy="{{ T + ph - ph * d / cap }}" {% if n == 365 %} class="yr" r="4"{% else %} r="2"{% endif %}><title>{{ names[f] }} at N = {{ n }}: {{ c.digits }} digits</title></circle>{% endif %}{% endfor %}
+<text class="lbl" x="{{ lastx + 8 }}" y="{{ T + ph - ph * lastd / cap + 4 }}">{{ names[f] }} {{ lastd }}</text></g>
 {%- endfor %}
 </svg>
-<figcaption>Correct significant digits of the result after N steps, capped at 40 on the axis (a WAD cell that happens to be exactly representable records 60). FP127Lib coincides with FP127 and is not drawn. A missing point is a revert. Series: FP127 emerald, ABDK sapphire, Solady and PRBMath gold told apart by dash, also labelled at the line end.</figcaption>
-</figure>
 {%- endcomponent %}
 
 {#- Median digits per form against N with a min–max band over all inputs. key = "digits" or "digitsFormat". -#}
