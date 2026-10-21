@@ -553,7 +553,8 @@ def plot_format_ceiling() -> str:
 
 def plot_accuracy() -> str:
     """3.2: FP256 against the correctly rounded word, seeded random inputs (sweep.json)."""
-    rows = [r for r in SWEEP["rows"] if r["lib"] == "fp256"]
+    rows = [r for r in SWEEP["rows"] if r["lib"] == "fp256" and "stage" not in r]
+    wide = [r for r in SWEEP["rows"] if r["lib"] == "fp256" and r.get("stage") == "second"]
     fig, ax = figure(11.5, 5.4)
     for y, r in enumerate(rows):
         share = 100 * r["correctlyRounded"] / r["n"]
@@ -562,12 +563,15 @@ def plot_accuracy() -> str:
         note = f"{r['correctlyRounded']:,} / {r['n']:,}"
         if r["misrounded"]:
             note += f"   ({r['misrounded']:,} off, by up to {r['maxUlp']} mark{'s' if r['maxUlp'] > 1 else ''})"
-        ax.text(101.5, y, note, va="center", fontsize=11.5, color=INK)
-    ax.set_yticks(range(len(rows)), [r["op"] for r in rows], fontsize=13)
+        ax.text(101.5, y, note, va="center", fontsize=9, color=INK)
+    ax.set_yticks(range(len(rows)), [r["op"] for r in rows], fontsize=9.5)
     ax.invert_yaxis()
     ax.set_xlim(0, 100)
     ax.set_xticks(range(0, 101, 25), [f"{x}%" for x in range(0, 101, 25)])
-    ax.set_xlabel("FP256: share of random inputs that return the correctly rounded word")
+    forced = sum(r["n"] for r in wide)
+    off = sum(r["misrounded"] for r in wide)
+    ax.set_xlabel("FP256: share of random inputs that return the correctly rounded word\n"
+                  f"and {forced:,} more forced through the second stage of {len(wide)} ops: {off} misrounded")
     ax.grid(axis="y", visible=False)
     return svg(fig)
 
@@ -615,6 +619,10 @@ def plot_gas() -> str:
 
 
 def plot_live() -> str:
+    # The recorded totals are the cells livecap actually called. Counting only the
+    # cells at or below each form's liveMaxN gives 9,298 rather than 9,373: liveMaxN
+    # is the minimum over a form's inputs, and inputs that climbed past it were
+    # checked too (#95). The record is right; the per-form rebuild undercounts.
     live = RELEASE["live"]
     fig, ax = figure(11.5, 4.2)
     rows = [("the ladder: every scenario, input, library and N", live["ladder"]),

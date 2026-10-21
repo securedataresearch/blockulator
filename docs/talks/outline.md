@@ -224,7 +224,7 @@ Say first:
   - FP127's pow is nearest only while |y|·x^y < 2^140, and faithful to 2^170.
   - FP256's powu is not correctly rounded for |n| ≥ 2^237. compound handles any n.
 
-Source: `docs/benchmarks/sweep.md` on PR #102 (FP256 release four) and PR #101 (FP127 v5).
+Source: `docs/benchmarks/sweep.md` (FP256 release four and FP127 v5, merged in #103).
 `scripts/fp256/generators/bounds.py` checks each stated bound against the Python models
 of the Yul. The worst measured error is 0.67 of its bound.
 
@@ -240,19 +240,20 @@ of the Yul. The worst measured error is 0.67 of its bound.
 
 ### 3.4 What it costs (1 min)
 
-- **Solady is 1.4 to 10 times cheaper per op, and should be.** Integer-exact work
-  (`mulDivUp`, `fullMulDiv`) stays in Solady and OZ; these libraries complement them.
-- Median gas per op, inline (release three and v4, live today):
+- **Solady is 1.6 to 13 times cheaper per op than FP127, and should be.** Integer-exact
+  work (`mulDivUp`, `fullMulDiv`) stays in Solady and OZ; these libraries complement them.
+- Median gas per op, inline (FP127 v5 and FP256 release four, merged in #103):
 
   | op | Solady | PRBMath | FP127 | FP256 |
   |---|---|---|---|---|
-  | mul | 321 | 641 | 531 | 1,388 |
-  | div | 329 | 705 | 981 | 2,137 |
-  | exp | 547 | 2,951 | 5,366 | 7,336 |
-  | ln | 731 | 1,099 | 1,035 | 6,950 |
-  | pow | 1,605 | 10,062 | 6,654 | 11,094 |
+  | mul | 324 | 641 | 543 | 1,388 |
+  | div | 330 | 705 | 956 | 2,137 |
+  | exp | 525 | 2,957 | 6,605 | 7,866 |
+  | ln | 709 | 1,099 | 1,156 | 7,508 |
+  | pow | 1,609 | 10,068 | 5,871 | 12,142 |
 
-- FP127 costs less than PRBMath on mul, ln and pow.
+- FP127 costs less than PRBMath on mul and pow. Since v5 rounds ln to the nearest word,
+  it costs 57 gas more than PRBMath's.
 - What the premium buys: Resupply's rejected borrow, Bunni's 35.63 wei, and Balancer's
   0 of 165 calls. Set against nine-figure losses, a few thousand gas is the cheapest line
   in the audit.
@@ -271,8 +272,8 @@ Say first:
   - Lambert W always takes the wide step, at about 152k.
 - Budget gas for the p99 if an attacker can choose your inputs.
 
-Source: `docs/benchmarks/gas.md` and `gas256.md` (live releases); the gas columns of
-`docs/benchmarks/sweep.md` on PR #102 (release four).
+Source: `docs/benchmarks/gas.md` and `gas256.md` (FP127 v5 and FP256 release four); the gas columns of
+`docs/benchmarks/sweep.md` (release four).
 
 ### 3.5 Why nothing else needs writing (0.5 min)
 
@@ -290,9 +291,10 @@ Source: `docs/benchmarks/gas.md` and `gas256.md` (live releases); the gas column
 Use FP127 and FP256. They are free, MIT-licensed, and one `forge install` away. Keep the
 state in the format, and round toward the protocol at the edge.
 
-**Before the talk:** 3.2 and 3.3 describe FP127 v5 (#101) and FP256 release four (#102).
-Deploy both and merge them. Until then, the live contracts are FP127 v4 and FP256 release
-three, and 3.2 must be said in the past tense of release three.
+**Before the talk:** 3.2 and 3.3 describe FP127 v5 and FP256 release four, merged in #103
+and shipping inline through `forge install`. Deploy both. Until then, the live contracts
+are FP127 v4 and FP256 release three: say "the library" for 3.2 and 3.3, not "the
+deployed contract".
 
 ---
 
@@ -339,9 +341,8 @@ Done (`make talk`, 18 slides, in the outline's order; titles are placeholders):
 13. 3.1 The format ceiling: digits against exponent bits, computed (19 → 71.3, 13 → 73.2,
     11 → 73.8, 9 → 74.4).
 14. 3.2 The accuracy ceiling: FP256's correctly rounded share per op (sweep.json). It reads
-    master's sweep, which is release three until #102 merges. Run `make talk` again after
-    the merge. Slide 15's gas likewise gets release four's columns once `gas256.md` is
-    regenerated.
+    master's sweep, release four since #103; slide 15's gas reads release four's
+    `gas.md` and `gas256.md`.
 15. 3.3 What it costs: median gas, Solady / PRBMath / FP127 / FP256 for mul, div, exp, ln,
     pow (gas.md, gas256.md).
 16. Both goals met, with the walls stated.
