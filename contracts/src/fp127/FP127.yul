@@ -371,31 +371,34 @@ object "FP127" {
             }
 
             function exp2frac(f) -> r {
+                // mulg(r, f) inline and unsigned: f and every partial sum are below 2^194
+                let l := 0
+                let h := 0
                 r := 0x1b5a5019cfe1d4f099ea512721
-                r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
-                r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
-                r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
-                r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
-                r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
-                r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
-                r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
-                r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
-                r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
-                r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
-                r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
-                r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
-                r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
-                r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
-                r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
-                r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
-                r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
-                r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
-                r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
-                r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
-                r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
-                r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
-                r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
-                r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x26af06ddbabc8cd6364386b5760)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x57709b02fc63eaab1c4797e6ea8b)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xabdf567d5ded49a416936c1ae8c18)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x145b07f4c51e82851a25b974d02341f)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1314964d587a24af79377a43902b7ec888b8c0)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x10000000000000000000000000000000000005fc97a4a9077)
             }
 
             function exp2core(t) -> r {
