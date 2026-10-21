@@ -22,21 +22,22 @@ ask_secondary_href = "/writeup/"
 
 [[extra.steps]]
 label = "the word"
-title = "128 fractional bits"
-text = "WAD gives the fraction 60 bits and the rest to overflow headroom. FP127 gives it 128."
+title = "128 fixed bits, 237 floating"
+text = "WAD gives the fraction 60 bits. FP127 gives it 128. FP256 floats 237 significant bits at any magnitude."
 
 [[extra.steps]]
 label = "the ladder"
 title = "Measured over N steps"
-text = "13 scenarios, 87 inputs, 10 libraries, N = 1 to 10,000, against 300-digit arithmetic."
+# {scenarios}, {inputs} and {others} are counted from static/data/ladder.json by templates/home.html.
+text = "FP127, FP256 and {others} other libraries, {scenarios} scenarios, {inputs} inputs, N = 1 to 10,000, against 300-digit arithmetic."
 
 [[extra.steps]]
 label = "two forms"
-title = "One source"
-text = "A deployed object and an inline library, generated from the same Yul and fuzzed equal on all of int256."
+title = "One source each"
+text = "Each is one Yul source, generated into a deployed contract and an inline library, fuzzed equal on all of int256."
 
 [[extra.steps]]
 label = "trust"
 title = "No owner"
-text = "No storage, no proxy, no upgrade. A change is a new salt and a new address."
+text = "No contract has storage, a proxy or an upgrade. A change is a new salt and a new address."
 +++
