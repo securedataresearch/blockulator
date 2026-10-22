@@ -376,11 +376,13 @@ def _indent(text: str, n: int) -> str:
 # A flat switch is a linear chain of comparisons, about 22 gas per selector
 # ranked before the one called; the binary search below costs one comparison
 # per level instead, and pays from a dozen or so exports (measured: FP127's
-# 55 save 465 gas a call on average, FP256X3's 15 save 72, FP256X2's 10 save
-# 31 with some ops dearer, FP256X's 5 lose). Objects with fewer than
-# DISPATCH_MIN exports keep the flat switch, and so does FP256: the search
-# costs it 180 bytes of a runtime within a few hundred of the 24,576 limit.
-FLAT_DISPATCH = {"FP256"}
+# 55 save 465 gas a call on average, FP256X3's 15 would save 72, FP256X2's
+# 10 31 with some ops dearer, FP256X's 5 would lose). Objects with fewer
+# than DISPATCH_MIN exports keep the flat switch. So do the four FP256
+# objects: release four is frozen for deployment, its bytecode and
+# addresses final (and the search would cost FP256 core 180 bytes of its
+# 64 of headroom).
+FLAT_DISPATCH = {"FP256", "FP256X", "FP256X2", "FP256X3"}
 DISPATCH_MIN = 12
 # A leaf of the selector search is a plain switch of at most this many cases.
 DISPATCH_LEAF = 4

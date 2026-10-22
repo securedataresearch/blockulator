@@ -27,7 +27,7 @@ read inside the call's own window (test/sweep/Sweep.t.sol):
 Then the build-setting bench (test/profile/ViaIr.t.sol) twice, under the
 default profile (via_ir = false) and [profile.viair], beside the Yul objects.
 The object's own call and dispatch cost (a flat selector switch is a linear
-chain, FP127's and FP256X3's a binary search: it grows with the comparisons
+chain, FP127's a binary search: it grows with the comparisons
 before the selector's case, gen.py dispatch_steps) is fitted on the trivial
 ops, where the inline call is the same code, and taken out of the heavy ops'
 object column.
