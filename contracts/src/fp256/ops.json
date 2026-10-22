@@ -174,7 +174,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "The principal branch of Lambert W, W(x) e^W(x) = x, W >= -1. Seeds as FP127's: the branch-point series in p = sqrt(2(1 + e x)) with 1 + e x exact, x - x^2 + 3/2 x^3 on (-1/4, 1/8), Winitzki's L (1 - ln(1 + L)/(2 + L)), L = ln(1 + x), above (the logarithms to 2^-21, enough for a seed). Then fourth-order steps at word precision on the log form w + ln(w/x) = 0 (no e^w, so the whole range up to W = 181,700 works; one to three from these seeds) until one starts within 2^-66, and one rounding when its error bound clears the rounding boundary; below p = 2^-21 the branch-point series to p^11 at word precision, tested the same way. On a miss one Newton step at 2^-510 (the residual in three words) and one rounding: correctly rounded.",
+      "notice": "The principal branch of Lambert W, W(x) e^W(x) = x, W >= -1. Below 1 + e x = 1/2 (x < -0.184) the unknown is q = 1 + W on (q - 1) e^q + 1 = 1 + e x, with 1 + e x exact: a seed from sqrt(2 (1 + e x)), sixth-order steps at 2^-126 (none to two), one at word precision whose error is q times the precision, so the branch point costs none, and one rounding when the bound clears the rounding boundary. Elsewhere x (1 - x + 3x^2/2) or Winitzki's seed from a table-free logarithm, fourth-order log-form steps at 2^-126 (one or two) and one at word precision with a bound (no e^w, so the whole range up to W = 181,700 works), tested the same way. On a miss one Newton step at 2^-510 (the residual in three words) and one rounding: correctly rounded. W rounds to x below 2^-238.",
       "domain": "x >= -1/e",
       "reverts": "OutOfRange() below -1/e or for a word that is not a number"
     },
@@ -186,7 +186,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "The secondary real branch of Lambert W, W(x) <= -1. Seeds as FP127's: the branch-point series in -p for x < -1/4 (below p = 2^-21 the result, as in lambertW0), the asymptotic L - ln(-L) + ln(-L)/L, L = ln(-x), above; then lambertW0's fourth-order log-form steps (no e^w: W reaches about -181,700 at the bottom of the format), its rounding test and, on a miss, its Newton step at 2^-510: correctly rounded.",
+      "notice": "The secondary real branch of Lambert W, W(x) <= -1. Below 1 + e x = 1/4 (x < -0.276) as lambertW0 in q = 1 + W (negative here); above, the asymptotic seed L - ln(-L) + ln(-L)/L, L = ln(-x), from the table-free logarithm, lambertW0's fourth-order log-form steps (one to three at 2^-126, one at word precision; no e^w: W reaches about -181,700 at the bottom of the format), its rounding test and, on a miss, its Newton step at 2^-510: correctly rounded.",
       "domain": "-1/e <= x < 0",
       "reverts": "OutOfRange() outside that or for a word that is not a number"
     },

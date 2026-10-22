@@ -2089,14 +2089,19 @@ function fp256_normCdf(x) -> r {
 }
 
 // ---------------------------------------------------------------------------
-// Lambert W (release three)
+// Lambert W (release three; the seed -> fast -> safe shape from the second
+// gas pass): a log-free seed, cheap table-free steps at 2^-126, one safe step
+// with a bound and the rounding test. Near -1/e the unknown is q = 1 + W on
+// Phi(q) = (q - 1) e^q + 1 = 1 + e x, whose error is q times the working
+// precision, so the branch point costs no precision; elsewhere the
+// fourth-order log-form step lwlog.
 // ---------------------------------------------------------------------------
 
-/// q = 1 + e x for x = -m 2^-238 in [-1/2, -1/4), from the exact product of
-/// the significand with e in two words (2^-492), rounded once. Reverts
-/// OutOfRange when q < 0 (x below -1/e); zero exactly at the word nearest
-/// -1/e only if it is -1/e.
-function lwq(m) -> q {
+/// y = 1 + e x for x = -m 2^-238 in [-1/2, -1/4) as Y 2^ey, Y in [2^254,
+/// 2^255), from the exact product of the significand with e in two words
+/// (2^-492), floored once into Y. Reverts OutOfRange when y < 0 (x below
+/// -1/e); Y = 0 exactly at the word nearest -1/e only if it is -1/e.
+function lwy(m) -> Y, ey {
     let p1, p0 := mul512(m, 0xadf85458a2bb4a9aafdc5620273d3cf1d8b9c583ce2d3695a9e13641146433fb)
     let c1, c0 := mul512(m, 0x3324e7738926cfbe5f4bf8d8d8c31d763da06c80abb1185eb4f7c7b5757f5958)
     let t := or(shl(2, c1), shr(254, c0))
@@ -2106,71 +2111,158 @@ function lwq(m) -> q {
     let dl := sub(0, lo)
     let dh := sub(sub(0x100000000000000000000000000000000000000000000000000000000000, hi), iszero(iszero(lo)))
     if slt(dh, 0) { rev(0x7db3aba7) }
-    if iszero(or(dh, dl)) { q := 0 leave }
+    if iszero(or(dh, dl)) { leave }
     let n := msb(dl)
     if dh { n := add(256, msb(dh)) }
-    let d := shl(sub(254, n), dl)
-    if gt(n, 254) { d := shr512(dh, dl, sub(n, 254)) }
-    q := normround(0, sub(add(0x3ffff, n), 492), d)
+    Y := shl(sub(254, n), dl)
+    if gt(n, 254) { Y := shr512(dh, dl, sub(n, 254)) }
+    ey := sub(n, 746)
 }
 
-/// W(x) near the branch point from p = +-sqrt(2(1 + e x)), |p| < 2^-21 (+
-/// for W0, - for W-1): the series W = -1 + sum_(k=1..11) mu_k p^k (Corless et
-/// al.; the next term is below 2^-261) as D = |W| 2^254 = 2^254 - P S, S by
-/// Horner on P = p 2^254 (|p| floored) with the mu_k rounded at 2^-254: each
-/// step within a unit and shrunk by |p| after it, P's floor one unit, the
-/// last product's floor one, p's own rounding (1.5 2^-237 relative) under
-/// 2^-257, so D within 2.2 units (bounds.py's lambert). Rounded once when
-/// that clears the rounding boundary, else lwfix from the rounded value.
-function lwser(x, p) -> r {
-    let P := shr(sub(0x3ffed, and(shr(236, p), 0x7ffff)), or(and(p, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000))
-    if shr(255, p) { P := sub(0, P) }
-    let S := 0x27fdc8c94fb38a69e89d4e4ab38ccc029656fdeb59fa04815ade5a7cb38240
-    S := add(sub(0, 0x3e71be1a92260ba70af38553d309a99b8cd446298c481991d887214da438ee), mulw(P, S))
-    S := add(0x628ad2a498c39cf0fa1d2fe7ec71fed1d3b094716efb67abcdd2d8d2cf67d1, mulw(P, S))
-    S := add(sub(0, 0x9d902b2ef224dcc5e5a70b6d8dc2bc90ebd2b086afec93544511bfba01f24b), mulw(P, S))
-    S := add(0x1002c98983bc435a045285a1b7069470dcdc800879e4896c9e5fb4ad8b52121, mulw(P, S))
-    S := add(sub(0, 0x1a9bbcb24fe29f595de1b82e796c546675cfa8d4a04088c62d92416ff11207a), mulw(P, S))
-    S := add(0x2d9203cae759203cae759203cae759203cae759203cae759203cae759203cae, mulw(P, S))
-    S := add(sub(0, 0x518a6dfc3518a6dfc3518a6dfc3518a6dfc3518a6dfc3518a6dfc3518a6dfc3), mulw(P, S))
-    S := add(0x9c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c7, mulw(P, S))
-    S := add(sub(0, 0x1555555555555555555555555555555555555555555555555555555555555555), mulw(P, S))
-    S := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(P, S))
-    let D := sub(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(P, S))
-    r := normround(1, 0x3ffff, D)
-    if rbad(D, 4) { r := lwfix(x, r) }
+/// k ln 2 + ln r at 2^-128 for a mantissa r in [2^126, 2^127) ([1, 2) at
+/// 2^-126) and a signed integer k: four reduction stages by 2^(1/2),
+/// 2^(1/4), 2^(1/8) and 2^(1/16) (a floored product each) leave r in
+/// [1, 2^(1/16)), then ln r = 2 atanh s, s = (r - 1)/(r + 1) in [0, 0.0217),
+/// the odd series sum s^(2i + 1)/(2i + 1) to i = 11 by Horner at 2^-126
+/// (truncation under 2^-131); within about 2^-124. The table-free
+/// logarithm behind the fast steps.
+function lnc(r, k) -> L {
+    let j := shl(4, k)
+    if iszero(lt(r, 0x5a827999fcef32422cbec4d9baa55f50)) {
+        r := shr(126, mul(r, 0x2d413cccfe779921165f626cdd52afa8))
+        j := add(j, 8)
+    }
+    if iszero(lt(r, 0x4c1bf828c6dc54b7a356918c17217b7b)) {
+        r := shr(126, mul(r, 0x35d13f32b5a75abd0e69a2ee640b4ff8))
+        j := add(j, 4)
+    }
+    if iszero(lt(r, 0x45cae0f1f545eb737df23143ac529e48)) {
+        r := shr(126, mul(r, 0x3ab031b9f7490e4bb40b5d6cdc1b953f))
+        j := add(j, 2)
+    }
+    if iszero(lt(r, 0x42d561b3e6243d8a62e4adc610aa60d9)) {
+        r := shr(126, mul(r, 0x3d495f454921b30b1ee7431ebb6603f1))
+        j := add(j, 1)
+    }
+    let s := sdiv(shl(126, sub(r, 0x40000000000000000000000000000000)), add(r, 0x40000000000000000000000000000000))
+    let s2 := sar(126, mul(s, s))
+    let A := 0x2c8590b21642c8590b21642c8590b21
+    A := add(0x30c30c30c30c30c30c30c30c30c30c3, sar(126, mul(s2, A)))
+    A := add(0x35e50d79435e50d79435e50d79435e5, sar(126, mul(s2, A)))
+    A := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, sar(126, mul(s2, A)))
+    A := add(0x4444444444444444444444444444444, sar(126, mul(s2, A)))
+    A := add(0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec5, sar(126, mul(s2, A)))
+    A := add(0x5d1745d1745d1745d1745d1745d1746, sar(126, mul(s2, A)))
+    A := add(0x71c71c71c71c71c71c71c71c71c71c7, sar(126, mul(s2, A)))
+    A := add(0x9249249249249249249249249249249, sar(126, mul(s2, A)))
+    A := add(0xccccccccccccccccccccccccccccccd, sar(126, mul(s2, A)))
+    A := add(0x15555555555555555555555555555555, sar(126, mul(s2, A)))
+    A := add(0x40000000000000000000000000000000, sar(126, mul(s2, A)))
+    L := add(mul(j, 0xb17217f7d1cf79abc9e3b39803f2f6b), shl(2, sar(125, mul(s, A))))
 }
 
-/// e^w for Lambert W's former float Newton steps: exp's kernel path and one
-/// rounding. No op calls it since the steps moved to lwlog; it stays because
-/// make profile's probe list (scripts/fp127/gen.py PROBES) names it, and
-/// nothing outside an export's closure reaches the bytecode.
-function lwexp(w) -> r {
-    let s, e, m := unpack(w)
-    let k, f := explog2(sub(e, 0x3ffff), m)
-    r := exp2kf(s, k, f)
+/// k ln 2 + ln r as lnc but crude, for the seeds: a degree-3 fit of
+/// ln(1 + t) on [0, 1) at 2^-126 (within 2^-10.8), which is all a seed
+/// within 2^-5 needs.
+function lnc0(r, k) -> L {
+    let t := sub(r, 0x40000000000000000000000000000000)
+    let P := add(sub(0, 0x193a803a4689b1e7d4fe8cc4f525bca5), sar(126, mul(0x6c624f4ace937ad74c72c1900aebb69, t)))
+    P := add(0x3ecce60a25db5c9757959e657fdbf429, sar(126, mul(P, t)))
+    P := add(0x95fd7e22848b1d16f2f2bb6adf6c7, sar(126, mul(P, t)))
+    L := add(mul(k, 0xb17217f7d1cf79abc9e3b39803f2f6af), shl(2, P))
 }
 
-/// ln x for x > 0 within about 2^-21, for Lambert W's seeds only (which
-/// are within 2^-5 of W anyway): log2(1 + f) for the top 64 fraction bits f
-/// by a degree-7 Chebyshev fit at 2^-64 (2^-21.4, lwlnfit in bounds.py),
-/// plus the exponent, times ln 2, rounded once.
-function lwln(x) -> r {
-    // (u + p 2^-64) ln 2 at 2^-128
-    let t := mul(add(shl(64, sub(and(shr(236, x), 0x7ffff), 0x3ffff)), lw2q(and(shr(172, x), 0xffffffffffffffff))), 0xb17217f7d1cf79ac)
-    r := normround(slt(t, 0), 0x4007d, absw(t))
+/// The mantissa (in [2^126, 2^127)) and exponent of v > 0 at 2^-128, for
+/// lnc and lnc0.
+function lnm(v) -> r, k {
+    let n := msb(v)
+    r := shr(sub(n, 126), v)
+    if lt(n, 126) { r := shl(sub(126, n), v) }
+    k := sub(n, 128)
 }
 
-/// log2(1 + f 2^-64) at 2^-64 for 0 <= f < 2^64, within 2^-21.4 (lwln).
-function lw2q(f) -> p {
-    p := 266377486799641577
-    p := add(sub(0, 1395521547598861468), sar(64, mul(p, f)))
-    p := add(3481873446185410082, sar(64, mul(p, f)))
-    p := add(sub(0, 5939118987770338793), sar(64, mul(p, f)))
-    p := add(8708466524488688751, sar(64, mul(p, f)))
-    p := add(sub(0, 13287486091412030003), sar(64, mul(p, f)))
-    p := add(26612150119985157926, sar(64, mul(p, f)))
-    p := add(6798757998674, sar(64, mul(p, f)))
+
+/// Winitzki's seed L (1 - ln(1 + L)/(2 + L)), L = ln(1 + x) (ln x from
+/// 2^18, where the two differ by under 2^-18), for x >= 1/8 at 2^-128 by
+/// the crude logarithm, rounded to a float: within 2^-5.5 of W (bounds.py).
+function lwsw(x) -> w {
+    let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+    let u := sub(and(shr(236, x), 0x7ffff), 0x3ffff)
+    let L := 0
+    switch slt(u, 18)
+    case 1 {
+        let r, k := lnm(add(0x100000000000000000000000000000000, shr(sub(108, u), m)))
+        L := lnc0(r, k)
+    }
+    default { L := lnc0(shr(110, m), u) }
+    let r, k := lnm(add(0x100000000000000000000000000000000, L))
+    let l1 := lnc0(r, k)
+    let t := sdiv(shl(100, l1), shr(28, add(0x200000000000000000000000000000000, L)))
+    w := normround(0, 0x4007d, sub(L, shr(110, mul(shr(18, L), t))))
+}
+
+/// The origin seed x (1 - x (1 - 3x/2)) for |x| < 1/4, the cubic at 2^-128
+/// times the significand, rounded to a float: within 8/3 |x|^3 of W.
+function lwso(x) -> w {
+    let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+    let e := and(shr(236, x), 0x7ffff)
+    let xa := shr(sub(0x4006b, e), m)
+    if shr(255, x) { xa := sub(0, xa) }
+    let inner := add(sub(0x100000000000000000000000000000000, xa), shr(1, mul(3, shr(128, mul(xa, xa)))))
+    let p1, p0 := mul512(shl(18, m), inner)
+    w := normround(shr(255, x), e, or(shl(128, p1), shr(128, p0)))
+}
+
+/// The asymptotic seed L - ln(-L) + ln(-L)/L, L = ln(-x), for W-1 on
+/// -0.276 < x < 0 at 2^-128 by the crude logarithm, rounded to a float:
+/// within 2^-3.2 (bounds.py).
+function lwsm(x) -> w {
+    let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+    let lx := lnc0(shr(110, m), sub(and(shr(236, x), 0x7ffff), 0x3ffff))
+    let r, k := lnm(sub(0, lx))
+    let ll := lnc0(r, k)
+    w := normround(1, 0x4007d, sub(0, add(sub(lx, ll), sdiv(shl(100, ll), sar(28, lx)))))
+}
+
+/// One fourth-order step on f(w) = w + ln(w / x) = 0 from the float w at
+/// 2^-128 (lwlog's reversion w (1 - u + uv/2 - uv^2/2 + u^2 v/3) with the
+/// ratio of the significands to 2^-126 and lnc for the logarithm; the two
+/// quotients by h = 1 + w truncated to 100 bits, which leaves the step's
+/// own error under 2^-124), and |u| 2^128, the step's size: from within
+/// 2^-18 the step lands within about 2^-70, where lwlog's bound holds.
+function lwf128(x, w) -> wn, au {
+    let mx := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+    let mw := or(and(w, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+    let ew := and(shr(236, w), 0x7ffff)
+    let k := sub(ew, and(shr(236, x), 0x7ffff))
+    let r := div(shl(19, mw), shr(107, mx))
+    if lt(r, 0x40000000000000000000000000000000) {
+        r := shl(1, r)
+        k := sub(k, 1)
+    }
+    let L := lnc(r, k)
+    // w and h = 1 + w at 2^-128 (|w| < 2^18)
+    let wf := shr(sub(0x4006b, ew), mw)
+    if shr(255, w) { wf := sub(0, wf) }
+    let hs := sar(28, add(wf, 0x100000000000000000000000000000000))
+    let u := sdiv(shl(100, add(wf, L)), hs)
+    let v := sdiv(shl(100, u), hs)
+    let uv := sar(128, mul(u, v))
+    let fac := add(sub(add(sub(0x100000000000000000000000000000000, u), sar(1, uv)), sar(1, sar(128, mul(uv, v)))), sdiv(sar(128, mul(sar(128, mul(u, u)), v)), 3))
+    let p1, p0 := mul512(shl(18, mw), fac)
+    wn := normround(shr(255, w), ew, or(shl(128, p1), shr(128, p0)))
+    au := absw(u)
+}
+
+/// The fast stage of the log form: lwf128 steps until one starts within
+/// 2^-18 (at most four; one or two from the seeds, bounds.py).
+function lwfast(x, w) -> r {
+    r := w
+    for { let i := 0 } lt(i, 4) { i := add(i, 1) } {
+        let au := 0
+        r, au := lwf128(x, r)
+        if lt(au, 0x4000000000000000000000000000) { break }
+    }
 }
 
 /// a / b at 2^-254 for signed words, |a / b| < 4: the quotient of the
@@ -2189,10 +2281,12 @@ function sdiv254(a, b) -> q {
 /// of the ratio of the significands (floored, so within 37 + 1.45 units)
 /// plus the exponent difference, packed as log2pair does (the shift's floor
 /// one unit of 2^Ls) and times ln 2: f within 31.4 units of 2^Ls, so u
-/// within du = 1 + 32 2^254 / |h 2^-Ls| units; D within 2 (1.01 du + 5) + 1
+/// within du = 1 + 32 2^254 / |h 2^-Ls| units (the quotient by |h| / 16
+/// rounded up); v within 2^-125 relative, under 2^-4 of a unit in u v /
+/// 2; D within 2 (1.01 du + 5) + 1
 /// once max(|u|, |v|) <= 2^-66 (cv = 1), where the truncation is below 2^-8
 /// of a unit (bounds.py's lambert measures it).
-function lwlog(x, w, q2) -> D, err, cv {
+function lwlog(x, w) -> D, err, cv {
     let mx := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
     let mw := or(and(w, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
     let ew := and(shr(236, w), 0x7ffff)
@@ -2204,12 +2298,7 @@ function lwlog(x, w, q2) -> D, err, cv {
         k := sub(k, 1)
     }
     default { q := div254(mw, mx) }
-    // q2: a first step with lw2q's log (to 2^-21, so its D only seeds the next)
-    let lg := 0
-    switch q2
-    case 0 { lg := log2m(q) }
-    default { lg := shl(190, lw2q(shr(190, sub(q, 0x4000000000000000000000000000000000000000000000000000000000000000)))) }
-    let Lm, Ls := log2pairg(k, lg)
+    let Lm, Ls := log2pairg(k, log2m(q))
     // w at 2^Ls (|w| < 2^(255 + Ls)); f = w + ln(w / x) and h = w + 1 there
     let n := sub(sub(ew, 0x400eb), Ls)
     let wf := shl(n, mw)
@@ -2217,24 +2306,30 @@ function lwlog(x, w, q2) -> D, err, cv {
     if shr(255, w) { wf := sub(0, wf) }
     let hf := add(wf, shl(sub(0, Ls), 1))
     let u := sdiv254(add(wf, mulw(Lm, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b)), hf)
-    let v := sar(add(Ls, 254), sdiv254(u, hf))
+    // v = u / h: u times 1/h to 2^-125 from the top 126 bits of hf (|hf| >
+    // 2^253, else the full quotient), which enters D at second order
+    let v := 0
+    switch gt(absw(hf), 0x2000000000000000000000000000000000000000000000000000000000000000)
+    case 1 { v := mulw(u, shl(128, sdiv(0x1000000000000000000000000000000000000000000000000000000000000000, sar(128, hf)))) }
+    default { v := sdiv254(u, hf) }
+    v := sar(add(Ls, 254), v)
     let uv := mulw(u, v)
     D := mulwu(shl(18, mw), add(sub(add(sub(0x4000000000000000000000000000000000000000000000000000000000000000, u), sar(1, uv)), sar(1, mulw(uv, v))), sdiv(mulw(mulw(u, u), v), 3)))
-    let du := add(17, shl(4, div(0x8000000000000000000000000000000000000000000000000000000000000000, absw(hf))))
+    let ah := shr(4, absw(hf))
+    let du := add(1, div(add(0x8000000000000000000000000000000000000000000000000000000000000000, sub(ah, 1)), ah))
     err := add(add(shl(1, du), shr(4, du)), 12)
-    if iszero(hf) { err := not(0) }
+    if lt(absw(hf), 16) { err := not(0) }
     cv := iszero(shr(188, or(absw(u), absw(v))))
 }
 
-/// W(x) from the seed w: lwlog steps (at most six; one to three from FP127's
-/// seeds) until one starts within 2^-66, then its unrounded value rounded
-/// once when its bound clears the rounding boundary, else lwfix from it.
-function lwiter(x, w, q2) -> r {
-    for { let i := 0 } lt(i, 6) { i := add(i, 1) } {
-        let D, err, cv := lwlog(x, w, q2)
+/// W(x) from the float w, within 2^-66 after the fast stage: the safe lwlog
+/// step, its unrounded value rounded once when its bound clears the rounding
+/// boundary, else lwfix from it (a step that starts outside 2^-66 is
+/// repeated, at most three).
+function lwiter(x, w) -> r {
+    for { let i := 0 } lt(i, 3) { i := add(i, 1) } {
+        let D, err, cv := lwlog(x, w)
         w := normround(shr(255, w), and(shr(236, w), 0x7ffff), D)
-        cv := and(cv, iszero(q2))
-        q2 := 0
         if cv {
             if iszero(rbad(D, err)) {
                 r := w
@@ -2246,91 +2341,216 @@ function lwiter(x, w, q2) -> r {
     r := lwfix(x, w)
 }
 
+/// u2 of e^q = 1 + q u1, u_k = 1 + q u_{k+1}/(k + 1) from u_K = 1, for q at
+/// 2^-254 (signed, |q| < 1), K terms: each step within 2 units (the product's
+/// floor, the quotient's truncation) and shrunk by |q|/(k + 1) by the next,
+/// so u2 within 2.8 units for |q| <= 0.95. Then e^q = 1 + q + q^2 u2/2 and
+/// Phi(q)/q^2 = 1 + (q - 1) u2/2.
+function lwu2(qa, K) -> u {
+    u := 0x4000000000000000000000000000000000000000000000000000000000000000
+    for { let k := K } gt(k, 2) { k := sub(k, 1) } {
+        u := add(0x4000000000000000000000000000000000000000000000000000000000000000, sdiv(mulw(qa, u), k))
+    }
+}
+
+/// 1 + tau (b1 + tau (b2 + tau (b3 + tau (b4 + tau b5)))) at 2^-254, the
+/// reversion of Phi(q + d) = Phi(q) - R to sixth order: d = -t S(tau) with
+/// t = R / Phi'(q), tau = t / q and (sympy, the Taylor coefficients
+/// Phi^(n)(q) = (q + n - 1) e^q divided by Phi')
+///   b1 = (1 + q)/2, b2 = (3 + 2q (2 + q))/6,
+///   b3 = (15 + q (25 + q (18 + 6q)))/24,
+///   b4 = (105 + q (210 + q (190 + q (96 + 24q))))/120,
+///   b5 = (1890 + q (4410 + q (4760 + q (3052 + q (1200 + 240q)))))/1440.
+/// b1 and b2 by an integer Horner on q at 2^-254 with the constants at
+/// 2^-240 (14 bits of headroom; |b_k| < 10 for |q| <= 0.95), within a unit
+/// of 2^-240; b3 to b5 at 2^-112 (lwb3), which tau^3 <= 2^-132 makes
+/// enough; |b6| < 11 there, so the truncation is under 11 |q tau^6|.
+function lwbs(qa, tau) -> S {
+    S := add(sdiv(add(shl(240, 3), mulw(qa, add(shl(240, 4), mulw(qa, shl(240, 2))))), 6), mulw(tau, shl(128, lwb3(sar(128, qa), sar(128, tau)))))
+    S := add(sar(1, add(shl(240, 1), sar(14, qa))), mulw(tau, S))
+    S := shl(14, add(shl(240, 1), mulw(tau, S)))
+}
+
+/// b3 + tau (b4 + tau b5) at 2^-112 for q and tau at 2^-126, the tail of
+/// the reversion's S that tau^3 makes needs only 128 bits of.
+function lwb3(qa, tau) -> R {
+    R := sdiv(add(shl(112, 1890), sar(126, mul(qa, add(shl(112, 4410), sar(126, mul(qa, add(shl(112, 4760), sar(126, mul(qa, add(shl(112, 3052), sar(126, mul(qa, add(shl(112, 1200), sar(126, mul(qa, shl(112, 240)))))))))))))))), 1440)
+    R := add(sdiv(add(shl(112, 105), sar(126, mul(qa, add(shl(112, 210), sar(126, mul(qa, add(shl(112, 190), sar(126, mul(qa, add(shl(112, 96), sar(126, mul(qa, shl(112, 24))))))))))))), 120), sar(126, mul(tau, R)))
+    R := add(sdiv(add(shl(112, 15), sar(126, mul(qa, add(shl(112, 25), sar(126, mul(qa, add(shl(112, 18), sar(126, mul(qa, shl(112, 6)))))))))), 24), sar(126, mul(tau, R)))
+}
+
+/// 1 + tau (b1 + tau (b2 + tau (b3 + tau (b4 + tau b5)))) at 2^-112 for the
+/// fast step, q and tau at 2^-126.
+function lwbs128(qa, tau) -> S {
+    S := add(sdiv(add(shl(112, 3), sar(126, mul(qa, add(shl(112, 4), sar(126, mul(qa, shl(112, 2))))))), 6), sar(126, mul(tau, lwb3(qa, tau))))
+    S := add(sar(1, add(shl(112, 1), sar(14, qa))), sar(126, mul(tau, S)))
+    S := add(shl(112, 1), sar(126, mul(tau, S)))
+}
+
+/// The fast step near -1/e: one sixth-order step at 2^-126 on Phi(q) =
+/// (q - 1) e^q + 1 = y in q = 1 + W from |q| = Q 2^ep (Q in [2^125, 2^127),
+/// sg the sign: + for W0, - for W-1), y = Y 2^ey with 2 ep - ey = k + 2.
+/// e^q by the series (K terms, |q|^K/K! under 2^-130), the relative residual
+/// rho = Phi(q)/y - 1 and tau = rho Phi(q)/(q^2 e^q (1 + rho)) = t/q, then
+/// |q| (1 - tau S(tau)). Returns the new Q and |tau| 2^126: from tau the
+/// step lands within about 11 |q| tau^6, so within 2^-126 from 2^-24.
+function lwq128(Q, ep, sg, Y, k) -> Qn, at {
+    let qa := shr(sub(sub(0, ep), 126), Q)
+    if sg { qa := sub(0, qa) }
+    let j := 126
+    if qa { j := sub(126, msb(absw(qa))) }
+    let K := add(2, div(130, add(j, 2)))
+    if gt(K, 35) { K := 35 }
+    let u := 0x40000000000000000000000000000000
+    for { let i := K } gt(i, 2) { i := sub(i, 1) } {
+        u := add(0x40000000000000000000000000000000, sdiv(sar(126, mul(qa, u)), i))
+    }
+    let G := add(0x40000000000000000000000000000000, sar(127, mul(sub(qa, 0x40000000000000000000000000000000), u)))
+    let E := add(add(0x40000000000000000000000000000000, qa), sar(127, mul(qa, sar(126, mul(qa, u)))))
+    // (1 + rho) 2^128 = Q^2 G 2^(k + 2) 2^128 / Y
+    let Rr := divu(shl(add(2, k), mulhi(mul(Q, Q), shl(130, G))), Y)
+    let rho := sub(Rr, 0x100000000000000000000000000000000)
+    let tau := sdiv(shl(126, sar(128, mul(rho, G))), shr(128, mul(E, Rr)))
+    Qn := sub(Q, sar(126, mul(Q, sar(112, mul(tau, lwbs128(qa, tau))))))
+    at := absw(tau)
+}
+
+/// The safe step near -1/e: lwq128 at 2^-254 from |q| = Qa 2^eq (Qa in
+/// [2^253, 2^255)), 2 eq - ey = k - 254, with mulw and div254 and the
+/// series to |q|^K/K! < 2^-258. Returns the new |q| at 2^-254 and |tau|
+/// 2^254. The bound (bounds.py's lambert measures it): u2 within 2.8 units,
+/// so Phi/q^2 within |q - 1| 1.4 + 1 (3.7 for q >= -0.95, 2.4 for q <= 0.77);
+/// the two floored products and the floored quotient by Y (itself floored)
+/// put rho within 24 units (W-1) or 16 (W0) of 2^-254; tau = rho G/(E (1 +
+/// rho)) within 24 G/E <= 17 units (G/E = Phi/(q^2 e^q) <= 0.704 on [-0.95,
+/// 0), <= 0.5 on (0, 0.77]: 8 units); the correction q tau S within |q|
+/// times that plus the products' two floors; the shift into 2^-254 one;
+/// the truncation 11 |q| tau^6 under 2^-8 of a unit once |tau| <= 2^-44:
+/// |q| within 17 |q| + 3 units (W-1), 8 |q| + 3 (W0).
+function lwq254(Qa, eqs, sg, Y, k) -> qn, at {
+    let qa := shr(sub(sub(0, eqs), 254), Qa)
+    if sg { qa := sub(0, qa) }
+    let j := sub(254, msb(absw(qa)))
+    let K := add(2, div(261, add(j, 3)))
+    if gt(K, 58) { K := 58 }
+    let u2 := lwu2(qa, K)
+    let G := add(0x4000000000000000000000000000000000000000000000000000000000000000, sar(1, mulw(sub(qa, 0x4000000000000000000000000000000000000000000000000000000000000000), u2)))
+    let E := add(add(0x4000000000000000000000000000000000000000000000000000000000000000, qa), sar(1, mulw(qa, mulw(qa, u2))))
+    let Rr := div254(shl(k, mulwu(mulwu(Qa, Qa), G)), Y)
+    let rho := sub(Rr, 0x4000000000000000000000000000000000000000000000000000000000000000)
+    let tau := sdiv254(mulw(rho, G), mulwu(E, Rr))
+    qn := shr(sub(sub(0, eqs), 254), sub(Qa, mulw(Qa, mulw(tau, lwbs(qa, tau)))))
+    at := absw(tau)
+}
+
+/// W near -1/e, both branches (sg = 1 for W-1), from y = Y 2^ey: the seed
+/// q0 = +-p (1 -+ p/3 + 11 p^2/72), p = sqrt(2y) by isqrt at 2^-126
+/// (within 2^-6.6 for p <= 1/2, 2^-3.9 at p = 1); lwq128 steps until one
+/// starts within 2^-24 (none below p = 2^-15, one to 2^-7, two beyond);
+/// one lwq254 step (repeated only if it started outside 2^-44); then
+/// W = -1 +- q as D = 2^254 -+ q 2^254, rounded once when its bound (8 q + 3
+/// < 10 for W0, 17 |q| + 3 < 20 for W-1) clears the rounding boundary, else
+/// lwfix from the rounded value.
+function lwbr(x, sg, Y, ey) -> r {
+    let k := sub(2, and(ey, 1))
+    let eqs := sar(1, add(sub(ey, 254), k))
+    let ep := add(eqs, 128)
+    let P := isqrt(shr(add(1, k), Y))
+    let p := shr(sub(sub(0, ep), 126), P)
+    let s0 := add(0x40000000000000000000000000000000, div(mul(11, shr(126, mul(p, p))), 72))
+    switch sg
+    case 0 { s0 := sub(s0, div(p, 3)) }
+    default { s0 := add(s0, div(p, 3)) }
+    let Q := shr(126, mul(P, s0))
+    for { let i := 0 } lt(i, 4) { i := add(i, 1) } {
+        let at := 0
+        Q, at := lwq128(Q, ep, sg, Y, k)
+        if lt(at, 0x4000000000000000000000000) { break }
+    }
+    let Qa := shl(128, Q)
+    let qn := 0
+    for { let i := 0 } lt(i, 3) { i := add(i, 1) } {
+        let at := 0
+        qn, at := lwq254(Qa, eqs, sg, Y, k)
+        if lt(at, 0x400000000000000000000000000000000000000000000000000000) { break }
+        Qa := shl(sub(sub(0, eqs), 254), qn)
+    }
+    let D := sub(0x4000000000000000000000000000000000000000000000000000000000000000, qn)
+    let err := 10
+    if sg {
+        D := add(0x4000000000000000000000000000000000000000000000000000000000000000, qn)
+        err := 20
+    }
+    r := normround(1, 0x3ffff, D)
+    if rbad(D, err) { r := lwfix(x, r) }
+}
+
 /// @object FP256X
 /// @export lambertW0(int256 x) returns (int256 r)
 /// @domain x >= -1/e
 /// @reverts OutOfRange() below -1/e or for a word that is not a number
 /// @notice The principal branch of Lambert W, W(x) e^W(x) = x, W >= -1.
-///         Seeds as FP127's: the branch-point series in p = sqrt(2(1 + e x))
-///         with 1 + e x exact, x - x^2 + 3/2 x^3 on (-1/4, 1/8), Winitzki's
-///         L (1 - ln(1 + L)/(2 + L)), L = ln(1 + x), above (the logarithms
-///         to 2^-21, enough for a seed). Then fourth-order
-///         steps at word precision on the log form w + ln(w/x) = 0 (no e^w,
-///         so the whole range up to W = 181,700 works; one to three from
-///         these seeds) until one starts within 2^-66, and one rounding when
-///         its error bound clears the rounding boundary; below p = 2^-21 the
-///         branch-point series to p^11 at word precision, tested the same
-///         way. On a miss one Newton step at 2^-510 (the residual in three
-///         words) and one rounding: correctly rounded.
+///         Below 1 + e x = 1/2 (x < -0.184) the unknown is q = 1 + W on
+///         (q - 1) e^q + 1 = 1 + e x, with 1 + e x exact: a seed from
+///         sqrt(2 (1 + e x)), sixth-order steps at 2^-126 (none to two),
+///         one at word precision whose error is q times the precision, so
+///         the branch point costs none, and one rounding when the bound
+///         clears the rounding boundary. Elsewhere x (1 - x + 3x^2/2) or
+///         Winitzki's seed from a table-free logarithm, fourth-order
+///         log-form steps at 2^-126 (one or two) and one at word precision
+///         with a bound (no e^w, so the whole range up to W = 181,700
+///         works), tested the same way. On a miss one Newton step at
+///         2^-510 (the residual in three words) and one rounding:
+///         correctly rounded. W rounds to x below 2^-238.
 function fp256_lambertW0(x) -> r {
     let s, e, m := unpack(x)
     if iszero(e) { r := 0 leave }
     let u := sub(e, 0x3ffff)
-    let one := 0x3ffff00000000000000000000000000000000000000000000000000000000000
-    let w := 0
-    if s { if sgt(u, sub(0, 2)) { rev(0x7db3aba7) } }
-    switch or(slt(u, sub(0, 3)), and(s, eq(u, sub(0, 3))))
-    case 1 {
-        let x2 := fp256_mul(x, x)
-        w := fp256_add(fp256_sub(x, x2), fp256_mul(x2, fp256_mul(x, 0x3ffff80000000000000000000000000000000000000000000000000000000000)))
-    }
-    default {
-        if s {
-            let q := lwq(m)
-            if iszero(q) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
-            let p := fp256_sqrt(fp256_add(q, q))
-            if slt(p, 0x3ffea00000000000000000000000000000000000000000000000000000000000) {
-                r := lwser(x, p)
+    if s {
+        if sgt(u, sub(0, 2)) { rev(0x7db3aba7) }
+        if eq(u, sub(0, 2)) {
+            let Y, ey := lwy(m)
+            if iszero(Y) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+            if slt(ey, sub(0, 255)) {
+                r := lwbr(x, 0, Y, ey)
                 leave
             }
-            let p2 := fp256_mul(p, p)
-            r := lwiter(x, fp256_add(fp256_sub(fp256_sub(p, one), fp256_mul(p2, 0x3fffd55555555555555555555555555555555555555555555555555555555555)),
-                           fp256_mul(fp256_mul(p2, p), 0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39)), 0)
-            leave
         }
-        let l := lwln(fp256_add(x, one))
-        w := fp256_mul(l, fp256_sub(one, fp256_div(lwln(fp256_add(l, one)), fp256_add(l, 0x4000000000000000000000000000000000000000000000000000000000000000))))
     }
-    // Winitzki's seed (within 2^-5.7 up to x = 2^64, better above) takes a
-    // first step on lw2q's log
-    r := lwiter(x, w, and(iszero(or(s, slt(u, sub(0, 3)))), slt(u, 64)))
+    if slt(u, sub(0, 237)) { r := x leave }
+    let w := 0
+    switch and(iszero(s), sgt(u, sub(0, 4)))
+    case 1 { w := lwsw(x) }
+    default { w := lwso(x) }
+    if sgt(u, sub(0, 24)) { w := lwfast(x, w) }
+    r := lwiter(x, w)
 }
 
 /// @object FP256X
 /// @export lambertWm1(int256 x) returns (int256 r)
 /// @domain -1/e <= x < 0
 /// @reverts OutOfRange() outside that or for a word that is not a number
-/// @notice The secondary real branch of Lambert W, W(x) <= -1. Seeds as
-///         FP127's: the branch-point series in -p for x < -1/4 (below
-///         p = 2^-21 the result, as in lambertW0), the
-///         asymptotic L - ln(-L) + ln(-L)/L, L = ln(-x), above; then
-///         lambertW0's fourth-order log-form steps (no e^w: W reaches about
-///         -181,700 at the bottom of the format), its rounding test and, on
-///         a miss, its Newton step at 2^-510: correctly rounded.
+/// @notice The secondary real branch of Lambert W, W(x) <= -1. Below
+///         1 + e x = 1/4 (x < -0.276) as lambertW0 in q = 1 + W (negative
+///         here); above, the asymptotic seed L - ln(-L) + ln(-L)/L, L =
+///         ln(-x), from the table-free logarithm, lambertW0's fourth-order
+///         log-form steps (one to three at 2^-126, one at word precision;
+///         no e^w: W reaches about -181,700 at the bottom of the format),
+///         its rounding test and, on a miss, its Newton step at 2^-510:
+///         correctly rounded.
 function fp256_lambertWm1(x) -> r {
     let s, e, m := unpack(x)
     let u := sub(e, 0x3ffff)
     if or(iszero(s), sgt(u, sub(0, 2))) { rev(0x7db3aba7) }
-    let w := 0
-    switch eq(u, sub(0, 2))
-    case 1 {
-        let q := lwq(m)
-        if iszero(q) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
-        let p := fp256_sqrt(fp256_add(q, q))
-        if slt(p, 0x3ffea00000000000000000000000000000000000000000000000000000000000) {
-            r := lwser(x, fp256_neg(p))
+    if eq(u, sub(0, 2)) {
+        let Y, ey := lwy(m)
+        if iszero(Y) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
+        if slt(ey, sub(0, 256)) {
+            r := lwbr(x, 1, Y, ey)
             leave
         }
-        let p2 := fp256_mul(p, p)
-        w := fp256_sub(fp256_sub(fp256_sub(0xbffff00000000000000000000000000000000000000000000000000000000000, p), fp256_mul(p2, 0x3fffd55555555555555555555555555555555555555555555555555555555555)),
-                       fp256_mul(fp256_mul(p2, p), 0x3fffc38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e39))
     }
-    default {
-        let lx := lwln(and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
-        let ll := lwln(fp256_neg(lx))
-        w := fp256_add(fp256_sub(lx, ll), fp256_div(ll, lx))
-    }
-    r := lwiter(x, w, 0)
+    r := lwiter(x, lwfast(x, lwsm(x)))
 }
 
 // ---------------------------------------------------------------------------

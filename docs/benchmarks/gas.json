@@ -2,7 +2,7 @@
  "generated": "2026-10-22",
  "description": "Gas per op across an input ladder. First four forms are FP127; the first two and the third include the external call. FP127Lib and the competitors are the internal library call alone, timed inside the harness's entry point net of its dispatch. null = reverted or unsupported. summary holds min/median/max per form, null where there is no measurement. typical (where present) is the same over random inputs that take no shortcut.",
  "versions": {
-  "fp127": "dc4afde",
+  "fp127": "6e705a6",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
