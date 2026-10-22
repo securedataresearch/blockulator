@@ -81,26 +81,6 @@ object "FP256X3" {
                 p1 := sub(sub(mm, p0), lt(mm, p0))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function divh(a, b) -> q {
                 let prod0 := shl(255, a)
                 let prod1 := shr(1, a)
@@ -708,9 +688,7 @@ object "FP256X3" {
 
             function isqrtw(n1, n0) -> y {
                 y := isqrt(n1)
-                y := shr(1, add(shl(128, y), divu(n1, y)))
-                let qh := divu(n1, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n1), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n1, mul(y, y))), y))
                 if gtsq(y, n1) { y := sub(y, 1) }
                 if gtsq(y, n1) { y := sub(y, 1) }
                 for {} sqle(add(y, 1), n1, n0) {} { y := add(y, 1) }

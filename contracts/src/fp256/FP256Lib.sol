@@ -317,31 +317,20 @@ library FP256Lib {
         }
     }
     /// @notice sqrt(x): the significand shifted to an even exponent, its
-    ///         integer square root at 2^136 (Newton: a 256-bit seed, one
-    ///         2^128 stage, one 2^256 stage, corrected by squaring), rounded
-    ///         once. Never overflows or underflows.
+    ///         integer square root at 2^136 (Newton: the word root of the top
+    ///         256 bits, one residual step in a word, corrected by squaring),
+    ///         rounded once. Never overflows or underflows.
+    /// @dev floor(sqrt(N)) for N = n 2^256, n = m 2^(16 + odd) in [2^252, 2^254):
+    ///      Y = floor(sqrt(n)) is a 127-bit root (isqrt), y0 = Y 2^128 is
+    ///      below the root R by less than 2^128, and the Newton step from y0
+    ///      is y0 + (N - y0^2) / (2 y0) = y0 + (n - Y^2) 2^127 / Y: the
+    ///      residual n - Y^2 <= 2Y is a word, so one mul and one div replace
+    ///      the three 512-bit divu stages of release four. The step lands at or
+    ///      above R (AM-GM) and below R + (R - y0)^2 / (2 y0) < R + 2, its
+    ///      floor above R - 1, so the iterate is floor(R), + 1 or + 2 and the
+    ///      two 512-bit squarings step it back to the floor.
     function sqrt(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function gtsq(y, n) -> t {
                 let p0 := mul(y, y)
                 let mm := mulmod(y, y, not(0))
@@ -414,9 +403,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -1399,26 +1386,6 @@ library FP256Lib {
                 r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function gtsq(y, n) -> t {
                 let p0 := mul(y, y)
                 let mm := mulmod(y, y, not(0))
@@ -1446,9 +1413,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -5547,26 +5512,6 @@ library FP256Lib {
                 r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function gtsq(y, n) -> t {
                 let p0 := mul(y, y)
                 let mm := mulmod(y, y, not(0))
@@ -5594,9 +5539,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -6286,26 +6229,6 @@ library FP256Lib {
                 if x { r := xor(x, 0x8000000000000000000000000000000000000000000000000000000000000000) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function gtsq(y, n) -> t {
                 let p0 := mul(y, y)
                 let mm := mulmod(y, y, not(0))
@@ -6333,9 +6256,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -7068,9 +6989,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -11392,26 +11311,6 @@ library FP256Lib {
     ///         root.
     function gavg(int256 _a, int256 _b) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function gtsq(y, n) -> t {
                 let p0 := mul(y, y)
                 let mm := mulmod(y, y, not(0))
@@ -11444,9 +11343,7 @@ library FP256Lib {
 
             function isqrtw(n1, n0) -> y {
                 y := isqrt(n1)
-                y := shr(1, add(shl(128, y), divu(n1, y)))
-                let qh := divu(n1, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n1), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n1, mul(y, y))), y))
                 if gtsq(y, n1) { y := sub(y, 1) }
                 if gtsq(y, n1) { y := sub(y, 1) }
                 for {} sqle(add(y, 1), n1, n0) {} { y := add(y, 1) }
@@ -11583,26 +11480,6 @@ library FP256Lib {
                 t1, t0 := wadd(x1, x0, y1, y0)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function gtsq(y, n) -> t {
                 let p0 := mul(y, y)
                 let mm := mulmod(y, y, not(0))
@@ -11629,9 +11506,7 @@ library FP256Lib {
 
             function isqrtw(n1, n0) -> y {
                 y := isqrt(n1)
-                y := shr(1, add(shl(128, y), divu(n1, y)))
-                let qh := divu(n1, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n1), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n1, mul(y, y))), y))
                 if gtsq(y, n1) { y := sub(y, 1) }
                 if gtsq(y, n1) { y := sub(y, 1) }
                 for {} sqle(add(y, 1), n1, n0) {} { y := add(y, 1) }

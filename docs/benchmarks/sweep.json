@@ -67,9 +67,9 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 2692,
-   "gasP99": 2692,
-   "gasMax": 2692
+   "gasMedian": 1542,
+   "gasP99": 1558,
+   "gasMax": 1558
   },
   {
    "lib": "fp256",
@@ -989,9 +989,9 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 3828,
-   "gasP99": 4063,
-   "gasMax": 4069
+   "gasMedian": 2678,
+   "gasP99": 2929,
+   "gasMax": 2935
   },
   {
    "lib": "fp256",
@@ -1006,9 +1006,9 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 5287,
-   "gasP99": 5602,
-   "gasMax": 5608
+   "gasMedian": 4145,
+   "gasP99": 4460,
+   "gasMax": 4468
   },
   {
    "lib": "fp256",

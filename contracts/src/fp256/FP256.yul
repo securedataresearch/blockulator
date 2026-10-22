@@ -971,9 +971,7 @@ object "FP256" {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)

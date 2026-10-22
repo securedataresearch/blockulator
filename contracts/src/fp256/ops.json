@@ -65,7 +65,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "sqrt(x): the significand shifted to an even exponent, its integer square root at 2^136 (Newton: a 256-bit seed, one 2^128 stage, one 2^256 stage, corrected by squaring), rounded once. Never overflows or underflows.",
+      "notice": "sqrt(x): the significand shifted to an even exponent, its integer square root at 2^136 (Newton: the word root of the top 256 bits, one residual step in a word, corrected by squaring), rounded once. Never overflows or underflows.",
       "domain": "x >= 0",
       "reverts": "OutOfRange() for x < 0 or a word that is not a number"
     },

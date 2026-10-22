@@ -1108,9 +1108,18 @@ function gtsq(y, n) -> t {
 /// @domain x >= 0
 /// @reverts OutOfRange() for x < 0 or a word that is not a number
 /// @notice sqrt(x): the significand shifted to an even exponent, its
-///         integer square root at 2^136 (Newton: a 256-bit seed, one
-///         2^128 stage, one 2^256 stage, corrected by squaring), rounded
-///         once. Never overflows or underflows.
+///         integer square root at 2^136 (Newton: the word root of the top
+///         256 bits, one residual step in a word, corrected by squaring),
+///         rounded once. Never overflows or underflows.
+/// @dev floor(sqrt(N)) for N = n 2^256, n = m 2^(16 + odd) in [2^252, 2^254):
+///      Y = floor(sqrt(n)) is a 127-bit root (isqrt), y0 = Y 2^128 is
+///      below the root R by less than 2^128, and the Newton step from y0
+///      is y0 + (N - y0^2) / (2 y0) = y0 + (n - Y^2) 2^127 / Y: the
+///      residual n - Y^2 <= 2Y is a word, so one mul and one div replace
+///      the three 512-bit divu stages of release four. The step lands at or
+///      above R (AM-GM) and below R + (R - y0)^2 / (2 y0) < R + 2, its
+///      floor above R - 1, so the iterate is floor(R), + 1 or + 2 and the
+///      two 512-bit squarings step it back to the floor.
 function fp256_sqrt(x) -> r {
     let s, e, m := unpack(x)
     if s { rev(0x7db3aba7) }
@@ -1119,9 +1128,7 @@ function fp256_sqrt(x) -> r {
     let odd := and(u, 1)
     let n := shl(add(16, odd), m)
     let y := isqrt(n)
-    y := shr(1, add(shl(128, y), divu(n, y)))
-    let qh := divu(n, y)
-    y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+    y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
     if gtsq(y, n) { y := sub(y, 1) }
     if gtsq(y, n) { y := sub(y, 1) }
     r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -3918,12 +3925,12 @@ function sqle(y, n1, n0) -> t {
 }
 
 /// floor(sqrt(n1 2^256 + n0)) for n1 in [2^252, 2^254): sqrt's root of
-/// n1 2^256, then up while (y + 1)^2 still fits (at most twice).
+/// n1 2^256 (the word root of n1 and one residual Newton step in a word,
+/// stepped back by squaring), then up while (y + 1)^2 still fits (at most
+/// twice, as n0 < 2^256 moves the root by under 2).
 function isqrtw(n1, n0) -> y {
     y := isqrt(n1)
-    y := shr(1, add(shl(128, y), divu(n1, y)))
-    let qh := divu(n1, y)
-    y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n1), mul(qh, y)), y))))
+    y := add(shl(128, y), div(shl(127, sub(n1, mul(y, y))), y))
     if gtsq(y, n1) { y := sub(y, 1) }
     if gtsq(y, n1) { y := sub(y, 1) }
     for {} sqle(add(y, 1), n1, n0) {} { y := add(y, 1) }
