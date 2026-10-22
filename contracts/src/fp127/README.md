@@ -107,7 +107,7 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `ln`, `log2`, `log10` | x > 0 | `OutOfRange` |
 | `log2Up(x)` | ceil(log2 x): msb − 128, plus one unless a power of two | `OutOfRange` |
 | `sqrt(x)` | floor, x ≥ 0 | `OutOfRange` |
-| `cbrt(x)` | all x, odd; exact for perfect cubes | `Overflow` only at −2^255 |
+| `cbrt(x)` | all x, odd; nearest decided exactly; exact for perfect cubes | `Overflow` only at −2^255 |
 | `pow(x, y)` | x^y for x ≥ 0; 0^0 = 1; shortcuts y = 1, y = 2 (the rounded square), x = 2, x = 10 | `OutOfRange` for x < 0, `Overflow` |
 | `powu(x, n)` | x^floor(n) for any integer n, binary exponentiation on a 256-bit mantissa, a 512-bit one where that is ambiguous, one rounding; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
 | `compound(r, n)` | (1 + r)^floor(n) through `powu` | `Overflow`, `DivisionByZero` |
@@ -160,7 +160,9 @@ as one 768-bit product), and e^(f ln 2) − 1 is evaluated by `expk` to about
 double-word factors e^(v·4^-k) from a 24-entry table, the rest goes to
 u + u²/2 in the double word and a one-word tail. The result is formed at
 2^-192 in two words and rounded once. `l2p` refines the one-word log2 by one
-Newton step through `expk` (2^-299 absolute); `pow` and `cbrt` use it.
+Newton step through `expk` (2^-299 absolute); `pow` uses it. `cbrt` is
+Newton on y³ = |x|·2^256 with precision doubling (a seed from the bits, four
+word steps, one residual step, exact cubes) and an exact midpoint test.
 `ln`, `log2` and `log10` round the one-word kernel when its 2^-145 error
 bound cannot change the answer and fall back to `l2p` within 2^-145 of a
 midpoint (about one input in 2^17). Lambert W ends with one Newton step
