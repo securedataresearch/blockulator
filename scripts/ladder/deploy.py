@@ -5,7 +5,7 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Thirteen contracts, salt "FP127 ladder v8": the eleven adapters (no constructor
+Thirteen contracts, salt "FP127 ladder v9": the eleven adapters (no constructor
 arguments), LadderRunner and EdgeRunner (constructor = the ten adapter
 addresses as one array, so their init code depends on them). Each transaction is sent with the node's
 own gas estimate plus 25%, because Sepolia's code-deposit pricing is not
@@ -20,13 +20,14 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
 PROXY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
-SALT_ASCII = "FP127 ladder v8"
+SALT_ASCII = "FP127 ladder v9"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
@@ -96,7 +97,12 @@ def cmd_deploy(rpc: str) -> int:
         print(f"{'':16} tx {receipt['transactionHash']} block {int(receipt['blockNumber'], 16)} gasUsed {int(receipt['gasUsed'], 16):,} status {status}")
         if status != 1:
             return 1
-        if not deployed(rpc, c["address"]):
+        # a public RPC can answer from a node a block behind the receipt's
+        for _ in range(10):
+            if deployed(rpc, c["address"]):
+                break
+            time.sleep(3)
+        else:
             print("no code at the predicted address")
             return 1
     return 0
@@ -104,7 +110,7 @@ def cmd_deploy(rpc: str) -> int:
 
 def cmd_record(rpc: str) -> int:
     rec = {"chainId": 11155111, "network": "sepolia", "proxy": PROXY, "salt": SALT, "saltAscii": SALT_ASCII,
-           "fp127": "0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1", "contracts": {}}
+           "fp127": json.loads((RECORD.parent / "FP127.json").read_text())["address"], "contracts": {}}
     for c in plan():
         code = cast("code", c["address"], "--rpc-url", rpc)
         rec["contracts"][c["name"]] = {

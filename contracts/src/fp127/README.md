@@ -32,13 +32,14 @@ make size             # deployed runtime size against the 24,576-byte limit
 
 The same Yul function bodies are emitted twice.
 
-**Deployed object.** `FP127.yul` wraps the bodies in a `switch` on the
-4-byte selector. It is deployed with CREATE2 through the deterministic
-proxy at `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the
-version. v4 (salt `"FP127 v4"`) is live at
-`0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` on Sepolia. This source is v5
-(salt `"FP127 v5"`, 55 ops, 17,157 bytes of runtime), not yet deployed;
-`make predict` prints its address. Record and verification recipe in
+**Deployed object.** `FP127.yul` wraps the bodies in a dispatcher that
+finds the 4-byte selector by binary search. It is deployed with CREATE2
+through the deterministic proxy at
+`0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the version.
+This source is v5 (salt `"FP127 v5"`, 55 ops, 19,863 bytes of runtime),
+live on Sepolia at `0x619176d72D7a12390F8970802943D344c0fd3fE2` since
+2026-10-21 (Blockulator 2.1); `make predict` recomputes that address from
+the artifact. v1 to v4 stay deployed. Record and verification recipe in
 [`contracts/deployments/FP127.md`](../../deployments/FP127.md).
 Every contract that `staticcall`s it runs identical bytecode.
 `FP127Caller.sol` is the minimal Solidity wrapper for that path; it bubbles

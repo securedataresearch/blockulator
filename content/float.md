@@ -12,7 +12,7 @@ FP127 has 38 digits at 1, 8 at 10^−30 and nothing outside 2^−128 to 2^127; t
 
 ## The word
 
-Sign in bit 255, a 19-bit exponent (bias 262,143), a 236-bit fraction with an implicit one: 237 significant bits, about 71 digits, from 10^−78,900 to 10^78,900. No NaN, no infinity, no subnormals, no negative zero. Zero is the all-zero word; any other word with exponent 0 reverts `OutOfRange`. Equality is bit equality.
+Sign in bit 255, a 19-bit exponent (bias 262,143), a 236-bit fraction with an implicit one: 237 significant bits, about 71 digits, from 10^−78,913 to 10^78,913. No NaN, no infinity, no subnormals, no negative zero. Zero is the all-zero word; any other word with exponent 0 reverts `OutOfRange`. Equality is bit equality.
 
 {{ <wordstrip format="fp256" /> }}
 
@@ -24,11 +24,21 @@ Rounding: once per op (Lambert W iterates), ties away from zero. Overflow revert
 |---|---:|---|
 | FP127 | 38 at 1 | 2^−128 to 2^127 (±1.7 × 10^38) |
 | ABDKMathQuad | 34 | 10^±4,932 |
-| FP256 | 71 | 10^±78,900 |
+| FP256 | 71 | 10^±78,913 |
 
 ## Deployed form
 
 {{ <deployment lib="fp256" /> }}
+
+Release four (Blockulator 2.1) is four objects from one source; the record above is FP256's. The other three, on the same CREATE2 proxy:
+
+| object | ops | address |
+|---|---|---|
+| FP256X | `erf`, `erfc`, `normCdf`, `lambertW0`, `lambertWm1` | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
+| FP256X2 | `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `sinh`, `cosh`, `tanh`, `atanh` | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
+| FP256X3 | `min`, `max`, `clamp`, `avg`, `dist`, `zeroFloorSub`, `inv`, `lerp`, `frac`, `round`, `gcd`, `factorial`, `pi`, `gavg`, `hypot` | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
+
+The inline library holds all 67 ops. Records: [`FP256.md`](/contracts/deployments/FP256.md).
 
 ## Inline form
 
@@ -137,7 +147,7 @@ Radiant's empty-market exploit used the same half unit: its share burn rounded t
 
 Each rounds once from the exact value. A positive `Up` result never underflows to zero: `toUintUp` and `toFixed18Up` charge one unit for any positive dust. `toUintDown` and `toUintUp` revert with `OutOfRange` below zero.
 
-All fourteen are new in release four, which is the source you get with `forge install`. The deployed release three object does not have them yet; until release four is deployed, use the inline library. `round` and `frac` (#79, also release four) are not edge ops: `round` rounds to nearest, halves away from zero.
+All fourteen are new in release four: the deployed FP256 object has them, and so does the inline library you get with `forge install`. The release three object does not. `round` and `frac` (#79, also release four) are not edge ops: `round` rounds to nearest, halves away from zero.
 
 ### Divide last
 
@@ -170,13 +180,13 @@ function index() external view returns (int256) {
 }
 ```
 
-In FP256 the gain is gas more than digits. In the example test, an FP256 index multiplied 1,000 times ends 9.2 to 13.8 parts in 2^236 from the log read. Each `exp` and `mul` rounds to nearest at 237 bits, so the errors stay tiny and partly cancel. What you save is the `exp` and `mul` on every accrual (7,866 + 1,388 gas, median, in [`gas256.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas256.md)). You pay an `exp` on every read instead. This fits a continuous rate only. With a rate per period r, L gains n × log1p(r), and that rounding is added n times; use `compound(r, n)` there. The [FP127 page](/library/#keep-an-index-as-its-logarithm) has the measured numbers.
+In FP256 the gain is gas more than digits. In the example test, an FP256 index multiplied 1,000 times ends 9.2 to 13.8 parts in 2^236 from the log read. Each `exp` and `mul` rounds to nearest at 237 bits, so the errors stay tiny and partly cancel. What you save is the `exp` and `mul` on every accrual (7,759 + 1,133 gas, median, in [`gas256.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas256.md)). You pay an `exp` on every read instead. This fits a continuous rate only. With a rate per period r, L gains n × log1p(r), and that rounding is added n times; use `compound(r, n)` there. The [FP127 page](/library/#keep-an-index-as-its-logarithm) has the measured numbers.
 
 The snippets are compiled and run on the replays' own integers in [`test/examples/Integrating.t.sol`]({{ config.extra.repo }}/blob/master/test/examples/Integrating.t.sol).
 
 ## Release three
 
-28 ops. `exp`, `ln`, `log1p`, `expm1`, `erf`, `erfc`, `normCdf` and every non-transcendental op return the correctly rounded word at every committed vector. `pow`, `powu` and `compound` are within one unit in the last place while |y log2 x| stays below about 2^13; the Lambert branches are within two units away from −1/e. On random inputs (4,000 to 20,000 per op) `add`, `mul`, `div`, `sqrt`, `exp`, `log1p`, `expm1`, `erf` and `erfc` were correctly rounded every time; `ln`, `normCdf` and `pow` were one unit off on 1 in 20,000, 4,000 and 2,500. The kernels run at 2^−254 with 512-bit products: 2^f from a 16-entry table and a degree-26 polynomial, log2 from twelve reduction stages and a degree-17 polynomial, `erfc` as e^(−y²) times a scaled series or continued fraction (never 1 − erf). Release one borrowed FP127's kernels (146, 149 and 123 bits on exp, ln and pow); release two refit them for the wide word; release three added nine ops.
+Blockulator 2.0's FP256, still deployed at `0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be`: 28 ops. `exp`, `ln`, `log1p`, `expm1`, `erf`, `erfc`, `normCdf` and every non-transcendental op return the correctly rounded word at every committed vector. `pow`, `powu` and `compound` are within one unit in the last place while |y log2 x| stays below about 2^13; the Lambert branches are within two units away from −1/e. On random inputs (4,000 to 20,000 per op) `add`, `mul`, `div`, `sqrt`, `exp`, `log1p`, `expm1`, `erf` and `erfc` were correctly rounded every time; `ln`, `normCdf` and `pow` were one unit off on 1 in 20,000, 4,000 and 2,500. The kernels run at 2^−254 with 512-bit products: 2^f from a 16-entry table and a degree-26 polynomial, log2 from twelve reduction stages and a degree-17 polynomial, `erfc` as e^(−y²) times a scaled series or continued fraction (never 1 − erf). Release one borrowed FP127's kernels (146, 149 and 123 bits on exp, ln and pow); release two refit them for the wide word; release three added nine ops.
 
 ## The ops
 

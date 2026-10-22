@@ -1,6 +1,6 @@
 base_url = "https://blockulator.com"
 title = "blockulator"
-description = "Blockulator 2.0 by Secure Data Research: FP127 and FP256, two rulers for EVM arithmetic, measured against ABDK, Quad, Solady, PRBMath, Balancer, Aave, Morpho and Maker."
+description = "Blockulator 2.1 by Secure Data Research: FP127 and FP256, two rulers for EVM arithmetic, measured against ABDK, Quad, Solady, PRBMath, Balancer, Aave, Morpho and Maker."
 compile_sass = false
 build_search_index = false
 generate_feeds = false

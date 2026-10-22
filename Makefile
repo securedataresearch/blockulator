@@ -205,7 +205,7 @@ SALT := 0x4650313237207635000000000000000000000000000000000000000000000000
 # Sepolia (Amsterdam fork) charges about 1,550 gas per byte of deposited code,
 # not 200: the node estimates ~10.45M gas for this deployment where forge
 # 1.7.1's local EVM says 1.46M, so the transaction is sent with an explicit limit.
-DEPLOY_GAS ?= 20000000
+DEPLOY_GAS ?= 40000000
 
 predict: build
 	@forge script $(DEPLOY_SCRIPT) --sig "predict()" --rpc-url $(SEPOLIA_RPC) 2>&1 | grep -E "deployer|salt|hash|keccak|bytes|address|deployed"
@@ -219,6 +219,7 @@ deploy-sepolia: build
 	if [ "$$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC))" != "0x" ]; then echo "already deployed"; exit 0; fi; \
 	INIT=$$($(PY) python -c "import json;print(json.load(open('out/FP127.yul/FP127.json'))['bytecode']['object'][2:])"); \
 	cast send $(CREATE2_PROXY) "$(SALT)$$INIT" --rpc-url $(SEPOLIA_RPC) --private-key "$$DEPLOYER_KEY" --gas-limit $(DEPLOY_GAS) --json > contracts/deployments/FP127.sepolia.receipt.json.tmp; \
+	$(PY) python -c "import json,sys;r=json.load(open('contracts/deployments/FP127.sepolia.receipt.json.tmp'));sys.exit(0 if r['status']=='0x1' else 'reverted: '+r['transactionHash']+' (receipt kept in contracts/deployments/FP127.sepolia.receipt.json.tmp)')"; \
 	mv contracts/deployments/FP127.sepolia.receipt.json.tmp contracts/deployments/FP127.sepolia.receipt.json; \
 	$(PY) python -c "import json,sys;r=json.load(sys.stdin);print('status',r['status'],'tx',r['transactionHash'],'block',int(r['blockNumber'],16),'gasUsed',int(r['gasUsed'],16))" < contracts/deployments/FP127.sepolia.receipt.json; \
 	echo "code at $$ADDR: $$(( ($$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC) | wc -c) - 3) / 2 )) bytes"
@@ -261,6 +262,7 @@ deploy-fp256-sepolia: build
 	if [ "$$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC))" != "0x" ]; then echo "already deployed"; exit 0; fi; \
 	INIT=$$($(PY) python -c "import json;print(json.load(open('out/FP256.yul/FP256.json'))['bytecode']['object'][2:])"); \
 	cast send $(CREATE2_PROXY) "$(SALT256)$$INIT" --rpc-url $(SEPOLIA_RPC) --private-key "$$DEPLOYER_KEY" --gas-limit $(DEPLOY_GAS256) --json > contracts/deployments/FP256.sepolia.receipt.json.tmp; \
+	$(PY) python -c "import json,sys;r=json.load(open('contracts/deployments/FP256.sepolia.receipt.json.tmp'));sys.exit(0 if r['status']=='0x1' else 'reverted: '+r['transactionHash']+' (receipt kept in contracts/deployments/FP256.sepolia.receipt.json.tmp)')"; \
 	mv contracts/deployments/FP256.sepolia.receipt.json.tmp contracts/deployments/FP256.sepolia.receipt.json; \
 	$(PY) python -c "import json,sys;r=json.load(sys.stdin);print('status',r['status'],'tx',r['transactionHash'],'block',int(r['blockNumber'],16),'gasUsed',int(r['gasUsed'],16))" < contracts/deployments/FP256.sepolia.receipt.json; \
 	echo "code at $$ADDR: $$(( ($$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC) | wc -c) - 3) / 2 )) bytes"
@@ -282,6 +284,7 @@ deploy-fp256x-sepolia: build
 	if [ "$$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC))" != "0x" ]; then echo "already deployed"; exit 0; fi; \
 	INIT=$$($(PY) python -c "import json;print(json.load(open('out/FP256X.yul/FP256X.json'))['bytecode']['object'][2:])"); \
 	cast send $(CREATE2_PROXY) "$(SALT256X)$$INIT" --rpc-url $(SEPOLIA_RPC) --private-key "$$DEPLOYER_KEY" --gas-limit $(DEPLOY_GAS256) --json > contracts/deployments/FP256X.sepolia.receipt.json.tmp; \
+	$(PY) python -c "import json,sys;r=json.load(open('contracts/deployments/FP256X.sepolia.receipt.json.tmp'));sys.exit(0 if r['status']=='0x1' else 'reverted: '+r['transactionHash']+' (receipt kept in contracts/deployments/FP256X.sepolia.receipt.json.tmp)')"; \
 	mv contracts/deployments/FP256X.sepolia.receipt.json.tmp contracts/deployments/FP256X.sepolia.receipt.json; \
 	$(PY) python -c "import json,sys;r=json.load(sys.stdin);print('status',r['status'],'tx',r['transactionHash'],'block',int(r['blockNumber'],16),'gasUsed',int(r['gasUsed'],16))" < contracts/deployments/FP256X.sepolia.receipt.json; \
 	echo "code at $$ADDR: $$(( ($$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC) | wc -c) - 3) / 2 )) bytes"
@@ -303,6 +306,7 @@ deploy-fp256x2-sepolia: build
 	if [ "$$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC))" != "0x" ]; then echo "already deployed"; exit 0; fi; \
 	INIT=$$($(PY) python -c "import json;print(json.load(open('out/FP256X2.yul/FP256X2.json'))['bytecode']['object'][2:])"); \
 	cast send $(CREATE2_PROXY) "$(SALT256X2)$$INIT" --rpc-url $(SEPOLIA_RPC) --private-key "$$DEPLOYER_KEY" --gas-limit $(DEPLOY_GAS256) --json > contracts/deployments/FP256X2.sepolia.receipt.json.tmp; \
+	$(PY) python -c "import json,sys;r=json.load(open('contracts/deployments/FP256X2.sepolia.receipt.json.tmp'));sys.exit(0 if r['status']=='0x1' else 'reverted: '+r['transactionHash']+' (receipt kept in contracts/deployments/FP256X2.sepolia.receipt.json.tmp)')"; \
 	mv contracts/deployments/FP256X2.sepolia.receipt.json.tmp contracts/deployments/FP256X2.sepolia.receipt.json; \
 	$(PY) python -c "import json,sys;r=json.load(sys.stdin);print('status',r['status'],'tx',r['transactionHash'],'block',int(r['blockNumber'],16),'gasUsed',int(r['gasUsed'],16))" < contracts/deployments/FP256X2.sepolia.receipt.json; \
 	echo "code at $$ADDR: $$(( ($$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC) | wc -c) - 3) / 2 )) bytes"
@@ -324,6 +328,7 @@ deploy-fp256x3-sepolia: build
 	if [ "$$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC))" != "0x" ]; then echo "already deployed"; exit 0; fi; \
 	INIT=$$($(PY) python -c "import json;print(json.load(open('out/FP256X3.yul/FP256X3.json'))['bytecode']['object'][2:])"); \
 	cast send $(CREATE2_PROXY) "$(SALT256X3)$$INIT" --rpc-url $(SEPOLIA_RPC) --private-key "$$DEPLOYER_KEY" --gas-limit $(DEPLOY_GAS256) --json > contracts/deployments/FP256X3.sepolia.receipt.json.tmp; \
+	$(PY) python -c "import json,sys;r=json.load(open('contracts/deployments/FP256X3.sepolia.receipt.json.tmp'));sys.exit(0 if r['status']=='0x1' else 'reverted: '+r['transactionHash']+' (receipt kept in contracts/deployments/FP256X3.sepolia.receipt.json.tmp)')"; \
 	mv contracts/deployments/FP256X3.sepolia.receipt.json.tmp contracts/deployments/FP256X3.sepolia.receipt.json; \
 	$(PY) python -c "import json,sys;r=json.load(sys.stdin);print('status',r['status'],'tx',r['transactionHash'],'block',int(r['blockNumber'],16),'gasUsed',int(r['gasUsed'],16))" < contracts/deployments/FP256X3.sepolia.receipt.json; \
 	echo "code at $$ADDR: $$(( ($$(cast code $$ADDR --rpc-url $(SEPOLIA_RPC) | wc -c) - 3) / 2 )) bytes"
