@@ -624,7 +624,7 @@
         "b",
         "t"
       ],
-      "notice": "a + t (b - a), rounded once from the exact value: a, t b and -t a summed exactly in a 1,024-bit window (terms far under it enter as their floor or their sign), so cancellation costs nothing and no intermediate can overflow. t is not clamped.",
+      "notice": "a + t (b - a), rounded once from the exact value: a, t b and -t a (computed once, in memory) summed exactly in a 1,024-bit window (terms far under it enter as their floor or their sign), so cancellation costs nothing and no intermediate can overflow. t is not clamped.",
       "domain": "any three numbers; the result must fit",
       "reverts": "Overflow() when the result does not fit; OutOfRange() for a word that is not a number"
     },

@@ -186,8 +186,10 @@ least 544 bits under the sum (or the other two cancel exactly and the term
 is the value); two such terms lie more than 546 bits under the third, which
 fixes the result up to the sign of their sum. The window is four words of
 memory just past the free memory pointer, which lerp reads and never moves
-(memory-safe temporary memory); it is the one op that uses memory beyond
-the scratch space.
+(memory-safe temporary memory), and the three terms, computed once, are
+the fifteen words after it (sign, magnitude, last-bit exponent and top
+position each); it is the one op that uses memory beyond the scratch
+space.
 
 pow, compound and powu compute exact ties exactly: when x^y has at most 238
 significant bits (y = n/2^j with j ≤ 7 and n ≤ 150, the odd part of x a

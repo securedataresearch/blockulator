@@ -10279,9 +10279,10 @@ library FP256Lib {
         }
     }
     /// @notice a + t (b - a), rounded once from the exact value: a, t b and
-    ///         -t a summed exactly in a 1,024-bit window (terms far under it
-    ///         enter as their floor or their sign), so cancellation costs
-    ///         nothing and no intermediate can overflow. t is not clamped.
+    ///         -t a (computed once, in memory) summed exactly in a 1,024-bit
+    ///         window (terms far under it enter as their floor or their sign),
+    ///         so cancellation costs nothing and no intermediate can overflow.
+    ///         t is not clamped.
     function lerp(int256 _a, int256 _b, int256 _t) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function msb(x) -> r {
@@ -10339,6 +10340,15 @@ library FP256Lib {
                 r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
             }
 
+            function lget(p, i) -> sg, n1, n0, f, h {
+                let q := add(p, add(0x80, mul(i, 0xa0)))
+                sg := mload(q)
+                n1 := mload(add(q, 0x20))
+                n0 := mload(add(q, 0x40))
+                f := mload(add(q, 0x60))
+                h := mload(add(q, 0x80))
+            }
+
             function lgt(h1, h2, y1, y0) -> g, z {
                 let x1 := mload(0x00)
                 let x0 := mload(0x20)
@@ -10349,74 +10359,41 @@ library FP256Lib {
                 }
             }
 
-            function mul512(a, b) -> p1, p0 {
-                p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                p1 := sub(sub(mm, p0), lt(mm, p0))
-            }
-
-            function lterm(a, b, t, i) -> sg, n1, n0, f {
-                let sa, ea, ma := unpack(a)
-                let st, et, mt := unpack(t)
-                f := sub(ea, 0x400eb)
-                switch i
-                case 0 {
-                    sg := sa
-                    n0 := ma
-                }
-                case 1 {
-                    let sb, eb, mb := unpack(b)
-                    if eb {
-                        sg := xor(st, sb)
-                        n1, n0 := mul512(mt, mb)
-                        f := add(sub(eb, 0x400eb), sub(et, 0x400eb))
-                    }
-                }
-                default {
-                    sg := xor(1, xor(st, sa))
-                    n1, n0 := mul512(mt, ma)
-                    f := add(f, sub(et, 0x400eb))
-                }
-            }
-
             function wshl(h, l, n) -> rh, rl {
                 rh := or(shl(n, h), shr(sub(256, n), l))
                 rl := shl(n, l)
             }
 
-            function lmag(a, b, t, i) -> sg, h, m1, m0 {
+            function lmag(p, i) -> sg, h, m1, m0 {
                 let n1 := 0
                 let n0 := 0
                 let f := 0
-                sg, n1, n0, f := lterm(a, b, t, i)
-                let w := add(msb(n0), 1)
-                if n1 { w := add(msb(n1), 257) }
-                h := add(f, w)
-                let sh := sub(512, w)
+                sg, n1, n0, f, h := lget(p, i)
+                let sh := sub(512, sub(h, f))
                 switch lt(sh, 256)
                 case 1 { m1, m0 := wshl(n1, n0, sh) }
                 default { m1 := shl(sub(sh, 256), n0) }
             }
 
-            function lcmp(a, b, t, k, h1) -> sg, g, z {
+            function lcmp(p, k, h1) -> sg, g, z {
                 let h2 := 0
                 let y1 := 0
                 let y0 := 0
-                sg, h2, y1, y0 := lmag(a, b, t, k)
+                sg, h2, y1, y0 := lmag(p, k)
                 g, z := lgt(h1, h2, y1, y0)
             }
 
-            function lmag0(a, b, t, i) -> sg, h {
+            function lmag0(p, i) -> sg, h {
                 let m1 := 0
                 let m0 := 0
-                sg, h, m1, m0 := lmag(a, b, t, i)
+                sg, h, m1, m0 := lmag(p, i)
                 mstore(0x00, m1)
                 mstore(0x20, m0)
             }
 
-            function lsign2(a, b, t, i, k) -> c {
-                let s1, h1 := lmag0(a, b, t, i)
-                let s2, g, z := lcmp(a, b, t, k, h1)
+            function lsign2(p, i, k) -> c {
+                let s1, h1 := lmag0(p, i)
+                let s2, g, z := lcmp(p, k, h1)
                 c := add(s1, 1)
                 if eq(s1, s2) { leave }
                 if z {
@@ -10498,19 +10475,9 @@ library FP256Lib {
                 r := normround(ng, e, w)
             }
 
-            function mzero() -> p {
-                p := mload(0x40)
-                if lt(p, 0x80) { p := 0x80 }
-                mstore(p, 0)
-                mstore(add(p, 0x20), 0)
-                mstore(add(p, 0x40), 0)
-                mstore(add(p, 0x60), 0)
-            }
-
-            function lerpfar(a, b, t, j, i, k) -> r {
-                let c := lsign2(a, b, t, i, k)
-                let sg, n1, n0, f := lterm(a, b, t, j)
-                let p := mzero()
+            function lerpfar(p, j, i, k) -> r {
+                let c := lsign2(p, i, k)
+                let sg, n1, n0, f, h := lget(p, j)
                 macc(p, 0, n1, n0, 46)
                 if and(iszero(iszero(c)), iszero(eq(sub(c, 1), sg))) { macc(p, 1, 0, 1, 0) }
                 r := mround(p, sg, sub(f, 46))
@@ -10530,8 +10497,8 @@ library FP256Lib {
                 default { rl := shr(sub(n, 256), h) }
             }
 
-            function laddf(p, a, b, t, i, L) -> ix {
-                let sg, n1, n0, f := lterm(a, b, t, i)
+            function laddf(p, i, L) -> ix {
+                let sg, n1, n0, f, h := lget(p, i)
                 let k := sub(L, f)
                 switch lt(k, 256)
                 case 1 { ix := iszero(iszero(and(n0, sub(shl(k, 1), 1)))) }
@@ -10541,8 +10508,8 @@ library FP256Lib {
                 macc(p, sg, n1, n0, 0)
             }
 
-            function laddi(p, a, b, t, i, L) {
-                let sg, n1, n0, f := lterm(a, b, t, i)
+            function laddi(p, i, L) {
+                let sg, n1, n0, f, h := lget(p, i)
                 macc(p, sg, n1, n0, sub(f, L))
             }
 
@@ -10563,10 +10530,9 @@ library FP256Lib {
                 default { r := fp256_neg(fp256_mul(t, a)) }
             }
 
-            function lerpw(a, b, t, L, tr) -> r {
-                let p := mzero()
+            function lerpw(p, a, b, t, L, tr) -> r {
                 for { let i := 0 } lt(i, 3) { i := add(i, 1) } {
-                    if iszero(and(tr, shl(i, 1))) { laddi(p, a, b, t, i, L) }
+                    if iszero(and(tr, shl(i, 1))) { laddi(p, i, L) }
                 }
                 let ix := 0
                 if tr {
@@ -10574,7 +10540,7 @@ library FP256Lib {
                         r := lone(a, b, t, msb(tr))
                         leave
                     }
-                    ix := laddf(p, a, b, t, msb(tr), L)
+                    ix := laddf(p, msb(tr), L)
                 }
                 // W = floor(X / 2^L); for X < 0, floor(|X| / 2^L) is -W, or -W - 1 = not W
                 // when bits were dropped
@@ -10589,30 +10555,72 @@ library FP256Lib {
                 r := mround(p, ng, L)
             }
 
-            function ltopi(a, b, t, i) -> h {
-                let sg, n1, n0, f := lterm(a, b, t, i)
-                h := add(f, add(msb(n0), 1))
+            function lset(q, sg, n1, n0, f) {
+                mstore(q, sg)
+                mstore(add(q, 0x20), n1)
+                mstore(add(q, 0x40), n0)
+                mstore(add(q, 0x60), f)
+                let h := add(f, add(msb(n0), 1))
                 if n1 { h := add(f, add(msb(n1), 257)) }
+                mstore(add(q, 0x80), h)
             }
 
-            function ltr(a, b, t, i, L) -> x {
-                let sg, n1, n0, f := lterm(a, b, t, i)
+            function mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function lput1(q, b, st, ft, mt, fa) {
+                let sb, eb, mb := unpack(b)
+                switch eb
+                case 0 { lset(q, 0, 0, 0, fa) }
+                default {
+                    let n1, n0 := mul512(mt, mb)
+                    lset(q, xor(st, sb), n1, n0, add(sub(eb, 0x400eb), ft))
+                }
+            }
+
+            function lput(p, a, b, t) {
+                let sa, ea, ma := unpack(a)
+                let st, et, mt := unpack(t)
+                let f := sub(ea, 0x400eb)
+                let ft := sub(et, 0x400eb)
+                lset(add(p, 0x80), sa, 0, ma, f)
+                let n1, n0 := mul512(mt, ma)
+                lset(add(p, 0x1c0), xor(1, xor(st, sa)), n1, n0, add(f, ft))
+                lput1(add(p, 0x120), b, st, ft, mt, f)
+            }
+
+            function ltr(p, i, L) -> x {
+                let sg, n1, n0, f, h := lget(p, i)
                 x := and(slt(f, L), iszero(iszero(or(n1, n0))))
             }
 
+            function mzero() -> p {
+                p := mload(0x40)
+                if lt(p, 0x80) { p := 0x80 }
+                mstore(p, 0)
+                mstore(add(p, 0x20), 0)
+                mstore(add(p, 0x40), 0)
+                mstore(add(p, 0x60), 0)
+            }
+
             function lerp3(a, b, t) -> r {
-                let H := ltopi(a, b, t, 0)
-                let h := ltopi(a, b, t, 1)
+                let p := mzero()
+                lput(p, a, b, t)
+                let H := mload(add(p, 0x100))
+                let h := mload(add(p, 0x1a0))
                 if sgt(h, H) { H := h }
-                h := ltopi(a, b, t, 2)
+                h := mload(add(p, 0x240))
                 if sgt(h, H) { H := h }
                 let L := sub(H, 1020)
-                let tr := or(or(ltr(a, b, t, 0, L), shl(1, ltr(a, b, t, 1, L))), shl(2, ltr(a, b, t, 2, L)))
+                let tr := or(or(ltr(p, 0, L), shl(1, ltr(p, 1, L))), shl(2, ltr(p, 2, L)))
                 switch tr
-                case 3 { r := lerpfar(a, b, t, 2, 0, 1) }
-                case 5 { r := lerpfar(a, b, t, 1, 0, 2) }
-                case 6 { r := lerpfar(a, b, t, 0, 1, 2) }
-                default { r := lerpw(a, b, t, L, tr) }
+                case 3 { r := lerpfar(p, 2, 0, 1) }
+                case 5 { r := lerpfar(p, 1, 0, 2) }
+                case 6 { r := lerpfar(p, 0, 1, 2) }
+                default { r := lerpw(p, a, b, t, L, tr) }
             }
 
             function fp256_lerp(a, b, t) -> r {

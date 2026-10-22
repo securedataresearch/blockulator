@@ -3386,48 +3386,65 @@ function fp256_inv(x) -> r {
 // significand and two 474-bit products, each with its own exponent). They
 // are summed exactly in a 1,024-bit window under the largest term, kept in
 // four words just past the free memory pointer (memory-safe: the pointer is
-// not moved). A term whose last bit falls under the window is floored into
-// it; with one such term the floor of the sum is exact, and it lies at least
-// 544 bits under the sum (or the rest cancels exactly and the term is the
-// value). Two such terms lie 546 bits under the third, which then fixes the
-// result up to the sign of their sum.
+// not moved); the three terms themselves, computed once, sit in the fifteen
+// words after it. A term whose last bit falls under the window is floored
+// into it; with one such term the floor of the sum is exact, and it lies at
+// least 544 bits under the sum (or the rest cancels exactly and the term is
+// the value). Two such terms lie 546 bits under the third, which then fixes
+// the result up to the sign of their sum.
 
-/// lerp's term i: a (0), t b (1) or -t a (2) as a sign, a two-word magnitude
-/// and the exponent of its last bit; a zero term sits at a's exponent.
-function lterm(a, b, t, i) -> sg, n1, n0, f {
+/// lerp's three terms, a (0), t b (1) and -t a (2), computed once: each as a
+/// sign, a two-word magnitude, the exponent of its last bit and the position
+/// just above its top bit, five words at p + 0x80 + 0xa0 i (p the window);
+/// a zero term sits at a's exponent.
+function lput(p, a, b, t) {
     let sa, ea, ma := unpack(a)
     let st, et, mt := unpack(t)
-    f := sub(ea, 0x400eb)
-    switch i
-    case 0 {
-        sg := sa
-        n0 := ma
-    }
-    case 1 {
-        let sb, eb, mb := unpack(b)
-        if eb {
-            sg := xor(st, sb)
-            n1, n0 := mul512(mt, mb)
-            f := add(sub(eb, 0x400eb), sub(et, 0x400eb))
-        }
-    }
+    let f := sub(ea, 0x400eb)
+    let ft := sub(et, 0x400eb)
+    lset(add(p, 0x80), sa, 0, ma, f)
+    let n1, n0 := mul512(mt, ma)
+    lset(add(p, 0x1c0), xor(1, xor(st, sa)), n1, n0, add(f, ft))
+    lput1(add(p, 0x120), b, st, ft, mt, f)
+}
+
+/// Term 1, t b, at q from t's parts (its own function keeps the Solidity
+/// pipeline's stack shallow); fa is a's exponent for a zero b.
+function lput1(q, b, st, ft, mt, fa) {
+    let sb, eb, mb := unpack(b)
+    switch eb
+    case 0 { lset(q, 0, 0, 0, fa) }
     default {
-        sg := xor(1, xor(st, sa))
-        n1, n0 := mul512(mt, ma)
-        f := add(f, sub(et, 0x400eb))
+        let n1, n0 := mul512(mt, mb)
+        lset(q, xor(st, sb), n1, n0, add(sub(eb, 0x400eb), ft))
     }
 }
 
-/// The position just above term i's top bit.
-function ltopi(a, b, t, i) -> h {
-    let sg, n1, n0, f := lterm(a, b, t, i)
-    h := add(f, add(msb(n0), 1))
+/// A term's five words at q: its sign, magnitude, last-bit exponent and the
+/// position just above its top bit.
+function lset(q, sg, n1, n0, f) {
+    mstore(q, sg)
+    mstore(add(q, 0x20), n1)
+    mstore(add(q, 0x40), n0)
+    mstore(add(q, 0x60), f)
+    let h := add(f, add(msb(n0), 1))
     if n1 { h := add(f, add(msb(n1), 257)) }
+    mstore(add(q, 0x80), h)
+}
+
+/// Term i's five words.
+function lget(p, i) -> sg, n1, n0, f, h {
+    let q := add(p, add(0x80, mul(i, 0xa0)))
+    sg := mload(q)
+    n1 := mload(add(q, 0x20))
+    n0 := mload(add(q, 0x40))
+    f := mload(add(q, 0x60))
+    h := mload(add(q, 0x80))
 }
 
 /// 1 when term i is nonzero and has bits under 2^L.
-function ltr(a, b, t, i, L) -> x {
-    let sg, n1, n0, f := lterm(a, b, t, i)
+function ltr(p, i, L) -> x {
+    let sg, n1, n0, f, h := lget(p, i)
     x := and(slt(f, L), iszero(iszero(or(n1, n0))))
 }
 
@@ -3523,15 +3540,15 @@ function mround(p, ng, L) -> r {
 }
 
 /// Term i added exactly into the window at p, whose bottom is 2^L.
-function laddi(p, a, b, t, i, L) {
-    let sg, n1, n0, f := lterm(a, b, t, i)
+function laddi(p, i, L) {
+    let sg, n1, n0, f, h := lget(p, i)
     macc(p, sg, n1, n0, sub(f, L))
 }
 
 /// Term i, which has bits under 2^L, added as its floor on the 2^L grid;
 /// ix = 1 when bits were dropped.
-function laddf(p, a, b, t, i, L) -> ix {
-    let sg, n1, n0, f := lterm(a, b, t, i)
+function laddf(p, i, L) -> ix {
+    let sg, n1, n0, f, h := lget(p, i)
     let k := sub(L, f)
     switch lt(k, 256)
     case 1 { ix := iszero(iszero(and(n0, sub(shl(k, 1), 1)))) }
@@ -3549,11 +3566,11 @@ function lone(a, b, t, i) -> r {
     default { r := fp256_neg(fp256_mul(t, a)) }
 }
 
-/// lerp with at most one term under the window 2^L (bit i of tr).
-function lerpw(a, b, t, L, tr) -> r {
-    let p := mzero()
+/// lerp with at most one term under the window 2^L (bit i of tr), the
+/// window at p still zero.
+function lerpw(p, a, b, t, L, tr) -> r {
     for { let i := 0 } lt(i, 3) { i := add(i, 1) } {
-        if iszero(and(tr, shl(i, 1))) { laddi(p, a, b, t, i, L) }
+        if iszero(and(tr, shl(i, 1))) { laddi(p, i, L) }
     }
     let ix := 0
     if tr {
@@ -3561,7 +3578,7 @@ function lerpw(a, b, t, L, tr) -> r {
             r := lone(a, b, t, msb(tr))
             leave
         }
-        ix := laddf(p, a, b, t, msb(tr), L)
+        ix := laddf(p, msb(tr), L)
     }
     // W = floor(X / 2^L); for X < 0, floor(|X| / 2^L) is -W, or -W - 1 = not W
     // when bits were dropped
@@ -3578,15 +3595,12 @@ function lerpw(a, b, t, L, tr) -> r {
 
 /// Term i's sign, the position above its top bit and its magnitude
 /// normalised to a top bit at 511 (term i is nonzero).
-function lmag(a, b, t, i) -> sg, h, m1, m0 {
+function lmag(p, i) -> sg, h, m1, m0 {
     let n1 := 0
     let n0 := 0
     let f := 0
-    sg, n1, n0, f := lterm(a, b, t, i)
-    let w := add(msb(n0), 1)
-    if n1 { w := add(msb(n1), 257) }
-    h := add(f, w)
-    let sh := sub(512, w)
+    sg, n1, n0, f, h := lget(p, i)
+    let sh := sub(512, sub(h, f))
     switch lt(sh, 256)
     case 1 { m1, m0 := wshl(n1, n0, sh) }
     default { m1 := shl(sub(sh, 256), n0) }
@@ -3605,27 +3619,27 @@ function lgt(h1, h2, y1, y0) -> g, z {
 }
 
 /// Term i's sign and top position, its normalised magnitude left in scratch.
-function lmag0(a, b, t, i) -> sg, h {
+function lmag0(p, i) -> sg, h {
     let m1 := 0
     let m0 := 0
-    sg, h, m1, m0 := lmag(a, b, t, i)
+    sg, h, m1, m0 := lmag(p, i)
     mstore(0x00, m1)
     mstore(0x20, m0)
 }
 
 /// Term k's sign, and lgt's comparison of its magnitude with scratch's.
-function lcmp(a, b, t, k, h1) -> sg, g, z {
+function lcmp(p, k, h1) -> sg, g, z {
     let h2 := 0
     let y1 := 0
     let y0 := 0
-    sg, h2, y1, y0 := lmag(a, b, t, k)
+    sg, h2, y1, y0 := lmag(p, k)
     g, z := lgt(h1, h2, y1, y0)
 }
 
 /// The sign of term i + term k: 0 when it is zero, 1 positive, 2 negative.
-function lsign2(a, b, t, i, k) -> c {
-    let s1, h1 := lmag0(a, b, t, i)
-    let s2, g, z := lcmp(a, b, t, k, h1)
+function lsign2(p, i, k) -> c {
+    let s1, h1 := lmag0(p, i)
+    let s2, g, z := lcmp(p, k, h1)
     c := add(s1, 1)
     if eq(s1, s2) { leave }
     if z {
@@ -3637,31 +3651,34 @@ function lsign2(a, b, t, i, k) -> c {
 
 /// lerp when terms i and k lie wholly under the window: they are more than
 /// 2^546 below term j, so on a grid 46 bits under j's last bit the floor of
-/// |X| is |term j|, less one when i + k leans the other way.
-function lerpfar(a, b, t, j, i, k) -> r {
-    let c := lsign2(a, b, t, i, k)
-    let sg, n1, n0, f := lterm(a, b, t, j)
-    let p := mzero()
+/// |X| is |term j|, less one when i + k leans the other way. The window at
+/// p is still zero.
+function lerpfar(p, j, i, k) -> r {
+    let c := lsign2(p, i, k)
+    let sg, n1, n0, f, h := lget(p, j)
     macc(p, 0, n1, n0, 46)
     if and(iszero(iszero(c)), iszero(eq(sub(c, 1), sg))) { macc(p, 1, 0, 1, 0) }
     r := mround(p, sg, sub(f, 46))
 }
 
-/// lerp past its shortcuts (a, t nonzero, a != b): the window's top two
-/// bits above the largest term, its bottom 1,022 bits under that.
+/// lerp past its shortcuts (a, t nonzero, a != b): the three terms once
+/// into memory, then the window's top two bits above the largest term, its
+/// bottom 1,022 bits under that.
 function lerp3(a, b, t) -> r {
-    let H := ltopi(a, b, t, 0)
-    let h := ltopi(a, b, t, 1)
+    let p := mzero()
+    lput(p, a, b, t)
+    let H := mload(add(p, 0x100))
+    let h := mload(add(p, 0x1a0))
     if sgt(h, H) { H := h }
-    h := ltopi(a, b, t, 2)
+    h := mload(add(p, 0x240))
     if sgt(h, H) { H := h }
     let L := sub(H, 1020)
-    let tr := or(or(ltr(a, b, t, 0, L), shl(1, ltr(a, b, t, 1, L))), shl(2, ltr(a, b, t, 2, L)))
+    let tr := or(or(ltr(p, 0, L), shl(1, ltr(p, 1, L))), shl(2, ltr(p, 2, L)))
     switch tr
-    case 3 { r := lerpfar(a, b, t, 2, 0, 1) }
-    case 5 { r := lerpfar(a, b, t, 1, 0, 2) }
-    case 6 { r := lerpfar(a, b, t, 0, 1, 2) }
-    default { r := lerpw(a, b, t, L, tr) }
+    case 3 { r := lerpfar(p, 2, 0, 1) }
+    case 5 { r := lerpfar(p, 1, 0, 2) }
+    case 6 { r := lerpfar(p, 0, 1, 2) }
+    default { r := lerpw(p, a, b, t, L, tr) }
 }
 
 /// @object FP256X3
@@ -3669,9 +3686,10 @@ function lerp3(a, b, t) -> r {
 /// @domain any three numbers; the result must fit
 /// @reverts Overflow() when the result does not fit; OutOfRange() for a word that is not a number
 /// @notice a + t (b - a), rounded once from the exact value: a, t b and
-///         -t a summed exactly in a 1,024-bit window (terms far under it
-///         enter as their floor or their sign), so cancellation costs
-///         nothing and no intermediate can overflow. t is not clamped.
+///         -t a (computed once, in memory) summed exactly in a 1,024-bit
+///         window (terms far under it enter as their floor or their sign),
+///         so cancellation costs nothing and no intermediate can overflow.
+///         t is not clamped.
 function fp256_lerp(a, b, t) -> r {
     let sa, ea, ma := unpack(a)
     let sb, eb, mb := unpack(b)
