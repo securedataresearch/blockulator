@@ -1,8 +1,8 @@
 {
- "generated": "2026-10-21",
+ "generated": "2026-10-22",
  "description": "Terminal precision: each scenario is N identical steps run through each library in its native representation for several inputs, against the same loop in exact arithmetic (mpmath, 200 digits), twice: from the exact parameters (digits) and from the parameters as the library received them (digitsFormat). See methodology.",
  "versions": {
-  "fp127": "fbbdc20",
+  "fp127": "5d6b4f8",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -115415,8 +115415,8 @@
         "errUlps": null,
         "relErr": "-4.1267e-67",
         "raw": "28935666194216341623244361747888634191134586856128347456262609302293796272832",
-        "gas": 12556302,
-        "gasPerStep": 1255
+        "gas": 12534721,
+        "gasPerStep": 1253
        }
       }
      }
@@ -117951,8 +117951,8 @@
         "errUlps": null,
         "relErr": "-1.794e-66",
         "raw": "28848015073196492438987561929664896830544986442147663616284998060123392572160",
-        "gas": 12507322,
-        "gasPerStep": 1250
+        "gas": 12492068,
+        "gasPerStep": 1249
        }
       }
      }
@@ -119216,8 +119216,8 @@
         "errUlps": null,
         "relErr": "-2.06406e-66",
         "raw": "28932706871126428314268514846368787240441051122066093555186449190417124092416",
-        "gas": 12546707,
-        "gasPerStep": 1254
+        "gas": 12525891,
+        "gasPerStep": 1252
        }
       }
      }
@@ -120481,8 +120481,8 @@
         "errUlps": null,
         "relErr": "2.27014e-67",
         "raw": "28934911413040339903236576112176435918557531297497591832484918520379934990336",
-        "gas": 12554634,
-        "gasPerStep": 1255
+        "gas": 12533038,
+        "gasPerStep": 1253
        }
       }
      }
@@ -121746,8 +121746,8 @@
         "errUlps": null,
         "relErr": "1.12442e-65",
         "raw": "28929118970575297456061732420067433501082808150308718836438114861505039632384",
-        "gas": 12538237,
-        "gasPerStep": 1253
+        "gas": 12518039,
+        "gasPerStep": 1251
        }
       }
      }
@@ -130899,9 +130899,5 @@
  ],
  "liveRunner": "0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5",
  "liveSelector": "0x281dbbfe",
- "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell.",
- "liveChecked": 9383,
- "liveMismatches": 0,
- "liveBlock": 11966662,
- "liveDate": "2026-10-22"
+ "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell."
 }

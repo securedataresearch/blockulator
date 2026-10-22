@@ -57,9 +57,9 @@ the inline library holds everything.
 | object | ops | runtime | salt | Sepolia address (CREATE2 proxy) |
 |---|---|---:|---|---|
 | FP256 | the arithmetic, the edge (directed ops), exp, ln, log1p, expm1, pow, powu, compound, the comparisons and conversions: 37 | 24,512 | `FP256 v4` | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
-| FP256X | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 22,266 | `FP256X v4` | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
-| FP256X2 | exp2, exp10, log2, log10, log2Up, cbrt, sinh, cosh, tanh, atanh: 10 | 19,889 | `FP256X2 v4` | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
-| FP256X3 | min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg, hypot: 15 | 6,844 | `FP256X3 v4` | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
+| FP256X | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 22,288 | `FP256X v4` | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
+| FP256X2 | exp2, exp10, log2, log10, log2Up, cbrt, sinh, cosh, tanh, atanh: 10 | 21,297 | `FP256X2 v4` | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
+| FP256X3 | min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg, hypot: 15 | 6,592 | `FP256X3 v4` | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
 
 The split is by family, as
 [#79](https://github.com/securedataresearch/blockulator/issues/79) asks:
@@ -333,15 +333,15 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 | ln, log1p | 8,500–9,400 | 31,200–37,600 | 126,400 |
 | pow, powu | 5,700–14,800 | 59,900–68,000 | 99,500 |
 | compound | 17,000 | 68,100 | 161,000 |
-| erf, erfc, normCdf | 17,600–34,200 | 101,000–112,700 | 430,100 (the continued fraction) |
+| erf, erfc, normCdf | 17,600–27,600 | 101,000–109,000 | 419,300 (the continued fraction) |
 | lambertW0, lambertWm1 | 29,700–34,000 | 66,900–71,700 | 92,400 |
 | the directed ops | 500–2,000 | | 2,000 |
 | exp2, exp10 | 7,500–7,600 | 30,000 | 30,300 |
 | log2, log10 | 8,400–8,600 | 31,600–31,800 | 36,200 |
-| sinh, cosh | 8,500–8,700 | 14,800–32,800 | 43,700 |
-| tanh, atanh | 16,400–17,000 | 21,500–30,800 | 88,500 |
+| sinh, cosh | 8,400–8,500 | 14,400–32,700 | 43,600 |
+| tanh, atanh | 8,400–13,900 | 15,200–22,700 | 80,800 |
 | cbrt, gavg, hypot | 3,800–13,600 | | 14,600 |
-| lerp | 12,000 | | 12,800 |
+| lerp | 7,900 | | 9,000 |
 | gcd | 5,500 | | 10,400 |
 | factorial | 1.22M | | 2.45M (n = 20,366) |
 
