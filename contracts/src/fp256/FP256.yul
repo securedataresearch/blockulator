@@ -190,6 +190,26 @@ object "FP256" {
                 q := mul(prod0, iv)
             }
 
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
             function exp2frac(f) -> r {
                 let x := and(f, 0x3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
                 r := 0xef15a4451ca23d12b30dfe18d411fa4ddfad5e
@@ -921,9 +941,7 @@ object "FP256" {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function isqrt(n) -> y {
@@ -1344,9 +1362,7 @@ object "FP256" {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mant(a, b) -> mm, c, dr {
@@ -1694,10 +1710,8 @@ object "FP256" {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
                 let s := xor(sa, sb)
-                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
+                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
             }
 
             function touint(x, up) -> r {

@@ -89,10 +89,10 @@ object "FP256X2" {
                 default { r := shr(sub(n, 256), p1) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -791,9 +791,7 @@ object "FP256X2" {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wsh(h, l, n) -> rh, rl {

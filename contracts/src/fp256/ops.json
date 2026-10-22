@@ -53,7 +53,7 @@
         "a",
         "b"
       ],
-      "notice": "a / b: floor(ma 2^255 / mb) by two exact 2^128 stages, rounded once.",
+      "notice": "a / b: floor(ma 2^255 / mb) by one exact 512-by-256 division, rounded once.",
       "domain": "b != 0",
       "reverts": "DivisionByZero() for b == 0; Overflow() when the quotient does not fit; OutOfRange() for a word that is not a number"
     },
@@ -610,7 +610,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "1 / x: div's exact quotient, rounded once.",
+      "notice": "1 / x: div's exact quotient floor(2^491 / m), rounded once.",
       "domain": "x != 0",
       "reverts": "DivisionByZero() for x == 0; Overflow() when 1/x does not fit; OutOfRange() for a word that is not a number"
     },

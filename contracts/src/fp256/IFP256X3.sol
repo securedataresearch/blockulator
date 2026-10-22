@@ -27,7 +27,7 @@ interface IFP256X3 {
     function dist(int256 a, int256 b) external pure returns (int256 r);
     /// @notice max(0, a - b), rounded once.
     function zeroFloorSub(int256 a, int256 b) external pure returns (int256 r);
-    /// @notice 1 / x: div's exact quotient, rounded once.
+    /// @notice 1 / x: div's exact quotient floor(2^491 / m), rounded once.
     function inv(int256 x) external pure returns (int256 r);
     /// @notice a + t (b - a), rounded once from the exact value: a, t b and
     ///         -t a summed exactly in a 1,024-bit window (terms far under it

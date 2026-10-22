@@ -237,13 +237,13 @@ library FP256Lib {
             _r := fp256_mul(_a, _b)
         }
     }
-    /// @notice a / b: floor(ma 2^255 / mb) by two exact 2^128 stages, rounded once.
+    /// @notice a / b: floor(ma 2^255 / mb) by one exact 512-by-256 division, rounded once.
     function div(int256 _a, int256 _b) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -310,9 +310,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             _r := fp256_div(_a, _b)
@@ -1168,10 +1166,10 @@ library FP256Lib {
                 if s { t := sub(0, t) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -1189,9 +1187,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wdbl(eh, el) -> rh, rl {
@@ -1320,10 +1316,10 @@ library FP256Lib {
     ///         Shortcuts for y in {1, 2, 1/2, -1}.
     function pow(int256 _x, int256 _y) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -1390,9 +1386,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_mul(a, b) -> r {
@@ -1403,6 +1397,26 @@ library FP256Lib {
                 let mm := mulmod(ma, mb, not(0))
                 let p1 := sub(sub(mm, p0), lt(mm, p0))
                 r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
             }
 
             function gtsq(y, n) -> t {
@@ -1920,9 +1934,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wadd(ah, al, bh, bl) -> rh, rl {
@@ -2511,10 +2523,10 @@ library FP256Lib {
                 m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -2532,9 +2544,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wdbl(eh, el) -> rh, rl {
@@ -3142,10 +3152,10 @@ library FP256Lib {
     ///         from |x| >= 13.
     function erf(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -3163,9 +3173,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function msb(x) -> r {
@@ -3899,10 +3907,10 @@ library FP256Lib {
     ///         error bound reaches the rounding boundary: correctly rounded.
     function erfc(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -3920,9 +3928,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function msb(x) -> r {
@@ -4659,10 +4665,10 @@ library FP256Lib {
     ///         one from x >= 13 sqrt 2.
     function normCdf(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -4680,9 +4686,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function msb(x) -> r {
@@ -5505,10 +5509,10 @@ library FP256Lib {
                 r := addsub(a, b, 0)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -5530,9 +5534,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_mul(a, b) -> r {
@@ -5543,6 +5545,26 @@ library FP256Lib {
                 let mm := mulmod(ma, mb, not(0))
                 let p1 := sub(sub(mm, p0), lt(mm, p0))
                 r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
             }
 
             function gtsq(y, n) -> t {
@@ -5677,9 +5699,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mulw(a, b) -> r {
@@ -6218,10 +6238,10 @@ library FP256Lib {
                 r := addsub(a, b, 0)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -6243,9 +6263,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_mul(a, b) -> r {
@@ -6266,6 +6284,26 @@ library FP256Lib {
                 check(x)
                 r := x
                 if x { r := xor(x, 0x8000000000000000000000000000000000000000000000000000000000000000) }
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
             }
 
             function gtsq(y, n) -> t {
@@ -6400,9 +6438,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mulw(a, b) -> r {
@@ -6956,6 +6992,26 @@ library FP256Lib {
                 if x { r := xor(x, 0x8000000000000000000000000000000000000000000000000000000000000000) }
             }
 
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
             function unpack(x) -> s, e, m {
                 s := shr(255, x)
                 e := and(shr(236, x), 0x7ffff)
@@ -6972,9 +7028,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_mul(a, b) -> r {
@@ -7491,9 +7545,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wadd(ah, al, bh, bl) -> rh, rl {
@@ -8137,10 +8189,10 @@ library FP256Lib {
                 if shr(237, absw(n)) { err := not(0) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -8158,9 +8210,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wadd(ah, al, bh, bl) -> rh, rl {
@@ -8828,10 +8878,10 @@ library FP256Lib {
                 r := sub(xor(x, m), m)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -8898,9 +8948,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_fromFixed18(x) -> r {
@@ -9159,10 +9207,10 @@ library FP256Lib {
                 r := pack(s, e, m)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -9195,10 +9243,8 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
                 let s := xor(sa, sb)
-                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
+                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
             }
 
             function fp256_divDown(a, b) -> r {
@@ -9253,10 +9299,10 @@ library FP256Lib {
                 r := pack(s, e, m)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -9289,10 +9335,8 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
                 let s := xor(sa, sb)
-                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
+                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
             }
 
             function fp256_divUp(a, b) -> r {
@@ -10160,13 +10204,13 @@ library FP256Lib {
             _r := fp256_zeroFloorSub(_a, _b)
         }
     }
-    /// @notice 1 / x: div's exact quotient, rounded once.
+    /// @notice 1 / x: div's exact quotient floor(2^491 / m), rounded once.
     function inv(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -10228,18 +10272,10 @@ library FP256Lib {
                 m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
             }
 
-            function fp256_div(a, b) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                if iszero(eb) { rev(0x23d359a3) }
-                if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
-            }
-
             function fp256_inv(x) -> r {
-                r := fp256_div(0x3ffff00000000000000000000000000000000000000000000000000000000000, x)
+                let s, e, m := unpack(x)
+                if iszero(e) { rev(0x23d359a3) }
+                r := normround(s, sub(0x7fffd, e), divh(0x100000000000000000000000000000000000000000000000000000000000, m))
             }
 
             _r := fp256_inv(_x)
@@ -12562,10 +12598,10 @@ library FP256Lib {
                 if s { t := sub(0, t) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -12583,9 +12619,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wadd(ah, al, bh, bl) -> rh, rl {
@@ -13085,10 +13119,10 @@ library FP256Lib {
                 r2 := sub(sub(a2, b2), c2)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -13106,9 +13140,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function log2poly(f) -> r {
@@ -13377,10 +13409,10 @@ library FP256Lib {
     ///         correctly rounded.
     function sinh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -13398,9 +13430,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mul512(a, b) -> p1, p0 {
@@ -13817,10 +13847,10 @@ library FP256Lib {
     ///         one below 2^-118.
     function cosh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -13838,9 +13868,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mul512(a, b) -> p1, p0 {
@@ -14188,10 +14216,10 @@ library FP256Lib {
     ///         +-1 once 2|x| log2 e passes 240.
     function tanh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -14209,9 +14237,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mul512(a, b) -> p1, p0 {
@@ -14808,10 +14834,10 @@ library FP256Lib {
                 p2 := add(p2, lt(p1, c))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -14829,9 +14855,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mulw(a, b) -> r {

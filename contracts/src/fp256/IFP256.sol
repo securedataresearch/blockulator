@@ -20,7 +20,7 @@ interface IFP256 {
     function sub(int256 a, int256 b) external pure returns (int256 r);
     /// @notice a * b: the 474-bit product of the significands, rounded once.
     function mul(int256 a, int256 b) external pure returns (int256 r);
-    /// @notice a / b: floor(ma 2^255 / mb) by two exact 2^128 stages, rounded once.
+    /// @notice a / b: floor(ma 2^255 / mb) by one exact 512-by-256 division, rounded once.
     function div(int256 a, int256 b) external pure returns (int256 r);
     /// @notice sqrt(x): the significand shifted to an even exponent, its
     ///         integer square root at 2^136 (Newton: a 256-bit seed, one
