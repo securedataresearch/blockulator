@@ -1572,7 +1572,11 @@ function fp127_pi(terms) -> r {
 }
 
 // ---------------------------------------------------------------------------
-// Lambert W, principal branch
+// Lambert W, both branches (v6: seed -> fast -> safe). A log-free seed near
+// -1/e in q = 1 + W on (q - 1) e^q + 1 = 1 + e x, where the error is q times
+// the working precision so the branch point costs none; elsewhere a seed
+// from a table-free logarithm; then fourth-order log-form steps in one
+// word at 2^-126, and the double-word step lwfin last.
 // ---------------------------------------------------------------------------
 
 /// W(i) for integer i in 1..5, rounded to nearest (v5 corrects W(4), which
@@ -1588,23 +1592,182 @@ function lw(i) -> w {
     default { w := 0 }
 }
 
-/// One Halley step for w e^w = x. With f(w) = w e^w - x, f' = e^w (w + 1)
-/// and f'' = e^w (w + 2):
-///   r  = f / f' = (w - x e^-w) / (w + 1)
-///   w' = w - r (1 + r (w + 2) / (2 (w + 1)))
-/// the second factor being 1 / (1 - r f'' / (2 f')) to first order, which
-/// keeps the step cubic. The second form of r is used: the Huff formed
-/// w e^w and e^w (w + 1), which exceed int256 when x is within about 1% of
-/// the top of the range, whereas x / e^w is of the order of w. One
-/// reciprocal of w + 1 serves both quotients. v4's step (Fritsch-Shafer-
-/// Crowley as the Huff wrote it) had r / (2 (w + 1)) for the second-order
-/// term, so it only doubled the correct bits (measured: 7, 14, 29, 58,
-/// 117); this one triples them. One-word exp (expf).
-function lwfsc(x, w) -> wn {
-    let wp1 := add(w, 0x100000000000000000000000000000000)
-    let iv := fp127_inv(wp1)
-    let rr := mulraw(sub(w, fp127_div(x, expf(w))), iv)
-    wn := sub(w, mulraw(rr, add(0x100000000000000000000000000000000, sar(1, mulraw(mulraw(rr, add(wp1, 0x100000000000000000000000000000000)), iv)))))
+/// k ln 2 + ln r at 2^-128 for a mantissa r in [2^126, 2^127) ([1, 2) at
+/// 2^-126) and a signed integer k: four reduction stages by 2^(1/2),
+/// 2^(1/4), 2^(1/8) and 2^(1/16) (a floored product each) leave r in
+/// [1, 2^(1/16)), then ln r = 2 atanh s, s = (r - 1)/(r + 1) in [0, 0.0217),
+/// the odd series sum s^(2i + 1)/(2i + 1) to i = 11 by Horner at 2^-126
+/// (truncation under 2^-131); within about 2^-124. The table-free
+/// logarithm behind the fast steps.
+function lnc(r, k) -> L {
+    let j := shl(4, k)
+    if iszero(lt(r, 0x5a827999fcef32422cbec4d9baa55f50)) {
+        r := shr(126, mul(r, 0x2d413cccfe779921165f626cdd52afa8))
+        j := add(j, 8)
+    }
+    if iszero(lt(r, 0x4c1bf828c6dc54b7a356918c17217b7b)) {
+        r := shr(126, mul(r, 0x35d13f32b5a75abd0e69a2ee640b4ff8))
+        j := add(j, 4)
+    }
+    if iszero(lt(r, 0x45cae0f1f545eb737df23143ac529e48)) {
+        r := shr(126, mul(r, 0x3ab031b9f7490e4bb40b5d6cdc1b953f))
+        j := add(j, 2)
+    }
+    if iszero(lt(r, 0x42d561b3e6243d8a62e4adc610aa60d9)) {
+        r := shr(126, mul(r, 0x3d495f454921b30b1ee7431ebb6603f1))
+        j := add(j, 1)
+    }
+    let s := sdiv(shl(126, sub(r, 0x40000000000000000000000000000000)), add(r, 0x40000000000000000000000000000000))
+    let s2 := sar(126, mul(s, s))
+    let A := 0x2c8590b21642c8590b21642c8590b21
+    A := add(0x30c30c30c30c30c30c30c30c30c30c3, sar(126, mul(s2, A)))
+    A := add(0x35e50d79435e50d79435e50d79435e5, sar(126, mul(s2, A)))
+    A := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, sar(126, mul(s2, A)))
+    A := add(0x4444444444444444444444444444444, sar(126, mul(s2, A)))
+    A := add(0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec5, sar(126, mul(s2, A)))
+    A := add(0x5d1745d1745d1745d1745d1745d1746, sar(126, mul(s2, A)))
+    A := add(0x71c71c71c71c71c71c71c71c71c71c7, sar(126, mul(s2, A)))
+    A := add(0x9249249249249249249249249249249, sar(126, mul(s2, A)))
+    A := add(0xccccccccccccccccccccccccccccccd, sar(126, mul(s2, A)))
+    A := add(0x15555555555555555555555555555555, sar(126, mul(s2, A)))
+    A := add(0x40000000000000000000000000000000, sar(126, mul(s2, A)))
+    L := add(mul(j, 0xb17217f7d1cf79abc9e3b39803f2f6b), shl(2, sar(125, mul(s, A))))
+}
+
+/// k ln 2 + ln r as lnc but crude, for the seeds: a degree-3 fit of
+/// ln(1 + t) on [0, 1) at 2^-126 (within 2^-10.8), which is all a seed
+/// within 2^-5 needs.
+function lnc0(r, k) -> L {
+    let t := sub(r, 0x40000000000000000000000000000000)
+    let P := add(sub(0, 0x193a803a4689b1e7d4fe8cc4f525bca5), sar(126, mul(0x6c624f4ace937ad74c72c1900aebb69, t)))
+    P := add(0x3ecce60a25db5c9757959e657fdbf429, sar(126, mul(P, t)))
+    P := add(0x95fd7e22848b1d16f2f2bb6adf6c7, sar(126, mul(P, t)))
+    L := add(mul(k, 0xb17217f7d1cf79abc9e3b39803f2f6af), shl(2, P))
+}
+
+/// The mantissa (in [2^126, 2^127)) and exponent of v > 0 at 2^-128, for
+/// lnc and lnc0.
+function lnm(v) -> r, k {
+    let n := msb(v)
+    r := shr(sub(n, 126), v)
+    if lt(n, 126) { r := shl(sub(126, n), v) }
+    k := sub(n, 128)
+}
+
+
+/// One fourth-order step on f(w) = w + ln(w / x) = 0 (W e^W = x, so W and x
+/// share a sign) from w, both at 2^-128: with h = w + 1, u = f / h and v =
+/// u / h, w (1 - u + uv/2 - uv^2/2 + u^2 v/3), the series reversion of f to
+/// third order (truncation w u v^3 (6w^2 - 8w + 1)/24). ln(w / x) is lnc of
+/// the ratio of the leading 127 bits plus the exponent difference; the
+/// quotients by h truncated to 100 bits, which leaves the step's own error
+/// under 2^-124 relative. Returns the new w and |u| 2^128, the step's size:
+/// from within 2^-32 the step lands within about 2^-127 relative, where
+/// lwfin's double-word step takes it to the nearest word.
+function lwf127(x, w) -> wn, au {
+    let aw := absw(w)
+    let ax := absw(x)
+    let nw := msb(aw)
+    let nx := msb(ax)
+    let k := sub(nw, nx)
+    let r := div(shr(3, shl(sub(255, nw), aw)), shr(129, shl(sub(255, nx), ax)))
+    if lt(r, 0x40000000000000000000000000000000) {
+        r := shl(1, r)
+        k := sub(k, 1)
+    }
+    let hs := sar(28, add(w, 0x100000000000000000000000000000000))
+    let u := sdiv(shl(100, add(w, lnc(r, k))), hs)
+    let v := sdiv(shl(100, u), hs)
+    let uv := sar(128, mul(u, v))
+    wn := mulraw(w, add(sub(add(sub(0x100000000000000000000000000000000, u), sar(1, uv)), sar(1, sar(128, mul(uv, v)))), sdiv(sar(128, mul(sar(128, mul(u, u)), v)), 3)))
+    au := absw(u)
+}
+
+/// The fast stage of the log form: lwf127 steps until one starts within
+/// 2^-22 (at most four; two from the seeds, precise_model.py).
+function lwfast(x, w) -> r {
+    r := w
+    for { let i := 0 } lt(i, 4) { i := add(i, 1) } {
+        let au := 0
+        r, au := lwf127(x, r)
+        if lt(au, 0x400000000000000000000000000) { break }
+    }
+}
+
+/// b3 + tau (b4 + tau b5) at 2^-112 for q and tau at 2^-126, the tail of
+/// the reversion's S that tau^3 makes needs only 128 bits of.
+function lwb3(qa, tau) -> R {
+    R := sdiv(add(shl(112, 1890), sar(126, mul(qa, add(shl(112, 4410), sar(126, mul(qa, add(shl(112, 4760), sar(126, mul(qa, add(shl(112, 3052), sar(126, mul(qa, add(shl(112, 1200), sar(126, mul(qa, shl(112, 240)))))))))))))))), 1440)
+    R := add(sdiv(add(shl(112, 105), sar(126, mul(qa, add(shl(112, 210), sar(126, mul(qa, add(shl(112, 190), sar(126, mul(qa, add(shl(112, 96), sar(126, mul(qa, shl(112, 24))))))))))))), 120), sar(126, mul(tau, R)))
+    R := add(sdiv(add(shl(112, 15), sar(126, mul(qa, add(shl(112, 25), sar(126, mul(qa, add(shl(112, 18), sar(126, mul(qa, shl(112, 6)))))))))), 24), sar(126, mul(tau, R)))
+}
+
+/// 1 + tau (b1 + tau (b2 + tau (b3 + tau (b4 + tau b5)))) at 2^-112 for the
+/// fast step, q and tau at 2^-126.
+function lwbs128(qa, tau) -> S {
+    S := add(sdiv(add(shl(112, 3), sar(126, mul(qa, add(shl(112, 4), sar(126, mul(qa, shl(112, 2))))))), 6), sar(126, mul(tau, lwb3(qa, tau))))
+    S := add(sar(1, add(shl(112, 1), sar(14, qa))), sar(126, mul(tau, S)))
+    S := add(shl(112, 1), sar(126, mul(tau, S)))
+}
+
+/// The fast step near -1/e: one sixth-order step at 2^-126 on Phi(q) =
+/// (q - 1) e^q + 1 = y in q = 1 + W from |q| = Q 2^ep (Q in [2^125, 2^127),
+/// sg the sign: + for W0, - for W-1), y = Y 2^ey with 2 ep - ey = k + 2
+/// (FP256's lwq128): e^q by its series, the relative residual rho =
+/// Phi(q)/y - 1, tau = rho Phi(q)/(q^2 e^q (1 + rho)), then |q| (1 - tau
+/// S(tau)). Returns the new Q and |tau| 2^126; from tau the step lands
+/// within about 11 |q| tau^6, so within 2^-126 from 2^-24.
+function lwq128(Q, ep, sg, Y, k) -> Qn, at {
+    let qa := shr(sub(sub(0, ep), 126), Q)
+    if sg { qa := sub(0, qa) }
+    let j := 126
+    if qa { j := sub(126, msb(absw(qa))) }
+    let K := add(2, div(130, add(j, 2)))
+    if gt(K, 35) { K := 35 }
+    let u := 0x40000000000000000000000000000000
+    for { let i := K } gt(i, 2) { i := sub(i, 1) } {
+        u := add(0x40000000000000000000000000000000, sdiv(sar(126, mul(qa, u)), i))
+    }
+    let G := add(0x40000000000000000000000000000000, sar(127, mul(sub(qa, 0x40000000000000000000000000000000), u)))
+    let E := add(add(0x40000000000000000000000000000000, qa), sar(127, mul(qa, sar(126, mul(qa, u)))))
+    let Rr := divu(shl(add(2, k), hmul(mul(Q, Q), shl(130, G))), Y)
+    let rho := sub(Rr, 0x100000000000000000000000000000000)
+    let tau := sdiv(shl(126, sar(128, mul(rho, G))), shr(128, mul(E, Rr)))
+    Qn := sub(Q, sar(126, mul(Q, sar(112, mul(tau, lwbs128(qa, tau))))))
+    at := absw(tau)
+}
+
+/// W near -1/e, both branches (sg = 1 for W-1), from q = 1 + e x at 2^-256
+/// (0 < q < 2^255, so y = 1 + e x < 1/2; y = Y 2^ey with Y in [2^254,
+/// 2^255), floored, relative error 2^-256 / y, so q is within 2^-256 / q
+/// absolute, under 2^-192 down to the smallest input): the seed q0 = +-p
+/// (1 -+ p/3 + 11 p^2/72), p = sqrt(2y) by isqrt at 2^-126; lwq128 steps
+/// until one starts within 2^-24 (none below p = 2^-15, one to 2^-7, two
+/// beyond); then w = -1 +- q at 2^-128 (q taken at 2^-126), within 2^-124
+/// |q| of W, for lwfin.
+function lwbr(q, sg) -> w {
+    let nb := msb(q)
+    let Y := shl(sub(254, nb), q)
+    let ey := sub(nb, 510)
+    let k := sub(2, and(ey, 1))
+    let eqs := sar(1, add(sub(ey, 254), k))
+    let ep := add(eqs, 128)
+    let P := isqrt(shr(add(1, k), Y))
+    let p := shr(sub(sub(0, ep), 126), P)
+    let s0 := add(0x40000000000000000000000000000000, div(mul(11, shr(126, mul(p, p))), 72))
+    switch sg
+    case 0 { s0 := sub(s0, div(p, 3)) }
+    default { s0 := add(s0, div(p, 3)) }
+    let Q := shr(126, mul(P, s0))
+    for { let i := 0 } lt(i, 4) { i := add(i, 1) } {
+        let at := 0
+        Q, at := lwq128(Q, ep, sg, Y, k)
+        if lt(at, 0x4000000000000000000000000) { break }
+    }
+    let qw := shl(2, shr(sub(sub(0, ep), 126), Q))
+    switch sg
+    case 0 { w := sub(qw, 0x100000000000000000000000000000000) }
+    default { w := sub(sub(0, 0x100000000000000000000000000000000), qw) }
 }
 
 /// The final step of both branches, in the double word: Newton on
@@ -1612,11 +1775,11 @@ function lwfsc(x, w) -> wn {
 ///   w' = w - F w / (w + 1),
 /// with e^w = 2^n (1 + s) from the double-word kernel: A = |w| (1 + s) and
 /// B = |x| 2^-n at 2^-384, y = (A - B) / B and F = y - y^2/2 to about
-/// 2^-300, and the correction rounded once. The one-word iterations leave w within about
-/// 2^-128 / |1 + W| of W; this step takes that to the nearest word, where v4
-/// was 1,153 ULPs off near -1/e (the residual is now exact enough that the
-/// amplification 1 / (1 + w) no longer reaches the grid) and 2 ULPs off
-/// elsewhere.
+/// 2^-300, and the correction rounded once. The one-word stages leave w
+/// within about 2^-124 of W (relative, or times |1 + W| near -1/e); this
+/// step takes that to the nearest word, where v4 was 1,153 ULPs off near
+/// -1/e (the residual is now exact enough that the amplification 1 / (1 + w)
+/// no longer reaches the grid) and 2 ULPs off elsewhere.
 function lwfin(x, w) -> r {
     let n, sh, sl := expx(w)
     let aw := absw(w)
@@ -1647,26 +1810,10 @@ function lwfin(x, w) -> r {
 }
 
 /// q = 1 + e x at 2^-256 for -1/e <= x < 0, with e to 2^-254: the distance to
-/// the branch point, to 2^-254. The one-word q (mulraw) is good to 2^-128
-/// only, which near -1/e is all of it.
+/// the branch point, to 2^-254 (the one is 2^256, which the word drops).
 function lwq(x) -> q {
     let ph, pl := smul512(x, 0xadf85458a2bb4a9aafdc5620273d3cf1d8b9c583ce2d3695a9e13641146433fb)
     q := or(shl(130, ph), shr(126, pl))
-}
-
-/// The branch-point series without its sign: p + p^2/3 + 11/72 p^3 +
-/// 43/540 p^4 with alternate terms negated for W0, for p = sqrt(2 q) at
-/// 2^-128 from q at 2^-256. W0 = -1 + p - p^2/3 + ..., W-1 = -1 - p - p^2/3 - ...
-function lwbp(q, principal) -> w {
-    let p := isqrt(shl(1, q))
-    let p2 := mulraw(p, p)
-    let p3 := mulraw(p2, p)
-    let p4 := mulraw(p2, p2)
-    let odd := add(p, div(mul(p3, 11), 72))
-    let even := add(div(p2, 3), div(mul(p4, 43), 540))
-    switch principal
-    case 1 { w := sub(sub(odd, even), 0x100000000000000000000000000000000) }
-    default { w := sub(sub(0, add(odd, even)), 0x100000000000000000000000000000000) }
 }
 
 /// @export lambertW0(int256 x) returns (int256 r)
@@ -1675,17 +1822,18 @@ function lwbp(q, principal) -> w {
 /// @notice Principal branch of the Lambert W function, W(x) e^W(x) = x, for
 ///         x >= -1/e, rounded to nearest.
 /// @dev Reverts with OutOfRange below -1/e (the Huff returned 0). W(x) = x
-///      for |x| < 2^-65 (the nearest word), and W(1..5) come from the table. Within 2^-40 of the branch point in
-///      1 + e x, the branch-point series in p = sqrt(2 (1 + e x)) with
-///      1 + e x to 2^-254 seeds the final step directly. Everything else is
-///      seeded and refined by as many one-word Halley steps as the seed
-///      needs for 120 bits or more before the double-word Newton step lwfin
-///      (none to three; each triples the correct bits). Seeds: the origin
-///      series x - x^2 + 3/2 x^3 for -1/4 < x < 2^-5 (none from |x| < 2^-33,
-///      one to 2^-13, two to 2^-5, three beyond); Winitzki's
-///      L (1 - ln(1 + L) / (2 + L)) with L = ln(1 + x) above, five to eleven
-///      bits, three steps; the branch-point series -1 + p - p^2/3 + 11/72 p^3
-///      down to -1/e, one to three steps as 1 + e x falls from 1/4 to 2^-40. The Huff used a 64-entry
+///      for |x| < 2^-65 (the nearest word), and W(1..5) come from the table.
+///      Below 1 + e x = 1/2 (x < -0.184) the unknown is q = 1 + W on
+///      (q - 1) e^q + 1 = 1 + e x (to 2^-256): a seed from sqrt(2 (1 + e x)),
+///      one or two sixth-order steps at 2^-126 whose error is q times the
+///      precision, so the branch point costs none, then lwfin. Elsewhere the
+///      origin cubic x (1 - x + 3x^2/2) for |x| < 1/8 (no step below 2^-40,
+///      one to 2^-11, two beyond) or Winitzki's L (1 - ln(1 + L) / (2 + L)),
+///      L = ln(1 + x), from the crude logarithm (two steps), then
+///      fourth-order log-form steps at 2^-126 until one starts within 2^-22,
+///      and the double-word Newton step lwfin. v5 ran up to three one-word
+///      Halley steps with a one-word exp and three divisions each, and the
+///      branch-point series below 2^-40. The Huff used a 64-entry
 ///      interpolation table with two steps, which gave 50 to 100 bits on
 ///      (0, 64), read past the table above 64 and ran out of gas below 0.
 function fp127_lambertW0(x) -> r {
@@ -1698,71 +1846,26 @@ function fp127_lambertW0(x) -> r {
         leave
     }
     let w := 0
-    // the Halley steps the seed needs (scripts/fp127/generators/precise_model.py lambertw)
-    let n := 3
-    switch or(lt(absw(x), 0x8000000000000000000000000000000), and(slt(x, 0), sgt(x, sub(0, 0x40000000000000000000000000000000))))
+    switch slt(x, 0x20000000000000000000000000000000)
     case 1 {
-        // the origin series, -1/4 < x < 2^-5; its error is about 8/3 x^4
+        if slt(x, sub(0, 0x2f16ac6c59de6f8d5d6f63c1482a7c86)) {
+            r := lwfin(x, lwbr(lwq(x), 0))
+            leave
+        }
+        // the origin cubic, |x| < 0.184; its error is about 8/3 x^3 relative
         let x2 := mulraw(x, x)
         w := add(sub(x, x2), mulraw(x2, add(x, sar(1, x))))
-        if lt(absw(x), 0x8000000000000000000000000000000) {
-            n := 2
-            if lt(absw(x), 0x80000000000000000000000000000) { n := 1 }
-            if lt(absw(x), 0x800000000000000000000000) { n := 0 }
-        }
+        if lt(absw(x), 0x8000000000000000000000) { r := lwfin(x, w) leave }
     }
     default {
-        switch slt(x, 0)
-        case 1 {
-            let qq := lwq(x)
-            if lt(qq, 0x1000000000000000000000000000000000000000000000000000000) {
-                r := lwfin(x, lwbp(qq, 1))
-                leave
-            }
-            let q := add(0x100000000000000000000000000000000, mulraw(x, 0x2b7e151628aed2a6abf7158809cf4f3c7))
-            if slt(q, 0) { q := 0 }
-            let p := fp127_sqrt(shl(1, q))
-            let p2 := mulraw(p, p)
-            w := sub(p, 0x100000000000000000000000000000000)
-            w := sub(w, div(p2, 3))
-            w := add(w, div(mul(mulraw(p2, p), 11), 72))
-            // 1 + e x below 2^-8: two steps; below 2^-28: one
-            if lt(qq, 0x100000000000000000000000000000000000000000000000000000000000000) {
-                n := 2
-                if lt(qq, 0x1000000000000000000000000000000000000000000000000000000000) { n := 1 }
-            }
-        }
-        default {
-            // ln(1 + x); for x within ONE of the top of the range 1 + x would
-            // wrap, and ln(x) is the same seed to far more bits than needed.
-            let xp := x
-            if slt(x, 0x7ffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffff) { xp := add(x, 0x100000000000000000000000000000000) }
-            let l := lnf(xp)
-            let l1 := lnf(add(l, 0x100000000000000000000000000000000))
-            w := mulraw(l, sub(0x100000000000000000000000000000000, fp127_div(l1, add(l, 0x200000000000000000000000000000000))))
-        }
+        let rr, kk := lnm(add(0x100000000000000000000000000000000, x))
+        let L := lnc0(rr, kk)
+        rr, kk := lnm(add(0x100000000000000000000000000000000, L))
+        let l1 := lnc0(rr, kk)
+        let t := sdiv(shl(100, l1), shr(28, add(0x200000000000000000000000000000000, L)))
+        w := sub(L, shr(110, mul(shr(18, L), t)))
     }
-    for {} n { n := sub(n, 1) } { w := lwfsc(x, w) }
-    r := lwfin(x, w)
-}
-
-// ---------------------------------------------------------------------------
-// Lambert W, secondary branch
-// ---------------------------------------------------------------------------
-
-/// One log-form Halley step for the secondary branch. For x < 0 and w < 0,
-/// w e^w = x is equivalent to w + ln(-w) = ln(-x) =: lx; with
-/// F(w) = w + ln(-w) - lx, F' = (w + 1) / w and F'' = -1 / w^2,
-///   s  = F / F' = w F / (w + 1)
-///   w' = w - s (1 - F / (2 (w + 1)^2))
-/// (Newton, v4's step, is w - s). It never forms e^w or x / w: on this
-/// branch w reaches about -93 at x = -2^-128, where e^-w overflows and e^w
-/// underflows the format. One reciprocal of w + 1 serves both quotients.
-function lwm1(lx, w) -> wn {
-    let f := sub(add(w, lnf(sub(0, w))), lx)
-    let iv := fp127_inv(add(w, 0x100000000000000000000000000000000))
-    let sn := mulraw(mulraw(w, f), iv)
-    wn := sub(w, mulraw(sn, sub(0x100000000000000000000000000000000, sar(1, mulraw(mulraw(f, iv), iv)))))
+    r := lwfin(x, lwfast(x, w))
 }
 
 /// @export lambertWm1(int256 x) returns (int256 r)
@@ -1770,53 +1873,27 @@ function lwm1(lx, w) -> wn {
 /// @reverts OutOfRange() outside that
 /// @notice Secondary real branch of the Lambert W function, W(x) e^W(x) = x
 ///         with W(x) <= -1, for -1/e <= x < 0, rounded to nearest.
-/// @dev Reverts with OutOfRange below -1/e and for x >= 0. Within 2^-40 of
-///      the branch point in 1 + e x, the series -1 - p - p^2/3 - 11/72 p^3
-///      - 43/540 p^4, p = sqrt(2 (1 + e x)) with 1 + e x to 2^-254, seeds the
-///      final step directly. Elsewhere: the branch-point series for x < -1/4,
-///      the asymptotic L - ln(-L) + ln(-L) / L with L = ln(-x) for
-///      -1/4 <= x < 0, then as many one-word log-form Halley steps as the
-///      seed needs for 120 bits or more (two to four for the asymptotic seed
-///      as -x grows past 2^-8 and 2^-4; one to three for the branch-point
-///      series as 1 + e x falls past 2^-8 and 2^-28), then the double-word
-///      step lwfin. The smallest input, -floor(2^128 / e), is
-///      2^-128 inside -1/e and its W is -1 - 2^-63.3, not -1, which v4
-///      returned. The archived Huff lambertwm1 was never functional and is
-///      not the reference for this routine.
+/// @dev Reverts with OutOfRange below -1/e and for x >= 0. Below 1 + e x =
+///      1/4 (x < -0.276) as lambertW0 in q = 1 + W (negative here); above,
+///      the asymptotic L - ln(-L) + ln(-L) / L with L = ln(-x) from the
+///      table-free logarithm, then fourth-order log-form steps at 2^-126
+///      until one starts within 2^-22 (two), and the double-word
+///      step lwfin. The smallest input, -floor(2^128 / e), is 2^-128 inside
+///      -1/e and its W is -1 - 2^-63.3, not -1, which v4 returned. The
+///      archived Huff lambertwm1 was never functional and is not the
+///      reference for this routine.
 function fp127_lambertWm1(x) -> r {
     if slt(x, sub(0, 0x5e2d58d8b3bcdf1abadec7829054f90d)) { rev(0x7db3aba7) }
     if iszero(slt(x, 0)) { rev(0x7db3aba7) }
-    let w := 0
-    let n := 3
-    let lx := lnf(sub(0, x))
-    switch slt(x, sub(0, 0x40000000000000000000000000000000))
-    case 1 {
-        let qq := lwq(x)
-        if lt(qq, 0x1000000000000000000000000000000000000000000000000000000) {
-            r := lwfin(x, lwbp(qq, 0))
-            leave
-        }
-        let q := add(0x100000000000000000000000000000000, mulraw(x, 0x2b7e151628aed2a6abf7158809cf4f3c7))
-        let p := fp127_sqrt(shl(1, q))
-        let p2 := mulraw(p, p)
-        w := sub(sub(0, 0x100000000000000000000000000000000), p)
-        w := sub(w, div(p2, 3))
-        w := sub(w, div(mul(mulraw(p2, p), 11), 72))
-        // 1 + e x below 2^-8: two steps; below 2^-28: one
-        if lt(qq, 0x100000000000000000000000000000000000000000000000000000000000000) {
-            n := 2
-            if lt(qq, 0x1000000000000000000000000000000000000000000000000000000000) { n := 1 }
-        }
+    if slt(x, sub(0, 0x46a202a286cda7540c2715a1ec3fbaca)) {
+        r := lwfin(x, lwbr(lwq(x), 1))
+        leave
     }
-    default {
-        let ll := lnf(sub(0, lx))
-        w := add(sub(lx, ll), fp127_div(ll, lx))
-        // the asymptotic seed: two steps for -x below 2^-8, four from 2^-4
-        if sgt(x, sub(0, 0x1000000000000000000000000000000)) { n := 2 }
-        if slt(x, sub(0, 0x10000000000000000000000000000000)) { n := 4 }
-    }
-    for {} n { n := sub(n, 1) } { w := lwm1(lx, w) }
-    r := lwfin(x, w)
+    let rr, kk := lnm(sub(0, x))
+    let lx := lnc0(rr, kk)
+    rr, kk := lnm(sub(0, lx))
+    let ll := lnc0(rr, kk)
+    r := lwfin(x, lwfast(x, add(sub(lx, ll), sdiv(shl(100, ll), sar(28, lx)))))
 }
 
 // ---------------------------------------------------------------------------
