@@ -41,9 +41,9 @@ FP256 release four, not yet deployed: correctly rounded, and the edge.
 
 | component | version | Sepolia |
 |---|---|---|
-| FP256 | FP256 v4, 37 ops, 24,250 bytes | not yet deployed |
-| FP256X | FP256X v4, 5 ops, 23,891 bytes | not yet deployed |
-| FP256X2 | FP256X2 v4, 10 ops, 19,220 bytes | not yet deployed |
+| FP256 | FP256 v4, 37 ops, 24,512 bytes | not yet deployed |
+| FP256X | FP256X v4, 5 ops, 22,266 bytes | not yet deployed |
+| FP256X2 | FP256X2 v4, 10 ops, 19,889 bytes | not yet deployed |
 | FP256X3 | FP256X3 v4, 15 ops, 6,844 bytes | not yet deployed |
 
 - Every FP256 op is correctly rounded or exact: 0 misrounded of 364,658
@@ -66,8 +66,14 @@ FP256 release four, not yet deployed: correctly rounded, and the edge.
   library holds all of them. `make predict-fp256x`, `deploy-fp256x-sepolia`,
   `verify-fp256x-sepolia`.
 - Gas: the fast paths cost a few hundred gas more; the second stage, when it
-  runs, 36k (exp) to 436k (erfc's continued fraction); Lambert W always
-  takes one wide step, 152k at the median (109k before).
+  runs, 29k (exp) to 430k (erfc's continued fraction). The optimisation
+  pass (fp256-faster, results unchanged word for word): Lambert W by
+  fourth-order steps at word precision with a stated bound and the rounding
+  test, the wide step only on a miss, 34k / 30k at the median (W0 / W−1;
+  151k / 156k before, 109k in release three); `wexpm1` 27k → 21k, so every
+  second stage is about 6k cheaper; pow, powu and compound fallbacks
+  shorter (p99 80k → 68k, 92k → 73k, 167k → 116k), the pow bound tighter,
+  `wln1ps`'s length set by |d|.
 - The ops FP127 has and FP256 lacked (#79), each correctly rounded or exact:
   `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `sinh`, `cosh`,
   `tanh`, `atanh` in FP256X2 (on the same kernels, each with a stated bound

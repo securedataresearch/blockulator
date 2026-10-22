@@ -29,8 +29,8 @@ ends: [blockulator.com](https://blockulator.com).
   `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `hypot`, `gavg`, `inv`,
   the hyperbolics, `min`, `max`, `clamp`, `avg`, `lerp`, `dist`,
   `zeroFloorSub`, `frac`, `round`, `gcd`, `factorial`, `pi`. Four objects:
-  FP256 (24,250 bytes), FP256X (23,891: erf, erfc, normCdf, Lambert W),
-  FP256X2 (19,220: the exponential family and cbrt) and FP256X3 (6,844: the
+  FP256 (24,512 bytes), FP256X (22,266: erf, erfc, normCdf, Lambert W),
+  FP256X2 (19,889: the exponential family and cbrt) and FP256X3 (6,844: the
   algebraic ops). Release three (28 ops,
   within 1 to 4 ULP on five of them) is live on Sepolia.
 

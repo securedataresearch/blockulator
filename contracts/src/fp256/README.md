@@ -2,7 +2,7 @@
 
 256-bit binary floating point for the EVM. Release four (not yet deployed):
 67 ops, every one correctly rounded or exact, in four deployed objects of
-24,250 (FP256), 23,891 (FP256X), 19,220 (FP256X2) and 6,844 (FP256X3)
+24,512 (FP256), 22,266 (FP256X), 19,889 (FP256X2) and 6,844 (FP256X3)
 bytes from one source. Release three
 (28 ops, one object) is live on Sepolia at
 [`0x67eFfb11…61be`](../../deployments/FP256.md).
@@ -56,9 +56,9 @@ the inline library holds everything.
 
 | object | ops | runtime | salt | predicted address (CREATE2 proxy) |
 |---|---|---:|---|---|
-| FP256 | the arithmetic, the edge (directed ops), exp, ln, log1p, expm1, pow, powu, compound, the comparisons and conversions: 37 | 24,250 | `FP256 v4` | `0x7471C249ebaE6ddA9892bc18DA45FE1D6B44897c` |
-| FP256X | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 23,891 | `FP256X v4` | `0xeE62FB72b4029AD723C691095338CF51919C5B73` |
-| FP256X2 | exp2, exp10, log2, log10, log2Up, cbrt, sinh, cosh, tanh, atanh: 10 | 19,220 | `FP256X2 v4` | `0x7D5423c4c789f3Ac27E106643E7C32f45f8a058d` |
+| FP256 | the arithmetic, the edge (directed ops), exp, ln, log1p, expm1, pow, powu, compound, the comparisons and conversions: 37 | 24,512 | `FP256 v4` | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
+| FP256X | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 22,266 | `FP256X v4` | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
+| FP256X2 | exp2, exp10, log2, log10, log2Up, cbrt, sinh, cosh, tanh, atanh: 10 | 19,889 | `FP256X2 v4` | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
 | FP256X3 | min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg, hypot: 15 | 6,844 | `FP256X3 v4` | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
 
 The split is by family, as
@@ -112,18 +112,25 @@ The second stage:
 - `wexpm1`: e^r − 1 for r in [0, 1): z = r/2^24, e^z − 1 = z·T(z) by 19
   Horner terms (k = 20..12 in one word, k = 11..2 in two), then 24
   doublings E ← 2E + E² on the value scaled by 2^24, which keep its
-  relative precision; within 2^−503.
+  relative precision; within 2^−503. The doublings run in one loop without
+  calls, each square with its cross term formed once (`wdbl`, bit for bit
+  the same as `wmul`'s), so a call costs about 21k gas, not 27k.
 - `wexp`: e^x = 2^k(1 + E), r = x − k ln 2 exact modulo 4 at 2^−510 with
   ln 2 in three words.
 - `wlnw`: ln of a mantissa in [1, 2) by one Newton step from the kernel's
   value (within 2^−249): y0 − (e^y0 − m)/e^y0, the residual at 2^−510 and
   its quotient at 2^−502; within 2^−497.
-- `wln1ps` and `em1w`: the series ln(1 + d)/d (64 terms below 2^−8, 128
-  below 2^−4) and (e^x − 1)/x in two words, relative, for the near-one
-  bands.
+- `wln1ps` and `em1w`: the series ln(1 + d)/d (⌈512/(−u − 1)⌉ terms for
+  |d| < 2^(u+1): 128 at most, 64 below 2^−8, 14 at 2^−40) and (e^x − 1)/x
+  in two words, relative, for the near-one bands.
 - pow and compound: log2 x (or log2(1 + rate)) in two words, its exact
   three-word product with y's significand (or with n, any int256), split at
-  2^−510, 2^f by `wexpm1`.
+  2^−510, 2^f by `wexpm1`. ln, log2 and log10 hand the second stage the
+  kernel's log2m they already have. powu, when its own bound misses, goes
+  straight to pow's second stage (pow's looser bound would miss too);
+  compound skips its fast value where its bound is sure to reach the
+  rounding boundary (`compsure`: a per-second rate with |n log2(1 + rate)|
+  from about 11,000 to 2^19).
 - The error function: below y = 7 the all-positive series erf(y) =
   (2/√π) y e^(−y²) Σ (2y²)^k/(2k+1)!! in two words at a scale 2^−σ
   (σ = ⌊1.4434 ⌊y²⌋⌋ + 9), and 1 − erf for erfc (at most 74 bits of
@@ -131,10 +138,19 @@ The second stage:
   …))) (x and k for normCdf), numerator and denominator by two scaled
   recurrences of depth 1700/⌊|x|⌋ + 28 (2404 for normCdf): truncation below
   2^−402 from y = 7 to 430 (`bounds.py`).
-- Lambert W: after the float Newton steps, always one log-form Newton step
-  at 2^−510, w − (w + ln(|w|/|x|))·w/(1 + w). W and x share a sign, so the
-  form holds for every x ≠ 0, and the ratio's one wide ln keeps the
-  correction's relative precision down to the smallest x.
+- Lambert W: from FP127's seeds (their logarithms by a degree-7 fit, 2^−21),
+  fourth-order steps at word precision on w + ln(w/x) = 0, the series
+  reversion w(1 − u + uv/2 − uv²/2 + u²v/3) with u = f/(1 + w), v =
+  u/(1 + w), the logarithm of the ratio of the significands by the log2
+  kernel (one or two steps, three from Winitzki's seed below 2^64, of which
+  the first runs on the fitted logarithm); the step that starts within
+  2^−66 has a bound, 2·(1.01·du + 5) + 1 with du = 1 + 32·2^254/|h|, and
+  `rbad`. Below p = 2^−21 the branch-point series W = −1 + Σ μ_k p^k to
+  k = 11 (the next term under 2^−261) by Horner at 2^−254, within 2.2
+  units, and `rbad(D, 4)`. On a miss one log-form Newton step at 2^−510, w − (w + ln(|w|/|x|))·w/(1 + w). W and x
+  share a sign, so the form holds for every x ≠ 0, and the ratio's one
+  wide ln keeps the correction's relative precision down to the smallest
+  x.
 
 #79's second stages:
 
@@ -192,12 +208,12 @@ The bounds, and what they give:
 | ln | 40 | (log2m 37 + 1) ln 2 + 2 | 5.18 | 2^−489 rel. | 2^−252 ULP |
 | log1p | 44 | as ln, + 1 + x's normalisation | 6.73 | 2^−489 rel. | 2^−252 ULP |
 | pow, compound near one | 16 + 12(k + 1) | t within 8(k + 1) + 2 units | 0.42 of it | 2^−486 rel. | 2^−249 ULP |
-| pow, compound | 16 + 2·yb·(40 + 2\|u\|) | log2m 37, Lm's shift 2\|u\|; yb ≥ \|y\| (\|n\| + 1) | 0.38 of it | 2^−470 rel. | 2^−233 ULP |
+| pow, compound | 8 + yq·(39 + 2\|u\|)·355/2^16 | 6 + 1.3863·\|y\|·(log2m 37 + Lm's shift 2\|u\| + compound's dropped one 1.45); yq ≥ 2^8\|y\| (2^8(\|n\| + 1)) | 0.49 of it | 2^−470 rel. | 2^−233 ULP |
 | powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it | as pow | 2^−233 ULP |
 | erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 10.6 | 2^−499 rel. | 2^−262 ULP |
 | erf, erfc, Φ, ½ ≤ y < 6 | 192 | 2 × g's 81 + 8 | 11.3 | 2^−444 rel. | 2^−207 ULP |
 | erfc, Φ, y ≥ 6 | 32n + 64 | A and B gain 2^−251 a step | 186 | 2^−392 rel. | 2^−155 ULP |
-| lambertW0, lambertWm1 | (always wide) | Newton δ²/(2\|1 + W\|), δ ≤ 2^−218 | | 2^−415; 2^−354 near −1/e | 2^−178; 2^−117 near −1/e |
+| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 17 + 16·⌊2^255/\|h\|⌋; 4 on the branch series | f within 31.4 units of its scale, the reversion's truncation under 2^−8; the series' Horner floors and p's rounding, 2.2 | 0.15, 0.49 of it | 2^−415; 2^−354 near −1/e | 2^−178; 2^−117 near −1/e |
 | exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.54 | 2^−492 rel. | 2^−255 ULP |
 | log2, near one | 8 | d P within 3, times log2 e: 3 log2 e + 2 | 4.64 | 2^−497 rel. | 2^−260 ULP |
 | log2 | 38 | log2m 37, the shift into Lm 1 | 2.25 | 2^−489 rel. | 2^−252 ULP |
@@ -236,8 +252,8 @@ Lambert W's branch point). None is known.
 | `erf` | FP256X | below ½, x (2/√π) e^(−x²) Σ (2x²)^k/(2k+1)!!; above, 1 − erfc; ±1 from \|x\| ≥ 13 | never |
 | `erfc` | FP256X | e^(−x²)·g(x), g from 45 Taylor anchors on [½, 6] and a continued fraction beyond, e^(−x²) from the exact square: 71 digits to the underflow near x = 427 | never |
 | `normCdf` | FP256X | Φ(x) = erfc(−x/√2)/2, the left tail to about x = −603; exactly one from x ≥ 13√2 | never |
-| `lambertW0` | FP256X | W e^W = x, W ≥ −1: FP127's seeds, six float Newton steps (w e^w = x up to 3, w + ln w = ln x above), the branch-point series below p = 2^−21, then the wide step | `OutOfRange` below −1/e |
-| `lambertWm1` | FP256X | W ≤ −1 on [−1/e, 0): seeds, seven float log-form steps, the wide step | `OutOfRange` outside [−1/e, 0) |
+| `lambertW0` | FP256X | W e^W = x, W ≥ −1: FP127's seeds, fourth-order log-form steps at word precision (one to three) with a bound and the rounding test, the branch-point series at word precision below p = 2^−21; the wide step on a miss | `OutOfRange` below −1/e |
+| `lambertWm1` | FP256X | W ≤ −1 on [−1/e, 0): seeds, the same steps and test, the wide step on a miss | `OutOfRange` outside [−1/e, 0) |
 | `neg`, `abs`, `sign` | FP256 | bit operations; −0 is 0 | `OutOfRange` |
 | `cmp`, `lt`, `eq` | FP256 | through a monotone key (negatives mirrored); `eq` is bit equality; plain integers | `OutOfRange` |
 | `floor`, `ceil` | FP256 | the integral number at or below / above x, exact | `OutOfRange` |
@@ -307,20 +323,20 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 
 | op | fast path | second stage | largest seen |
 |---|---:|---:|---:|
-| exp, expm1 | 7,500–8,100 | 35,500–36,000 | 45,900 |
-| ln, log1p | 8,800–9,700 | 43,000–63,700 | 126,600 |
-| pow, powu | 6,600–15,300 | 80,300–85,500 | 113,900 |
-| compound | 17,400 | 102,900 | 167,500 |
-| erf, erfc, normCdf | 18,000–35,000 | 107,200–119,300 | 436,400 (the continued fraction) |
-| lambertW0, lambertWm1 | 151,700–156,900, the wide step included | | 173,200 |
-| the directed ops | 1,500–3,000 | | |
-| exp2, exp10 | 8,800–9,000 | 36,400–36,500 | 36,800 |
-| log2, log10 | 9,800–10,000 | 43,900–44,000 | 49,800 |
-| sinh, cosh | 10,000–10,200 | 15,500–39,400 | 44,300 |
-| tanh, atanh | 17,900–18,500 | 22,200–31,500 | 89,200 |
-| cbrt, gavg, hypot | 5,800–15,100 | | 16,100 |
-| lerp | 12,200 | | 13,100 |
-| gcd | 7,300 | | 12,200 |
+| exp, expm1 | 7,200–7,700 | 29,300–29,800 | 45,700 |
+| ln, log1p | 8,500–9,400 | 31,200–37,600 | 126,400 |
+| pow, powu | 5,700–14,800 | 59,900–68,000 | 99,500 |
+| compound | 17,000 | 68,100 | 161,000 |
+| erf, erfc, normCdf | 17,600–34,200 | 101,000–112,700 | 430,100 (the continued fraction) |
+| lambertW0, lambertWm1 | 29,700–34,000 | 66,900–71,700 | 92,400 |
+| the directed ops | 500–2,000 | | 2,000 |
+| exp2, exp10 | 7,500–7,600 | 30,000 | 30,300 |
+| log2, log10 | 8,400–8,600 | 31,600–31,800 | 36,200 |
+| sinh, cosh | 8,500–8,700 | 14,800–32,800 | 43,700 |
+| tanh, atanh | 16,400–17,000 | 21,500–30,800 | 88,500 |
+| cbrt, gavg, hypot | 3,800–13,600 | | 14,600 |
+| lerp | 12,000 | | 12,800 |
+| gcd | 5,500 | | 10,400 |
 | factorial | 1.22M | | 2.45M (n = 20,366) |
 
 The second stage runs for about 2·err/2^w of inputs, w = 17..19 the bits
