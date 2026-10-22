@@ -8,9 +8,10 @@ pragma solidity ^0.8.24;
 ///         same Yul that the deployed FP256 and FP256X objects run, so the three
 ///         agree by construction.
 /// @dev Blocks are memory-safe: the only memory touched is scratch space
-///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's
-///      four-word accumulator just past the free memory pointer, which it does
-///      not move.
+///      (0x00..0x3f) for revert selectors and lerp's comparisons, and temporary
+///      memory just past the free memory pointer, which is never moved: lerp's
+///      four-word accumulator and its terms, the error function family's
+///      node table and sums.
 library FP256Lib {
     error Overflow();
     error DivisionByZero();
@@ -3107,14 +3108,14 @@ library FP256Lib {
             _r := fp256_expm1(_x)
         }
     }
-    /// @notice The error function. Below 1/2, x (2/sqrt pi) e^(-x^2) times the
-    ///         all-positive series sum (2x^2)^k / (2k+1)!!; above, 1 - erfc with
-    ///         erfc = e^(-x^2) g(x) from the anchors or the continued fraction
-    ///         (see erfc). e^(-x^2) comes from the exact square. One rounding
-    ///         when the fast value's error bound clears the rounding boundary,
-    ///         else the series in two words below 7 and 1 - erfc by the
-    ///         continued fraction in two words above: correctly rounded. +-1
-    ///         from |x| >= 13.
+    /// @notice The error function. 1 - erfc from |x| = 1/2 (see erfc); below,
+    ///         tanh(pi x/h) - e^(-x^2) x U(x) from the same 59-node trapezoidal
+    ///         rule, the tanh from e^(2 pi x/h) - 1 (the 2^f kernel from 2^-5, the
+    ///         expm1 series with doublings below), so the relative precision
+    ///         holds down to the smallest x. One rounding when the fast value's
+    ///         error bound clears the rounding boundary, else the series in two
+    ///         words below 7 and 1 - erfc by the continued fraction in two words
+    ///         above: correctly rounded. +-1 from |x| >= 13.
     function erf(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function divh(a, b) -> q {
@@ -3141,17 +3142,6 @@ library FP256Lib {
                 q := shr(1, divh(a, b))
             }
 
-            function msb(x) -> r {
-                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
-                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
-                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
-                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
-                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
-                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
-                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
-                if iszero(lt(x, 0x2)) { r := add(r, 1) }
-            }
-
             function mul512(a, b) -> p1, p0 {
                 p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -3161,144 +3151,6 @@ library FP256Lib {
             function mulwu(a, b) -> r {
                 let p1, p0 := mul512(a, b)
                 r := or(shl(2, p1), shr(254, p0))
-            }
-
-            function erfcxcf(Y, uy) -> R, eg, n {
-                let y2 := mulwu(Y, Y)
-                let ey := add(uy, uy)
-                if shr(255, y2) {
-                    y2 := shr(1, y2)
-                    ey := add(ey, 1)
-                }
-                n := add(div(4400, shr(sub(254, ey), y2)), 48)
-                let w := shr(add(ey, 4), div254(0x4000000000000000000000000000000000000000000000000000000000000000, y2))
-                let am := 0x800000000000000000000000000000000000000000000000000000000000000
-                let an := am
-                let bm := 0
-                let bn := am
-                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
-                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
-                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
-                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
-                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
-                // needs no shift of its own; a zero shift would change nothing, so it
-                // is skipped). Written out: no calls in the loop
-                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
-                    let p0 := mul(c, am)
-                    let mm := mulmod(c, am, not(0))
-                    let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    p0 := mul(c, bm)
-                    mm := mulmod(c, bm, not(0))
-                    let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
-                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
-                        let hf := shl(sub(sh, 1), 1)
-                        am := shr(sh, add(am, hf))
-                        an := shr(sh, add(a2, hf))
-                        bm := shr(sh, add(bm, hf))
-                        bn := shr(sh, add(b2, hf))
-                    }
-                }
-                let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
-                let sb := sub(253, msb(bn))
-                let sd := sub(253, msb(dn))
-                R := div254(shl(sb, bn), shl(sd, dn))
-                eg := sub(sub(sd, sb), uy)
-            }
-
-            function erfcfv(Y, uy, v) -> D, eg, er {
-                let R, e2, n := erfcxcf(Y, uy)
-                eg := e2
-                D := mulwu(R, v)
-                er := add(64, shl(5, n))
-            }
-
-            function erfcxg0(j) -> g {
-                switch j
-                case 4 { g := 0x4ecef0f262c3cb2abd4a76f3bf858856efdf32563b95b2841ae0ee1218abe3e2 }
-                case 5 { g := 0x4745ad6027abd9043e5f49b40441648cf81fbcfb1e41c4e68f7e5ead045990d7 }
-                case 6 { g := 0x40e3553a8f60ce13decb27ae99af2fa62b9b3b6c3ac5f0b20a8b423d86476fc6 }
-                case 7 { g := 0x3b6e8fdc813589552fbe29a2b067802778928eeed560ee3d2d5ea2a379930136 }
-                case 8 { g := 0x36bb0f01f2ad64304a88fe4634cddb0ad316b6c1960d9e066c83d07fcb62ca2f }
-                case 9 { g := 0x32a63c13629369cab5d9b942c79109271effdef65a3728ea4098fe330a2205ce }
-                case 10 { g := 0x2f14d24270ecf4014797400f19191d5fe5a48c91cc8925c97c128b85d47d7a84 }
-                case 11 { g := 0x2bf11ea5e78ed592051a17f4bc6271c922d3e5fa99d640b880bdb3421d1d8c96 }
-                case 12 { g := 0x2929b5ff455ad09cdef8786c71079fb58ff496ba7f5357d7e12e4509b568e9a3 }
-                case 13 { g := 0x26b07ecc8864f53b8a38a0119a8c9555e844a67bf1b31850fd92a3483c49b3af }
-                case 14 { g := 0x2479f85e3b8fc04ec4103acc6308fc0e1707ca1010ae9140459e57361ea61222 }
-                case 15 { g := 0x227cae876c0900e50efe52ea998852887f1054300be82faf99439abcb2282156 }
-                case 16 { g := 0x20b0ce36a58eebd88f871fc40eceb0c53b16f184d1ceafceaa5398c293b85fad }
-                case 17 { g := 0x1f0fd28fdc20ab51b6db109f6b424fd64bfe3ae7b339bb9dab40a4f8b0d9e2fb }
-                case 18 { g := 0x1d94446d627931cafcceafbd376e1314b7a46a4db70d4d6f9effe4883f78a5e1 }
-                case 19 { g := 0x1c3987d04d0b9783d791fc876e221ff4867136da59e89c3a59c55af3ab1f88f0 }
-                case 20 { g := 0x1afbb3f3b7343acc17e86bd7b734eb6edd26461dfcfe74ca1f4244b77c61154a }
-                case 21 { g := 0x19d7738e1f4db71e59221b62587628c8673b71caf70f5d32301dd2669b66d68e }
-                case 22 { g := 0x18c9eb68ff27d6912c6270e6d72c1f84a5a269820f0dec4609051952e95dacf8 }
-                case 23 { g := 0x17d0a5e9dd571047a28cf6b91600a33b35735fb2aa199cb46be4f2a39e9679b7 }
-                case 24 { g := 0x16e9827d229d2ccdf158431d94da3421b78167cd1fd99c3d46ce926afe452eec }
-                case 25 { g := 0x1612a8125451bd59f690799da46facbdf6d245ab18ccf1c1020dceaf751939fd }
-                case 26 { g := 0x154a7a08d4bb44fa57c9bb32508dc61313a69c26f6defda0b0b1d8ddd6d8d716 }
-                case 27 { g := 0x148f8f10299b711635e7b3452b78cda8d5e97030653e85e00096d4517719cf20 }
-                case 28 { g := 0x13e0a99a0ee913f37e9a43449cd0c5d4ce820c177e636ac2f7784ac5153065f2 }
-                case 29 { g := 0x133cb19179d7f5febc25c2947e8f89366b66e51ce9f55ab5890ecd3c525bbf22 }
-                case 30 { g := 0x12a2af19c1492f817ed7e573035d2a49a5f40f7da09dc3cb6b8f7d0eb9b51cab }
-                case 31 { g := 0x1211c625924e338c6478346b830147a9bc4c1a77b12d1e24c5cef1438baf221c }
-                case 32 { g := 0x118932bf08e15442606a849d1f39e27976aa3bfab86a842ea754270ee75b2bec }
-                case 33 { g := 0x110845e1dcb19a2698cfc74f5821d77bae20f98163f3cb252838f2e99491984b }
-                case 34 { g := 0x108e62ce8c89ac88db65377816e5960af139732531b4b9cc71dddb019c9ea457 }
-                case 35 { g := 0x101afcc22e71b80ff78f84abc953e5a24f024cb46b1f65a3eb1f58b44bca72bf }
-                case 36 { g := 0xfad95024e7a62c07688809d2d4cfdbc51a1874b7030261f972e1302e3119ad4 }
-                case 37 { g := 0xf45b92f487dc6ad4598692d4159b4cf4de076845f1c20c8a1fe85a7b6fd361a }
-                case 38 { g := 0xee301d1f3bf4d62b163fc84de9ca8a3bbafbe214fa2211238b7ef23be4dfbd2 }
-                case 39 { g := 0xe85111b6a49f4e5ce56b2961e0030d5f6cf48e89899dde542ccb17091682b4c }
-                case 40 { g := 0xe2b91cf4a1e8cef197de6f7a724e96f0a5cf18e054be7d2627c7d45dd61db12 }
-                case 41 { g := 0xdd63652170dfd9409abadf6e0f914c3ec9462102d54d77c2431631c7494dbaf }
-                case 42 { g := 0xd84b7d670a37f197cf1d947d7046a3dec5c7b1f01d27b9a92ad5c7e4055dc49 }
-                case 43 { g := 0xd36d5a4abadb68390992198b6427ead13e0284e54a10d0ca1660434f81e2831 }
-                case 44 { g := 0xcec5479142795d49fb100bc268f63b91bfba3c975835cef3dc38fa45d29d284 }
-                case 45 { g := 0xca4fdf5b1ebb09e8e2b812ca7403fc4215b52007d82fce51cb9986da73a668f }
-                case 46 { g := 0xc60a024e6aa8eef9f5909a889e28ad828d035c71a59602a8765385ee23a888d }
-                case 47 { g := 0xc1f0d0aa2c9eacd8ea70d4c055e1cb3b2adfa66dabd8be92f7eda2c5b4726da }
-                case 48 { g := 0xbe01a4244eb90b9539d773438884970be40151bbfcd27f1db0116ce11993f00 }
-                default { g := 0 }
-            }
-
-            function mulwr(a, b) -> r {
-                let p1, p0 := mul512(a, b)
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := add(or(shl(2, p1), shr(254, p0)), and(shr(253, p0), 1))
-            }
-
-            function rdivs(a, n) -> q {
-                switch slt(a, 0)
-                case 1 { q := sub(0, div(add(sub(0, a), shr(1, n)), n)) }
-                default { q := div(add(a, shr(1, n)), n) }
-            }
-
-            function erfcxa(Y, uy) -> s {
-                let j := add(shr(sub(251, uy), Y), and(shr(sub(250, uy), Y), 1))
-                if lt(j, 4) { j := 4 }
-                if gt(j, 48) { j := 48 }
-                let h := shl(uy, Y)
-                if slt(uy, 0) { h := shr(sub(0, uy), Y) }
-                h := sub(h, shl(251, j))
-                let pm := erfcxg0(j)
-                let y0g0 := add(mul(j, shr(3, pm)), shr(3, mul(j, and(pm, 7))))
-                let p := mulwr(sub(shl(1, y0g0), 0x906eba8214db688d71d48a7f6bfec3441409a0ebac3e751739a15830cce620b0), h)
-                s := add(pm, p)
-                let yh2 := shl(1, add(mul(j, sar(3, h)), shr(3, add(mul(j, and(h, 7)), 4))))
-                let h22 := shl(1, mulwr(h, h))
-                for { let n := 2 } or(p, pm) { n := add(n, 1) } {
-                    let nx := rdivs(add(mulwr(yh2, p), mulwr(h22, pm)), n)
-                    pm := p
-                    p := nx
-                    s := add(s, p)
-                }
             }
 
             function exp2frac(f) -> r {
@@ -3390,66 +3242,177 @@ library FP256Lib {
                 kk, v := exp2kv(1, k, f)
             }
 
-            function erfcbig(Y, uy, u, m, h) -> D, ee, er {
+            function erfasym(Y, uy, u, m, h) -> D, e, ok {
                 let kk, v := expnegsq(u, m, h)
                 if slt(kk, sub(0, 0x80000)) { leave }
-                switch or(slt(uy, 2), and(eq(uy, 2), lt(Y, 0x6000000000000000000000000000000000000000000000000000000000000000)))
-                case 1 {
-                    D := mulwu(erfcxa(Y, uy), v)
-                    ee := sub(kk, 1)
-                    // g within 1.6 units of 2^-255 per Taylor term (at most 50) and the
-                    // anchor's half unit, v within 6 units of 2^-254: 2 x 81 + 8
-                    er := 192
+                ok := 1
+                let y2 := mulwu(Y, Y)
+                let ey := add(uy, uy)
+                if shr(255, y2) {
+                    y2 := shr(1, y2)
+                    ey := add(ey, 1)
                 }
-                default {
-                    D, ee, er := erfcfv(Y, uy, v)
-                    ee := add(ee, kk)
+                let W1 := div254(shl(254, 1), y2)
+                let w := shr(add(ey, 1), W1)
+                let term := shr(sub(ey, 7), W1)
+                let T := sub(0, term)
+                for { let mm := 3 } term { mm := add(mm, 2) } {
+                    term := mulwu(term, mul(mm, w))
+                    switch and(mm, 2)
+                    case 2 { T := add(T, term) }
+                    default { T := sub(T, term) }
                 }
+                let Q := divh(shl(255, 1), mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
+                let p1, p0 := mul512(sub(0, T), Q)
+                p1, p0 := mul512(sub(Q, shr(6, p1)), v)
+                D := shr512(p1, p0, 255)
+                e := sub(sub(kk, uy), 255)
             }
 
-            function mulwru(a, b) -> r {
+            function erftau(Y, H2, L2) -> p1, p0 {
+                p1, p0 := mul512(Y, H2)
+                let lo := mulwu(Y, L2)
+                p0 := add(p0, lo)
+                p1 := add(p1, lt(p0, lo))
+            }
+
+            function erfpolek(Y, uy) -> Pm, ep, Nm, Wd {
+                let p1, p0 := erftau(Y, 0x9d21de6d96085832ea3d6cb19fdd5d60229045f75ffbf3e692ab8a0084a0aaae, 0x1a03d201fb3f9f11cec29a0c3eadb5af4f1dbaeb46476d8b6c75a99d2e5a0c9a)
+                let k := shr512(p1, p0, sub(504, uy))
+                let kk, v := exp2kv(0, k, and(shr512(p1, p0, sub(250, uy)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                let one := shl(sub(254, k), 1)
+                Wd := add(v, one)
+                Nm := sub(v, one)
+                Pm := divh(shl(254, 1), Wd)
+                ep := sub(sub(0, 254), k)
+            }
+
+            function mulw(a, b) -> r {
                 let p1, p0 := mul512(a, b)
-                r := add(or(shl(2, p1), shr(254, p0)), and(shr(253, p0), 1))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(2, p1), shr(254, p0))
             }
 
-            function erfser(d) -> s {
-                let term := 0x4000000000000000000000000000000000000000000000000000000000000000
-                s := term
-                for { let k := 3 } term { k := add(k, 2) } {
-                    term := div(add(mulwru(term, d), shr(1, k)), k)
-                    s := add(s, term)
+            function expm1tail(df) -> p {
+                p := 0x7cb3c065cbd5df3292d019f2a7628819cffac21b76c8
+                p := add(0xbb0da098b1c0cecbdc3826ebfb13cc26b7f82329322c2, mulw(df, p))
+                p := add(0x10ce396db7f8529450c90b7f338ec7577a874b28b381f78, mulw(df, p))
+                p := add(0x171b8ef6dcf5718bef146fcee6e45218487a0757f6d2b457, mulw(df, p))
+                p := add(0x1e542ba402022507a9cad2bf8f0babbfdf2029a373f48cb25, mulw(df, p))
+                p := add(0x25e9368d0282ae49943d876f72ce96afd6e8340c50f1afdeed, mulw(df, p))
+                p := add(0x2d04f0c772fb2ef7600910d4585552f0cf33bdcea01f00d8b9e, mulw(df, p))
+                p := add(0x32a58ee0615a94d64c0a32eee35ffd4ee91a35887422e0f3d121, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e333, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e3337, mulw(df, p))
+                p := add(0x3272e95180f93a4175be28bbf47c9d519a311b52ebaebe12dd5003c, mulw(df, p))
+                p := add(0x2c248c2750da12f9470663a475ed09a766eaf7e88e38e65081a60347, mulw(df, p))
+            }
+
+            function expm1series(df) -> p {
+                p := expm1tail(df)
+                p := add(0x23ddb1dff1b12f6a89b530f59fd097d8039ee96cf38e3b216956e2a95, mulw(df, p))
+                p := add(0x1ae64567f544e38fe747e4b837dc71e202b72f11b6aaac590f0129fef9, mulw(df, p))
+                p := add(0x127e4fb7789f5c72ef016d3ea6678e4b61ddf05c2d95567d3a50ccdf4b2, mulw(df, p))
+                p := add(0xb8ef1d2ab6399c7d560e4472800b8ef1d2ab6399c7d560e4472800b8ef2, mulw(df, p))
+                p := add(0x680680680680680680680680680680680680680680680680680680680680, mulw(df, p))
+                p := add(0x3403403403403403403403403403403403403403403403403403403403403, mulw(df, p))
+                p := add(0x16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c17, mulw(df, p))
+                p := add(0x88888888888888888888888888888888888888888888888888888888888889, mulw(df, p))
+                p := add(0x2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0x2000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+            }
+
+            function erfpoles(Y, uy) -> Pm, Tm, es {
+                let p1, p0 := erftau(Y, 0x6cea7294f8fa0891c2604e730b5b69ab590562b852e5e607da296eded6451cf7, 0x3805488e7473b0e11d7ad31615404263b5e8651bbe65f38033329a5859b463ce)
+                let dd := shr512(p1, p0, 255)
+                es := sub(249, uy)
+                let j := 0
+                if sgt(uy, sub(0, 15)) { j := add(uy, 14) }
+                let s0 := add(es, j)
+                let S := mulwu(dd, expm1series(shr(sub(s0, 254), dd)))
+                for { let i := 0 } lt(i, j) { i := add(i, 1) } {
+                    p1, p0 := mul512(S, S)
+                    S := add(S, shr512(p1, p0, sub(add(s0, 1), i)))
                 }
+                let Wd := add(shl(254, 1), shr(sub(es, 253), S))
+                Pm := divh(shl(254, 1), Wd)
+                Tm := divh(S, Wd)
             }
 
-            function erfsmall(u, m, h) -> F {
-                let p1, p0 := mul512(m, m)
-                let S := erfser(shr512(p1, p0, sub(add(217, h), add(u, u))))
-                let kk, v := expnegsq(u, m, h)
-                F := mulwru(mulwru(0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, shr(sub(0, kk), v)), S)
-                if h {
-                    let q1, q0 := mul512(F, 0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8a)
-                    F := shr512(q1, q0, 255)
-                }
+            function erfctab(p) {
+                mstore(add(p, 0x0), 0x94705c5b1b073b47440b8ea4f11f382a2bdf867463049dfdbe5d08d48f557862)
+                mstore(add(p, 0x20), 0x85718ef09781a1ac7676bd8bf07596e2cc152987164296ec768a94d1f904c881)
+                mstore(add(p, 0x40), 0x6bd82ae4d9093d857c5270d0d618fb8df452a29c211286b323ebf3e45fbd100e)
+                mstore(add(p, 0x60), 0x4e59fdd73cca57721d5a97499c25f6158ede3de1dcbef4a70c0ebe70bea5d2d5)
+                mstore(add(p, 0x80), 0x6658f6917d2ed937d7686ee14e72d44cda921979d998c3dab328c58b12cabedf)
+                mstore(add(p, 0xa0), 0x782fd74c110dcb9bf73553bc1a5937ac498d1bcf508c8c7dff8e4002b4c717f8)
+                mstore(add(p, 0xc0), 0x7ee0cd4a4d48717e0dd3ca6de36a91a47cb424dbfa1a69d5237e2ce0d478e9c1)
+                mstore(add(p, 0xe0), 0x78693c8b82720bc8d77ff16790c19390f238e5ac9e1e3c117db352a941be893a)
+                mstore(add(p, 0x100), 0x66bace8f7ce7d0502c4db747b0a2fb739ed26f2ad4fe01930ef671875a7bc26c)
+                mstore(add(p, 0x120), 0x4eca73b06c14e50a09f3c45c1fee5657aee313c88524e37515eef5992325c56e)
+                mstore(add(p, 0x140), 0x6ca6c0004c96a6b9822e6fd8cf31fac99a1aeaef25084c80bdde21c870b98256)
+                mstore(add(p, 0x160), 0x86b161753d4cd47129c92a25082780b87c7f402de38262742d8df0bd402a3122)
+                mstore(add(p, 0x180), 0x961bac530f8057b38580deb52eebf7089c7e207fa967e9cef462b6d8521ecdb4)
+                mstore(add(p, 0x1a0), 0x96635b8a984f70bae002d4fbf9d73318bae5d14c4ed82bb7a841c86294ac1041)
+                mstore(add(p, 0x1c0), 0x8772b5a33b270ebfd3eb8fe5d26b4789e38120e0f3655d55452739158dd6b773)
+                mstore(add(p, 0x1e0), 0x6dab2736ec97cd4224c7b7815db6c4831bcf0b491febc8ef45ae3b4820454f9b)
+                mstore(add(p, 0x200), 0x4fd3514d837c7328ae2b6eac0c5c3b18cb12af8cd34d54881e4b7a687933a6d5)
+                mstore(add(p, 0x220), 0x6877a51d47974f13d1f6019af7a5c45ea2f0c29f909cd64c179ff806c1895854)
+                mstore(add(p, 0x240), 0x7ae7b2956c4f1365223c04c759e35a33838738197f85d409b20cbaaac000a78f)
+                mstore(add(p, 0x260), 0x81fd5c57a9060f14b6a551e7cfcadd3f2c3fc8b29b2dc91b1f5034c58b597ee2)
+                mstore(add(p, 0x280), 0x7b981b63fab445021a73b9123f88633ae67124abe212f54a1f1675bbbd0a1d3d)
+                mstore(add(p, 0x2a0), 0x69a4604706a0919d1eb00ed5e3f78eca25285bcd50c7586d96a2707667adf66e)
+                mstore(add(p, 0x2c0), 0x512cf9e54a8a434a8bdcb48082ce810b13d016e923fa720b849ee691b2e365b4)
+                mstore(add(p, 0x2e0), 0x70261c68990edf20fb8a0af08cd6c790795939692dde512864f501d5d0b465f0)
+                mstore(add(p, 0x300), 0x8b49bc2527778ce3b1b2cd674cabdebf9f69c0b7ff8fc08519e4a25b1de110c4)
+                mstore(add(p, 0x320), 0x4dc264d255c90782a6b14642b84d947805e3029b52519a3c358eed5178c02ca9)
+                mstore(add(p, 0x340), 0x4e0cbb3c86688bff0cd0e1c8b79bbc182a46dfabf0de567841d1c8a0219fdc6d)
+                mstore(add(p, 0x360), 0x8cdab4605c05a95d19e2201cc9b96fcff844cf974e770379655f5725814c633f)
+                mstore(add(p, 0x380), 0x724232d3db83f15603e873b3155977c29adca9eec5edd3726e8a24ff608ca80f)
+                mstore(add(p, 0x3a0), 0x5352532b0a737f1b8e90215513b58340b036bc7fdb97e84320adfd77f617b690)
+                mstore(add(p, 0x3c0), 0x6d3f031e91d00b83dd0c419dfeb90194bc05155e7742f525b79a02624131e890)
+                mstore(add(p, 0x3e0), 0x80c45bbffebfdfad6b5834d09a4d9ed32493b380b91048709cdedca6174a188d)
+                mstore(add(p, 0x400), 0x88718fd06ed3d997127c651e7c43afda4020ac7efa8c581031702a3711661c5c)
+                mstore(add(p, 0x420), 0x81f8f8f4c443c8ee53f0b31c9bb0d3663823c32f70704b698b109f0a81080a05)
+                mstore(add(p, 0x440), 0x6f4d1eea96c1e948a56af41fee221d319ce6273fad8401872fcac6858df3b4cc)
+                mstore(add(p, 0x460), 0x55af09b9ac7d4d682fd1723be3bd6819f7dd3f83ca7384b0aadc13af922b6506)
+                mstore(add(p, 0x480), 0x76990b786bd651f03e6cde71f5cfc5e41cfbbf456b12d383c330f623336ee9d6)
+                mstore(add(p, 0x4a0), 0x9392863383a2c83b2f42fcf226753331d6cc2ac1601daef998293e4c985779a3)
+                mstore(add(p, 0x4c0), 0x5289b1db264820ce3ad4bee1b4e5194c917ad58a4b64dd332bc35d106c3d0d70)
+                mstore(add(p, 0x4e0), 0x530029f3e8aa65f830ff738e556d607284011d762243658f9589fb5134539e3c)
+                mstore(add(p, 0x500), 0x961189fdd8954f42c1c2d229da415fb7c05c1f74d0695fb66f9a6ec8c74c4b2d)
+                mstore(add(p, 0x520), 0x79f5c7351f5f5de1b08f5287b86f53c51ea675c1add97c54e1aa3f11142c8b2a)
+                mstore(add(p, 0x540), 0x591a8bc3ef3bff1ee3a32a195cd4073b41ae09ebff8cdbb3798cc955968f3411)
+                mstore(add(p, 0x560), 0x750b940b5aa681680d1b14dc0b6ab75305401d36cc56135075f1b94e76f5e75c)
+                mstore(add(p, 0x580), 0x8a37917615962057e8f40e7346d1a866eba5814aaf2cf2c0c10d3d34b30a1878)
+                mstore(add(p, 0x5a0), 0x92baefa215574c997f76973e87c20253b5cb5cf1f1702bf579b10babb68da2e5)
+                mstore(add(p, 0x5c0), 0x8c0833f4c67ba9c33351debf52c5f33d21fc693915d4f60ac3143de868c1a04c)
+                mstore(add(p, 0x5e0), 0x7823abb345a9b4021fd595911d5dee17723c9cb071cb3b3d38edb5b5947d2d81)
+                mstore(add(p, 0x600), 0x5ca8ffa8b070db297efcb9b9bccc0c1f89ba7a3c94cbf9c0cfa4bc9bf19936ae)
+                mstore(add(p, 0x620), 0x807e4d83466b843f8f1865d79f60cab7964965495fada99d46f5c67f9aad2574)
+                mstore(add(p, 0x640), 0x501784540740505101b1ce47d532df7dc633aeac6487be54ab24a2147cebe81b)
+                mstore(add(p, 0x660), 0x59c232eed2923c9a135e417e465b7b47560fc7d4749f6710cd95452e22afbd91)
+                mstore(add(p, 0x680), 0x5a6e230e77b4e3ce74dc9c2111e17a32ff5a1d72f9a6a2024c7beeb8c0efe6f1)
+                mstore(add(p, 0x6a0), 0x51e73b59da7c72469731dcc9d088a7ca20dd236c192273d6d4d9a6893bf83ba4)
+                mstore(add(p, 0x6c0), 0x855f8ae9389aa907997ab5bed5766d24597f87d06c8bbdbe087ab43e55a7a10d)
+                mstore(add(p, 0x6e0), 0x619fb6799c4053b3d184e5fdd5d9ceab0160f376082f807f65ce90aba689e2d8)
+                mstore(add(p, 0x700), 0x8079f70ed040895aab2f6d084cff2b3f889543aa833439050258c5f16c44cbe1)
+                mstore(add(p, 0x720), 0x4bffdfef4ddff24431a7830deabd83cf918db26619720af1daa20d5e58f32e75)
+                mstore(add(p, 0x740), 0x50d4be2ba06e48aeef9868f47d8f3667422291d8c0303c475442cd2fab6330cc)
             }
 
-            function cfstep(x0h, x0l, x1h, x1l, m, sa, k) -> nh, nl {
-                // (X1 m) >> 237: X1 below 2^509 and m below 2^237
-                let lo := mul(x1l, m)
-                let mm := mulmod(x1l, m, not(0))
-                nl := shr(237, lo)
-                let c := sub(sub(mm, lo), lt(mm, lo))
-                lo := mul(x1h, m)
-                mm := mulmod(x1h, m, not(0))
-                mm := sub(sub(mm, lo), lt(mm, lo))
-                lo := add(lo, c)
-                nh := or(shl(19, add(mm, lt(lo, c))), shr(237, lo))
-                nl := or(shl(19, lo), nl)
-                // + (X0 >> sa) k, floored before the product (k below 2^10: within k units)
-                lo := or(shl(sub(256, sa), x0h), shr(sa, x0l))
-                c := mul(lo, k)
-                mm := mulmod(lo, k, not(0))
-                nl := add(nl, c)
-                nh := add(add(nh, add(mul(shr(sa, x0h), k), sub(sub(mm, c), lt(mm, c)))), lt(nl, c))
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
             }
 
             function wshr(h, l, n) -> rh, rl {
@@ -3461,103 +3424,121 @@ library FP256Lib {
                 default { rl := shr(sub(n, 256), h) }
             }
 
-            function cfrun(b, m, sa, n) -> h, l, e {
-                let ah := 0
-                let al := 0
-                h := 0x10000000000000000000000000000000000000000000000000000000000000
-                if iszero(b) {
-                    ah := h
-                    h := shl(7, m)
+            function erfquad(Y, uy) -> MU, eU {
+                let p := mload(0x40)
+                if lt(p, 0x80) { p := 0x80 }
+                erfctab(p)
+                let p1, p0 := mul512(Y, Y)
+                p1, p0 := wshr(p1, p0, sub(6, add(uy, uy)))
+                mstore(add(p, 0x760), p1)
+                mstore(add(p, 0x780), p0)
+                mstore(add(p, 0x7a0), 0)
+                mstore(add(p, 0x7c0), 0)
+                let sh := 0
+                let sh0 := 0
+                for { let k := 0 } lt(k, 59) { k := add(k, 1) } {
+                    let a := add(add(k, k), 1)
+                    a := mul(a, a)
+                    let lo := mul(a, 0x48d2c8fdddcd9e97e291494f4b9bfcfe1d6741446217ce812b9fcbcd3e4b4f88)
+                    let hi := mulmod(a, 0x48d2c8fdddcd9e97e291494f4b9bfcfe1d6741446217ce812b9fcbcd3e4b4f88, not(0))
+                    hi := add(mul(a, 0xda19e02505de1c6d4ef13b2ad9e1bfcd30d2c575bd2f82a93aa043f56722), sub(sub(hi, lo), lt(hi, lo)))
+                    let ll := add(mload(add(p, 0x780)), lo)
+                    hi := add(add(hi, mload(add(p, 0x760))), lt(ll, lo))
+                    switch k
+                    case 0 {
+                        sh := add(msb(hi), 1)
+                        sh0 := sh
+                    }
+                    default { for {} iszero(lt(hi, shl(sh, 1))) {} { sh := add(sh, 1) } }
+                    // q = floor(c_k 2^255 / B), then q 2^-(g_k + sh - sh0 + 2) into the sum
+                    lo := divh(mload(add(p, shl(5, k))), or(shl(sub(256, sh), hi), shr(sh, ll)))
+                    a := add(add(shr(64, mul(a, 0x4ea9d0585408551)), sub(sh, sh0)), 2)
+                    switch lt(a, 256)
+                    case 1 {
+                        hi := shr(a, lo)
+                        lo := shl(sub(256, a), lo)
+                    }
+                    default {
+                        hi := 0
+                        lo := shr(sub(a, 256), lo)
+                    }
+                    a := add(mload(add(p, 0x7c0)), lo)
+                    mstore(add(p, 0x7a0), add(add(mload(add(p, 0x7a0)), hi), lt(a, lo)))
+                    mstore(add(p, 0x7c0), a)
                 }
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    let nh, nl := cfstep(ah, al, h, l, m, sa, k)
-                    ah := h
-                    al := l
-                    h := nh
-                    l := nl
-                    if shr(252, h) {
-                        let t := sub(msb(h), 247)
-                        ah, al := wshr(ah, al, t)
-                        h, l := wshr(h, l, t)
-                        e := add(e, t)
+                let A1 := mload(add(p, 0x7a0))
+                let t := sub(255, msb(A1))
+                MU := or(shl(t, A1), shr(sub(256, t), mload(add(p, 0x7c0))))
+                eU := sub(sub(0, 9), add(sh0, t))
+            }
+
+            function erfyue(Y, uy, u, m, h) -> D0, e0, ok {
+                let kk, v := expnegsq(u, m, h)
+                if slt(kk, sub(0, 0x80000)) { leave }
+                ok := 1
+                let MU, eU := erfquad(Y, uy)
+                let p1, p0 := mul512(Y, MU)
+                let YU := shr512(p1, p0, 255)
+                p1, p0 := mul512(YU, v)
+                D0 := shr512(p1, p0, 255)
+                e0 := add(add(uy, 2), add(eU, kk))
+            }
+
+            function ge12(Y, uy) -> t {
+                t := or(sgt(uy, 3), and(eq(uy, 3), iszero(lt(Y, 0x6000000000000000000000000000000000000000000000000000000000000000))))
+            }
+
+            function ystuff(u, m, h) -> Y, uy {
+                Y := shl(18, m)
+                uy := u
+                if h {
+                    let p1, p0 := mul512(Y, 0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8a)
+                    Y := shr512(p1, p0, 255)
+                    if lt(Y, 0x4000000000000000000000000000000000000000000000000000000000000000) {
+                        Y := shr512(p1, p0, 254)
+                        uy := sub(u, 1)
                     }
                 }
             }
 
-            function wmul(ah, al, bh, bl) -> rh, rl {
-                let p0 := mul(ah, bh)
-                let mm := mulmod(ah, bh, not(0))
-                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
-                rl := shl(2, p0)
-                // ah bl + al bh, at most 2^512
-                p0 := mul(ah, bl)
-                mm := mulmod(ah, bl, not(0))
-                let q1 := sub(sub(mm, p0), lt(mm, p0))
-                let t0 := mul(al, bh)
-                mm := mulmod(al, bh, not(0))
-                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
-                t0 := add(p0, t0)
-                q1 := add(q1, lt(t0, p0))
-                p0 := or(shl(2, q1), shr(254, t0))
-                rl := add(rl, p0)
-                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
-                // al bl through its high word
-                t0 := mul(al, bl)
-                mm := mulmod(al, bl, not(0))
-                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
-                rl := add(rl, p0)
-                rh := add(rh, lt(rl, p0))
-            }
-
-            function wshl(h, l, n) -> rh, rl {
-                rh := or(shl(n, h), shr(sub(256, n), l))
-                rl := shl(n, l)
-            }
-
-            function wnorm(h, l) -> rh, rl, t {
-                switch h
+            function erfcmag(u, m, h) -> D, ee, er {
+                let Y, uy := ystuff(u, m, h)
+                let e := 0
+                switch slt(uy, 4)
                 case 0 {
-                    t := sub(510, msb(l))
-                    switch lt(t, 256)
-                    case 1 { rh, rl := wshl(0, l, t) }
-                    default { rh := shl(sub(t, 256), l) }
+                    let ok := 0
+                    D, e, ok := erfasym(Y, uy, u, m, h)
+                    if iszero(ok) { leave }
+                    er := 64
                 }
                 default {
-                    t := sub(254, msb(h))
-                    switch slt(t, 0)
-                    case 1 { rh, rl := wshr(h, l, sub(0, t)) }
-                    default { rh, rl := wshl(h, l, t) }
+                    let D0, e0, ok := erfyue(Y, uy, u, m, h)
+                    if iszero(ok) { leave }
+                    D := D0
+                    e := e0
+                    if iszero(ge12(Y, uy)) {
+                        let Pm := 0
+                        let ep := sub(0, 255)
+                        switch slt(uy, sub(0, 5))
+                        case 0 {
+                            let n2 := 0
+                            let w2 := 0
+                            Pm, ep, n2, w2 := erfpolek(Y, uy)
+                        }
+                        default {
+                            let t2 := 0
+                            let e2 := 0
+                            Pm, t2, e2 := erfpoles(Y, uy)
+                        }
+                        e := add(e0, 1)
+                        if sgt(ep, e0) { e := add(ep, 1) }
+                        D := add(shr(sub(e, e0), D0), shr(sub(e, ep), Pm))
+                    }
+                    er := 96
                 }
-            }
-
-            function wsub(ah, al, bh, bl) -> rh, rl {
-                rl := sub(al, bl)
-                rh := sub(sub(ah, bh), lt(al, bl))
-            }
-
-            function wrecip(ah, al) -> qh, ql {
-                let q := div254(0x4000000000000000000000000000000000000000000000000000000000000000, ah)
-                let eh, el := wmul(ah, al, q, 0)
-                eh, el := wsub(0x8000000000000000000000000000000000000000000000000000000000000000, 0, eh, el)
-                qh, ql := wmul(q, 0, eh, el)
-            }
-
-            function cfratio(m, sa, n) -> qh, ql, t {
-                let ah, al, ea := cfrun(0, m, sa, n)
-                let ta := 0
-                ah, al, ta := wnorm(ah, al)
-                qh, ql := wrecip(ah, al)
-                let bh, bl, eb := cfrun(1, m, sa, n)
-                let tb := 0
-                bh, bl, tb := wnorm(bh, bl)
-                qh, ql := wmul(qh, ql, bh, bl)
-                qh, ql := wshr(qh, ql, 1)
-                t := add(sub(add(eb, ta), add(ea, tb)), 1)
-            }
-
-            function absw(x) -> r {
-                let m := sar(255, x)
-                r := sub(xor(x, m), m)
+                let t := sub(255, msb(D))
+                D := shl(t, D)
+                ee := add(sub(e, t), 254)
             }
 
             function mulhi(a, b) -> h {
@@ -3566,15 +3547,118 @@ library FP256Lib {
                 h := sub(sub(mm, lo), lt(mm, lo))
             }
 
-            function kln2(a) -> ph, pl {
-                let y1, y0 := mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
-                pl := add(y0, mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
-                ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
+            function erfsmall(u, m) -> D2, e2, err {
+                let Y, uy := ystuff(u, m, 0)
+                let D0, e0, ok := erfyue(Y, uy, u, m, 0)
+                let Tm := 0
+                let et := sub(0, 256)
+                let ET := 64
+                switch slt(uy, sub(0, 5))
+                case 0 {
+                    let Pm, ep, Nm, Wd := erfpolek(Y, uy)
+                    Tm := divh(shl(1, Nm), Wd)
+                }
+                default {
+                    let Pm, T2, es := erfpoles(Y, uy)
+                    Tm := T2
+                    et := sub(sub(0, 2), es)
+                    ET := 256
+                }
+                e2 := e0
+                if sgt(et, e0) { e2 := et }
+                let Dt := shr(sub(e2, et), Tm)
+                let Dr := shr(sub(e2, e0), D0)
+                D2 := sub(Dt, Dr)
+                err := add(2, add(mulhi(Dt, ET), mulhi(Dr, 56)))
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function pack(s, e, m) -> r {
+                if sgt(e, 0x7ffff) { rev(0x35278d12) }
+                if slt(e, 1) { r := 0 leave }
+                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function normround(s, e, D) -> r {
+                let n := msb(D)
+                e := add(e, sub(n, 254))
+                D := shl(sub(255, n), D)
+                let m := add(shr(19, D), and(shr(18, D), 1))
+                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
+                    m := 0x100000000000000000000000000000000000000000000000000000000000
+                    e := add(e, 1)
+                }
+                r := pack(s, e, m)
+            }
+
+            function round2(s, e, h, l) -> r {
+                if h {
+                    let k := add(msb(h), 1)
+                    r := normround(s, add(e, k), or(shl(sub(256, k), h), shr(k, l)))
+                    leave
+                }
+                r := normround(s, e, l)
+            }
+
+            function wshl(h, l, n) -> rh, rl {
+                rh := or(shl(n, h), shr(sub(256, n), l))
+                rl := shl(n, l)
+            }
+
+            function wsh(h, l, n) -> rh, rl {
+                switch slt(n, 0)
+                case 1 { rh, rl := wshr(h, l, sub(0, n)) }
+                default { rh, rl := wshl(h, l, n) }
+            }
+
+            function wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function erfwop(s, op, Sh, Sl, es) -> r {
+                let hf := eq(op, 2)
+                if or(and(eq(op, 1), iszero(s)), and(hf, s)) {
+                    r := round2(0, add(sub(0x3feff, hf), es), Sh, Sl)
+                    leave
+                }
+                Sh, Sl := wsh(Sh, Sl, es)
+                Sh, Sl := wsub(shl(add(254, iszero(iszero(op))), 1), 0, Sh, Sl)
+                r := round2(mul(s, iszero(op)), sub(0x3feff, hf), Sh, Sl)
             }
 
             function wadd(ah, al, bh, bl) -> rh, rl {
                 rl := add(al, bl)
                 rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function walign(p, bh, bl, be, sb) {
+                let ae := mload(add(p, 0x200))
+                let re := add(ae, 1)
+                if sgt(be, ae) { re := add(be, 1) }
+                let ah, al := wshr(mload(add(p, 0x1c0)), mload(add(p, 0x1e0)), sub(re, ae))
+                bh, bl := wshr(bh, bl, sub(re, be))
+                switch sb
+                case 0 { ah, al := wadd(ah, al, bh, bl) }
+                default { ah, al := wsub(bh, bl, ah, al) }
+                mstore(add(p, 0x1c0), ah)
+                mstore(add(p, 0x1e0), al)
+                mstore(add(p, 0x200), re)
+            }
+
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function kln2(a) -> ph, pl {
+                let y1, y0 := mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                pl := add(y0, mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
+                ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
             }
 
             function wdbl(eh, el) -> rh, rl {
@@ -3609,6 +3693,31 @@ library FP256Lib {
                 let q1 := div(x, k)
                 x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
                 ql := or(shl(128, q1), div(x, k))
+            }
+
+            function wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
             }
 
             function wexpm1(rh, rl) -> eh, el {
@@ -3647,10 +3756,103 @@ library FP256Lib {
                 eh, el := wexpm1(rh, rl)
             }
 
-            function wsh(h, l, n) -> rh, rl {
-                switch slt(n, 0)
-                case 1 { rh, rl := wshr(h, l, sub(0, n)) }
-                default { rh, rl := wshl(h, l, n) }
+            function wnorm(h, l) -> rh, rl, t {
+                switch h
+                case 0 {
+                    t := sub(510, msb(l))
+                    switch lt(t, 256)
+                    case 1 { rh, rl := wshl(0, l, t) }
+                    default { rh := shl(sub(t, 256), l) }
+                }
+                default {
+                    t := sub(254, msb(h))
+                    switch slt(t, 0)
+                    case 1 { rh, rl := wshr(h, l, sub(0, t)) }
+                    default { rh, rl := wshl(h, l, t) }
+                }
+            }
+
+            function wrecip(ah, al) -> qh, ql {
+                let q := div254(0x4000000000000000000000000000000000000000000000000000000000000000, ah)
+                let eh, el := wmul(ah, al, q, 0)
+                eh, el := wsub(0x8000000000000000000000000000000000000000000000000000000000000000, 0, eh, el)
+                qh, ql := wmul(q, 0, eh, el)
+            }
+
+            function werfpole(p, tn) -> gh, gl, ep {
+                let ey := mload(add(p, 0x80))
+                let xh, xl := wmul(mload(add(p, 0x40)), mload(add(p, 0x60)), 0x4b5da333e5709b2a9c6e12ea4a69a4edd8eb66be7b4680077949d454cf2d0ddd, 0xefb1fd0105f57e2672cf691a1b204dc6ab67c56e7429a9e2f945df07d2ef16d8)
+                let kk := shr(sub(249, ey), mulwu(xh, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923))
+                xh, xl := wsh(xh, xl, add(ey, 5))
+                let kp, fh, fl := wexpr(0, kk, xh, xl)
+                fh := add(fh, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                // 1 + 2^kp (1 + F) = 2^kp (1 + F + 2^-kp)
+                gh, gl := wshr(0x4000000000000000000000000000000000000000000000000000000000000000, 0, kp)
+                gh, gl := wadd(fh, fl, gh, gl)
+                let tg := 0
+                gh, gl, tg := wnorm(gh, gl)
+                gh, gl := wrecip(gh, gl)
+                ep := add(sub(1, kp), tg)
+                if tn {
+                    fh, fl := wshl(fh, fl, kp)
+                    fh, fl := wsub(fh, fl, 0x4000000000000000000000000000000000000000000000000000000000000000, 0)
+                    gh, gl := wmul(fh, fl, gh, gl)
+                    ep := sub(ep, 1)
+                }
+            }
+
+            function wmem() -> p {
+                p := mload(0x40)
+                if lt(p, 0x80) { p := 0x80 }
+            }
+
+            function erfwfin(s, op) -> r {
+                let p := wmem()
+                let ey := mload(add(p, 0x80))
+                if or(slt(ey, 4), and(eq(ey, 4), lt(mload(add(p, 0x40)), 0x4400000000000000000000000000000000000000000000000000000000000000))) {
+                    let tn := and(iszero(op), slt(ey, sub(0, 5)))
+                    let gh, gl, ep := werfpole(p, tn)
+                    walign(p, gh, gl, ep, tn)
+                    if tn {
+                        r := round2(s, add(0x3feff, mload(add(p, 0x200))), mload(add(p, 0x1c0)), mload(add(p, 0x1e0)))
+                        leave
+                    }
+                }
+                r := erfwop(s, op, mload(add(p, 0x1c0)), mload(add(p, 0x1e0)), mload(add(p, 0x200)))
+            }
+
+            function werfsum(p) -> Sh, Sl, t0 {
+                mstore(add(p, 0xa0), 0x6bf195b4b9ee71e4a1ad5da04f8ac3c16c1508287cf9172a31a2297722201e2)
+                mstore(add(p, 0xc0), 0x9b49411751740459f60cda4929cb96178828db9f8e3dc1347c10576ff149f067)
+                mstore(add(p, 0xe0), 0x3c89dbb867ce52caef4e27095f43df95e10976206bcc98ff3e7a9318a6cf4601)
+                mstore(add(p, 0x100), 0x6606dec42949e767274266bc9159de76f47e688595a679ba0efc08463b6831ea)
+                mstore(add(p, 0x120), 0)
+                mstore(add(p, 0x140), 0)
+                for { let k := 0 } lt(k, 113) { k := add(k, 1) } {
+                    let a := add(add(k, k), 1)
+                    a := mul(a, a)
+                    let lo := mul(a, 0x64601c668f14b07ad6cc10eb078b1ac108dbdcb6f1aa47db451092f2f81d13bb)
+                    let hi := add(mul(a, 0x71e033550798379f04f849efdc3d3b5d8ac4232249dba35f27ac084c0), mulhi(a, 0x64601c668f14b07ad6cc10eb078b1ac108dbdcb6f1aa47db451092f2f81d13bb))
+                    let dl := add(mload(add(p, 0x20)), lo)
+                    let dh := add(add(mload(p), hi), lt(dl, lo))
+                    let t := 0
+                    dh, dl, t := wnorm(dh, dl)
+                    if iszero(k) { t0 := t }
+                    dh, dl := wrecip(dh, dl)
+                    dh, dl := wmul(mload(add(p, 0xa0)), mload(add(p, 0xc0)), dh, dl)
+                    dh, dl := wshr(dh, dl, sub(t0, t))
+                    dh, dl := wadd(mload(add(p, 0x120)), mload(add(p, 0x140)), dh, dl)
+                    mstore(add(p, 0x120), dh)
+                    mstore(add(p, 0x140), dl)
+                    dh, dl := wmul(mload(add(p, 0xa0)), mload(add(p, 0xc0)), mload(add(p, 0xe0)), mload(add(p, 0x100)))
+                    mstore(add(p, 0xa0), dh)
+                    mstore(add(p, 0xc0), dl)
+                    dh, dl := wmul(mload(add(p, 0xe0)), mload(add(p, 0x100)), 0x3c89dbb867ce52caef4e27095f43df95e10976206bcc98ff3e7a9318a6cf4601, 0x6606dec42949e767274266bc9159de76f47e688595a679ba0efc08463b6831ea)
+                    mstore(add(p, 0xe0), dh)
+                    mstore(add(p, 0x100), dl)
+                }
+                Sh := mload(add(p, 0x120))
+                Sl := mload(add(p, 0x140))
             }
 
             function wexpnsq(u, m, h) -> k2, eh, el {
@@ -3660,154 +3862,58 @@ library FP256Lib {
                 k2, eh, el := wexpr(1, kk, xh, xl)
             }
 
-            function erfccf2(u, m, h) -> vh, vl, ve {
-                let qh, ql, t := cfratio(m, sub(add(shl(1, u), 3), h), add(div(add(1700, mul(h, 704)), shr(sub(236, u), m)), 28))
+            function erfwsum(u, m, h, Yh, Yl, ey) {
+                let p := wmem()
+                mstore(add(p, 0x40), Yh)
+                mstore(add(p, 0x60), Yl)
+                mstore(add(p, 0x80), ey)
+                let Sh, Sl := wmul(Yh, Yl, Yh, Yl)
+                Sh, Sl := wshr(Sh, Sl, sub(20, add(ey, ey)))
+                mstore(p, Sh)
+                mstore(add(p, 0x20), Sl)
+                let es := 0
+                Sh, Sl, es := werfsum(p)
+                Sh, Sl := wmul(Yh, Yl, Sh, Sl)
                 let k2, eh, el := wexpnsq(u, m, h)
-                qh, ql := wmul(qh, ql, add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el)
-                switch h
-                case 0 { vh, vl := wmul(qh, ql, 0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, 0x603ace7c2c938788a0601b04b663cd75de8fa7772470e53c3a7bb7c3bfff6128) }
-                default { vh, vl := wmul(qh, ql, 0x33108a67a86ca11a1f9678a017571c5fe9c14f982893836c60238da40131ce97, 0x4efc562aa23e9edb91fae9d5d9ba7446f58a13bcb85f0a8993c74c9a22f8467f) }
-                // value = B/A 2^t 2^-beta e^(-y^2) C, beta = u + 2 - h
-                ve := add(sub(t, sub(add(u, 2), h)), k2)
+                Sh, Sl := wmul(Sh, Sl, add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el)
+                mstore(add(p, 0x1c0), Sh)
+                mstore(add(p, 0x1e0), Sl)
+                mstore(add(p, 0x200), add(add(ey, sub(es, 20)), k2))
             }
 
-            function rev(sel) {
-                mstore(0x00, shl(224, sel))
-                revert(0x00, 0x04)
-            }
-
-            function pack(s, e, m) -> r {
-                if sgt(e, 0x7ffff) { rev(0x35278d12) }
-                if slt(e, 1) { r := 0 leave }
-                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
-            }
-
-            function normround(s, e, D) -> r {
-                let n := msb(D)
-                e := add(e, sub(n, 254))
-                D := shl(sub(255, n), D)
-                let m := add(shr(19, D), and(shr(18, D), 1))
-                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
-                    m := 0x100000000000000000000000000000000000000000000000000000000000
-                    e := add(e, 1)
-                }
-                r := pack(s, e, m)
-            }
-
-            function round2(s, e, h, l) -> r {
-                if h {
-                    let k := add(msb(h), 1)
-                    r := normround(s, add(e, k), or(shl(sub(256, k), h), shr(k, l)))
-                    leave
-                }
-                r := normround(s, e, l)
-            }
-
-            function erfwcf(s, u, m, h, op) -> r {
-                let vh, vl, ve := erfccf2(u, m, h)
-                let hf := eq(op, 2)
-                if or(and(eq(op, 1), iszero(s)), and(hf, s)) {
-                    r := round2(0, add(sub(0x3feff, hf), ve), vh, vl)
-                    leave
-                }
-                vh, vl := wshr(vh, vl, sub(0, ve))
-                vh, vl := wsub(shl(add(254, iszero(iszero(op))), 1), 0, vh, vl)
-                r := round2(mul(s, iszero(op)), sub(0x3feff, hf), vh, vl)
-            }
-
-            function erfdsc(u, m, h) -> dh, dl, ds, sig {
-                let p1, p0 := mul512(m, m)
-                sig := add(shr(10, mul(shr512(p1, p0, sub(add(472, h), shl(1, u))), 1478)), 9)
-                dh, dl := wshl(p1, p0, 37)
-                ds := sub(add(shl(1, u), 2), h)
-            }
-
-            function erfterm(th, tl, dh, dl, ds, k) -> rh, rl {
-                rh, rl := wmul(th, tl, dh, dl)
-                rh, rl := wsh(rh, rl, ds)
-                rh, rl := wdivs(rh, rl, add(shl(1, k), 1))
-            }
-
-            function erfsum(u, m, h) -> sh, sl, sig {
-                let dh, dl, ds, sg := erfdsc(u, m, h)
-                sig := sg
-                let th, tl := wshr(0x4000000000000000000000000000000000000000000000000000000000000000, 0, sig)
-                sh := th
-                sl := tl
-                for { let k := 1 } or(th, tl) { k := add(k, 1) } {
-                    th, tl := erfterm(th, tl, dh, dl, ds, k)
-                    sh, sl := wadd(sh, sl, th, tl)
-                }
-            }
-
-            function mul3(h, l, m) -> n2, n1, n0 {
-                let a1, a0 := mul512(h, m)
-                let b1 := 0
-                b1, n0 := mul512(l, m)
-                n1 := add(a0, b1)
-                n2 := add(a1, lt(n1, a0))
-            }
-
-            function erfser2(u, m, h) -> n2, n1, n0, E {
-                let sh, sl, sig := erfsum(u, m, h)
-                let k2, eh, el := wexpnsq(u, m, h)
-                sh, sl := wmul(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, sh, sl)
-                switch h
-                case 0 { sh, sl := wmul(sh, sl, 0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, 0x603ace7c2c938788a0601b04b663cd75de8fa7772470e53c3a7bb7c3bfff6128) }
-                default { sh, sl := wmul(sh, sl, 0x33108a67a86ca11a1f9678a017571c5fe9c14f982893836c60238da40131ce97, 0x4efc562aa23e9edb91fae9d5d9ba7446f58a13bcb85f0a8993c74c9a22f8467f) }
-                n2, n1, n0 := mul3(sh, sl, m)
-                E := add(sub(u, 746), add(k2, sig))
-            }
-
-            function round3(s, e, n2, n1, n0) -> r {
-                if n2 {
-                    let k := add(msb(n2), 1)
-                    r := normround(s, add(e, add(256, k)), or(shl(sub(256, k), n2), shr(k, n1)))
-                    leave
-                }
-                r := round2(s, e, n1, n0)
-            }
-
-            function shr3(z2, z1, z0, n) -> rh, rl {
-                if lt(n, 256) {
-                    rh := or(shl(sub(256, n), z2), shr(n, z1))
-                    rl := or(shl(sub(256, n), z1), shr(n, z0))
-                    leave
-                }
-                rh, rl := wshr(z2, z1, sub(n, 256))
-            }
-
-            function erfwser(s, u, m, h, op) -> r {
-                let n2, n1, n0, E := erfser2(u, m, h)
+            function erfwtiny(s, op, Yh, Yl, ey) -> r {
+                let th, tl := wmul(Yh, Yl, 0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, 0x603ace7c2c938788a0601b04b663cd75de8fa7772470e53c3a7bb7c3bfff6128)
                 if iszero(op) {
-                    r := round3(s, add(0x400fd, E), n2, n1, n0)
+                    r := round2(s, add(0x3feff, ey), th, tl)
                     leave
                 }
-                let fh, fl := shr3(n2, n1, n0, sub(sub(0, 510), E))
-                switch xor(s, eq(op, 1))
-                case 1 { fh, fl := wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl) }
-                default { fh, fl := wadd(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl) }
-                r := round2(0, sub(0x3feff, eq(op, 2)), fh, fl)
+                th, tl := wshr(th, tl, sub(0, ey))
+                switch s
+                case 0 { th, tl := wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, th, tl) }
+                default { th, tl := wadd(0x4000000000000000000000000000000000000000000000000000000000000000, 0, th, tl) }
+                r := round2(0, sub(0x3feff, eq(op, 2)), th, tl)
             }
 
-            function ystuff(u, m, h) -> Y, uy {
-                Y := shl(18, m)
-                uy := u
+            function wy(u, m, h) -> Yh, Yl, ey {
+                Yh := shl(18, m)
+                ey := u
                 if h {
-                    let p1, p0 := mul512(Y, 0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8a)
-                    Y := shr512(p1, p0, 255)
-                    if lt(Y, 0x4000000000000000000000000000000000000000000000000000000000000000) {
-                        Y := shr512(p1, p0, 254)
-                        uy := sub(u, 1)
+                    Yh, Yl := wmul(Yh, 0, 0x2d413cccfe779921165f626cdd52afa7c75bd82ea24eea133b45eb2160cce645, 0x52bf20c10eae28b0ea2c7f9bf720f6ce43dd2a1790e71ed29e0121cd8f7e89da)
+                    if lt(Yh, 0x4000000000000000000000000000000000000000000000000000000000000000) {
+                        Yh, Yl := wshl(Yh, Yl, 1)
+                        ey := sub(u, 1)
                     }
                 }
             }
 
             function erfw(s, u, m, h, op) -> r {
-                let Y, uy := ystuff(u, m, h)
-                switch or(sgt(uy, 2), and(eq(uy, 2), iszero(lt(Y, 0x7000000000000000000000000000000000000000000000000000000000000000))))
-                case 0 { r := erfwser(s, u, m, h, op) }
-                default { r := erfwcf(s, u, m, h, op) }
+                let Yh, Yl, ey := wy(u, m, h)
+                switch slt(ey, sub(0, 130))
+                case 1 { r := erfwtiny(s, op, Yh, Yl, ey) }
+                default {
+                    erfwsum(u, m, h, Yh, Yl, ey)
+                    r := erfwfin(s, op)
+                }
             }
 
             function ge13(Y, uy) -> t {
@@ -3848,17 +3954,15 @@ library FP256Lib {
                     leave
                 }
                 if slt(uy, sub(0, 1)) {
-                    // F within 52 units of 2^-254, so D within 2 x 52 + 1
-                    let p1, p0 := mul512(m, erfsmall(u, m, 0))
-                    let D := shr512(p1, p0, 236)
-                    if rbad(D, 128) {
+                    let D2, e2, err := erfsmall(u, m)
+                    if rbad(D2, err) {
                         r := erfw(s, u, m, 0, 0)
                         leave
                     }
-                    r := normround(s, e, D)
+                    r := normround(s, add(0x400fd, e2), D2)
                     leave
                 }
-                let D, ee, er := erfcbig(Y, uy, u, m, 0)
+                let D, ee, er := erfcmag(u, m, 0)
                 let D2 := sub(0x4000000000000000000000000000000000000000000000000000000000000000, shr(sub(0, ee), D))
                 if rbad(D2, add(shr(sub(0, ee), er), 2)) {
                     r := erfw(s, u, m, 0, 0)
@@ -3870,15 +3974,16 @@ library FP256Lib {
             _r := fp256_erf(_x)
         }
     }
-    /// @notice The complementary error function as a product, never a
-    ///         difference, for x >= 1/2: erfc(x) = e^(-x^2) g(x), g = e^(x^2) erfc
-    ///         from a Taylor series around 45 anchors on [1/2, 6] and the
-    ///         continued fraction above, e^(-x^2) from the exact 474-bit square,
-    ///         so the tail keeps 71 digits until it underflows 2^-262142 near
-    ///         x = 427. 1 - erf below 1/2, 2 - erfc(-x) below zero. One rounding,
-    ///         or the wide second stage (the series and 1 - erf below 7, the
-    ///         continued fraction above, in two words) when the fast value's
-    ///         error bound reaches the rounding boundary: correctly rounded.
+    /// @notice The complementary error function as a sum of positive terms: the
+    ///         59-node modified trapezoidal rule erfc(x) = e^(-x^2) x sum_k c_k /
+    ///         (x^2 + t_k^2) + 2/(1 + e^(2 pi x/h)) (Al Azah & Chandler-Wilde,
+    ///         relative error below 2^-257 for every x >= 0), e^(-x^2) from the
+    ///         exact 474-bit square, so the tail keeps 71 digits until it
+    ///         underflows 2^-262142 near x = 427; the asymptotic series from
+    ///         x = 16. 2 - erfc(-x) below zero. One rounding, or the wide second
+    ///         stage (the series and 1 - erf below 7, the continued fraction
+    ///         above, in two words) when the fast value's error bound reaches the
+    ///         rounding boundary: correctly rounded.
     function erfc(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function divh(a, b) -> q {
@@ -3905,17 +4010,6 @@ library FP256Lib {
                 q := shr(1, divh(a, b))
             }
 
-            function msb(x) -> r {
-                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
-                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
-                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
-                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
-                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
-                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
-                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
-                if iszero(lt(x, 0x2)) { r := add(r, 1) }
-            }
-
             function mul512(a, b) -> p1, p0 {
                 p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -3925,144 +4019,6 @@ library FP256Lib {
             function mulwu(a, b) -> r {
                 let p1, p0 := mul512(a, b)
                 r := or(shl(2, p1), shr(254, p0))
-            }
-
-            function erfcxcf(Y, uy) -> R, eg, n {
-                let y2 := mulwu(Y, Y)
-                let ey := add(uy, uy)
-                if shr(255, y2) {
-                    y2 := shr(1, y2)
-                    ey := add(ey, 1)
-                }
-                n := add(div(4400, shr(sub(254, ey), y2)), 48)
-                let w := shr(add(ey, 4), div254(0x4000000000000000000000000000000000000000000000000000000000000000, y2))
-                let am := 0x800000000000000000000000000000000000000000000000000000000000000
-                let an := am
-                let bm := 0
-                let bn := am
-                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
-                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
-                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
-                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
-                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
-                // needs no shift of its own; a zero shift would change nothing, so it
-                // is skipped). Written out: no calls in the loop
-                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
-                    let p0 := mul(c, am)
-                    let mm := mulmod(c, am, not(0))
-                    let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    p0 := mul(c, bm)
-                    mm := mulmod(c, bm, not(0))
-                    let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
-                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
-                        let hf := shl(sub(sh, 1), 1)
-                        am := shr(sh, add(am, hf))
-                        an := shr(sh, add(a2, hf))
-                        bm := shr(sh, add(bm, hf))
-                        bn := shr(sh, add(b2, hf))
-                    }
-                }
-                let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
-                let sb := sub(253, msb(bn))
-                let sd := sub(253, msb(dn))
-                R := div254(shl(sb, bn), shl(sd, dn))
-                eg := sub(sub(sd, sb), uy)
-            }
-
-            function erfcfv(Y, uy, v) -> D, eg, er {
-                let R, e2, n := erfcxcf(Y, uy)
-                eg := e2
-                D := mulwu(R, v)
-                er := add(64, shl(5, n))
-            }
-
-            function erfcxg0(j) -> g {
-                switch j
-                case 4 { g := 0x4ecef0f262c3cb2abd4a76f3bf858856efdf32563b95b2841ae0ee1218abe3e2 }
-                case 5 { g := 0x4745ad6027abd9043e5f49b40441648cf81fbcfb1e41c4e68f7e5ead045990d7 }
-                case 6 { g := 0x40e3553a8f60ce13decb27ae99af2fa62b9b3b6c3ac5f0b20a8b423d86476fc6 }
-                case 7 { g := 0x3b6e8fdc813589552fbe29a2b067802778928eeed560ee3d2d5ea2a379930136 }
-                case 8 { g := 0x36bb0f01f2ad64304a88fe4634cddb0ad316b6c1960d9e066c83d07fcb62ca2f }
-                case 9 { g := 0x32a63c13629369cab5d9b942c79109271effdef65a3728ea4098fe330a2205ce }
-                case 10 { g := 0x2f14d24270ecf4014797400f19191d5fe5a48c91cc8925c97c128b85d47d7a84 }
-                case 11 { g := 0x2bf11ea5e78ed592051a17f4bc6271c922d3e5fa99d640b880bdb3421d1d8c96 }
-                case 12 { g := 0x2929b5ff455ad09cdef8786c71079fb58ff496ba7f5357d7e12e4509b568e9a3 }
-                case 13 { g := 0x26b07ecc8864f53b8a38a0119a8c9555e844a67bf1b31850fd92a3483c49b3af }
-                case 14 { g := 0x2479f85e3b8fc04ec4103acc6308fc0e1707ca1010ae9140459e57361ea61222 }
-                case 15 { g := 0x227cae876c0900e50efe52ea998852887f1054300be82faf99439abcb2282156 }
-                case 16 { g := 0x20b0ce36a58eebd88f871fc40eceb0c53b16f184d1ceafceaa5398c293b85fad }
-                case 17 { g := 0x1f0fd28fdc20ab51b6db109f6b424fd64bfe3ae7b339bb9dab40a4f8b0d9e2fb }
-                case 18 { g := 0x1d94446d627931cafcceafbd376e1314b7a46a4db70d4d6f9effe4883f78a5e1 }
-                case 19 { g := 0x1c3987d04d0b9783d791fc876e221ff4867136da59e89c3a59c55af3ab1f88f0 }
-                case 20 { g := 0x1afbb3f3b7343acc17e86bd7b734eb6edd26461dfcfe74ca1f4244b77c61154a }
-                case 21 { g := 0x19d7738e1f4db71e59221b62587628c8673b71caf70f5d32301dd2669b66d68e }
-                case 22 { g := 0x18c9eb68ff27d6912c6270e6d72c1f84a5a269820f0dec4609051952e95dacf8 }
-                case 23 { g := 0x17d0a5e9dd571047a28cf6b91600a33b35735fb2aa199cb46be4f2a39e9679b7 }
-                case 24 { g := 0x16e9827d229d2ccdf158431d94da3421b78167cd1fd99c3d46ce926afe452eec }
-                case 25 { g := 0x1612a8125451bd59f690799da46facbdf6d245ab18ccf1c1020dceaf751939fd }
-                case 26 { g := 0x154a7a08d4bb44fa57c9bb32508dc61313a69c26f6defda0b0b1d8ddd6d8d716 }
-                case 27 { g := 0x148f8f10299b711635e7b3452b78cda8d5e97030653e85e00096d4517719cf20 }
-                case 28 { g := 0x13e0a99a0ee913f37e9a43449cd0c5d4ce820c177e636ac2f7784ac5153065f2 }
-                case 29 { g := 0x133cb19179d7f5febc25c2947e8f89366b66e51ce9f55ab5890ecd3c525bbf22 }
-                case 30 { g := 0x12a2af19c1492f817ed7e573035d2a49a5f40f7da09dc3cb6b8f7d0eb9b51cab }
-                case 31 { g := 0x1211c625924e338c6478346b830147a9bc4c1a77b12d1e24c5cef1438baf221c }
-                case 32 { g := 0x118932bf08e15442606a849d1f39e27976aa3bfab86a842ea754270ee75b2bec }
-                case 33 { g := 0x110845e1dcb19a2698cfc74f5821d77bae20f98163f3cb252838f2e99491984b }
-                case 34 { g := 0x108e62ce8c89ac88db65377816e5960af139732531b4b9cc71dddb019c9ea457 }
-                case 35 { g := 0x101afcc22e71b80ff78f84abc953e5a24f024cb46b1f65a3eb1f58b44bca72bf }
-                case 36 { g := 0xfad95024e7a62c07688809d2d4cfdbc51a1874b7030261f972e1302e3119ad4 }
-                case 37 { g := 0xf45b92f487dc6ad4598692d4159b4cf4de076845f1c20c8a1fe85a7b6fd361a }
-                case 38 { g := 0xee301d1f3bf4d62b163fc84de9ca8a3bbafbe214fa2211238b7ef23be4dfbd2 }
-                case 39 { g := 0xe85111b6a49f4e5ce56b2961e0030d5f6cf48e89899dde542ccb17091682b4c }
-                case 40 { g := 0xe2b91cf4a1e8cef197de6f7a724e96f0a5cf18e054be7d2627c7d45dd61db12 }
-                case 41 { g := 0xdd63652170dfd9409abadf6e0f914c3ec9462102d54d77c2431631c7494dbaf }
-                case 42 { g := 0xd84b7d670a37f197cf1d947d7046a3dec5c7b1f01d27b9a92ad5c7e4055dc49 }
-                case 43 { g := 0xd36d5a4abadb68390992198b6427ead13e0284e54a10d0ca1660434f81e2831 }
-                case 44 { g := 0xcec5479142795d49fb100bc268f63b91bfba3c975835cef3dc38fa45d29d284 }
-                case 45 { g := 0xca4fdf5b1ebb09e8e2b812ca7403fc4215b52007d82fce51cb9986da73a668f }
-                case 46 { g := 0xc60a024e6aa8eef9f5909a889e28ad828d035c71a59602a8765385ee23a888d }
-                case 47 { g := 0xc1f0d0aa2c9eacd8ea70d4c055e1cb3b2adfa66dabd8be92f7eda2c5b4726da }
-                case 48 { g := 0xbe01a4244eb90b9539d773438884970be40151bbfcd27f1db0116ce11993f00 }
-                default { g := 0 }
-            }
-
-            function mulwr(a, b) -> r {
-                let p1, p0 := mul512(a, b)
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := add(or(shl(2, p1), shr(254, p0)), and(shr(253, p0), 1))
-            }
-
-            function rdivs(a, n) -> q {
-                switch slt(a, 0)
-                case 1 { q := sub(0, div(add(sub(0, a), shr(1, n)), n)) }
-                default { q := div(add(a, shr(1, n)), n) }
-            }
-
-            function erfcxa(Y, uy) -> s {
-                let j := add(shr(sub(251, uy), Y), and(shr(sub(250, uy), Y), 1))
-                if lt(j, 4) { j := 4 }
-                if gt(j, 48) { j := 48 }
-                let h := shl(uy, Y)
-                if slt(uy, 0) { h := shr(sub(0, uy), Y) }
-                h := sub(h, shl(251, j))
-                let pm := erfcxg0(j)
-                let y0g0 := add(mul(j, shr(3, pm)), shr(3, mul(j, and(pm, 7))))
-                let p := mulwr(sub(shl(1, y0g0), 0x906eba8214db688d71d48a7f6bfec3441409a0ebac3e751739a15830cce620b0), h)
-                s := add(pm, p)
-                let yh2 := shl(1, add(mul(j, sar(3, h)), shr(3, add(mul(j, and(h, 7)), 4))))
-                let h22 := shl(1, mulwr(h, h))
-                for { let n := 2 } or(p, pm) { n := add(n, 1) } {
-                    let nx := rdivs(add(mulwr(yh2, p), mulwr(h22, pm)), n)
-                    pm := p
-                    p := nx
-                    s := add(s, p)
-                }
             }
 
             function exp2frac(f) -> r {
@@ -4154,46 +4110,250 @@ library FP256Lib {
                 kk, v := exp2kv(1, k, f)
             }
 
-            function erfcbig(Y, uy, u, m, h) -> D, ee, er {
+            function erfasym(Y, uy, u, m, h) -> D, e, ok {
                 let kk, v := expnegsq(u, m, h)
                 if slt(kk, sub(0, 0x80000)) { leave }
-                switch or(slt(uy, 2), and(eq(uy, 2), lt(Y, 0x6000000000000000000000000000000000000000000000000000000000000000)))
-                case 1 {
-                    D := mulwu(erfcxa(Y, uy), v)
-                    ee := sub(kk, 1)
-                    // g within 1.6 units of 2^-255 per Taylor term (at most 50) and the
-                    // anchor's half unit, v within 6 units of 2^-254: 2 x 81 + 8
-                    er := 192
+                ok := 1
+                let y2 := mulwu(Y, Y)
+                let ey := add(uy, uy)
+                if shr(255, y2) {
+                    y2 := shr(1, y2)
+                    ey := add(ey, 1)
                 }
-                default {
-                    D, ee, er := erfcfv(Y, uy, v)
-                    ee := add(ee, kk)
+                let W1 := div254(shl(254, 1), y2)
+                let w := shr(add(ey, 1), W1)
+                let term := shr(sub(ey, 7), W1)
+                let T := sub(0, term)
+                for { let mm := 3 } term { mm := add(mm, 2) } {
+                    term := mulwu(term, mul(mm, w))
+                    switch and(mm, 2)
+                    case 2 { T := add(T, term) }
+                    default { T := sub(T, term) }
                 }
+                let Q := divh(shl(255, 1), mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
+                let p1, p0 := mul512(sub(0, T), Q)
+                p1, p0 := mul512(sub(Q, shr(6, p1)), v)
+                D := shr512(p1, p0, 255)
+                e := sub(sub(kk, uy), 255)
             }
 
-            function mulwru(a, b) -> r {
+            function erftau(Y, H2, L2) -> p1, p0 {
+                p1, p0 := mul512(Y, H2)
+                let lo := mulwu(Y, L2)
+                p0 := add(p0, lo)
+                p1 := add(p1, lt(p0, lo))
+            }
+
+            function erfpolek(Y, uy) -> Pm, ep, Nm, Wd {
+                let p1, p0 := erftau(Y, 0x9d21de6d96085832ea3d6cb19fdd5d60229045f75ffbf3e692ab8a0084a0aaae, 0x1a03d201fb3f9f11cec29a0c3eadb5af4f1dbaeb46476d8b6c75a99d2e5a0c9a)
+                let k := shr512(p1, p0, sub(504, uy))
+                let kk, v := exp2kv(0, k, and(shr512(p1, p0, sub(250, uy)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                let one := shl(sub(254, k), 1)
+                Wd := add(v, one)
+                Nm := sub(v, one)
+                Pm := divh(shl(254, 1), Wd)
+                ep := sub(sub(0, 254), k)
+            }
+
+            function mulw(a, b) -> r {
                 let p1, p0 := mul512(a, b)
-                r := add(or(shl(2, p1), shr(254, p0)), and(shr(253, p0), 1))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(2, p1), shr(254, p0))
             }
 
-            function erfser(d) -> s {
-                let term := 0x4000000000000000000000000000000000000000000000000000000000000000
-                s := term
-                for { let k := 3 } term { k := add(k, 2) } {
-                    term := div(add(mulwru(term, d), shr(1, k)), k)
-                    s := add(s, term)
+            function expm1tail(df) -> p {
+                p := 0x7cb3c065cbd5df3292d019f2a7628819cffac21b76c8
+                p := add(0xbb0da098b1c0cecbdc3826ebfb13cc26b7f82329322c2, mulw(df, p))
+                p := add(0x10ce396db7f8529450c90b7f338ec7577a874b28b381f78, mulw(df, p))
+                p := add(0x171b8ef6dcf5718bef146fcee6e45218487a0757f6d2b457, mulw(df, p))
+                p := add(0x1e542ba402022507a9cad2bf8f0babbfdf2029a373f48cb25, mulw(df, p))
+                p := add(0x25e9368d0282ae49943d876f72ce96afd6e8340c50f1afdeed, mulw(df, p))
+                p := add(0x2d04f0c772fb2ef7600910d4585552f0cf33bdcea01f00d8b9e, mulw(df, p))
+                p := add(0x32a58ee0615a94d64c0a32eee35ffd4ee91a35887422e0f3d121, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e333, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e3337, mulw(df, p))
+                p := add(0x3272e95180f93a4175be28bbf47c9d519a311b52ebaebe12dd5003c, mulw(df, p))
+                p := add(0x2c248c2750da12f9470663a475ed09a766eaf7e88e38e65081a60347, mulw(df, p))
+            }
+
+            function expm1series(df) -> p {
+                p := expm1tail(df)
+                p := add(0x23ddb1dff1b12f6a89b530f59fd097d8039ee96cf38e3b216956e2a95, mulw(df, p))
+                p := add(0x1ae64567f544e38fe747e4b837dc71e202b72f11b6aaac590f0129fef9, mulw(df, p))
+                p := add(0x127e4fb7789f5c72ef016d3ea6678e4b61ddf05c2d95567d3a50ccdf4b2, mulw(df, p))
+                p := add(0xb8ef1d2ab6399c7d560e4472800b8ef1d2ab6399c7d560e4472800b8ef2, mulw(df, p))
+                p := add(0x680680680680680680680680680680680680680680680680680680680680, mulw(df, p))
+                p := add(0x3403403403403403403403403403403403403403403403403403403403403, mulw(df, p))
+                p := add(0x16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c17, mulw(df, p))
+                p := add(0x88888888888888888888888888888888888888888888888888888888888889, mulw(df, p))
+                p := add(0x2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0x2000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+            }
+
+            function erfpoles(Y, uy) -> Pm, Tm, es {
+                let p1, p0 := erftau(Y, 0x6cea7294f8fa0891c2604e730b5b69ab590562b852e5e607da296eded6451cf7, 0x3805488e7473b0e11d7ad31615404263b5e8651bbe65f38033329a5859b463ce)
+                let dd := shr512(p1, p0, 255)
+                es := sub(249, uy)
+                let j := 0
+                if sgt(uy, sub(0, 15)) { j := add(uy, 14) }
+                let s0 := add(es, j)
+                let S := mulwu(dd, expm1series(shr(sub(s0, 254), dd)))
+                for { let i := 0 } lt(i, j) { i := add(i, 1) } {
+                    p1, p0 := mul512(S, S)
+                    S := add(S, shr512(p1, p0, sub(add(s0, 1), i)))
                 }
+                let Wd := add(shl(254, 1), shr(sub(es, 253), S))
+                Pm := divh(shl(254, 1), Wd)
+                Tm := divh(S, Wd)
             }
 
-            function erfsmall(u, m, h) -> F {
-                let p1, p0 := mul512(m, m)
-                let S := erfser(shr512(p1, p0, sub(add(217, h), add(u, u))))
+            function erfctab(p) {
+                mstore(add(p, 0x0), 0x94705c5b1b073b47440b8ea4f11f382a2bdf867463049dfdbe5d08d48f557862)
+                mstore(add(p, 0x20), 0x85718ef09781a1ac7676bd8bf07596e2cc152987164296ec768a94d1f904c881)
+                mstore(add(p, 0x40), 0x6bd82ae4d9093d857c5270d0d618fb8df452a29c211286b323ebf3e45fbd100e)
+                mstore(add(p, 0x60), 0x4e59fdd73cca57721d5a97499c25f6158ede3de1dcbef4a70c0ebe70bea5d2d5)
+                mstore(add(p, 0x80), 0x6658f6917d2ed937d7686ee14e72d44cda921979d998c3dab328c58b12cabedf)
+                mstore(add(p, 0xa0), 0x782fd74c110dcb9bf73553bc1a5937ac498d1bcf508c8c7dff8e4002b4c717f8)
+                mstore(add(p, 0xc0), 0x7ee0cd4a4d48717e0dd3ca6de36a91a47cb424dbfa1a69d5237e2ce0d478e9c1)
+                mstore(add(p, 0xe0), 0x78693c8b82720bc8d77ff16790c19390f238e5ac9e1e3c117db352a941be893a)
+                mstore(add(p, 0x100), 0x66bace8f7ce7d0502c4db747b0a2fb739ed26f2ad4fe01930ef671875a7bc26c)
+                mstore(add(p, 0x120), 0x4eca73b06c14e50a09f3c45c1fee5657aee313c88524e37515eef5992325c56e)
+                mstore(add(p, 0x140), 0x6ca6c0004c96a6b9822e6fd8cf31fac99a1aeaef25084c80bdde21c870b98256)
+                mstore(add(p, 0x160), 0x86b161753d4cd47129c92a25082780b87c7f402de38262742d8df0bd402a3122)
+                mstore(add(p, 0x180), 0x961bac530f8057b38580deb52eebf7089c7e207fa967e9cef462b6d8521ecdb4)
+                mstore(add(p, 0x1a0), 0x96635b8a984f70bae002d4fbf9d73318bae5d14c4ed82bb7a841c86294ac1041)
+                mstore(add(p, 0x1c0), 0x8772b5a33b270ebfd3eb8fe5d26b4789e38120e0f3655d55452739158dd6b773)
+                mstore(add(p, 0x1e0), 0x6dab2736ec97cd4224c7b7815db6c4831bcf0b491febc8ef45ae3b4820454f9b)
+                mstore(add(p, 0x200), 0x4fd3514d837c7328ae2b6eac0c5c3b18cb12af8cd34d54881e4b7a687933a6d5)
+                mstore(add(p, 0x220), 0x6877a51d47974f13d1f6019af7a5c45ea2f0c29f909cd64c179ff806c1895854)
+                mstore(add(p, 0x240), 0x7ae7b2956c4f1365223c04c759e35a33838738197f85d409b20cbaaac000a78f)
+                mstore(add(p, 0x260), 0x81fd5c57a9060f14b6a551e7cfcadd3f2c3fc8b29b2dc91b1f5034c58b597ee2)
+                mstore(add(p, 0x280), 0x7b981b63fab445021a73b9123f88633ae67124abe212f54a1f1675bbbd0a1d3d)
+                mstore(add(p, 0x2a0), 0x69a4604706a0919d1eb00ed5e3f78eca25285bcd50c7586d96a2707667adf66e)
+                mstore(add(p, 0x2c0), 0x512cf9e54a8a434a8bdcb48082ce810b13d016e923fa720b849ee691b2e365b4)
+                mstore(add(p, 0x2e0), 0x70261c68990edf20fb8a0af08cd6c790795939692dde512864f501d5d0b465f0)
+                mstore(add(p, 0x300), 0x8b49bc2527778ce3b1b2cd674cabdebf9f69c0b7ff8fc08519e4a25b1de110c4)
+                mstore(add(p, 0x320), 0x4dc264d255c90782a6b14642b84d947805e3029b52519a3c358eed5178c02ca9)
+                mstore(add(p, 0x340), 0x4e0cbb3c86688bff0cd0e1c8b79bbc182a46dfabf0de567841d1c8a0219fdc6d)
+                mstore(add(p, 0x360), 0x8cdab4605c05a95d19e2201cc9b96fcff844cf974e770379655f5725814c633f)
+                mstore(add(p, 0x380), 0x724232d3db83f15603e873b3155977c29adca9eec5edd3726e8a24ff608ca80f)
+                mstore(add(p, 0x3a0), 0x5352532b0a737f1b8e90215513b58340b036bc7fdb97e84320adfd77f617b690)
+                mstore(add(p, 0x3c0), 0x6d3f031e91d00b83dd0c419dfeb90194bc05155e7742f525b79a02624131e890)
+                mstore(add(p, 0x3e0), 0x80c45bbffebfdfad6b5834d09a4d9ed32493b380b91048709cdedca6174a188d)
+                mstore(add(p, 0x400), 0x88718fd06ed3d997127c651e7c43afda4020ac7efa8c581031702a3711661c5c)
+                mstore(add(p, 0x420), 0x81f8f8f4c443c8ee53f0b31c9bb0d3663823c32f70704b698b109f0a81080a05)
+                mstore(add(p, 0x440), 0x6f4d1eea96c1e948a56af41fee221d319ce6273fad8401872fcac6858df3b4cc)
+                mstore(add(p, 0x460), 0x55af09b9ac7d4d682fd1723be3bd6819f7dd3f83ca7384b0aadc13af922b6506)
+                mstore(add(p, 0x480), 0x76990b786bd651f03e6cde71f5cfc5e41cfbbf456b12d383c330f623336ee9d6)
+                mstore(add(p, 0x4a0), 0x9392863383a2c83b2f42fcf226753331d6cc2ac1601daef998293e4c985779a3)
+                mstore(add(p, 0x4c0), 0x5289b1db264820ce3ad4bee1b4e5194c917ad58a4b64dd332bc35d106c3d0d70)
+                mstore(add(p, 0x4e0), 0x530029f3e8aa65f830ff738e556d607284011d762243658f9589fb5134539e3c)
+                mstore(add(p, 0x500), 0x961189fdd8954f42c1c2d229da415fb7c05c1f74d0695fb66f9a6ec8c74c4b2d)
+                mstore(add(p, 0x520), 0x79f5c7351f5f5de1b08f5287b86f53c51ea675c1add97c54e1aa3f11142c8b2a)
+                mstore(add(p, 0x540), 0x591a8bc3ef3bff1ee3a32a195cd4073b41ae09ebff8cdbb3798cc955968f3411)
+                mstore(add(p, 0x560), 0x750b940b5aa681680d1b14dc0b6ab75305401d36cc56135075f1b94e76f5e75c)
+                mstore(add(p, 0x580), 0x8a37917615962057e8f40e7346d1a866eba5814aaf2cf2c0c10d3d34b30a1878)
+                mstore(add(p, 0x5a0), 0x92baefa215574c997f76973e87c20253b5cb5cf1f1702bf579b10babb68da2e5)
+                mstore(add(p, 0x5c0), 0x8c0833f4c67ba9c33351debf52c5f33d21fc693915d4f60ac3143de868c1a04c)
+                mstore(add(p, 0x5e0), 0x7823abb345a9b4021fd595911d5dee17723c9cb071cb3b3d38edb5b5947d2d81)
+                mstore(add(p, 0x600), 0x5ca8ffa8b070db297efcb9b9bccc0c1f89ba7a3c94cbf9c0cfa4bc9bf19936ae)
+                mstore(add(p, 0x620), 0x807e4d83466b843f8f1865d79f60cab7964965495fada99d46f5c67f9aad2574)
+                mstore(add(p, 0x640), 0x501784540740505101b1ce47d532df7dc633aeac6487be54ab24a2147cebe81b)
+                mstore(add(p, 0x660), 0x59c232eed2923c9a135e417e465b7b47560fc7d4749f6710cd95452e22afbd91)
+                mstore(add(p, 0x680), 0x5a6e230e77b4e3ce74dc9c2111e17a32ff5a1d72f9a6a2024c7beeb8c0efe6f1)
+                mstore(add(p, 0x6a0), 0x51e73b59da7c72469731dcc9d088a7ca20dd236c192273d6d4d9a6893bf83ba4)
+                mstore(add(p, 0x6c0), 0x855f8ae9389aa907997ab5bed5766d24597f87d06c8bbdbe087ab43e55a7a10d)
+                mstore(add(p, 0x6e0), 0x619fb6799c4053b3d184e5fdd5d9ceab0160f376082f807f65ce90aba689e2d8)
+                mstore(add(p, 0x700), 0x8079f70ed040895aab2f6d084cff2b3f889543aa833439050258c5f16c44cbe1)
+                mstore(add(p, 0x720), 0x4bffdfef4ddff24431a7830deabd83cf918db26619720af1daa20d5e58f32e75)
+                mstore(add(p, 0x740), 0x50d4be2ba06e48aeef9868f47d8f3667422291d8c0303c475442cd2fab6330cc)
+            }
+
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function wshr(h, l, n) -> rh, rl {
+                switch lt(n, 256)
+                case 1 {
+                    rh := shr(n, h)
+                    rl := or(shl(sub(256, n), h), shr(n, l))
+                }
+                default { rl := shr(sub(n, 256), h) }
+            }
+
+            function erfquad(Y, uy) -> MU, eU {
+                let p := mload(0x40)
+                if lt(p, 0x80) { p := 0x80 }
+                erfctab(p)
+                let p1, p0 := mul512(Y, Y)
+                p1, p0 := wshr(p1, p0, sub(6, add(uy, uy)))
+                mstore(add(p, 0x760), p1)
+                mstore(add(p, 0x780), p0)
+                mstore(add(p, 0x7a0), 0)
+                mstore(add(p, 0x7c0), 0)
+                let sh := 0
+                let sh0 := 0
+                for { let k := 0 } lt(k, 59) { k := add(k, 1) } {
+                    let a := add(add(k, k), 1)
+                    a := mul(a, a)
+                    let lo := mul(a, 0x48d2c8fdddcd9e97e291494f4b9bfcfe1d6741446217ce812b9fcbcd3e4b4f88)
+                    let hi := mulmod(a, 0x48d2c8fdddcd9e97e291494f4b9bfcfe1d6741446217ce812b9fcbcd3e4b4f88, not(0))
+                    hi := add(mul(a, 0xda19e02505de1c6d4ef13b2ad9e1bfcd30d2c575bd2f82a93aa043f56722), sub(sub(hi, lo), lt(hi, lo)))
+                    let ll := add(mload(add(p, 0x780)), lo)
+                    hi := add(add(hi, mload(add(p, 0x760))), lt(ll, lo))
+                    switch k
+                    case 0 {
+                        sh := add(msb(hi), 1)
+                        sh0 := sh
+                    }
+                    default { for {} iszero(lt(hi, shl(sh, 1))) {} { sh := add(sh, 1) } }
+                    // q = floor(c_k 2^255 / B), then q 2^-(g_k + sh - sh0 + 2) into the sum
+                    lo := divh(mload(add(p, shl(5, k))), or(shl(sub(256, sh), hi), shr(sh, ll)))
+                    a := add(add(shr(64, mul(a, 0x4ea9d0585408551)), sub(sh, sh0)), 2)
+                    switch lt(a, 256)
+                    case 1 {
+                        hi := shr(a, lo)
+                        lo := shl(sub(256, a), lo)
+                    }
+                    default {
+                        hi := 0
+                        lo := shr(sub(a, 256), lo)
+                    }
+                    a := add(mload(add(p, 0x7c0)), lo)
+                    mstore(add(p, 0x7a0), add(add(mload(add(p, 0x7a0)), hi), lt(a, lo)))
+                    mstore(add(p, 0x7c0), a)
+                }
+                let A1 := mload(add(p, 0x7a0))
+                let t := sub(255, msb(A1))
+                MU := or(shl(t, A1), shr(sub(256, t), mload(add(p, 0x7c0))))
+                eU := sub(sub(0, 9), add(sh0, t))
+            }
+
+            function erfyue(Y, uy, u, m, h) -> D0, e0, ok {
                 let kk, v := expnegsq(u, m, h)
-                F := mulwru(mulwru(0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, shr(sub(0, kk), v)), S)
-                if h {
-                    let q1, q0 := mul512(F, 0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8a)
-                    F := shr512(q1, q0, 255)
-                }
+                if slt(kk, sub(0, 0x80000)) { leave }
+                ok := 1
+                let MU, eU := erfquad(Y, uy)
+                let p1, p0 := mul512(Y, MU)
+                let YU := shr512(p1, p0, 255)
+                p1, p0 := mul512(YU, v)
+                D0 := shr512(p1, p0, 255)
+                e0 := add(add(uy, 2), add(eU, kk))
+            }
+
+            function ge12(Y, uy) -> t {
+                t := or(sgt(uy, 3), and(eq(uy, 3), iszero(lt(Y, 0x6000000000000000000000000000000000000000000000000000000000000000))))
             }
 
             function ystuff(u, m, h) -> Y, uy {
@@ -4211,91 +4371,74 @@ library FP256Lib {
 
             function erfcmag(u, m, h) -> D, ee, er {
                 let Y, uy := ystuff(u, m, h)
-                switch slt(uy, sub(0, 1))
-                case 1 {
-                    // F within 52 units of 2^-254 (erfser's terms, e^(-y^2), the products)
-                    let p1, p0 := mul512(m, erfsmall(u, m, h))
-                    D := sub(0x4000000000000000000000000000000000000000000000000000000000000000, shr512(p1, p0, sub(236, u)))
-                    er := 128
+                let e := 0
+                switch slt(uy, 4)
+                case 0 {
+                    let ok := 0
+                    D, e, ok := erfasym(Y, uy, u, m, h)
+                    if iszero(ok) { leave }
+                    er := 64
                 }
-                default { D, ee, er := erfcbig(Y, uy, u, m, h) }
-            }
-
-            function cfstep(x0h, x0l, x1h, x1l, m, sa, k) -> nh, nl {
-                // (X1 m) >> 237: X1 below 2^509 and m below 2^237
-                let lo := mul(x1l, m)
-                let mm := mulmod(x1l, m, not(0))
-                nl := shr(237, lo)
-                let c := sub(sub(mm, lo), lt(mm, lo))
-                lo := mul(x1h, m)
-                mm := mulmod(x1h, m, not(0))
-                mm := sub(sub(mm, lo), lt(mm, lo))
-                lo := add(lo, c)
-                nh := or(shl(19, add(mm, lt(lo, c))), shr(237, lo))
-                nl := or(shl(19, lo), nl)
-                // + (X0 >> sa) k, floored before the product (k below 2^10: within k units)
-                lo := or(shl(sub(256, sa), x0h), shr(sa, x0l))
-                c := mul(lo, k)
-                mm := mulmod(lo, k, not(0))
-                nl := add(nl, c)
-                nh := add(add(nh, add(mul(shr(sa, x0h), k), sub(sub(mm, c), lt(mm, c)))), lt(nl, c))
-            }
-
-            function wshr(h, l, n) -> rh, rl {
-                switch lt(n, 256)
-                case 1 {
-                    rh := shr(n, h)
-                    rl := or(shl(sub(256, n), h), shr(n, l))
-                }
-                default { rl := shr(sub(n, 256), h) }
-            }
-
-            function cfrun(b, m, sa, n) -> h, l, e {
-                let ah := 0
-                let al := 0
-                h := 0x10000000000000000000000000000000000000000000000000000000000000
-                if iszero(b) {
-                    ah := h
-                    h := shl(7, m)
-                }
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    let nh, nl := cfstep(ah, al, h, l, m, sa, k)
-                    ah := h
-                    al := l
-                    h := nh
-                    l := nl
-                    if shr(252, h) {
-                        let t := sub(msb(h), 247)
-                        ah, al := wshr(ah, al, t)
-                        h, l := wshr(h, l, t)
-                        e := add(e, t)
+                default {
+                    let D0, e0, ok := erfyue(Y, uy, u, m, h)
+                    if iszero(ok) { leave }
+                    D := D0
+                    e := e0
+                    if iszero(ge12(Y, uy)) {
+                        let Pm := 0
+                        let ep := sub(0, 255)
+                        switch slt(uy, sub(0, 5))
+                        case 0 {
+                            let n2 := 0
+                            let w2 := 0
+                            Pm, ep, n2, w2 := erfpolek(Y, uy)
+                        }
+                        default {
+                            let t2 := 0
+                            let e2 := 0
+                            Pm, t2, e2 := erfpoles(Y, uy)
+                        }
+                        e := add(e0, 1)
+                        if sgt(ep, e0) { e := add(ep, 1) }
+                        D := add(shr(sub(e, e0), D0), shr(sub(e, ep), Pm))
                     }
+                    er := 96
                 }
+                let t := sub(255, msb(D))
+                D := shl(t, D)
+                ee := add(sub(e, t), 254)
             }
 
-            function wmul(ah, al, bh, bl) -> rh, rl {
-                let p0 := mul(ah, bh)
-                let mm := mulmod(ah, bh, not(0))
-                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
-                rl := shl(2, p0)
-                // ah bl + al bh, at most 2^512
-                p0 := mul(ah, bl)
-                mm := mulmod(ah, bl, not(0))
-                let q1 := sub(sub(mm, p0), lt(mm, p0))
-                let t0 := mul(al, bh)
-                mm := mulmod(al, bh, not(0))
-                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
-                t0 := add(p0, t0)
-                q1 := add(q1, lt(t0, p0))
-                p0 := or(shl(2, q1), shr(254, t0))
-                rl := add(rl, p0)
-                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
-                // al bl through its high word
-                t0 := mul(al, bl)
-                mm := mulmod(al, bl, not(0))
-                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
-                rl := add(rl, p0)
-                rh := add(rh, lt(rl, p0))
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function pack(s, e, m) -> r {
+                if sgt(e, 0x7ffff) { rev(0x35278d12) }
+                if slt(e, 1) { r := 0 leave }
+                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function normround(s, e, D) -> r {
+                let n := msb(D)
+                e := add(e, sub(n, 254))
+                D := shl(sub(255, n), D)
+                let m := add(shr(19, D), and(shr(18, D), 1))
+                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
+                    m := 0x100000000000000000000000000000000000000000000000000000000000
+                    e := add(e, 1)
+                }
+                r := pack(s, e, m)
+            }
+
+            function round2(s, e, h, l) -> r {
+                if h {
+                    let k := add(msb(h), 1)
+                    r := normround(s, add(e, k), or(shl(sub(256, k), h), shr(k, l)))
+                    leave
+                }
+                r := normround(s, e, l)
             }
 
             function wshl(h, l, n) -> rh, rl {
@@ -4303,20 +4446,10 @@ library FP256Lib {
                 rl := shl(n, l)
             }
 
-            function wnorm(h, l) -> rh, rl, t {
-                switch h
-                case 0 {
-                    t := sub(510, msb(l))
-                    switch lt(t, 256)
-                    case 1 { rh, rl := wshl(0, l, t) }
-                    default { rh := shl(sub(t, 256), l) }
-                }
-                default {
-                    t := sub(254, msb(h))
-                    switch slt(t, 0)
-                    case 1 { rh, rl := wshr(h, l, sub(0, t)) }
-                    default { rh, rl := wshl(h, l, t) }
-                }
+            function wsh(h, l, n) -> rh, rl {
+                switch slt(n, 0)
+                case 1 { rh, rl := wshr(h, l, sub(0, n)) }
+                default { rh, rl := wshl(h, l, n) }
             }
 
             function wsub(ah, al, bh, bl) -> rh, rl {
@@ -4324,24 +4457,34 @@ library FP256Lib {
                 rh := sub(sub(ah, bh), lt(al, bl))
             }
 
-            function wrecip(ah, al) -> qh, ql {
-                let q := div254(0x4000000000000000000000000000000000000000000000000000000000000000, ah)
-                let eh, el := wmul(ah, al, q, 0)
-                eh, el := wsub(0x8000000000000000000000000000000000000000000000000000000000000000, 0, eh, el)
-                qh, ql := wmul(q, 0, eh, el)
+            function erfwop(s, op, Sh, Sl, es) -> r {
+                let hf := eq(op, 2)
+                if or(and(eq(op, 1), iszero(s)), and(hf, s)) {
+                    r := round2(0, add(sub(0x3feff, hf), es), Sh, Sl)
+                    leave
+                }
+                Sh, Sl := wsh(Sh, Sl, es)
+                Sh, Sl := wsub(shl(add(254, iszero(iszero(op))), 1), 0, Sh, Sl)
+                r := round2(mul(s, iszero(op)), sub(0x3feff, hf), Sh, Sl)
             }
 
-            function cfratio(m, sa, n) -> qh, ql, t {
-                let ah, al, ea := cfrun(0, m, sa, n)
-                let ta := 0
-                ah, al, ta := wnorm(ah, al)
-                qh, ql := wrecip(ah, al)
-                let bh, bl, eb := cfrun(1, m, sa, n)
-                let tb := 0
-                bh, bl, tb := wnorm(bh, bl)
-                qh, ql := wmul(qh, ql, bh, bl)
-                qh, ql := wshr(qh, ql, 1)
-                t := add(sub(add(eb, ta), add(ea, tb)), 1)
+            function wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function walign(p, bh, bl, be, sb) {
+                let ae := mload(add(p, 0x200))
+                let re := add(ae, 1)
+                if sgt(be, ae) { re := add(be, 1) }
+                let ah, al := wshr(mload(add(p, 0x1c0)), mload(add(p, 0x1e0)), sub(re, ae))
+                bh, bl := wshr(bh, bl, sub(re, be))
+                switch sb
+                case 0 { ah, al := wadd(ah, al, bh, bl) }
+                default { ah, al := wsub(bh, bl, ah, al) }
+                mstore(add(p, 0x1c0), ah)
+                mstore(add(p, 0x1e0), al)
+                mstore(add(p, 0x200), re)
             }
 
             function absw(x) -> r {
@@ -4359,11 +4502,6 @@ library FP256Lib {
                 let y1, y0 := mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
                 pl := add(y0, mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
                 ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
-            }
-
-            function wadd(ah, al, bh, bl) -> rh, rl {
-                rl := add(al, bl)
-                rh := add(add(ah, bh), lt(rl, al))
             }
 
             function wdbl(eh, el) -> rh, rl {
@@ -4398,6 +4536,31 @@ library FP256Lib {
                 let q1 := div(x, k)
                 x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
                 ql := or(shl(128, q1), div(x, k))
+            }
+
+            function wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
             }
 
             function wexpm1(rh, rl) -> eh, el {
@@ -4436,10 +4599,103 @@ library FP256Lib {
                 eh, el := wexpm1(rh, rl)
             }
 
-            function wsh(h, l, n) -> rh, rl {
-                switch slt(n, 0)
-                case 1 { rh, rl := wshr(h, l, sub(0, n)) }
-                default { rh, rl := wshl(h, l, n) }
+            function wnorm(h, l) -> rh, rl, t {
+                switch h
+                case 0 {
+                    t := sub(510, msb(l))
+                    switch lt(t, 256)
+                    case 1 { rh, rl := wshl(0, l, t) }
+                    default { rh := shl(sub(t, 256), l) }
+                }
+                default {
+                    t := sub(254, msb(h))
+                    switch slt(t, 0)
+                    case 1 { rh, rl := wshr(h, l, sub(0, t)) }
+                    default { rh, rl := wshl(h, l, t) }
+                }
+            }
+
+            function wrecip(ah, al) -> qh, ql {
+                let q := div254(0x4000000000000000000000000000000000000000000000000000000000000000, ah)
+                let eh, el := wmul(ah, al, q, 0)
+                eh, el := wsub(0x8000000000000000000000000000000000000000000000000000000000000000, 0, eh, el)
+                qh, ql := wmul(q, 0, eh, el)
+            }
+
+            function werfpole(p, tn) -> gh, gl, ep {
+                let ey := mload(add(p, 0x80))
+                let xh, xl := wmul(mload(add(p, 0x40)), mload(add(p, 0x60)), 0x4b5da333e5709b2a9c6e12ea4a69a4edd8eb66be7b4680077949d454cf2d0ddd, 0xefb1fd0105f57e2672cf691a1b204dc6ab67c56e7429a9e2f945df07d2ef16d8)
+                let kk := shr(sub(249, ey), mulwu(xh, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923))
+                xh, xl := wsh(xh, xl, add(ey, 5))
+                let kp, fh, fl := wexpr(0, kk, xh, xl)
+                fh := add(fh, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                // 1 + 2^kp (1 + F) = 2^kp (1 + F + 2^-kp)
+                gh, gl := wshr(0x4000000000000000000000000000000000000000000000000000000000000000, 0, kp)
+                gh, gl := wadd(fh, fl, gh, gl)
+                let tg := 0
+                gh, gl, tg := wnorm(gh, gl)
+                gh, gl := wrecip(gh, gl)
+                ep := add(sub(1, kp), tg)
+                if tn {
+                    fh, fl := wshl(fh, fl, kp)
+                    fh, fl := wsub(fh, fl, 0x4000000000000000000000000000000000000000000000000000000000000000, 0)
+                    gh, gl := wmul(fh, fl, gh, gl)
+                    ep := sub(ep, 1)
+                }
+            }
+
+            function wmem() -> p {
+                p := mload(0x40)
+                if lt(p, 0x80) { p := 0x80 }
+            }
+
+            function erfwfin(s, op) -> r {
+                let p := wmem()
+                let ey := mload(add(p, 0x80))
+                if or(slt(ey, 4), and(eq(ey, 4), lt(mload(add(p, 0x40)), 0x4400000000000000000000000000000000000000000000000000000000000000))) {
+                    let tn := and(iszero(op), slt(ey, sub(0, 5)))
+                    let gh, gl, ep := werfpole(p, tn)
+                    walign(p, gh, gl, ep, tn)
+                    if tn {
+                        r := round2(s, add(0x3feff, mload(add(p, 0x200))), mload(add(p, 0x1c0)), mload(add(p, 0x1e0)))
+                        leave
+                    }
+                }
+                r := erfwop(s, op, mload(add(p, 0x1c0)), mload(add(p, 0x1e0)), mload(add(p, 0x200)))
+            }
+
+            function werfsum(p) -> Sh, Sl, t0 {
+                mstore(add(p, 0xa0), 0x6bf195b4b9ee71e4a1ad5da04f8ac3c16c1508287cf9172a31a2297722201e2)
+                mstore(add(p, 0xc0), 0x9b49411751740459f60cda4929cb96178828db9f8e3dc1347c10576ff149f067)
+                mstore(add(p, 0xe0), 0x3c89dbb867ce52caef4e27095f43df95e10976206bcc98ff3e7a9318a6cf4601)
+                mstore(add(p, 0x100), 0x6606dec42949e767274266bc9159de76f47e688595a679ba0efc08463b6831ea)
+                mstore(add(p, 0x120), 0)
+                mstore(add(p, 0x140), 0)
+                for { let k := 0 } lt(k, 113) { k := add(k, 1) } {
+                    let a := add(add(k, k), 1)
+                    a := mul(a, a)
+                    let lo := mul(a, 0x64601c668f14b07ad6cc10eb078b1ac108dbdcb6f1aa47db451092f2f81d13bb)
+                    let hi := add(mul(a, 0x71e033550798379f04f849efdc3d3b5d8ac4232249dba35f27ac084c0), mulhi(a, 0x64601c668f14b07ad6cc10eb078b1ac108dbdcb6f1aa47db451092f2f81d13bb))
+                    let dl := add(mload(add(p, 0x20)), lo)
+                    let dh := add(add(mload(p), hi), lt(dl, lo))
+                    let t := 0
+                    dh, dl, t := wnorm(dh, dl)
+                    if iszero(k) { t0 := t }
+                    dh, dl := wrecip(dh, dl)
+                    dh, dl := wmul(mload(add(p, 0xa0)), mload(add(p, 0xc0)), dh, dl)
+                    dh, dl := wshr(dh, dl, sub(t0, t))
+                    dh, dl := wadd(mload(add(p, 0x120)), mload(add(p, 0x140)), dh, dl)
+                    mstore(add(p, 0x120), dh)
+                    mstore(add(p, 0x140), dl)
+                    dh, dl := wmul(mload(add(p, 0xa0)), mload(add(p, 0xc0)), mload(add(p, 0xe0)), mload(add(p, 0x100)))
+                    mstore(add(p, 0xa0), dh)
+                    mstore(add(p, 0xc0), dl)
+                    dh, dl := wmul(mload(add(p, 0xe0)), mload(add(p, 0x100)), 0x3c89dbb867ce52caef4e27095f43df95e10976206bcc98ff3e7a9318a6cf4601, 0x6606dec42949e767274266bc9159de76f47e688595a679ba0efc08463b6831ea)
+                    mstore(add(p, 0xe0), dh)
+                    mstore(add(p, 0x100), dl)
+                }
+                Sh := mload(add(p, 0x120))
+                Sl := mload(add(p, 0x140))
             }
 
             function wexpnsq(u, m, h) -> k2, eh, el {
@@ -4449,141 +4705,58 @@ library FP256Lib {
                 k2, eh, el := wexpr(1, kk, xh, xl)
             }
 
-            function erfccf2(u, m, h) -> vh, vl, ve {
-                let qh, ql, t := cfratio(m, sub(add(shl(1, u), 3), h), add(div(add(1700, mul(h, 704)), shr(sub(236, u), m)), 28))
+            function erfwsum(u, m, h, Yh, Yl, ey) {
+                let p := wmem()
+                mstore(add(p, 0x40), Yh)
+                mstore(add(p, 0x60), Yl)
+                mstore(add(p, 0x80), ey)
+                let Sh, Sl := wmul(Yh, Yl, Yh, Yl)
+                Sh, Sl := wshr(Sh, Sl, sub(20, add(ey, ey)))
+                mstore(p, Sh)
+                mstore(add(p, 0x20), Sl)
+                let es := 0
+                Sh, Sl, es := werfsum(p)
+                Sh, Sl := wmul(Yh, Yl, Sh, Sl)
                 let k2, eh, el := wexpnsq(u, m, h)
-                qh, ql := wmul(qh, ql, add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el)
-                switch h
-                case 0 { vh, vl := wmul(qh, ql, 0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, 0x603ace7c2c938788a0601b04b663cd75de8fa7772470e53c3a7bb7c3bfff6128) }
-                default { vh, vl := wmul(qh, ql, 0x33108a67a86ca11a1f9678a017571c5fe9c14f982893836c60238da40131ce97, 0x4efc562aa23e9edb91fae9d5d9ba7446f58a13bcb85f0a8993c74c9a22f8467f) }
-                // value = B/A 2^t 2^-beta e^(-y^2) C, beta = u + 2 - h
-                ve := add(sub(t, sub(add(u, 2), h)), k2)
+                Sh, Sl := wmul(Sh, Sl, add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el)
+                mstore(add(p, 0x1c0), Sh)
+                mstore(add(p, 0x1e0), Sl)
+                mstore(add(p, 0x200), add(add(ey, sub(es, 20)), k2))
             }
 
-            function rev(sel) {
-                mstore(0x00, shl(224, sel))
-                revert(0x00, 0x04)
-            }
-
-            function pack(s, e, m) -> r {
-                if sgt(e, 0x7ffff) { rev(0x35278d12) }
-                if slt(e, 1) { r := 0 leave }
-                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
-            }
-
-            function normround(s, e, D) -> r {
-                let n := msb(D)
-                e := add(e, sub(n, 254))
-                D := shl(sub(255, n), D)
-                let m := add(shr(19, D), and(shr(18, D), 1))
-                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
-                    m := 0x100000000000000000000000000000000000000000000000000000000000
-                    e := add(e, 1)
-                }
-                r := pack(s, e, m)
-            }
-
-            function round2(s, e, h, l) -> r {
-                if h {
-                    let k := add(msb(h), 1)
-                    r := normround(s, add(e, k), or(shl(sub(256, k), h), shr(k, l)))
-                    leave
-                }
-                r := normround(s, e, l)
-            }
-
-            function erfwcf(s, u, m, h, op) -> r {
-                let vh, vl, ve := erfccf2(u, m, h)
-                let hf := eq(op, 2)
-                if or(and(eq(op, 1), iszero(s)), and(hf, s)) {
-                    r := round2(0, add(sub(0x3feff, hf), ve), vh, vl)
-                    leave
-                }
-                vh, vl := wshr(vh, vl, sub(0, ve))
-                vh, vl := wsub(shl(add(254, iszero(iszero(op))), 1), 0, vh, vl)
-                r := round2(mul(s, iszero(op)), sub(0x3feff, hf), vh, vl)
-            }
-
-            function erfdsc(u, m, h) -> dh, dl, ds, sig {
-                let p1, p0 := mul512(m, m)
-                sig := add(shr(10, mul(shr512(p1, p0, sub(add(472, h), shl(1, u))), 1478)), 9)
-                dh, dl := wshl(p1, p0, 37)
-                ds := sub(add(shl(1, u), 2), h)
-            }
-
-            function erfterm(th, tl, dh, dl, ds, k) -> rh, rl {
-                rh, rl := wmul(th, tl, dh, dl)
-                rh, rl := wsh(rh, rl, ds)
-                rh, rl := wdivs(rh, rl, add(shl(1, k), 1))
-            }
-
-            function erfsum(u, m, h) -> sh, sl, sig {
-                let dh, dl, ds, sg := erfdsc(u, m, h)
-                sig := sg
-                let th, tl := wshr(0x4000000000000000000000000000000000000000000000000000000000000000, 0, sig)
-                sh := th
-                sl := tl
-                for { let k := 1 } or(th, tl) { k := add(k, 1) } {
-                    th, tl := erfterm(th, tl, dh, dl, ds, k)
-                    sh, sl := wadd(sh, sl, th, tl)
-                }
-            }
-
-            function mul3(h, l, m) -> n2, n1, n0 {
-                let a1, a0 := mul512(h, m)
-                let b1 := 0
-                b1, n0 := mul512(l, m)
-                n1 := add(a0, b1)
-                n2 := add(a1, lt(n1, a0))
-            }
-
-            function erfser2(u, m, h) -> n2, n1, n0, E {
-                let sh, sl, sig := erfsum(u, m, h)
-                let k2, eh, el := wexpnsq(u, m, h)
-                sh, sl := wmul(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, sh, sl)
-                switch h
-                case 0 { sh, sl := wmul(sh, sl, 0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, 0x603ace7c2c938788a0601b04b663cd75de8fa7772470e53c3a7bb7c3bfff6128) }
-                default { sh, sl := wmul(sh, sl, 0x33108a67a86ca11a1f9678a017571c5fe9c14f982893836c60238da40131ce97, 0x4efc562aa23e9edb91fae9d5d9ba7446f58a13bcb85f0a8993c74c9a22f8467f) }
-                n2, n1, n0 := mul3(sh, sl, m)
-                E := add(sub(u, 746), add(k2, sig))
-            }
-
-            function round3(s, e, n2, n1, n0) -> r {
-                if n2 {
-                    let k := add(msb(n2), 1)
-                    r := normround(s, add(e, add(256, k)), or(shl(sub(256, k), n2), shr(k, n1)))
-                    leave
-                }
-                r := round2(s, e, n1, n0)
-            }
-
-            function shr3(z2, z1, z0, n) -> rh, rl {
-                if lt(n, 256) {
-                    rh := or(shl(sub(256, n), z2), shr(n, z1))
-                    rl := or(shl(sub(256, n), z1), shr(n, z0))
-                    leave
-                }
-                rh, rl := wshr(z2, z1, sub(n, 256))
-            }
-
-            function erfwser(s, u, m, h, op) -> r {
-                let n2, n1, n0, E := erfser2(u, m, h)
+            function erfwtiny(s, op, Yh, Yl, ey) -> r {
+                let th, tl := wmul(Yh, Yl, 0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, 0x603ace7c2c938788a0601b04b663cd75de8fa7772470e53c3a7bb7c3bfff6128)
                 if iszero(op) {
-                    r := round3(s, add(0x400fd, E), n2, n1, n0)
+                    r := round2(s, add(0x3feff, ey), th, tl)
                     leave
                 }
-                let fh, fl := shr3(n2, n1, n0, sub(sub(0, 510), E))
-                switch xor(s, eq(op, 1))
-                case 1 { fh, fl := wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl) }
-                default { fh, fl := wadd(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl) }
-                r := round2(0, sub(0x3feff, eq(op, 2)), fh, fl)
+                th, tl := wshr(th, tl, sub(0, ey))
+                switch s
+                case 0 { th, tl := wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, th, tl) }
+                default { th, tl := wadd(0x4000000000000000000000000000000000000000000000000000000000000000, 0, th, tl) }
+                r := round2(0, sub(0x3feff, eq(op, 2)), th, tl)
+            }
+
+            function wy(u, m, h) -> Yh, Yl, ey {
+                Yh := shl(18, m)
+                ey := u
+                if h {
+                    Yh, Yl := wmul(Yh, 0, 0x2d413cccfe779921165f626cdd52afa7c75bd82ea24eea133b45eb2160cce645, 0x52bf20c10eae28b0ea2c7f9bf720f6ce43dd2a1790e71ed29e0121cd8f7e89da)
+                    if lt(Yh, 0x4000000000000000000000000000000000000000000000000000000000000000) {
+                        Yh, Yl := wshl(Yh, Yl, 1)
+                        ey := sub(u, 1)
+                    }
+                }
             }
 
             function erfw(s, u, m, h, op) -> r {
-                let Y, uy := ystuff(u, m, h)
-                switch or(sgt(uy, 2), and(eq(uy, 2), iszero(lt(Y, 0x7000000000000000000000000000000000000000000000000000000000000000))))
-                case 0 { r := erfwser(s, u, m, h, op) }
-                default { r := erfwcf(s, u, m, h, op) }
+                let Yh, Yl, ey := wy(u, m, h)
+                switch slt(ey, sub(0, 130))
+                case 1 { r := erfwtiny(s, op, Yh, Yl, ey) }
+                default {
+                    erfwsum(u, m, h, Yh, Yl, ey)
+                    r := erfwfin(s, op)
+                }
             }
 
             function rbad(D, err) -> b {
@@ -4641,11 +4814,11 @@ library FP256Lib {
         }
     }
     /// @notice The standard normal distribution function Phi(x) = erfc(-x /
-    ///         sqrt 2) / 2, with e^(-x^2/2) from the exact square, so the left
-    ///         tail keeps 71 digits until it underflows near x = -603 (the
-    ///         18-decimal grid is empty from about -8.3); one rounding, or erf's
-    ///         wide second stage at y = |x| / sqrt 2: correctly rounded; exactly
-    ///         one from x >= 13 sqrt 2.
+    ///         sqrt 2) / 2 by erfc's rule at y = |x| / sqrt 2, with e^(-x^2/2)
+    ///         from the exact square, so the left tail keeps 71 digits until it
+    ///         underflows near x = -603 (the 18-decimal grid is empty from about
+    ///         -8.3); one rounding, or erf's wide second stage at y: correctly
+    ///         rounded; exactly one from x >= 13 sqrt 2.
     function normCdf(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function divh(a, b) -> q {
@@ -4672,17 +4845,6 @@ library FP256Lib {
                 q := shr(1, divh(a, b))
             }
 
-            function msb(x) -> r {
-                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
-                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
-                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
-                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
-                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
-                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
-                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
-                if iszero(lt(x, 0x2)) { r := add(r, 1) }
-            }
-
             function mul512(a, b) -> p1, p0 {
                 p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -4692,144 +4854,6 @@ library FP256Lib {
             function mulwu(a, b) -> r {
                 let p1, p0 := mul512(a, b)
                 r := or(shl(2, p1), shr(254, p0))
-            }
-
-            function erfcxcf(Y, uy) -> R, eg, n {
-                let y2 := mulwu(Y, Y)
-                let ey := add(uy, uy)
-                if shr(255, y2) {
-                    y2 := shr(1, y2)
-                    ey := add(ey, 1)
-                }
-                n := add(div(4400, shr(sub(254, ey), y2)), 48)
-                let w := shr(add(ey, 4), div254(0x4000000000000000000000000000000000000000000000000000000000000000, y2))
-                let am := 0x800000000000000000000000000000000000000000000000000000000000000
-                let an := am
-                let bm := 0
-                let bn := am
-                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
-                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
-                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
-                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
-                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
-                // needs no shift of its own; a zero shift would change nothing, so it
-                // is skipped). Written out: no calls in the loop
-                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
-                    let p0 := mul(c, am)
-                    let mm := mulmod(c, am, not(0))
-                    let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    p0 := mul(c, bm)
-                    mm := mulmod(c, bm, not(0))
-                    let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
-                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
-                        let hf := shl(sub(sh, 1), 1)
-                        am := shr(sh, add(am, hf))
-                        an := shr(sh, add(a2, hf))
-                        bm := shr(sh, add(bm, hf))
-                        bn := shr(sh, add(b2, hf))
-                    }
-                }
-                let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
-                let sb := sub(253, msb(bn))
-                let sd := sub(253, msb(dn))
-                R := div254(shl(sb, bn), shl(sd, dn))
-                eg := sub(sub(sd, sb), uy)
-            }
-
-            function erfcfv(Y, uy, v) -> D, eg, er {
-                let R, e2, n := erfcxcf(Y, uy)
-                eg := e2
-                D := mulwu(R, v)
-                er := add(64, shl(5, n))
-            }
-
-            function erfcxg0(j) -> g {
-                switch j
-                case 4 { g := 0x4ecef0f262c3cb2abd4a76f3bf858856efdf32563b95b2841ae0ee1218abe3e2 }
-                case 5 { g := 0x4745ad6027abd9043e5f49b40441648cf81fbcfb1e41c4e68f7e5ead045990d7 }
-                case 6 { g := 0x40e3553a8f60ce13decb27ae99af2fa62b9b3b6c3ac5f0b20a8b423d86476fc6 }
-                case 7 { g := 0x3b6e8fdc813589552fbe29a2b067802778928eeed560ee3d2d5ea2a379930136 }
-                case 8 { g := 0x36bb0f01f2ad64304a88fe4634cddb0ad316b6c1960d9e066c83d07fcb62ca2f }
-                case 9 { g := 0x32a63c13629369cab5d9b942c79109271effdef65a3728ea4098fe330a2205ce }
-                case 10 { g := 0x2f14d24270ecf4014797400f19191d5fe5a48c91cc8925c97c128b85d47d7a84 }
-                case 11 { g := 0x2bf11ea5e78ed592051a17f4bc6271c922d3e5fa99d640b880bdb3421d1d8c96 }
-                case 12 { g := 0x2929b5ff455ad09cdef8786c71079fb58ff496ba7f5357d7e12e4509b568e9a3 }
-                case 13 { g := 0x26b07ecc8864f53b8a38a0119a8c9555e844a67bf1b31850fd92a3483c49b3af }
-                case 14 { g := 0x2479f85e3b8fc04ec4103acc6308fc0e1707ca1010ae9140459e57361ea61222 }
-                case 15 { g := 0x227cae876c0900e50efe52ea998852887f1054300be82faf99439abcb2282156 }
-                case 16 { g := 0x20b0ce36a58eebd88f871fc40eceb0c53b16f184d1ceafceaa5398c293b85fad }
-                case 17 { g := 0x1f0fd28fdc20ab51b6db109f6b424fd64bfe3ae7b339bb9dab40a4f8b0d9e2fb }
-                case 18 { g := 0x1d94446d627931cafcceafbd376e1314b7a46a4db70d4d6f9effe4883f78a5e1 }
-                case 19 { g := 0x1c3987d04d0b9783d791fc876e221ff4867136da59e89c3a59c55af3ab1f88f0 }
-                case 20 { g := 0x1afbb3f3b7343acc17e86bd7b734eb6edd26461dfcfe74ca1f4244b77c61154a }
-                case 21 { g := 0x19d7738e1f4db71e59221b62587628c8673b71caf70f5d32301dd2669b66d68e }
-                case 22 { g := 0x18c9eb68ff27d6912c6270e6d72c1f84a5a269820f0dec4609051952e95dacf8 }
-                case 23 { g := 0x17d0a5e9dd571047a28cf6b91600a33b35735fb2aa199cb46be4f2a39e9679b7 }
-                case 24 { g := 0x16e9827d229d2ccdf158431d94da3421b78167cd1fd99c3d46ce926afe452eec }
-                case 25 { g := 0x1612a8125451bd59f690799da46facbdf6d245ab18ccf1c1020dceaf751939fd }
-                case 26 { g := 0x154a7a08d4bb44fa57c9bb32508dc61313a69c26f6defda0b0b1d8ddd6d8d716 }
-                case 27 { g := 0x148f8f10299b711635e7b3452b78cda8d5e97030653e85e00096d4517719cf20 }
-                case 28 { g := 0x13e0a99a0ee913f37e9a43449cd0c5d4ce820c177e636ac2f7784ac5153065f2 }
-                case 29 { g := 0x133cb19179d7f5febc25c2947e8f89366b66e51ce9f55ab5890ecd3c525bbf22 }
-                case 30 { g := 0x12a2af19c1492f817ed7e573035d2a49a5f40f7da09dc3cb6b8f7d0eb9b51cab }
-                case 31 { g := 0x1211c625924e338c6478346b830147a9bc4c1a77b12d1e24c5cef1438baf221c }
-                case 32 { g := 0x118932bf08e15442606a849d1f39e27976aa3bfab86a842ea754270ee75b2bec }
-                case 33 { g := 0x110845e1dcb19a2698cfc74f5821d77bae20f98163f3cb252838f2e99491984b }
-                case 34 { g := 0x108e62ce8c89ac88db65377816e5960af139732531b4b9cc71dddb019c9ea457 }
-                case 35 { g := 0x101afcc22e71b80ff78f84abc953e5a24f024cb46b1f65a3eb1f58b44bca72bf }
-                case 36 { g := 0xfad95024e7a62c07688809d2d4cfdbc51a1874b7030261f972e1302e3119ad4 }
-                case 37 { g := 0xf45b92f487dc6ad4598692d4159b4cf4de076845f1c20c8a1fe85a7b6fd361a }
-                case 38 { g := 0xee301d1f3bf4d62b163fc84de9ca8a3bbafbe214fa2211238b7ef23be4dfbd2 }
-                case 39 { g := 0xe85111b6a49f4e5ce56b2961e0030d5f6cf48e89899dde542ccb17091682b4c }
-                case 40 { g := 0xe2b91cf4a1e8cef197de6f7a724e96f0a5cf18e054be7d2627c7d45dd61db12 }
-                case 41 { g := 0xdd63652170dfd9409abadf6e0f914c3ec9462102d54d77c2431631c7494dbaf }
-                case 42 { g := 0xd84b7d670a37f197cf1d947d7046a3dec5c7b1f01d27b9a92ad5c7e4055dc49 }
-                case 43 { g := 0xd36d5a4abadb68390992198b6427ead13e0284e54a10d0ca1660434f81e2831 }
-                case 44 { g := 0xcec5479142795d49fb100bc268f63b91bfba3c975835cef3dc38fa45d29d284 }
-                case 45 { g := 0xca4fdf5b1ebb09e8e2b812ca7403fc4215b52007d82fce51cb9986da73a668f }
-                case 46 { g := 0xc60a024e6aa8eef9f5909a889e28ad828d035c71a59602a8765385ee23a888d }
-                case 47 { g := 0xc1f0d0aa2c9eacd8ea70d4c055e1cb3b2adfa66dabd8be92f7eda2c5b4726da }
-                case 48 { g := 0xbe01a4244eb90b9539d773438884970be40151bbfcd27f1db0116ce11993f00 }
-                default { g := 0 }
-            }
-
-            function mulwr(a, b) -> r {
-                let p1, p0 := mul512(a, b)
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := add(or(shl(2, p1), shr(254, p0)), and(shr(253, p0), 1))
-            }
-
-            function rdivs(a, n) -> q {
-                switch slt(a, 0)
-                case 1 { q := sub(0, div(add(sub(0, a), shr(1, n)), n)) }
-                default { q := div(add(a, shr(1, n)), n) }
-            }
-
-            function erfcxa(Y, uy) -> s {
-                let j := add(shr(sub(251, uy), Y), and(shr(sub(250, uy), Y), 1))
-                if lt(j, 4) { j := 4 }
-                if gt(j, 48) { j := 48 }
-                let h := shl(uy, Y)
-                if slt(uy, 0) { h := shr(sub(0, uy), Y) }
-                h := sub(h, shl(251, j))
-                let pm := erfcxg0(j)
-                let y0g0 := add(mul(j, shr(3, pm)), shr(3, mul(j, and(pm, 7))))
-                let p := mulwr(sub(shl(1, y0g0), 0x906eba8214db688d71d48a7f6bfec3441409a0ebac3e751739a15830cce620b0), h)
-                s := add(pm, p)
-                let yh2 := shl(1, add(mul(j, sar(3, h)), shr(3, add(mul(j, and(h, 7)), 4))))
-                let h22 := shl(1, mulwr(h, h))
-                for { let n := 2 } or(p, pm) { n := add(n, 1) } {
-                    let nx := rdivs(add(mulwr(yh2, p), mulwr(h22, pm)), n)
-                    pm := p
-                    p := nx
-                    s := add(s, p)
-                }
             }
 
             function exp2frac(f) -> r {
@@ -4921,46 +4945,250 @@ library FP256Lib {
                 kk, v := exp2kv(1, k, f)
             }
 
-            function erfcbig(Y, uy, u, m, h) -> D, ee, er {
+            function erfasym(Y, uy, u, m, h) -> D, e, ok {
                 let kk, v := expnegsq(u, m, h)
                 if slt(kk, sub(0, 0x80000)) { leave }
-                switch or(slt(uy, 2), and(eq(uy, 2), lt(Y, 0x6000000000000000000000000000000000000000000000000000000000000000)))
-                case 1 {
-                    D := mulwu(erfcxa(Y, uy), v)
-                    ee := sub(kk, 1)
-                    // g within 1.6 units of 2^-255 per Taylor term (at most 50) and the
-                    // anchor's half unit, v within 6 units of 2^-254: 2 x 81 + 8
-                    er := 192
+                ok := 1
+                let y2 := mulwu(Y, Y)
+                let ey := add(uy, uy)
+                if shr(255, y2) {
+                    y2 := shr(1, y2)
+                    ey := add(ey, 1)
                 }
-                default {
-                    D, ee, er := erfcfv(Y, uy, v)
-                    ee := add(ee, kk)
+                let W1 := div254(shl(254, 1), y2)
+                let w := shr(add(ey, 1), W1)
+                let term := shr(sub(ey, 7), W1)
+                let T := sub(0, term)
+                for { let mm := 3 } term { mm := add(mm, 2) } {
+                    term := mulwu(term, mul(mm, w))
+                    switch and(mm, 2)
+                    case 2 { T := add(T, term) }
+                    default { T := sub(T, term) }
                 }
+                let Q := divh(shl(255, 1), mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
+                let p1, p0 := mul512(sub(0, T), Q)
+                p1, p0 := mul512(sub(Q, shr(6, p1)), v)
+                D := shr512(p1, p0, 255)
+                e := sub(sub(kk, uy), 255)
             }
 
-            function mulwru(a, b) -> r {
+            function erftau(Y, H2, L2) -> p1, p0 {
+                p1, p0 := mul512(Y, H2)
+                let lo := mulwu(Y, L2)
+                p0 := add(p0, lo)
+                p1 := add(p1, lt(p0, lo))
+            }
+
+            function erfpolek(Y, uy) -> Pm, ep, Nm, Wd {
+                let p1, p0 := erftau(Y, 0x9d21de6d96085832ea3d6cb19fdd5d60229045f75ffbf3e692ab8a0084a0aaae, 0x1a03d201fb3f9f11cec29a0c3eadb5af4f1dbaeb46476d8b6c75a99d2e5a0c9a)
+                let k := shr512(p1, p0, sub(504, uy))
+                let kk, v := exp2kv(0, k, and(shr512(p1, p0, sub(250, uy)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                let one := shl(sub(254, k), 1)
+                Wd := add(v, one)
+                Nm := sub(v, one)
+                Pm := divh(shl(254, 1), Wd)
+                ep := sub(sub(0, 254), k)
+            }
+
+            function mulw(a, b) -> r {
                 let p1, p0 := mul512(a, b)
-                r := add(or(shl(2, p1), shr(254, p0)), and(shr(253, p0), 1))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(2, p1), shr(254, p0))
             }
 
-            function erfser(d) -> s {
-                let term := 0x4000000000000000000000000000000000000000000000000000000000000000
-                s := term
-                for { let k := 3 } term { k := add(k, 2) } {
-                    term := div(add(mulwru(term, d), shr(1, k)), k)
-                    s := add(s, term)
+            function expm1tail(df) -> p {
+                p := 0x7cb3c065cbd5df3292d019f2a7628819cffac21b76c8
+                p := add(0xbb0da098b1c0cecbdc3826ebfb13cc26b7f82329322c2, mulw(df, p))
+                p := add(0x10ce396db7f8529450c90b7f338ec7577a874b28b381f78, mulw(df, p))
+                p := add(0x171b8ef6dcf5718bef146fcee6e45218487a0757f6d2b457, mulw(df, p))
+                p := add(0x1e542ba402022507a9cad2bf8f0babbfdf2029a373f48cb25, mulw(df, p))
+                p := add(0x25e9368d0282ae49943d876f72ce96afd6e8340c50f1afdeed, mulw(df, p))
+                p := add(0x2d04f0c772fb2ef7600910d4585552f0cf33bdcea01f00d8b9e, mulw(df, p))
+                p := add(0x32a58ee0615a94d64c0a32eee35ffd4ee91a35887422e0f3d121, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e333, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e3337, mulw(df, p))
+                p := add(0x3272e95180f93a4175be28bbf47c9d519a311b52ebaebe12dd5003c, mulw(df, p))
+                p := add(0x2c248c2750da12f9470663a475ed09a766eaf7e88e38e65081a60347, mulw(df, p))
+            }
+
+            function expm1series(df) -> p {
+                p := expm1tail(df)
+                p := add(0x23ddb1dff1b12f6a89b530f59fd097d8039ee96cf38e3b216956e2a95, mulw(df, p))
+                p := add(0x1ae64567f544e38fe747e4b837dc71e202b72f11b6aaac590f0129fef9, mulw(df, p))
+                p := add(0x127e4fb7789f5c72ef016d3ea6678e4b61ddf05c2d95567d3a50ccdf4b2, mulw(df, p))
+                p := add(0xb8ef1d2ab6399c7d560e4472800b8ef1d2ab6399c7d560e4472800b8ef2, mulw(df, p))
+                p := add(0x680680680680680680680680680680680680680680680680680680680680, mulw(df, p))
+                p := add(0x3403403403403403403403403403403403403403403403403403403403403, mulw(df, p))
+                p := add(0x16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c17, mulw(df, p))
+                p := add(0x88888888888888888888888888888888888888888888888888888888888889, mulw(df, p))
+                p := add(0x2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0x2000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+            }
+
+            function erfpoles(Y, uy) -> Pm, Tm, es {
+                let p1, p0 := erftau(Y, 0x6cea7294f8fa0891c2604e730b5b69ab590562b852e5e607da296eded6451cf7, 0x3805488e7473b0e11d7ad31615404263b5e8651bbe65f38033329a5859b463ce)
+                let dd := shr512(p1, p0, 255)
+                es := sub(249, uy)
+                let j := 0
+                if sgt(uy, sub(0, 15)) { j := add(uy, 14) }
+                let s0 := add(es, j)
+                let S := mulwu(dd, expm1series(shr(sub(s0, 254), dd)))
+                for { let i := 0 } lt(i, j) { i := add(i, 1) } {
+                    p1, p0 := mul512(S, S)
+                    S := add(S, shr512(p1, p0, sub(add(s0, 1), i)))
                 }
+                let Wd := add(shl(254, 1), shr(sub(es, 253), S))
+                Pm := divh(shl(254, 1), Wd)
+                Tm := divh(S, Wd)
             }
 
-            function erfsmall(u, m, h) -> F {
-                let p1, p0 := mul512(m, m)
-                let S := erfser(shr512(p1, p0, sub(add(217, h), add(u, u))))
+            function erfctab(p) {
+                mstore(add(p, 0x0), 0x94705c5b1b073b47440b8ea4f11f382a2bdf867463049dfdbe5d08d48f557862)
+                mstore(add(p, 0x20), 0x85718ef09781a1ac7676bd8bf07596e2cc152987164296ec768a94d1f904c881)
+                mstore(add(p, 0x40), 0x6bd82ae4d9093d857c5270d0d618fb8df452a29c211286b323ebf3e45fbd100e)
+                mstore(add(p, 0x60), 0x4e59fdd73cca57721d5a97499c25f6158ede3de1dcbef4a70c0ebe70bea5d2d5)
+                mstore(add(p, 0x80), 0x6658f6917d2ed937d7686ee14e72d44cda921979d998c3dab328c58b12cabedf)
+                mstore(add(p, 0xa0), 0x782fd74c110dcb9bf73553bc1a5937ac498d1bcf508c8c7dff8e4002b4c717f8)
+                mstore(add(p, 0xc0), 0x7ee0cd4a4d48717e0dd3ca6de36a91a47cb424dbfa1a69d5237e2ce0d478e9c1)
+                mstore(add(p, 0xe0), 0x78693c8b82720bc8d77ff16790c19390f238e5ac9e1e3c117db352a941be893a)
+                mstore(add(p, 0x100), 0x66bace8f7ce7d0502c4db747b0a2fb739ed26f2ad4fe01930ef671875a7bc26c)
+                mstore(add(p, 0x120), 0x4eca73b06c14e50a09f3c45c1fee5657aee313c88524e37515eef5992325c56e)
+                mstore(add(p, 0x140), 0x6ca6c0004c96a6b9822e6fd8cf31fac99a1aeaef25084c80bdde21c870b98256)
+                mstore(add(p, 0x160), 0x86b161753d4cd47129c92a25082780b87c7f402de38262742d8df0bd402a3122)
+                mstore(add(p, 0x180), 0x961bac530f8057b38580deb52eebf7089c7e207fa967e9cef462b6d8521ecdb4)
+                mstore(add(p, 0x1a0), 0x96635b8a984f70bae002d4fbf9d73318bae5d14c4ed82bb7a841c86294ac1041)
+                mstore(add(p, 0x1c0), 0x8772b5a33b270ebfd3eb8fe5d26b4789e38120e0f3655d55452739158dd6b773)
+                mstore(add(p, 0x1e0), 0x6dab2736ec97cd4224c7b7815db6c4831bcf0b491febc8ef45ae3b4820454f9b)
+                mstore(add(p, 0x200), 0x4fd3514d837c7328ae2b6eac0c5c3b18cb12af8cd34d54881e4b7a687933a6d5)
+                mstore(add(p, 0x220), 0x6877a51d47974f13d1f6019af7a5c45ea2f0c29f909cd64c179ff806c1895854)
+                mstore(add(p, 0x240), 0x7ae7b2956c4f1365223c04c759e35a33838738197f85d409b20cbaaac000a78f)
+                mstore(add(p, 0x260), 0x81fd5c57a9060f14b6a551e7cfcadd3f2c3fc8b29b2dc91b1f5034c58b597ee2)
+                mstore(add(p, 0x280), 0x7b981b63fab445021a73b9123f88633ae67124abe212f54a1f1675bbbd0a1d3d)
+                mstore(add(p, 0x2a0), 0x69a4604706a0919d1eb00ed5e3f78eca25285bcd50c7586d96a2707667adf66e)
+                mstore(add(p, 0x2c0), 0x512cf9e54a8a434a8bdcb48082ce810b13d016e923fa720b849ee691b2e365b4)
+                mstore(add(p, 0x2e0), 0x70261c68990edf20fb8a0af08cd6c790795939692dde512864f501d5d0b465f0)
+                mstore(add(p, 0x300), 0x8b49bc2527778ce3b1b2cd674cabdebf9f69c0b7ff8fc08519e4a25b1de110c4)
+                mstore(add(p, 0x320), 0x4dc264d255c90782a6b14642b84d947805e3029b52519a3c358eed5178c02ca9)
+                mstore(add(p, 0x340), 0x4e0cbb3c86688bff0cd0e1c8b79bbc182a46dfabf0de567841d1c8a0219fdc6d)
+                mstore(add(p, 0x360), 0x8cdab4605c05a95d19e2201cc9b96fcff844cf974e770379655f5725814c633f)
+                mstore(add(p, 0x380), 0x724232d3db83f15603e873b3155977c29adca9eec5edd3726e8a24ff608ca80f)
+                mstore(add(p, 0x3a0), 0x5352532b0a737f1b8e90215513b58340b036bc7fdb97e84320adfd77f617b690)
+                mstore(add(p, 0x3c0), 0x6d3f031e91d00b83dd0c419dfeb90194bc05155e7742f525b79a02624131e890)
+                mstore(add(p, 0x3e0), 0x80c45bbffebfdfad6b5834d09a4d9ed32493b380b91048709cdedca6174a188d)
+                mstore(add(p, 0x400), 0x88718fd06ed3d997127c651e7c43afda4020ac7efa8c581031702a3711661c5c)
+                mstore(add(p, 0x420), 0x81f8f8f4c443c8ee53f0b31c9bb0d3663823c32f70704b698b109f0a81080a05)
+                mstore(add(p, 0x440), 0x6f4d1eea96c1e948a56af41fee221d319ce6273fad8401872fcac6858df3b4cc)
+                mstore(add(p, 0x460), 0x55af09b9ac7d4d682fd1723be3bd6819f7dd3f83ca7384b0aadc13af922b6506)
+                mstore(add(p, 0x480), 0x76990b786bd651f03e6cde71f5cfc5e41cfbbf456b12d383c330f623336ee9d6)
+                mstore(add(p, 0x4a0), 0x9392863383a2c83b2f42fcf226753331d6cc2ac1601daef998293e4c985779a3)
+                mstore(add(p, 0x4c0), 0x5289b1db264820ce3ad4bee1b4e5194c917ad58a4b64dd332bc35d106c3d0d70)
+                mstore(add(p, 0x4e0), 0x530029f3e8aa65f830ff738e556d607284011d762243658f9589fb5134539e3c)
+                mstore(add(p, 0x500), 0x961189fdd8954f42c1c2d229da415fb7c05c1f74d0695fb66f9a6ec8c74c4b2d)
+                mstore(add(p, 0x520), 0x79f5c7351f5f5de1b08f5287b86f53c51ea675c1add97c54e1aa3f11142c8b2a)
+                mstore(add(p, 0x540), 0x591a8bc3ef3bff1ee3a32a195cd4073b41ae09ebff8cdbb3798cc955968f3411)
+                mstore(add(p, 0x560), 0x750b940b5aa681680d1b14dc0b6ab75305401d36cc56135075f1b94e76f5e75c)
+                mstore(add(p, 0x580), 0x8a37917615962057e8f40e7346d1a866eba5814aaf2cf2c0c10d3d34b30a1878)
+                mstore(add(p, 0x5a0), 0x92baefa215574c997f76973e87c20253b5cb5cf1f1702bf579b10babb68da2e5)
+                mstore(add(p, 0x5c0), 0x8c0833f4c67ba9c33351debf52c5f33d21fc693915d4f60ac3143de868c1a04c)
+                mstore(add(p, 0x5e0), 0x7823abb345a9b4021fd595911d5dee17723c9cb071cb3b3d38edb5b5947d2d81)
+                mstore(add(p, 0x600), 0x5ca8ffa8b070db297efcb9b9bccc0c1f89ba7a3c94cbf9c0cfa4bc9bf19936ae)
+                mstore(add(p, 0x620), 0x807e4d83466b843f8f1865d79f60cab7964965495fada99d46f5c67f9aad2574)
+                mstore(add(p, 0x640), 0x501784540740505101b1ce47d532df7dc633aeac6487be54ab24a2147cebe81b)
+                mstore(add(p, 0x660), 0x59c232eed2923c9a135e417e465b7b47560fc7d4749f6710cd95452e22afbd91)
+                mstore(add(p, 0x680), 0x5a6e230e77b4e3ce74dc9c2111e17a32ff5a1d72f9a6a2024c7beeb8c0efe6f1)
+                mstore(add(p, 0x6a0), 0x51e73b59da7c72469731dcc9d088a7ca20dd236c192273d6d4d9a6893bf83ba4)
+                mstore(add(p, 0x6c0), 0x855f8ae9389aa907997ab5bed5766d24597f87d06c8bbdbe087ab43e55a7a10d)
+                mstore(add(p, 0x6e0), 0x619fb6799c4053b3d184e5fdd5d9ceab0160f376082f807f65ce90aba689e2d8)
+                mstore(add(p, 0x700), 0x8079f70ed040895aab2f6d084cff2b3f889543aa833439050258c5f16c44cbe1)
+                mstore(add(p, 0x720), 0x4bffdfef4ddff24431a7830deabd83cf918db26619720af1daa20d5e58f32e75)
+                mstore(add(p, 0x740), 0x50d4be2ba06e48aeef9868f47d8f3667422291d8c0303c475442cd2fab6330cc)
+            }
+
+            function msb(x) -> r {
+                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
+                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
+                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
+                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
+                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
+                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
+                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
+                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+            }
+
+            function wshr(h, l, n) -> rh, rl {
+                switch lt(n, 256)
+                case 1 {
+                    rh := shr(n, h)
+                    rl := or(shl(sub(256, n), h), shr(n, l))
+                }
+                default { rl := shr(sub(n, 256), h) }
+            }
+
+            function erfquad(Y, uy) -> MU, eU {
+                let p := mload(0x40)
+                if lt(p, 0x80) { p := 0x80 }
+                erfctab(p)
+                let p1, p0 := mul512(Y, Y)
+                p1, p0 := wshr(p1, p0, sub(6, add(uy, uy)))
+                mstore(add(p, 0x760), p1)
+                mstore(add(p, 0x780), p0)
+                mstore(add(p, 0x7a0), 0)
+                mstore(add(p, 0x7c0), 0)
+                let sh := 0
+                let sh0 := 0
+                for { let k := 0 } lt(k, 59) { k := add(k, 1) } {
+                    let a := add(add(k, k), 1)
+                    a := mul(a, a)
+                    let lo := mul(a, 0x48d2c8fdddcd9e97e291494f4b9bfcfe1d6741446217ce812b9fcbcd3e4b4f88)
+                    let hi := mulmod(a, 0x48d2c8fdddcd9e97e291494f4b9bfcfe1d6741446217ce812b9fcbcd3e4b4f88, not(0))
+                    hi := add(mul(a, 0xda19e02505de1c6d4ef13b2ad9e1bfcd30d2c575bd2f82a93aa043f56722), sub(sub(hi, lo), lt(hi, lo)))
+                    let ll := add(mload(add(p, 0x780)), lo)
+                    hi := add(add(hi, mload(add(p, 0x760))), lt(ll, lo))
+                    switch k
+                    case 0 {
+                        sh := add(msb(hi), 1)
+                        sh0 := sh
+                    }
+                    default { for {} iszero(lt(hi, shl(sh, 1))) {} { sh := add(sh, 1) } }
+                    // q = floor(c_k 2^255 / B), then q 2^-(g_k + sh - sh0 + 2) into the sum
+                    lo := divh(mload(add(p, shl(5, k))), or(shl(sub(256, sh), hi), shr(sh, ll)))
+                    a := add(add(shr(64, mul(a, 0x4ea9d0585408551)), sub(sh, sh0)), 2)
+                    switch lt(a, 256)
+                    case 1 {
+                        hi := shr(a, lo)
+                        lo := shl(sub(256, a), lo)
+                    }
+                    default {
+                        hi := 0
+                        lo := shr(sub(a, 256), lo)
+                    }
+                    a := add(mload(add(p, 0x7c0)), lo)
+                    mstore(add(p, 0x7a0), add(add(mload(add(p, 0x7a0)), hi), lt(a, lo)))
+                    mstore(add(p, 0x7c0), a)
+                }
+                let A1 := mload(add(p, 0x7a0))
+                let t := sub(255, msb(A1))
+                MU := or(shl(t, A1), shr(sub(256, t), mload(add(p, 0x7c0))))
+                eU := sub(sub(0, 9), add(sh0, t))
+            }
+
+            function erfyue(Y, uy, u, m, h) -> D0, e0, ok {
                 let kk, v := expnegsq(u, m, h)
-                F := mulwru(mulwru(0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, shr(sub(0, kk), v)), S)
-                if h {
-                    let q1, q0 := mul512(F, 0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8a)
-                    F := shr512(q1, q0, 255)
-                }
+                if slt(kk, sub(0, 0x80000)) { leave }
+                ok := 1
+                let MU, eU := erfquad(Y, uy)
+                let p1, p0 := mul512(Y, MU)
+                let YU := shr512(p1, p0, 255)
+                p1, p0 := mul512(YU, v)
+                D0 := shr512(p1, p0, 255)
+                e0 := add(add(uy, 2), add(eU, kk))
+            }
+
+            function ge12(Y, uy) -> t {
+                t := or(sgt(uy, 3), and(eq(uy, 3), iszero(lt(Y, 0x6000000000000000000000000000000000000000000000000000000000000000))))
             }
 
             function ystuff(u, m, h) -> Y, uy {
@@ -4978,91 +5206,74 @@ library FP256Lib {
 
             function erfcmag(u, m, h) -> D, ee, er {
                 let Y, uy := ystuff(u, m, h)
-                switch slt(uy, sub(0, 1))
-                case 1 {
-                    // F within 52 units of 2^-254 (erfser's terms, e^(-y^2), the products)
-                    let p1, p0 := mul512(m, erfsmall(u, m, h))
-                    D := sub(0x4000000000000000000000000000000000000000000000000000000000000000, shr512(p1, p0, sub(236, u)))
-                    er := 128
+                let e := 0
+                switch slt(uy, 4)
+                case 0 {
+                    let ok := 0
+                    D, e, ok := erfasym(Y, uy, u, m, h)
+                    if iszero(ok) { leave }
+                    er := 64
                 }
-                default { D, ee, er := erfcbig(Y, uy, u, m, h) }
-            }
-
-            function cfstep(x0h, x0l, x1h, x1l, m, sa, k) -> nh, nl {
-                // (X1 m) >> 237: X1 below 2^509 and m below 2^237
-                let lo := mul(x1l, m)
-                let mm := mulmod(x1l, m, not(0))
-                nl := shr(237, lo)
-                let c := sub(sub(mm, lo), lt(mm, lo))
-                lo := mul(x1h, m)
-                mm := mulmod(x1h, m, not(0))
-                mm := sub(sub(mm, lo), lt(mm, lo))
-                lo := add(lo, c)
-                nh := or(shl(19, add(mm, lt(lo, c))), shr(237, lo))
-                nl := or(shl(19, lo), nl)
-                // + (X0 >> sa) k, floored before the product (k below 2^10: within k units)
-                lo := or(shl(sub(256, sa), x0h), shr(sa, x0l))
-                c := mul(lo, k)
-                mm := mulmod(lo, k, not(0))
-                nl := add(nl, c)
-                nh := add(add(nh, add(mul(shr(sa, x0h), k), sub(sub(mm, c), lt(mm, c)))), lt(nl, c))
-            }
-
-            function wshr(h, l, n) -> rh, rl {
-                switch lt(n, 256)
-                case 1 {
-                    rh := shr(n, h)
-                    rl := or(shl(sub(256, n), h), shr(n, l))
-                }
-                default { rl := shr(sub(n, 256), h) }
-            }
-
-            function cfrun(b, m, sa, n) -> h, l, e {
-                let ah := 0
-                let al := 0
-                h := 0x10000000000000000000000000000000000000000000000000000000000000
-                if iszero(b) {
-                    ah := h
-                    h := shl(7, m)
-                }
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    let nh, nl := cfstep(ah, al, h, l, m, sa, k)
-                    ah := h
-                    al := l
-                    h := nh
-                    l := nl
-                    if shr(252, h) {
-                        let t := sub(msb(h), 247)
-                        ah, al := wshr(ah, al, t)
-                        h, l := wshr(h, l, t)
-                        e := add(e, t)
+                default {
+                    let D0, e0, ok := erfyue(Y, uy, u, m, h)
+                    if iszero(ok) { leave }
+                    D := D0
+                    e := e0
+                    if iszero(ge12(Y, uy)) {
+                        let Pm := 0
+                        let ep := sub(0, 255)
+                        switch slt(uy, sub(0, 5))
+                        case 0 {
+                            let n2 := 0
+                            let w2 := 0
+                            Pm, ep, n2, w2 := erfpolek(Y, uy)
+                        }
+                        default {
+                            let t2 := 0
+                            let e2 := 0
+                            Pm, t2, e2 := erfpoles(Y, uy)
+                        }
+                        e := add(e0, 1)
+                        if sgt(ep, e0) { e := add(ep, 1) }
+                        D := add(shr(sub(e, e0), D0), shr(sub(e, ep), Pm))
                     }
+                    er := 96
                 }
+                let t := sub(255, msb(D))
+                D := shl(t, D)
+                ee := add(sub(e, t), 254)
             }
 
-            function wmul(ah, al, bh, bl) -> rh, rl {
-                let p0 := mul(ah, bh)
-                let mm := mulmod(ah, bh, not(0))
-                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
-                rl := shl(2, p0)
-                // ah bl + al bh, at most 2^512
-                p0 := mul(ah, bl)
-                mm := mulmod(ah, bl, not(0))
-                let q1 := sub(sub(mm, p0), lt(mm, p0))
-                let t0 := mul(al, bh)
-                mm := mulmod(al, bh, not(0))
-                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
-                t0 := add(p0, t0)
-                q1 := add(q1, lt(t0, p0))
-                p0 := or(shl(2, q1), shr(254, t0))
-                rl := add(rl, p0)
-                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
-                // al bl through its high word
-                t0 := mul(al, bl)
-                mm := mulmod(al, bl, not(0))
-                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
-                rl := add(rl, p0)
-                rh := add(rh, lt(rl, p0))
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function pack(s, e, m) -> r {
+                if sgt(e, 0x7ffff) { rev(0x35278d12) }
+                if slt(e, 1) { r := 0 leave }
+                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
+            function normround(s, e, D) -> r {
+                let n := msb(D)
+                e := add(e, sub(n, 254))
+                D := shl(sub(255, n), D)
+                let m := add(shr(19, D), and(shr(18, D), 1))
+                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
+                    m := 0x100000000000000000000000000000000000000000000000000000000000
+                    e := add(e, 1)
+                }
+                r := pack(s, e, m)
+            }
+
+            function round2(s, e, h, l) -> r {
+                if h {
+                    let k := add(msb(h), 1)
+                    r := normround(s, add(e, k), or(shl(sub(256, k), h), shr(k, l)))
+                    leave
+                }
+                r := normround(s, e, l)
             }
 
             function wshl(h, l, n) -> rh, rl {
@@ -5070,20 +5281,10 @@ library FP256Lib {
                 rl := shl(n, l)
             }
 
-            function wnorm(h, l) -> rh, rl, t {
-                switch h
-                case 0 {
-                    t := sub(510, msb(l))
-                    switch lt(t, 256)
-                    case 1 { rh, rl := wshl(0, l, t) }
-                    default { rh := shl(sub(t, 256), l) }
-                }
-                default {
-                    t := sub(254, msb(h))
-                    switch slt(t, 0)
-                    case 1 { rh, rl := wshr(h, l, sub(0, t)) }
-                    default { rh, rl := wshl(h, l, t) }
-                }
+            function wsh(h, l, n) -> rh, rl {
+                switch slt(n, 0)
+                case 1 { rh, rl := wshr(h, l, sub(0, n)) }
+                default { rh, rl := wshl(h, l, n) }
             }
 
             function wsub(ah, al, bh, bl) -> rh, rl {
@@ -5091,24 +5292,34 @@ library FP256Lib {
                 rh := sub(sub(ah, bh), lt(al, bl))
             }
 
-            function wrecip(ah, al) -> qh, ql {
-                let q := div254(0x4000000000000000000000000000000000000000000000000000000000000000, ah)
-                let eh, el := wmul(ah, al, q, 0)
-                eh, el := wsub(0x8000000000000000000000000000000000000000000000000000000000000000, 0, eh, el)
-                qh, ql := wmul(q, 0, eh, el)
+            function erfwop(s, op, Sh, Sl, es) -> r {
+                let hf := eq(op, 2)
+                if or(and(eq(op, 1), iszero(s)), and(hf, s)) {
+                    r := round2(0, add(sub(0x3feff, hf), es), Sh, Sl)
+                    leave
+                }
+                Sh, Sl := wsh(Sh, Sl, es)
+                Sh, Sl := wsub(shl(add(254, iszero(iszero(op))), 1), 0, Sh, Sl)
+                r := round2(mul(s, iszero(op)), sub(0x3feff, hf), Sh, Sl)
             }
 
-            function cfratio(m, sa, n) -> qh, ql, t {
-                let ah, al, ea := cfrun(0, m, sa, n)
-                let ta := 0
-                ah, al, ta := wnorm(ah, al)
-                qh, ql := wrecip(ah, al)
-                let bh, bl, eb := cfrun(1, m, sa, n)
-                let tb := 0
-                bh, bl, tb := wnorm(bh, bl)
-                qh, ql := wmul(qh, ql, bh, bl)
-                qh, ql := wshr(qh, ql, 1)
-                t := add(sub(add(eb, ta), add(ea, tb)), 1)
+            function wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function walign(p, bh, bl, be, sb) {
+                let ae := mload(add(p, 0x200))
+                let re := add(ae, 1)
+                if sgt(be, ae) { re := add(be, 1) }
+                let ah, al := wshr(mload(add(p, 0x1c0)), mload(add(p, 0x1e0)), sub(re, ae))
+                bh, bl := wshr(bh, bl, sub(re, be))
+                switch sb
+                case 0 { ah, al := wadd(ah, al, bh, bl) }
+                default { ah, al := wsub(bh, bl, ah, al) }
+                mstore(add(p, 0x1c0), ah)
+                mstore(add(p, 0x1e0), al)
+                mstore(add(p, 0x200), re)
             }
 
             function absw(x) -> r {
@@ -5126,11 +5337,6 @@ library FP256Lib {
                 let y1, y0 := mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
                 pl := add(y0, mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
                 ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
-            }
-
-            function wadd(ah, al, bh, bl) -> rh, rl {
-                rl := add(al, bl)
-                rh := add(add(ah, bh), lt(rl, al))
             }
 
             function wdbl(eh, el) -> rh, rl {
@@ -5165,6 +5371,31 @@ library FP256Lib {
                 let q1 := div(x, k)
                 x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
                 ql := or(shl(128, q1), div(x, k))
+            }
+
+            function wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
             }
 
             function wexpm1(rh, rl) -> eh, el {
@@ -5203,10 +5434,103 @@ library FP256Lib {
                 eh, el := wexpm1(rh, rl)
             }
 
-            function wsh(h, l, n) -> rh, rl {
-                switch slt(n, 0)
-                case 1 { rh, rl := wshr(h, l, sub(0, n)) }
-                default { rh, rl := wshl(h, l, n) }
+            function wnorm(h, l) -> rh, rl, t {
+                switch h
+                case 0 {
+                    t := sub(510, msb(l))
+                    switch lt(t, 256)
+                    case 1 { rh, rl := wshl(0, l, t) }
+                    default { rh := shl(sub(t, 256), l) }
+                }
+                default {
+                    t := sub(254, msb(h))
+                    switch slt(t, 0)
+                    case 1 { rh, rl := wshr(h, l, sub(0, t)) }
+                    default { rh, rl := wshl(h, l, t) }
+                }
+            }
+
+            function wrecip(ah, al) -> qh, ql {
+                let q := div254(0x4000000000000000000000000000000000000000000000000000000000000000, ah)
+                let eh, el := wmul(ah, al, q, 0)
+                eh, el := wsub(0x8000000000000000000000000000000000000000000000000000000000000000, 0, eh, el)
+                qh, ql := wmul(q, 0, eh, el)
+            }
+
+            function werfpole(p, tn) -> gh, gl, ep {
+                let ey := mload(add(p, 0x80))
+                let xh, xl := wmul(mload(add(p, 0x40)), mload(add(p, 0x60)), 0x4b5da333e5709b2a9c6e12ea4a69a4edd8eb66be7b4680077949d454cf2d0ddd, 0xefb1fd0105f57e2672cf691a1b204dc6ab67c56e7429a9e2f945df07d2ef16d8)
+                let kk := shr(sub(249, ey), mulwu(xh, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923))
+                xh, xl := wsh(xh, xl, add(ey, 5))
+                let kp, fh, fl := wexpr(0, kk, xh, xl)
+                fh := add(fh, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                // 1 + 2^kp (1 + F) = 2^kp (1 + F + 2^-kp)
+                gh, gl := wshr(0x4000000000000000000000000000000000000000000000000000000000000000, 0, kp)
+                gh, gl := wadd(fh, fl, gh, gl)
+                let tg := 0
+                gh, gl, tg := wnorm(gh, gl)
+                gh, gl := wrecip(gh, gl)
+                ep := add(sub(1, kp), tg)
+                if tn {
+                    fh, fl := wshl(fh, fl, kp)
+                    fh, fl := wsub(fh, fl, 0x4000000000000000000000000000000000000000000000000000000000000000, 0)
+                    gh, gl := wmul(fh, fl, gh, gl)
+                    ep := sub(ep, 1)
+                }
+            }
+
+            function wmem() -> p {
+                p := mload(0x40)
+                if lt(p, 0x80) { p := 0x80 }
+            }
+
+            function erfwfin(s, op) -> r {
+                let p := wmem()
+                let ey := mload(add(p, 0x80))
+                if or(slt(ey, 4), and(eq(ey, 4), lt(mload(add(p, 0x40)), 0x4400000000000000000000000000000000000000000000000000000000000000))) {
+                    let tn := and(iszero(op), slt(ey, sub(0, 5)))
+                    let gh, gl, ep := werfpole(p, tn)
+                    walign(p, gh, gl, ep, tn)
+                    if tn {
+                        r := round2(s, add(0x3feff, mload(add(p, 0x200))), mload(add(p, 0x1c0)), mload(add(p, 0x1e0)))
+                        leave
+                    }
+                }
+                r := erfwop(s, op, mload(add(p, 0x1c0)), mload(add(p, 0x1e0)), mload(add(p, 0x200)))
+            }
+
+            function werfsum(p) -> Sh, Sl, t0 {
+                mstore(add(p, 0xa0), 0x6bf195b4b9ee71e4a1ad5da04f8ac3c16c1508287cf9172a31a2297722201e2)
+                mstore(add(p, 0xc0), 0x9b49411751740459f60cda4929cb96178828db9f8e3dc1347c10576ff149f067)
+                mstore(add(p, 0xe0), 0x3c89dbb867ce52caef4e27095f43df95e10976206bcc98ff3e7a9318a6cf4601)
+                mstore(add(p, 0x100), 0x6606dec42949e767274266bc9159de76f47e688595a679ba0efc08463b6831ea)
+                mstore(add(p, 0x120), 0)
+                mstore(add(p, 0x140), 0)
+                for { let k := 0 } lt(k, 113) { k := add(k, 1) } {
+                    let a := add(add(k, k), 1)
+                    a := mul(a, a)
+                    let lo := mul(a, 0x64601c668f14b07ad6cc10eb078b1ac108dbdcb6f1aa47db451092f2f81d13bb)
+                    let hi := add(mul(a, 0x71e033550798379f04f849efdc3d3b5d8ac4232249dba35f27ac084c0), mulhi(a, 0x64601c668f14b07ad6cc10eb078b1ac108dbdcb6f1aa47db451092f2f81d13bb))
+                    let dl := add(mload(add(p, 0x20)), lo)
+                    let dh := add(add(mload(p), hi), lt(dl, lo))
+                    let t := 0
+                    dh, dl, t := wnorm(dh, dl)
+                    if iszero(k) { t0 := t }
+                    dh, dl := wrecip(dh, dl)
+                    dh, dl := wmul(mload(add(p, 0xa0)), mload(add(p, 0xc0)), dh, dl)
+                    dh, dl := wshr(dh, dl, sub(t0, t))
+                    dh, dl := wadd(mload(add(p, 0x120)), mload(add(p, 0x140)), dh, dl)
+                    mstore(add(p, 0x120), dh)
+                    mstore(add(p, 0x140), dl)
+                    dh, dl := wmul(mload(add(p, 0xa0)), mload(add(p, 0xc0)), mload(add(p, 0xe0)), mload(add(p, 0x100)))
+                    mstore(add(p, 0xa0), dh)
+                    mstore(add(p, 0xc0), dl)
+                    dh, dl := wmul(mload(add(p, 0xe0)), mload(add(p, 0x100)), 0x3c89dbb867ce52caef4e27095f43df95e10976206bcc98ff3e7a9318a6cf4601, 0x6606dec42949e767274266bc9159de76f47e688595a679ba0efc08463b6831ea)
+                    mstore(add(p, 0xe0), dh)
+                    mstore(add(p, 0x100), dl)
+                }
+                Sh := mload(add(p, 0x120))
+                Sl := mload(add(p, 0x140))
             }
 
             function wexpnsq(u, m, h) -> k2, eh, el {
@@ -5216,141 +5540,58 @@ library FP256Lib {
                 k2, eh, el := wexpr(1, kk, xh, xl)
             }
 
-            function erfccf2(u, m, h) -> vh, vl, ve {
-                let qh, ql, t := cfratio(m, sub(add(shl(1, u), 3), h), add(div(add(1700, mul(h, 704)), shr(sub(236, u), m)), 28))
+            function erfwsum(u, m, h, Yh, Yl, ey) {
+                let p := wmem()
+                mstore(add(p, 0x40), Yh)
+                mstore(add(p, 0x60), Yl)
+                mstore(add(p, 0x80), ey)
+                let Sh, Sl := wmul(Yh, Yl, Yh, Yl)
+                Sh, Sl := wshr(Sh, Sl, sub(20, add(ey, ey)))
+                mstore(p, Sh)
+                mstore(add(p, 0x20), Sl)
+                let es := 0
+                Sh, Sl, es := werfsum(p)
+                Sh, Sl := wmul(Yh, Yl, Sh, Sl)
                 let k2, eh, el := wexpnsq(u, m, h)
-                qh, ql := wmul(qh, ql, add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el)
-                switch h
-                case 0 { vh, vl := wmul(qh, ql, 0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, 0x603ace7c2c938788a0601b04b663cd75de8fa7772470e53c3a7bb7c3bfff6128) }
-                default { vh, vl := wmul(qh, ql, 0x33108a67a86ca11a1f9678a017571c5fe9c14f982893836c60238da40131ce97, 0x4efc562aa23e9edb91fae9d5d9ba7446f58a13bcb85f0a8993c74c9a22f8467f) }
-                // value = B/A 2^t 2^-beta e^(-y^2) C, beta = u + 2 - h
-                ve := add(sub(t, sub(add(u, 2), h)), k2)
+                Sh, Sl := wmul(Sh, Sl, add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el)
+                mstore(add(p, 0x1c0), Sh)
+                mstore(add(p, 0x1e0), Sl)
+                mstore(add(p, 0x200), add(add(ey, sub(es, 20)), k2))
             }
 
-            function rev(sel) {
-                mstore(0x00, shl(224, sel))
-                revert(0x00, 0x04)
-            }
-
-            function pack(s, e, m) -> r {
-                if sgt(e, 0x7ffff) { rev(0x35278d12) }
-                if slt(e, 1) { r := 0 leave }
-                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
-            }
-
-            function normround(s, e, D) -> r {
-                let n := msb(D)
-                e := add(e, sub(n, 254))
-                D := shl(sub(255, n), D)
-                let m := add(shr(19, D), and(shr(18, D), 1))
-                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
-                    m := 0x100000000000000000000000000000000000000000000000000000000000
-                    e := add(e, 1)
-                }
-                r := pack(s, e, m)
-            }
-
-            function round2(s, e, h, l) -> r {
-                if h {
-                    let k := add(msb(h), 1)
-                    r := normround(s, add(e, k), or(shl(sub(256, k), h), shr(k, l)))
-                    leave
-                }
-                r := normround(s, e, l)
-            }
-
-            function erfwcf(s, u, m, h, op) -> r {
-                let vh, vl, ve := erfccf2(u, m, h)
-                let hf := eq(op, 2)
-                if or(and(eq(op, 1), iszero(s)), and(hf, s)) {
-                    r := round2(0, add(sub(0x3feff, hf), ve), vh, vl)
-                    leave
-                }
-                vh, vl := wshr(vh, vl, sub(0, ve))
-                vh, vl := wsub(shl(add(254, iszero(iszero(op))), 1), 0, vh, vl)
-                r := round2(mul(s, iszero(op)), sub(0x3feff, hf), vh, vl)
-            }
-
-            function erfdsc(u, m, h) -> dh, dl, ds, sig {
-                let p1, p0 := mul512(m, m)
-                sig := add(shr(10, mul(shr512(p1, p0, sub(add(472, h), shl(1, u))), 1478)), 9)
-                dh, dl := wshl(p1, p0, 37)
-                ds := sub(add(shl(1, u), 2), h)
-            }
-
-            function erfterm(th, tl, dh, dl, ds, k) -> rh, rl {
-                rh, rl := wmul(th, tl, dh, dl)
-                rh, rl := wsh(rh, rl, ds)
-                rh, rl := wdivs(rh, rl, add(shl(1, k), 1))
-            }
-
-            function erfsum(u, m, h) -> sh, sl, sig {
-                let dh, dl, ds, sg := erfdsc(u, m, h)
-                sig := sg
-                let th, tl := wshr(0x4000000000000000000000000000000000000000000000000000000000000000, 0, sig)
-                sh := th
-                sl := tl
-                for { let k := 1 } or(th, tl) { k := add(k, 1) } {
-                    th, tl := erfterm(th, tl, dh, dl, ds, k)
-                    sh, sl := wadd(sh, sl, th, tl)
-                }
-            }
-
-            function mul3(h, l, m) -> n2, n1, n0 {
-                let a1, a0 := mul512(h, m)
-                let b1 := 0
-                b1, n0 := mul512(l, m)
-                n1 := add(a0, b1)
-                n2 := add(a1, lt(n1, a0))
-            }
-
-            function erfser2(u, m, h) -> n2, n1, n0, E {
-                let sh, sl, sig := erfsum(u, m, h)
-                let k2, eh, el := wexpnsq(u, m, h)
-                sh, sl := wmul(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, sh, sl)
-                switch h
-                case 0 { sh, sl := wmul(sh, sl, 0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, 0x603ace7c2c938788a0601b04b663cd75de8fa7772470e53c3a7bb7c3bfff6128) }
-                default { sh, sl := wmul(sh, sl, 0x33108a67a86ca11a1f9678a017571c5fe9c14f982893836c60238da40131ce97, 0x4efc562aa23e9edb91fae9d5d9ba7446f58a13bcb85f0a8993c74c9a22f8467f) }
-                n2, n1, n0 := mul3(sh, sl, m)
-                E := add(sub(u, 746), add(k2, sig))
-            }
-
-            function round3(s, e, n2, n1, n0) -> r {
-                if n2 {
-                    let k := add(msb(n2), 1)
-                    r := normround(s, add(e, add(256, k)), or(shl(sub(256, k), n2), shr(k, n1)))
-                    leave
-                }
-                r := round2(s, e, n1, n0)
-            }
-
-            function shr3(z2, z1, z0, n) -> rh, rl {
-                if lt(n, 256) {
-                    rh := or(shl(sub(256, n), z2), shr(n, z1))
-                    rl := or(shl(sub(256, n), z1), shr(n, z0))
-                    leave
-                }
-                rh, rl := wshr(z2, z1, sub(n, 256))
-            }
-
-            function erfwser(s, u, m, h, op) -> r {
-                let n2, n1, n0, E := erfser2(u, m, h)
+            function erfwtiny(s, op, Yh, Yl, ey) -> r {
+                let th, tl := wmul(Yh, Yl, 0x48375d410a6db446b8ea453fb5ff61a20a04d075d61f3a8b9cd0ac1866731058, 0x603ace7c2c938788a0601b04b663cd75de8fa7772470e53c3a7bb7c3bfff6128)
                 if iszero(op) {
-                    r := round3(s, add(0x400fd, E), n2, n1, n0)
+                    r := round2(s, add(0x3feff, ey), th, tl)
                     leave
                 }
-                let fh, fl := shr3(n2, n1, n0, sub(sub(0, 510), E))
-                switch xor(s, eq(op, 1))
-                case 1 { fh, fl := wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl) }
-                default { fh, fl := wadd(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl) }
-                r := round2(0, sub(0x3feff, eq(op, 2)), fh, fl)
+                th, tl := wshr(th, tl, sub(0, ey))
+                switch s
+                case 0 { th, tl := wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, th, tl) }
+                default { th, tl := wadd(0x4000000000000000000000000000000000000000000000000000000000000000, 0, th, tl) }
+                r := round2(0, sub(0x3feff, eq(op, 2)), th, tl)
+            }
+
+            function wy(u, m, h) -> Yh, Yl, ey {
+                Yh := shl(18, m)
+                ey := u
+                if h {
+                    Yh, Yl := wmul(Yh, 0, 0x2d413cccfe779921165f626cdd52afa7c75bd82ea24eea133b45eb2160cce645, 0x52bf20c10eae28b0ea2c7f9bf720f6ce43dd2a1790e71ed29e0121cd8f7e89da)
+                    if lt(Yh, 0x4000000000000000000000000000000000000000000000000000000000000000) {
+                        Yh, Yl := wshl(Yh, Yl, 1)
+                        ey := sub(u, 1)
+                    }
+                }
             }
 
             function erfw(s, u, m, h, op) -> r {
-                let Y, uy := ystuff(u, m, h)
-                switch or(sgt(uy, 2), and(eq(uy, 2), iszero(lt(Y, 0x7000000000000000000000000000000000000000000000000000000000000000))))
-                case 0 { r := erfwser(s, u, m, h, op) }
-                default { r := erfwcf(s, u, m, h, op) }
+                let Yh, Yl, ey := wy(u, m, h)
+                switch slt(ey, sub(0, 130))
+                case 1 { r := erfwtiny(s, op, Yh, Yl, ey) }
+                default {
+                    erfwsum(u, m, h, Yh, Yl, ey)
+                    r := erfwfin(s, op)
+                }
             }
 
             function ge13(Y, uy) -> t {

@@ -3,8 +3,6 @@
 
     uv run scripts/fp256/generators/bounds.py [n]     # n inputs per region (default 2000)
 
-Also checks the depth of the second stage's continued fraction for erfc
-(truncation below 2^-390 from y = 7).
 
 Every op that is not exact by construction hands normround a fast value D
 and, since release four, first asks rbad(D, err) whether D +- err could round
@@ -37,10 +35,16 @@ analysis is not off by a missed term.
                                              passes, and |t| < 2^19 (checked by sure() below)
   powu                  2 n + 8              each 256-bit product within 2^-255, squarings
                                              double it: (n + 1) 2^-255 of am, plus 2 for 1/am
-  erf, erfc, normCdf    128 (y < 1/2)        2 x F's 52 (erfser's rounded terms, e^-y^2, products) + 1
-                        192 (anchors)        2 x g's 81 (1.6 per Taylor term, 50 terms, anchor 0.5) + 8
-                        32 n + 64 (CF)       A and B each gain 2^-251 relative per step: 2^5 n
+  erfc, normCdf         96 (quadrature)      U within 2^-252.8 (the quotients' unit of 2^-253, B's
+                                             floor, the table's 2^-254.2 floors, the sum's), e^-y^2
+                                             6 units of 2^-254, the pole term 40 of 2^-256 of itself
+                                             (below erfc), three floors, truncation 2^-258
+                        64 (asymptotic)      terms' floors at 2^-262, w's 2^-254, Q 2 units, e^-y^2,
+                                             two floors; remainder below the first omitted term
                         er >> -ee + 2        for the differences 1 - erfc, 2 - erfc
+  erf, y < 1/2          2 + (64 Dt + 56 Dr) / 2^256   tanh (kernel, y >= 2^-5) within 64 units of 2^-256
+                        2 + (256 Dt + 56 Dr) / 2^256  tanh (series + doublings below) within 256;
+                                             e^-y^2 y U within 56; in units of the aligned grid
 """
 from __future__ import annotations
 
@@ -271,42 +275,31 @@ def run(n):
         if abs(be) > 1 << 20 or not inx:
             continue
         M.add("powu", 2 * nn + 8, am, power(dec(x), nn) * power(2, 255 - ae))
-    # the error function family
+    # the error function family: the quadrature (y < 16), the asymptotic series
+    # (y >= 16), the small-y tanh difference for erf (y < 1/2)
     for h, nm in ((0, "erfc"), (1, "normCdf")):
         for _ in range(n):
             r = rng.random()
-            x = rf(rng, -12, -2, 0) if r < 0.25 else (rf(rng, -1, 2, 0) if r < 0.75 else rf(rng, 2, 6, 0))
+            x = rf(rng, -140, -6, 0) if r < 0.2 else (rf(rng, -5, 1, 0) if r < 0.6 else (rf(rng, 2, 3, 0) if r < 0.85 else rf(rng, 4, 8, 0)))
             s, e, m = K.unpack(x)
             u = e - BIAS
-            Y, uy = E.ystuff(u, m, h)
-            y = dec(x) / sqrt(2 ** h)
-            if uy <= -2:
-                F = E.erf_small(ker, u, m, h)
-                D = WS - ((m * F) >> (236 - u))
-                M.add(f"{nm}, y < 1/2", 128, D, erfc(y) * power(2, 254))
-                if h == 0:
-                    M.add("erf, y < 1/2", 128, (m * F) >> 236, erf(y) * power(2, 254 - u))
-                continue
-            val = E.erfc_big(ker, Y, uy, u, m, h)
+            val = E.erfc_mag(ker, u, m, h)
             if val is None:
                 continue
-            D, ee = val
-            if D == 0:
-                continue
-            anchors = uy <= 1 or (uy == 2 and Y < 3 << 253)
-            if anchors:
-                err = 192
-            else:
-                y2 = K.mulwu(Y, Y)
-                ey = 2 * uy
-                if y2 >> 255:
-                    y2 >>= 1
-                    ey += 1
-                err = 64 + 32 * (4400 // (y2 >> (254 - ey)) + 48)
-            region = "anchors" if anchors else "continued fraction"
+            D, ee, err, region = val
+            y = dec(x) / sqrt(2 ** h)
             M.add(f"{nm}, {region}", err, D, erfc(y) * power(2, 254 - ee))
-            D2 = WS - (D >> -ee)
-            M.add(f"1 - {nm}, {region}", (err >> -ee) + 2, D2, (1 - erfc(y)) * power(2, 254))
+            if ee >= -253:
+                D2 = WS - (D >> -ee)
+                M.add(f"1 - {nm}, {region}", (err >> -ee) + 2, D2, (1 - erfc(y)) * power(2, 254))
+    for _ in range(n):
+        r = rng.random()
+        x = rf(rng, -140, -6, 0) if r < 0.4 else rf(rng, -5, -2, 0)
+        s, e, m = K.unpack(x)
+        u = e - BIAS
+        D2, e2, err = E.erf_small(ker, u, m)
+        region = "series tanh" if u <= -6 else "kernel tanh"
+        M.add(f"erf, {region}", err, D2, erf(dec(x)) * power(2, -e2))
     run79(ker, rng, M, n)
     bad = lambert(ker, M, max(n // 8, 50))
     return M.report() or bad or lwlnfit()
@@ -641,36 +634,32 @@ def lambert(ker, M, n):
     return slow > 0
 
 
-def cf_depth(n):
-    """The second stage's continued fraction for erfc at y >= 7: depth
-    1700/floor|x| + 28 (erfc, x = y) or 2404/floor|x| + 28 (normCdf, x = y
-    sqrt 2), truncation error relative to erfc at 150 digits."""
-    mp.dps = 150
+def quad_trunc(n):
+    """The trapezoidal rule's truncation, the theorem's claim measured: the 59-node
+    rule (the fast path, bound 2^-257.9) and the 113-node rule (the wide stage,
+    2^-502.2) in exact arithmetic against erfc at 200 digits, random y."""
+    mp.dps = 200
     rng = random.Random(7)
-    worst = mpf(0)
+    worst = {E.N: mpf(0), E.NW: mpf(0)}
     for _ in range(n):
-        h = rng.getrandbits(1)
-        x = mpf(rng.uniform(7 * (1.4143 if h else 1), 430 * (1.4143 if h else 1)))
-        if rng.random() < 0.5:
-            x = mpf(7 * (1.4143 if h else 1)) + mpf(rng.random())
-        xi = int(x)
-        depth = (1700 + 704 * h) // xi + 28
-        y = x / sqrt(2 ** h)
-        b, a = (2 * y, 2) if h == 0 else (x, 1)
-        t = mpf(0)
-        for k in range(depth, 0, -1):
-            t = (a * k) / (b + t)
-        c = (2 / sqrt(mp.pi)) if h == 0 else sqrt(2 / mp.pi)
-        v = c * exp(-y * y) / (b + t)
-        worst = max(worst, abs(v / erfc(y) - 1))
-    print(f"continued fraction at y >= 7, depth 1700/floor|x| + 28: truncation below 2^{float(log(worst, 2)):.1f} "
-          f"over {n} points (the second stage is held to 2^-392)")
-    return worst > mpf(2) ** -390
+        y = mpf(2) ** rng.uniform(-8, 4.1) if rng.random() < 0.7 else mpf(rng.uniform(0, 17))
+        for N in worst:
+            h = sqrt(mp.pi / (N + 1))
+            s = sum(exp(-((k + mpf(1) / 2) * h) ** 2) / (y * y + ((k + mpf(1) / 2) * h) ** 2) for k in range(N + 1))
+            v = exp(-y * y) * 2 * h * y / mp.pi * s + 2 / (1 + exp(2 * mp.pi * y / h))
+            worst[N] = max(worst[N], abs(v / erfc(y) - 1))
+    bad = False
+    for N, w in worst.items():
+        bound = float(log(mpf(3.97) * sqrt(N + 1) * exp(-mp.pi * N), 2))
+        print(f"trapezoidal rule, {N + 1} nodes: truncation below 2^{float(log(w, 2)):.1f} over {n} points "
+              f"(theorem: 2^{bound:.1f})")
+        bad |= w > mpf(2) ** bound
+    return bad
 
 
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 2000
     bad = run(n)
     bad |= sure(n * 4)
-    bad |= cf_depth(max(n // 20, 50))
+    bad |= quad_trunc(max(n // 40, 25))
     sys.exit(1 if bad else 0)

@@ -25,6 +25,7 @@ contract ViaIrBench is Test {
     address internal fp256x;
     address internal fp256x2;
     address internal fp256x3;
+    address internal fp256x4;
     uint256 constant N = 8;
 
     function setUp() public {
@@ -33,6 +34,7 @@ contract ViaIrBench is Test {
         fp256x = _deploy("out/FP256X.yul/FP256X.json");
         fp256x2 = _deploy("out/FP256X2.yul/FP256X2.json");
         fp256x3 = _deploy("out/FP256X3.yul/FP256X3.json");
+        fp256x4 = _deploy("out/FP256X4.yul/FP256X4.json");
     }
 
     function _deploy(string memory artifact) internal returns (address d) {
@@ -142,8 +144,8 @@ contract ViaIrBench is Test {
 
     function _obj256(string memory op) internal view returns (address) {
         bytes32 h = keccak256(bytes(op));
-        if (h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
-            || h == keccak256("lambertW0") || h == keccak256("lambertWm1")) return fp256x;
+        if (h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")) return fp256x4;
+        if (h == keccak256("lambertW0") || h == keccak256("lambertWm1")) return fp256x;
         if (h == keccak256("exp2") || h == keccak256("log2") || h == keccak256("cbrt")
             || h == keccak256("cosh") || h == keccak256("tanh")) return fp256x2;
         if (h == keccak256("min") || h == keccak256("max") || h == keccak256("hypot")) return fp256x3;
@@ -219,7 +221,8 @@ contract ViaIrBench is Test {
 
     function test_viair_fp256() public view {
         _object(fp256, abi.encodeWithSignature("abs(int256)", int256(1)));
-        _object(fp256x, abi.encodeWithSignature("erf(int256)", int256(1)));
+        _object(fp256x, abi.encodeWithSignature("lambertW0(int256)", int256(1)));
+        _object(fp256x4, abi.encodeWithSignature("erf(int256)", int256(1)));
         _object(fp256x2, abi.encodeWithSignature("exp2(int256)", int256(1)));
         _object(fp256x3, abi.encodeWithSignature("inv(int256)", int256(1)));
         _u256("abs", -8, 8, 0);

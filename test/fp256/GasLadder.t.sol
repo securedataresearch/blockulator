@@ -23,7 +23,7 @@ contract GasLadder256 is FP256Harness {
     /// 2,500-gas cold-account surcharge.
     function _warm() internal view {
         obj.mul(ONE, ONE);
-        objX.erf(ONE);
+        objX4.erf(ONE);
         objX2.exp2(ONE);
         objX3.inv(ONE);
     }

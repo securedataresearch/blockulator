@@ -13,9 +13,9 @@ import {console} from "forge-std/console.sol";
 ///         are equal) must be at or above the op's floor. Release four: the
 ///         floor is 256 for every op, so every word must equal the oracle's
 ///         (correct rounding, ties away from zero, or the exact value rounded
-///         in the op's direction). The error function family and Lambert W
-///         run on FP256X, #79's exponential family on FP256X2 and its
-///         algebraic ops on FP256X3, everything else on FP256.
+///         in the op's direction). Lambert W runs on FP256X, the error
+///         function family on FP256X4, #79's exponential family on FP256X2
+///         and its algebraic ops on FP256X3, everything else on FP256.
 ///         Prints PREC|op|n|min|mean|worstInput and writes
 ///         docs/fp256/precision.json.
 contract Precision256 is FP256Harness {

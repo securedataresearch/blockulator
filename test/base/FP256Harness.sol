@@ -6,6 +6,7 @@ import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
 import {IFP256X} from "../../contracts/src/fp256/IFP256X.sol";
 import {IFP256X2} from "../../contracts/src/fp256/IFP256X2.sol";
 import {IFP256X3} from "../../contracts/src/fp256/IFP256X3.sol";
+import {IFP256X4} from "../../contracts/src/fp256/IFP256X4.sol";
 import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
 
 /// @notice External wrapper around the inline library so every call can be
@@ -84,8 +85,10 @@ contract LibUser256 {
 
 abstract contract FP256Harness is Test {
     IFP256 internal obj;
-    /// release four's second object: the error function family and Lambert W
+    /// release four's second object: Lambert W (and, until release 2.2, the error
+    /// function family, now FP256X4)
     IFP256X internal objX;
+    IFP256X4 internal objX4;
     /// #79's objects: the exponential family and roots on the kernels (FP256X2),
     /// the algebraic ops (FP256X3)
     IFP256X2 internal objX2;
@@ -107,6 +110,7 @@ abstract contract FP256Harness is Test {
         objX = IFP256X(_deployYulObject("out/FP256X.yul/FP256X.json"));
         objX2 = IFP256X2(_deployYulObject("out/FP256X2.yul/FP256X2.json"));
         objX3 = IFP256X3(_deployYulObject("out/FP256X3.yul/FP256X3.json"));
+        objX4 = IFP256X4(_deployYulObject("out/FP256X4.yul/FP256X4.json"));
         lib = new LibUser256();
     }
 
@@ -191,12 +195,16 @@ abstract contract FP256Harness is Test {
         else assertEq(keccak256(x.err), keccak256(y.err), string.concat(what, ": revert data"));
     }
 
-    /// The object that serves op: FP256X for the error function family and
-    /// Lambert W, FP256 for everything else.
+    /// The object that serves op: FP256X for Lambert W, FP256X4 for the error
+    /// function family, FP256 for everything else.
     function _isX(string memory op) internal pure returns (bool) {
         bytes32 h = keccak256(bytes(op));
-        return h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
-            || h == keccak256("lambertW0") || h == keccak256("lambertWm1");
+        return h == keccak256("lambertW0") || h == keccak256("lambertWm1");
+    }
+
+    function _isX4(string memory op) internal pure returns (bool) {
+        bytes32 h = keccak256(bytes(op));
+        return h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf");
     }
 
     /// #79's ops: FP256X2 for the exponential family, cbrt and the hyperbolics,
@@ -220,6 +228,7 @@ abstract contract FP256Harness is Test {
         if (_isX(op)) return address(objX);
         if (_isX2(op)) return address(objX2);
         if (_isX3(op)) return address(objX3);
+        if (_isX4(op)) return address(objX4);
         return address(obj);
     }
 

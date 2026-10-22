@@ -58,14 +58,18 @@ LIBS = {
         "objects": {
             "FP256": {"iface": "IFP256", "abi": "abi.json"},
             "FP256X": {"iface": "IFP256X", "abi": "abiX.json",
-                       "iface_notice": "Interface of the deployed FP256X object, FP256's extension: the\n///         error function family and Lambert W on the same 256-bit binary\n///         floating point words as IFP256 (sign bit 255, a 19-bit biased\n///         exponent, bias 262143, a 236-bit fraction; zero is the all-zero word)."},
+                       "iface_notice": "Interface of the deployed FP256X object, FP256's extension: Lambert\n///         W (the error function family moved to FP256X4 in release 2.2) on\n///         the same 256-bit binary floating point words as IFP256 (sign bit\n///         255, a 19-bit biased exponent, bias 262143, a 236-bit fraction;\n///         zero is the all-zero word)."},
             # #79: the ops FP127 has, two more objects
             "FP256X2": {"iface": "IFP256X2", "abi": "abiX2.json",
                         "iface_notice": "Interface of the deployed FP256X2 object, FP256's second extension:\n///         exp2, exp10, log2, log10, log2Up, cbrt and the hyperbolic\n///         functions on the same 256-bit binary floating point words as IFP256."},
             "FP256X3": {"iface": "IFP256X3", "abi": "abiX3.json",
                         "iface_notice": "Interface of the deployed FP256X3 object, FP256's third extension:\n///         the algebraic ops FP127 has (min, max, clamp, avg, dist,\n///         zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg,\n///         hypot) on the same 256-bit binary floating point words as IFP256."},
+            # release 2.2: the error function family by the trapezoidal rule, its node
+            # table and wide stage, leaves FP256X to Lambert W
+            "FP256X4": {"iface": "IFP256X4", "abi": "abiX4.json",
+                        "iface_notice": "Interface of the deployed FP256X4 object, FP256's fourth extension:\n///         erf, erfc and normCdf on the same 256-bit binary floating point\n///         words as IFP256 (sign bit 255, a 19-bit biased exponent, bias\n///         262143, a 236-bit fraction; zero is the all-zero word)."},
         },
-        "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
+        "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and temporary\n///      memory just past the free memory pointer, which is never moved: lerp's\n///      four-word accumulator and its terms, the error function family's\n///      node table and sums.",
     },
 }
 LIB = LIBS["fp127"]
@@ -382,7 +386,7 @@ def _indent(text: str, n: int) -> str:
 # core stays byte for byte: the search would cost it 180 bytes of its 64 of
 # headroom) and FP256X (five exports); FP256X2 and FP256X3 take the search
 # from release 2.2.
-FLAT_DISPATCH = {"FP256", "FP256X"}
+FLAT_DISPATCH = {"FP256", "FP256X", "FP256X4"}
 DISPATCH_MIN = 10
 # A leaf of the selector search is a plain switch of at most this many cases.
 DISPATCH_LEAF = 4
@@ -526,9 +530,9 @@ COUNTS = {
 
 # The helpers make profile measures, in slot order.
 PROBES = {
-    "fp256": ["log2m", "exp2frac", "wexpm1", "wlnw", "cfrun", "erfw", "lwfix",
+    "fp256": ["log2m", "exp2frac", "wexpm1", "wlnw", "werfsum", "werfpole", "erfw", "lwfix",
               "lwlog", "lwexp", "lwln", "powslow", "compslow", "wln1ps",
-              "erfser", "erfcxa", "erfcxcf", "expnegsq",
+              "expnegsq", "erfquad", "erfpolek", "erfpoles", "erfasym", "erfctab",
               # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp
               "em1k", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cbrtw", "cubegt",
               "isqrtw", "lerp3"],

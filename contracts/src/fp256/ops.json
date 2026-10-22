@@ -131,38 +131,38 @@
       "reverts": "Overflow() when e^x - 1 does not fit (x above about 181,705); OutOfRange() for a word that is not a number"
     },
     {
-      "object": "FP256X",
+      "object": "FP256X4",
       "name": "erf",
       "signature": "erf(int256)",
       "selector": "0x7a959e36",
       "inputs": [
         "x"
       ],
-      "notice": "The error function. Below 1/2, x (2/sqrt pi) e^(-x^2) times the all-positive series sum (2x^2)^k / (2k+1)!!; above, 1 - erfc with erfc = e^(-x^2) g(x) from the anchors or the continued fraction (see erfc). e^(-x^2) comes from the exact square. One rounding when the fast value's error bound clears the rounding boundary, else the series in two words below 7 and 1 - erfc by the continued fraction in two words above: correctly rounded. +-1 from |x| >= 13.",
+      "notice": "The error function. 1 - erfc from |x| = 1/2 (see erfc); below, tanh(pi x/h) - e^(-x^2) x U(x) from the same 59-node trapezoidal rule, the tanh from e^(2 pi x/h) - 1 (the 2^f kernel from 2^-5, the expm1 series with doublings below), so the relative precision holds down to the smallest x. One rounding when the fast value's error bound clears the rounding boundary, else the series in two words below 7 and 1 - erfc by the continued fraction in two words above: correctly rounded. +-1 from |x| >= 13.",
       "domain": "any number",
       "reverts": "OutOfRange() for a word that is not a number"
     },
     {
-      "object": "FP256X",
+      "object": "FP256X4",
       "name": "erfc",
       "signature": "erfc(int256)",
       "selector": "0xa79456da",
       "inputs": [
         "x"
       ],
-      "notice": "The complementary error function as a product, never a difference, for x >= 1/2: erfc(x) = e^(-x^2) g(x), g = e^(x^2) erfc from a Taylor series around 45 anchors on [1/2, 6] and the continued fraction above, e^(-x^2) from the exact 474-bit square, so the tail keeps 71 digits until it underflows 2^-262142 near x = 427. 1 - erf below 1/2, 2 - erfc(-x) below zero. One rounding, or the wide second stage (the series and 1 - erf below 7, the continued fraction above, in two words) when the fast value's error bound reaches the rounding boundary: correctly rounded.",
+      "notice": "The complementary error function as a sum of positive terms: the 59-node modified trapezoidal rule erfc(x) = e^(-x^2) x sum_k c_k / (x^2 + t_k^2) + 2/(1 + e^(2 pi x/h)) (Al Azah & Chandler-Wilde, relative error below 2^-257 for every x >= 0), e^(-x^2) from the exact 474-bit square, so the tail keeps 71 digits until it underflows 2^-262142 near x = 427; the asymptotic series from x = 16. 2 - erfc(-x) below zero. One rounding, or the wide second stage (the series and 1 - erf below 7, the continued fraction above, in two words) when the fast value's error bound reaches the rounding boundary: correctly rounded.",
       "domain": "any number",
       "reverts": "OutOfRange() for a word that is not a number"
     },
     {
-      "object": "FP256X",
+      "object": "FP256X4",
       "name": "normCdf",
       "signature": "normCdf(int256)",
       "selector": "0x7b9745a0",
       "inputs": [
         "x"
       ],
-      "notice": "The standard normal distribution function Phi(x) = erfc(-x / sqrt 2) / 2, with e^(-x^2/2) from the exact square, so the left tail keeps 71 digits until it underflows near x = -603 (the 18-decimal grid is empty from about -8.3); one rounding, or erf's wide second stage at y = |x| / sqrt 2: correctly rounded; exactly one from x >= 13 sqrt 2.",
+      "notice": "The standard normal distribution function Phi(x) = erfc(-x / sqrt 2) / 2 by erfc's rule at y = |x| / sqrt 2, with e^(-x^2/2) from the exact square, so the left tail keeps 71 digits until it underflows near x = -603 (the 18-decimal grid is empty from about -8.3); one rounding, or erf's wide second stage at y: correctly rounded; exactly one from x >= 13 sqrt 2.",
       "domain": "any number",
       "reverts": "OutOfRange() for a word that is not a number"
     },
