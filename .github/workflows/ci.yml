@@ -60,6 +60,12 @@ jobs:
       - name: FP256 gas ladder
         run: make bench-fp256
 
+      - name: Osaka build (msb on CLZ) returns what the shanghai build returns
+        run: |
+          make test-osaka
+          make size-osaka
+          make bench-osaka
+
       - name: Terminal-precision ladder is current
         run: make ladder-check
 

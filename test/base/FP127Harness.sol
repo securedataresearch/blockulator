@@ -158,11 +158,15 @@ abstract contract FP127Harness is Test {
         vm.etch(h, code);
         huff = IHuffFP127(h);
 
-        obj = IFP127(_deployYulObject("out/FP127.yul/FP127.json"));
+        obj = IFP127(_deployYulObject(string.concat(_buildDir(), "FP127.yul/FP127.json")));
         lib = new LibUser();
         caller = new FP127Caller(address(obj));
         ref = new Ref();
     }
+
+    /// Where the object's artifact is read from: out/ for the shanghai build,
+    /// out/osaka/ for the osaka build's suites (test/osaka).
+    function _buildDir() internal pure virtual returns (string memory) { return "out/"; }
 
     /// Yul artifacts carry a null ABI, which vm.getCode refuses to parse, so
     /// the init code is read from the artifact JSON and created directly.

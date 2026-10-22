@@ -103,12 +103,16 @@ abstract contract FP256Harness is Test {
     int256 internal constant MAX_WORD = type(int256).max;           // exponent 0x7ffff, fraction all ones
 
     function setUp() public virtual {
-        obj = IFP256(_deployYulObject("out/FP256.yul/FP256.json"));
-        objX = IFP256X(_deployYulObject("out/FP256X.yul/FP256X.json"));
-        objX2 = IFP256X2(_deployYulObject("out/FP256X2.yul/FP256X2.json"));
-        objX3 = IFP256X3(_deployYulObject("out/FP256X3.yul/FP256X3.json"));
+        obj = IFP256(_deployYulObject(string.concat(_buildDir(), "FP256.yul/FP256.json")));
+        objX = IFP256X(_deployYulObject(string.concat(_buildDir(), "FP256X.yul/FP256X.json")));
+        objX2 = IFP256X2(_deployYulObject(string.concat(_buildDir(), "FP256X2.yul/FP256X2.json")));
+        objX3 = IFP256X3(_deployYulObject(string.concat(_buildDir(), "FP256X3.yul/FP256X3.json")));
         lib = new LibUser256();
     }
+
+    /// Where the objects' artifacts are read from: out/ for the shanghai
+    /// build, out/osaka/ for the osaka build's suites (test/osaka).
+    function _buildDir() internal pure virtual returns (string memory) { return "out/"; }
 
     function _deployYulObject(string memory artifact) internal returns (address deployed) {
         bytes memory initCode = vm.parseJsonBytes(vm.readFile(artifact), ".bytecode.object");

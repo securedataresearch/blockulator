@@ -1,0 +1,1222 @@
+[
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "fromFixed18",
+  "n": 33,
+  "shanghaiMedian": 416,
+  "osakaMedian": 416,
+  "shanghaiMean": 416,
+  "osakaMean": 416
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "toFixed18",
+  "n": 99,
+  "shanghaiMedian": 406,
+  "osakaMedian": 406,
+  "shanghaiMean": 406,
+  "osakaMean": 406
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "toFixed18Down",
+  "n": 99,
+  "shanghaiMedian": 361,
+  "osakaMedian": 361,
+  "shanghaiMean": 361,
+  "osakaMean": 361
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "toFixed18Up",
+  "n": 99,
+  "shanghaiMedian": 457,
+  "osakaMedian": 457,
+  "shanghaiMean": 454,
+  "osakaMean": 454
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "add",
+  "n": 377,
+  "shanghaiMedian": 379,
+  "osakaMedian": 379,
+  "shanghaiMean": 379,
+  "osakaMean": 379
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "sub",
+  "n": 380,
+  "shanghaiMedian": 380,
+  "osakaMedian": 380,
+  "shanghaiMean": 380,
+  "osakaMean": 380
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "mul",
+  "n": 231,
+  "shanghaiMedian": 523,
+  "osakaMedian": 523,
+  "shanghaiMean": 523,
+  "osakaMean": 523
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "div",
+  "n": 377,
+  "shanghaiMedian": 845,
+  "osakaMedian": 845,
+  "shanghaiMean": 821,
+  "osakaMean": 821
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "mulDown",
+  "n": 218,
+  "shanghaiMedian": 504,
+  "osakaMedian": 504,
+  "shanghaiMean": 504,
+  "osakaMean": 504
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "mulUp",
+  "n": 225,
+  "shanghaiMedian": 627,
+  "osakaMedian": 627,
+  "shanghaiMean": 607,
+  "osakaMean": 607
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "divDown",
+  "n": 363,
+  "shanghaiMedian": 1017,
+  "osakaMedian": 1017,
+  "shanghaiMean": 1006,
+  "osakaMean": 1006
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "divUp",
+  "n": 367,
+  "shanghaiMedian": 984,
+  "osakaMedian": 984,
+  "shanghaiMean": 973,
+  "osakaMean": 973
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "exp2",
+  "n": 104,
+  "shanghaiMedian": 5089,
+  "osakaMedian": 5083,
+  "shanghaiMean": 4600,
+  "osakaMean": 4594
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "exp",
+  "n": 117,
+  "shanghaiMedian": 5295,
+  "osakaMedian": 5286,
+  "shanghaiMean": 4908,
+  "osakaMean": 4899
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "exp10",
+  "n": 80,
+  "shanghaiMedian": 5208,
+  "osakaMedian": 5202,
+  "shanghaiMean": 4893,
+  "osakaMean": 4887
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "log2",
+  "n": 322,
+  "shanghaiMedian": 928,
+  "osakaMedian": 622,
+  "shanghaiMean": 1533,
+  "osakaMean": 1244
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "ln",
+  "n": 322,
+  "shanghaiMedian": 1080,
+  "osakaMedian": 774,
+  "shanghaiMean": 1681,
+  "osakaMean": 1392
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "log10",
+  "n": 322,
+  "shanghaiMedian": 1035,
+  "osakaMedian": 729,
+  "shanghaiMean": 1635,
+  "osakaMean": 1347
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "log2Up",
+  "n": 322,
+  "shanghaiMedian": 766,
+  "osakaMedian": 462,
+  "shanghaiMean": 775,
+  "osakaMean": 462
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "sqrt",
+  "n": 298,
+  "shanghaiMedian": 1482,
+  "osakaMedian": 1235,
+  "shanghaiMean": 1289,
+  "osakaMean": 1112
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "pow",
+  "n": 501,
+  "shanghaiMedian": 5710,
+  "osakaMedian": 5507,
+  "shanghaiMean": 6699,
+  "osakaMean": 6502
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "powu",
+  "n": 435,
+  "shanghaiMedian": 2887,
+  "osakaMedian": 2665,
+  "shanghaiMean": 6597,
+  "osakaMean": 6361
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "compound",
+  "n": 141,
+  "shanghaiMedian": 2600,
+  "osakaMedian": 2317,
+  "shanghaiMean": 6713,
+  "osakaMean": 6491
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "cbrt",
+  "n": 98,
+  "shanghaiMedian": 2280,
+  "osakaMedian": 1957,
+  "shanghaiMean": 2274,
+  "osakaMean": 1969
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "gavg",
+  "n": 158,
+  "shanghaiMedian": 1644,
+  "osakaMedian": 1397,
+  "shanghaiMean": 1387,
+  "osakaMean": 1229
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "hypot",
+  "n": 121,
+  "shanghaiMedian": 1940,
+  "osakaMedian": 1693,
+  "shanghaiMean": 1929,
+  "osakaMean": 1668
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "inv",
+  "n": 62,
+  "shanghaiMedian": 495,
+  "osakaMedian": 495,
+  "shanghaiMean": 495,
+  "osakaMean": 495
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "abs",
+  "n": 98,
+  "shanghaiMedian": 413,
+  "osakaMedian": 413,
+  "shanghaiMean": 413,
+  "osakaMean": 413
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "neg",
+  "n": 98,
+  "shanghaiMedian": 421,
+  "osakaMedian": 421,
+  "shanghaiMean": 421,
+  "osakaMean": 421
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "sign",
+  "n": 99,
+  "shanghaiMedian": 384,
+  "osakaMedian": 384,
+  "shanghaiMean": 384,
+  "osakaMean": 384
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "min",
+  "n": 200,
+  "shanghaiMedian": 405,
+  "osakaMedian": 405,
+  "shanghaiMean": 403,
+  "osakaMean": 403
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "max",
+  "n": 200,
+  "shanghaiMedian": 406,
+  "osakaMedian": 406,
+  "shanghaiMean": 404,
+  "osakaMean": 404
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "clamp",
+  "n": 300,
+  "shanghaiMedian": 428,
+  "osakaMedian": 428,
+  "shanghaiMean": 428,
+  "osakaMean": 428
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "avg",
+  "n": 200,
+  "shanghaiMedian": 404,
+  "osakaMedian": 404,
+  "shanghaiMean": 404,
+  "osakaMean": 404
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "zeroFloorSub",
+  "n": 189,
+  "shanghaiMedian": 498,
+  "osakaMedian": 498,
+  "shanghaiMean": 501,
+  "osakaMean": 501
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "dist",
+  "n": 190,
+  "shanghaiMedian": 454,
+  "osakaMedian": 454,
+  "shanghaiMean": 454,
+  "osakaMean": 454
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "lerp",
+  "n": 289,
+  "shanghaiMedian": 684,
+  "osakaMedian": 684,
+  "shanghaiMean": 684,
+  "osakaMean": 684
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "floor",
+  "n": 99,
+  "shanghaiMedian": 383,
+  "osakaMedian": 383,
+  "shanghaiMean": 383,
+  "osakaMean": 383
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "ceil",
+  "n": 97,
+  "shanghaiMedian": 425,
+  "osakaMedian": 425,
+  "shanghaiMean": 425,
+  "osakaMean": 425
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "frac",
+  "n": 99,
+  "shanghaiMedian": 339,
+  "osakaMedian": 339,
+  "shanghaiMean": 339,
+  "osakaMean": 339
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "round",
+  "n": 97,
+  "shanghaiMedian": 397,
+  "osakaMedian": 397,
+  "shanghaiMean": 397,
+  "osakaMean": 397
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "gcd",
+  "n": 81,
+  "shanghaiMedian": 453,
+  "osakaMedian": 453,
+  "shanghaiMean": 511,
+  "osakaMean": 511
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "factorial",
+  "n": 12,
+  "shanghaiMedian": 707,
+  "osakaMedian": 707,
+  "shanghaiMean": 1144,
+  "osakaMean": 1144
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "pi",
+  "n": 8,
+  "shanghaiMedian": 2207,
+  "osakaMedian": 2973,
+  "shanghaiMean": 2141,
+  "osakaMean": 2907
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "lambertW0",
+  "n": 140,
+  "shanghaiMedian": 11693,
+  "osakaMedian": 10088,
+  "shanghaiMean": 10402,
+  "osakaMean": 9152
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "lambertWm1",
+  "n": 86,
+  "shanghaiMedian": 12444,
+  "osakaMedian": 11353,
+  "shanghaiMean": 12582,
+  "osakaMean": 11131
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "log1p",
+  "n": 561,
+  "shanghaiMedian": 3628,
+  "osakaMedian": 3320,
+  "shanghaiMean": 3652,
+  "osakaMean": 3369
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "expm1",
+  "n": 577,
+  "shanghaiMedian": 1779,
+  "osakaMedian": 1779,
+  "shanghaiMean": 2158,
+  "osakaMean": 2157
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "sinh",
+  "n": 575,
+  "shanghaiMedian": 4199,
+  "osakaMedian": 4223,
+  "shanghaiMean": 3040,
+  "osakaMean": 3055
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "cosh",
+  "n": 575,
+  "shanghaiMedian": 4198,
+  "osakaMedian": 4222,
+  "shanghaiMean": 3023,
+  "osakaMean": 3038
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "tanh",
+  "n": 579,
+  "shanghaiMedian": 2560,
+  "osakaMedian": 2560,
+  "shanghaiMean": 2567,
+  "osakaMean": 2566
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "atanh",
+  "n": 534,
+  "shanghaiMedian": 3852,
+  "osakaMedian": 3601,
+  "shanghaiMean": 3886,
+  "osakaMean": 3633
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "erf",
+  "n": 571,
+  "shanghaiMedian": 3530,
+  "osakaMedian": 3530,
+  "shanghaiMean": 5023,
+  "osakaMean": 5023
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "erfc",
+  "n": 571,
+  "shanghaiMedian": 3540,
+  "osakaMedian": 3540,
+  "shanghaiMean": 5023,
+  "osakaMean": 5023
+ },
+ {
+  "lib": "fp127",
+  "object": "FP127",
+  "op": "normCdf",
+  "n": 571,
+  "shanghaiMedian": 3657,
+  "osakaMedian": 3657,
+  "shanghaiMean": 5506,
+  "osakaMean": 5506
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "add",
+  "n": 497,
+  "shanghaiMedian": 865,
+  "osakaMedian": 865,
+  "shanghaiMean": 880,
+  "osakaMean": 880
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "sub",
+  "n": 499,
+  "shanghaiMedian": 944,
+  "osakaMedian": 944,
+  "shanghaiMean": 929,
+  "osakaMean": 928
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "mul",
+  "n": 495,
+  "shanghaiMedian": 775,
+  "osakaMedian": 775,
+  "shanghaiMean": 775,
+  "osakaMean": 775
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "div",
+  "n": 496,
+  "shanghaiMedian": 1045,
+  "osakaMedian": 1045,
+  "shanghaiMean": 1045,
+  "osakaMean": 1045
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "sqrt",
+  "n": 673,
+  "shanghaiMedian": 1476,
+  "osakaMedian": 1322,
+  "shanghaiMean": 1488,
+  "osakaMean": 1335
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "exp",
+  "n": 767,
+  "shanghaiMedian": 1553,
+  "osakaMedian": 1399,
+  "shanghaiMean": 3646,
+  "osakaMean": 3421
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "ln",
+  "n": 2118,
+  "shanghaiMedian": 5578,
+  "osakaMedian": 5104,
+  "shanghaiMean": 5669,
+  "osakaMean": 5191
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "pow",
+  "n": 244,
+  "shanghaiMedian": 11590,
+  "osakaMedian": 11105,
+  "shanghaiMean": 13848,
+  "osakaMean": 13422
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "log1p",
+  "n": 1226,
+  "shanghaiMedian": 7732,
+  "osakaMedian": 7379,
+  "shanghaiMean": 7674,
+  "osakaMean": 7236
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "expm1",
+  "n": 851,
+  "shanghaiMedian": 5671,
+  "osakaMedian": 5363,
+  "shanghaiMean": 5780,
+  "osakaMean": 5469
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X",
+  "op": "erf",
+  "n": 382,
+  "shanghaiMedian": 17491,
+  "osakaMedian": 17171,
+  "shanghaiMean": 20216,
+  "osakaMean": 19951
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X",
+  "op": "erfc",
+  "n": 437,
+  "shanghaiMedian": 21120,
+  "osakaMedian": 20646,
+  "shanghaiMean": 24888,
+  "osakaMean": 24479
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X",
+  "op": "normCdf",
+  "n": 434,
+  "shanghaiMedian": 19569,
+  "osakaMedian": 19246,
+  "shanghaiMean": 20342,
+  "osakaMean": 20022
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X",
+  "op": "lambertW0",
+  "n": 815,
+  "shanghaiMedian": 8547,
+  "osakaMedian": 8109,
+  "shanghaiMean": 9094,
+  "osakaMean": 8581
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X",
+  "op": "lambertWm1",
+  "n": 662,
+  "shanghaiMedian": 11848,
+  "osakaMedian": 11010,
+  "shanghaiMean": 12750,
+  "osakaMean": 11861
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "powu",
+  "n": 380,
+  "shanghaiMedian": 3968,
+  "osakaMedian": 3660,
+  "shanghaiMean": 6708,
+  "osakaMean": 6391
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "compound",
+  "n": 421,
+  "shanghaiMedian": 13363,
+  "osakaMedian": 12851,
+  "shanghaiMean": 15718,
+  "osakaMean": 15167
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "neg",
+  "n": 1346,
+  "shanghaiMedian": 350,
+  "osakaMedian": 350,
+  "shanghaiMean": 350,
+  "osakaMean": 350
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "abs",
+  "n": 1346,
+  "shanghaiMedian": 377,
+  "osakaMedian": 377,
+  "shanghaiMean": 377,
+  "osakaMean": 377
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "sign",
+  "n": 1346,
+  "shanghaiMedian": 388,
+  "osakaMedian": 388,
+  "shanghaiMean": 388,
+  "osakaMean": 388
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "cmp",
+  "n": 295,
+  "shanghaiMedian": 502,
+  "osakaMedian": 502,
+  "shanghaiMean": 502,
+  "osakaMean": 502
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "lt",
+  "n": 297,
+  "shanghaiMedian": 503,
+  "osakaMedian": 503,
+  "shanghaiMean": 503,
+  "osakaMean": 503
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "eq",
+  "n": 200,
+  "shanghaiMedian": 448,
+  "osakaMedian": 448,
+  "shanghaiMean": 448,
+  "osakaMean": 448
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "fromUint",
+  "n": 10,
+  "shanghaiMedian": 706,
+  "osakaMedian": 552,
+  "shanghaiMean": 669,
+  "osakaMean": 530
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "fromFP127",
+  "n": 11,
+  "shanghaiMedian": 761,
+  "osakaMedian": 607,
+  "shanghaiMean": 723,
+  "osakaMean": 583
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "toFP127",
+  "n": 969,
+  "shanghaiMedian": 673,
+  "osakaMedian": 673,
+  "shanghaiMean": 647,
+  "osakaMean": 647
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "fromFixed18",
+  "n": 13,
+  "shanghaiMedian": 1020,
+  "osakaMedian": 866,
+  "shanghaiMean": 971,
+  "osakaMean": 829
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "toFixed18",
+  "n": 1107,
+  "shanghaiMedian": 665,
+  "osakaMedian": 665,
+  "shanghaiMean": 608,
+  "osakaMean": 608
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "mulDown",
+  "n": 487,
+  "shanghaiMedian": 1312,
+  "osakaMedian": 1158,
+  "shanghaiMean": 1308,
+  "osakaMean": 1159
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "mulUp",
+  "n": 490,
+  "shanghaiMedian": 1253,
+  "osakaMedian": 1099,
+  "shanghaiMean": 1245,
+  "osakaMean": 1098
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "divDown",
+  "n": 492,
+  "shanghaiMedian": 1482,
+  "osakaMedian": 1328,
+  "shanghaiMean": 1464,
+  "osakaMean": 1314
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "divUp",
+  "n": 494,
+  "shanghaiMedian": 1510,
+  "osakaMedian": 1356,
+  "shanghaiMean": 1498,
+  "osakaMean": 1347
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "toUintDown",
+  "n": 77,
+  "shanghaiMedian": 535,
+  "osakaMedian": 535,
+  "shanghaiMean": 531,
+  "osakaMean": 531
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "toUintUp",
+  "n": 77,
+  "shanghaiMedian": 606,
+  "osakaMedian": 606,
+  "shanghaiMean": 591,
+  "osakaMean": 591
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "toIntDown",
+  "n": 147,
+  "shanghaiMedian": 774,
+  "osakaMedian": 774,
+  "shanghaiMean": 772,
+  "osakaMean": 772
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "toIntUp",
+  "n": 147,
+  "shanghaiMedian": 762,
+  "osakaMedian": 762,
+  "shanghaiMean": 750,
+  "osakaMean": 750
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "floor",
+  "n": 154,
+  "shanghaiMedian": 746,
+  "osakaMedian": 746,
+  "shanghaiMean": 720,
+  "osakaMean": 720
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "ceil",
+  "n": 154,
+  "shanghaiMedian": 717,
+  "osakaMedian": 717,
+  "shanghaiMean": 691,
+  "osakaMean": 691
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "toFixed18Down",
+  "n": 1107,
+  "shanghaiMedian": 915,
+  "osakaMedian": 915,
+  "shanghaiMean": 783,
+  "osakaMean": 783
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "toFixed18Up",
+  "n": 1107,
+  "shanghaiMedian": 958,
+  "osakaMedian": 958,
+  "shanghaiMean": 815,
+  "osakaMean": 815
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "fromUintDown",
+  "n": 19,
+  "shanghaiMedian": 745,
+  "osakaMedian": 591,
+  "shanghaiMean": 726,
+  "osakaMean": 580
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256",
+  "op": "fromUintUp",
+  "n": 19,
+  "shanghaiMedian": 830,
+  "osakaMedian": 676,
+  "shanghaiMean": 796,
+  "osakaMean": 650
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "min",
+  "n": 200,
+  "shanghaiMedian": 458,
+  "osakaMedian": 458,
+  "shanghaiMean": 459,
+  "osakaMean": 459
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "max",
+  "n": 200,
+  "shanghaiMedian": 437,
+  "osakaMedian": 437,
+  "shanghaiMean": 438,
+  "osakaMean": 438
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "clamp",
+  "n": 295,
+  "shanghaiMedian": 694,
+  "osakaMedian": 694,
+  "shanghaiMean": 694,
+  "osakaMean": 694
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "avg",
+  "n": 501,
+  "shanghaiMedian": 875,
+  "osakaMedian": 875,
+  "shanghaiMean": 887,
+  "osakaMean": 887
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "dist",
+  "n": 399,
+  "shanghaiMedian": 836,
+  "osakaMedian": 836,
+  "shanghaiMean": 849,
+  "osakaMean": 849
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "zeroFloorSub",
+  "n": 398,
+  "shanghaiMedian": 945,
+  "osakaMedian": 945,
+  "shanghaiMean": 956,
+  "osakaMean": 956
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "inv",
+  "n": 1345,
+  "shanghaiMedian": 897,
+  "osakaMedian": 897,
+  "shanghaiMean": 896,
+  "osakaMean": 896
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "lerp",
+  "n": 1144,
+  "shanghaiMedian": 7061,
+  "osakaMedian": 5984,
+  "shanghaiMean": 6722,
+  "osakaMean": 5657
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "frac",
+  "n": 154,
+  "shanghaiMedian": 877,
+  "osakaMedian": 722,
+  "shanghaiMean": 1135,
+  "osakaMean": 1008
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "round",
+  "n": 154,
+  "shanghaiMedian": 661,
+  "osakaMedian": 661,
+  "shanghaiMean": 638,
+  "osakaMean": 638
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "log2Up",
+  "n": 759,
+  "shanghaiMedian": 960,
+  "osakaMedian": 806,
+  "shanghaiMean": 954,
+  "osakaMean": 804
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "gcd",
+  "n": 380,
+  "shanghaiMedian": 2713,
+  "osakaMedian": 2229,
+  "shanghaiMean": 2687,
+  "osakaMean": 2217
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "factorial",
+  "n": 39,
+  "shanghaiMedian": 7082,
+  "osakaMedian": 6312,
+  "shanghaiMean": 284492,
+  "osakaMean": 257380
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "pi",
+  "n": 19,
+  "shanghaiMedian": 712,
+  "osakaMedian": 712,
+  "shanghaiMean": 693,
+  "osakaMean": 693
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "cbrt",
+  "n": 317,
+  "shanghaiMedian": 2812,
+  "osakaMedian": 2658,
+  "shanghaiMean": 2796,
+  "osakaMean": 2642
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "gavg",
+  "n": 258,
+  "shanghaiMedian": 2285,
+  "osakaMedian": 2021,
+  "shanghaiMean": 2249,
+  "osakaMean": 2023
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X3",
+  "op": "hypot",
+  "n": 475,
+  "shanghaiMedian": 826,
+  "osakaMedian": 826,
+  "shanghaiMean": 1999,
+  "osakaMean": 1888
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "exp2",
+  "n": 268,
+  "shanghaiMedian": 5845,
+  "osakaMedian": 5533,
+  "shanghaiMean": 5442,
+  "osakaMean": 5149
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "exp10",
+  "n": 267,
+  "shanghaiMedian": 5848,
+  "osakaMedian": 5534,
+  "shanghaiMean": 5759,
+  "osakaMean": 5452
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "log2",
+  "n": 759,
+  "shanghaiMedian": 5485,
+  "osakaMedian": 5011,
+  "shanghaiMean": 5710,
+  "osakaMean": 5233
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "log10",
+  "n": 759,
+  "shanghaiMedian": 5592,
+  "osakaMedian": 5115,
+  "shanghaiMean": 5829,
+  "osakaMean": 5349
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "sinh",
+  "n": 253,
+  "shanghaiMedian": 6153,
+  "osakaMedian": 5901,
+  "shanghaiMean": 6113,
+  "osakaMean": 5836
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "cosh",
+  "n": 253,
+  "shanghaiMedian": 6093,
+  "osakaMedian": 5776,
+  "shanghaiMean": 4764,
+  "osakaMean": 4533
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "tanh",
+  "n": 258,
+  "shanghaiMedian": 6172,
+  "osakaMedian": 5919,
+  "shanghaiMean": 5522,
+  "osakaMean": 5280
+ },
+ {
+  "lib": "fp256",
+  "object": "FP256X2",
+  "op": "atanh",
+  "n": 261,
+  "shanghaiMedian": 11107,
+  "osakaMedian": 10310,
+  "shanghaiMean": 10167,
+  "osakaMean": 9580
+ }
+]
