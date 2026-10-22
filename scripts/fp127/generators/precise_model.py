@@ -30,6 +30,11 @@ The v5 kernels work on a double word (DW): a pair (hi, lo) read as
             double word is skipped. fastpow checks the bound against the
             true error and the result against op_pow / op_cbrt.
 
+  cosh_series(x)  cosh's even series below one, K Horner steps as
+            fp127_cosh floors them, measured in units of 2^-192 against the
+            stated bound of 3 (each floor is divided by at least 2 at the next
+            step, the floored x^2 moves cosh by under 0.6 unit).
+
   lambertw  Lambert W's one-word iterations in real arithmetic: each seed,
             the Halley steps the Yul gives it, and the correct bits left for
             the double-word step lwfin, -log2(|w - W| max(1, 1/|1 + W|) /
@@ -295,6 +300,36 @@ def op_cbrt(X):
 
 
 # ---------------------------------------------------------------------------
+# the hyperbolics
+# ---------------------------------------------------------------------------
+
+# cosh's series: K terms below each |x| threshold (in 127.128), as fp127_cosh
+# picks them; x^(2K+2) / (2K+2)! <= 2^-200 at the threshold
+COSH_K = [(ONE, 23), (ONE >> 1, 20), (ONE >> 2, 17), (ONE >> 4, 13), (ONE >> 8, 9), (ONE >> 16, 5), (ONE >> 32, 2)]
+
+
+def cosh_terms(ax: int) -> int:
+    k = 23
+    for bound, kk in COSH_K[1:]:
+        if ax < bound:
+            k = kk
+    return k
+
+
+def cosh_series(ax: int):
+    """cosh(x) at 2^-192 for 2^-64 <= |x| < 1 (ax = |x| in 127.128), as
+    fp127_cosh floors it: x^2 floors once, then K Horner steps
+    v = 1 + floor(x^2 v / ((2k)(2k-1))), k = K..1. Returns (value, K)."""
+    xs = ax << 64
+    x2 = (xs * xs) >> 192
+    v = G
+    K = cosh_terms(ax)
+    for k in range(K, 0, -1):
+        v = G + ((x2 * v) >> 192) // ((2 * k) * (2 * k - 1))
+    return v, K
+
+
+# ---------------------------------------------------------------------------
 # pow and cbrt: the one-word value first (pow2t)
 # ---------------------------------------------------------------------------
 
@@ -523,8 +558,22 @@ def measure(n=2000):
         c = rng.getrandbits(b) | (1 << b)
         got = op_cbrt(c)
         rec("cbrt ULP", ulp_err(got, mp.cbrt(mpf(c) / ONE) * ONE), c)
+        # cosh's series below one: units of 2^-192 against the stated 3
+        b = rng.randint(64, 127)
+        ax = rng.getrandbits(b) | (1 << b)
+        if ax >= ONE:
+            ax = ONE - 1 - rng.getrandbits(20)
+        v, K = cosh_series(ax)
+        err = abs(mpf(v) - mp.cosh(mpf(ax) / ONE) * G)
+        assert err <= 3, (ax, K, err)
+        rec("cosh series (2^-192 units)", err, ax)
     for k, (err, inp) in worst.items():
-        print(f"{k:24s} max {mp.nstr(err, 6):>14s}  log2 {mp.nstr(log(err, 2) if err else -999, 6)}  at {inp}")
+        print(f"{k:26s} max {mp.nstr(err, 6):>14s}  log2 {mp.nstr(log(err, 2) if err else -999, 6)}  at {inp}")
+    # the series' bound at every threshold's top: the first dropped term
+    for bound, K in COSH_K:
+        x = mpf(bound) / ONE
+        tail = x ** (2 * K + 2) / mp.factorial(2 * K + 2)
+        print(f"cosh series K = {K:2d} below |x| = 2^{int(log(x, 2)):4d}: first dropped term 2^{mp.nstr(log(tail, 2), 5)}")
 
 
 def constants():

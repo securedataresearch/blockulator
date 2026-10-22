@@ -123,7 +123,7 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `pi(terms)` | Ramanujan's 1914 series, floor(terms) terms, 1 ≤ terms ≤ 7; five terms give 36 digits, 230 ULP from π, and more add nothing | `OutOfRange` |
 | `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
 | `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −90 | `Overflow` above 88 |
-| `sinh`, `cosh` | \|x\| ≤ 88; the odd series at 2^-192 for sinh below 1 | `Overflow` |
+| `sinh`, `cosh` | \|x\| ≤ 88; below 1 the odd series (sinh) and the even series (cosh, within 3 units of 2^-192) at 2^-192; cosh is exactly 1 below 2^-64 | `Overflow` |
 | `tanh(x)` | all x; ±1 exactly from \|x\| = 46 | never |
 | `atanh(x)` | \|x\| < 1, both logs unrounded at 2^-192 | `OutOfRange` |
 | `erf(x)`, `erfc(x)` | all x; series to 4, continued fraction beyond, at 2^-192; erfc(9.3) is one ULP, zero beyond | never |
