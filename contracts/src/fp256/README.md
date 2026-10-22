@@ -2,7 +2,7 @@
 
 256-bit binary floating point for the EVM. Release four (not yet deployed):
 67 ops, every one correctly rounded or exact, in four deployed objects of
-24,250 (FP256), 23,891 (FP256X), 19,220 (FP256X2) and 6,844 (FP256X3)
+24,512 (FP256), 22,266 (FP256X), 19,889 (FP256X2) and 6,844 (FP256X3)
 bytes from one source. Release three
 (28 ops, one object) is live on Sepolia at
 [`0x67eFfb11…61be`](../../deployments/FP256.md).
@@ -56,9 +56,9 @@ the inline library holds everything.
 
 | object | ops | runtime | salt | predicted address (CREATE2 proxy) |
 |---|---|---:|---|---|
-| FP256 | the arithmetic, the edge (directed ops), exp, ln, log1p, expm1, pow, powu, compound, the comparisons and conversions: 37 | 24,250 | `FP256 v4` | `0x7471C249ebaE6ddA9892bc18DA45FE1D6B44897c` |
-| FP256X | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 23,891 | `FP256X v4` | `0xeE62FB72b4029AD723C691095338CF51919C5B73` |
-| FP256X2 | exp2, exp10, log2, log10, log2Up, cbrt, sinh, cosh, tanh, atanh: 10 | 19,220 | `FP256X2 v4` | `0x7D5423c4c789f3Ac27E106643E7C32f45f8a058d` |
+| FP256 | the arithmetic, the edge (directed ops), exp, ln, log1p, expm1, pow, powu, compound, the comparisons and conversions: 37 | 24,512 | `FP256 v4` | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
+| FP256X | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 22,266 | `FP256X v4` | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
+| FP256X2 | exp2, exp10, log2, log10, log2Up, cbrt, sinh, cosh, tanh, atanh: 10 | 19,889 | `FP256X2 v4` | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
 | FP256X3 | min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg, hypot: 15 | 6,844 | `FP256X3 v4` | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
 
 The split is by family, as
@@ -323,20 +323,20 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 
 | op | fast path | second stage | largest seen |
 |---|---:|---:|---:|
-| exp, expm1 | 7,500–8,100 | 35,500–36,000 | 45,900 |
-| ln, log1p | 8,800–9,700 | 43,000–63,700 | 126,600 |
-| pow, powu | 6,600–15,300 | 80,300–85,500 | 113,900 |
-| compound | 17,400 | 102,900 | 167,500 |
-| erf, erfc, normCdf | 18,000–35,000 | 107,200–119,300 | 436,400 (the continued fraction) |
-| lambertW0, lambertWm1 | 151,700–156,900, the wide step included | | 173,200 |
-| the directed ops | 1,500–3,000 | | |
-| exp2, exp10 | 8,800–9,000 | 36,400–36,500 | 36,800 |
-| log2, log10 | 9,800–10,000 | 43,900–44,000 | 49,800 |
-| sinh, cosh | 10,000–10,200 | 15,500–39,400 | 44,300 |
-| tanh, atanh | 17,900–18,500 | 22,200–31,500 | 89,200 |
-| cbrt, gavg, hypot | 5,800–15,100 | | 16,100 |
-| lerp | 12,200 | | 13,100 |
-| gcd | 7,300 | | 12,200 |
+| exp, expm1 | 7,200–7,700 | 29,300–29,800 | 45,700 |
+| ln, log1p | 8,500–9,400 | 31,200–37,600 | 126,400 |
+| pow, powu | 5,700–14,800 | 59,900–68,000 | 99,500 |
+| compound | 17,000 | 68,100 | 161,000 |
+| erf, erfc, normCdf | 17,600–34,200 | 101,000–112,700 | 430,100 (the continued fraction) |
+| lambertW0, lambertWm1 | 29,700–34,000 | 66,900–71,700 | 92,400 |
+| the directed ops | 500–2,000 | | 2,000 |
+| exp2, exp10 | 7,500–7,600 | 30,000 | 30,300 |
+| log2, log10 | 8,400–8,600 | 31,600–31,800 | 36,200 |
+| sinh, cosh | 8,500–8,700 | 14,800–32,800 | 43,700 |
+| tanh, atanh | 16,400–17,000 | 21,500–30,800 | 88,500 |
+| cbrt, gavg, hypot | 3,800–13,600 | | 14,600 |
+| lerp | 12,000 | | 12,800 |
+| gcd | 5,500 | | 10,400 |
 | factorial | 1.22M | | 2.45M (n = 20,366) |
 
 The second stage runs for about 2·err/2^w of inputs, w = 17..19 the bits

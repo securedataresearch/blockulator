@@ -100,9 +100,9 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
   log2Up, cbrt, sinh, cosh, tanh, atanh) and FP256X3 (min, max, clamp, avg,
   dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg,
   hypot); predicted CREATE2 addresses
-  0x7471C249ebaE6ddA9892bc18DA45FE1D6B44897c,
-  0xeE62FB72b4029AD723C691095338CF51919C5B73,
-  0x7D5423c4c789f3Ac27E106643E7C32f45f8a058d and
+  0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9,
+  0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0,
+  0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697 and
   0x59D51481cb2EA924EC17FE263cd05b90CEF22383 (salts "FP256 v4",
   "FP256X v4", "FP256X2 v4", "FP256X3 v4").
 - /results/ the headline numbers, /results/ladder/ the ladder, /results/edges/ the cliffs,
