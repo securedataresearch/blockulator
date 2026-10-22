@@ -16,11 +16,14 @@ product and never a difference:
                g_(n+1) = (2 y0 g_n + 2 g_(n-1)) / (n + 1), one stored constant g(y0)
                per anchor; products and the division rounded to nearest (truncation
                cost three bits through a bias), about 46 terms.
-  y >= 6       the continued fraction erfc(y) = e^(-y^2) / (sqrt(pi) K),
+  6..16        the continued fraction erfc(y) = e^(-y^2) / (sqrt(pi) K),
                K = y + (1/2)/(y + 1/(y + (3/2)/(y + ...))), its convergents scaled by
                y^k so a step is X_k = X_(k-1) + (k / 2y^2) X_(k-2), the A and B pairs
                renormalised together below 2^252 by rounded shifts (B'/A'' = y/K < 1),
                to depth 4400 / floor(y^2) + 48 (measured: 262 bits of truncation).
+  y >= 18      the asymptotic series erfc(y) = e^(-y^2)/(y sqrt pi) sum (-1)^m (1/2)_m / y^(2m)
+               (DLMF 7.12.1), its terms at 2^-262 until one floors to zero, the
+               remainder below the first omitted term: 76 terms at 18, 18 at 430.
 
 e^(-y^2) comes from the exact 474-bit square of the significand times log2 e in
 two words, so the deep tail keeps its bits: erfc(y) for y up to about 427 and
@@ -163,6 +166,39 @@ def erfcxcf(Y, uy):
     return R, sd_ - sb_ + eb - ea - uy
 
 
+def asym(Y, uy, v):
+    """erfc(y) for y >= 18 by the asymptotic series, given e^(-y^2)'s v: (D, eg) with
+    D in [2^255, 2^256), erfc = D 2^(eg + kk - 254), as the Yul's erfasym."""
+    y2 = (Y * Y) >> 254
+    ey = 2 * uy
+    if y2 >> 255:
+        y2 >>= 1
+        ey += 1
+    W1 = (1 << 508) // y2
+    w254 = W1 >> (ey + 1)
+    term = W1 >> (ey - 7)                      # w at 2^-262
+    T = -term
+    sign, mm = 1, 2
+    while term:
+        term = (term * ((2 * mm - 1) * w254)) >> 254
+        T += sign * term
+        sign, mm = -sign, mm + 1
+    assert T <= 0
+    Q = (1 << 510) // ((Y * SQRTPI) >> 254)
+    SQ = Q - (((-T) * Q) >> 262)
+    D = (SQ * v) >> 255
+    t = 255 - (D.bit_length() - 1)
+    return D << t, -uy - 1 - t
+
+
+
+
+
+def asym_regime(Y, uy):
+    """y >= 18: the asymptotic series is cheaper than the fraction there (measured)."""
+    return uy > 4 or (uy == 4 and Y >= 9 << 251)
+
+
 def ystuff(u, m, h):
     """y = |x| (h = 0) or |x|/sqrt 2 (h = 1) as y = Y 2^(uy - 254), Y in [2^254, 2^255)."""
     Y, uy = m << 18, u
@@ -193,6 +229,9 @@ def erfc_big(ker, Y, uy, u, m, h):
     if uy <= 1 or (uy == 2 and Y < 3 << 253):         # 1/2 <= y < 6: the anchors
         g = erfcxa(yfix(Y, uy))
         return (g * v) >> 254, kk - 1
+    if asym_regime(Y, uy):                            # y >= 18: the asymptotic series
+        D, eg = asym(Y, uy, v)
+        return D, kk + eg
     R, eg = erfcxcf(Y, uy)                            # y >= 6: the continued fraction
     return (R * v) >> 254, kk + eg
 

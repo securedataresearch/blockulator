@@ -528,7 +528,7 @@ COUNTS = {
 PROBES = {
     "fp256": ["log2m", "exp2frac", "wexpm1", "wlnw", "cfrun", "erfw", "lwfix",
               "lwlog", "lwf128", "lnc", "lwq510", "lwsp", "lwy", "powslow", "compslow", "wln1ps",
-              "erfser", "erfcxa", "erfcxcf", "expnegsq",
+              "erfser", "erfcxa", "erfcxcf", "erfasym", "expnegsq",
               # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp
               "em1k", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cbrtw", "cubegt",
               "isqrtw", "lerp3"],
