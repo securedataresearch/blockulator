@@ -6,13 +6,14 @@ keeps its own version in its CREATE2 salt, because the salt names the address;
 
 ## Unreleased
 
-FP127 v5: in source, not yet deployed (salt `FP127 v5`, 55 ops, 17,157
+FP127 v5: in source, not yet deployed (salt `FP127 v5`, 55 ops, 19,863
 bytes of runtime). v4 stays live at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`.
 
 - Every transcendental returns the nearest word. `exp`, `exp2`, `exp10`,
-  `expm1`, `sinh`, `cosh`, `tanh`, `pow` and `cbrt` round once from a
-  double-word kernel good to about 2^−300; `ln`, `log2`, `log10` and `log1p`
-  fall back to a double-word log within 2^−145 of a midpoint; `powu` and
+  `expm1`, `sinh`, `cosh` and `tanh` round once from a double-word kernel
+  good to about 2^−300; `ln`, `log2`, `log10`, `log1p`, `pow` and `cbrt`
+  round the one-word value when its error bound allows and fall back to the
+  double word near a midpoint; `powu` and
   `compound` settle ambiguous roundings on a 512-bit mantissa; Lambert W
   ends with a double-word Newton step. Random-input sweep, max error in
   ULPs, v4 → v5: `exp` 4.0e32 → 0.5, `pow` 4.8e34 → 0.5, `cbrt` 1.6e14 →
@@ -32,10 +33,24 @@ bytes of runtime). v4 stays live at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`
   x = 10; y ∈ {3, 4, ½, ¼, −1}, which floored, take the general path.
 - The precision test measures the true distance to the real truth and holds
   each op to its rounding contract (v4: within 2 ULP of a floored reference).
-- Gas through the object, medians: `exp` 7,076 (+1,544), `exp2` 4,664
-  (−696), `pow` 5,742 (−352), `cbrt` 7,270 (+551), `lambertW0` 41,481
-  (+5,242), `lambertWm1` 31,764 (+2,402), `atanh` 7,646 (−1,055); six more
-  selectors add about 90 to the other ops' dispatch.
+- Gas through the object, ladder medians against v4: `exp` 6,058 (+145),
+  `exp2` 3,714 (−2,048), `pow` 4,956 (−4,425), `cbrt` 4,545 (−5,404),
+  `lambertW0` 24,690 (+3,752), `sqrt` 2,175 (−2,104), `mul` 1,103 (+99).
+  The object dispatches by binary search on the selector, not a linear
+  chain.
+- A gas-only pass (`fp127-faster`), every result the same word, checked on
+  the sweep, the vectors and dense extra sets. Sweep medians:
+  - Lambert W uses Halley steps, as many as the seed needs: `lambertW0`
+    46,170 → 18,607 and `lambertWm1` 35,250 → 23,977.
+  - `pow` and `cbrt` try one word first: 14,807 → 6,121 and 14,935 → 6,019.
+  - The erf loops run inline; erf's worst case falls from 66,655 to 36,440.
+  - At tiny x, `expm1` 7,089 → 2,066, `sinh` 6,060 → 2,284 and `tanh`
+    7,988 → 4,680.
+  - `sqrt` 3,209 → 710 uses Solady's isqrt seed, keeping v4's word where it
+    was not the floor.
+  - `inv` 698 → 242, `div` 315 when |a| < 1, and the logs' fallback
+    ~12,600 → ~9,760.
+  - `exp2frac` runs inline throughout.
 
 FP256 release four, not yet deployed: correctly rounded, and the edge.
 

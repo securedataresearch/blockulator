@@ -95,32 +95,32 @@ The first 4,000 inputs of each op again, through a test-only copy of FP256Lib wh
 
 ## FP127
 
-*nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, median / p99 / largest; *fallback* is the share of inputs that took the double-word decider (ln, log2, log10 near a midpoint; powu and compound on a 512-bit mantissa; a dash: the op has none).
+*nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, median / p99 / largest; *fallback* is the share of inputs that took the double-word decider (ln, log2, log10, pow and cbrt near a midpoint or, for pow and cbrt, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).
 
 | op | inputs | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |
 |---|---:|---:|---:|---:|---:|---:|---|---:|---:|
 | mul | 4,000 | 2,001 | 4,000 | 1 | 0.5 | 128.2 | 4,000 / 0 | 263 / 263 / 263 | — |
-| div | 4,000 | 2,072 | 4,000 | 1 | 0.484 | 128.3 | 1,962 / 2,038 | 658 / 658 / 658 | — |
-| sqrt | 4,000 | 1,983 | 4,000 | 1 | 0.504 | 128.3 | 3,990 / 0 | 3,209 / 3,401 / 3,402 | — |
+| div | 4,000 | 2,072 | 4,000 | 1 | 0.484 | 128.3 | 1,962 / 2,038 | 657 / 657 / 657 | — |
+| sqrt | 4,000 | 1,983 | 4,000 | 1 | 0.504 | 128.3 | 3,990 / 0 | 710 / 1,663 / 1,675 | — |
 | exp | 3,963 | 3,963 | 3,963 | 0.5 | 0.248 | 129.0 | 2,003 / 1,948 | 6,090 / 6,883 / 6,928 | — |
-| ln | 4,000 | 4,000 | 4,000 | 0.5 | 0.252 | 129.3 | 1,987 / 2,013 | 3,433 / 3,712 / 3,809 | 0 |
-| log2 | 4,000 | 4,000 | 4,000 | 0.5 | 0.245 | 129.2 | 2,020 / 1,970 | 3,225 / 3,509 / 3,583 | 0 |
-| pow | 3,970 | 3,970 | 3,970 | 0.5 | 0.245 | 129.0 | 1,992 / 1,955 | 14,807 / 16,296 / 16,650 | — |
-| cbrt | 4,000 | 4,000 | 4,000 | 0.5 | 0.254 | 129.3 | 1,986 / 2,007 | 14,935 / 16,108 / 16,492 | — |
-| expm1 | 3,987 | 3,987 | 3,987 | 0.5 | 0.238 | 129.2 | 2,121 / 1,860 | 7,089 / 7,089 / 7,089 | — |
-| erf | 2,000 | 2,000 | 2,000 | 0.5 | 0.239 | — | 1,037 / 963 | 8,212 / 45,510 / 66,655 | — |
-| normCdf | 2,000 | 2,000 | 2,000 | 0.5 | 0.24 | — | 1,001 / 989 | 8,174 / 48,243 / 66,845 | — |
+| ln | 4,000 | 4,000 | 4,000 | 0.5 | 0.252 | 129.3 | 1,987 / 2,013 | 3,410 / 3,689 / 3,786 | 0 |
+| log2 | 4,000 | 4,000 | 4,000 | 0.5 | 0.245 | 129.2 | 2,020 / 1,970 | 3,194 / 3,478 / 3,552 | 0 |
+| pow | 3,970 | 3,970 | 3,970 | 0.5 | 0.245 | 129.0 | 1,992 / 1,955 | 6,121 / 16,088 / 18,842 | 6.75% |
+| cbrt | 4,000 | 4,000 | 4,000 | 0.5 | 0.254 | 129.3 | 1,986 / 2,007 | 6,019 / 16,183 / 18,443 | 36.95% |
+| expm1 | 3,987 | 3,987 | 3,987 | 0.5 | 0.238 | 129.2 | 2,121 / 1,860 | 2,066 / 6,788 / 7,056 | — |
+| erf | 2,000 | 2,000 | 2,000 | 0.5 | 0.239 | — | 1,037 / 963 | 4,881 / 25,103 / 36,440 | — |
+| normCdf | 2,000 | 2,000 | 2,000 | 0.5 | 0.24 | — | 1,001 / 989 | 4,952 / 26,650 / 36,630 | — |
 | compound | 3,367 | 3,367 | 3,367 | 0.5 | 0.203 | 129.0 | 1,364 / 1,447 | 9,469 / 11,012 / 33,599 | 0.38% |
 | exp2 | 4,000 | 4,000 | 4,000 | 0.5 | 0.249 | 129.0 | 1,960 / 2,040 | 5,830 / 6,845 / 6,899 | — |
 | exp10 | 3,963 | 3,963 | 3,963 | 0.5 | 0.245 | 129.0 | 2,022 / 1,913 | 5,977 / 6,781 / 6,846 | — |
-| log10 | 4,000 | 4,000 | 4,000 | 0.5 | 0.255 | 129.2 | 2,007 / 1,993 | 3,432 / 3,714 / 3,809 | 0 |
-| sinh | 3,929 | 3,929 | 3,929 | 0.5 | 0.248 | 129.2 | 1,930 / 1,999 | 6,060 / 12,838 / 13,485 | — |
+| log10 | 4,000 | 4,000 | 4,000 | 0.5 | 0.255 | 129.2 | 2,007 / 1,993 | 3,409 / 3,691 / 3,786 | 0 |
+| sinh | 3,929 | 3,929 | 3,929 | 0.5 | 0.248 | 129.2 | 1,930 / 1,999 | 2,284 / 12,838 / 13,485 | — |
 | cosh | 3,924 | 3,924 | 3,924 | 0.5 | 0.247 | 129.0 | 1,976 / 1,948 | 10,651 / 12,822 / 13,408 | — |
-| tanh | 4,000 | 4,000 | 4,000 | 0.5 | 0.232 | — | 1,947 / 1,906 | 7,988 / 7,992 / 7,992 | — |
+| tanh | 4,000 | 4,000 | 4,000 | 0.5 | 0.232 | — | 1,947 / 1,906 | 4,680 / 7,672 / 7,738 | — |
 | powu | 2,390 | 2,390 | 2,390 | 0.499 | 9.86e-72 | 129.9 | 413 / 393 | 3,728 / 5,013 / 15,157 | 0.50% |
 | mulUp | 4,000 | 1,986 | 4,000 | 1 | 0.503 | 128.0 | 0 / 4,000 | 396 / 396 / 396 | — |
-| divUp | 4,000 | 1,998 | 4,000 | 1 | 0.501 | 128.4 | 0 / 4,000 | 858 / 858 / 858 | — |
-| divDown | 4,000 | 1,990 | 4,000 | 1 | 0.502 | 128.2 | 4,000 / 0 | 815 / 851 / 851 | — |
+| divUp | 4,000 | 1,998 | 4,000 | 1 | 0.501 | 128.4 | 0 / 4,000 | 817 / 857 / 857 | — |
+| divDown | 4,000 | 1,990 | 4,000 | 1 | 0.502 | 128.2 | 4,000 / 0 | 814 / 850 / 850 | — |
 | toFixed18Up | 4,000 | 1,988 | 4,000 | 1 | 0.504 | 128.5 | 0 / 3,706 | 190 / 190 / 190 | — |
-| lambertW0 | 1,500 | 1,500 | 1,500 | 0.5 | 0.224 | 129.1 | 662 / 741 | 46,170 / 49,865 / 50,169 | — |
-| lambertWm1 | 1,500 | 1,500 | 1,500 | 0.5 | 0.242 | 129.1 | 747 / 753 | 35,250 / 37,077 / 38,058 | — |
+| lambertW0 | 1,500 | 1,500 | 1,500 | 0.5 | 0.224 | 129.1 | 662 / 741 | 18,607 / 29,243 / 29,562 | — |
+| lambertWm1 | 1,500 | 1,500 | 1,500 | 0.5 | 0.242 | 129.1 | 747 / 753 | 23,977 / 32,092 / 33,615 | — |

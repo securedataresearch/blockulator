@@ -102,7 +102,7 @@ int256 g = FP256Lib.pow(FP256Lib.add(FP256Lib.ONE, r), FP256Lib.fromUint(3153600
 ```
 
 Compile the inline libraries with `via_ir = true` (in `foundry.toml`). Without
-it, solc's legacy pipeline leaves their heavy ops 5–27% dearer than the same
+it, solc's legacy pipeline leaves their heavy ops 2–27% dearer than the same
 Yul in the deployed object; through the IR they match it
 ([`docs/benchmarks/profile.md`](docs/benchmarks/profile.md)).
 

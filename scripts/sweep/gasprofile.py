@@ -263,7 +263,7 @@ def report():
            "`test/profile/ViaIr.t.sol` on eight typical inputs per op (medians), compiled with the default profile "
            "(`via_ir = false`, as `make bench`) and with `[profile.viair]`. *Object* is the whole `staticcall`; "
            "*object net* takes out its call and selector-dispatch cost, fitted on the trivial ops as "
-           + "; ".join(f"{k.upper()} {v['base']:,} + {v['perRank']:g} per dispatch comparison" for k, v in fits.items())
+           + "; ".join(f"{k.upper()} {v['base']:,} {'+' if v['perRank'] >= 0 else '−'} {abs(v['perRank']):g} per dispatch comparison" for k, v in fits.items())
            + ". *Gap* is inline over object net.",
            "",
            "| lib | op | inline, via_ir false | inline, via_ir true | object (staticcall) | object net | gap, false → true |",

@@ -1,5 +1,5 @@
 {
- "_doc": "Random-input accuracy sweep of the inline FP127 and FP256 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n\nRelease four adds the directed ops, powu and lambertWm1, and a second pass: the\nsame inputs (the first 4,000 of each) through a test-only copy of FP256Lib whose\nrounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly\nrounded op returns its wide second stage. That pass is generated into\ntest/sweep/wide/ (not committed) and removed after the run.\n\nA third pass runs every op on all its inputs through test-only copies of FP256Lib\nand FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:\nFP256's rbad firing, FP127's nearmid firing and powu's 512-bit powus), generated into\ntest/sweep/count/ and removed after the run: the *fallback* column is the share of\ninputs that left the fast path. Its results must equal the plain pass's word for word.\n\nGas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of\nthe one call, after its dispatch, and subtracts the same window around an assignment.\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.",
+ "_doc": "Random-input accuracy sweep of the inline FP127 and FP256 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n\nRelease four adds the directed ops, powu and lambertWm1, and a second pass: the\nsame inputs (the first 4,000 of each) through a test-only copy of FP256Lib whose\nrounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly\nrounded op returns its wide second stage. That pass is generated into\ntest/sweep/wide/ (not committed) and removed after the run.\n\nA third pass runs every op on all its inputs through test-only copies of FP256Lib\nand FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:\nFP256's rbad firing, FP127's double-word l2p and powu's 512-bit powus), generated into\ntest/sweep/count/ and removed after the run: the *fallback* column is the share of\ninputs that left the fast path. Its results must equal the plain pass's word for word.\n\nGas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of\nthe one call, after its dispatch, and subtracts the same window around an assignment.\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.",
  "seed": 20261020,
  "seedLambert": 7,
  "rows": [
@@ -1412,9 +1412,9 @@
    "minBits": 128.3,
    "below": 1962,
    "above": 2038,
-   "gasMedian": 658,
-   "gasP99": 658,
-   "gasMax": 658
+   "gasMedian": 657,
+   "gasP99": 657,
+   "gasMax": 657
   },
   {
    "lib": "fp127",
@@ -1431,9 +1431,9 @@
    "minBits": 128.3,
    "below": 3990,
    "above": 0,
-   "gasMedian": 3209,
-   "gasP99": 3401,
-   "gasMax": 3402
+   "gasMedian": 710,
+   "gasP99": 1663,
+   "gasMax": 1675
   },
   {
    "lib": "fp127",
@@ -1470,9 +1470,9 @@
    "minBits": 129.3,
    "below": 1987,
    "above": 2013,
-   "gasMedian": 3433,
-   "gasP99": 3712,
-   "gasMax": 3809,
+   "gasMedian": 3410,
+   "gasP99": 3689,
+   "gasMax": 3786,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -1492,9 +1492,9 @@
    "minBits": 129.2,
    "below": 2020,
    "above": 1970,
-   "gasMedian": 3225,
-   "gasP99": 3509,
-   "gasMax": 3583,
+   "gasMedian": 3194,
+   "gasP99": 3478,
+   "gasMax": 3552,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -1515,9 +1515,12 @@
    "minBits": 129.0,
    "below": 1992,
    "above": 1955,
-   "gasMedian": 14807,
-   "gasP99": 16296,
-   "gasMax": 16650
+   "gasMedian": 6121,
+   "gasP99": 16088,
+   "gasMax": 18842,
+   "fallback": 270,
+   "fallbackRuns": 270,
+   "fallbackPct": 6.75
   },
   {
    "lib": "fp127",
@@ -1534,9 +1537,12 @@
    "minBits": 129.3,
    "below": 1986,
    "above": 2007,
-   "gasMedian": 14935,
-   "gasP99": 16108,
-   "gasMax": 16492
+   "gasMedian": 6019,
+   "gasP99": 16183,
+   "gasMax": 18443,
+   "fallback": 1478,
+   "fallbackRuns": 1478,
+   "fallbackPct": 36.95
   },
   {
    "lib": "fp127",
@@ -1554,9 +1560,9 @@
    "minBits": 129.2,
    "below": 2121,
    "above": 1860,
-   "gasMedian": 7089,
-   "gasP99": 7089,
-   "gasMax": 7089
+   "gasMedian": 2066,
+   "gasP99": 6788,
+   "gasMax": 7056
   },
   {
    "lib": "fp127",
@@ -1573,9 +1579,9 @@
    "minBits": null,
    "below": 1037,
    "above": 963,
-   "gasMedian": 8212,
-   "gasP99": 45510,
-   "gasMax": 66655
+   "gasMedian": 4881,
+   "gasP99": 25103,
+   "gasMax": 36440
   },
   {
    "lib": "fp127",
@@ -1592,9 +1598,9 @@
    "minBits": null,
    "below": 1001,
    "above": 989,
-   "gasMedian": 8174,
-   "gasP99": 48243,
-   "gasMax": 66845
+   "gasMedian": 4952,
+   "gasP99": 26650,
+   "gasMax": 36630
   },
   {
    "lib": "fp127",
@@ -1673,9 +1679,9 @@
    "minBits": 129.2,
    "below": 2007,
    "above": 1993,
-   "gasMedian": 3432,
-   "gasP99": 3714,
-   "gasMax": 3809,
+   "gasMedian": 3409,
+   "gasP99": 3691,
+   "gasMax": 3786,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -1696,7 +1702,7 @@
    "minBits": 129.2,
    "below": 1930,
    "above": 1999,
-   "gasMedian": 6060,
+   "gasMedian": 2284,
    "gasP99": 12838,
    "gasMax": 13485
   },
@@ -1735,9 +1741,9 @@
    "minBits": null,
    "below": 1947,
    "above": 1906,
-   "gasMedian": 7988,
-   "gasP99": 7992,
-   "gasMax": 7992
+   "gasMedian": 4680,
+   "gasP99": 7672,
+   "gasMax": 7738
   },
   {
    "lib": "fp127",
@@ -1796,9 +1802,9 @@
    "minBits": 128.4,
    "below": 0,
    "above": 4000,
-   "gasMedian": 858,
-   "gasP99": 858,
-   "gasMax": 858
+   "gasMedian": 817,
+   "gasP99": 857,
+   "gasMax": 857
   },
   {
    "lib": "fp127",
@@ -1815,9 +1821,9 @@
    "minBits": 128.2,
    "below": 4000,
    "above": 0,
-   "gasMedian": 815,
-   "gasP99": 851,
-   "gasMax": 851
+   "gasMedian": 814,
+   "gasP99": 850,
+   "gasMax": 850
   },
   {
    "lib": "fp127",
@@ -1853,9 +1859,9 @@
    "minBits": 129.1,
    "below": 662,
    "above": 741,
-   "gasMedian": 46170,
-   "gasP99": 49865,
-   "gasMax": 50169
+   "gasMedian": 18607,
+   "gasP99": 29243,
+   "gasMax": 29562
   },
   {
    "lib": "fp127",
@@ -1872,9 +1878,9 @@
    "minBits": 129.1,
    "below": 747,
    "above": 753,
-   "gasMedian": 35250,
-   "gasP99": 37077,
-   "gasMax": 38058
+   "gasMedian": 23977,
+   "gasP99": 32092,
+   "gasMax": 33615
   }
  ]
 }
