@@ -334,7 +334,7 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 | ln, log1p | 8,500–9,400 | 31,200–37,600 | 126,400 |
 | pow, powu | 5,700–14,800 | 59,900–68,000 | 99,500 |
 | compound | 17,000 | 68,100 | 161,000 |
-| erf, erfc, normCdf | 17,600–27,600 | 101,000–109,000 | 419,300 (the continued fraction) |
+| erf, erfc, normCdf | 17,600–18,500 | 97,600–105,200 | 418,200 (the continued fraction in two words) |
 | lambertW0, lambertWm1 | 29,700–34,000 | 66,900–71,700 | 92,400 |
 | the directed ops | 500–2,000 | | 2,000 |
 | exp2, exp10 | 7,500–7,600 | 30,000 | 30,300 |

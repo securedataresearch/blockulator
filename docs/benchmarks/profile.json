@@ -20,6 +20,7 @@
    "erfser",
    "erfcxa",
    "erfcxcf",
+   "erfasym",
    "expnegsq",
    "em1k",
    "hserw",
@@ -299,7 +300,7 @@
    "op": "erf",
    "n": 4000,
    "median": 17615,
-   "p99": 71533,
+   "p99": 71603,
    "max": 94932,
    "fallback": 4,
    "fallbackRuns": 4,
@@ -347,6 +348,12 @@
      "exclusivePct": 9.9,
      "gasPerCall": 56255
     },
+    "erfasym": {
+     "callsPerInput": 0,
+     "inclusivePct": 0,
+     "exclusivePct": 0,
+     "gasPerCall": 0
+    },
     "expnegsq": {
      "callsPerInput": 1.0,
      "inclusivePct": 28.2,
@@ -361,127 +368,139 @@
    "lib": "fp256",
    "op": "erfc",
    "n": 6000,
-   "median": 26774,
-   "p99": 74469,
-   "max": 416061,
-   "fallback": 33,
-   "fallbackRuns": 33,
-   "fallbackPct": 0.55,
+   "median": 18526,
+   "p99": 70674,
+   "max": 416131,
+   "fallback": 16,
+   "fallbackRuns": 16,
+   "fallbackPct": 0.267,
    "helpers": {
     "exp2frac": {
      "callsPerInput": 1.0,
-     "inclusivePct": 19.9,
-     "exclusivePct": 19.9,
+     "inclusivePct": 22.4,
+     "exclusivePct": 22.4,
      "gasPerCall": 5368
     },
     "wexpm1": {
-     "callsPerInput": 0.005,
-     "inclusivePct": 0.4,
-     "exclusivePct": 0.4,
+     "callsPerInput": 0.003,
+     "inclusivePct": 0.2,
+     "exclusivePct": 0.2,
      "gasPerCall": 21419
     },
     "cfrun": {
-     "callsPerInput": 0.009,
-     "inclusivePct": 1.5,
-     "exclusivePct": 1.5,
-     "gasPerCall": 48171
+     "callsPerInput": 0.003,
+     "inclusivePct": 1.1,
+     "exclusivePct": 1.1,
+     "gasPerCall": 88747
     },
     "erfw": {
-     "callsPerInput": 0.005,
-     "inclusivePct": 2.7,
+     "callsPerInput": 0.003,
+     "inclusivePct": 2.1,
      "exclusivePct": 0.7,
-     "gasPerCall": 132004
+     "gasPerCall": 184948
     },
     "erfser": {
      "callsPerInput": 0.352,
-     "inclusivePct": 8.4,
-     "exclusivePct": 8.4,
+     "inclusivePct": 9.5,
+     "exclusivePct": 9.5,
      "gasPerCall": 6428
     },
     "erfcxa": {
      "callsPerInput": 0.179,
-     "inclusivePct": 16.8,
-     "exclusivePct": 16.8,
+     "inclusivePct": 19.0,
+     "exclusivePct": 19.0,
      "gasPerCall": 25273
     },
     "erfcxcf": {
-     "callsPerInput": 0.468,
-     "inclusivePct": 39.0,
-     "exclusivePct": 39.0,
-     "gasPerCall": 22514
+     "callsPerInput": 0.097,
+     "inclusivePct": 15.0,
+     "exclusivePct": 15.0,
+     "gasPerCall": 37032
+    },
+    "erfasym": {
+     "callsPerInput": 0.371,
+     "inclusivePct": 17.4,
+     "exclusivePct": 17.4,
+     "gasPerCall": 11182
     },
     "expnegsq": {
      "callsPerInput": 1.0,
-     "inclusivePct": 24.5,
-     "exclusivePct": 4.6,
+     "inclusivePct": 27.6,
+     "exclusivePct": 5.2,
      "gasPerCall": 6611
     }
    },
-   "probeCalls": 18118,
-   "residualPerCall": 3.0
+   "probeCalls": 18050,
+   "residualPerCall": 3.9
   },
   {
    "lib": "fp256",
    "op": "normCdf",
    "n": 6000,
-   "median": 26898,
-   "p99": 75238,
-   "max": 413916,
-   "fallback": 41,
-   "fallbackRuns": 41,
-   "fallbackPct": 0.683,
+   "median": 18130,
+   "p99": 67902,
+   "max": 413986,
+   "fallback": 20,
+   "fallbackRuns": 20,
+   "fallbackPct": 0.333,
    "helpers": {
     "exp2frac": {
      "callsPerInput": 0.902,
-     "inclusivePct": 19.6,
-     "exclusivePct": 19.6,
+     "inclusivePct": 21.5,
+     "exclusivePct": 21.5,
      "gasPerCall": 5374
     },
     "wexpm1": {
-     "callsPerInput": 0.007,
-     "inclusivePct": 0.6,
-     "exclusivePct": 0.6,
+     "callsPerInput": 0.003,
+     "inclusivePct": 0.3,
+     "exclusivePct": 0.3,
      "gasPerCall": 21419
     },
     "cfrun": {
-     "callsPerInput": 0.01,
-     "inclusivePct": 2.2,
-     "exclusivePct": 2.2,
-     "gasPerCall": 53526
+     "callsPerInput": 0.003,
+     "inclusivePct": 1.6,
+     "exclusivePct": 1.6,
+     "gasPerCall": 109111
     },
     "erfw": {
-     "callsPerInput": 0.007,
-     "inclusivePct": 3.4,
-     "exclusivePct": 0.6,
-     "gasPerCall": 123888
+     "callsPerInput": 0.003,
+     "inclusivePct": 2.5,
+     "exclusivePct": 0.5,
+     "gasPerCall": 166600
     },
     "erfser": {
      "callsPerInput": 0.367,
-     "inclusivePct": 9.1,
-     "exclusivePct": 9.1,
+     "inclusivePct": 10.0,
+     "exclusivePct": 10.0,
      "gasPerCall": 6164
     },
     "erfcxa": {
      "callsPerInput": 0.203,
-     "inclusivePct": 20.8,
-     "exclusivePct": 20.8,
+     "inclusivePct": 22.8,
+     "exclusivePct": 22.8,
      "gasPerCall": 25302
     },
     "erfcxcf": {
-     "callsPerInput": 0.332,
-     "inclusivePct": 31.4,
-     "exclusivePct": 31.4,
-     "gasPerCall": 23408
+     "callsPerInput": 0.093,
+     "inclusivePct": 14.7,
+     "exclusivePct": 14.7,
+     "gasPerCall": 35602
+    },
+    "erfasym": {
+     "callsPerInput": 0.239,
+     "inclusivePct": 11.5,
+     "exclusivePct": 11.5,
+     "gasPerCall": 10837
     },
     "expnegsq": {
      "callsPerInput": 0.917,
-     "inclusivePct": 24.2,
-     "exclusivePct": 4.6,
+     "inclusivePct": 26.5,
+     "exclusivePct": 5.0,
      "gasPerCall": 6526
     }
    },
-   "probeCalls": 16471,
-   "residualPerCall": 2.4
+   "probeCalls": 16387,
+   "residualPerCall": 3.0
   },
   {
    "lib": "fp256",
@@ -2160,8 +2179,8 @@
    "stage": "forced",
    "n": 4000,
    "median": 100995,
-   "p99": 415582,
-   "max": 417957,
+   "p99": 415652,
+   "max": 418027,
    "helpers": {
     "exp2frac": {
      "callsPerInput": 1.0,
@@ -2205,6 +2224,12 @@
      "exclusivePct": 1.7,
      "gasPerCall": 56243
     },
+    "erfasym": {
+     "callsPerInput": 0,
+     "inclusivePct": 0,
+     "exclusivePct": 0,
+     "gasPerCall": 0
+    },
     "expnegsq": {
      "callsPerInput": 1.0,
      "inclusivePct": 4.8,
@@ -2220,93 +2245,99 @@
    "op": "erfc",
    "stage": "forced",
    "n": 6000,
-   "median": 107850,
-   "p99": 415063,
-   "max": 418095,
+   "median": 105162,
+   "p99": 415133,
+   "max": 418165,
    "helpers": {
     "exp2frac": {
      "callsPerInput": 1.0,
-     "inclusivePct": 3.8,
-     "exclusivePct": 3.8,
+     "inclusivePct": 3.9,
+     "exclusivePct": 3.9,
      "gasPerCall": 5368
     },
     "wexpm1": {
      "callsPerInput": 1.0,
-     "inclusivePct": 15.2,
-     "exclusivePct": 15.2,
+     "inclusivePct": 15.6,
+     "exclusivePct": 15.6,
      "gasPerCall": 21299
     },
     "cfrun": {
      "callsPerInput": 0.911,
-     "inclusivePct": 29.3,
-     "exclusivePct": 29.3,
+     "inclusivePct": 29.9,
+     "exclusivePct": 29.9,
      "gasPerCall": 44932
     },
     "erfw": {
      "callsPerInput": 1.0,
-     "inclusivePct": 82.1,
-     "exclusivePct": 37.5,
+     "inclusivePct": 83.8,
+     "exclusivePct": 38.3,
      "gasPerCall": 114674
     },
     "erfser": {
      "callsPerInput": 0.352,
-     "inclusivePct": 1.6,
-     "exclusivePct": 1.6,
+     "inclusivePct": 1.7,
+     "exclusivePct": 1.7,
      "gasPerCall": 6428
     },
     "erfcxa": {
      "callsPerInput": 0.179,
-     "inclusivePct": 3.2,
-     "exclusivePct": 3.2,
+     "inclusivePct": 3.3,
+     "exclusivePct": 3.3,
      "gasPerCall": 25273
     },
     "erfcxcf": {
-     "callsPerInput": 0.468,
-     "inclusivePct": 7.5,
-     "exclusivePct": 7.5,
-     "gasPerCall": 22502
+     "callsPerInput": 0.097,
+     "inclusivePct": 2.6,
+     "exclusivePct": 2.6,
+     "gasPerCall": 37020
+    },
+    "erfasym": {
+     "callsPerInput": 0.371,
+     "inclusivePct": 3.0,
+     "exclusivePct": 3.0,
+     "gasPerCall": 11176
     },
     "expnegsq": {
      "callsPerInput": 1.0,
-     "inclusivePct": 4.7,
+     "inclusivePct": 4.8,
      "exclusivePct": 0.9,
      "gasPerCall": 6611
     }
    },
    "probeCalls": 35468,
-   "residualPerCall": 9.2
+   "residualPerCall": 9.7
   },
   {
    "lib": "fp256",
    "op": "normCdf",
    "stage": "forced",
    "n": 6000,
-   "median": 101076,
-   "p99": 380977,
-   "max": 417350,
+   "median": 97645,
+   "p99": 381047,
+   "max": 417420,
    "helpers": {
     "exp2frac": {
      "callsPerInput": 0.902,
-     "inclusivePct": 3.8,
-     "exclusivePct": 3.8,
+     "inclusivePct": 3.9,
+     "exclusivePct": 3.9,
      "gasPerCall": 5374
     },
     "wexpm1": {
      "callsPerInput": 0.902,
-     "inclusivePct": 15.1,
-     "exclusivePct": 15.1,
+     "inclusivePct": 15.3,
+     "exclusivePct": 15.3,
      "gasPerCall": 21299
     },
     "cfrun": {
      "callsPerInput": 0.648,
-     "inclusivePct": 25.0,
-     "exclusivePct": 25.0,
+     "inclusivePct": 25.4,
+     "exclusivePct": 25.4,
      "gasPerCall": 49099
     },
     "erfw": {
      "callsPerInput": 0.902,
-     "inclusivePct": 82.1,
-     "exclusivePct": 42.0,
+     "inclusivePct": 83.4,
+     "exclusivePct": 42.7,
      "gasPerCall": 115888
     },
     "erfser": {
@@ -2317,25 +2348,31 @@
     },
     "erfcxa": {
      "callsPerInput": 0.203,
-     "inclusivePct": 4.0,
-     "exclusivePct": 4.0,
+     "inclusivePct": 4.1,
+     "exclusivePct": 4.1,
      "gasPerCall": 25302
     },
     "erfcxcf": {
-     "callsPerInput": 0.332,
-     "inclusivePct": 6.1,
-     "exclusivePct": 6.1,
-     "gasPerCall": 23396
+     "callsPerInput": 0.093,
+     "inclusivePct": 2.6,
+     "exclusivePct": 2.6,
+     "gasPerCall": 35590
+    },
+    "erfasym": {
+     "callsPerInput": 0.239,
+     "inclusivePct": 2.1,
+     "exclusivePct": 2.1,
+     "gasPerCall": 10831
     },
     "expnegsq": {
      "callsPerInput": 0.917,
-     "inclusivePct": 4.7,
+     "inclusivePct": 4.8,
      "exclusivePct": 0.9,
      "gasPerCall": 6526
     }
    },
    "probeCalls": 31041,
-   "residualPerCall": 8.2
+   "residualPerCall": 8.6
   },
   {
    "lib": "fp256",
@@ -3027,9 +3064,9 @@
    "lib": "fp256",
    "op": "erf",
    "inlineLegacy": 35493,
-   "inlineViaIr": 29259,
-   "object": 30001,
-   "objectNet": 29307,
+   "inlineViaIr": 29275,
+   "object": 30017,
+   "objectNet": 29323,
    "selectorRank": 1
   },
   {
