@@ -538,9 +538,7 @@ contract SweepWide is Test {
         }
     }
 
-    function test_sweep_wide() public {
 %s
-    }
 }
 """
 
@@ -554,7 +552,7 @@ def run_wide():
     fn = {f"{op}x": op for op in EXTRA}
     disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = FP256LibWide.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
                       for n in names)
-    runs = "\n".join(f'        this.runOne("{n}", {"true" if fn.get(n, n) in TWO else "false"});' for n in names)
+    runs = "\n".join(f'    function test_{n}() public {{ this.runOne("{n}", {"true" if fn.get(n, n) in TWO else "false"}); }}' for n in names)
     (wd / "SweepWide.t.sol").write_text(WIDE_TEST % (disp, WIDE_N, WIDE_N, runs))
     try:
         subprocess.run(["forge", "test", "--match-path", "test/sweep/wide/SweepWide.t.sol", "-q"], cwd=ROOT, check=True)
@@ -622,9 +620,7 @@ contract Sweep%(Tag)s is Test {
         }
     }
 
-    function test_sweep_%(tag)s() public {
 %(runs)s
-    }
 }
 """
 
@@ -673,7 +669,7 @@ def run_instrumented(kind: str, forced: bool = False):
         expr = expr.replace("FP256Lib.", f"FP256Lib{Tag}.").replace("FP127Lib.", f"FP127Lib{Tag}.")
         disp.append(f'        if (op == "{name}") {{ g0 = gasleft(); r = {expr}; g = gasleft(); }}')
         if name != "noop":
-            runs.append(f'        this.runOne("{name}", {nargs(name)});')
+            runs.append(f'    function test_{name}() public {{ this.runOne("{name}", {nargs(name)}); }}')
     rec = rec_words(kind)
     imports = "\n".join(f'import {{{lib.upper()}Lib{Tag}}} from "./{lib.upper()}Lib{Tag}.sol";' for lib in libs)
     (wd / f"Sweep{Tag}.t.sol").write_text(INSTR_TEST % {
