@@ -138,36 +138,38 @@ The second stage:
   …))) (x and k for normCdf), numerator and denominator by two scaled
   recurrences of depth 1700/⌊|x|⌋ + 28 (2404 for normCdf): truncation below
   2^−402 from y = 7 to 430 (`bounds.py`).
-- Lambert W, seed → fast → safe. Near −1/e (1 + e·x below 1/2 for W0, 1/4
-  for W−1) the unknown is q = 1 + W on Φ(q) = (q − 1)e^q + 1 = 1 + e·x,
-  with 1 + e·x exact in two words: the seed ±p(1 ∓ p/3 + 11p²/72), p =
-  √(2(1 + e·x)) by the integer square root; sixth-order steps at 2^−126
-  (`lwq128`: e^q by its series, the relative residual ρ = Φ(q̃)/y − 1, τ =
-  ρΦ/(q²e^q(1 + ρ)) and q̃(1 − τ(1 + b₁τ + … + b₅τ⁵)), the b_k polynomials in
-  q from the reversion of Φ) until one starts within 2^−24 (none to two);
-  then one at word precision (`lwq254`), whose error is q times the
-  precision, so the branch point costs none: |q| within 8q + 3 (W0) or
-  17|q| + 3 (W−1) units of 2^−254, the constants 10 and 20 in the Yul,
-  and W = −1 ± q exact. Elsewhere a seed from a table-free logarithm
-  (`lnc`: 2·atanh((r − 1)/(r + 1)) at 2^−126, no table) — x(1 − x + 3x²/2)
-  for |x| < 1/8, Winitzki's L(1 − ln(1 + L)/(2 + L)) above, L − ln(−L) +
-  ln(−L)/L for W−1 — then fourth-order log-form steps at 2^−126 (`lwf128`,
-  one to three) until one starts within 2^−18, and one at word precision
-  (`lwlog`, the series reversion w(1 − u + uv/2 − uv²/2 + u²v/3) with u =
-  f/(1 + w), v = u/(1 + w), the logarithm of the ratio of the significands
-  by the log2 kernel) with the bound 2·(1.01·du + 5) + 1, du = 1 +
-  32·2^254/|h|, and `rbad`. On a miss one log-form Newton step at 2^−510,
-  w − (w + ln(|w|/|x|))·w/(1 + w). W and x share a sign, so the form holds
-  for every x ≠ 0, and the ratio's one wide ln keeps the correction's
-  relative precision down to the smallest x. The a-posteriori residual
-  bound of the literature review (|w̃ − W| ≤ |f̃|·|w̃|/(|1 + w̃| − δ)) is
-  what `lwlog`'s bound is, with f̃'s error from the kernel's static bound;
-  the adaptive-precision rule near −1/e is replaced by the change of
-  variable, which removes the 1/(1 + W) amplification instead of paying
-  for it.
-
-#79's second stages:
-
+- Lambert W, seed → fast → safe, no series. Near −1/e (1 + e·x below 1/8)
+  the unknown is q = 1 + W on Φ(q) = (q − 1)e^q + 1 = 1 + e·x, with 1 + e·x
+  exact in two words: the seed p·S(p), p = √(2(1 + e·x)) by the integer
+  square root and S = (1 + W)/p (one analytic function on both branches,
+  W−1 at −p) by a degree-16 Chebyshev fit on [−½, ½] (`lwsp`, relative
+  error 2^−44.9 on 20,001 points, the constant term exactly 1, certified by
+  `bounds.py`); then one sixth-order reversion step (`lwq510`) with e^q − 1
+  from the core's wide exp kernel (`wexpm1` for W0, `wexpr(1, −1, |q|)` for
+  W−1, within 2^−503 absolute, which is the relative precision the residual
+  needs): Φ = q − E1(1 − q) (W0) or |E1|(1 + |q|) − |q| (W−1) wide, τ =
+  (Φ − y)/(q²e^q) from the exact difference's top word, q̃(1 − τ(1 + b₁τ +
+  … + b₅τ⁵)) with the b_k polynomials in q from the reversion. The error is
+  5 units of 2^−254 whatever q (2^−503/(q·e^q) from the kernel, under a unit
+  down to y = 2^−492, plus the roundings), so the branch point costs no
+  precision and W = −1 ± q is exact. Elsewhere a seed from a crude
+  logarithm (`lnc0`, a degree-3 fit, 2^−10.8) — x(1 − x + 3x²/2) for |x| <
+  ⅓, Winitzki's L(1 − ln(1 + L)/(2 + L)) for x ≥ 1/8, L − ln(−L) + ln(−L)/L
+  for W−1 — then fourth-order log-form steps at 2^−126 (`lwf128`, one to
+  three) on the table-driven logarithm `lnc` (six reductions by 2^(1/2^k)
+  as `log2m`'s, then 2·atanh(s)/s by a degree-7 fit, 2^−139.5) until one
+  starts within 2^−18, and one at word precision (`lwlog`, the series
+  reversion w(1 − u + uv/2 − uv²/2 + u²v/3) with u = f/(1 + w), v =
+  u/(1 + w), the logarithm of the ratio of the significands by the log2
+  kernel) with the bound 2·(1.01·du + 5) + 1, du = 1 + 32·2^254/|h|, and
+  `rbad`. On a miss one log-form Newton step at 2^−510, w − (w +
+  ln(|w|/|x|))·w/(1 + w). W and x share a sign, so the form holds for every
+  x ≠ 0, and the ratio's one wide ln keeps the correction's relative
+  precision down to the smallest x. The a-posteriori residual bound of the
+  literature review (|w̃ − W| ≤ |f̃|·|w̃|/(|1 + w̃| − δ)) is what `lwlog`'s
+  bound is; near −1/e the change of variable to q removes the 1/(1 + W)
+  amplification, and the wide kernel's two words are the "adaptive
+  precision" for every q at once.
 - `exp2` and `exp10`: x or x log2 10 (three words) split at 2^−510 and 2^f
   by `wexpm1`, as pow's (`pow2w`).
 - `log2`: pow's wide log2 (`wlog2`: the wide series near one, wln off it).
@@ -232,7 +234,7 @@ The bounds, and what they give:
 | erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 10.6 | 2^−499 rel. | 2^−262 ULP |
 | erf, erfc, Φ, ½ ≤ y < 6 | 192 | 2 × g's 81 + 8 | 11.3 | 2^−444 rel. | 2^−207 ULP |
 | erfc, Φ, y ≥ 6 | 32n + 64 | A and B gain 2^−251 a step | 186 | 2^−392 rel. | 2^−155 ULP |
-| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 17 + 16·⌊2^255/\|h\|⌋; 10 / 20 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: Φ/q² within 2.4 / 3.7, ρ within 16 / 24, τ within 8 / 17, so 8q + 3 / 17\|q\| + 3 | 0.07, 0.10 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
+| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.13, 0.18 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
 | exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.54 | 2^−492 rel. | 2^−255 ULP |
 | log2, near one | 8 | d P within 3, times log2 e: 3 log2 e + 2 | 4.64 | 2^−497 rel. | 2^−260 ULP |
 | log2 | 38 | log2m 37, the shift into Lm 1 | 2.25 | 2^−489 rel. | 2^−252 ULP |
@@ -272,7 +274,7 @@ Lambert W's branch point). None is known.
 | `erf` | FP256X | below ½, x (2/√π) e^(−x²) Σ (2x²)^k/(2k+1)!!; above, 1 − erfc; ±1 from \|x\| ≥ 13 | never |
 | `erfc` | FP256X | e^(−x²)·g(x), g from 45 Taylor anchors on [½, 6] and a continued fraction beyond, e^(−x²) from the exact square: 71 digits to the underflow near x = 427 | never |
 | `normCdf` | FP256X | Φ(x) = erfc(−x/√2)/2, the left tail to about x = −603; exactly one from x ≥ 13√2 | never |
-| `lambertW0` | FP256X | W e^W = x, W ≥ −1: near −1/e sixth-order steps in q = 1 + W (two at 2^−126, one at word precision with a bound); elsewhere a table-free seed, fourth-order log-form steps at 2^−126 and one at word precision with a bound; the rounding test, the wide step on a miss | `OutOfRange` below −1/e |
+| `lambertW0` | FP256X | W e^W = x, W ≥ −1: near −1/e a fit seed in q = 1 + W and one sixth-order step on the wide exp kernel with a bound; elsewhere a crude-log seed, fourth-order log-form steps at 2^−126 and one at word precision with a bound; the rounding test, the wide step on a miss | `OutOfRange` below −1/e |
 | `lambertWm1` | FP256X | W ≤ −1 on [−1/e, 0): the same stages and test, the wide step on a miss | `OutOfRange` outside [−1/e, 0) |
 | `neg`, `abs`, `sign` | FP256 | bit operations; −0 is 0 | `OutOfRange` |
 | `cmp`, `lt`, `eq` | FP256 | through a monotone key (negatives mirrored); `eq` is bit equality; plain integers | `OutOfRange` |

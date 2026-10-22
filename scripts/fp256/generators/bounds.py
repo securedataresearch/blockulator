@@ -474,16 +474,17 @@ def run79(ker, rng, M, n):
 
 # ---- Lambert W: seed -> fast -> safe, as the Yul forms it ---------------------
 #
-# Near -1/e (1 + e x = y below 1/2 for W0, 1/4 for W-1) the unknown is
-# q = 1 + W on Phi(q) = (q - 1) e^q + 1 = y, whose relative error is the
-# working precision with no 1/(1 + W) amplification, so the safe step runs
-# at word precision for every y: |q| within 8 q + 3 (W0) or 17 |q| + 3 (W-1)
-# units of 2^-254, and W = -1 +- q is exact. This replaces the adaptive
-# precision rule (262 + log2(1/|1 + w|) bits) of the literature review: the
-# bound is q times a constant, so the rounding test's margin never shrinks
-# towards the branch point. Elsewhere the fourth-order log-form step lwlog
-# (unchanged bound) after a cheap stage at 2^-126 whose seeds and step
-# counts this section measures.
+# Near -1/e (1 + e x = y below 1/8) the unknown is q = 1 + W on Phi(q) =
+# (q - 1) e^q + 1 = y, seeded by a degree-16 fit in p = sqrt(2y) (2^-44.8)
+# and finished by one sixth-order step whose e^q - 1 comes from the core's
+# wide exp kernel (2^-503 absolute, which is the relative precision the
+# residual needs: 2^-503/(q^2 e^q) in tau, 2^-503/(q e^q) in q): |q| within
+# 5 units of 2^-254 whatever q, and W = -1 +- q exact. This replaces the
+# adaptive-precision rule (262 + log2(1/|1 + w|) bits) of the literature
+# review: the kernel's two words are that precision for every q down to
+# 2^-246. Elsewhere the fourth-order log-form step lwlog (unchanged bound)
+# after a cheap stage at 2^-126 whose seeds and step counts this section
+# measures.
 
 LN2_CEIL = 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8b
 LN2_128 = 0xb17217f7d1cf79abc9e3b39803f2f6af
@@ -551,33 +552,46 @@ def lwlog(ker, x, w):
 
 
 def lwy(m):
-    """The Yul's lwy: (Y, ey) with y = 1 + e x = Y 2^ey, Y in [2^254, 2^255);
-    (0, 0) at y = 0, None below -1/e."""
+    """The Yul's lwy: (Y, ey, yh, yl) with y = 1 + e x = Y 2^ey, Y in [2^254, 2^255), and
+    y exact at 2^-510 as (yh, yl); (0, 0, 0, 0) at y = 0, None below -1/e."""
     P = m * EH + ((m * EL) >> 254 & M256)
     D = (1 << 492) - P
     if D < 0:
         return None
     if D == 0:
-        return 0, 0
+        return 0, 0, 0, 0
     nb = K.msb(D)
-    return (D << (254 - nb) if nb <= 254 else D >> (nb - 254)), nb - 746
+    Y = D << (254 - nb) if nb <= 254 else D >> (nb - 254)
+    return Y, nb - 746, (D << 18) >> 256, (D << 18) & M256
 
 
-T_STAGES = [(0x5a827999fcef32422cbec4d9baa55f50, 0x2d413cccfe779921165f626cdd52afa8, 8),
-            (0x4c1bf828c6dc54b7a356918c17217b7b, 0x35d13f32b5a75abd0e69a2ee640b4ff8, 4),
-            (0x45cae0f1f545eb737df23143ac529e48, 0x3ab031b9f7490e4bb40b5d6cdc1b953f, 2),
-            (0x42d561b3e6243d8a62e4adc610aa60d9, 0x3d495f454921b30b1ee7431ebb6603f1, 1)]
-ATANH_C = [0x2c8590b21642c8590b21642c8590b21, 0x30c30c30c30c30c30c30c30c30c30c3, 0x35e50d79435e50d79435e50d79435e5,
-           0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, 0x4444444444444444444444444444444, 0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec5,
-           0x5d1745d1745d1745d1745d1745d1746, 0x71c71c71c71c71c71c71c71c71c71c7, 0x9249249249249249249249249249249,
-           0xccccccccccccccccccccccccccccccd, 0x15555555555555555555555555555555, 0x40000000000000000000000000000000]
-LN2_124 = 0xb17217f7d1cf79abc9e3b39803f2f6b
+T_STAGES = [(0x5a827999fcef32422cbec4d9baa55f50, 0x2d413cccfe779921165f626cdd52afa8, 32),
+            (0x4c1bf828c6dc54b7a356918c17217b7b, 0x35d13f32b5a75abd0e69a2ee640b4ff8, 16),
+            (0x45cae0f1f545eb737df23143ac529e48, 0x3ab031b9f7490e4bb40b5d6cdc1b953f, 8),
+            (0x42d561b3e6243d8a62e4adc610aa60d9, 0x3d495f454921b30b1ee7431ebb6603f1, 4),
+            (0x4166c34c5615d0eb9f1523ada3290600, 0x3ea0ecb6dc8a80ce9f096ec50c575ff3, 2),
+            (0x40b268f9de0183b9bdf2b293de8a6f7a, 0x3f4f83033d21b05d214fce964c783b81, 1)]
+ATANH_C = [0x4446135483304695b31cd2087781804, 0x4ec4ec491eccde6dc9ec3dc71cf3623, 0x5d1745d1746646dc577e7d058db642b,
+           0x71c71c71c71c71bed60c1d9b8a55f08, 0x92492492492492492496556bf318f39, 0xcccccccccccccccccccccccbd3dcdb3,
+           0x155555555555555555555555555556c2, 0x40000000000000000000000000000000]
+LN2_122 = 0x2c5c85fdf473de6af278ece600fcbdb
 LNC0 = [0x6c624f4ace937ad74c72c1900aebb69, -0x193a803a4689b1e7d4fe8cc4f525bca5, 0x3ecce60a25db5c9757959e657fdbf429, 0x95fd7e22848b1d16f2f2bb6adf6c7]
+LWSP = [0x53b90081353ec0d6941c921fcfafe595a00cc42497241ae655363581fda94, -0x7da26a79225bb5fb50ea8efcc8ae9d4254e4dc4f946a07e0bfe6de0579346,
+        0x644585809454cf76ef165d39ed6b3221e9ba088251003ceff2f71f7c0c755, -0x98b8b6e30746fa914f48ce0a496b7a037105c06bb06c9d7f684c61cf6fd46,
+        0x110d843b49b21ba51a501bbb77ed0f257949b9cc213a87345be9ca07b63737, -0x1a313459af0764ab9552879fb1e10f9bf22264fb538a1aa117eae1bb53021a,
+        0x27f5807beecdf9efb8c709fad4296181f19ead87c6548eb20db7222ab50a4c, -0x3e656398e74c5d03b4b5df785dc1c426dcc98ec31e23a08ebd7c71dc546983,
+        0x628b743708e2d24266d1587a51d9c728881f97fd4201e6904b1872252776b5, -0x9d911c278f1cb7b3ed76e932800a7853179177003af08ad833049761583efd,
+        0x1002c921ab74cdbe4d174f50d821165e87a6ad194e0c48cc71d0e1d0a3a51bb, -0x1a9bbc1771a4a40ca538aa8217e0e6417f0eebd3b401221c91c8d7a77ccffbb,
+        0x2d9203ccc4cd1b7ae3baee267b661786f46d8800613ee614953eb058ced39ae, -0x518a6dfefd1f0da4f26b457422d5955b99bbeb25c7a90c9258e8aaf51a88dc3,
+        0x9c71c71c6f490046c1d5e4523fc72a7e7eebcd533f42e92e99d9f2e603d55fc, -0x155555555519dbb6d739a70acc0e3d8ec423a092398259b8ab5412b03b634978,
+        1 << 254]
+
 
 
 def lnc(r, k):
-    """The Yul's lnc: k ln 2 + ln r at 2^-128, r in [2^126, 2^127): four reduction stages, 12 odd terms."""
-    j = 16 * k
+    """The Yul's lnc: k ln 2 + ln r at 2^-128, r in [2^126, 2^127): six table reductions,
+    then 2 s atanh(s)/s with the degree-7 fit in s^2 (lncfit certifies it)."""
+    j = 64 * k
     for T, I, dj in T_STAGES:
         if r >= T:
             r = (r * I) >> 126
@@ -587,7 +601,7 @@ def lnc(r, k):
     A = ATANH_C[0]
     for c in ATANH_C[1:]:
         A = c + ((s2 * A) >> 126)
-    return j * LN2_124 + (((s * A) >> 125) << 2)
+    return j * LN2_122 + (((s * A) >> 125) << 2)
 
 
 def lnc0(r, k):
@@ -603,6 +617,34 @@ def lnm(v):
     n = K.msb(v)
     r = v >> (n - 126) if n >= 126 else v << (126 - n)
     return r, n - 128
+
+
+def lwsp(p, S):
+    """The Yul's lwsp: S(p) = (1 + W)/p by the degree-16 fit, Horner at 2^-S on p at 2^-S."""
+    v = LWSP[0] >> (254 - S)
+    for c in LWSP[1:]:
+        v = (c >> (254 - S) if c >= 0 else -((-c) >> (254 - S))) + ((p * v) >> S)
+    return v
+
+
+def lncfit():
+    """lnc's and lwsp's fits certified: the Yul's constants are the rounded chebyfit
+    coefficients, and the fits' sup norms on dense grids are what the Yul claims."""
+    from mpmath import chebyfit, atanh, lambertw, e as Ee, sqrt as msqrt, power, nint, mpf, log
+    mp.dps = 90
+    smax = (power(2, mpf(1) / 64) - 1) / (power(2, mpf(1) / 64) + 1)
+    g = lambda u: atanh(msqrt(u)) / msqrt(u) if u > 0 else mpf(1)
+    ap = chebyfit(g, [mpf(0), smax ** 2], 8)
+    assert [int(nint(c * mpf(2) ** 126)) for c in ap] == ATANH_C, "lnc's fit"
+    worst = max(abs(sum(c * (smax ** 2 * i / 4000) ** (7 - j) for j, c in enumerate(ap)) - g(smax ** 2 * i / 4000)) for i in range(4001))
+    print(f"lnc: atanh(s)/s by the degree-7 fit within 2^{float(log(worst, 2)):.1f} on [0, {float(smax):.5f}]^2")
+    S = lambda p: (1 + lambertw((p * p / 2 - 1) / Ee, 0 if p > 0 else -1).real) / p if p != 0 else mpf(1)
+    sp = chebyfit(S, [-mpf(1) / 2, mpf(1) / 2], 17)
+    assert [int(nint(c * mpf(2) ** 254)) for c in sp] == LWSP, "lwsp's fit"
+    worst2 = max(abs(sum(c * (mpf(i) / 4000) ** (16 - j) for j, c in enumerate(sp)) / S(mpf(i) / 4000) - 1) for i in range(-2000, 2001))
+    print(f"lwsp: S(p) by the degree-16 fit within 2^{float(log(worst2, 2)):.1f} relative on [-1/2, 1/2]")
+    mp.dps = 120
+    return worst > mpf(2) ** -138 or worst2 > mpf(2) ** -44.5
 
 
 def lwsw(x):
@@ -664,14 +706,6 @@ def lwfast(x, w):
     return w, n
 
 
-def lwu2(qa, Kt, S):
-    one = 1 << S
-    u = one
-    for k in range(Kt, 2, -1):
-        u = one + sdiv((qa * u) >> S, k)
-    return u
-
-
 def lwb3(qa, tau):
     """The Yul's lwb3: b3 + tau (b4 + tau b5) at 2^-112, q and tau at 2^-126."""
     C = lambda n: n << 112
@@ -682,87 +716,105 @@ def lwb3(qa, tau):
     return sdiv(h([6, 18, 25, 15]), 24) + m(tau, v)
 
 
-def lwbs(qa, tau, S, c):
-    """1 + tau (b1 + ...) for the q form; S the scale of q and tau (126 or 254), c that of the b_k."""
-    m = lambda a, b: (a * b) >> S
-    C = lambda n: n << c
-    R = lwb3(qa >> (S - 126), tau >> (S - 126)) << (c - 112)
+def lwbs(qa, tau):
+    """The Yul's lwbs: 1 + tau (b1 + ...) at 2^-254 for q and tau at 2^-254."""
+    m = lambda a, b: (a * b) >> 254
+    C = lambda n: n << 240
+    R = lwb3(qa >> 128, tau >> 128) << 128
     v = sdiv(C(3) + m(qa, C(4) + m(qa, C(2))), 6) + m(tau, R)
-    v = ((C(1) + (qa >> (S - c))) >> 1) + m(tau, v)
-    return C(1) + m(tau, v)
+    v = ((C(1) + (qa >> 14)) >> 1) + m(tau, v)
+    return (C(1) + m(tau, v)) << 14
 
 
-def lwq128(Q, ep, sg, Y, k):
-    """The Yul's lwq128: (Q', |tau| 2^126)."""
-    one = 1 << 126
-    qa = Q >> (-ep - 126)
-    if sg:
-        qa = -qa
-    j = 126 - K.msb(abs(qa)) if qa else 126
-    Kt = min(2 + 130 // (j + 2), 35)
-    u = lwu2(qa, Kt, 126)
-    G = one + (((qa - one) * u) >> 127)
-    E = one + qa + ((qa * ((qa * u) >> 126)) >> 127)
-    Rr = ((((Q * Q * G) >> 126) << (2 + k)) << 128) // Y
-    rho = Rr - (1 << 128)
-    tau = sdiv(((rho * G) >> 128) << 126, (E * Rr) >> 128)
-    Sv = lwbs(qa, tau, 126, 112)
-    return Q - ((Q * ((tau * Sv) >> 112)) >> 126), abs(tau)
+def wexpm1_exact(qh, ql):
+    """The core's wexpm1 / wexpr stand-in: e^r - 1 exact, floored at 2^-510 (the kernel is
+    within 2^-503; its share of the bound is derived, not measured here)."""
+    r = mpf((qh << 256) | ql) / power(2, 510)
+    v = int(mp.floor((exp(r) - 1) * power(2, 510)))
+    return v >> 256, v & M256
 
 
-def lwq254(Qa, eq, sg, Y, k):
-    """The Yul's lwq254: (|q| 2^254, |tau| 2^254)."""
-    one = WS
-    qa = Qa >> (-eq - 254)
-    if sg:
-        qa = -qa
-    j = 254 - K.msb(abs(qa))
-    Kt = min(2 + 261 // (j + 3), 58)
-    u2 = lwu2(qa, Kt, 254)
-    G = one + (((qa - one) * u2) >> 255)
-    E = one + qa + ((qa * ((qa * u2) >> 254)) >> 255)
-    Rr = ((((((Qa * Qa) >> 254) * G) >> 254) << k) << 254) // Y
-    rho = Rr - one
-    tau = sdiv254((rho * G) >> 254, (E * Rr) >> 254)
-    Sv = lwbs(qa, tau, 254, 240) << 14
-    return (Qa - ((Qa * ((tau * Sv) >> 254)) >> 254)) >> (-eq - 254), abs(tau)
+def lwphi(sg, q254, qh, ql):
+    """The Yul's lwphi: Phi wide at 2^-510 and 1 + E1 at 2^-252."""
+    one = 1 << 254
+    if not sg:
+        eh, el = wexpm1_exact(qh, ql)
+        E252 = (eh >> 2) + (1 << 252)
+    else:
+        # wexpr(1, -1, |q|): e^q = (1 + X)/2, X = wexpm1(ln 2 - |q|)
+        LN2 = int(mp.floor(log(2) * power(2, 510)))
+        r = LN2 - ((qh << 256) | ql)
+        xh, xl = wexpm1_exact(r >> 256, r & M256)
+        v = (((xh + one) << 256) | xl) >> 1
+        xh, xl = v >> 256, v & M256
+        E252 = xh >> 2
+        v = (one << 256) - v
+        eh, el = v >> 256, v & M256
+    m = one - q254 if not sg else one + q254
+    P = (((eh << 256) | el) * m) >> 254
+    Q = (qh << 256) | ql
+    F = Q - P if not sg else P - Q
+    return F >> 256, F & M256, E252
 
 
-def lwbr(Y, ey, sg):
-    """The Yul's lwbr up to D: (D, err, steps at 2^-126, steps at 2^-254, |tau| of the last)."""
+def lwtau(fh, fl, yh, yl, Qa, eqs, E252):
+    """The Yul's lwtau."""
+    D = ((fh << 256) | fl) - ((yh << 256) | yl)
+    ng = D < 0
+    D = abs(D)
+    if D == 0:
+        return 0
+    n = K.msb(D)
+    h = D >> (n - 255) if n >= 255 else D << (255 - n)
+    e = n - 255 - 256
+    B = (((Qa * Qa) >> 254) * E252) >> 254
+    d = K.msb(B) - 254
+    B <<= -d
+    sh = e - 2 * eqs - 509 - d
+    t = ((h >> 1) << 254) // B
+    tau = t >> -sh if sh <= -8 else 1 << 254
+    return -tau if ng else tau
+
+
+def lwq510(Qa, eqs, sg, yh, yl):
+    """The Yul's lwq510: (|q| 2^254, |tau| 2^254)."""
+    q254 = Qa >> (-eqs - 254)
+    s = eqs + 510
+    Q = Qa << s
+    qh, ql = Q >> 256, Q & M256
+    fh, fl, E252 = lwphi(sg, q254, qh, ql)
+    tau = lwtau(fh, fl, yh, yl, Qa, eqs, E252)
+    qa = -q254 if sg else q254
+    return (Qa - ((Qa * ((tau * lwbs(qa, tau)) >> 254)) >> 254)) >> (-eqs - 254), abs(tau)
+
+
+def lwbr(Y, ey, yh, yl, sg):
+    """The Yul's lwbr up to D: (D, err, steps, |tau| at the start of the last)."""
     k = 2 - (ey & 1)
-    eq = (ey - 254 + k) >> 1
-    ep = eq + 128
+    eqs = (ey - 254 + k) >> 1
+    ep = eqs + 128
     P = isqrt_yul(Y >> (1 + k))
-    p = P >> (-ep - 126)
-    s0 = (1 << 126) + (11 * ((p * p) >> 126)) // 72
-    s0 = s0 + p // 3 if sg else s0 - p // 3
-    Q = (P * s0) >> 126
-    n128 = 0
-    for _ in range(4):
-        Q, at = lwq128(Q, ep, sg, Y, k)
-        n128 += 1
-        if at < 1 << 102:
-            break
-    Qa = Q << 128
-    n254 = 0
-    for _ in range(3):
-        qn, at = lwq254(Qa, eq, sg, Y, k)
-        n254 += 1
-        if at < 1 << 210:
-            break
-        Qa = qn << (-eq - 254)
+    p = P << (ep + 254) if ep + 254 >= 0 else P >> (-ep - 254)
     if sg:
-        return WS + qn, 20, n128, n254, at, round(17 * qn / 2 ** 254 + 3, 3)
-    return WS - qn, 10, n128, n254, at, round(8 * qn / 2 ** 254 + 3, 3)
+        p = -p
+    Qa = ((P << 128) * lwsp(p, 254)) >> 254
+    n = 0
+    for _ in range(2):
+        qn, at = lwq510(Qa, eqs, sg, yh, yl)
+        n += 1
+        if at < 1 << 210 or qn < 1 << 194:
+            break
+        Qa = qn << (-eqs - 254)
+    return (WS + qn if sg else WS - qn), 5, n, at
 
 
 def lambert(ker, M, n):
     """Lambert W's bounds, measured: the safe q-form step near -1/e against
-    8 q + 3 / 17 |q| + 3 (and the constants 10 / 20 the Yul uses), lwlog's
-    bound after the new seeds and the cheap stage, the step counts of both
-    fast stages, and the share of inputs whose rounding test would fire
-    (the fallback rate, rbad on the model's D)."""
+    its 5 units (the wide exp kernel stands in as the exact e^q - 1 floored
+    at 2^-510; the kernel's own 2^-503 adds under a unit for |q| >= 2^-246,
+    derived in lwq510's comment), lwlog's bound after the new seeds and the
+    cheap stage, the step counts, and the share of inputs whose rounding
+    test would fire (the fallback rate, rbad on the model's D)."""
     from mpmath import lambertw, e as Ee
     rng = random.Random(9)
     slow = 0
@@ -784,6 +836,8 @@ def lambert(ker, M, n):
         xv = dec(x)
         s, e, m = K.unpack(x)
         u = e - BIAS
+        if s and u == -2 and lwy(m)[1] <= -258:
+            return
         if br == 0 and not s and u >= -3:
             w, run = lwsw(x), True
         elif br == 0:
@@ -812,16 +866,15 @@ def lambert(ker, M, n):
         s, e, m = K.unpack(x)
         if xv < -1 / Ee or e != BIAS - 2:
             return
-        Y, ey = lwy(m)
-        if Y == 0 or ey > (-256 if br == 0 else -257):
+        Y, ey, yh, yl = lwy(m)
+        if Y == 0 or ey > -258:
             return
-        D, err, n128, n254, at, bound = lwbr(Y, ey, br == -1)
+        D, err, nst, at = lwbr(Y, ey, yh, yl, br == -1)
         name = f"lambertW{'0' if br == 0 else 'm1'}, q form"
         exact = abs(lambertw(xv, br).real) * power(2, 254)
         M.add(name, err, D, exact)
-        M.add(name + " (8q+3 / 17|q|+3)", bound, D, exact)
         st = steps.setdefault(name, {})
-        st[(n128, n254)] = st.get((n128, n254), 0) + 1
+        st[nst] = st.get(nst, 0) + 1
         fall[0] += 1
         fall[1] += rb(D, err)
 
@@ -829,7 +882,7 @@ def lambert(ker, M, n):
         gen(mpf(2) ** rng.uniform(-3, 10), 0)
         gen(mpf(2) ** rng.uniform(10, 2000) if rng.random() < 0.7 else mpf(2) ** rng.randint(2000, 260000), 0)
         gen(mpf(2) ** rng.uniform(-262000, -3), 0)
-        gen(-mpf(2) ** rng.uniform(-80, -2.44), 0)
+        gen(-mpf(2) ** rng.uniform(-80, -1.64), 0)
         gen(-mpf(2) ** rng.uniform(-300, -1.86) if rng.random() < 0.8 else -mpf(2) ** -rng.uniform(300, 262000), -1)
         for br in (0, -1):
             near(-1 / Ee + mpf(2) ** -rng.uniform(1.5, 235), br)
@@ -837,7 +890,7 @@ def lambert(ker, M, n):
           f"{fall[1]} of {fall[0]} ({100 * fall[1] / fall[0]:.3f}%)")
     for name, st in steps.items():
         print(f"  {name}: steps {dict(sorted(st.items()))}")
-    return slow > 0
+    return slow > 0 or lncfit()
 
 
 def cf_depth(n):

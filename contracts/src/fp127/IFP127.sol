@@ -254,10 +254,13 @@ interface IFP127 {
     ///         x >= -1/e, rounded to nearest.
     /// @dev Reverts with OutOfRange below -1/e (the Huff returned 0). W(x) = x
     ///      for |x| < 2^-65 (the nearest word), and W(1..5) come from the table.
-    ///      Below 1 + e x = 1/2 (x < -0.184) the unknown is q = 1 + W on
-    ///      (q - 1) e^q + 1 = 1 + e x (to 2^-256): a seed from sqrt(2 (1 + e x)),
-    ///      one or two sixth-order steps at 2^-126 whose error is q times the
-    ///      precision, so the branch point costs none, then lwfin. Elsewhere the
+    ///      Below 1 + e x = 1/8 (x < -0.322) the unknown is q = 1 + W on
+    ///      (q - 1) e^q + 1 = 1 + e x (to 2^-256): the seed p S(p), p =
+    ///      sqrt(2 (1 + e x)) and S a degree-16 fit, one sixth-order step at
+    ///      2^-192 on the double-word exp kernel (q within about 5 units of
+    ///      2^-192 whatever q, so the branch point costs none) and one
+    ///      rounding, nearest unless within 5 2^-64 ULP of a midpoint.
+    ///      Elsewhere the
     ///      origin cubic x (1 - x + 3x^2/2) for |x| < 1/8 (no step below 2^-40,
     ///      one to 2^-11, two beyond) or Winitzki's L (1 - ln(1 + L) / (2 + L)),
     ///      L = ln(1 + x), from the crude logarithm (two steps), then
@@ -271,7 +274,7 @@ interface IFP127 {
     /// @notice Secondary real branch of the Lambert W function, W(x) e^W(x) = x
     ///         with W(x) <= -1, for -1/e <= x < 0, rounded to nearest.
     /// @dev Reverts with OutOfRange below -1/e and for x >= 0. Below 1 + e x =
-    ///      1/4 (x < -0.276) as lambertW0 in q = 1 + W (negative here); above,
+    ///      1/8 (x < -0.322) as lambertW0 in q = 1 + W (negative here); above,
     ///      the asymptotic L - ln(-L) + ln(-L) / L with L = ln(-x) from the
     ///      table-free logarithm, then fourth-order log-form steps at 2^-126
     ///      until one starts within 2^-22 (two), and the double-word
