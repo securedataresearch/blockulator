@@ -519,8 +519,8 @@ PROBE_RESIDUAL = 92
 # every call (the helper is the fallback itself).
 COUNTS = {
     "fp256": {"rbad": "ret"},
-    # FP127: the double-word log l2p runs exactly when the one-word log, pow or
-    # cbrt could not decide (nearmid, or pow2t not ok)
+    # FP127: the double-word log l2p runs exactly when the one-word log or pow
+    # could not decide (nearmid, or pow2t not ok)
     "fp127": {"l2p": "call", "powus": "call"},
 }
 
@@ -530,10 +530,10 @@ PROBES = {
               "lwlog", "lwexp", "lwln", "powslow", "compslow", "wln1ps",
               "erfser", "erfcxa", "erfcxcf", "expnegsq",
               # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp
-              "em1k", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cubegt",
+              "em1k", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cbrtw", "cubegt",
               "isqrtw", "lerp3"],
     "fp127": ["expk", "log2m", "erfs", "erfcf", "lwfsc", "lwm1", "lwfin",
-              "l2p", "powus", "einvhalf"],
+              "l2p", "powus", "einvhalf", "cbrtw", "cube"],
 }
 
 

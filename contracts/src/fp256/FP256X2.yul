@@ -111,10 +111,10 @@ object "FP256X2" {
                 default { r := shr(sub(n, 256), p1) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -844,9 +844,7 @@ object "FP256X2" {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wsh(h, l, n) -> rh, rl {
@@ -904,25 +902,17 @@ object "FP256X2" {
                 r := fromint(u)
             }
 
-            function gt3(a2, a1, a0, b2, b1, b0) -> t {
-                t := gt(a2, b2)
-                if eq(a2, b2) {
-                    t := gt(a1, b1)
-                    if eq(a1, b1) { t := gt(a0, b0) }
-                }
-            }
-
-            function cubegt(y, n2, n1, n0) -> t {
-                let p1, p0 := mul512(y, y)
-                let c2, c1, c0 := mul3(p1, p0, y)
-                t := gt3(c2, c1, c0, n2, n1, n0)
-            }
-
             function cbrtseed(m, rr) -> y {
-                let g := div(add(shl(253, add(2, rr)), shr(1, log2m(shl(18, m)))), 3)
-                let ip := iszero(lt(g, 0x2000000000000000000000000000000000000000000000000000000000000000))
-                if ip { g := sub(g, 0x2000000000000000000000000000000000000000000000000000000000000000) }
-                y := shr(sub(17, ip), exp2frac(shl(1, g)))
+                let l := add(0xbf5da1f0001eb537, shr(64, mul(0x428a2f98d728ae22, shr(172, m))))
+                y := shr(42, mul(l, and(shr(shl(6, rr), 0x50a28be635ca2b8980000000000000006597fa94f5b8f20b), 0xffffffffffffffff)))
+            }
+
+            function cbrtw(n, y) -> r {
+                r := div(add(shl(1, y), div(n, mul(y, y))), 3)
+                r := div(add(shl(1, r), div(n, mul(r, r))), 3)
+                r := div(add(shl(1, r), div(n, mul(r, r))), 3)
+                r := div(add(shl(1, r), div(n, mul(r, r))), 3)
+                r := sub(r, gt(mul(r, r), div(n, r)))
             }
 
             function fp256_cbrt(x) -> r {
@@ -936,9 +926,30 @@ object "FP256X2" {
                     q := sub(q, 1)
                 }
                 let n2, n1, n0 := shl3(m, add(rr, 477))
-                let y := cbrtseed(m, rr)
-                for {} cubegt(y, n2, n1, n0) {} { y := sub(y, 1) }
-                for {} iszero(cubegt(add(y, 1), n2, n1, n0)) {} { y := add(y, 1) }
+                let j := 153
+                let sh := add(18, rr)
+                if eq(rr, 2) {
+                    j := 154
+                    sh := 17
+                }
+                let n := shl(sh, m)
+                let y := cbrtw(n, cbrtseed(m, rr))
+                let y2 := mul(y, y)
+                y := add(add(shl(j, y), div(shl(sub(j, 72), sub(n, mul(y2, y))), shr(72, mul(3, y2)))), 1)
+                let p1, p0 := mul512(y, y)
+                let c2, c1, c0 := mul3(p1, p0, y)
+                c2, c1, c0 := sub3(c2, c1, c0, n2, n1, n0)
+                let t1, t0 := mul512(p0, 3)
+                y := sub(y, div(or(shl(212, c2), shr(44, c1)), add(shr(44, add(mul(3, p1), t1)), 1)))
+                p1, p0 := mul512(y, y)
+                c2, c1, c0 := mul3(p1, p0, y)
+                c2, c1, c0 := sub3(c2, c1, c0, n2, n1, n0)
+                t1, t0 := mul512(p0, 3)
+                t1 := add(mul(3, p1), t1)
+                let u := sub(mul(3, y), 1)
+                t1 := sub(t1, lt(t0, u))
+                t0 := sub(t0, u)
+                y := sub(sub(y, iszero(iszero(or(c1, c0)))), or(gt(c1, t1), and(eq(c1, t1), gt(c0, t0))))
                 r := normround(s, add(q, 0x4005e), y)
             }
 

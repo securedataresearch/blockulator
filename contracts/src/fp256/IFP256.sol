@@ -20,12 +20,21 @@ interface IFP256 {
     function sub(int256 a, int256 b) external pure returns (int256 r);
     /// @notice a * b: the 474-bit product of the significands, rounded once.
     function mul(int256 a, int256 b) external pure returns (int256 r);
-    /// @notice a / b: floor(ma 2^255 / mb) by two exact 2^128 stages, rounded once.
+    /// @notice a / b: floor(ma 2^255 / mb) by one exact 512-by-256 division, rounded once.
     function div(int256 a, int256 b) external pure returns (int256 r);
     /// @notice sqrt(x): the significand shifted to an even exponent, its
-    ///         integer square root at 2^136 (Newton: a 256-bit seed, one
-    ///         2^128 stage, one 2^256 stage, corrected by squaring), rounded
-    ///         once. Never overflows or underflows.
+    ///         integer square root at 2^136 (Newton: the word root of the top
+    ///         256 bits, one residual step in a word, corrected by squaring),
+    ///         rounded once. Never overflows or underflows.
+    /// @dev floor(sqrt(N)) for N = n 2^256, n = m 2^(16 + odd) in [2^252, 2^254):
+    ///      Y = floor(sqrt(n)) is a 127-bit root (isqrt), y0 = Y 2^128 is
+    ///      below the root R by less than 2^128, and the Newton step from y0
+    ///      is y0 + (N - y0^2) / (2 y0) = y0 + (n - Y^2) 2^127 / Y: the
+    ///      residual n - Y^2 <= 2Y is a word, so one mul and one div replace
+    ///      the three 512-bit divu stages of release four. The step lands at or
+    ///      above R (AM-GM) and below R + (R - y0)^2 / (2 y0) < R + 2, its
+    ///      floor above R - 1, so the iterate is floor(R), + 1 or + 2 and the
+    ///      two 512-bit squarings step it back to the floor.
     function sqrt(int256 x) external pure returns (int256 r);
     /// @notice e^x = 2^(x log2 e): the 512-bit product of the significand and
     ///         log2 e in two words (2^-508), split into the integer part and a

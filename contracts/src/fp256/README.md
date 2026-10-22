@@ -65,7 +65,7 @@ The split is by family, as
 [#79](https://github.com/securedataresearch/blockulator/issues/79) asks:
 FP256 is what a protocol calls at the token edge and in accrual, FP256X the
 special functions, FP256X2 the rest of the exponential family on the same
-kernels (cbrt's seed is 2^(log2 x / 3) from them), FP256X3 the algebraic
+kernels (cbrt is Newton from a seed in the bits), FP256X3 the algebraic
 ops. FP256 has 64 bytes left and FP256X 2,310, so #79's 25 ops, 25,479
 bytes in one object, are two more. `make build-fp256` compiles all four,
 `make size-fp256` prints them, and `predict-fp256x`, `-fp256x2`, `-fp256x3`
@@ -171,8 +171,8 @@ The second stage:
   words, halved in the one rounding.
 
 Exact by construction: `cbrt` (the floor of the cube root of the
-significand scaled to 714 to 716 bits, from a kernel seed corrected by exact
-three-word cubes), `gavg` and `hypot` (the floor of the square root of the
+significand scaled to 714 to 716 bits, by Newton with precision doubling from a
+seed in the bits and an exact three-word cube at the end), `gavg` and `hypot` (the floor of the square root of the
 exact 474-bit product or sum of squares, floored only on a grid far under
 the root's, so hypot's Pythagorean ties, which exist, round away from zero),
 `lerp` (the exact a + t (b − a), below), `avg`, `dist`, `zeroFloorSub`,
@@ -247,7 +247,7 @@ Lambert W's branch point). None is known.
 | `div` | FP256 | floor(ma·2^255 / mb) by two exact 2^128 stages, one rounding | `DivisionByZero`, `Overflow`, `OutOfRange` |
 | `mulDown`, `mulUp` | FP256 | the product rounded toward −∞ / +∞; away from zero below the format: the smallest number | `Overflow`, `OutOfRange` |
 | `divDown`, `divUp` | FP256 | the quotient rounded toward −∞ / +∞ | `DivisionByZero`, `Overflow`, `OutOfRange` |
-| `sqrt` | FP256 | the integer root of the significand at 2^136 (Newton, corrected by squaring), one rounding; never overflows | `OutOfRange` for x < 0 |
+| `sqrt` | FP256 | the integer root of the significand at 2^136 (the word root of the top 256 bits, one residual Newton step in a word, corrected by squaring), one rounding; never overflows | `OutOfRange` for x < 0 |
 | `exp` | FP256 | 2^(x log2 e): the 512-bit product with log2 e, 2^f from a 16-entry table and a degree-26 polynomial at 2^−254, the test; 1 + x + x²/2 floored exactly below 2^−118; exactly one below 2^−238 | `Overflow` above about 181,705; zero below −181,700 |
 | `ln` | FP256 | (E − bias + log2(M/2^236)) ln 2 through twelve reduction stages and a degree-17 polynomial; within 2^−8 of one, d = x − 1 exact and a 32-term series; the test | `OutOfRange` for x ≤ 0 |
 | `log1p` | FP256 | ln(1 + x) without a rounded 1 + x: x times the series below 2^−4, 1 + x exact above (ln x + 1/x from 2^254 in the second stage) | `OutOfRange` for x ≤ −1 |
@@ -277,7 +277,7 @@ Lambert W's branch point). None is known.
 | `log2` | FP256X2 | (E − bias) + log2m of the mantissa, the test; d series(d) log2 e within 2^−8 of one; exact at powers of two | `OutOfRange` for x ≤ 0 |
 | `log10` | FP256X2 | log2 x times log10 2, the test; ln's series times log10 e near one; exact at 10^0 to 10^102 | `OutOfRange` for x ≤ 0 |
 | `log2Up` | FP256X2 | ⌈log2 x⌉ as a number, exact | `OutOfRange` for x ≤ 0 |
-| `cbrt` | FP256X2 | the floor of the cube root at 238+ bits from a kernel seed and exact cubes, one rounding; odd | never |
+| `cbrt` | FP256X2 | the floor of the cube root at 238+ bits by Newton with precision doubling from a seed in the bits, an exact cube at the end, one rounding; odd | never |
 | `sinh`, `cosh` | FP256X2 | sinh = (U + U/(1 + U))/2 with U = e^\|x\| − 1 from expm1's machinery below ½ (its series below 2^−8, exp's unrounded kernel above); (e^\|x\| ∓ e^−\|x\|)/2 from that kernel and its reciprocal otherwise; cosh exactly one below 2^−118 | `Overflow` beyond about 181,705 |
 | `tanh` | FP256X2 | U/(U + 2) with U = e^2\|x\| − 1 from expm1's machinery below ½ (its series below 2^−9, the kernel above); 1 − 2/(e^2\|x\| + 1) above; ±1 once 2\|x\| log2 e passes 240 | never |
 | `atanh` | FP256X2 | log1p(y)/2 for y = 2\|x\|/(1 − \|x\|): x R P from log1p's series below 2^−6; (log2(1 + \|x\|) − log2(1 − \|x\|)) ln 2 / 2 from the exact arguments above | `OutOfRange` for \|x\| ≥ 1 |

@@ -932,8 +932,10 @@ object "FP127" {
                 case 0 { r := isqrtw(shl(128, x)) }
                 default {
                     let sh := and(sub(255, msb(x)), not(1))
-                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
-                    r := shr(1, add(r, divu(x, r)))
+                    let z := shl(sh, x)
+                    let y := isqrtw(z)
+                    let k := sub(64, shr(1, sh))
+                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
                     let h, l := mul512(r, r)
                     if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
                 }
@@ -1139,50 +1141,52 @@ object "FP127" {
                 r := fp127_powu(fp127_add(0x100000000000000000000000000000000, rate), n)
             }
 
+            function cbrtw(z, y) -> r {
+                r := div(add(shl(1, y), div(z, mul(y, y))), 3)
+                r := div(add(shl(1, r), div(z, mul(r, r))), 3)
+                r := div(add(shl(1, r), div(z, mul(r, r))), 3)
+                r := div(add(shl(1, r), div(z, mul(r, r))), 3)
+                r := sub(r, gt(mul(r, r), div(z, r)))
+            }
+
+            function cube(y) -> h, l {
+                let p1, p0 := mul512(y, y)
+                let a1 := 0
+                a1, l := mul512(p0, y)
+                h := add(a1, mul(p1, y))
+            }
+
             function fp127_cbrt(x) -> r {
                 if iszero(x) { leave }
                 let ax := fp127_abs(x)
-                // log2|x| at 2^-192 in one word (log2g), its msb and log2m kept for l2p
                 let ms := msb(ax)
-                let y0 := 0
-                let v := shl(192, sub(ms, 128))
-                if and(ax, sub(ax, 1)) {
-                    let mm := shl(sub(192, ms), ax)
-                    if gt(ms, 192) { mm := shr(sub(ms, 192), ax) }
-                    y0 := log2m(mm)
-                    v := add(v, y0)
+                let sh := sub(255, ms)
+                sh := sub(sh, mod(sub(sh, 1), 3))
+                let z := shl(sh, ax)
+                let j := div(sub(256, sh), 3)
+                let e := sub(add(ms, sh), 253)
+                let l := add(0xbf5da1f0001eb537, shr(64, mul(0x428a2f98d728ae22, shr(add(189, e), z))))
+                let y := cbrtw(z, shr(42, mul(l, and(shr(shl(6, e), 0x80000000000000006597fa94f5b8f20b50a28be635ca2b89), 0xffffffffffffffff))))
+                let y2 := mul(y, y)
+                y := add(add(shl(j, y), div(shl(j, shr(2, sub(z, mul(y2, y)))), shr(2, mul(3, y2)))), 1)
+                let h := 0
+                h, l := cube(y)
+                for {} or(gt(h, ax), and(eq(h, ax), iszero(iszero(l)))) {} {
+                    y := sub(y, 1)
+                    h, l := cube(y)
                 }
-                // 2^(log2|x| / 3) in one word; the third's error is under 2^-145 / 3 + 2^-192
-                // (ay = 1). From |x| = 2^39 the result's 2^13 puts eb past 2^61: no try.
-                if lt(ms, 167) {
-                    let ok := 0
-                    r, ok := pow2t(sdiv(v, 3), 0x100000000000000000000000000000000)
-                    if ok {
-                        if slt(x, 0) { r := sub(0, r) }
-                        leave
-                    }
-                }
-                let lh, ll := l2p(ax, ms, y0)
-                // log2|x| = 3 q + rem + frac; the fraction of the third is (rem + frac) / 3
-                let li := sar(128, lh)
-                let q := sdiv(li, 3)
-                let t := sub(li, mul(q, 3))
-                if slt(t, 0) {
-                    t := add(t, 3)
-                    q := sub(q, 1)
-                }
-                // (rem + frac) 2^512 / 3 by long division on 128-bit limbs
-                t := or(shl(128, t), and(lh, 0xffffffffffffffffffffffffffffffff))
-                let d3 := div(t, 3)
-                t := or(shl(128, sub(t, mul(d3, 3))), shr(128, ll))
-                let d2 := div(t, 3)
-                t := or(shl(128, sub(t, mul(d2, 3))), and(ll, 0xffffffffffffffffffffffffffffffff))
-                let d1 := div(t, 3)
-                let d0 := div(shl(128, sub(t, mul(d1, 3))), 3)
-                let rh, rl := lnmul(or(shl(128, d3), d2), or(shl(128, d1), d0))
-                let sh, sl := expk(rh, rl)
-                let vh, vl := sc192(q, sh, sl)
-                r := rnd192(vh, vl)
+                // E = N - y^3 = (ax - h, -l) in two words; 8E against 12 y^2 + 6 y + 1
+                let eh := sub(sub(ax, h), iszero(iszero(l)))
+                let el := sub(0, l)
+                let p1, p0 := mul512(y, y)
+                let t1, t0 := mul512(p0, 12)
+                t1 := add(mul(12, p1), t1)
+                let u := add(mul(6, y), 1)
+                t0 := add(t0, u)
+                t1 := add(t1, lt(t0, u))
+                eh := or(shl(3, eh), shr(253, el))
+                el := shl(3, el)
+                r := add(y, or(gt(eh, t1), and(eq(eh, t1), iszero(lt(el, t0)))))
                 if slt(x, 0) { r := sub(0, r) }
             }
 

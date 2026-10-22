@@ -237,13 +237,13 @@ library FP256Lib {
             _r := fp256_mul(_a, _b)
         }
     }
-    /// @notice a / b: floor(ma 2^255 / mb) by two exact 2^128 stages, rounded once.
+    /// @notice a / b: floor(ma 2^255 / mb) by one exact 512-by-256 division, rounded once.
     function div(int256 _a, int256 _b) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -310,40 +310,27 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             _r := fp256_div(_a, _b)
         }
     }
     /// @notice sqrt(x): the significand shifted to an even exponent, its
-    ///         integer square root at 2^136 (Newton: a 256-bit seed, one
-    ///         2^128 stage, one 2^256 stage, corrected by squaring), rounded
-    ///         once. Never overflows or underflows.
+    ///         integer square root at 2^136 (Newton: the word root of the top
+    ///         256 bits, one residual step in a word, corrected by squaring),
+    ///         rounded once. Never overflows or underflows.
+    /// @dev floor(sqrt(N)) for N = n 2^256, n = m 2^(16 + odd) in [2^252, 2^254):
+    ///      Y = floor(sqrt(n)) is a 127-bit root (isqrt), y0 = Y 2^128 is
+    ///      below the root R by less than 2^128, and the Newton step from y0
+    ///      is y0 + (N - y0^2) / (2 y0) = y0 + (n - Y^2) 2^127 / Y: the
+    ///      residual n - Y^2 <= 2Y is a word, so one mul and one div replace
+    ///      the three 512-bit divu stages of release four. The step lands at or
+    ///      above R (AM-GM) and below R + (R - y0)^2 / (2 y0) < R + 2, its
+    ///      floor above R - 1, so the iterate is floor(R), + 1 or + 2 and the
+    ///      two 512-bit squarings step it back to the floor.
     function sqrt(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function gtsq(y, n) -> t {
                 let p0 := mul(y, y)
                 let mm := mulmod(y, y, not(0))
@@ -416,9 +403,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -1168,10 +1153,10 @@ library FP256Lib {
                 if s { t := sub(0, t) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -1189,9 +1174,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wdbl(eh, el) -> rh, rl {
@@ -1320,10 +1303,10 @@ library FP256Lib {
     ///         Shortcuts for y in {1, 2, 1/2, -1}.
     function pow(int256 _x, int256 _y) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -1390,9 +1373,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_mul(a, b) -> r {
@@ -1432,9 +1413,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -1920,9 +1899,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wadd(ah, al, bh, bl) -> rh, rl {
@@ -2511,10 +2488,10 @@ library FP256Lib {
                 m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -2532,9 +2509,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wdbl(eh, el) -> rh, rl {
@@ -3142,10 +3117,10 @@ library FP256Lib {
     ///         from |x| >= 13.
     function erf(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -3163,9 +3138,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function msb(x) -> r {
@@ -3908,10 +3881,10 @@ library FP256Lib {
     ///         error bound reaches the rounding boundary: correctly rounded.
     function erfc(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -3929,9 +3902,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function msb(x) -> r {
@@ -4677,10 +4648,10 @@ library FP256Lib {
     ///         one from x >= 13 sqrt 2.
     function normCdf(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -4698,9 +4669,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function msb(x) -> r {
@@ -5532,10 +5501,10 @@ library FP256Lib {
                 r := addsub(a, b, 0)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -5557,9 +5526,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_mul(a, b) -> r {
@@ -5599,9 +5566,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -5704,9 +5669,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mulw(a, b) -> r {
@@ -6245,10 +6208,10 @@ library FP256Lib {
                 r := addsub(a, b, 0)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -6270,9 +6233,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_mul(a, b) -> r {
@@ -6322,9 +6283,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -6427,9 +6386,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mulw(a, b) -> r {
@@ -6983,6 +6940,26 @@ library FP256Lib {
                 if x { r := xor(x, 0x8000000000000000000000000000000000000000000000000000000000000000) }
             }
 
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
             function unpack(x) -> s, e, m {
                 s := shr(255, x)
                 e := and(shr(236, x), 0x7ffff)
@@ -6999,9 +6976,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_mul(a, b) -> r {
@@ -7041,9 +7016,7 @@ library FP256Lib {
                 let odd := and(u, 1)
                 let n := shl(add(16, odd), m)
                 let y := isqrt(n)
-                y := shr(1, add(shl(128, y), divu(n, y)))
-                let qh := divu(n, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n, mul(y, y))), y))
                 if gtsq(y, n) { y := sub(y, 1) }
                 if gtsq(y, n) { y := sub(y, 1) }
                 r := normround(0, add(0x3ffff, sar(1, sub(u, odd))), y)
@@ -7518,9 +7491,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wadd(ah, al, bh, bl) -> rh, rl {
@@ -8164,10 +8135,10 @@ library FP256Lib {
                 if shr(237, absw(n)) { err := not(0) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -8185,9 +8156,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wadd(ah, al, bh, bl) -> rh, rl {
@@ -8855,10 +8824,10 @@ library FP256Lib {
                 r := sub(xor(x, m), m)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -8925,9 +8894,7 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
+                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
             }
 
             function fp256_fromFixed18(x) -> r {
@@ -9186,10 +9153,10 @@ library FP256Lib {
                 r := pack(s, e, m)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -9222,10 +9189,8 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
                 let s := xor(sa, sb)
-                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
+                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
             }
 
             function fp256_divDown(a, b) -> r {
@@ -9280,10 +9245,10 @@ library FP256Lib {
                 r := pack(s, e, m)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -9316,10 +9281,8 @@ library FP256Lib {
                 let sb, eb, mb := unpack(b)
                 if iszero(eb) { rev(0x23d359a3) }
                 if iszero(ea) { leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
                 let s := xor(sa, sb)
-                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
+                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
             }
 
             function fp256_divUp(a, b) -> r {
@@ -10187,13 +10150,13 @@ library FP256Lib {
             _r := fp256_zeroFloorSub(_a, _b)
         }
     }
-    /// @notice 1 / x: div's exact quotient, rounded once.
+    /// @notice 1 / x: div's exact quotient floor(2^491 / m), rounded once.
     function inv(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -10255,18 +10218,10 @@ library FP256Lib {
                 m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
             }
 
-            function fp256_div(a, b) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                if iszero(eb) { rev(0x23d359a3) }
-                if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
-            }
-
             function fp256_inv(x) -> r {
-                r := fp256_div(0x3ffff00000000000000000000000000000000000000000000000000000000000, x)
+                let s, e, m := unpack(x)
+                if iszero(e) { rev(0x23d359a3) }
+                r := normround(s, sub(0x7fffd, e), divh(0x100000000000000000000000000000000000000000000000000000000000, m))
             }
 
             _r := fp256_inv(_x)
@@ -11131,164 +11086,45 @@ library FP256Lib {
         }
     }
     /// @notice The cube root, cbrt(-x) = -cbrt(x): floor(cbrt(N)) of the
-    ///         significand scaled to N = m 2^(477 + rr), 714 to 716 bits, from a
-    ///         kernel seed corrected by exact three-word cubes, then rounded
-    ///         once. Exact for perfect cubes; never overflows.
+    ///         significand scaled to N = m 2^(477 + rr), 714 to 716 bits, by
+    ///         Newton with precision doubling (a seed from the top bits, four
+    ///         steps in one word to 85 bits, two residual steps to 170 and 239)
+    ///         and an exact three-word cube at the end, then rounded once.
+    ///         Exact for perfect cubes; never overflows.
+    /// @dev N = n 2^(3j) exactly, n = m 2^(18 + rr) (m 2^17 and j = 154 for
+    ///      rr = 2) in [2^253, 2^256), so with Y = floor(cbrt(n)) from cbrtw and
+    ///      y0 = Y 2^j the residual N - y0^3 = (n - Y^3) 2^(3j) has a word
+    ///      numerator n - Y^3 <= 3Y^2 + 3Y and the Newton step from below is
+    ///      y0 + (n - Y^3) 2^j / (3 Y^2): numerator and denominator are taken
+    ///      at 2^-72 (the denominator keeps 97 bits, so the quotient is within
+    ///      2^57 above the exact step, which is itself above the root R by
+    ///      under (R - y0)^2 / y0 < 2^71), plus one so y1 > R. The second step
+    ///      is y1 - (y1^3 - N) / (3 y1^2) with the exact three-word cube,
+    ///      numerator floored and denominator ceiled at 2^300 (E = y1^3 - N <
+    ///      3 y1^2 2^71 < 2^550), so y2 >= R stays above the root and under
+    ///      R + (y1 - R)^2 / y1 + 2^-105 + 1: y2 is ceil(R) or ceil(R) + 1, so
+    ///      one exact cube decides the floor: E = y2^3 - N is zero at the root,
+    ///      and y2 - R > 1 exactly when E > y2^3 - (y2 - 1)^3 = 3 y2^2 - 3 y2 + 1
+    ///      (E is under 7 R^2, two words).
     function cbrt(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
+            function cbrtseed(m, rr) -> y {
+                let l := add(0xbf5da1f0001eb537, shr(64, mul(0x428a2f98d728ae22, shr(172, m))))
+                y := shr(42, mul(l, and(shr(shl(6, rr), 0x50a28be635ca2b8980000000000000006597fa94f5b8f20b), 0xffffffffffffffff)))
+            }
+
+            function cbrtw(n, y) -> r {
+                r := div(add(shl(1, y), div(n, mul(y, y))), 3)
+                r := div(add(shl(1, r), div(n, mul(r, r))), 3)
+                r := div(add(shl(1, r), div(n, mul(r, r))), 3)
+                r := div(add(shl(1, r), div(n, mul(r, r))), 3)
+                r := sub(r, gt(mul(r, r), div(n, r)))
+            }
+
             function mul512(a, b) -> p1, p0 {
                 p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
                 p1 := sub(sub(mm, p0), lt(mm, p0))
-            }
-
-            function mulwu(a, b) -> r {
-                let p1, p0 := mul512(a, b)
-                r := or(shl(2, p1), shr(254, p0))
-            }
-
-            function exp2frac(f) -> r {
-                let x := and(f, 0x3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
-                r := 0xef15a4451ca23d12b30dfe18d411fa4ddfad5e
-                r := add(mulwu(r, x), 0x2245d31ff476d0c9b30c9334de63851af8c5d488)
-                r := add(mulwu(r, x), 0x4d46b4130787134f2a100f94c77c56ed31416a76b)
-                r := add(mulwu(r, x), 0xa73a8ad71927f01c2b655223d08c7d886ad653d9e1)
-                r := add(mulwu(r, x), 0x15acfad3732e67e3eb833ad1df1d51e455b9162ed161)
-                r := add(mulwu(r, x), 0x2aff8af07c0e85ac8a653c0ab487083b0cd9bd8c95642)
-                r := add(mulwu(r, x), 0x516b312d4144dcab4ef2cf7c79f553111a7f01bb0a7930)
-                r := add(mulwu(r, x), 0x92d3f65c1ae326d005819c8f5f4c0a9d81dcba6dad8512a)
-                r := add(mulwu(r, x), 0xfb8bb5eda1b4aeb99d7afbdec0f0b415b75127ab7911e36e)
-                r := add(mulwu(r, x), 0x198444b41c25a7d561d83a8cbe3d8980ac15c25e1cccecd1ce)
-                r := add(mulwu(r, x), 0x271d135cf3f1672471fc9dbc5618b80e2afe40ac27fc02788b8)
-                r := add(mulwu(r, x), 0x386dd087608043ccf62afe3524ff2ac6e0ed7fb23e766921b288)
-                r := add(mulwu(r, x), 0x4c52593561e2a5cfc50d89572bb8d9d9451308dba591d37ed4920)
-                r := add(mulwu(r, x), 0x605864c59b43e58a06b0c03dc6c670b3c410cc09a7f09024860f8d)
-                r := add(mulwu(r, x), 0x70ef5943f0a6178ad5a1f85e8bb9873c1c3a1b6f4210f27c95f2660)
-                r := add(mulwu(r, x), 0x7a32b1cd46ec9303d5e65791c85276e3d9cc30260527257f7d671652)
-                r := add(mulwu(r, x), 0x7933d4562e3b27dbf687654b9da67150304513747d41a3490ca9e84db)
-                r := add(mulwu(r, x), 0x6d494f4e579f0f6929c39693fe4228c65c6554dbdc44060f48666bac2f)
-                r := add(mulwu(r, x), 0x58b0088e97208ff63ff981b69df12c370d07b883d5efb0e18af5cb30c31)
-                r := add(mulwu(r, x), 0x3ff97f8b11618d0d62a3990fb1cd256708a9744087f72b707591e866cc73)
-                r := add(mulwu(r, x), 0x2861225f0d8f0ede9615130d64683e7d98a7fe6623dd82a4e1a6d15a077c0)
-                r := add(mulwu(r, x), 0x15d87fe78a673110717f69a514bec330576ca696e71970e466df389c1f9ecb)
-                r := add(mulwu(r, x), 0x9d955b7dd273b94e65df05a9f756283923c7529f31c88eb4cdb84c8e6d5e2f)
-                r := add(mulwu(r, x), 0x38d611ae09417f16674ec576657a5bdd3d711d113680443a3a98cc56eadaba4)
-                r := add(mulwu(r, x), 0xf5fdeffc162c754378b583764b9afe551d13a8e186734ea615f49ddd89cc7c5)
-                r := add(mulwu(r, x), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)
-                r := add(mulwu(r, x), 0x4000000000000000000000000000000000000000000000000000000000000000)
-                switch shr(250, f)
-                case 1 { r := mulwu(r, 0x42d561b3e6243d8a62e4adc610aa60d90a45022cf3ac28a8aea159b1578f742d) }
-                case 2 { r := mulwu(r, 0x45cae0f1f545eb737df23143ac529e480d5427fdf5d61a4fc8f09af74251fb9a) }
-                case 3 { r := mulwu(r, 0x48e1e9b9d588e19b07eb6c70572d64ec0ca159a40b7da79378901e57b2dfdcdd) }
-                case 4 { r := mulwu(r, 0x4c1bf828c6dc54b7a356918c17217b7b2f09cd0d8a7d40bc6bc5b2e5f7d3ddb8) }
-                case 5 { r := mulwu(r, 0x4f7a993048d088d6d0488f84f5dcfee8b2e0ae091099f15110fcbbff3e3fd08c) }
-                case 6 { r := mulwu(r, 0x52ff6b54d8a89c750e5ebfb10b88380d8ee8b856715e7e0b92c4e4c5414869f8) }
-                case 7 { r := mulwu(r, 0x56ac1f752150a56324c054647acd176235f204a0381a7ef6d8b2f8a0c19d33ed) }
-                case 8 { r := mulwu(r, 0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8b) }
-                case 9 { r := mulwu(r, 0x5e8451cfac061b5f54408fdb3687d7bd0ad9a5de5814c7a086cd25f011f67019) }
-                case 10 { r := mulwu(r, 0x62b39508aa836d6e9f156864b26ecf9bb587c9cccc128d1b63b4300372736049) }
-                case 11 { r := mulwu(r, 0x6712460a8fc24071f11ac1c7caf96376b7943085c61b242d15de9cc579ae03d0) }
-                case 12 { r := mulwu(r, 0x6ba27e656b4eb57a1cd345dcc8169fef0eb99d7a9102c58b5ae09d6d073bc14d) }
-                case 13 { r := mulwu(r, 0x70666f76154a7088832c4a8246e999e51125928d998490010e5cce9f8ff94c51) }
-                case 14 { r := mulwu(r, 0x75606373ee921c976816bad9b8372a7d627d567021dbfc8e0bec68f46518c405) }
-                case 15 { r := mulwu(r, 0x7a92be8a924366163dce863d76cc07e1b7a8818433bb84fadeec01949b255150) }
-            }
-
-            function mulw(a, b) -> r {
-                let p1, p0 := mul512(a, b)
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(2, p1), shr(254, p0))
-            }
-
-            function log2poly(f) -> r {
-                r := 0xfae0b8675497d903f5e4542ac3ac8663083462bdeaccf9dfa001a45ff5546ea4
-                r := add(mulw(r, f), 0x56e6ad0426b074a78f4695774d29dbbeb179d4d39005acd056f3e8e39322bcf)
-                r := add(mulw(r, f), 0xfa3aae26be852b5debd632905047f581fb7a76542a44f3db53dc746a1ee25cb9)
-                r := add(mulw(r, f), 0x627cec5a5334e620480f50409f14445c6bd87524c5bf6b71cc734050c24f117)
-                r := add(mulw(r, f), 0xf967a275614849b98209eb79f293c5dde48b35893c6e6b99cfb19171116df250)
-                r := add(mulw(r, f), 0x71a3d5a34c5d807383166248359d08e9e6a6cb6384e8e859f65e05ebf921953)
-                r := add(mulw(r, f), 0xf84e3d88f17f00a2d80fad799e2dc58ef76103db31157909de119f3d462b9170)
-                r := add(mulw(r, f), 0x864d424ca0116942b91d16680a2d5c0c11744f6cfa34e5797be9f7d971d833f)
-                r := add(mulw(r, f), 0xf6c449d7883200c369ac6675945867b028e9563704b8a68381f3cc6c431afa2e)
-                r := add(mulw(r, f), 0xa42589ebe01547c354071b63eba837883254261f73033c62bb1d97e0ee4fc66)
-                r := add(mulw(r, f), 0xf4755c4d6a3e80f444178012f96e2c17714ca49aee0222f21141a545623568d0)
-                r := add(mulw(r, f), 0xd30bb153d6f6c9fb22e490ee2efcd9c10cf642cef6810d6d6b6291ad3e3d7ec)
-                r := add(mulw(r, f), 0xf09c7b11e2fe0145b01f556ea1e83ac9ec636071ed9114aae3bb34557f978f73)
-                r := add(mulw(r, f), 0x12776c50ef9bfe792ca73314d74fb9741788bf77495755d1fc8f9a730dc08318)
-                r := add(mulw(r, f), 0xe8eab89ad47d01e8882f0025f2dc582ee29510aae452d4b4ee9d2c0c8de61dc3)
-                r := add(mulw(r, f), 0x1ec709dc3a03fd749fc15522bc2f8a6c27393f1c24e6e4641730d911aa9e7e7c)
-                r := add(mulw(r, f), 0xd1d57135a8fa03d1105e004be5b8b05dc52a2155c8a5a969dd36ba64cb97bfd3)
-                r := add(mulw(r, f), 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09924)
-                r := mulw(r, f)
-            }
-
-            function log2m(mm) -> r {
-                let acc := 0
-                if iszero(gt(0x5a827999fcef32422cbec4d9baa55f4f8eb7b05d449dd426768bd642c199cc8b, mm)) {
-                    mm := mulwu(mm, 0x2d413cccfe779921165f626cdd52afa7c75bd82ea24eea133b45eb2160cce645)
-                    acc := add(acc, 0x2000000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x4c1bf828c6dc54b7a356918c17217b7b2f09cd0d8a7d40bc6bc5b2e5f7d3ddb8, mm)) {
-                    mm := mulwu(mm, 0x35d13f32b5a75abd0e69a2ee640b4ff7875ccebd488162c5ad704eb6839de0a6)
-                    acc := add(acc, 0x1000000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x45cae0f1f545eb737df23143ac529e480d5427fdf5d61a4fc8f09af74251fb9a, mm)) {
-                    mm := mulwu(mm, 0x3ab031b9f7490e4bb40b5d6cdc1b953eb13eab3810edfe4705f6347a328c6203)
-                    acc := add(acc, 0x800000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x42d561b3e6243d8a62e4adc610aa60d90a45022cf3ac28a8aea159b1578f742d, mm)) {
-                    mm := mulwu(mm, 0x3d495f454921b30b1ee7431ebb6603f0dbd440c219ddc27d6f7600ca4d92a8a8)
-                    acc := add(acc, 0x400000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x4166c34c5615d0eb9f1523ada32905ff94f8d257df7d2ebe128178a8339bc50c, mm)) {
-                    mm := mulwu(mm, 0x3ea0ecb6dc8a80ce9f096ec50c575ff32001bf886a57453712112ca6fd2bc63a)
-                    acc := add(acc, 0x200000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x40b268f9de0183b9bdf2b293de8a6f7a4f5c28b2af172e26e8403ad60f900726, mm)) {
-                    mm := mulwu(mm, 0x3f4f83033d21b05d214fce964c783b80c186deeca16981e46748a16d9d53b758)
-                    acc := add(acc, 0x100000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x4058f6a7ecccd5b61299ab8cdb737e9000fb0130d82f890101e1aad65d26fa7d, mm)) {
-                    mm := mulwu(mm, 0x3fa784571ee3e212eb74966579e74bc25a4d3b15af8349510e9d48bb600e949f)
-                    acc := add(acc, 0x80000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x402c6be96af2fb584a6ac4fb04772551156e061fc325d07acee3808c8aa5c7cd, mm)) {
-                    mm := mulwu(mm, 0x3fd3b2d65447b2294c06e885fbc6375f0bd02615e55b51d7f6c5c51d1c0335cc)
-                    acc := add(acc, 0x40000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x4016321b687027a87fc674a533cbd9e71a2fc17ad8fd71071e858c6034bae0b1, mm)) {
-                    mm := mulwu(mm, 0x3fe9d59487236bb467ce86d23ee5316240c1edd208bf54566423ff662221bc13)
-                    acc := add(acc, 0x20000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x400b18178ba33b141b486ff22688e804201b0290b576b9f824dc7b8ee5524a11, mm)) {
-                    mm := mulwu(mm, 0x3ff4e9d4703df842f4ee7e2b804bef81a3ad7b351f76ca25dc72d54b267f0a74)
-                    acc := add(acc, 0x10000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x40058bce410147e84a2f2a71570c79781b774c4557f81b103b661bffcac2670b, mm)) {
-                    mm := mulwu(mm, 0x3ffa74acbdf6c9d5777c74a28de290e31bc14bd8ba0f98e48b94c35526e2b018)
-                    acc := add(acc, 0x8000000000000000000000000000000000000000000000000000000000000)
-                }
-                if iszero(gt(0x4002c5d7bff71dae8e38c59c72a4e5c99a518c38bd42e8cc4a2d9e530905beaa, mm)) {
-                    mm := mulwu(mm, 0x3ffd3a46ffc6e30f620ce383afca12937a074726c06dee1d9b0c021666c08c48)
-                    acc := add(acc, 0x4000000000000000000000000000000000000000000000000000000000000)
-                }
-                r := add(acc, log2poly(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)))
-            }
-
-            function cbrtseed(m, rr) -> y {
-                let g := div(add(shl(253, add(2, rr)), shr(1, log2m(shl(18, m)))), 3)
-                let ip := iszero(lt(g, 0x2000000000000000000000000000000000000000000000000000000000000000))
-                if ip { g := sub(g, 0x2000000000000000000000000000000000000000000000000000000000000000) }
-                y := shr(sub(17, ip), exp2frac(shl(1, g)))
-            }
-
-            function gt3(a2, a1, a0, b2, b1, b0) -> t {
-                t := gt(a2, b2)
-                if eq(a2, b2) {
-                    t := gt(a1, b1)
-                    if eq(a1, b1) { t := gt(a0, b0) }
-                }
             }
 
             function mul3(h, l, m) -> n2, n1, n0 {
@@ -11297,12 +11133,6 @@ library FP256Lib {
                 b1, n0 := mul512(l, m)
                 n1 := add(a0, b1)
                 n2 := add(a1, lt(n1, a0))
-            }
-
-            function cubegt(y, n2, n1, n0) -> t {
-                let p1, p0 := mul512(y, y)
-                let c2, c1, c0 := mul3(p1, p0, y)
-                t := gt3(c2, c1, c0, n2, n1, n0)
             }
 
             function msb(x) -> r {
@@ -11355,6 +11185,16 @@ library FP256Lib {
                 }
             }
 
+            function sub3(a2, a1, a0, b2, b1, b0) -> r2, r1, r0 {
+                r0 := sub(a0, b0)
+                let c := lt(a0, b0)
+                r1 := sub(a1, b1)
+                let c2 := lt(a1, b1)
+                c2 := or(c2, lt(r1, c))
+                r1 := sub(r1, c)
+                r2 := sub(sub(a2, b2), c2)
+            }
+
             function unpack(x) -> s, e, m {
                 s := shr(255, x)
                 e := and(shr(236, x), 0x7ffff)
@@ -11377,9 +11217,30 @@ library FP256Lib {
                     q := sub(q, 1)
                 }
                 let n2, n1, n0 := shl3(m, add(rr, 477))
-                let y := cbrtseed(m, rr)
-                for {} cubegt(y, n2, n1, n0) {} { y := sub(y, 1) }
-                for {} iszero(cubegt(add(y, 1), n2, n1, n0)) {} { y := add(y, 1) }
+                let j := 153
+                let sh := add(18, rr)
+                if eq(rr, 2) {
+                    j := 154
+                    sh := 17
+                }
+                let n := shl(sh, m)
+                let y := cbrtw(n, cbrtseed(m, rr))
+                let y2 := mul(y, y)
+                y := add(add(shl(j, y), div(shl(sub(j, 72), sub(n, mul(y2, y))), shr(72, mul(3, y2)))), 1)
+                let p1, p0 := mul512(y, y)
+                let c2, c1, c0 := mul3(p1, p0, y)
+                c2, c1, c0 := sub3(c2, c1, c0, n2, n1, n0)
+                let t1, t0 := mul512(p0, 3)
+                y := sub(y, div(or(shl(212, c2), shr(44, c1)), add(shr(44, add(mul(3, p1), t1)), 1)))
+                p1, p0 := mul512(y, y)
+                c2, c1, c0 := mul3(p1, p0, y)
+                c2, c1, c0 := sub3(c2, c1, c0, n2, n1, n0)
+                t1, t0 := mul512(p0, 3)
+                t1 := add(mul(3, p1), t1)
+                let u := sub(mul(3, y), 1)
+                t1 := sub(t1, lt(t0, u))
+                t0 := sub(t0, u)
+                y := sub(sub(y, iszero(iszero(or(c1, c0)))), or(gt(c1, t1), and(eq(c1, t1), gt(c0, t0))))
                 r := normround(s, add(q, 0x4005e), y)
             }
 
@@ -11391,26 +11252,6 @@ library FP256Lib {
     ///         root.
     function gavg(int256 _a, int256 _b) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function gtsq(y, n) -> t {
                 let p0 := mul(y, y)
                 let mm := mulmod(y, y, not(0))
@@ -11443,9 +11284,7 @@ library FP256Lib {
 
             function isqrtw(n1, n0) -> y {
                 y := isqrt(n1)
-                y := shr(1, add(shl(128, y), divu(n1, y)))
-                let qh := divu(n1, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n1), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n1, mul(y, y))), y))
                 if gtsq(y, n1) { y := sub(y, 1) }
                 if gtsq(y, n1) { y := sub(y, 1) }
                 for {} sqle(add(y, 1), n1, n0) {} { y := add(y, 1) }
@@ -11582,26 +11421,6 @@ library FP256Lib {
                 t1, t0 := wadd(x1, x0, y1, y0)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function gtsq(y, n) -> t {
                 let p0 := mul(y, y)
                 let mm := mulmod(y, y, not(0))
@@ -11628,9 +11447,7 @@ library FP256Lib {
 
             function isqrtw(n1, n0) -> y {
                 y := isqrt(n1)
-                y := shr(1, add(shl(128, y), divu(n1, y)))
-                let qh := divu(n1, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n1), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n1, mul(y, y))), y))
                 if gtsq(y, n1) { y := sub(y, 1) }
                 if gtsq(y, n1) { y := sub(y, 1) }
                 for {} sqle(add(y, 1), n1, n0) {} { y := add(y, 1) }
@@ -12597,10 +12414,10 @@ library FP256Lib {
                 if s { t := sub(0, t) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -12618,9 +12435,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function wadd(ah, al, bh, bl) -> rh, rl {
@@ -13120,10 +12935,10 @@ library FP256Lib {
                 r2 := sub(sub(a2, b2), c2)
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -13141,9 +12956,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function log2poly(f) -> r {
@@ -13413,10 +13226,10 @@ library FP256Lib {
     ///         exponentials in two words: correctly rounded.
     function sinh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -13434,9 +13247,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mul512(a, b) -> p1, p0 {
@@ -13914,10 +13725,10 @@ library FP256Lib {
     ///         one below 2^-118.
     function cosh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -13935,9 +13746,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mul512(a, b) -> p1, p0 {
@@ -14287,10 +14096,10 @@ library FP256Lib {
     ///         2|x| log2 e passes 240.
     function tanh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -14308,9 +14117,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mul512(a, b) -> p1, p0 {
@@ -14966,10 +14773,10 @@ library FP256Lib {
                 p2 := add(p2, lt(p1, c))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -14987,9 +14794,7 @@ library FP256Lib {
             }
 
             function div254(a, b) -> q {
-                let qh := divu(a, b)
-                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
-                q := add(shl(126, qh), shr(2, ql))
+                q := shr(1, divh(a, b))
             }
 
             function mulw(a, b) -> r {

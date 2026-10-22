@@ -103,10 +103,10 @@ object "FP256X3" {
                 p1 := sub(sub(mm, p0), lt(mm, p0))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+            function divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
                 prod1 := sub(prod1, gt(remainder, prod0))
                 prod0 := sub(prod0, remainder)
                 let twos := and(sub(0, b), b)
@@ -239,16 +239,6 @@ object "FP256X3" {
                 r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
             }
 
-            function fp256_div(a, b) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                if iszero(eb) { rev(0x23d359a3) }
-                if iszero(ea) { r := 0 leave }
-                let qh := divu(ma, mb)
-                let ql := divu(sub(shl(128, ma), mul(qh, mb)), mb)
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), or(shl(127, qh), shr(1, ql)))
-            }
-
             function isqrt(n) -> y {
                 y := 0x80000000000000000000000000000000
                 y := shr(1, add(y, div(n, y)))
@@ -353,7 +343,9 @@ object "FP256X3" {
             }
 
             function fp256_inv(x) -> r {
-                r := fp256_div(0x3ffff00000000000000000000000000000000000000000000000000000000000, x)
+                let s, e, m := unpack(x)
+                if iszero(e) { rev(0x23d359a3) }
+                r := normround(s, sub(0x7fffd, e), divh(0x100000000000000000000000000000000000000000000000000000000000, m))
             }
 
             function lput(p, a, b, t) {
@@ -725,9 +717,7 @@ object "FP256X3" {
 
             function isqrtw(n1, n0) -> y {
                 y := isqrt(n1)
-                y := shr(1, add(shl(128, y), divu(n1, y)))
-                let qh := divu(n1, y)
-                y := shr(1, add(y, or(shl(128, qh), divu(sub(shl(128, n1), mul(qh, y)), y))))
+                y := add(shl(128, y), div(shl(127, sub(n1, mul(y, y))), y))
                 if gtsq(y, n1) { y := sub(y, 1) }
                 if gtsq(y, n1) { y := sub(y, 1) }
                 for {} sqle(add(y, 1), n1, n0) {} { y := add(y, 1) }
