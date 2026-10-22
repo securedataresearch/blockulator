@@ -148,36 +148,95 @@ contract Sweep is Test {
         (, g) = this.f("noop", 0, 0, 0);
     }
 
-    function test_sweep_fp256() public {
-        this.runOne("fp256_add", true); this.runOne("fp256_mul", true); this.runOne("fp256_div", true); this.runOne("fp256_sqrt", false);
-        this.runOne("fp256_exp", false); this.runOne("fp256_ln", false); this.runOne("fp256_log1p", false); this.runOne("fp256_expm1", false);
-        this.runOne("fp256_pow", true); this.runOne("fp256_erf", false); this.runOne("fp256_erfc", false); this.runOne("fp256_normCdf", false);
-        this.runOne("fp256_compound", true); this.runOne("fp256_lambertW0", false);
-        // release four
-        this.runOne("fp256_lambertW0x", false); this.runOne("fp256_lambertWm1", false); this.runOne("fp256_powu", true);
-        this.runOne("fp256_expx", false); this.runOne("fp256_expm1x", false); this.runOne("fp256_log1px", false); this.runOne("fp256_powx", true);
-        this.runOne("fp256_compoundx", true); this.runOne("fp256_erfcx", false); this.runOne("fp256_normCdfx", false); this.runOne("fp256_powux", true);
-        this.runOne("fp256_mulDown", true); this.runOne("fp256_mulUp", true); this.runOne("fp256_divDown", true); this.runOne("fp256_divUp", true);
-        this.runOne("fp256_toUintDown", false); this.runOne("fp256_toUintUp", false); this.runOne("fp256_toIntDown", false); this.runOne("fp256_toIntUp", false);
-        this.runOne("fp256_floor", false); this.runOne("fp256_ceil", false); this.runOne("fp256_fromUintDown", false); this.runOne("fp256_fromUintUp", false);
-        this.runOne("fp256_toFixed18Down", false); this.runOne("fp256_toFixed18Up", false);
-        // #79
-        this.runOne("fp256_exp2", false); this.runOne("fp256_exp10", false); this.runOne("fp256_log2", false); this.runOne("fp256_log10", false);
-        this.runOne("fp256_log2Up", false); this.runOne("fp256_cbrt", false); this.runOne("fp256_sinh", false); this.runOne("fp256_cosh", false);
-        this.runOne("fp256_tanh", false); this.runOne("fp256_atanh", false); this.runOne("fp256_min", true); this.runOne("fp256_max", true);
-        this.runOne("fp256_avg", true); this.runOne("fp256_dist", true); this.runOne("fp256_zeroFloorSub", true); this.runOne("fp256_inv", false);
-        this.runOne("fp256_frac", false); this.runOne("fp256_round", false); this.runOne("fp256_gcd", true); this.runOne("fp256_factorial", false);
-        this.runOne("fp256_pi", false); this.runOne("fp256_gavg", true); this.runOne("fp256_hypot", true);
-        this.runOne3("fp256_clamp"); this.runOne3("fp256_lerp");
-    }
-
-    function test_sweep_fp127() public {
-        this.runOne("fp127_mul", true); this.runOne("fp127_div", true); this.runOne("fp127_sqrt", false); this.runOne("fp127_exp", false);
-        this.runOne("fp127_ln", false); this.runOne("fp127_log2", false); this.runOne("fp127_pow", true); this.runOne("fp127_cbrt", false);
-        this.runOne("fp127_expm1", false); this.runOne("fp127_erf", false); this.runOne("fp127_normCdf", false); this.runOne("fp127_compound", true);
-        this.runOne("fp127_lambertW0", false); this.runOne("fp127_lambertWm1", false);
-        this.runOne("fp127_exp2", false); this.runOne("fp127_exp10", false); this.runOne("fp127_log10", false); this.runOne("fp127_sinh", false);
-        this.runOne("fp127_cosh", false); this.runOne("fp127_tanh", false); this.runOne("fp127_powu", true); this.runOne("fp127_mulUp", true);
-        this.runOne("fp127_divUp", true); this.runOne("fp127_divDown", true); this.runOne("fp127_toFixed18Up", false);
-    }
+    // One test per op: forge runs test functions in parallel, and each op
+    // writes its own output file.
+    function test_fp256_add() public { this.runOne("fp256_add", true); }
+    function test_fp256_mul() public { this.runOne("fp256_mul", true); }
+    function test_fp256_div() public { this.runOne("fp256_div", true); }
+    function test_fp256_sqrt() public { this.runOne("fp256_sqrt", false); }
+    function test_fp256_exp() public { this.runOne("fp256_exp", false); }
+    function test_fp256_ln() public { this.runOne("fp256_ln", false); }
+    function test_fp256_log1p() public { this.runOne("fp256_log1p", false); }
+    function test_fp256_expm1() public { this.runOne("fp256_expm1", false); }
+    function test_fp256_pow() public { this.runOne("fp256_pow", true); }
+    function test_fp256_erf() public { this.runOne("fp256_erf", false); }
+    function test_fp256_erfc() public { this.runOne("fp256_erfc", false); }
+    function test_fp256_normCdf() public { this.runOne("fp256_normCdf", false); }
+    function test_fp256_compound() public { this.runOne("fp256_compound", true); }
+    function test_fp256_lambertW0() public { this.runOne("fp256_lambertW0", false); }
+    function test_fp256_lambertW0x() public { this.runOne("fp256_lambertW0x", false); }
+    function test_fp256_lambertWm1() public { this.runOne("fp256_lambertWm1", false); }
+    function test_fp256_powu() public { this.runOne("fp256_powu", true); }
+    function test_fp256_expx() public { this.runOne("fp256_expx", false); }
+    function test_fp256_expm1x() public { this.runOne("fp256_expm1x", false); }
+    function test_fp256_log1px() public { this.runOne("fp256_log1px", false); }
+    function test_fp256_powx() public { this.runOne("fp256_powx", true); }
+    function test_fp256_compoundx() public { this.runOne("fp256_compoundx", true); }
+    function test_fp256_erfcx() public { this.runOne("fp256_erfcx", false); }
+    function test_fp256_normCdfx() public { this.runOne("fp256_normCdfx", false); }
+    function test_fp256_powux() public { this.runOne("fp256_powux", true); }
+    function test_fp256_mulDown() public { this.runOne("fp256_mulDown", true); }
+    function test_fp256_mulUp() public { this.runOne("fp256_mulUp", true); }
+    function test_fp256_divDown() public { this.runOne("fp256_divDown", true); }
+    function test_fp256_divUp() public { this.runOne("fp256_divUp", true); }
+    function test_fp256_toUintDown() public { this.runOne("fp256_toUintDown", false); }
+    function test_fp256_toUintUp() public { this.runOne("fp256_toUintUp", false); }
+    function test_fp256_toIntDown() public { this.runOne("fp256_toIntDown", false); }
+    function test_fp256_toIntUp() public { this.runOne("fp256_toIntUp", false); }
+    function test_fp256_floor() public { this.runOne("fp256_floor", false); }
+    function test_fp256_ceil() public { this.runOne("fp256_ceil", false); }
+    function test_fp256_fromUintDown() public { this.runOne("fp256_fromUintDown", false); }
+    function test_fp256_fromUintUp() public { this.runOne("fp256_fromUintUp", false); }
+    function test_fp256_toFixed18Down() public { this.runOne("fp256_toFixed18Down", false); }
+    function test_fp256_toFixed18Up() public { this.runOne("fp256_toFixed18Up", false); }
+    function test_fp256_exp2() public { this.runOne("fp256_exp2", false); }
+    function test_fp256_exp10() public { this.runOne("fp256_exp10", false); }
+    function test_fp256_log2() public { this.runOne("fp256_log2", false); }
+    function test_fp256_log10() public { this.runOne("fp256_log10", false); }
+    function test_fp256_log2Up() public { this.runOne("fp256_log2Up", false); }
+    function test_fp256_cbrt() public { this.runOne("fp256_cbrt", false); }
+    function test_fp256_sinh() public { this.runOne("fp256_sinh", false); }
+    function test_fp256_cosh() public { this.runOne("fp256_cosh", false); }
+    function test_fp256_tanh() public { this.runOne("fp256_tanh", false); }
+    function test_fp256_atanh() public { this.runOne("fp256_atanh", false); }
+    function test_fp256_min() public { this.runOne("fp256_min", true); }
+    function test_fp256_max() public { this.runOne("fp256_max", true); }
+    function test_fp256_avg() public { this.runOne("fp256_avg", true); }
+    function test_fp256_dist() public { this.runOne("fp256_dist", true); }
+    function test_fp256_zeroFloorSub() public { this.runOne("fp256_zeroFloorSub", true); }
+    function test_fp256_inv() public { this.runOne("fp256_inv", false); }
+    function test_fp256_frac() public { this.runOne("fp256_frac", false); }
+    function test_fp256_round() public { this.runOne("fp256_round", false); }
+    function test_fp256_gcd() public { this.runOne("fp256_gcd", true); }
+    function test_fp256_factorial() public { this.runOne("fp256_factorial", false); }
+    function test_fp256_pi() public { this.runOne("fp256_pi", false); }
+    function test_fp256_gavg() public { this.runOne("fp256_gavg", true); }
+    function test_fp256_hypot() public { this.runOne("fp256_hypot", true); }
+    function test_fp256_clamp() public { this.runOne3("fp256_clamp"); }
+    function test_fp256_lerp() public { this.runOne3("fp256_lerp"); }
+    function test_fp127_mul() public { this.runOne("fp127_mul", true); }
+    function test_fp127_div() public { this.runOne("fp127_div", true); }
+    function test_fp127_sqrt() public { this.runOne("fp127_sqrt", false); }
+    function test_fp127_exp() public { this.runOne("fp127_exp", false); }
+    function test_fp127_ln() public { this.runOne("fp127_ln", false); }
+    function test_fp127_log2() public { this.runOne("fp127_log2", false); }
+    function test_fp127_pow() public { this.runOne("fp127_pow", true); }
+    function test_fp127_cbrt() public { this.runOne("fp127_cbrt", false); }
+    function test_fp127_expm1() public { this.runOne("fp127_expm1", false); }
+    function test_fp127_erf() public { this.runOne("fp127_erf", false); }
+    function test_fp127_normCdf() public { this.runOne("fp127_normCdf", false); }
+    function test_fp127_compound() public { this.runOne("fp127_compound", true); }
+    function test_fp127_lambertW0() public { this.runOne("fp127_lambertW0", false); }
+    function test_fp127_lambertWm1() public { this.runOne("fp127_lambertWm1", false); }
+    function test_fp127_exp2() public { this.runOne("fp127_exp2", false); }
+    function test_fp127_exp10() public { this.runOne("fp127_exp10", false); }
+    function test_fp127_log10() public { this.runOne("fp127_log10", false); }
+    function test_fp127_sinh() public { this.runOne("fp127_sinh", false); }
+    function test_fp127_cosh() public { this.runOne("fp127_cosh", false); }
+    function test_fp127_tanh() public { this.runOne("fp127_tanh", false); }
+    function test_fp127_powu() public { this.runOne("fp127_powu", true); }
+    function test_fp127_mulUp() public { this.runOne("fp127_mulUp", true); }
+    function test_fp127_divUp() public { this.runOne("fp127_divUp", true); }
+    function test_fp127_divDown() public { this.runOne("fp127_divDown", true); }
+    function test_fp127_toFixed18Up() public { this.runOne("fp127_toFixed18Up", false); }
 }
