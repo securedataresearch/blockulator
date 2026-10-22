@@ -9,29 +9,31 @@
 > a double by calling it.
 
 
-Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address in
+Current release: Blockulator 2.1 (FP127 v5 + FP256 release four, ladder v9),
+live on Sepolia since 2026-10-21, every address in
 /contracts/deployments/RELEASE.json.
 
 ## What it is
 
-- 49 operations: add, sub, mul, div, fromFixed18, toFixed18, exp, exp2,
+- 55 operations: add, sub, mul, div, fromFixed18, toFixed18, exp, exp2,
   exp10, ln, log2, log10, log2Up, sqrt, cbrt, pow, powu, compound, gavg,
   hypot, inv, abs, neg, sign, min, max, clamp, avg, zeroFloorSub, dist, lerp,
   floor, ceil, frac, round, gcd, factorial, lambertW0, lambertWm1, pi
   (Ramanujan's series, pi(terms): five terms give 36 digits, 230 ULP from
   pi; more add nothing),
   log1p, expm1, sinh, cosh, tanh, atanh, erf, erfc, normCdf (the standard
-  normal distribution function, the N(d) of Black-Scholes). powu, compound
-  and the last nine are new in the v4 object, live on Sepolia since
-  2026-10-15.
+  normal distribution function, the N(d) of Black-Scholes), and the
+  directed mulUp, mulDown, divUp, divDown, toFixed18Up, toFixed18Down, new
+  in the v5 object, live on Sepolia since 2026-10-21.
 - Encoding: every operand and result is an int256 holding value * 2**128.
   Decode by dividing by 2**128. Range about +/- 1.7e38.
 - Checked arithmetic: out-of-domain inputs revert with Overflow(),
   DivisionByZero() or OutOfRange(). Nothing wraps.
-- Validated against mpmath at 200 decimal places: integer and rounding
-  ops bit-exact; mul and sqrt round down and div toward zero, within one
-  ULP; ln, log2 and log10 within two ULP; exp, exp2 and exp10 146 bits or
-  better. The transcendentals round to nearest with 64 guard bits:
+- Validated against mpmath at 200 decimal places: add, sub, the
+  comparisons and floor, ceil, round, gcd, factorial exact; mul and sqrt round down and div toward zero, within
+  one ULP; every transcendental (exp, ln, pow, cbrt, Lambert W, erf, ...)
+  the nearest word, within half an ULP at every committed vector and on
+  1,500 to 4,000 random inputs per op, pow at extreme exponents excepted.
   exp(ln(x)) returns the same word for 10,000 steps.
   /data/precision.json
 - Machine-readable op table (signature, selector, domain, reverts):
@@ -41,8 +43,8 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
 
 - Network: Ethereum Sepolia, chainId 11155111
 - RPC: https://ethereum-sepolia-rpc.publicnode.com
-- FP127: 0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1 (CREATE2 through
-  0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v4"; record at
+- FP127: 0x619176d72D7a12390F8970802943D344c0fd3fE2 (CREATE2 through
+  0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v5"; record at
   /contracts/deployments/FP127.md and /data/fp127.json)
 - ABI: /data/abi.json. All functions are pure; selectors are in /data/ops.json.
 - Example: sqrt(2) is `sqrt(int256)` with 2 * 2**128 =
@@ -66,10 +68,9 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
   inputs; the methodology key says how each number is defined. Daily
   compounding, reference input, N = 365: FP127 36 digits (40 against the
   format truth), Solady and PRBMath 16, ABDK 17.
-- Any cell of the deployed release (FP127 v4, FP256 release three; the
-  datasets here describe FP127 v5 and FP256 release four, not yet deployed)
-  can be re-run on chain: LadderRunner at
-  0xEf689d3782490066fE911a6dD33357f59caE40fE (salt "FP127 ladder v8"),
+- Any cell can be re-run on chain against the deployed release (FP127 v5,
+  FP256 release four, the code the datasets describe): LadderRunner at
+  0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5 (salt "FP127 ladder v9"),
   run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok,
   int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal), with p
   the input's floored parameters from /data/ladder-inputs.json. Scenario
@@ -85,26 +86,29 @@ Current release: Blockulator 2.0 (FP127 v4 + FP256 v3, ladder v8), every address
   each cell with its digits or how the library had no answer (zero below
   its floor, revert, out of range, unsupported); /results/edges/ renders it;
   any cell re-runs through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
-  at 0x09b8fC41E872279A749a0221AE23D124079AcB44 (selector 0xf833b7d5) with
+  at 0xcA89eeA1831c38B62d2d3332ECbb8A57BaF246fF (selector 0xf833b7d5) with
   the arguments from /data/edge-inputs.json.
-- FP256 (/library/fp256/): a 256-bit binary float, release three: sign bit 255, a
+- FP256 (/library/fp256/): a 256-bit binary float, release four: sign bit 255, a
   19-bit biased exponent (bias 262143) in bits 254..236, a 236-bit fraction
-  with an implicit one; about 71 digits at any magnitude; no NaN, infinity
-  or subnormals (invalid words revert OutOfRange); 28 ops: add, sub, mul, div, sqrt, exp, ln, pow, log1p, expm1, erf, erfc, normCdf, lambertW0, lambertWm1, powu, compound, neg, abs, sign, cmp, lt, eq, fromUint, fromFP127, toFP127, fromFixed18, toFixed18. Ops table /data/fp256/ops.json, ABI
-  /data/fp256/abi.json, record /data/fp256/fp256.json; live on Sepolia at
-  0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be (salt "FP256 v3", the same
-  CREATE2 proxy), Sourcify and Blockscout verified. Release four (in the
-  source, not yet deployed) has 67 ops, each correctly rounded or exact, in
-  four objects: FP256 (arithmetic, the edge, exp, ln, pow, conversions),
-  FP256X (erf family, Lambert W), FP256X2 (exp2, exp10, log2, log10,
-  log2Up, cbrt, sinh, cosh, tanh, atanh) and FP256X3 (min, max, clamp, avg,
-  dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg,
-  hypot); predicted CREATE2 addresses
-  0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9,
-  0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0,
-  0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697 and
-  0x59D51481cb2EA924EC17FE263cd05b90CEF22383 (salts "FP256 v4",
-  "FP256X v4", "FP256X2 v4", "FP256X3 v4").
+  with an implicit one; about 71 digits at any magnitude, to 10^+-78,913; no
+  NaN, infinity or subnormals (invalid words revert OutOfRange). 67 ops,
+  each correctly rounded or exact, in four objects live on Sepolia since
+  2026-10-21 (the same CREATE2 proxy, Sourcify and Blockscout verified):
+  FP256 at 0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9 (salt "FP256 v4":
+  the arithmetic, the edge (mulDown, mulUp, divDown, divUp, toUintDown,
+  toUintUp, toIntDown, toIntUp, toFixed18Down, toFixed18Up, floor, ceil,
+  fromUintDown, fromUintUp), exp, ln, log1p, expm1, pow, powu, compound,
+  the comparisons and conversions), FP256X at
+  0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0 (salt "FP256X v4": erf, erfc,
+  normCdf, lambertW0, lambertWm1), FP256X2 at
+  0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697 (salt "FP256X2 v4": exp2,
+  exp10, log2, log10, log2Up, cbrt, sinh, cosh, tanh, atanh) and FP256X3 at
+  0x59D51481cb2EA924EC17FE263cd05b90CEF22383 (salt "FP256X3 v4": min, max,
+  clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial,
+  pi, gavg, hypot). Ops table /data/fp256/ops.json, FP256's ABI
+  /data/fp256/abi.json, record /data/fp256/fp256.json and
+  /contracts/deployments/FP256.md. Release three (28 ops, salt "FP256 v3")
+  stays live at 0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be.
 - /results/ the headline numbers, /results/ladder/ the ladder, /results/edges/ the cliffs,
   /results/ops/ gas and precision per op, /library/ address, ABI and the op table,
   /why/ the mechanism, /writeup/ the story.

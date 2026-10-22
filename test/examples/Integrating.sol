@@ -16,9 +16,9 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 //
 // The directed ops (FP127 mulUp, mulDown, divUp, divDown, toFixed18Up, toFixed18Down;
 // FP256 mulUp, mulDown, divUp, divDown, toUintUp, toUintDown, toIntUp, toIntDown,
-// toFixed18Up, toFixed18Down, floor, ceil) are in the source, FP127 v5 and FP256
-// release four. The deployed objects (FP127 v4, FP256 release three) do not have them
-// yet; FP127's floor and ceil are in v4.
+// toFixed18Up, toFixed18Down, floor, ceil) are in FP127 v5 and FP256 release four, deployed
+// (Blockulator 2.1) and inline; the older FP127 v4 and FP256 release three objects do not
+// have them, except FP127's floor and ceil.
 
 /// FP127 has no fromUint: an integer below 2^127 is `int256(x) << 128`.
 function q(uint256 x) pure returns (int256) {
