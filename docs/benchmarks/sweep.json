@@ -1585,6 +1585,25 @@
   },
   {
    "lib": "fp127",
+   "op": "erfc",
+   "n": 2000,
+   "status": {
+    "ok": 2000
+   },
+   "nearest": 2000,
+   "faithful": 2000,
+   "maxUlp": 0.49996960528410705,
+   "p99Ulp": 0.4956670764548165,
+   "medianUlp": 0.24747889113312907,
+   "minBits": 129.0,
+   "below": 1014,
+   "above": 937,
+   "gasMedian": 4755,
+   "gasP99": 21818,
+   "gasMax": 36433
+  },
+  {
+   "lib": "fp127",
    "op": "normCdf",
    "n": 2000,
    "status": {

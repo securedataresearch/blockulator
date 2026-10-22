@@ -67,7 +67,7 @@ WIDE256 = ["exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf", "comp
            "lambertWm1", "powu", "exp2", "exp10", "log2", "log10", "sinh", "cosh", "tanh", "atanh"]
 WIDE_N = 4000
 PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp", "toFixed18Down", "toFixed18Up"}
-OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "normCdf", "compound",
+OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "erfc", "normCdf", "compound",
           "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up"]
 TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
        "min", "max", "avg", "dist", "zeroFloorSub", "gcd", "gavg", "hypot"}
@@ -128,6 +128,9 @@ def gen():
     write("fp127_expm1", [f127(rng, 60, 134) for _ in range(S)])
     write("fp127_erf", [f127(rng, 100, 130) for _ in range(S // 2)])
     write("fp127_normCdf", [f127(rng, 100, 131) for _ in range(S // 2)])
+    # erfc joined the FP127 sweep for the second gas pass; its own stream keeps every other op's inputs
+    re = random.Random(SEED + 6)
+    write("fp127_erfc", [f127(re, 100, 131) for _ in range(S // 2)])
     write("fp127_compound", [f127(rng, 80, 123) for _ in range(S)], [rng.randint(1, 40_000_000) << 128 for _ in range(S)])
     # FP127 v5: the rest of the exponential family, the hyperbolics, powu and the directed edge ops
     rv = random.Random(SEED + 5)
@@ -338,6 +341,7 @@ def truth127(op, a, b):
         "cbrt": lambda: (mp.cbrt(x) if A >= 0 else -mp.cbrt(-x)) * ONE,
         "expm1": lambda: mp.expm1(x) * ONE,
         "erf": lambda: mp.erf(x) * ONE,
+        "erfc": lambda: mp.erfc(x) * ONE,
         "normCdf": lambda: mp.ncdf(x) * ONE,
         "compound": lambda: mp.power(1 + x, int(mp.floor(y))) * ONE,
         "exp2": lambda: mp.power(2, x) * ONE,
@@ -445,7 +449,7 @@ def score():
           "Gas is the inline library's (FP256Lib) own cost on these inputs, median / 99th "
           "percentile / largest, the second stage's runs included where the fast value's "
           "error bound reached the rounding boundary. *Fallback* is the share of inputs whose "
-          "rounding test fired (a dash: the op has none; Lambert W runs its wide step always).",
+          "rounding test fired (a dash: the op has none).",
           "",
           "| op | inputs | correctly rounded | misrounded | max ULP | gas median / p99 / max | fallback |",
           "|---|---:|---:|---:|---:|---:|---:|"]
