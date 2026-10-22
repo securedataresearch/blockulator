@@ -276,7 +276,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "Cube root, defined for all x: cbrt(-x) = -cbrt(x). Rounded to nearest; exact for perfect cubes.",
+      "notice": "Cube root, defined for all x: cbrt(-x) = -cbrt(x). Rounded to nearest (decided exactly); exact for perfect cubes.",
       "domain": "any x",
       "reverts": "Overflow() only at -2^255"
     },

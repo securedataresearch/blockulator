@@ -15,9 +15,26 @@ interface IFP256X2 {
     ///         power of two. Exact.
     function log2Up(int256 x) external pure returns (int256 r);
     /// @notice The cube root, cbrt(-x) = -cbrt(x): floor(cbrt(N)) of the
-    ///         significand scaled to N = m 2^(477 + rr), 714 to 716 bits, from a
-    ///         kernel seed corrected by exact three-word cubes, then rounded
-    ///         once. Exact for perfect cubes; never overflows.
+    ///         significand scaled to N = m 2^(477 + rr), 714 to 716 bits, by
+    ///         Newton with precision doubling (a seed from the top bits, four
+    ///         steps in one word to 85 bits, two residual steps to 170 and 239)
+    ///         and an exact three-word cube at the end, then rounded once.
+    ///         Exact for perfect cubes; never overflows.
+    /// @dev N = n 2^(3j) exactly, n = m 2^(18 + rr) (m 2^17 and j = 154 for
+    ///      rr = 2) in [2^253, 2^256), so with Y = floor(cbrt(n)) from cbrtw and
+    ///      y0 = Y 2^j the residual N - y0^3 = (n - Y^3) 2^(3j) has a word
+    ///      numerator n - Y^3 <= 3Y^2 + 3Y and the Newton step from below is
+    ///      y0 + (n - Y^3) 2^j / (3 Y^2): numerator and denominator are taken
+    ///      at 2^-72 (the denominator keeps 97 bits, so the quotient is within
+    ///      2^57 above the exact step, which is itself above the root R by
+    ///      under (R - y0)^2 / y0 < 2^71), plus one so y1 > R. The second step
+    ///      is y1 - (y1^3 - N) / (3 y1^2) with the exact three-word cube,
+    ///      numerator floored and denominator ceiled at 2^300 (E = y1^3 - N <
+    ///      3 y1^2 2^71 < 2^550), so y2 >= R stays above the root and under
+    ///      R + (y1 - R)^2 / y1 + 2^-105 + 1: y2 is ceil(R) or ceil(R) + 1, so
+    ///      one exact cube decides the floor: E = y2^3 - N is zero at the root,
+    ///      and y2 - R > 1 exactly when E > y2^3 - (y2 - 1)^3 = 3 y2^2 - 3 y2 + 1
+    ///      (E is under 7 R^2, two words).
     function cbrt(int256 x) external pure returns (int256 r);
     /// @notice 2^x: the integer part of x to the exponent, its fraction (exact
     ///         at 2^-254 from 2^-18 up) through the 2^f kernel, one rounding
