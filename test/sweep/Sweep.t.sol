@@ -103,6 +103,7 @@ contract Sweep is Test {
         if (op == "fp127_sinh") { g0 = gasleft(); r = FP127Lib.sinh(a); g = gasleft(); }
         if (op == "fp127_cosh") { g0 = gasleft(); r = FP127Lib.cosh(a); g = gasleft(); }
         if (op == "fp127_tanh") { g0 = gasleft(); r = FP127Lib.tanh(a); g = gasleft(); }
+        if (op == "fp127_atanh") { g0 = gasleft(); r = FP127Lib.atanh(a); g = gasleft(); }
         if (op == "fp127_powu") { g0 = gasleft(); r = FP127Lib.powu(a, b); g = gasleft(); }
         if (op == "fp127_mulUp") { g0 = gasleft(); r = FP127Lib.mulUp(a, b); g = gasleft(); }
         if (op == "fp127_divUp") { g0 = gasleft(); r = FP127Lib.divUp(a, b); g = gasleft(); }
@@ -236,6 +237,7 @@ contract Sweep is Test {
     function test_fp127_sinh() public { this.runOne("fp127_sinh", false); }
     function test_fp127_cosh() public { this.runOne("fp127_cosh", false); }
     function test_fp127_tanh() public { this.runOne("fp127_tanh", false); }
+    function test_fp127_atanh() public { this.runOne("fp127_atanh", false); }
     function test_fp127_powu() public { this.runOne("fp127_powu", true); }
     function test_fp127_mulUp() public { this.runOne("fp127_mulUp", true); }
     function test_fp127_divUp() public { this.runOne("fp127_divUp", true); }
