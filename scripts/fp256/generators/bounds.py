@@ -40,6 +40,8 @@ analysis is not off by a missed term.
   erf, erfc, normCdf    128 (y < 1/2)        2 x F's 52 (erfser's rounded terms, e^-y^2, products) + 1
                         192 (anchors)        2 x g's 81 (1.6 per Taylor term, 50 terms, anchor 0.5) + 8
                         32 n + 64 (CF)       A and B each gain 2^-251 relative per step: 2^5 n
+                        64 (y >= 18)         the asymptotic series' terms' floors at 2^-262, w's
+                                             2^-254, Q's 2 units, v's 6, two floors (under 48)
                         er >> -ee + 2        for the differences 1 - erfc, 2 - erfc
 """
 from __future__ import annotations
@@ -275,7 +277,7 @@ def run(n):
     for h, nm in ((0, "erfc"), (1, "normCdf")):
         for _ in range(n):
             r = rng.random()
-            x = rf(rng, -12, -2, 0) if r < 0.25 else (rf(rng, -1, 2, 0) if r < 0.75 else rf(rng, 2, 6, 0))
+            x = rf(rng, -12, -2, 0) if r < 0.2 else (rf(rng, -1, 2, 0) if r < 0.6 else (rf(rng, 2, 3, 0) if r < 0.8 else rf(rng, 4, 8, 0)))
             s, e, m = K.unpack(x)
             u = e - BIAS
             Y, uy = E.ystuff(u, m, h)
@@ -296,6 +298,8 @@ def run(n):
             anchors = uy <= 1 or (uy == 2 and Y < 3 << 253)
             if anchors:
                 err = 192
+            elif E.asym_regime(Y, uy):
+                err = 64
             else:
                 y2 = K.mulwu(Y, Y)
                 ey = 2 * uy
@@ -303,7 +307,7 @@ def run(n):
                     y2 >>= 1
                     ey += 1
                 err = 64 + 32 * (4400 // (y2 >> (254 - ey)) + 48)
-            region = "anchors" if anchors else "continued fraction"
+            region = "anchors" if anchors else ("asymptotic series" if E.asym_regime(Y, uy) else "continued fraction")
             M.add(f"{nm}, {region}", err, D, erfc(y) * power(2, 254 - ee))
             D2 = WS - (D >> -ee)
             M.add(f"1 - {nm}, {region}", (err >> -ee) + 2, D2, (1 - erfc(y)) * power(2, 254))
