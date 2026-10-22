@@ -1621,6 +1621,30 @@
   },
   {
    "lib": "fp127",
+   "op": "erfc",
+   "n": 2000,
+   "median": 4755,
+   "p99": 21818,
+   "max": 36433,
+   "helpers": {
+    "erfs": {
+     "callsPerInput": 0.94,
+     "inclusivePct": 84.9,
+     "exclusivePct": 84.9,
+     "gasPerCall": 5591
+    },
+    "erfcf": {
+     "callsPerInput": 0.032,
+     "inclusivePct": 10.2,
+     "exclusivePct": 10.2,
+     "gasPerCall": 20006
+    }
+   },
+   "probeCalls": 1942,
+   "residualPerCall": -8.0
+  },
+  {
+   "lib": "fp127",
    "op": "normCdf",
    "n": 2000,
    "median": 4952,

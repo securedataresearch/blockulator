@@ -203,7 +203,7 @@ def report():
           "- **fallback**: the share of inputs whose rounding test fired (FP256 `rbad`; FP127 the double-word `l2p` "
           "behind ln, log2, log10, pow and cbrt, and powu / compound's 512-bit `powus`), counted by a test-only copy of the library whose results "
           "match the committed one's word for word; a dash: the op has no such test (Lambert W in FP256 "
-          "runs its wide step, `lwfix`, every time);",
+          "tests its one-word step and runs the wide step, `lwfix`, only on a miss);",
           "- **helpers**: test-only gas probes around the named helpers. *exclusive* is a helper's gas without "
           "the probed helpers it calls, as a share of the op's total; *inclusive* counts them; the probes' own "
           "cost is taken out. Shares are over all inputs, so a fallback that runs rarely shows small.",

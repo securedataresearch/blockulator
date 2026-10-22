@@ -92,6 +92,7 @@ contract Sweep is Test {
         if (op == "fp127_cbrt") { g0 = gasleft(); r = FP127Lib.cbrt(a); g = gasleft(); }
         if (op == "fp127_expm1") { g0 = gasleft(); r = FP127Lib.expm1(a); g = gasleft(); }
         if (op == "fp127_erf") { g0 = gasleft(); r = FP127Lib.erf(a); g = gasleft(); }
+        if (op == "fp127_erfc") { g0 = gasleft(); r = FP127Lib.erfc(a); g = gasleft(); }
         if (op == "fp127_normCdf") { g0 = gasleft(); r = FP127Lib.normCdf(a); g = gasleft(); }
         if (op == "fp127_compound") { g0 = gasleft(); r = FP127Lib.compound(a, b); g = gasleft(); }
         if (op == "fp127_lambertW0") { g0 = gasleft(); r = FP127Lib.lambertW0(a); g = gasleft(); }
@@ -224,6 +225,7 @@ contract Sweep is Test {
     function test_fp127_cbrt() public { this.runOne("fp127_cbrt", false); }
     function test_fp127_expm1() public { this.runOne("fp127_expm1", false); }
     function test_fp127_erf() public { this.runOne("fp127_erf", false); }
+    function test_fp127_erfc() public { this.runOne("fp127_erfc", false); }
     function test_fp127_normCdf() public { this.runOne("fp127_normCdf", false); }
     function test_fp127_compound() public { this.runOne("fp127_compound", true); }
     function test_fp127_lambertW0() public { this.runOne("fp127_lambertW0", false); }
