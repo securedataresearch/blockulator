@@ -11067,8 +11067,10 @@ library FP256Lib {
     ///      is y1 - (y1^3 - N) / (3 y1^2) with the exact three-word cube,
     ///      numerator floored and denominator ceiled at 2^300 (E = y1^3 - N <
     ///      3 y1^2 2^71 < 2^550), so y2 >= R stays above the root and under
-    ///      R + (y1 - R)^2 / y1 + 2^-105 + 1: y2 is ceil(R) or ceil(R) + 1 and
-    ///      at most two exact cubes step down to the floor.
+    ///      R + (y1 - R)^2 / y1 + 2^-105 + 1: y2 is ceil(R) or ceil(R) + 1, so
+    ///      one exact cube decides the floor: E = y2^3 - N is zero at the root,
+    ///      and y2 - R > 1 exactly when E > y2^3 - (y2 - 1)^3 = 3 y2^2 - 3 y2 + 1
+    ///      (E is under 7 R^2, two words).
     function cbrt(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function cbrtseed(m, rr) -> y {
@@ -11084,14 +11086,6 @@ library FP256Lib {
                 r := sub(r, gt(mul(r, r), div(n, r)))
             }
 
-            function gt3(a2, a1, a0, b2, b1, b0) -> t {
-                t := gt(a2, b2)
-                if eq(a2, b2) {
-                    t := gt(a1, b1)
-                    if eq(a1, b1) { t := gt(a0, b0) }
-                }
-            }
-
             function mul512(a, b) -> p1, p0 {
                 p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -11104,12 +11098,6 @@ library FP256Lib {
                 b1, n0 := mul512(l, m)
                 n1 := add(a0, b1)
                 n2 := add(a1, lt(n1, a0))
-            }
-
-            function cubegt(y, n2, n1, n0) -> t {
-                let p1, p0 := mul512(y, y)
-                let c2, c1, c0 := mul3(p1, p0, y)
-                t := gt3(c2, c1, c0, n2, n1, n0)
             }
 
             function msb(x) -> r {
@@ -11209,7 +11197,15 @@ library FP256Lib {
                 c2, c1, c0 := sub3(c2, c1, c0, n2, n1, n0)
                 let t1, t0 := mul512(p0, 3)
                 y := sub(y, div(or(shl(212, c2), shr(44, c1)), add(shr(44, add(mul(3, p1), t1)), 1)))
-                for {} cubegt(y, n2, n1, n0) {} { y := sub(y, 1) }
+                p1, p0 := mul512(y, y)
+                c2, c1, c0 := mul3(p1, p0, y)
+                c2, c1, c0 := sub3(c2, c1, c0, n2, n1, n0)
+                t1, t0 := mul512(p0, 3)
+                t1 := add(mul(3, p1), t1)
+                let u := sub(mul(3, y), 1)
+                t1 := sub(t1, lt(t0, u))
+                t0 := sub(t0, u)
+                y := sub(sub(y, iszero(iszero(or(c1, c0)))), or(gt(c1, t1), and(eq(c1, t1), gt(c0, t0))))
                 r := normround(s, add(q, 0x4005e), y)
             }
 

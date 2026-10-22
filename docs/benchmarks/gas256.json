@@ -2,7 +2,7 @@
  "generated": "2026-10-22",
  "description": "Gas per FP256 op across an input ladder: the object (staticcall), the inline library, the same op in FP127Lib on the same value where it fits, and ABDKMathQuad. null = reverted or unsupported. summary holds min/median/max per form. The internal forms are the library call alone, timed inside the harness's entry point net of its dispatch. typical (where present) is the same over random inputs that take no shortcut.",
  "versions": {
-  "fp127": "685f273",
+  "fp127": "a45a214",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -371,20 +371,20 @@
    ],
    "gas": {
     "yul": [
-     4003,
-     3855,
-     4005,
-     4007,
-     3922,
-     4009
+     3643,
+     3582,
+     3645,
+     3672,
+     3648,
+     3649
     ],
     "lib": [
-     3597,
-     3517,
-     3597,
-     3601,
-     3555,
-     3597
+     3092,
+     3054,
+     3092,
+     3105,
+     3092,
+     3092
     ],
     "fp127lib": [
      2151,
@@ -405,14 +405,14 @@
    },
    "summary": {
     "yul": {
-     "min": 3855,
-     "median": 4004,
-     "max": 4009
+     "min": 3582,
+     "median": 3646,
+     "max": 3672
     },
     "lib": {
-     "min": 3517,
-     "median": 3597,
-     "max": 3601
+     "min": 3054,
+     "median": 3092,
+     "max": 3105
     },
     "fp127lib": {
      "min": 2132,
@@ -434,24 +434,24 @@
     ],
     "gas": {
      "yul": [
-      4129,
-      4043,
-      4044,
-      4046,
-      4135,
-      4049,
-      4050,
-      4115
+      3794,
+      3709,
+      3710,
+      3712,
+      3800,
+      3715,
+      3716,
+      3780
      ],
      "lib": [
-      3601,
-      3550,
-      3550,
-      3550,
-      3601,
-      3550,
-      3550,
-      3588
+      3105,
+      3054,
+      3054,
+      3054,
+      3105,
+      3054,
+      3054,
+      3092
      ],
      "fp127lib": [
       2187,
@@ -476,14 +476,14 @@
     },
     "summary": {
      "yul": {
-      "min": 4043,
-      "median": 4049,
-      "max": 4135
+      "min": 3709,
+      "median": 3715,
+      "max": 3800
      },
      "lib": {
-      "min": 3550,
-      "median": 3550,
-      "max": 3601
+      "min": 3054,
+      "median": 3054,
+      "max": 3105
      },
      "fp127lib": {
       "min": 101,

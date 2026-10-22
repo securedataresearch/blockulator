@@ -31,8 +31,10 @@ interface IFP256X2 {
     ///      is y1 - (y1^3 - N) / (3 y1^2) with the exact three-word cube,
     ///      numerator floored and denominator ceiled at 2^300 (E = y1^3 - N <
     ///      3 y1^2 2^71 < 2^550), so y2 >= R stays above the root and under
-    ///      R + (y1 - R)^2 / y1 + 2^-105 + 1: y2 is ceil(R) or ceil(R) + 1 and
-    ///      at most two exact cubes step down to the floor.
+    ///      R + (y1 - R)^2 / y1 + 2^-105 + 1: y2 is ceil(R) or ceil(R) + 1, so
+    ///      one exact cube decides the floor: E = y2^3 - N is zero at the root,
+    ///      and y2 - R > 1 exactly when E > y2^3 - (y2 - 1)^3 = 3 y2^2 - 3 y2 + 1
+    ///      (E is under 7 R^2, two words).
     function cbrt(int256 x) external pure returns (int256 r);
     /// @notice 2^x: the integer part of x to the exponent, its fraction (exact
     ///         at 2^-254 from 2^-18 up) through the 2^f kernel, one rounding

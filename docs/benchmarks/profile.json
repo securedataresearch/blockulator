@@ -1012,31 +1012,25 @@
    "lib": "fp256",
    "op": "cbrt",
    "n": 4000,
-   "median": 3575,
-   "p99": 3601,
-   "max": 3601,
+   "median": 3079,
+   "p99": 3105,
+   "max": 3105,
    "helpers": {
     "cbrtseed": {
      "callsPerInput": 1.0,
-     "inclusivePct": 2.4,
-     "exclusivePct": 2.4,
+     "inclusivePct": 2.8,
+     "exclusivePct": 2.8,
      "gasPerCall": 86
     },
     "cbrtw": {
      "callsPerInput": 1.0,
-     "inclusivePct": 7.3,
-     "exclusivePct": 7.3,
+     "inclusivePct": 8.5,
+     "exclusivePct": 8.5,
      "gasPerCall": 261
-    },
-    "cubegt": {
-     "callsPerInput": 2.0,
-     "inclusivePct": 34.4,
-     "exclusivePct": 34.4,
-     "gasPerCall": 615
     }
    },
-   "probeCalls": 16000,
-   "residualPerCall": 2.0
+   "probeCalls": 8000,
+   "residualPerCall": -3.0
   },
   {
    "lib": "fp256",
@@ -3086,10 +3080,10 @@
   {
    "lib": "fp256",
    "op": "cbrt",
-   "inlineLegacy": 3536,
-   "inlineViaIr": 3083,
-   "object": 3999,
-   "objectNet": 3186,
+   "inlineLegacy": 3040,
+   "inlineViaIr": 2749,
+   "object": 3665,
+   "objectNet": 2852,
    "selectorRank": 7
   },
   {

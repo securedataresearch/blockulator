@@ -849,20 +849,6 @@ object "FP256X2" {
                 r := fromint(u)
             }
 
-            function gt3(a2, a1, a0, b2, b1, b0) -> t {
-                t := gt(a2, b2)
-                if eq(a2, b2) {
-                    t := gt(a1, b1)
-                    if eq(a1, b1) { t := gt(a0, b0) }
-                }
-            }
-
-            function cubegt(y, n2, n1, n0) -> t {
-                let p1, p0 := mul512(y, y)
-                let c2, c1, c0 := mul3(p1, p0, y)
-                t := gt3(c2, c1, c0, n2, n1, n0)
-            }
-
             function cbrtseed(m, rr) -> y {
                 let l := add(0xbf5da1f0001eb537, shr(64, mul(0x428a2f98d728ae22, shr(172, m))))
                 y := shr(42, mul(l, and(shr(shl(6, rr), 0x50a28be635ca2b8980000000000000006597fa94f5b8f20b), 0xffffffffffffffff)))
@@ -902,7 +888,15 @@ object "FP256X2" {
                 c2, c1, c0 := sub3(c2, c1, c0, n2, n1, n0)
                 let t1, t0 := mul512(p0, 3)
                 y := sub(y, div(or(shl(212, c2), shr(44, c1)), add(shr(44, add(mul(3, p1), t1)), 1)))
-                for {} cubegt(y, n2, n1, n0) {} { y := sub(y, 1) }
+                p1, p0 := mul512(y, y)
+                c2, c1, c0 := mul3(p1, p0, y)
+                c2, c1, c0 := sub3(c2, c1, c0, n2, n1, n0)
+                t1, t0 := mul512(p0, 3)
+                t1 := add(mul(3, p1), t1)
+                let u := sub(mul(3, y), 1)
+                t1 := sub(t1, lt(t0, u))
+                t0 := sub(t0, u)
+                y := sub(sub(y, iszero(iszero(or(c1, c0)))), or(gt(c1, t1), and(eq(c1, t1), gt(c0, t0))))
                 r := normround(s, add(q, 0x4005e), y)
             }
 
