@@ -325,12 +325,11 @@ def div254(a, b):
     return (a << 254) // b
 
 
-def hser(x2, b):
-    t = WS
-    for k in range(25, 0, -1):
-        j = 2 * k + b
-        t = WS + K.mulwu(x2, t) // (j * (j - 1))
-    return t
+def em1k(ker, u, m):
+    """e^|x| - 1 at 2^-254 from the kernel, as the Yul's em1k."""
+    k, f = ker.explog2(u, m)
+    kk, v = ker.exp2kv(0, k, f)
+    return (v << kk) - WS
 
 
 def onep(s, u, m):
@@ -352,11 +351,16 @@ def run79(ker, rng, M, n):
       log2, kernel          38   log2m 37, the shift into Lm 1
       log10, near one       8    ln's D within 5, times log10 e: 5 log10 e + 2
       log10, kernel         16   (37 + 1) log10 2 + 2
-      sinh, |x| < 1/2       8    the series within 3 units: 2 x 3 + 1
+      sinh, |x| < 2^-8      18   expm1's series T within 2.5 (|x|'s floor), |x| T within 2.1,
+                                 the quotient T/(1 + |x| T) within 5.6, the sum 8.1: 2 x 8.1 + 1
+      sinh, to 1/2          14   U = e^|x| - 1 from the kernel within 6, U/(1 + U) within 7
       sinh, cosh, kernel    16   v within 6; 2^508/v within 7, one more for the shift
-      tanh, |x| < 1/2       16   each series within 3, the quotient within 7: 2 x 7 + 1
+      tanh, |x| < 2^-9      14   T within 3 (2|x|'s floor), |x| T within 2.1, the quotient
+                                 within 6.1: 2 x 6.1 + 1
+      tanh, to 1/2          8    U = e^2|x| - 1 within 12, U/(U + 2) has slope under 1/2: 6 + 1
       tanh, kernel          8    2/(V + 1) within 6 x 0.54 + 2
-      atanh, |x| < 2^-4     12   each series within 3, the mean 3.5: 2 x 3.5 + 1
+      atanh, |x| < 2^-6     18   R = 1/(1 - |x|) within 2.1, y = 2|x|R within 4.2, log1p's
+                                 series P within 3 + 2.1, R P within 8.3: 2 x 8.3 + 1
       atanh, kernel         32   two log2m within 37 each, the shift halves: 38 ln 2 + 2
       cbrt seed             2    the seed within two of floor(cbrt N); exact cubes then fix it
     """
@@ -406,10 +410,20 @@ def run79(ker, rng, M, n):
         u = e - BIAS
         xv = abs(dec(x))
         if u < -1:
-            x2 = (m * m) >> (218 - 2 * u)
-            S, C = hser(x2, 1), hser(x2, 0)
-            M.add("sinh, |x| < 1/2", 8, (m * S) >> 236, mp.sinh(xv) * power(2, 254 - u))
-            M.add("tanh, |x| < 1/2", 16, (m * div254(S, C)) >> 236, mp.tanh(xv) * power(2, 254 - u))
+            df = ker.tofixed254(0, u, m)
+            if u < -8:
+                T = ker.expm1series(df)
+                q = div254(T, WS + K.mulwu(df, T))
+                M.add("sinh, |x| < 2^-8", 18, (m * (T + q)) >> 236, 2 * mp.sinh(xv) * power(2, 254 - u))
+            else:
+                U = em1k(ker, u, m)
+                M.add("sinh, to 1/2", 14, U + div254(U, U + WS), 2 * mp.sinh(xv) * power(2, 254))
+            if u < -9:
+                T = ker.expm1series(2 * df)
+                M.add("tanh, |x| < 2^-9", 14, (m * div254(T, WS + K.mulwu(df, T))) >> 236, mp.tanh(xv) * power(2, 254 - u))
+            else:
+                U = em1k(ker, u + 1, m)
+                M.add("tanh, to 1/2", 8, div254(U, U + 2 * WS), mp.tanh(xv) * power(2, 254))
             continue
         k, f = ker.explog2(u, m)
         kk, v = ker.exp2kv(0, k, f)
@@ -427,11 +441,12 @@ def run79(ker, rng, M, n):
         s, e, m = K.unpack(x)
         u = e - BIAS
         xv = abs(dec(x))
-        if u < -4:
-            df = ker.tofixed254(0, u, m)
-            t = K.SERIES_TERMS if u < -8 else K.WIDE_TERMS
-            p = ker.ln1pseries(df, t) + ker.ln1pseries((-df) & K.MASK, t)
-            M.add("atanh, |x| < 2^-4", 12, (m * (p >> 1)) >> 236, mp.atanh(xv) * power(2, 254 - u))
+        if u < -6:
+            xf = ker.tofixed254(0, u, m)
+            Rr = div254(WS, WS - xf)
+            y = 2 * K.mulwu(xf, Rr)
+            P = ker.ln1pseries(y, K.SERIES_TERMS if u < -10 else K.WIDE_TERMS)
+            M.add("atanh, |x| < 2^-6", 18, (m * K.mulwu(Rr, P)) >> 236, mp.atanh(xv) * power(2, 254 - u))
             continue
         uu1, a1 = onep(0, u, m)
         uu2, a2 = onep(1, u, m)
