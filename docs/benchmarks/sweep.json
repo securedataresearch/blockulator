@@ -1,5 +1,5 @@
 {
- "_doc": "Random-input accuracy sweep of the inline FP127 and FP256 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n\nRelease four adds the directed ops, powu and lambertWm1, and a second pass: the\nsame inputs (the first 4,000 of each) through a test-only copy of FP256Lib whose\nrounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly\nrounded op returns its wide second stage. That pass is generated into\ntest/sweep/wide/ (not committed) and removed after the run.\n\nA third pass runs every op on all its inputs through test-only copies of FP256Lib\nand FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:\nFP256's rbad firing, FP127's double-word l2p and powu's 512-bit powus), generated into\ntest/sweep/count/ and removed after the run: the *fallback* column is the share of\ninputs that left the fast path. Its results must equal the plain pass's word for word.\n\nGas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of\nthe one call, after its dispatch, and subtracts the same window around an assignment.\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.",
+ "_doc": "Random-input accuracy sweep of the inline FP127 and FP256 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n    uv run scripts/sweep/sweep.py --ops cosh,sinh   # only those ops (both libraries, both passes);\n                                           # their rows replace the ones in sweep.json, the rest stay\n                                           # (the second-stage gas can differ by a unit: the generated\n                                           # runner is a smaller contract; the re-baseline runs everything)\n\nRelease four adds the directed ops, powu and lambertWm1, and a second pass: the\nsame inputs (the first 4,000 of each) through a test-only copy of FP256Lib whose\nrounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly\nrounded op returns its wide second stage. That pass is generated into\ntest/sweep/wide/ (not committed) and removed after the run.\n\nA third pass runs every op on all its inputs through test-only copies of FP256Lib\nand FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:\nFP256's rbad firing, FP127's double-word l2p and powu's 512-bit powus), generated into\ntest/sweep/count/ and removed after the run: the *fallback* column is the share of\ninputs that left the fast path. Its results must equal the plain pass's word for word.\n\nGas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of\nthe one call, after its dispatch, and subtracts the same window around an assignment.\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.",
  "seed": 20261020,
  "seedLambert": 7,
  "rows": [
@@ -189,7 +189,7 @@
     "0": 4000
    },
    "gasMedian": 17615,
-   "gasP99": 82692,
+   "gasP99": 72369,
    "gasMax": 94932,
    "fallback": 4,
    "fallbackRuns": 4,
@@ -208,9 +208,9 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 34260,
-   "gasP99": 85575,
-   "gasMax": 428233,
+   "gasMedian": 27603,
+   "gasP99": 75305,
+   "gasMax": 417315,
    "fallback": 33,
    "fallbackRuns": 33,
    "fallbackPct": 0.55
@@ -228,9 +228,9 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 30851,
-   "gasP99": 85231,
-   "gasMax": 425959,
+   "gasMedian": 27723,
+   "gasP99": 76074,
+   "gasMax": 415170,
    "fallback": 41,
    "fallbackRuns": 41,
    "fallbackPct": 0.683
@@ -687,12 +687,12 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 8698,
-   "gasP99": 8711,
-   "gasMax": 8723,
-   "fallback": 0,
-   "fallbackRuns": 0,
-   "fallbackPct": 0.0
+   "gasMedian": 8388,
+   "gasP99": 8663,
+   "gasMax": 36816,
+   "fallback": 1,
+   "fallbackRuns": 1,
+   "fallbackPct": 0.013
   },
   {
    "lib": "fp256",
@@ -727,12 +727,12 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 16368,
-   "gasP99": 16381,
-   "gasMax": 16381,
-   "fallback": 0,
-   "fallbackRuns": 0,
-   "fallbackPct": 0.0
+   "gasMedian": 8411,
+   "gasP99": 8675,
+   "gasMax": 60582,
+   "fallback": 1,
+   "fallbackRuns": 1,
+   "fallbackPct": 0.013
   },
   {
    "lib": "fp256",
@@ -747,12 +747,12 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 16972,
-   "gasP99": 32024,
+   "gasMedian": 13973,
+   "gasP99": 18146,
    "gasMax": 74388,
-   "fallback": 7,
-   "fallbackRuns": 7,
-   "fallbackPct": 0.087
+   "fallback": 17,
+   "fallbackRuns": 17,
+   "fallbackPct": 0.212
   },
   {
    "lib": "fp256",
@@ -886,9 +886,9 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 12024,
-   "gasP99": 12841,
-   "gasMax": 12896
+   "gasMedian": 7894,
+   "gasP99": 8546,
+   "gasMax": 9062
   },
   {
    "lib": "fp256",
@@ -1119,8 +1119,8 @@
    },
    "stage": "second",
    "gasMedian": 100995,
-   "gasP99": 427769,
-   "gasMax": 430120
+   "gasP99": 416836,
+   "gasMax": 419211
   },
   {
    "lib": "fp256",
@@ -1136,9 +1136,9 @@
     "0": 6000
    },
    "stage": "second",
-   "gasMedian": 112730,
-   "gasP99": 427268,
-   "gasMax": 430138
+   "gasMedian": 108957,
+   "gasP99": 416317,
+   "gasMax": 419349
   },
   {
    "lib": "fp256",
@@ -1154,9 +1154,9 @@
     "0": 6000
    },
    "stage": "second",
-   "gasMedian": 105415,
-   "gasP99": 393134,
-   "gasMax": 429017
+   "gasMedian": 102031,
+   "gasP99": 382231,
+   "gasMax": 418186
   },
   {
    "lib": "fp256",
@@ -1320,9 +1320,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 14829,
-   "gasP99": 43668,
-   "gasMax": 43674
+   "gasMedian": 14372,
+   "gasP99": 43471,
+   "gasMax": 43570
   },
   {
    "lib": "fp256",
@@ -1356,9 +1356,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 30817,
-   "gasP99": 88493,
-   "gasMax": 88493
+   "gasMedian": 22682,
+   "gasP99": 80639,
+   "gasMax": 80804
   },
   {
    "lib": "fp256",
@@ -1374,9 +1374,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 21484,
-   "gasP99": 73615,
-   "gasMax": 82494
+   "gasMedian": 15153,
+   "gasP99": 72457,
+   "gasMax": 73969
   },
   {
    "lib": "fp127",
@@ -1537,7 +1537,7 @@
    "minBits": 129.3,
    "below": 1986,
    "above": 2007,
-   "gasMedian": 6025,
+   "gasMedian": 6024,
    "gasP99": 16189,
    "gasMax": 18449,
    "fallback": 1478,
