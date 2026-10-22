@@ -4,6 +4,10 @@ correctly rounded truth.
 
     uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score
     uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only
+    uv run scripts/sweep/sweep.py --ops cosh,sinh   # only those ops (both libraries, both passes);
+                                           # their rows replace the ones in sweep.json, the rest stay
+                                           # (the second-stage gas can differ by a unit: the generated
+                                           # runner is a smaller contract; the re-baseline runs everything)
 
 Release four adds the directed ops, powu and lambertWm1, and a second pass: the
 same inputs (the first 4,000 of each) through a test-only copy of FP256Lib whose
@@ -67,6 +71,20 @@ WIDE256 = ["exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf", "comp
            "lambertWm1", "powu", "exp2", "exp10", "log2", "log10", "sinh", "cosh", "tanh", "atanh"]
 WIDE_N = 4000
 PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp", "toFixed18Down", "toFixed18Up"}
+SEL: set[str] | None = None   # --ops: the ops to run and re-score; None is all of them
+
+
+def selected(op: str) -> bool:
+    return SEL is None or op in SEL
+
+
+def match_tests() -> list[str]:
+    """forge's --match-test for the selected ops (every test when all are selected)."""
+    if SEL is None:
+        return []
+    return ["--match-test", "^test_(noop|(fp256|fp127)_(" + "|".join(sorted(SEL)) + ")x?)$"]
+
+
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "erfc", "normCdf", "compound",
           "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up"]
 TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
@@ -414,22 +432,32 @@ def score():
     rows = []
     with mpc.Pool() as pool:
         for op in OPS256:
+            if not selected(op):
+                continue
             data = load(f"fp256_{op}")
             res = pool.map(job256, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=64)
             rows.append(dict(summarize256(op, res), **gasstats([g for *_, g in data]), **fallback("fp256", op, data)))
             print(json.dumps(rows[-1]), flush=True)
         for op in WIDE256:
-            if not (D / f"wide_{op}.out").exists():
+            if not selected(op) or not (D / f"wide_{op}.out").exists():
                 continue
             data = load(f"wide_{op}")
             res = pool.map(job256, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=16)
             rows.append(dict(summarize256(op, res), stage="second", **gasstats([g for *_, g in data])))
             print(json.dumps(rows[-1]), flush=True)
         for op in OPS127 + ["lambertW0", "lambertWm1"]:
+            if not selected(op):
+                continue
             data = load(f"fp127_{op}")
             res = pool.map(job127, [(op, a, b, o) for a, b, c, o, g in data], chunksize=64)
             rows.append(dict(summarize127(op, res), **gasstats([g for *_, g in data]), **fallback("fp127", op, data)))
             print(json.dumps(rows[-1]), flush=True)
+    if SEL is not None:
+        # a partial run: the selected ops' rows replace their old ones, every other row stays
+        key = lambda r: (r["lib"], r["op"], r.get("stage"))  # noqa: E731
+        new = {key(r): r for r in rows}
+        old = json.loads((OUT / "sweep.json").read_text())["rows"]
+        rows = [new.pop(key(r), r) for r in old] + list(new.values())
     doc = {"_doc": __doc__.strip(), "seed": SEED, "seedLambert": SEED_LW, "rows": rows}
     (OUT / "sweep.json").write_text(json.dumps(doc, indent=1) + "\n")
     md = ["# Random-input accuracy sweep",
@@ -552,7 +580,9 @@ def run_wide():
     wd = ROOT / "test" / "sweep" / "wide"
     subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", "fp256", "--wide-lib",
                     str(wd / "FP256LibWide.sol")], cwd=ROOT, check=True)
-    names = WIDE256 + [f"{op}x" for op in EXTRA]
+    names = [op for op in WIDE256 if selected(op)] + [f"{op}x" for op in EXTRA if selected(op)]
+    if not names:
+        return
     fn = {f"{op}x": op for op in EXTRA}
     disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = FP256LibWide.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
                       for n in names)
@@ -642,9 +672,14 @@ def rec_words(kind: str) -> int:
     return (G.PROBE_BASE - G.COUNT_SLOT + G.PROBE_STRIDE * max(len(v) for v in G.PROBES.values())) // 32
 
 
-def nargs(name: str) -> int:
+def base_op(name: str) -> str:
+    """fp256_erfcx -> erfc, fp127_erf -> erf: the op behind an input file's name."""
     op = name.split("_", 1)[1] if "_" in name else name
-    op = op[:-1] if name.startswith("fp256_") and op.endswith("x") and op[:-1] in EXTRA else op
+    return op[:-1] if name.startswith("fp256_") and op.endswith("x") and op[:-1] in EXTRA else op
+
+
+def nargs(name: str) -> int:
+    op = base_op(name)
     return 3 if op in THREE else 2 if op in TWO else 1
 
 
@@ -669,6 +704,8 @@ def run_instrumented(kind: str, forced: bool = False):
     disp, runs = [], []
     for name, expr in sweep_dispatch():
         if forced and name != "noop" and name not in want:
+            continue
+        if name != "noop" and not selected(base_op(name)):
             continue
         expr = expr.replace("FP256Lib.", f"FP256Lib{Tag}.").replace("FP127Lib.", f"FP127Lib{Tag}.")
         disp.append(f'        if (op == "{name}") {{ g0 = gasleft(); r = {expr}; g = gasleft(); }}')
@@ -735,9 +772,17 @@ def pct(r) -> str:
 
 
 def main():
-    if sys.argv[1:] != ["score"]:
+    global SEL
+    args = sys.argv[1:]
+    if args[:1] == ["--ops"]:
+        SEL = set(args[1].split(","))
+        args = args[2:]
+        unknown = SEL - set(OPS256) - set(OPS127) - {"lambertW0", "lambertWm1"}
+        if unknown:
+            sys.exit(f"--ops: not swept: {', '.join(sorted(unknown))}")
+    if args != ["score"]:
         gen()
-        subprocess.run(["forge", "test", "--match-path", "test/sweep/Sweep.t.sol", "-q"], cwd=ROOT, check=True)
+        subprocess.run(["forge", "test", "--match-path", "test/sweep/Sweep.t.sol", "-q"] + match_tests(), cwd=ROOT, check=True)
         run_wide()
         run_instrumented("count")
     score()

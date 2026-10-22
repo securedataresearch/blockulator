@@ -37,6 +37,7 @@ help:
 	@echo "  make accrual-verify   - (network) recompile the pinned Aave/Morpho sources, compare runtime bytecode to mainnet"
 	@echo "  make accrual-survey   - (network) refresh scripts/accrual/survey.json from mainnet at the current block"
 	@echo "  make sweep            - random-input accuracy of every FP127/FP256 op vs correctly rounded truth -> docs/benchmarks/sweep.{json,md}"
+	@echo "  make sweep OPS=a,b    - only those ops (both libraries, both passes); their rows replace the recorded ones"
 	@echo "  make profile          - where the gas goes: per op gas, fallback rate and per-helper share on the sweep inputs, and the via_ir bench -> docs/benchmarks/profile.{json,md}"
 	@echo "  make replays          - four exploits replayed bit-exact from pinned chain data, then in FP127, FP256 and exact -> docs/benchmarks/replay-*.md"
 	@echo "  make replays-fetch    - (network, read-only) re-pin scripts/replays/*.json from the attack transactions"
@@ -182,7 +183,7 @@ replay-balancer-v1-fetch:
 	@$(PY) scripts/replays/balancer_v1.py fetch
 
 sweep: build
-	@$(PY) scripts/sweep/sweep.py
+	@$(PY) scripts/sweep/sweep.py $(if $(OPS),--ops $(OPS))
 profile: build
 	@$(PY) scripts/sweep/gasprofile.py
 talk:
