@@ -1432,8 +1432,8 @@
    "below": 3990,
    "above": 0,
    "gasMedian": 710,
-   "gasP99": 1663,
-   "gasMax": 1675
+   "gasP99": 1328,
+   "gasMax": 1340
   },
   {
    "lib": "fp127",

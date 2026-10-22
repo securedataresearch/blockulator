@@ -932,8 +932,10 @@ object "FP127" {
                 case 0 { r := isqrtw(shl(128, x)) }
                 default {
                     let sh := and(sub(255, msb(x)), not(1))
-                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
-                    r := shr(1, add(r, divu(x, r)))
+                    let z := shl(sh, x)
+                    let y := isqrtw(z)
+                    let k := sub(64, shr(1, sh))
+                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
                     let h, l := mul512(r, r)
                     if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
                 }

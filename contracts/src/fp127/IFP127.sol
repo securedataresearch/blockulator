@@ -107,9 +107,14 @@ interface IFP127 {
     /// @notice sqrt(x) for x >= 0.
     /// @dev Reverts with OutOfRange for x < 0 (the Huff read garbage). The
     ///      floor of sqrt(N), N = x 2^128: for x < 2^128, N fits a word and
-    ///      isqrtw takes it whole; above, isqrtw of x shifted up by an even
-    ///      amount gives sqrt(N) to 2^-126 relative, one Newton step with the
-    ///      512-bit divu takes it below one unit, and a 512-bit compare steps
+    ///      isqrtw takes it whole; above, Y = isqrtw(z) is the 128-bit root of
+    ///      z = x 2^sh (sh even, z in [2^254, 2^256)), N = z 2^(2k) exactly for
+    ///      k = 64 - sh/2, y0 = Y 2^k is under the root R by less than 2^k, and
+    ///      the Newton step y0 + (N - y0^2) / (2 y0) = y0 + (z - Y^2) 2^(k-1) / Y
+    ///      has a word numerator (z - Y^2 <= 2Y) and a word quotient: one mul
+    ///      and one div where v5 ran the 512-bit divu. The step is at or above
+    ///      R (AM-GM) and under R + (R - y0)^2 / (2 y0) <= R + 2^(k - 128), so
+    ///      its floor is floor(R) or floor(R) + 1, and a 512-bit compare steps
     ///      back from floor + 1. v4 (the Huff's FP127_SQRT, sqrtv4) ran seven
     ///      divu Newton steps from 2^floor((128 + msb)/2), a seed within a
     ///      factor sqrt2 below the root, and returned the last iterate: the

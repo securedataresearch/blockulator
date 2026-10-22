@@ -1779,9 +1779,14 @@ library FP127Lib {
     /// @notice sqrt(x) for x >= 0.
     /// @dev Reverts with OutOfRange for x < 0 (the Huff read garbage). The
     ///      floor of sqrt(N), N = x 2^128: for x < 2^128, N fits a word and
-    ///      isqrtw takes it whole; above, isqrtw of x shifted up by an even
-    ///      amount gives sqrt(N) to 2^-126 relative, one Newton step with the
-    ///      512-bit divu takes it below one unit, and a 512-bit compare steps
+    ///      isqrtw takes it whole; above, Y = isqrtw(z) is the 128-bit root of
+    ///      z = x 2^sh (sh even, z in [2^254, 2^256)), N = z 2^(2k) exactly for
+    ///      k = 64 - sh/2, y0 = Y 2^k is under the root R by less than 2^k, and
+    ///      the Newton step y0 + (N - y0^2) / (2 y0) = y0 + (z - Y^2) 2^(k-1) / Y
+    ///      has a word numerator (z - Y^2 <= 2Y) and a word quotient: one mul
+    ///      and one div where v5 ran the 512-bit divu. The step is at or above
+    ///      R (AM-GM) and under R + (R - y0)^2 / (2 y0) <= R + 2^(k - 128), so
+    ///      its floor is floor(R) or floor(R) + 1, and a 512-bit compare steps
     ///      back from floor + 1. v4 (the Huff's FP127_SQRT, sqrtv4) ran seven
     ///      divu Newton steps from 2^floor((128 + msb)/2), a seed within a
     ///      factor sqrt2 below the root, and returned the last iterate: the
@@ -1794,26 +1799,6 @@ library FP127Lib {
     ///      sqrtv4 runs, so every result is v4's.
     function sqrt(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function isqrtw(z) -> y {
                 y := 181
                 let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
@@ -1854,6 +1839,26 @@ library FP127Lib {
                 revert(0x00, 0x04)
             }
 
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
             function mulraw(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -1883,8 +1888,10 @@ library FP127Lib {
                 case 0 { r := isqrtw(shl(128, x)) }
                 default {
                     let sh := and(sub(255, msb(x)), not(1))
-                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
-                    r := shr(1, add(r, divu(x, r)))
+                    let z := shl(sh, x)
+                    let y := isqrtw(z)
+                    let k := sub(64, shr(1, sh))
+                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
                     let h, l := mul512(r, r)
                     if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
                 }
@@ -3100,26 +3107,6 @@ library FP127Lib {
                 r := or(shl(128, p1), shr(128, p0))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function isqrtw(z) -> y {
                 y := 181
                 let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
@@ -3155,6 +3142,26 @@ library FP127Lib {
                 h := sub(sub(mm, l), lt(mm, l))
             }
 
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
             function mulraw(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -3184,8 +3191,10 @@ library FP127Lib {
                 case 0 { r := isqrtw(shl(128, x)) }
                 default {
                     let sh := and(sub(255, msb(x)), not(1))
-                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
-                    r := shr(1, add(r, divu(x, r)))
+                    let z := shl(sh, x)
+                    let y := isqrtw(z)
+                    let k := sub(64, shr(1, sh))
+                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
                     let h, l := mul512(r, r)
                     if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
                 }
@@ -3225,26 +3234,6 @@ library FP127Lib {
                 r := or(shl(128, p1), shr(128, p0))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function isqrtw(z) -> y {
                 y := 181
                 let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
@@ -3280,6 +3269,26 @@ library FP127Lib {
                 h := sub(sub(mm, l), lt(mm, l))
             }
 
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
             function mulraw(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -3309,8 +3318,10 @@ library FP127Lib {
                 case 0 { r := isqrtw(shl(128, x)) }
                 default {
                     let sh := and(sub(255, msb(x)), not(1))
-                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
-                    r := shr(1, add(r, divu(x, r)))
+                    let z := shl(sh, x)
+                    let y := isqrtw(z)
+                    let k := sub(64, shr(1, sh))
+                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
                     let h, l := mul512(r, r)
                     if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
                 }
@@ -3705,26 +3716,6 @@ library FP127Lib {
                 r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function isqrtw(z) -> y {
                 y := 181
                 let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
@@ -3760,6 +3751,26 @@ library FP127Lib {
                 h := sub(sub(mm, l), lt(mm, l))
             }
 
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
             function mulraw(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -3789,8 +3800,10 @@ library FP127Lib {
                 case 0 { r := isqrtw(shl(128, x)) }
                 default {
                     let sh := and(sub(255, msb(x)), not(1))
-                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
-                    r := shr(1, add(r, divu(x, r)))
+                    let z := shl(sh, x)
+                    let y := isqrtw(z)
+                    let k := sub(64, shr(1, sh))
+                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
                     let h, l := mul512(r, r)
                     if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
                 }
@@ -3878,26 +3891,6 @@ library FP127Lib {
                 r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function isqrtw(z) -> y {
                 y := 181
                 let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
@@ -3933,6 +3926,26 @@ library FP127Lib {
                 h := sub(sub(mm, l), lt(mm, l))
             }
 
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
             function mulraw(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -3962,8 +3975,10 @@ library FP127Lib {
                 case 0 { r := isqrtw(shl(128, x)) }
                 default {
                     let sh := and(sub(255, msb(x)), not(1))
-                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
-                    r := shr(1, add(r, divu(x, r)))
+                    let z := shl(sh, x)
+                    let y := isqrtw(z)
+                    let k := sub(64, shr(1, sh))
+                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
                     let h, l := mul512(r, r)
                     if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
                 }
@@ -4455,26 +4470,6 @@ library FP127Lib {
                 r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function isqrtw(z) -> y {
                 y := 181
                 let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
@@ -4510,6 +4505,26 @@ library FP127Lib {
                 h := sub(sub(mm, l), lt(mm, l))
             }
 
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
             function mulraw(a, b) -> r {
                 let p0 := mul(a, b)
                 let mm := mulmod(a, b, not(0))
@@ -4539,8 +4554,10 @@ library FP127Lib {
                 case 0 { r := isqrtw(shl(128, x)) }
                 default {
                     let sh := and(sub(255, msb(x)), not(1))
-                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
-                    r := shr(1, add(r, divu(x, r)))
+                    let z := shl(sh, x)
+                    let y := isqrtw(z)
+                    let k := sub(64, shr(1, sh))
+                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
                     let h, l := mul512(r, r)
                     if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
                 }
