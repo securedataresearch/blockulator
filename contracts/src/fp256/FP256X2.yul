@@ -6,38 +6,60 @@ object "FP256X2" {
     }
     object "runtime" {
         code {
-            switch shr(224, calldataload(0))
-            case 0x17cdc976 { /* sinh(int256) */
-                ret(fp256_sinh(calldataload(4)))
+            let dsel := shr(224, calldataload(0))
+            switch lt(dsel, 0xb47ca3c7)
+            case 0 {
+                switch lt(dsel, 0xd4b6188c)
+                case 0 {
+                    switch dsel
+                    case 0xd4b6188c { /* cbrt(int256) */
+                        ret(fp256_cbrt(calldataload(4)))
+                    }
+                    case 0xdbbb06d2 { /* exp2(int256) */
+                        ret(fp256_exp2(calldataload(4)))
+                    }
+                    case 0xe0d68737 { /* log2(int256) */
+                        ret(fp256_log2(calldataload(4)))
+                    }
+                    default { revert(0, 0) }
+                }
+                default {
+                    switch dsel
+                    case 0xb47ca3c7 { /* log10(int256) */
+                        ret(fp256_log10(calldataload(4)))
+                    }
+                    case 0xc6285a68 { /* atanh(int256) */
+                        ret(fp256_atanh(calldataload(4)))
+                    }
+                    default { revert(0, 0) }
+                }
             }
-            case 0x4c0dafa2 { /* exp10(int256) */
-                ret(fp256_exp10(calldataload(4)))
+            default {
+                switch lt(dsel, 0x5e1f05c7)
+                case 0 {
+                    switch dsel
+                    case 0x5e1f05c7 { /* tanh(int256) */
+                        ret(fp256_tanh(calldataload(4)))
+                    }
+                    case 0xa1985bb6 { /* log2Up(int256) */
+                        ret(fp256_log2Up(calldataload(4)))
+                    }
+                    case 0xaa13e96a { /* cosh(int256) */
+                        ret(fp256_cosh(calldataload(4)))
+                    }
+                    default { revert(0, 0) }
+                }
+                default {
+                    switch dsel
+                    case 0x17cdc976 { /* sinh(int256) */
+                        ret(fp256_sinh(calldataload(4)))
+                    }
+                    case 0x4c0dafa2 { /* exp10(int256) */
+                        ret(fp256_exp10(calldataload(4)))
+                    }
+                    default { revert(0, 0) }
+                }
             }
-            case 0x5e1f05c7 { /* tanh(int256) */
-                ret(fp256_tanh(calldataload(4)))
-            }
-            case 0xa1985bb6 { /* log2Up(int256) */
-                ret(fp256_log2Up(calldataload(4)))
-            }
-            case 0xaa13e96a { /* cosh(int256) */
-                ret(fp256_cosh(calldataload(4)))
-            }
-            case 0xb47ca3c7 { /* log10(int256) */
-                ret(fp256_log10(calldataload(4)))
-            }
-            case 0xc6285a68 { /* atanh(int256) */
-                ret(fp256_atanh(calldataload(4)))
-            }
-            case 0xd4b6188c { /* cbrt(int256) */
-                ret(fp256_cbrt(calldataload(4)))
-            }
-            case 0xdbbb06d2 { /* exp2(int256) */
-                ret(fp256_exp2(calldataload(4)))
-            }
-            case 0xe0d68737 { /* log2(int256) */
-                ret(fp256_log2(calldataload(4)))
-            }
-            default { revert(0, 0) }
 
             function ret(v) {
                 mstore(0, v)
