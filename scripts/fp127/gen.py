@@ -533,7 +533,7 @@ PROBES = {
               "hser", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cbrtw", "cubegt",
               "isqrtw", "lerp3"],
     "fp127": ["expk", "log2m", "erfs", "erfcf", "lwfsc", "lwm1", "lwfin",
-              "l2p", "powus", "cbrtw", "cube"],
+              "l2p", "powus", "einvhalf", "cbrtw", "cube"],
 }
 
 

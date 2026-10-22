@@ -294,18 +294,30 @@ interface IFP127 {
     /// @dev Below 2^-65, x itself: x^2/2 is under a quarter ULP and the series'
     ///      value is x 2^192 plus less than 2^62 units, which rounds to x.
     function expm1(int256 x) external pure returns (int256 r);
-    /// @notice sinh(x), rounded to nearest. For |x| < 1 the odd series
-    ///         x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms
-    ///         (fewer for a smaller |x|); beyond, (e^|x| - e^-|x|) / 2 from the
-    ///         double-word kernel, the difference taken before the one rounding.
-    /// @dev Below 2^-65, x itself (x^3/6 is under one unit of 2^-192). The
-    ///      series takes K = 19, 16, 13, 8, 5, 2 terms below 1/2, 1/4, 1/16,
-    ///      2^-8, 2^-16, 2^-32, where x^(2K+2) / (2K+3)! <= 2^-200; its mulg is
-    ///      inline and unsigned.
+    /// @notice sinh(x), rounded to nearest: (u + u/(1+u)) / 2 with u = e^|x| - 1
+    ///         from one double-word exp at 2^-192, u/(1+u) = 1 - e^-|x| by one
+    ///         division, the difference taken before the one rounding. The value
+    ///         before rounding is within 3 units of 2^-192 plus 2^-299 relative
+    ///         of sinh, so the result is nearest unless sinh is within 3 2^-64
+    ///         ULP (2^-44 ULP at the top of the range) of a midpoint.
+    /// @dev e^|x| = 2^n (1 + s) from expx; e^|x| / 2 is sc192(n - 1) (floors
+    ///      once, kernel 2^-300 relative), e^-|x| / 2 is einvhalf (floors once,
+    ///      plus 2^-63 unit); the subtraction is exact (precise_model.py
+    ///      measure: op_sinh). Below 2^-65, x itself: x^3/6 is under one unit
+    ///      of 2^-192. v5 ran an odd series below 1 and two exps beyond.
     function sinh(int256 x) external pure returns (int256 r);
-    /// @notice cosh(x) = (e^x + e^-x) / 2, rounded to nearest: both halves from
-    ///         the double-word kernel, summed before the one rounding. cosh(0) is
-    ///         exactly one.
+    /// @notice cosh(x), rounded to nearest: 1 + u (u/(1+u)) / 2 with u = e^|x| - 1
+    ///         from one double-word exp at 2^-192 and u/(1+u) = 1 - e^-|x| by one
+    ///         division, which is (e^|x| + e^-|x|) / 2 summed before the one
+    ///         rounding. The value before rounding is within 3 units of 2^-192
+    ///         plus 2^-299 relative of cosh, so the result is nearest unless
+    ///         cosh is within 3 2^-64 ULP (2^-44 ULP at the top of the range)
+    ///         of a midpoint. cosh(0) is exactly one.
+    /// @dev e^|x| / 2 is sc192(n - 1) (floors once, kernel 2^-300 relative),
+    ///      e^-|x| / 2 is einvhalf (floors once, plus 2^-63 unit); the sum is
+    ///      exact (precise_model.py measure: op_cosh). Below 2^-64, exactly one:
+    ///      cosh - 1 < x^2 / 2 (1 + x^2 / 12) < 2^-129, half an ULP. v5 ran two
+    ///      exps at every x.
     function cosh(int256 x) external pure returns (int256 r);
     /// @notice tanh(x), rounded to nearest. For |x| < 1/4, u / (u + 2) with
     ///         u = e^(2|x|) - 1 at 2^-192; up to |x| < 46, (1 - w) / (1 + w) with
@@ -314,9 +326,19 @@ interface IFP127 {
     ///      once at 2^-192. v4 subtracted a rounded quotient from one and
     ///      returned +-1 from |x| = 44, where 1 - tanh is still four ULPs.
     function tanh(int256 x) external pure returns (int256 r);
-    /// @notice atanh(x) = (ln(1 + x) - ln(1 - x)) / 2, both logarithms taken
-    ///         unrounded at 2^-192 and the difference scaled and rounded once.
-    ///         Both arguments are exact in 127.128.
+    /// @notice atanh(x) = log1p(2|x| / (1 - |x|)) / 2: the quotient at 2^-192 by
+    ///         one division, one unrounded logarithm of 1 + it, scaled by ln2/2
+    ///         and rounded once. The value before rounding is within 2^-146
+    ///         (the one-word log's 2^-145, scaled) plus 2 units of 2^-192 of
+    ///         atanh, so the result is nearest unless atanh is within 2^-18 ULP
+    ///         of a midpoint.
+    /// @dev q = floor(2|x| 2^192 / (1 - |x|)) floors once, which moves the log by
+    ///      under 1.5 units; 2^192 + q read as a 127.128 word is 2^64 (1 + q), so
+    ///      log2g of it less 64 is log2((1 + |x|) / (1 - |x|)); the final mulg
+    ///      floors once (precise_model.py measure: op_atanh). Within 2^-62 of
+    ///      +-1 the quotient would pass 2^255 and the v5 form runs instead: the
+    ///      difference of the two logs of the exact words 1 + |x| and 1 - |x|,
+    ///      within 2^-145 plus one unit.
     function atanh(int256 x) external pure returns (int256 r);
     /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
     ///         1 - erfc(x) by the continued fraction, both at 2^-192 and rounded
