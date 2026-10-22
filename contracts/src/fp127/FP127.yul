@@ -1512,9 +1512,8 @@ object "FP127" {
                 v := mulg(xs, v)
             }
 
-            function ehalf(x) -> vh, vl {
-                let n, sh, sl := expx(x)
-                vh, vl := sc192(sub(n, 1), sh, sl)
+            function einvhalf(n, sh) -> v {
+                v := divg(shl(sub(254, n), 1), or(0x8000000000000000000000000000000000000000000000000000000000000000, shr(1, sh)))
             }
 
             function fp127_log1p(x) -> r {
@@ -1546,44 +1545,22 @@ object "FP127" {
                 if iszero(x) { r := 0 leave }
                 let ax := absw(x)
                 if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
-                if lt(ax, 0x100000000000000000000000000000000) {
-                    if lt(ax, 0x8000000000000000) { r := x leave }
-                    let xs := shl(64, x)
-                    let x2 := mulg(xs, xs)
-                    let v := 0x1000000000000000000000000000000000000000000000000
-                    let k := 20
-                    if lt(ax, 0x80000000000000000000000000000000) {
-                        k := 19
-                        if lt(ax, 0x40000000000000000000000000000000) { k := 16 }
-                        if lt(ax, 0x10000000000000000000000000000000) { k := 13 }
-                        if lt(ax, 0x1000000000000000000000000000000) { k := 8 }
-                        if lt(ax, 0x10000000000000000000000000000) { k := 5 }
-                        if lt(ax, 0x1000000000000000000000000) { k := 2 }
-                    }
-                    let l := 0
-                    let h := 0
-                    for {} k { k := sub(k, 1) } {
-                        let k2 := shl(1, k)
-                        l := mul(x2, v)
-                        h := mulmod(x2, v, not(0))
-                        v := add(0x1000000000000000000000000000000000000000000000000, div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), mul(k2, add(k2, 1))))
-                    }
-                    r := round64(mulg(xs, v))
-                    leave
-                }
-                let vh, vl := ehalf(ax)
-                let wh, wl := ehalf(sub(0, ax))
-                r := rnd192(sub(sub(vh, wh), lt(vl, wl)), sub(vl, wl))
+                if lt(ax, 0x8000000000000000) { r := x leave }
+                let n, sh, sl := expx(ax)
+                let vh, vl := sc192(sub(n, 1), sh, sl)
+                let w := einvhalf(n, sh)
+                r := rnd192(sub(vh, lt(vl, w)), sub(vl, w))
                 if slt(x, 0) { r := sub(0, r) }
             }
 
             function fp127_cosh(x) -> r {
                 let ax := absw(x)
                 if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
-                let vh, vl := ehalf(ax)
-                let wh, wl := ehalf(sub(0, ax))
-                let l := add(vl, wl)
-                r := rnd192(add(add(vh, wh), lt(l, vl)), l)
+                if lt(ax, 0x10000000000000000) { r := 0x100000000000000000000000000000000 leave }
+                let n, sh, sl := expx(ax)
+                let vh, vl := sc192(sub(n, 1), sh, sl)
+                let l := add(vl, einvhalf(n, sh))
+                r := rnd192(add(vh, lt(l, vl)), l)
             }
 
             function fp127_tanh(x) -> r {
@@ -1621,9 +1598,17 @@ object "FP127" {
 
             function fp127_atanh(x) -> r {
                 let one := 0x100000000000000000000000000000000
-                if iszero(lt(absw(x), one)) { rev(0x7db3aba7) }
+                let ax := absw(x)
+                if iszero(lt(ax, one)) { rev(0x7db3aba7) }
                 if iszero(x) { r := 0 leave }
-                r := round64(mulg(sub(log2g(add(one, x)), log2g(sub(one, x))), 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b17))
+                switch lt(ax, 0xfffffffffffffffc0000000000000000)
+                case 1 {
+                    let q := add(0x1000000000000000000000000000000000000000000000000, divg(shl(1, ax), sub(one, ax)))
+                    r := sub(log2g(q), 0x40000000000000000000000000000000000000000000000000)
+                }
+                default { r := sub(log2g(add(one, ax)), log2g(sub(one, ax))) }
+                r := round64(mulg(r, 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b17))
+                if slt(x, 0) { r := sub(0, r) }
             }
 
             function erfs(xg) -> v {

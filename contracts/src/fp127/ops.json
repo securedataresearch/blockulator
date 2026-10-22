@@ -563,7 +563,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "sinh(x), rounded to nearest. For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms (fewer for a smaller |x|); beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the difference taken before the one rounding.",
+      "notice": "sinh(x), rounded to nearest: (u + u/(1+u)) / 2 with u = e^|x| - 1 from one double-word exp at 2^-192, u/(1+u) = 1 - e^-|x| by one division, the difference taken before the one rounding. The value before rounding is within 3 units of 2^-192 plus 2^-299 relative of sinh, so the result is nearest unless sinh is within 3 2^-64 ULP (2^-44 ULP at the top of the range) of a midpoint.",
       "domain": "|x| <= 88",
       "reverts": "Overflow() beyond that"
     },
@@ -574,7 +574,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "cosh(x) = (e^x + e^-x) / 2, rounded to nearest: both halves from the double-word kernel, summed before the one rounding. cosh(0) is exactly one.",
+      "notice": "cosh(x), rounded to nearest: 1 + u (u/(1+u)) / 2 with u = e^|x| - 1 from one double-word exp at 2^-192 and u/(1+u) = 1 - e^-|x| by one division, which is (e^|x| + e^-|x|) / 2 summed before the one rounding. The value before rounding is within 3 units of 2^-192 plus 2^-299 relative of cosh, so the result is nearest unless cosh is within 3 2^-64 ULP (2^-44 ULP at the top of the range) of a midpoint. cosh(0) is exactly one.",
       "domain": "|x| <= 88",
       "reverts": "Overflow() beyond that"
     },
@@ -596,7 +596,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "atanh(x) = (ln(1 + x) - ln(1 - x)) / 2, both logarithms taken unrounded at 2^-192 and the difference scaled and rounded once. Both arguments are exact in 127.128.",
+      "notice": "atanh(x) = log1p(2|x| / (1 - |x|)) / 2: the quotient at 2^-192 by one division, one unrounded logarithm of 1 + it, scaled by ln2/2 and rounded once. The value before rounding is within 2^-146 (the one-word log's 2^-145, scaled) plus 2 units of 2^-192 of atanh, so the result is nearest unless atanh is within 2^-18 ULP of a midpoint.",
       "domain": "|x| < 1",
       "reverts": "OutOfRange() at or beyond +-1"
     },

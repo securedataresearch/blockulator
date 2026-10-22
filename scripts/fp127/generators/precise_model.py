@@ -30,6 +30,17 @@ The v5 kernels work on a double word (DW): a pair (hi, lo) read as
             double word is skipped. fastpow checks the bound against the
             true error and the result against op_pow / op_cbrt.
 
+  einvhalf  e^-x / 2 at 2^-192 from e^x = 2^n (1 + s), one divg on the top
+            255 bits of s: with u = e^x - 1 it is (1 - u/(1+u)) / 2. op_sinh
+            and op_cosh (sinh = (u + u/(1+u)) / 2, cosh = 1 + u (u/(1+u)) / 2,
+            which is e^x / 2 -+ e^-x / 2) take the floored e^x / 2 from the
+            kernel, subtract or add it and round once. Measured in units of
+            2^-192 (less the kernel's 2^-299 relative) against the stated
+            bound of 3: the two floors and the dropped bits of s.
+  op_atanh  log1p(2x / (1 - x)) / 2: the quotient at 2^-192 by one divg, one
+            log2g of 2^192 + it (a 127.128 word worth 2^64 (1 + q)) less 64,
+            times ln2 / 2. Measured against the stated 2^-146 + 2 units.
+
   lambertw  Lambert W's one-word iterations in real arithmetic: each seed,
             the Halley steps the Yul gives it, and the correct bits left for
             the double-word step lwfin, -log2(|w - W| max(1, 1/|1 + W|) /
@@ -295,6 +306,75 @@ def op_cbrt(X):
 
 
 # ---------------------------------------------------------------------------
+# the hyperbolics from the exp and log kernels
+# ---------------------------------------------------------------------------
+
+LN2_HALF_192 = 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b17
+
+
+def divg(a: int, b: int) -> int:
+    """floor(a 2^192 / b), the Yul's two-stage divu (requires a >> 128 < b)."""
+    assert (a >> 128) < b
+    return (a << 192) // b
+
+
+def ehalf(X: int):
+    """e^x / 2 at 2^-192 as the Yul's expx then sc192(n - 1) give it, with
+    the kernel's n and s for einvhalf."""
+    n, s = exp_parts(X)
+    return scaled192(n - 1, s), n, s
+
+
+def einvhalf(n: int, s: int) -> int:
+    """e^-x / 2 at 2^-192 from e^x = 2^n (1 + s): floor(2^(254-n) 2^192 /
+    (2^255 + floor(s_hi / 2))), one divg."""
+    return divg(1 << (254 - n), H255 | ((s >> 256) >> 1))
+
+
+def hyp_pre(ax: int, sign: int) -> int:
+    """cosh (sign 1) or sinh (sign -1) at 2^-192 before the rounding."""
+    v, n, s = ehalf(ax)
+    return v + sign * einvhalf(n, s)
+
+
+def op_cosh(X: int):
+    ax = abs(X)
+    if ax > 88 * ONE:
+        return "REVERT"
+    if ax < 1 << 64:
+        return ONE
+    return rnd64(hyp_pre(ax, 1))
+
+
+def op_sinh(X: int):
+    ax = abs(X)
+    if ax > 88 * ONE:
+        return "REVERT"
+    r = ax if ax < 1 << 63 else rnd64(hyp_pre(ax, -1))
+    return -r if X < 0 else r
+
+
+def atanh_pre(ax: int) -> int:
+    """atanh(x) at 2^-192 before the rounding, 0 < x < 1 (ax in 127.128)."""
+    if ax < ONE - (1 << 66):
+        q = G + divg(2 * ax, ONE - ax)
+        l2 = log2g(q) - (64 << 192)
+    else:
+        l2 = log2g(ONE + ax) - log2g(ONE - ax)
+    return (l2 * LN2_HALF_192) >> 192
+
+
+def op_atanh(X: int):
+    ax = abs(X)
+    if ax >= ONE:
+        return "REVERT"
+    if X == 0:
+        return 0
+    r = rnd64(atanh_pre(ax))
+    return -r if X < 0 else r
+
+
+# ---------------------------------------------------------------------------
 # pow and cbrt: the one-word value first (pow2t)
 # ---------------------------------------------------------------------------
 
@@ -523,8 +603,35 @@ def measure(n=2000):
         c = rng.getrandbits(b) | (1 << b)
         got = op_cbrt(c)
         rec("cbrt ULP", ulp_err(got, mp.cbrt(mpf(c) / ONE) * ONE), c)
+        # sinh and cosh from one exp: units of 2^-192 less the kernel's
+        # 2^-299 relative, against the stated 3; and the rounded word. |x|
+        # from 2^-64 to 88, half the draws below 1.
+        b = rng.randint(64, 134)
+        ax = (rng.getrandbits(b) | (1 << b)) % (88 * ONE)
+        if ax < 1 << 64:
+            ax += 1 << 64
+        x = mpf(ax) / ONE
+        for name, sign, fn, op in (("cosh", 1, mp.cosh, op_cosh), ("sinh", -1, mp.sinh, op_sinh)):
+            tv = fn(x) * G
+            units = abs(mpf(hyp_pre(ax, sign)) - tv) - tv * mpf(2) ** -299
+            assert units <= 3, (name, ax, units)
+            rec(f"{name} (2^-192 units less 2^-299 rel)", max(units, 0), ax)
+            rec(f"{name} ULP", ulp_err(op(ax), fn(x) * ONE), ax)
+        # atanh: against 2^-146 + 2 units of 2^-192; |x| from 2^-68 to 1,
+        # a quarter of the draws within 2^-8..2^-127 of 1
+        if rng.random() < 0.25:
+            ax = ONE - (rng.getrandbits(rng.randint(1, 120)) | 1)
+        else:
+            b = rng.randint(60, 127)
+            ax = rng.getrandbits(b) | (1 << b)
+        x = mpf(ax) / ONE
+        tv = mp.atanh(x) * G
+        err = abs(mpf(atanh_pre(ax)) - tv)
+        assert err <= mpf(2) ** 46 + 2, (ax, err)
+        rec("atanh (2^-192 units; bound 2^46 + 2)", err, ax)
+        rec("atanh ULP", ulp_err(op_atanh(ax), mp.atanh(x) * ONE), ax)
     for k, (err, inp) in worst.items():
-        print(f"{k:24s} max {mp.nstr(err, 6):>14s}  log2 {mp.nstr(log(err, 2) if err else -999, 6)}  at {inp}")
+        print(f"{k:38s} max {mp.nstr(err, 6):>14s}  log2 {mp.nstr(log(err, 2) if err else -999, 6)}  at {inp}")
 
 
 def constants():
