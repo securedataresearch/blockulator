@@ -1,6 +1,6 @@
 # Terminal precision ladder
 
-Generated 2026-10-22 by `make ladder`. Versions: fp127 6e705a6, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
+Generated 2026-10-22 by `make ladder`. Versions: fp127 6c41c18, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
 
 Each scenario is run for several inputs; the first table is the reference input in full (`digits / digitsFormat / gas per step`, where digits is against the exact truth and digitsFormat against the truth from the parameters as the library received them), the second is the summary over all inputs (`median (min–max)` digits, capped at 40). Full values, both truths, signed errors and raw words are in ladder.json; the method is in the Methodology section at the end.
 
@@ -599,16 +599,16 @@ Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, 
 
 | N | truth | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | fp256 |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | `6.878391866103811` | 37 / 37 / 36,432 | 37 / 37 / 31,058 | 18 / 18 / 103,328 | 16 / 16 / 77,511 | 16 / 16 / 142,047 | 32 / 32 / 345,298 | 16 / 16 / 126,930 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 70 / 70 / 78,452 |
-| 2 | `6.868065132714932` | 37 / 38 / 18,670 | 37 / 38 / 15,714 | 18 / 17 / 51,807 | 17 / 17 / 38,872 | 16 / 16 / 71,318 | 32 / 32 / 173,114 | 17 / 17 / 63,717 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 70 / 70 / 39,862 |
-| 5 | `6.837144794797698` | 37 / 39 / 7,983 | 37 / 39 / 6,478 | 18 / 18 / 20,874 | 16 / 16 / 15,688 | 16 / 16 / 28,891 | 32 / 32 / 69,826 | 16 / 16 / 25,789 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 70 / 70 / 16,689 |
-| 10 | `6.785810396029252` | 36 / 38 / 4,445 | 36 / 38 / 3,424 | 18 / 18 / 10,586 | 16 / 16 / 7,960 | 16 / 16 / 14,740 | 31 / 31 / 35,008 | 16 / 16 / 13,146 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 70 / 70 / 8,910 |
-| 20 | `6.683889366360745` | 36 / 38 / 2,676 | 36 / 38 / 1,897 | 17 / 17 / 5,433 | 16 / 16 / 4,052 | 16 / 16 / 7,586 | 31 / 31 / 17,772 | 16 / 16 / 6,752 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 71 / 71 / 5,086 |
-| 50 | `6.384100145151291` | 36 / 38 / 1,604 | 36 / 38 / 970 | 17 / 18 / 2,323 | 16 / 16 / 1,743 | 16 / 16 / 3,352 | 31 / 31 / 7,628 | 16 / 16 / 2,974 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 69 / 69 / 2,729 |
-| 100 | `5.904291981569546` | 35 / 37 / 1,246 | 35 / 37 / 660 | 16 / 17 / 1,283 | 16 / 16 / 971 | 16 / 16 / 1,941 | 30 / 30 / 4,131 | 16 / 16 / 1,711 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 69 / 69 / 1,967 |
-| 365 | `3.76450175108814` | 35 / 37 / 1,006 | 35 / 37 / 455 | 16 / 17 / 577 | 16 / 16 / 450 | 16 / 16 / 990 | 30 / 30 / 1,938 | 16 / 16 / 859 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 68 / 68 / 1,449 |
-| 1000 | `0.9741872197637135` | 34 / 36 / 949 | 34 / 36 / 405 | 15 / 16 / 409 | 15 / 15 / 325 | 15 / 15 / 763 | 29 / 29 / 1,410 | 15 / 15 / 655 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 68 / 68 / 1,356 |
-| 10000 | `4.263958353856216e-34` | 3 / 3 / 931 | 3 / 3 / 374 | 0 / 0 / 317 | 0 / 0 / 256 | 0 / 0 / 640 | 27 / 27 / 1,087 | reverts `0xd4794efd` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 66 / 66 / 1,253 |
+| 1 | `6.878391866103811` | 37 / 37 / 36,432 | 37 / 37 / 31,058 | 18 / 18 / 103,328 | 16 / 16 / 77,511 | 16 / 16 / 142,047 | 32 / 32 / 345,298 | 16 / 16 / 126,930 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 70 / 70 / 185,574 |
+| 2 | `6.868065132714932` | 37 / 38 / 18,670 | 37 / 38 / 15,714 | 18 / 17 / 51,807 | 17 / 17 / 38,872 | 16 / 16 / 71,318 | 32 / 32 / 173,114 | 17 / 17 / 63,717 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 70 / 70 / 93,412 |
+| 5 | `6.837144794797698` | 37 / 39 / 7,983 | 37 / 39 / 6,478 | 18 / 18 / 20,874 | 16 / 16 / 15,688 | 16 / 16 / 28,891 | 32 / 32 / 69,826 | 16 / 16 / 25,789 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 70 / 70 / 38,096 |
+| 10 | `6.785810396029252` | 36 / 38 / 4,445 | 36 / 38 / 3,424 | 18 / 18 / 10,586 | 16 / 16 / 7,960 | 16 / 16 / 14,740 | 31 / 31 / 35,008 | 16 / 16 / 13,146 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 70 / 70 / 19,653 |
+| 20 | `6.683889366360745` | 36 / 38 / 2,676 | 36 / 38 / 1,897 | 17 / 17 / 5,433 | 16 / 16 / 4,052 | 16 / 16 / 7,586 | 31 / 31 / 17,772 | 16 / 16 / 6,752 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 71 / 71 / 10,448 |
+| 50 | `6.384100145151291` | 36 / 38 / 1,604 | 36 / 38 / 970 | 17 / 18 / 2,323 | 16 / 16 / 1,743 | 16 / 16 / 3,352 | 31 / 31 / 7,628 | 16 / 16 / 2,974 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 69 / 69 / 4,897 |
+| 100 | `5.904291981569546` | 35 / 37 / 1,246 | 35 / 37 / 660 | 16 / 17 / 1,283 | 16 / 16 / 971 | 16 / 16 / 1,941 | 30 / 30 / 4,131 | 16 / 16 / 1,711 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 69 / 69 / 3,095 |
+| 365 | `3.76450175108814` | 35 / 37 / 1,006 | 35 / 37 / 455 | 16 / 17 / 577 | 16 / 16 / 450 | 16 / 16 / 990 | 30 / 30 / 1,938 | 16 / 16 / 859 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 68 / 68 / 1,736 |
+| 1000 | `0.9741872197637135` | 34 / 36 / 949 | 34 / 36 / 405 | 15 / 16 / 409 | 15 / 15 / 325 | 15 / 15 / 763 | 29 / 29 / 1,410 | 15 / 15 / 655 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 68 / 68 / 1,419 |
+| 10000 | `4.263958353856216e-34` | 3 / 3 / 931 | 3 / 3 / 374 | 0 / 0 / 317 | 0 / 0 / 256 | 0 / 0 / 640 | 27 / 27 / 1,087 | reverts `0xd4794efd` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 66 / 66 / 1,256 |
 
 ### All inputs (6): digits, median (min–max)
 
