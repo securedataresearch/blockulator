@@ -6,119 +6,204 @@ object "FP256" {
     }
     object "runtime" {
         code {
-            switch shr(224, calldataload(0))
-            case 0x1aabb2f7 { /* mulUp(int256,int256) */
-                ret(fp256_mulUp(calldataload(4), calldataload(36)))
+            let dsel := shr(224, calldataload(0))
+            switch lt(dsel, 0x8e6f2353)
+            case 0 {
+                switch lt(dsel, 0xae610b48)
+                case 0 {
+                    switch lt(dsel, 0xddb29e92)
+                    case 0 {
+                        switch lt(dsel, 0xe3814b19)
+                        case 0 {
+                            switch dsel
+                            case 0xe3814b19 { /* fromUint(uint256) */
+                                ret(fp256_fromUint(calldataload(4)))
+                            }
+                            case 0xe46751e3 { /* exp(int256) */
+                                ret(fp256_exp(calldataload(4)))
+                            }
+                            case 0xfebfc540 { /* fromUintDown(uint256) */
+                                ret(fp256_fromUintDown(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0xddb29e92 { /* divDown(int256,int256) */
+                                ret(fp256_divDown(calldataload(4), calldataload(36)))
+                            }
+                            case 0xe2bec1fe { /* divUp(int256,int256) */
+                                ret(fp256_divUp(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch lt(dsel, 0xbbe93d91)
+                        case 0 {
+                            switch dsel
+                            case 0xbbe93d91 { /* mul(int256,int256) */
+                                ret(fp256_mul(calldataload(4), calldataload(36)))
+                            }
+                            case 0xc688366a { /* cmp(int256,int256) */
+                                ret(fp256_cmp(calldataload(4), calldataload(36)))
+                            }
+                            case 0xda3ff648 { /* floor(int256) */
+                                ret(fp256_floor(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0xae610b48 { /* sign(int256) */
+                                ret(fp256_sign(calldataload(4)))
+                            }
+                            case 0xb8846d69 { /* powu(int256,int256) */
+                                ret(fp256_powu(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                }
+                default {
+                    switch lt(dsel, 0xa2745c74)
+                    case 0 {
+                        switch lt(dsel, 0xa5f3c23b)
+                        case 0 {
+                            switch dsel
+                            case 0xa5f3c23b { /* add(int256,int256) */
+                                ret(fp256_add(calldataload(4), calldataload(36)))
+                            }
+                            case 0xaa2c45bf { /* eq(int256,int256) */
+                                ret(fp256_eq(calldataload(4), calldataload(36)))
+                            }
+                            case 0xadefc37b { /* sub(int256,int256) */
+                                ret(fp256_sub(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0xa2745c74 { /* toFixed18(int256) */
+                                ret(fp256_toFixed18(calldataload(4)))
+                            }
+                            case 0xa31e7db8 { /* compound(int256,int256) */
+                                ret(fp256_compound(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch dsel
+                        case 0x8e6f2353 { /* ln(int256) */
+                            ret(fp256_ln(calldataload(4)))
+                        }
+                        case 0x92b0c5b2 { /* pow(int256,int256) */
+                            ret(fp256_pow(calldataload(4), calldataload(36)))
+                        }
+                        case 0x973fe005 { /* expm1(int256) */
+                            ret(fp256_expm1(calldataload(4)))
+                        }
+                        case 0x9aea0a13 { /* fromFixed18(int256) */
+                            ret(fp256_fromFixed18(calldataload(4)))
+                        }
+                        default { revert(0, 0) }
+                    }
+                }
             }
-            case 0x1b5ac4b5 { /* abs(int256) */
-                ret(fp256_abs(calldataload(4)))
+            default {
+                switch lt(dsel, 0x54a53dc1)
+                case 0 {
+                    switch lt(dsel, 0x665df460)
+                    case 0 {
+                        switch lt(dsel, 0x736c53c3)
+                        case 0 {
+                            switch dsel
+                            case 0x736c53c3 { /* fromFP127(int256) */
+                                ret(fp256_fromFP127(calldataload(4)))
+                            }
+                            case 0x7c90b7f9 { /* toFP127(int256) */
+                                ret(fp256_toFP127(calldataload(4)))
+                            }
+                            case 0x8552a5b0 { /* log1p(int256) */
+                                ret(fp256_log1p(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x665df460 { /* sqrt(int256) */
+                                ret(fp256_sqrt(calldataload(4)))
+                            }
+                            case 0x67d4ca8d { /* toUintUp(int256) */
+                                ret(fp256_toUintUp(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch dsel
+                        case 0x54a53dc1 { /* neg(int256) */
+                            ret(fp256_neg(calldataload(4)))
+                        }
+                        case 0x5ed6bfec { /* toIntUp(int256) */
+                            ret(fp256_toIntUp(calldataload(4)))
+                        }
+                        case 0x5fe0506c { /* toUintDown(int256) */
+                            ret(fp256_toUintDown(calldataload(4)))
+                        }
+                        case 0x64f06660 { /* toIntDown(int256) */
+                            ret(fp256_toIntDown(calldataload(4)))
+                        }
+                        default { revert(0, 0) }
+                    }
+                }
+                default {
+                    switch lt(dsel, 0x32154abe)
+                    case 0 {
+                        switch lt(dsel, 0x42fba7ae)
+                        case 0 {
+                            switch dsel
+                            case 0x42fba7ae { /* ceil(int256) */
+                                ret(fp256_ceil(calldataload(4)))
+                            }
+                            case 0x43509138 { /* div(int256,int256) */
+                                ret(fp256_div(calldataload(4), calldataload(36)))
+                            }
+                            case 0x4b8d10e0 { /* mulDown(int256,int256) */
+                                ret(fp256_mulDown(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x32154abe { /* toFixed18Down(int256) */
+                                ret(fp256_toFixed18Down(calldataload(4)))
+                            }
+                            case 0x35e13636 { /* fromUintUp(uint256) */
+                                ret(fp256_fromUintUp(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch dsel
+                        case 0x1aabb2f7 { /* mulUp(int256,int256) */
+                            ret(fp256_mulUp(calldataload(4), calldataload(36)))
+                        }
+                        case 0x1b5ac4b5 { /* abs(int256) */
+                            ret(fp256_abs(calldataload(4)))
+                        }
+                        case 0x27066ea4 { /* toFixed18Up(int256) */
+                            ret(fp256_toFixed18Up(calldataload(4)))
+                        }
+                        case 0x30880038 { /* lt(int256,int256) */
+                            ret(fp256_lt(calldataload(4), calldataload(36)))
+                        }
+                        default { revert(0, 0) }
+                    }
+                }
             }
-            case 0x27066ea4 { /* toFixed18Up(int256) */
-                ret(fp256_toFixed18Up(calldataload(4)))
-            }
-            case 0x30880038 { /* lt(int256,int256) */
-                ret(fp256_lt(calldataload(4), calldataload(36)))
-            }
-            case 0x32154abe { /* toFixed18Down(int256) */
-                ret(fp256_toFixed18Down(calldataload(4)))
-            }
-            case 0x35e13636 { /* fromUintUp(uint256) */
-                ret(fp256_fromUintUp(calldataload(4)))
-            }
-            case 0x42fba7ae { /* ceil(int256) */
-                ret(fp256_ceil(calldataload(4)))
-            }
-            case 0x43509138 { /* div(int256,int256) */
-                ret(fp256_div(calldataload(4), calldataload(36)))
-            }
-            case 0x4b8d10e0 { /* mulDown(int256,int256) */
-                ret(fp256_mulDown(calldataload(4), calldataload(36)))
-            }
-            case 0x54a53dc1 { /* neg(int256) */
-                ret(fp256_neg(calldataload(4)))
-            }
-            case 0x5ed6bfec { /* toIntUp(int256) */
-                ret(fp256_toIntUp(calldataload(4)))
-            }
-            case 0x5fe0506c { /* toUintDown(int256) */
-                ret(fp256_toUintDown(calldataload(4)))
-            }
-            case 0x64f06660 { /* toIntDown(int256) */
-                ret(fp256_toIntDown(calldataload(4)))
-            }
-            case 0x665df460 { /* sqrt(int256) */
-                ret(fp256_sqrt(calldataload(4)))
-            }
-            case 0x67d4ca8d { /* toUintUp(int256) */
-                ret(fp256_toUintUp(calldataload(4)))
-            }
-            case 0x736c53c3 { /* fromFP127(int256) */
-                ret(fp256_fromFP127(calldataload(4)))
-            }
-            case 0x7c90b7f9 { /* toFP127(int256) */
-                ret(fp256_toFP127(calldataload(4)))
-            }
-            case 0x8552a5b0 { /* log1p(int256) */
-                ret(fp256_log1p(calldataload(4)))
-            }
-            case 0x8e6f2353 { /* ln(int256) */
-                ret(fp256_ln(calldataload(4)))
-            }
-            case 0x92b0c5b2 { /* pow(int256,int256) */
-                ret(fp256_pow(calldataload(4), calldataload(36)))
-            }
-            case 0x973fe005 { /* expm1(int256) */
-                ret(fp256_expm1(calldataload(4)))
-            }
-            case 0x9aea0a13 { /* fromFixed18(int256) */
-                ret(fp256_fromFixed18(calldataload(4)))
-            }
-            case 0xa2745c74 { /* toFixed18(int256) */
-                ret(fp256_toFixed18(calldataload(4)))
-            }
-            case 0xa31e7db8 { /* compound(int256,int256) */
-                ret(fp256_compound(calldataload(4), calldataload(36)))
-            }
-            case 0xa5f3c23b { /* add(int256,int256) */
-                ret(fp256_add(calldataload(4), calldataload(36)))
-            }
-            case 0xaa2c45bf { /* eq(int256,int256) */
-                ret(fp256_eq(calldataload(4), calldataload(36)))
-            }
-            case 0xadefc37b { /* sub(int256,int256) */
-                ret(fp256_sub(calldataload(4), calldataload(36)))
-            }
-            case 0xae610b48 { /* sign(int256) */
-                ret(fp256_sign(calldataload(4)))
-            }
-            case 0xb8846d69 { /* powu(int256,int256) */
-                ret(fp256_powu(calldataload(4), calldataload(36)))
-            }
-            case 0xbbe93d91 { /* mul(int256,int256) */
-                ret(fp256_mul(calldataload(4), calldataload(36)))
-            }
-            case 0xc688366a { /* cmp(int256,int256) */
-                ret(fp256_cmp(calldataload(4), calldataload(36)))
-            }
-            case 0xda3ff648 { /* floor(int256) */
-                ret(fp256_floor(calldataload(4)))
-            }
-            case 0xddb29e92 { /* divDown(int256,int256) */
-                ret(fp256_divDown(calldataload(4), calldataload(36)))
-            }
-            case 0xe2bec1fe { /* divUp(int256,int256) */
-                ret(fp256_divUp(calldataload(4), calldataload(36)))
-            }
-            case 0xe3814b19 { /* fromUint(uint256) */
-                ret(fp256_fromUint(calldataload(4)))
-            }
-            case 0xe46751e3 { /* exp(int256) */
-                ret(fp256_exp(calldataload(4)))
-            }
-            case 0xfebfc540 { /* fromUintDown(uint256) */
-                ret(fp256_fromUintDown(calldataload(4)))
-            }
-            default { revert(0, 0) }
 
             function ret(v) {
                 mstore(0, v)

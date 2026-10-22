@@ -378,11 +378,13 @@ def _indent(text: str, n: int) -> str:
 # per level instead, and pays from a dozen or so exports (measured: FP127's
 # 55 save 465 gas a call on average, FP256X3's 15 save 72, FP256X2's 10 31
 # with some ops dearer, FP256X's 5 would lose). Objects with fewer than
-# DISPATCH_MIN exports keep the flat switch. So do FP256 (the deployed v4
-# core stays byte for byte: the search would cost it 180 bytes of its 64 of
-# headroom) and FP256X (five exports); FP256X2 and FP256X3 take the search
-# from release 2.2.
-FLAT_DISPATCH = {"FP256", "FP256X"}
+# DISPATCH_MIN exports keep the flat switch. So does FP256X (five exports).
+# FP256X2 and FP256X3 take the search from release 2.2; the FP256 core from
+# fp256-basic-fast, once the fast paths for its basic ops freed the 180 bytes
+# the search costs (measured on the gas ladder: 278 gas a call saved on
+# average over its 37 benched exports, up to 656, a few of the first-ranked
+# ones up to 85 dearer).
+FLAT_DISPATCH = {"FP256X"}
 DISPATCH_MIN = 10
 # A leaf of the selector search is a plain switch of at most this many cases.
 DISPATCH_LEAF = 4
