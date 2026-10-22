@@ -373,17 +373,74 @@ def _indent(text: str, n: int) -> str:
     return "\n".join((pad + l) if l.strip() else l for l in text.splitlines())
 
 
+# A flat switch is a linear chain of comparisons, about 22 gas per selector
+# ranked before the one called; the binary search below costs one comparison
+# per level instead, and pays from a dozen or so exports (measured: FP127's
+# 55 save 465 gas a call on average, FP256X3's 15 would save 72, FP256X2's
+# 10 31 with some ops dearer, FP256X's 5 would lose). Objects with fewer
+# than DISPATCH_MIN exports keep the flat switch. So do the four FP256
+# objects: release four is frozen for deployment, its bytecode and
+# addresses final (and the search would cost FP256 core 180 bytes of its
+# 64 of headroom).
+FLAT_DISPATCH = {"FP256", "FP256X", "FP256X2", "FP256X3"}
+DISPATCH_MIN = 12
+# A leaf of the selector search is a plain switch of at most this many cases.
+DISPATCH_LEAF = 4
+
+
+def dispatch_steps(selectors: list[str], flat: bool) -> dict[str, int]:
+    """Comparisons the dispatch makes before it reaches each selector's case
+    (selectors sorted): the rank in a flat switch; in the search, the levels
+    above the leaf plus the rank in it. make profile fits the object's call
+    and dispatch cost on these."""
+    if flat:
+        return {s: i for i, s in enumerate(selectors)}
+    out: dict[str, int] = {}
+
+    def node(ss: list[str], depth: int) -> None:
+        if len(ss) <= DISPATCH_LEAF:
+            out.update({s: depth + i for i, s in enumerate(ss)})
+            return
+        mid = len(ss) // 2
+        node(ss[mid:], depth + 1)
+        node(ss[:mid], depth + 1)
+
+    node(selectors, 0)
+    return out
+
+
+def flat_dispatch(name: str, n: int) -> bool:
+    return name in FLAT_DISPATCH or n < DISPATCH_MIN
+
+
+def emit_dispatch(exports: list[Export], flat: bool = False) -> str:
+    """The selector dispatch over exports sorted by selector: a binary search
+    (switch on lt(sel, pivot)) down to switches of at most DISPATCH_LEAF
+    cases, each with a reverting default; flat=True is one switch."""
+    def case(e: Export, pad: str) -> str:
+        args = ", ".join(f"calldataload({4 + 32 * i})" for i in range(len(e.inputs)))
+        return f"{pad}case {e.selector} {{ /* {e.signature} */\n{pad}    ret({e.yul_name}({args}))\n{pad}}}"
+
+    if flat:
+        cases = "\n".join(case(e, " " * 12) for e in exports)
+        return f"            switch shr(224, calldataload(0))\n{cases}\n            default {{ revert(0, 0) }}"
+
+    def node(es: list[Export], depth: int) -> str:
+        pad = " " * (12 + 4 * depth)
+        if len(es) <= DISPATCH_LEAF:
+            cases = "\n".join(case(e, pad) for e in es)
+            return f"{pad}switch dsel\n{cases}\n{pad}default {{ revert(0, 0) }}"
+        mid = len(es) // 2
+        return (f"{pad}switch lt(dsel, {es[mid].selector})\n"
+                f"{pad}case 0 {{\n{node(es[mid:], depth + 1)}\n{pad}}}\n"
+                f"{pad}default {{\n{node(es[:mid], depth + 1)}\n{pad}}}")
+
+    return "            let dsel := shr(224, calldataload(0))\n" + node(exports, 0)
+
+
 def emit_object(src: Source, name: str | None = None) -> str:
     name = name or OBJECT_NAME
     exports = sorted((e for e in src.exports if object_of(e) == name), key=lambda e: int(e.selector, 16))
-    cases = []
-    for e in exports:
-        args = ", ".join(f"calldataload({4 + 32 * i})" for i in range(len(e.inputs)))
-        cases.append(
-            f"            case {e.selector} {{ /* {e.signature} */\n"
-            f"                ret({e.yul_name}({args}))\n"
-            f"            }}"
-        )
     funcs = "\n\n".join(_indent(f.text, 12) for f in object_funcs(src, name))
     return f"""{banner()}object "{name}" {{
     code {{
@@ -392,9 +449,7 @@ def emit_object(src: Source, name: str | None = None) -> str:
     }}
     object "runtime" {{
         code {{
-            switch shr(224, calldataload(0))
-{chr(10).join(cases)}
-            default {{ revert(0, 0) }}
+{emit_dispatch(exports, flat_dispatch(name, len(exports)))}
 
             function ret(v) {{
                 mstore(0, v)
@@ -464,7 +519,9 @@ PROBE_RESIDUAL = 92
 # every call (the helper is the fallback itself).
 COUNTS = {
     "fp256": {"rbad": "ret"},
-    "fp127": {"nearmid": "ret", "powus": "call"},
+    # FP127: the double-word log l2p runs exactly when the one-word log, pow or
+    # cbrt could not decide (nearmid, or pow2t not ok)
+    "fp127": {"l2p": "call", "powus": "call"},
 }
 
 # The helpers make profile measures, in slot order.
@@ -475,7 +532,7 @@ PROBES = {
               # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp
               "hser", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cubegt",
               "isqrtw", "lerp3"],
-    "fp127": ["expk", "log2m", "erfs", "erfcf", "lwfsc", "lwib", "lwm1", "lwfin",
+    "fp127": ["expk", "log2m", "erfs", "erfcf", "lwfsc", "lwm1", "lwfin",
               "l2p", "powus"],
 }
 

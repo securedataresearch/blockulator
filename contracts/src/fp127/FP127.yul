@@ -6,173 +6,279 @@ object "FP127" {
     }
     object "runtime" {
         code {
-            switch shr(224, calldataload(0))
-            case 0x17cdc976 { /* sinh(int256) */
-                ret(fp127_sinh(calldataload(4)))
+            let dsel := shr(224, calldataload(0))
+            switch lt(dsel, 0x92b0c5b2)
+            case 0 {
+                switch lt(dsel, 0xb47ca3c7)
+                case 0 {
+                    switch lt(dsel, 0xdbbb06d2)
+                    case 0 {
+                        switch lt(dsel, 0xe2bec1fe)
+                        case 0 {
+                            switch dsel
+                            case 0xe2bec1fe { /* divUp(int256,int256) */
+                                ret(fp127_divUp(calldataload(4), calldataload(36)))
+                            }
+                            case 0xe46751e3 { /* exp(int256) */
+                                ret(fp127_exp(calldataload(4)))
+                            }
+                            case 0xebf274be { /* avg(int256,int256) */
+                                ret(fp127_avg(calldataload(4), calldataload(36)))
+                            }
+                            case 0xff78cf2d { /* zeroFloorSub(int256,int256) */
+                                ret(fp127_zeroFloorSub(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0xdbbb06d2 { /* exp2(int256) */
+                                ret(fp127_exp2(calldataload(4)))
+                            }
+                            case 0xddb29e92 { /* divDown(int256,int256) */
+                                ret(fp127_divDown(calldataload(4), calldataload(36)))
+                            }
+                            case 0xe0d68737 { /* log2(int256) */
+                                ret(fp127_log2(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch lt(dsel, 0xc479210c)
+                        case 0 {
+                            switch dsel
+                            case 0xc479210c { /* hypot(int256,int256) */
+                                ret(fp127_hypot(calldataload(4), calldataload(36)))
+                            }
+                            case 0xc6285a68 { /* atanh(int256) */
+                                ret(fp127_atanh(calldataload(4)))
+                            }
+                            case 0xd4b6188c { /* cbrt(int256) */
+                                ret(fp127_cbrt(calldataload(4)))
+                            }
+                            case 0xda3ff648 { /* floor(int256) */
+                                ret(fp127_floor(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0xb47ca3c7 { /* log10(int256) */
+                                ret(fp127_log10(calldataload(4)))
+                            }
+                            case 0xb8846d69 { /* powu(int256,int256) */
+                                ret(fp127_powu(calldataload(4), calldataload(36)))
+                            }
+                            case 0xbbe93d91 { /* mul(int256,int256) */
+                                ret(fp127_mul(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                }
+                default {
+                    switch lt(dsel, 0xa5f3c23b)
+                    case 0 {
+                        switch lt(dsel, 0xadefc37b)
+                        case 0 {
+                            switch dsel
+                            case 0xadefc37b { /* sub(int256,int256) */
+                                ret(fp127_sub(calldataload(4), calldataload(36)))
+                            }
+                            case 0xae2785ac { /* frac(int256) */
+                                ret(fp127_frac(calldataload(4)))
+                            }
+                            case 0xae610b48 { /* sign(int256) */
+                                ret(fp127_sign(calldataload(4)))
+                            }
+                            case 0xae94abc8 { /* lambertWm1(int256) */
+                                ret(fp127_lambertWm1(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0xa5f3c23b { /* add(int256,int256) */
+                                ret(fp127_add(calldataload(4), calldataload(36)))
+                            }
+                            case 0xa79456da { /* erfc(int256) */
+                                ret(fp127_erfc(calldataload(4)))
+                            }
+                            case 0xaa13e96a { /* cosh(int256) */
+                                ret(fp127_cosh(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch lt(dsel, 0xa13ed853)
+                        case 0 {
+                            switch dsel
+                            case 0xa13ed853 { /* gavg(int256,int256) */
+                                ret(fp127_gavg(calldataload(4), calldataload(36)))
+                            }
+                            case 0xa1985bb6 { /* log2Up(int256) */
+                                ret(fp127_log2Up(calldataload(4)))
+                            }
+                            case 0xa2745c74 { /* toFixed18(int256) */
+                                ret(fp127_toFixed18(calldataload(4)))
+                            }
+                            case 0xa31e7db8 { /* compound(int256,int256) */
+                                ret(fp127_compound(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x92b0c5b2 { /* pow(int256,int256) */
+                                ret(fp127_pow(calldataload(4), calldataload(36)))
+                            }
+                            case 0x973fe005 { /* expm1(int256) */
+                                ret(fp127_expm1(calldataload(4)))
+                            }
+                            case 0x9aea0a13 { /* fromFixed18(int256) */
+                                ret(fp127_fromFixed18(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                }
             }
-            case 0x1aabb2f7 { /* mulUp(int256,int256) */
-                ret(fp127_mulUp(calldataload(4), calldataload(36)))
+            default {
+                switch lt(dsel, 0x58b4370b)
+                case 0 {
+                    switch lt(dsel, 0x7b8d0f0c)
+                    case 0 {
+                        switch lt(dsel, 0x84e13b60)
+                        case 0 {
+                            switch dsel
+                            case 0x84e13b60 { /* lerp(int256,int256,int256) */
+                                ret(fp127_lerp(calldataload(4), calldataload(36), calldataload(68)))
+                            }
+                            case 0x8552a5b0 { /* log1p(int256) */
+                                ret(fp127_log1p(calldataload(4)))
+                            }
+                            case 0x8e6f2353 { /* ln(int256) */
+                                ret(fp127_ln(calldataload(4)))
+                            }
+                            case 0x929edbfb { /* pi(int256) */
+                                ret(fp127_pi(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x7b8d0f0c { /* clamp(int256,int256,int256) */
+                                ret(fp127_clamp(calldataload(4), calldataload(36), calldataload(68)))
+                            }
+                            case 0x7b9745a0 { /* normCdf(int256) */
+                                ret(fp127_normCdf(calldataload(4)))
+                            }
+                            case 0x81fe5786 { /* max(int256,int256) */
+                                ret(fp127_max(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch lt(dsel, 0x63b03896)
+                        case 0 {
+                            switch dsel
+                            case 0x63b03896 { /* gcd(int256,int256) */
+                                ret(fp127_gcd(calldataload(4), calldataload(36)))
+                            }
+                            case 0x665df460 { /* sqrt(int256) */
+                                ret(fp127_sqrt(calldataload(4)))
+                            }
+                            case 0x6de23d34 { /* lambertW0(int256) */
+                                ret(fp127_lambertW0(calldataload(4)))
+                            }
+                            case 0x7a959e36 { /* erf(int256) */
+                                ret(fp127_erf(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x58b4370b { /* round(int256) */
+                                ret(fp127_round(calldataload(4)))
+                            }
+                            case 0x5ad78e8a { /* factorial(int256) */
+                                ret(fp127_factorial(calldataload(4)))
+                            }
+                            case 0x5e1f05c7 { /* tanh(int256) */
+                                ret(fp127_tanh(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                }
+                default {
+                    switch lt(dsel, 0x32154abe)
+                    case 0 {
+                        switch lt(dsel, 0x43509138)
+                        case 0 {
+                            switch dsel
+                            case 0x43509138 { /* div(int256,int256) */
+                                ret(fp127_div(calldataload(4), calldataload(36)))
+                            }
+                            case 0x4b8d10e0 { /* mulDown(int256,int256) */
+                                ret(fp127_mulDown(calldataload(4), calldataload(36)))
+                            }
+                            case 0x4c0dafa2 { /* exp10(int256) */
+                                ret(fp127_exp10(calldataload(4)))
+                            }
+                            case 0x54a53dc1 { /* neg(int256) */
+                                ret(fp127_neg(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x32154abe { /* toFixed18Down(int256) */
+                                ret(fp127_toFixed18Down(calldataload(4)))
+                            }
+                            case 0x3a02c983 { /* inv(int256) */
+                                ret(fp127_inv(calldataload(4)))
+                            }
+                            case 0x42fba7ae { /* ceil(int256) */
+                                ret(fp127_ceil(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch lt(dsel, 0x2110b689)
+                        case 0 {
+                            switch dsel
+                            case 0x2110b689 { /* dist(int256,int256) */
+                                ret(fp127_dist(calldataload(4), calldataload(36)))
+                            }
+                            case 0x27066ea4 { /* toFixed18Up(int256) */
+                                ret(fp127_toFixed18Up(calldataload(4)))
+                            }
+                            case 0x29aa9cbe { /* min(int256,int256) */
+                                ret(fp127_min(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x17cdc976 { /* sinh(int256) */
+                                ret(fp127_sinh(calldataload(4)))
+                            }
+                            case 0x1aabb2f7 { /* mulUp(int256,int256) */
+                                ret(fp127_mulUp(calldataload(4), calldataload(36)))
+                            }
+                            case 0x1b5ac4b5 { /* abs(int256) */
+                                ret(fp127_abs(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                }
             }
-            case 0x1b5ac4b5 { /* abs(int256) */
-                ret(fp127_abs(calldataload(4)))
-            }
-            case 0x2110b689 { /* dist(int256,int256) */
-                ret(fp127_dist(calldataload(4), calldataload(36)))
-            }
-            case 0x27066ea4 { /* toFixed18Up(int256) */
-                ret(fp127_toFixed18Up(calldataload(4)))
-            }
-            case 0x29aa9cbe { /* min(int256,int256) */
-                ret(fp127_min(calldataload(4), calldataload(36)))
-            }
-            case 0x32154abe { /* toFixed18Down(int256) */
-                ret(fp127_toFixed18Down(calldataload(4)))
-            }
-            case 0x3a02c983 { /* inv(int256) */
-                ret(fp127_inv(calldataload(4)))
-            }
-            case 0x42fba7ae { /* ceil(int256) */
-                ret(fp127_ceil(calldataload(4)))
-            }
-            case 0x43509138 { /* div(int256,int256) */
-                ret(fp127_div(calldataload(4), calldataload(36)))
-            }
-            case 0x4b8d10e0 { /* mulDown(int256,int256) */
-                ret(fp127_mulDown(calldataload(4), calldataload(36)))
-            }
-            case 0x4c0dafa2 { /* exp10(int256) */
-                ret(fp127_exp10(calldataload(4)))
-            }
-            case 0x54a53dc1 { /* neg(int256) */
-                ret(fp127_neg(calldataload(4)))
-            }
-            case 0x58b4370b { /* round(int256) */
-                ret(fp127_round(calldataload(4)))
-            }
-            case 0x5ad78e8a { /* factorial(int256) */
-                ret(fp127_factorial(calldataload(4)))
-            }
-            case 0x5e1f05c7 { /* tanh(int256) */
-                ret(fp127_tanh(calldataload(4)))
-            }
-            case 0x63b03896 { /* gcd(int256,int256) */
-                ret(fp127_gcd(calldataload(4), calldataload(36)))
-            }
-            case 0x665df460 { /* sqrt(int256) */
-                ret(fp127_sqrt(calldataload(4)))
-            }
-            case 0x6de23d34 { /* lambertW0(int256) */
-                ret(fp127_lambertW0(calldataload(4)))
-            }
-            case 0x7a959e36 { /* erf(int256) */
-                ret(fp127_erf(calldataload(4)))
-            }
-            case 0x7b8d0f0c { /* clamp(int256,int256,int256) */
-                ret(fp127_clamp(calldataload(4), calldataload(36), calldataload(68)))
-            }
-            case 0x7b9745a0 { /* normCdf(int256) */
-                ret(fp127_normCdf(calldataload(4)))
-            }
-            case 0x81fe5786 { /* max(int256,int256) */
-                ret(fp127_max(calldataload(4), calldataload(36)))
-            }
-            case 0x84e13b60 { /* lerp(int256,int256,int256) */
-                ret(fp127_lerp(calldataload(4), calldataload(36), calldataload(68)))
-            }
-            case 0x8552a5b0 { /* log1p(int256) */
-                ret(fp127_log1p(calldataload(4)))
-            }
-            case 0x8e6f2353 { /* ln(int256) */
-                ret(fp127_ln(calldataload(4)))
-            }
-            case 0x929edbfb { /* pi(int256) */
-                ret(fp127_pi(calldataload(4)))
-            }
-            case 0x92b0c5b2 { /* pow(int256,int256) */
-                ret(fp127_pow(calldataload(4), calldataload(36)))
-            }
-            case 0x973fe005 { /* expm1(int256) */
-                ret(fp127_expm1(calldataload(4)))
-            }
-            case 0x9aea0a13 { /* fromFixed18(int256) */
-                ret(fp127_fromFixed18(calldataload(4)))
-            }
-            case 0xa13ed853 { /* gavg(int256,int256) */
-                ret(fp127_gavg(calldataload(4), calldataload(36)))
-            }
-            case 0xa1985bb6 { /* log2Up(int256) */
-                ret(fp127_log2Up(calldataload(4)))
-            }
-            case 0xa2745c74 { /* toFixed18(int256) */
-                ret(fp127_toFixed18(calldataload(4)))
-            }
-            case 0xa31e7db8 { /* compound(int256,int256) */
-                ret(fp127_compound(calldataload(4), calldataload(36)))
-            }
-            case 0xa5f3c23b { /* add(int256,int256) */
-                ret(fp127_add(calldataload(4), calldataload(36)))
-            }
-            case 0xa79456da { /* erfc(int256) */
-                ret(fp127_erfc(calldataload(4)))
-            }
-            case 0xaa13e96a { /* cosh(int256) */
-                ret(fp127_cosh(calldataload(4)))
-            }
-            case 0xadefc37b { /* sub(int256,int256) */
-                ret(fp127_sub(calldataload(4), calldataload(36)))
-            }
-            case 0xae2785ac { /* frac(int256) */
-                ret(fp127_frac(calldataload(4)))
-            }
-            case 0xae610b48 { /* sign(int256) */
-                ret(fp127_sign(calldataload(4)))
-            }
-            case 0xae94abc8 { /* lambertWm1(int256) */
-                ret(fp127_lambertWm1(calldataload(4)))
-            }
-            case 0xb47ca3c7 { /* log10(int256) */
-                ret(fp127_log10(calldataload(4)))
-            }
-            case 0xb8846d69 { /* powu(int256,int256) */
-                ret(fp127_powu(calldataload(4), calldataload(36)))
-            }
-            case 0xbbe93d91 { /* mul(int256,int256) */
-                ret(fp127_mul(calldataload(4), calldataload(36)))
-            }
-            case 0xc479210c { /* hypot(int256,int256) */
-                ret(fp127_hypot(calldataload(4), calldataload(36)))
-            }
-            case 0xc6285a68 { /* atanh(int256) */
-                ret(fp127_atanh(calldataload(4)))
-            }
-            case 0xd4b6188c { /* cbrt(int256) */
-                ret(fp127_cbrt(calldataload(4)))
-            }
-            case 0xda3ff648 { /* floor(int256) */
-                ret(fp127_floor(calldataload(4)))
-            }
-            case 0xdbbb06d2 { /* exp2(int256) */
-                ret(fp127_exp2(calldataload(4)))
-            }
-            case 0xddb29e92 { /* divDown(int256,int256) */
-                ret(fp127_divDown(calldataload(4), calldataload(36)))
-            }
-            case 0xe0d68737 { /* log2(int256) */
-                ret(fp127_log2(calldataload(4)))
-            }
-            case 0xe2bec1fe { /* divUp(int256,int256) */
-                ret(fp127_divUp(calldataload(4), calldataload(36)))
-            }
-            case 0xe46751e3 { /* exp(int256) */
-                ret(fp127_exp(calldataload(4)))
-            }
-            case 0xebf274be { /* avg(int256,int256) */
-                ret(fp127_avg(calldataload(4), calldataload(36)))
-            }
-            case 0xff78cf2d { /* zeroFloorSub(int256,int256) */
-                ret(fp127_zeroFloorSub(calldataload(4), calldataload(36)))
-            }
-            default { revert(0, 0) }
 
             function ret(v) {
                 mstore(0, v)
@@ -317,8 +423,27 @@ object "FP127" {
                 let ng := xor(slt(a, 0), slt(b, 0))
                 let ua := absw(a)
                 let ub := absw(b)
-                if iszero(lt(shr(128, ua), ub)) { rev(0x35278d12) }
-                let q := divu(ua, ub)
+                let q := shr(128, ua)
+                switch q
+                case 0 { q := div(shl(128, ua), ub) }
+                default {
+                    if iszero(lt(q, ub)) { rev(0x35278d12) }
+                    let prod0 := shl(128, ua)
+                    let rem := mulmod(ua, 0x100000000000000000000000000000000, ub)
+                    q := sub(q, gt(rem, prod0))
+                    prod0 := sub(prod0, rem)
+                    let twos := and(sub(0, ub), ub)
+                    let d := div(ub, twos)
+                    prod0 := or(div(prod0, twos), mul(q, add(div(sub(0, twos), twos), 1)))
+                    let iv := xor(mul(3, d), 2)
+                    iv := mul(iv, sub(2, mul(d, iv)))
+                    iv := mul(iv, sub(2, mul(d, iv)))
+                    iv := mul(iv, sub(2, mul(d, iv)))
+                    iv := mul(iv, sub(2, mul(d, iv)))
+                    iv := mul(iv, sub(2, mul(d, iv)))
+                    iv := mul(iv, sub(2, mul(d, iv)))
+                    q := mul(prod0, iv)
+                }
                 if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
                 r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
@@ -352,31 +477,34 @@ object "FP127" {
             }
 
             function exp2frac(f) -> r {
+                // mulg(r, f) inline and unsigned: f and every partial sum are below 2^194
+                let l := 0
+                let h := 0
                 r := 0x1b5a5019cfe1d4f099ea512721
-                r := add(mulg(r, f), 0x26af06ddbabc8cd6364386b5760)
-                r := add(mulg(r, f), 0x57709b02fc63eaab1c4797e6ea8b)
-                r := add(mulg(r, f), 0xabdf567d5ded49a416936c1ae8c18)
-                r := add(mulg(r, f), 0x145b07f4c51e82851a25b974d02341f)
-                r := add(mulg(r, f), 0x24b4f8097d70b1adf392c3c9ab01cb63)
-                r := add(mulg(r, f), 0x3ee2ede3c82d172d48a5e7c977b31a425)
-                r := add(mulg(r, f), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
-                r := add(mulg(r, f), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
-                r := add(mulg(r, f), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
-                r := add(mulg(r, f), 0x1314964d587a24af79377a43902b7ec888b8c0)
-                r := add(mulg(r, f), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
-                r := add(mulg(r, f), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
-                r := add(mulg(r, f), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
-                r := add(mulg(r, f), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
-                r := add(mulg(r, f), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
-                r := add(mulg(r, f), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
-                r := add(mulg(r, f), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
-                r := add(mulg(r, f), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
-                r := add(mulg(r, f), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
-                r := add(mulg(r, f), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
-                r := add(mulg(r, f), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
-                r := add(mulg(r, f), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
-                r := add(mulg(r, f), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
-                r := add(mulg(r, f), 0x10000000000000000000000000000000000005fc97a4a9077)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x26af06ddbabc8cd6364386b5760)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x57709b02fc63eaab1c4797e6ea8b)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xabdf567d5ded49a416936c1ae8c18)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x145b07f4c51e82851a25b974d02341f)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x24b4f8097d70b1adf392c3c9ab01cb63)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x3ee2ede3c82d172d48a5e7c977b31a425)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x661112ca4bbd3dcb2636b2ae6a0ec057b4)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x9c744d741ac58f6d7eb2ab7cb68eec1653e)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xe1b7421d7f16dcf4744e3ca677bf334b3e94)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1314964d587a24af79377a43902b7ec888b8c0)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1816193166d0ef8a8b9f578caa1f6a3069d023c)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1c3bd650fc29861801b230f8f6cd00eeacb90c0c)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1e8cac7351bb24c00ba62caf5d1c7247910aeff17)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1e4cf5158b8ec9f700d9e590f1ee3e7323fd6cac13)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x1b5253d395e7c3da4a67e4d784c8f18e97d4c2146f3)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x162c0223a5c823fd8ffe74169293f4617ac4bf9ab33c)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xffe5fe2c458634358a8e62322500b67b41a3a93d03a8)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xa184897c363c3b7a58544c381a73bd57f098232afb817)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x5761ff9e299cc441c5fda69450bfd05ef31e2131e24c9b)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x276556df749cee539977c16a7dd6dbdbcd7b226ff00ae18)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xe35846b82505fc599d3b15d995e967c702bc1544c316863)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x3d7f7bff058b1d50de2d60dd92e6bf96c33c4b3874d65813)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0xb17217f7d1cf79abc9e3b39803f2f6af3f1f8fe506d096d2)
+                l := mul(r, f) h := mulmod(r, f, not(0)) r := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), 0x10000000000000000000000000000000000005fc97a4a9077)
             }
 
             function exp2core(t) -> r {
@@ -549,6 +677,30 @@ object "FP127" {
                 r := rnd192(vh, vl)
             }
 
+            function pow2t(t, ay) -> r, ok {
+                let at := t
+                let e := 0
+                if slt(t, 0) { at := sub(0, t) }
+                let k := shr(192, at)
+                switch slt(t, 0)
+                case 0 { e := add(k, 1) }
+                default { e := sub(0, k) }
+                // ay 2^(e+48) / 2^128 + 2^(e+48) + 6 (the shl is 0 for e < -48)
+                let eb := add(add(shr(sub(80, e), ay), shl(add(e, 48), 1)), 6)
+                if gt(eb, 0x2000000000000000) { leave }
+                let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                let v := 0
+                switch slt(t, 0)
+                case 0 { v := shl(k, exp2frac(f)) }
+                default {
+                    switch f
+                    case 0 { v := shr(k, 0x1000000000000000000000000000000000000000000000000) }
+                    default { v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f))) }
+                }
+                ok := gt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), eb)
+                r := shr(64, add(v, 0x8000000000000000))
+            }
+
             function fp127_exp2(x) -> r {
                 if iszero(slt(x, 0x7f00000000000000000000000000000000)) { rev(0x35278d12) }
                 if slt(x, sub(0, 0x8200000000000000000000000000000000)) { r := 0 leave }
@@ -648,12 +800,10 @@ object "FP127" {
                 b := lt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), 0x800000000000)
             }
 
-            function l2p(x) -> lh, ll {
-                let ms := msb(x)
+            function l2p(x, ms, y0) -> lh, ll {
                 let m := shl(sub(255, ms), x)
                 lh := shl(128, sub(ms, 128))
                 if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
-                let y0 := log2m(shr(63, m))
                 if slt(y0, 1) { y0 := 1 }
                 if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
                 // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
@@ -685,9 +835,18 @@ object "FP127" {
 
             function fp127_log2(x) -> r {
                 if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
-                let v := log2g(x)
+                // log2g, its msb and log2m kept for l2py
+                let ms := msb(x)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(x, sub(x, 1)) {
+                    let mm := shl(sub(192, ms), x)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
                 if nearmid(v) {
-                    let lh, ll := l2p(x)
+                    let lh, ll := l2p(x, ms, y0)
                     r := add(lh, shr(255, ll))
                     leave
                 }
@@ -697,9 +856,19 @@ object "FP127" {
             function fp127_ln(x) -> r {
                 if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
                 if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
-                let v := mulg(log2g(x), 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
+                // log2g, its msb and log2m kept for l2py
+                let ms := msb(x)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(x, sub(x, 1)) {
+                    let mm := shl(sub(192, ms), x)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
+                v := mulg(v, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
                 if nearmid(v) {
-                    let lh, ll := l2p(x)
+                    let lh, ll := l2p(x, ms, y0)
                     r := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
                     leave
                 }
@@ -709,9 +878,19 @@ object "FP127" {
             function fp127_log10(x) -> r {
                 if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
                 if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
-                let v := mulg(log2g(x), 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a5)
+                // log2g, its msb and log2m kept for l2py
+                let ms := msb(x)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(x, sub(x, 1)) {
+                    let mm := shl(sub(192, ms), x)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
+                v := mulg(v, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a5)
                 if nearmid(v) {
-                    let lh, ll := l2p(x)
+                    let lh, ll := l2p(x, ms, y0)
                     r := x384mul(lh, ll, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e6)
                     leave
                 }
@@ -728,9 +907,43 @@ object "FP127" {
                 r := shl(128, add(sub(msb(x), 128), iszero(iszero(and(x, sub(x, 1))))))
             }
 
+            function isqrtw(z) -> y {
+                y := 181
+                let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
+                b := or(b, shl(6, lt(0xffffffffffffffffff, shr(b, z))))
+                b := or(b, shl(5, lt(0xffffffffff, shr(b, z))))
+                b := or(b, shl(4, lt(0xffffff, shr(b, z))))
+                y := shl(shr(1, b), y)
+                y := shr(18, mul(y, add(shr(b, z), 65536)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := sub(y, lt(div(z, y), y))
+            }
+
             function fp127_sqrt(x) -> r {
                 if slt(x, 0) { rev(0x7db3aba7) }
-                if iszero(x) { r := 0 leave }
+                if iszero(x) { leave }
+                switch shr(128, x)
+                case 0 { r := isqrtw(shl(128, x)) }
+                default {
+                    let sh := and(sub(255, msb(x)), not(1))
+                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
+                    r := shr(1, add(r, divu(x, r)))
+                    let h, l := mul512(r, r)
+                    if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
+                }
+                // D = (r + 1)^2 - N, 512 bits, below x 2^-192 + 2: where v4 may have stopped on r + 1
+                let h, l := mul512(add(r, 1), add(r, 1))
+                h := sub(sub(h, shr(128, x)), lt(l, shl(128, x)))
+                if and(iszero(h), lt(sub(l, shl(128, x)), add(shr(192, x), 2))) { r := sqrtv4(x) }
+            }
+
+            function sqrtv4(x) -> r {
                 let e := add(128, msb(x))
                 let y := shl(shr(1, e), 1)
                 if and(e, 1) { y := mulraw(y, 0x16a09e667f3bcc908b2fb1366ea957d3e) }
@@ -763,8 +976,26 @@ object "FP127" {
                     case 0x200000000000000000000000000000000 { r := fp127_exp2(y) }
                     case 0xa00000000000000000000000000000000 { r := fp127_exp10(y) }
                     default {
-                        let lh, ll := l2p(x)
-                        r := pow2r(y, lh, ll)
+                        // log2(x) at 2^-192 in one word (log2g), its msb and log2m kept for l2p
+                        let ms := msb(x)
+                        let y0 := 0
+                        let v := shl(192, sub(ms, 128))
+                        if and(x, sub(x, 1)) {
+                            let mm := shl(sub(192, ms), x)
+                            if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                            y0 := log2m(mm)
+                            v := add(v, y0)
+                        }
+                        // t = y log2(x) at 2^-192, the floor of the 512-bit product, while |t| < 2^198
+                        let ok := 0
+                        let p0 := mul(y, v)
+                        let pm := mulmod(y, v, not(0))
+                        let p1 := sub(sub(sub(sub(pm, p0), lt(pm, p0)), mul(slt(y, 0), v)), mul(slt(v, 0), y))
+                        if eq(sar(70, p1), sar(255, p1)) { r, ok := pow2t(or(shl(128, p1), shr(128, p0)), absw(y)) }
+                        if iszero(ok) {
+                            let lh, ll := l2p(x, ms, y0)
+                            r := pow2r(y, lh, ll)
+                        }
                     }
                 }
             }
@@ -910,7 +1141,28 @@ object "FP127" {
 
             function fp127_cbrt(x) -> r {
                 if iszero(x) { leave }
-                let lh, ll := l2p(fp127_abs(x))
+                let ax := fp127_abs(x)
+                // log2|x| at 2^-192 in one word (log2g), its msb and log2m kept for l2p
+                let ms := msb(ax)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(ax, sub(ax, 1)) {
+                    let mm := shl(sub(192, ms), ax)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), ax) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
+                // 2^(log2|x| / 3) in one word; the third's error is under 2^-145 / 3 + 2^-192
+                // (ay = 1). From |x| = 2^39 the result's 2^13 puts eb past 2^61: no try.
+                if lt(ms, 167) {
+                    let ok := 0
+                    r, ok := pow2t(sdiv(v, 3), 0x100000000000000000000000000000000)
+                    if ok {
+                        if slt(x, 0) { r := sub(0, r) }
+                        leave
+                    }
+                }
+                let lh, ll := l2p(ax, ms, y0)
                 // log2|x| = 3 q + rem + frac; the fraction of the third is (rem + frac) / 3
                 let li := sar(128, lh)
                 let q := sdiv(li, 3)
@@ -943,7 +1195,13 @@ object "FP127" {
             }
 
             function fp127_inv(x) -> r {
-                r := fp127_div(0x100000000000000000000000000000000, x)
+                if iszero(x) { rev(0x23d359a3) }
+                let ng := slt(x, 0)
+                let ux := absw(x)
+                if eq(ux, 1) { rev(0x35278d12) }
+                let q := add(div(sub(0, ux), ux), 1)
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+                r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
 
             function fp127_abs(x) -> r {
@@ -1057,15 +1315,9 @@ object "FP127" {
 
             function lwfsc(x, w) -> wn {
                 let wp1 := add(w, 0x100000000000000000000000000000000)
-                let ew := expf(w)
-                let rr := fp127_div(sub(w, fp127_div(x, ew)), wp1)
-                let corr := mulraw(rr, add(fp127_div(rr, shl(1, wp1)), 0x100000000000000000000000000000000))
-                wn := sub(w, corr)
-            }
-
-            function lwib(x, w) -> wn {
-                let num := mulraw(w, add(0x100000000000000000000000000000000, lnf(fp127_div(x, w))))
-                wn := fp127_div(num, add(0x100000000000000000000000000000000, w))
+                let iv := fp127_inv(wp1)
+                let rr := mulraw(sub(w, fp127_div(x, expf(w))), iv)
+                wn := sub(w, mulraw(rr, add(0x100000000000000000000000000000000, sar(1, mulraw(mulraw(rr, add(wp1, 0x100000000000000000000000000000000)), iv)))))
             }
 
             function lwfin(x, w) -> r {
@@ -1124,14 +1376,22 @@ object "FP127" {
                     leave
                 }
                 let w := 0
-                switch slt(x, 0)
+                // the Halley steps the seed needs (scripts/fp127/generators/precise_model.py lambertw)
+                let n := 3
+                switch or(lt(absw(x), 0x8000000000000000000000000000000), and(slt(x, 0), sgt(x, sub(0, 0x40000000000000000000000000000000))))
                 case 1 {
-                    switch sgt(x, sub(0, 0x40000000000000000000000000000000))
-                    case 1 {
-                        let x2 := mulraw(x, x)
-                        w := add(sub(x, x2), mulraw(x2, add(x, sar(1, x))))
+                    // the origin series, -1/4 < x < 2^-5; its error is about 8/3 x^4
+                    let x2 := mulraw(x, x)
+                    w := add(sub(x, x2), mulraw(x2, add(x, sar(1, x))))
+                    if lt(absw(x), 0x8000000000000000000000000000000) {
+                        n := 2
+                        if lt(absw(x), 0x80000000000000000000000000000) { n := 1 }
+                        if lt(absw(x), 0x800000000000000000000000) { n := 0 }
                     }
-                    default {
+                }
+                default {
+                    switch slt(x, 0)
+                    case 1 {
                         let qq := lwq(x)
                         if lt(qq, 0x1000000000000000000000000000000000000000000000000000000) {
                             r := lwfin(x, lwbp(qq, 1))
@@ -1144,33 +1404,38 @@ object "FP127" {
                         w := sub(p, 0x100000000000000000000000000000000)
                         w := sub(w, div(p2, 3))
                         w := add(w, div(mul(mulraw(p2, p), 11), 72))
+                        // 1 + e x below 2^-8: two steps; below 2^-28: one
+                        if lt(qq, 0x100000000000000000000000000000000000000000000000000000000000000) {
+                            n := 2
+                            if lt(qq, 0x1000000000000000000000000000000000000000000000000000000000) { n := 1 }
+                        }
+                    }
+                    default {
+                        // ln(1 + x); for x within ONE of the top of the range 1 + x would
+                        // wrap, and ln(x) is the same seed to far more bits than needed.
+                        let xp := x
+                        if slt(x, 0x7ffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffff) { xp := add(x, 0x100000000000000000000000000000000) }
+                        let l := lnf(xp)
+                        let l1 := lnf(add(l, 0x100000000000000000000000000000000))
+                        w := mulraw(l, sub(0x100000000000000000000000000000000, fp127_div(l1, add(l, 0x200000000000000000000000000000000))))
                     }
                 }
-                default {
-                    // ln(1 + x); for x within ONE of the top of the range 1 + x would
-                    // wrap, and ln(x) is the same seed to far more bits than needed.
-                    let xp := x
-                    if slt(x, 0x7ffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffff) { xp := add(x, 0x100000000000000000000000000000000) }
-                    let l := lnf(xp)
-                    let l1 := lnf(add(l, 0x100000000000000000000000000000000))
-                    w := mulraw(l, sub(0x100000000000000000000000000000000, fp127_div(l1, add(l, 0x200000000000000000000000000000000))))
-                }
-                w := lwfsc(x, w)
-                w := lwfsc(x, w)
-                w := lwfsc(x, w)
-                w := lwfsc(x, w)
-                r := lwfin(x, lwib(x, w))
+                for {} n { n := sub(n, 1) } { w := lwfsc(x, w) }
+                r := lwfin(x, w)
             }
 
             function lwm1(lx, w) -> wn {
                 let f := sub(add(w, lnf(sub(0, w))), lx)
-                wn := sub(w, fp127_div(mulraw(w, f), add(w, 0x100000000000000000000000000000000)))
+                let iv := fp127_inv(add(w, 0x100000000000000000000000000000000))
+                let sn := mulraw(mulraw(w, f), iv)
+                wn := sub(w, mulraw(sn, sub(0x100000000000000000000000000000000, sar(1, mulraw(mulraw(f, iv), iv)))))
             }
 
             function fp127_lambertWm1(x) -> r {
                 if slt(x, sub(0, 0x5e2d58d8b3bcdf1abadec7829054f90d)) { rev(0x7db3aba7) }
                 if iszero(slt(x, 0)) { rev(0x7db3aba7) }
                 let w := 0
+                let n := 3
                 let lx := lnf(sub(0, x))
                 switch slt(x, sub(0, 0x40000000000000000000000000000000))
                 case 1 {
@@ -1185,16 +1450,21 @@ object "FP127" {
                     w := sub(sub(0, 0x100000000000000000000000000000000), p)
                     w := sub(w, div(p2, 3))
                     w := sub(w, div(mul(mulraw(p2, p), 11), 72))
+                    // 1 + e x below 2^-8: two steps; below 2^-28: one
+                    if lt(qq, 0x100000000000000000000000000000000000000000000000000000000000000) {
+                        n := 2
+                        if lt(qq, 0x1000000000000000000000000000000000000000000000000000000000) { n := 1 }
+                    }
                 }
                 default {
                     let ll := lnf(sub(0, lx))
                     w := add(sub(lx, ll), fp127_div(ll, lx))
+                    // the asymptotic seed: two steps for -x below 2^-8, four from 2^-4
+                    if sgt(x, sub(0, 0x1000000000000000000000000000000)) { n := 2 }
+                    if slt(x, sub(0, 0x10000000000000000000000000000000)) { n := 4 }
                 }
-                w := lwm1(lx, w)
-                w := lwm1(lx, w)
-                w := lwm1(lx, w)
-                w := lwm1(lx, w)
-                r := lwfin(x, lwm1(lx, w))
+                for {} n { n := sub(n, 1) } { w := lwm1(lx, w) }
+                r := lwfin(x, w)
             }
 
             function exp2g(t) -> v {
@@ -1219,11 +1489,25 @@ object "FP127" {
                 r := add(shl(64, qh), shr(64, ql))
             }
 
-            function expm1s(x) -> v {
+            function expm1s(x, ax) -> v {
                 let xs := shl(64, x)
+                let k := 27
+                if lt(ax, 0x4000000000000000000000000000000) {
+                    k := 22
+                    if lt(ax, 0x1000000000000000000000000000000) { k := 18 }
+                    if lt(ax, 0x100000000000000000000000000000) { k := 14 }
+                    if lt(ax, 0x10000000000000000000000000000) { k := 11 }
+                    if lt(ax, 0x100000000000000000000000000) { k := 8 }
+                    if lt(ax, 0x1000000000000000000000000) { k := 6 }
+                    if lt(ax, 0x100000000000000000000) { k := 5 }
+                }
                 v := 0x1000000000000000000000000000000000000000000000000
-                for { let k := 27 } gt(k, 1) { k := sub(k, 1) } {
-                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(mulg(xs, v), k))
+                let l := 0
+                let h := 0
+                for {} gt(k, 1) { k := sub(k, 1) } {
+                    l := mul(xs, v)
+                    h := mulmod(xs, v, not(0))
+                    v := add(0x1000000000000000000000000000000000000000000000000, sdiv(or(shl(64, sub(sub(sub(h, l), lt(h, l)), mul(slt(xs, 0), v))), shr(192, l)), k))
                 }
                 v := mulg(xs, v)
             }
@@ -1242,7 +1526,12 @@ object "FP127" {
                 if iszero(x) { r := 0 leave }
                 if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
                 if slt(x, sub(0, 0x5a00000000000000000000000000000000)) { r := sub(0, 0x100000000000000000000000000000000) leave }
-                if iszero(gt(absw(x), 0x10000000000000000000000000000000)) { r := round64(expm1s(x)) leave }
+                let ax := absw(x)
+                if iszero(gt(ax, 0x10000000000000000000000000000000)) {
+                    r := x
+                    if iszero(lt(ax, 0x8000000000000000)) { r := round64(expm1s(x, ax)) }
+                    leave
+                }
                 let n, sh, sl := expx(x)
                 let vh, vl := sc192(n, sh, sl)
                 switch slt(x, 0)
@@ -1258,12 +1547,26 @@ object "FP127" {
                 let ax := absw(x)
                 if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
                 if lt(ax, 0x100000000000000000000000000000000) {
+                    if lt(ax, 0x8000000000000000) { r := x leave }
                     let xs := shl(64, x)
                     let x2 := mulg(xs, xs)
                     let v := 0x1000000000000000000000000000000000000000000000000
-                    for { let k := 20 } k { k := sub(k, 1) } {
+                    let k := 20
+                    if lt(ax, 0x80000000000000000000000000000000) {
+                        k := 19
+                        if lt(ax, 0x40000000000000000000000000000000) { k := 16 }
+                        if lt(ax, 0x10000000000000000000000000000000) { k := 13 }
+                        if lt(ax, 0x1000000000000000000000000000000) { k := 8 }
+                        if lt(ax, 0x10000000000000000000000000000) { k := 5 }
+                        if lt(ax, 0x1000000000000000000000000) { k := 2 }
+                    }
+                    let l := 0
+                    let h := 0
+                    for {} k { k := sub(k, 1) } {
                         let k2 := shl(1, k)
-                        v := add(0x1000000000000000000000000000000000000000000000000, div(mulg(x2, v), mul(k2, add(k2, 1))))
+                        l := mul(x2, v)
+                        h := mulmod(x2, v, not(0))
+                        v := add(0x1000000000000000000000000000000000000000000000000, div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), mul(k2, add(k2, 1))))
                     }
                     r := round64(mulg(xs, v))
                     leave
@@ -1296,7 +1599,14 @@ object "FP127" {
                         let vh, vl := sc192(n, sh, sl)
                         u := sub(vl, 0x1000000000000000000000000000000000000000000000000)
                     }
-                    default { u := expm1s(shl(1, ax)) }
+                    default {
+                        // below 2^-65, x itself: x^3/3 is under one unit of 2^-192
+                        if lt(ax, 0x8000000000000000) {
+                            r := x
+                            leave
+                        }
+                        u := expm1s(shl(1, ax), shl(1, ax))
+                    }
                     r := round64(divg(u, add(u, 0x2000000000000000000000000000000000000000000000000)))
                 }
                 default {
@@ -1321,8 +1631,12 @@ object "FP127" {
                 let d := shl(1, x2)
                 let term := 0x1000000000000000000000000000000000000000000000000
                 let s := term
-                for { let k := 1 } term { k := add(k, 1) } {
-                    term := div(mulg(term, d), add(shl(1, k), 1))
+                let l := 0
+                let h := 0
+                for { let k := 3 } term { k := add(k, 2) } {
+                    l := mul(term, d)
+                    h := mulmod(term, d, not(0))
+                    term := div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), k)
                     s := add(s, term)
                 }
                 v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
@@ -1335,19 +1649,52 @@ object "FP127" {
                 let an := xg
                 let bm := 0
                 let bn := 0x1000000000000000000000000000000000000000000000000
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    let a2 := add(mulg(xg, an), shr(1, mul(k, am)))
-                    let b2 := add(mulg(xg, bn), shr(1, mul(k, bm)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
+                let l := 0
+                let h := 0
+                // two steps a turn, the newest convergent alternating between (am, bm)
+                // and (an, bn), so nothing is copied: the same values as one step a turn
+                let k := 1
+                for {} lt(k, n) { k := add(k, 2) } {
+                    l := mul(xg, an)
+                    h := mulmod(xg, an, not(0))
+                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
+                    l := mul(xg, bn)
+                    h := mulmod(xg, bn, not(0))
+                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
+                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                    l := mul(xg, am)
+                    h := mulmod(xg, am, not(0))
+                    an := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), an)))
+                    l := mul(xg, bm)
+                    h := mulmod(xg, bm, not(0))
+                    bn := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), bn)))
                     if gt(an, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
                         am := shr(64, am)
                         an := shr(64, an)
                         bm := shr(64, bm)
                         bn := shr(64, bn)
                     }
+                }
+                if eq(k, n) {
+                    l := mul(xg, an)
+                    h := mulmod(xg, an, not(0))
+                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
+                    l := mul(xg, bn)
+                    h := mulmod(xg, bn, not(0))
+                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
+                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        am := shr(64, am)
+                        an := shr(64, an)
+                        bm := shr(64, bm)
+                        bn := shr(64, bn)
+                    }
+                    an := am
+                    bn := bm
                 }
                 v := divg(mulg(expg(sub(0, x2)), bn), mulg(an, 0x1c5bf891b4ef6aa79c3b0520d5db9383fe3921546f63b252e))
             }
@@ -1356,7 +1703,7 @@ object "FP127" {
                 if iszero(x) { r := 0 leave }
                 let one := 0x100000000000000000000000000000000
                 let ax := absw(x)
-                switch lt(ax, 0xa00000000000000000000000000000000)
+                switch lt(ax, 0x960000000000000000000000000000000)
                 case 1 {
                     let xg := shl(64, ax)
                     switch gt(ax, 0x400000000000000000000000000000000)
@@ -1372,7 +1719,7 @@ object "FP127" {
                 if iszero(x) { r := one leave }
                 let ax := absw(x)
                 let v := 0
-                if lt(ax, 0xa00000000000000000000000000000000) {
+                if lt(ax, 0x960000000000000000000000000000000) {
                     let xg := shl(64, ax)
                     switch gt(ax, 0x400000000000000000000000000000000)
                     case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(xg)) }
@@ -1387,7 +1734,8 @@ object "FP127" {
                 let one := 0x100000000000000000000000000000000
                 let ax := absw(x)
                 let v := 0
-                if lt(ax, 0xe00000000000000000000000000000000) {
+                // from |x| = 13.3125 (|x| / sqrt2 > 9.41) erfc is below 2^-130.8: Phi is 0 or 1
+                if lt(ax, 0xd50000000000000000000000000000000) {
                     let yg := mulg(shl(64, ax), 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
                     switch gt(yg, 0x4000000000000000000000000000000000000000000000000)
                     case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(yg)) }

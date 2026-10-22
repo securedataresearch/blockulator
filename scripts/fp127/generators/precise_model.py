@@ -4,6 +4,8 @@ the constants they need and a measurement against mpmath.
 
     uv run scripts/fp127/generators/precise_model.py constants   # print the Yul constants
     uv run scripts/fp127/generators/precise_model.py measure [n] # kernel errors on n random inputs
+    uv run scripts/fp127/generators/precise_model.py fastpow [n] # pow / cbrt's one-word test (pow2t)
+    uv run scripts/fp127/generators/precise_model.py lambertw [d] # Lambert W's seeds and Halley step counts
 
 The v5 kernels work on a double word (DW): a pair (hi, lo) read as
 (hi * 2^256 + lo) * 2^-512, a fraction in [0, 1) held to 2^-512.
@@ -19,6 +21,22 @@ The v5 kernels work on a double word (DW): a pair (hi, lo) read as
             step from the one-word log2 kernel y0 (2^-150): with
             d = m 2^-y0 - 1 computed through expk, log2(m) = y0 + log2(1 + d).
             Error about 2^-299 absolute.
+
+  pow2t(t)  pow and cbrt's first try: 2^t in one word (exp2frac, 2^-145
+            relative) for t = y log2g(x) (or log2g(x) / 3), with an error
+            bound eb in units of 2^-192 that covers this value's error and
+            the double word's together; when the bits below the 2^-128 grid
+            are more than eb from the midpoint, both round alike and the
+            double word is skipped. fastpow checks the bound against the
+            true error and the result against op_pow / op_cbrt.
+
+  lambertw  Lambert W's one-word iterations in real arithmetic: each seed,
+            the Halley steps the Yul gives it, and the correct bits left for
+            the double-word step lwfin, -log2(|w - W| max(1, 1/|1 + W|) /
+            max(1, |W|)), worst over a grid of d points per octave. The
+            one-word arithmetic itself stops near 126 bits; every region must
+            reach 120 so lwfin, which squares the error, lands far below the
+            grid (v4 ran four doubling FSC steps and an Iacono-Boyd step).
 
 Every product floors, every shift drops bits below the grid, exactly as the
 Yul; Python's >> floors signed integers as Yul's sar does.
@@ -277,6 +295,183 @@ def op_cbrt(X):
 
 
 # ---------------------------------------------------------------------------
+# pow and cbrt: the one-word value first (pow2t)
+# ---------------------------------------------------------------------------
+
+def _exp2_coeffs():
+    import re
+    from pathlib import Path
+    text = (Path(__file__).resolve().parents[3] / "contracts/src/fp127/FP127.yul.src").read_text()
+    body = text[text.index("function exp2frac"):]
+    return [int(h, 16) for h in re.findall(r"0x[0-9a-f]+", body[: body.index("\n}\n")])]
+
+
+EXP2C = _exp2_coeffs()
+
+
+def exp2frac(f: int) -> int:
+    """2^f at 2^-192 for f in [0, 2^192): the degree-24 polynomial, Horner, floors."""
+    r = EXP2C[0]
+    for c in EXP2C[1:]:
+        r = ((r * f) >> 192) + c
+    return r
+
+
+def pow2t(t: int, ay: int):
+    """(r, ok, v, eb) as the Yul's pow2t: v = 2^t at 2^-192, eb its bound."""
+    at = abs(t)
+    k = at >> 192
+    e = k + 1 if t >= 0 else -k
+    eb = (ay >> (80 - e)) + ((1 << (e + 48)) if e + 48 >= 0 else 0) + 6
+    if eb > 1 << 61:
+        return None, 0, None, eb
+    f = at & (G - 1)
+    if t >= 0:
+        v = exp2frac(f) << k
+    elif f == 0:
+        v = G >> k
+    else:
+        v = exp2frac(G - f) >> (k + 1)
+    ok = abs((v & ((1 << 64) - 1)) - (1 << 63)) > eb
+    return (v + (1 << 63)) >> 64, ok, v, eb
+
+
+def pow_pre(X, Y):
+    """op_pow's value at 2^-192 before its rounding (None where it reverts or returns 0)."""
+    L = l2p(X)
+    t = Y * L
+    n, f = t >> 512, t & M512
+    if n >= 127 or n < -130:
+        return None
+    return scaled192(n, expk((f * LN2_512) >> 512))
+
+
+def cbrt_pre(X):
+    L = l2p(abs(X))
+    li = L >> 384
+    q, rem = divmod(li, 3)
+    f = (((rem << 384) + (L & ((1 << 384) - 1))) << 128) // 3
+    return scaled192(q, expk((f * LN2_512) >> 512))
+
+
+def fastpow(n=20000):
+    """On random pow and cbrt inputs: whenever pow2t says ok, its word equals
+    op_pow's (op_cbrt's), and the true errors of both values before rounding
+    together stay under eb. Prints the largest ratio (true error / eb)."""
+    rng = random.Random(7)
+    worst, taken, total = mpf(0), 0, 0
+    for i in range(n):
+        if i % 2 == 0:
+            X = rng.getrandbits(rng.randint(120, 136)) | 1
+            Y = rng.getrandbits(rng.randint(60, 140))
+            if i % 6 == 0:                         # near one with a large exponent
+                X = ONE + rng.getrandbits(rng.randint(1, 100)) * rng.choice([1, -1])
+                Y = rng.getrandbits(rng.randint(128, 200))
+            Y = -Y if rng.random() < 0.5 else Y
+            if X <= 0 or X == ONE:
+                continue
+            L = log2g(X)
+            t = (Y * L) >> 128
+            if abs(t) >= 1 << 198:
+                continue
+            r, ok, v, eb = pow2t(t, abs(Y))
+            truth = mp.power(mpf(X) / ONE, mpf(Y) / ONE) * G
+            pre = pow_pre(X, Y)
+            want = op_pow(X, Y)
+        else:
+            X = rng.getrandbits(rng.randint(1, 254)) | 1
+            L = log2g(X)
+            t = L // 3 if L >= 0 else -(-L // 3)           # sdiv truncates
+            r, ok, v, eb = pow2t(t, ONE)
+            truth = mp.cbrt(mpf(X) / ONE) * G
+            pre = cbrt_pre(X)
+            want = op_cbrt(X)
+        total += 1
+        if not ok:
+            continue
+        taken += 1
+        assert r == want, (X, r, want)
+        err = abs(mpf(v) - truth) + (abs(mpf(pre) - truth) if pre is not None else 1)
+        worst = max(worst, err / eb)
+    print(f"pow2t: {taken} of {total} inputs decided in one word, every one equal to the double word's; "
+          f"largest (true error of both values) / eb = {mp.nstr(worst, 4)}")
+
+
+# ---------------------------------------------------------------------------
+# Lambert W: seeds and Halley step counts (real arithmetic)
+# ---------------------------------------------------------------------------
+
+def lw_w0(x):
+    """W0's seed and Halley step count, as fp127_lambertW0 chooses them."""
+    ax = abs(x)
+    if ax < mpf(2) ** -5 or -mpf(1) / 4 < x < 0:
+        w = x - x * x + x * x * (x + x / 2)
+        n = 3 if ax >= mpf(2) ** -5 else 2 if ax >= mpf(2) ** -13 else 1 if ax >= mpf(2) ** -33 else 0
+        return w, n
+    if x < 0:
+        q = 1 + E_ * x
+        p = msqrt(2 * q)
+        n = 3 if q >= mpf(2) ** -8 else 2 if q >= mpf(2) ** -28 else 1
+        return -1 + p - p * p / 3 + p ** 3 * 11 / 72, n
+    lg = log(1 + x)
+    return lg * (1 - log(1 + lg) / (lg + 2)), 3
+
+
+def lw_wm1(x):
+    """W-1's seed and Halley step count, as fp127_lambertWm1 chooses them."""
+    if x < -mpf(1) / 4:
+        q = 1 + E_ * x
+        p = msqrt(2 * q)
+        n = 3 if q >= mpf(2) ** -8 else 2 if q >= mpf(2) ** -28 else 1
+        return -1 - p - p * p / 3 - p ** 3 * 11 / 72, n
+    lx = log(-x)
+    ll = log(-lx)
+    return lx - ll + ll / lx, 4 if x < -mpf(2) ** -4 else 3 if x <= -mpf(2) ** -8 else 2
+
+
+def lw_halley0(x, w):
+    """lwfsc: Halley on w e^w - x, f''/f' = (w + 2)/(w + 1)."""
+    iv = 1 / (w + 1)
+    r = (w - x * exp(-w)) * iv
+    return w - r * (1 + r * (w + 2) * iv / 2)
+
+
+def lw_halleym1(lx, w):
+    """lwm1: Halley on w + ln(-w) - ln(-x)."""
+    f = w + log(-w) - lx
+    iv = 1 / (w + 1)
+    return w - f * w * iv * (1 - f * iv * iv / 2)
+
+
+def lw_measure(d=8):
+    mp.dps = 300
+    nie = -1 / E_
+    pos = [mpf(2) ** (k / d) for k in range(-65 * d, 127 * d)]
+    neg = [-mpf(2) ** (-k / d) for k in range(2 * d, 65 * d)]
+    mid = [-mpf(1) / 4 + (nie + mpf(1) / 4) * (1 - mpf(2) ** -(k / d)) for k in range(1, 40 * d)]
+    near = [x for x in ((mpf(2) ** (-k / d) - 1) / E_ for k in range(1, 40 * d)) if x < -mpf(1) / 4]
+    small = [-mpf(2) ** (-k / d) for k in range(2 * d, 128 * d)]
+    for name, xs, seed, step, br in (
+            ("W0, x > 0", pos, lw_w0, lw_halley0, 0), ("W0, -1/4 < x < 0", neg, lw_w0, lw_halley0, 0),
+            ("W0, -1/e < x <= -1/4", mid + near, lw_w0, lw_halley0, 0),
+            ("W-1, -1/4 <= x < 0", small, lw_wm1, lw_halleym1, -1),
+            ("W-1, -1/e < x < -1/4", mid + near, lw_wm1, lw_halleym1, -1)):
+        by = {}
+        for x in xs:
+            W = lambertw(x, br).real
+            w, n = seed(x)
+            arg = log(-x) if br else x
+            for _ in range(n):
+                w = step(arg, w)
+            err = abs(w - W) * max(1, 1 / abs(1 + W)) / max(1, abs(W))
+            b = 999.0 if err == 0 else float(-log(err, 2))
+            by[n] = min(by.get(n, 999.0), b)
+        print(f"{name:22s} worst bits before lwfin, by Halley steps: "
+              + ", ".join(f"{n}: {b:.1f}" for n, b in sorted(by.items())))
+    mp.dps = 220
+
+
+# ---------------------------------------------------------------------------
 # measurement
 # ---------------------------------------------------------------------------
 
@@ -350,5 +545,9 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "measure"
     if cmd == "constants":
         constants()
+    elif cmd == "lambertw":
+        lw_measure(int(sys.argv[2]) if len(sys.argv) > 2 else 8)
+    elif cmd == "fastpow":
+        fastpow(int(sys.argv[2]) if len(sys.argv) > 2 else 20000)
     else:
         measure(int(sys.argv[2]) if len(sys.argv) > 2 else 2000)

@@ -563,7 +563,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "sinh(x), rounded to nearest. For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms; beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the difference taken before the one rounding.",
+      "notice": "sinh(x), rounded to nearest. For |x| < 1 the odd series x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms (fewer for a smaller |x|); beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the difference taken before the one rounding.",
       "domain": "|x| <= 88",
       "reverts": "Overflow() beyond that"
     },
@@ -607,7 +607,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "The error function. |x| <= 4 by the series, |x| > 4 as 1 - erfc(x) by the continued fraction, both at 2^-192 and rounded once; +-1 exactly from |x| >= 10, where 1 - erf is below one ULP.",
+      "notice": "The error function. |x| <= 4 by the series, |x| > 4 as 1 - erfc(x) by the continued fraction, both at 2^-192 and rounded once; +-1 exactly from |x| >= 9.375, where 1 - erf is below 2^-130.8 and the subtraction rounds to one.",
       "domain": "any x",
       "reverts": "never"
     },
@@ -618,7 +618,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "The complementary error function 1 - erf(x), computed directly for x > 4 so the tail keeps its digits down to the format's floor (erfc(9.3) is one ULP; zero beyond); 2 - erfc(-x) for x < 0.",
+      "notice": "The complementary error function 1 - erf(x), computed directly for x > 4 so the tail keeps its digits down to the format's floor (erfc(9.3) is one ULP; zero from 9.375, where it is below 2^-130.8); 2 - erfc(-x) for x < 0.",
       "domain": "any x",
       "reverts": "never"
     },

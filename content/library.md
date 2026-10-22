@@ -57,6 +57,8 @@ contract StaticcallExample {
 
 `FP127Lib.sol`: the same Yul in `memory-safe` assembly, one `internal pure` function per op. No external call: about 1,300 gas cheaper than the `staticcall` on `add` and `mul`, 240 on `sqrt` and 470 on `exp`; on `pow`, the erf family and Lambert W the deployed object is cheaper.
 
+Compile it with `via_ir = true` (in `foundry.toml`): solc's legacy pipeline leaves the heavy ops 2–22% dearer than the same Yul in the object, and through the IR they match it ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
+
 ```sh
 forge install securedataresearch/blockulator
 echo "fp127/=lib/blockulator/contracts/src/fp127/" >> remappings.txt

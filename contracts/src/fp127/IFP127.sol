@@ -105,9 +105,21 @@ interface IFP127 {
     ///      of two.
     function log2Up(int256 x) external pure returns (int256 r);
     /// @notice sqrt(x) for x >= 0.
-    /// @dev Reverts with OutOfRange for x < 0 (the Huff read garbage). Initial
-    ///      guess 2^floor((128 + msb)/2), times sqrt(2) when the exponent is
-    ///      odd, then seven Newton steps. Verbatim port of FP127_SQRT.
+    /// @dev Reverts with OutOfRange for x < 0 (the Huff read garbage). The
+    ///      floor of sqrt(N), N = x 2^128: for x < 2^128, N fits a word and
+    ///      isqrtw takes it whole; above, isqrtw of x shifted up by an even
+    ///      amount gives sqrt(N) to 2^-126 relative, one Newton step with the
+    ///      512-bit divu takes it below one unit, and a 512-bit compare steps
+    ///      back from floor + 1. v4 (the Huff's FP127_SQRT, sqrtv4) ran seven
+    ///      divu Newton steps from 2^floor((128 + msb)/2), a seed within a
+    ///      factor sqrt2 below the root, and returned the last iterate: the
+    ///      floor s, except that the seventh step can land on s + 1 when
+    ///      D = (s + 1)^2 - N is tiny. D = 1 is the iteration's two-cycle
+    ///      between s and s + 1; for D >= 2 an iterate at s or s + 1 steps to
+    ///      s, and one above s + 1 (after six steps, within sqrt(N) 2^-161.7 of
+    ///      the root) steps to under sqrt(N) (1 + 2^-324.4), which reaches
+    ///      s + 1 only if D < N 2^-323.4 = x 2^-195.4. Wherever D < x 2^-192 + 2,
+    ///      sqrtv4 runs, so every result is v4's.
     function sqrt(int256 x) external pure returns (int256 r);
     /// @notice x^y = 2^(y * log2(x)) for x >= 0, rounded to nearest.
     /// @dev Special cases in Huff order: y == 0 gives 1 (including 0^0); x == 0
@@ -119,7 +131,10 @@ interface IFP127 {
     ///      fraction through the double-word kernel with one rounding. The error
     ///      is under 2^-299 (1 + |y|) relative before that rounding: the
     ///      nearest word whenever |y| x^y < 2^140 or so, faithful to
-    ///      |y| x^y < 2^170. v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored
+    ///      |y| x^y < 2^170. The one-word log2 and 2^t go first (pow2t) and
+    ///      decide when their error bound cannot change the rounding, as the
+    ///      logs do; the double word then gives the same word, so it runs only
+    ///      near a midpoint or for results from about 2^12. v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored
     ///      or truncated; they now take the general path, which is nearest.
     function pow(int256 x, int256 y) external pure returns (int256 r);
     /// @notice x^floor(n) for an integer exponent, rounded to nearest: binary
@@ -148,13 +163,17 @@ interface IFP127 {
     /// @dev v5: 2^(log2|x| / 3), with log2 from l2p (2^-299), the division by
     ///      three done exactly on the 512-bit value and the fraction through the
     ///      double-word kernel. v4 was pow(|x|, 1/3) with the exponent 1/3
-    ///      floored to 128 bits, which put large results 1.6e14 ULPs off.
+    ///      floored to 128 bits, which put large results 1.6e14 ULPs off. The
+    ///      one-word log2 and 2^t go first, as in pow (pow2t), and decide when
+    ///      their error bound cannot change the rounding.
     function cbrt(int256 x) external pure returns (int256 r);
     /// @notice Geometric mean sqrt(a * b). Reverts with OutOfRange if a * b < 0.
     function gavg(int256 a, int256 b) external pure returns (int256 r);
     /// @notice sqrt(a^2 + b^2), checked.
     function hypot(int256 a, int256 b) external pure returns (int256 r);
     /// @notice 1 / x. Reverts with DivisionByZero for x == 0.
+    /// @dev div(2^128, x) in one word: floor(2^256 / |x|) is
+    ///      floor((2^256 - |x|) / |x|) + 1, and |x| = 1 overflows.
     function inv(int256 x) external pure returns (int256 r);
     /// @notice |x|. Reverts with Overflow for x == -2^255, which has no positive.
     function abs(int256 x) external pure returns (int256 r);
@@ -216,12 +235,14 @@ interface IFP127 {
     ///      for |x| < 2^-65 (the nearest word), and W(1..5) come from the table. Within 2^-40 of the branch point in
     ///      1 + e x, the branch-point series in p = sqrt(2 (1 + e x)) with
     ///      1 + e x to 2^-254 seeds the final step directly. Everything else is
-    ///      seeded to five to eight bits and refined by four FSC steps and one IB
-    ///      step in one-word arithmetic (126 to 128 bits away from -1/e), then
-    ///      by the double-word Newton step lwfin. Seeds: Winitzki's
-    ///      L (1 - ln(1 + L) / (2 + L)) with L = ln(1 + x) for x > 0; the origin
-    ///      series x - x^2 + 3/2 x^3 for -1/4 < x < 0; the branch-point series
-    ///      -1 + p - p^2/3 + 11/72 p^3 down to -1/e. The Huff used a 64-entry
+    ///      seeded and refined by as many one-word Halley steps as the seed
+    ///      needs for 120 bits or more before the double-word Newton step lwfin
+    ///      (none to three; each triples the correct bits). Seeds: the origin
+    ///      series x - x^2 + 3/2 x^3 for -1/4 < x < 2^-5 (none from |x| < 2^-33,
+    ///      one to 2^-13, two to 2^-5, three beyond); Winitzki's
+    ///      L (1 - ln(1 + L) / (2 + L)) with L = ln(1 + x) above, five to eleven
+    ///      bits, three steps; the branch-point series -1 + p - p^2/3 + 11/72 p^3
+    ///      down to -1/e, one to three steps as 1 + e x falls from 1/4 to 2^-40. The Huff used a 64-entry
     ///      interpolation table with two steps, which gave 50 to 100 bits on
     ///      (0, 64), read past the table above 64 and ran out of gas below 0.
     function lambertW0(int256 x) external pure returns (int256 r);
@@ -232,8 +253,11 @@ interface IFP127 {
     ///      - 43/540 p^4, p = sqrt(2 (1 + e x)) with 1 + e x to 2^-254, seeds the
     ///      final step directly. Elsewhere: the branch-point series for x < -1/4,
     ///      the asymptotic L - ln(-L) + ln(-L) / L with L = ln(-x) for
-    ///      -1/4 <= x < 0, five one-word log-form Newton steps, then the
-    ///      double-word step lwfin. The smallest input, -floor(2^128 / e), is
+    ///      -1/4 <= x < 0, then as many one-word log-form Halley steps as the
+    ///      seed needs for 120 bits or more (two to four for the asymptotic seed
+    ///      as -x grows past 2^-8 and 2^-4; one to three for the branch-point
+    ///      series as 1 + e x falls past 2^-8 and 2^-28), then the double-word
+    ///      step lwfin. The smallest input, -floor(2^128 / e), is
     ///      2^-128 inside -1/e and its W is -1 - 2^-63.3, not -1, which v4
     ///      returned. The archived Huff lambertwm1 was never functional and is
     ///      not the reference for this routine.
@@ -246,11 +270,17 @@ interface IFP127 {
     /// @notice e^x - 1, rounded to nearest, with the one subtracted before the
     ///         rounding so a small x keeps its relative precision: a 27-term
     ///         series at 2^-192 for |x| <= 1/16, the double-word exp beyond.
+    /// @dev Below 2^-65, x itself: x^2/2 is under a quarter ULP and the series'
+    ///      value is x 2^192 plus less than 2^62 units, which rounds to x.
     function expm1(int256 x) external pure returns (int256 r);
     /// @notice sinh(x), rounded to nearest. For |x| < 1 the odd series
-    ///         x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms;
-    ///         beyond, (e^|x| - e^-|x|) / 2 from the double-word kernel, the
-    ///         difference taken before the one rounding.
+    ///         x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms
+    ///         (fewer for a smaller |x|); beyond, (e^|x| - e^-|x|) / 2 from the
+    ///         double-word kernel, the difference taken before the one rounding.
+    /// @dev Below 2^-65, x itself (x^3/6 is under one unit of 2^-192). The
+    ///      series takes K = 19, 16, 13, 8, 5, 2 terms below 1/2, 1/4, 1/16,
+    ///      2^-8, 2^-16, 2^-32, where x^(2K+2) / (2K+3)! <= 2^-200; its mulg is
+    ///      inline and unsigned.
     function sinh(int256 x) external pure returns (int256 r);
     /// @notice cosh(x) = (e^x + e^-x) / 2, rounded to nearest: both halves from
     ///         the double-word kernel, summed before the one rounding. cosh(0) is
@@ -269,11 +299,13 @@ interface IFP127 {
     function atanh(int256 x) external pure returns (int256 r);
     /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
     ///         1 - erfc(x) by the continued fraction, both at 2^-192 and rounded
-    ///         once; +-1 exactly from |x| >= 10, where 1 - erf is below one ULP.
+    ///         once; +-1 exactly from |x| >= 9.375, where 1 - erf is below
+    ///         2^-130.8 and the subtraction rounds to one.
     function erf(int256 x) external pure returns (int256 r);
     /// @notice The complementary error function 1 - erf(x), computed directly
     ///         for x > 4 so the tail keeps its digits down to the format's
-    ///         floor (erfc(9.3) is one ULP; zero beyond); 2 - erfc(-x) for x < 0.
+    ///         floor (erfc(9.3) is one ULP; zero from 9.375, where it is below
+    ///         2^-130.8); 2 - erfc(-x) for x < 0.
     function erfc(int256 x) external pure returns (int256 r);
     /// @notice The standard normal distribution function
     ///         Phi(x) = erfc(-x / sqrt2) / 2, the argument scaled at 2^-192. The

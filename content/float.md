@@ -37,6 +37,8 @@ forge install securedataresearch/blockulator
 echo "fp256/=lib/blockulator/contracts/src/fp256/" >> remappings.txt
 ```
 
+Compile `FP256Lib.sol` with `via_ir = true` (in `foundry.toml`): solc's legacy pipeline leaves the heavy ops 9–27% dearer than the same Yul in the deployed objects, and through the IR they match them ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
+
 ```solidity
 import {FP256Lib} from "fp256/FP256Lib.sol";
 

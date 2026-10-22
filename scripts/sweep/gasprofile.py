@@ -26,8 +26,9 @@ read inside the call's own window (test/sweep/Sweep.t.sol):
 
 Then the build-setting bench (test/profile/ViaIr.t.sol) twice, under the
 default profile (via_ir = false) and [profile.viair], beside the Yul objects.
-The object's own call and dispatch cost (solc lowers the selector switch to a
-linear chain, so it grows with the selector's rank) is fitted on the trivial
+The object's own call and dispatch cost (a flat selector switch is a linear
+chain, FP127's a binary search: it grows with the comparisons
+before the selector's case, gen.py dispatch_steps) is fitted on the trivial
 ops, where the inline call is the same code, and taken out of the heavy ops'
 object column.
 """
@@ -115,12 +116,19 @@ def parse_via(prof):
 
 
 def ranks(lib):
-    """Each export's position in its object's selector switch."""
+    """Each export's comparisons in its object's selector dispatch before its
+    case: its position in a flat switch, or the levels of the binary search
+    plus its position in the leaf (gen.py dispatch_steps)."""
     ops = json.loads((G.LIBS[lib]["src"].parent / "ops.json").read_text())["ops"]
     by = {}
     for o in ops:
         by.setdefault(o.get("object", G.LIBS[lib]["object"]), []).append(o)
-    return {o["name"]: i for v in by.values() for i, o in enumerate(sorted(v, key=lambda o: int(o["selector"], 16)))}
+    out = {}
+    for obj, v in by.items():
+        sels = sorted((o["selector"] for o in v), key=lambda s: int(s, 16))
+        steps = G.dispatch_steps(sels, G.flat_dispatch(obj, len(sels)))
+        out.update({o["name"]: steps[o["selector"]] for o in v})
+    return out
 
 
 def fit(xs, ys):
@@ -192,8 +200,8 @@ def report():
           "script's docstring; in short:",
           "",
           "- **gas**: the committed library, median / 99th percentile / largest over the op's inputs;",
-          "- **fallback**: the share of inputs whose rounding test fired (FP256 `rbad`; FP127 `nearmid`, "
-          "and powu / compound's 512-bit `powus`), counted by a test-only copy of the library whose results "
+          "- **fallback**: the share of inputs whose rounding test fired (FP256 `rbad`; FP127 the double-word `l2p` "
+          "behind ln, log2, log10, pow and cbrt, and powu / compound's 512-bit `powus`), counted by a test-only copy of the library whose results "
           "match the committed one's word for word; a dash: the op has no such test (Lambert W in FP256 "
           "runs its wide step, `lwfix`, every time);",
           "- **helpers**: test-only gas probes around the named helpers. *exclusive* is a helper's gas without "
@@ -255,7 +263,7 @@ def report():
            "`test/profile/ViaIr.t.sol` on eight typical inputs per op (medians), compiled with the default profile "
            "(`via_ir = false`, as `make bench`) and with `[profile.viair]`. *Object* is the whole `staticcall`; "
            "*object net* takes out its call and selector-dispatch cost, fitted on the trivial ops as "
-           + "; ".join(f"{k.upper()} {v['base']:,} + {v['perRank']:g} per selector rank" for k, v in fits.items())
+           + "; ".join(f"{k.upper()} {v['base']:,} {'+' if v['perRank'] >= 0 else '−'} {abs(v['perRank']):g} per dispatch comparison" for k, v in fits.items())
            + ". *Gap* is inline over object net.",
            "",
            "| lib | op | inline, via_ir false | inline, via_ir true | object (staticcall) | object net | gap, false → true |",
