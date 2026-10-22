@@ -76,9 +76,9 @@ interface IFP256 {
     ///         significand with its own exponent, each product keeping its top
     ///         256 bits, rounded once at the end: exact whenever x^n fits 256
     ///         bits (so every exactly representable power and every exact tie),
-    ///         else within (2n + 8) units, and through pow when that reaches the
-    ///         rounding boundary. n < 0 inverts the final significand once. From
-    ///         2^16 on, pow(|x|, n) with the sign restored. Correctly rounded for
+    ///         else within (2n + 8) units, and through pow's second stage when
+    ///         that reaches the rounding boundary. n < 0 inverts the final
+    ///         significand once. From 2^16 on, pow(|x|, n) with the sign restored. Correctly rounded for
     ///         |n| < 2^237 (n is a number from there). 0^0 = 1.
     function powu(int256 x, int256 n) external pure returns (int256 r);
     /// @notice (1 + rate)^n without forming a rounded 1 + rate (a per-second
