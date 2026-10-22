@@ -3197,7 +3197,9 @@ library FP256Lib {
                     y2 := shr(1, y2)
                     ey := add(ey, 1)
                 }
-                n := add(div(4400, shr(sub(254, ey), y2)), 48)
+                let q := shr(sub(254, ey), y2)
+                let yi := shr(sub(254, uy), Y)
+                n := add(add(div(3040, q), div(336, yi)), 24)
                 let w := shr(add(ey, 4), div254(0x4000000000000000000000000000000000000000000000000000000000000000, y2))
                 let am := 0x800000000000000000000000000000000000000000000000000000000000000
                 let an := am
@@ -3206,8 +3208,8 @@ library FP256Lib {
                 // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
                 // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
                 // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
-                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
-                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
+                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.3 at every
+                // y >= 6, so a2 < 3.3 2^252 (B'/A'' = y/K stays just under one, so B
                 // needs no shift of its own; a zero shift would change nothing, so it
                 // is skipped). Written out: no calls in the loop
                 for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
@@ -3963,7 +3965,9 @@ library FP256Lib {
                     y2 := shr(1, y2)
                     ey := add(ey, 1)
                 }
-                n := add(div(4400, shr(sub(254, ey), y2)), 48)
+                let q := shr(sub(254, ey), y2)
+                let yi := shr(sub(254, uy), Y)
+                n := add(add(div(3040, q), div(336, yi)), 24)
                 let w := shr(add(ey, 4), div254(0x4000000000000000000000000000000000000000000000000000000000000000, y2))
                 let am := 0x800000000000000000000000000000000000000000000000000000000000000
                 let an := am
@@ -3972,8 +3976,8 @@ library FP256Lib {
                 // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
                 // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
                 // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
-                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
-                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
+                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.3 at every
+                // y >= 6, so a2 < 3.3 2^252 (B'/A'' = y/K stays just under one, so B
                 // needs no shift of its own; a zero shift would change nothing, so it
                 // is skipped). Written out: no calls in the loop
                 for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
@@ -4732,7 +4736,9 @@ library FP256Lib {
                     y2 := shr(1, y2)
                     ey := add(ey, 1)
                 }
-                n := add(div(4400, shr(sub(254, ey), y2)), 48)
+                let q := shr(sub(254, ey), y2)
+                let yi := shr(sub(254, uy), Y)
+                n := add(add(div(3040, q), div(336, yi)), 24)
                 let w := shr(add(ey, 4), div254(0x4000000000000000000000000000000000000000000000000000000000000000, y2))
                 let am := 0x800000000000000000000000000000000000000000000000000000000000000
                 let an := am
@@ -4741,8 +4747,8 @@ library FP256Lib {
                 // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
                 // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
                 // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
-                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
-                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
+                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.3 at every
+                // y >= 6, so a2 < 3.3 2^252 (B'/A'' = y/K stays just under one, so B
                 // needs no shift of its own; a zero shift would change nothing, so it
                 // is skipped). Written out: no calls in the loop
                 for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
