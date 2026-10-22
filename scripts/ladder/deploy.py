@@ -110,7 +110,7 @@ def cmd_deploy(rpc: str) -> int:
 
 def cmd_record(rpc: str) -> int:
     rec = {"chainId": 11155111, "network": "sepolia", "proxy": PROXY, "salt": SALT, "saltAscii": SALT_ASCII,
-           "fp127": "0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1", "contracts": {}}
+           "fp127": json.loads((RECORD.parent / "FP127.json").read_text())["address"], "contracts": {}}
     for c in plan():
         code = cast("code", c["address"], "--rpc-url", rpc)
         rec["contracts"][c["name"]] = {

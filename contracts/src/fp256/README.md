@@ -1,11 +1,11 @@
 # FP256 in Yul
 
-256-bit binary floating point for the EVM. Release four (not yet deployed):
-67 ops, every one correctly rounded or exact, in four deployed objects of
-24,512 (FP256), 22,266 (FP256X), 19,889 (FP256X2) and 6,844 (FP256X3)
-bytes from one source. Release three
-(28 ops, one object) is live on Sepolia at
-[`0x67eFfb11…61be`](../../deployments/FP256.md).
+256-bit binary floating point for the EVM. Release four, live on Sepolia
+since 2026-10-21 (Blockulator 2.1): 67 ops, every one correctly rounded or
+exact, in four deployed objects of 24,512 (FP256), 22,266 (FP256X), 19,889
+(FP256X2) and 6,844 (FP256X3) bytes from one source; addresses below and in
+[`contracts/deployments/FP256.md`](../../deployments/FP256.md). Releases one
+to three (release three: 28 ops, one object) stay deployed.
 
 One `int256` per value, the bit pattern of a float:
 
@@ -21,7 +21,7 @@ number and every op reverts `OutOfRange` on it. There is no NaN, no
 infinity, no subnormal and no negative zero: every valid word is a finite
 number with one representation, equality is bit equality, and positive
 words order as unsigned integers. Range 2^−262142 to just under 2^262145,
-about 10^±78,900; 237 significant bits, about 71 decimal digits, at every
+about 10^±78,913; 237 significant bits, about 71 decimal digits, at every
 magnitude.
 
 This is the second ruler. [FP127](../fp127/README.md) is a fixed point:
@@ -54,7 +54,7 @@ edge do not fit beside it. An export tagged `/// @object FP256X` (or
 object only its exports and their callees, its own interface and ABI, and
 the inline library holds everything.
 
-| object | ops | runtime | salt | predicted address (CREATE2 proxy) |
+| object | ops | runtime | salt | Sepolia address (CREATE2 proxy) |
 |---|---|---:|---|---|
 | FP256 | the arithmetic, the edge (directed ops), exp, ln, log1p, expm1, pow, powu, compound, the comparisons and conversions: 37 | 24,512 | `FP256 v4` | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
 | FP256X | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 22,266 | `FP256X v4` | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
@@ -66,7 +66,7 @@ The split is by family, as
 FP256 is what a protocol calls at the token edge and in accrual, FP256X the
 special functions, FP256X2 the rest of the exponential family on the same
 kernels (cbrt's seed is 2^(log2 x / 3) from them), FP256X3 the algebraic
-ops. FP256 has 326 bytes left and FP256X 685, so #79's 25 ops, 25,479
+ops. FP256 has 64 bytes left and FP256X 2,310, so #79's 25 ops, 25,479
 bytes in one object, are two more. `make build-fp256` compiles all four,
 `make size-fp256` prints them, and `predict-fp256x`, `-fp256x2`, `-fp256x3`
 with their `deploy-...-sepolia` and `verify-...-sepolia` mirror FP256's

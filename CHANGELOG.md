@@ -4,10 +4,34 @@ A release is the public name for a set of deployed contracts. Each contract
 keeps its own version in its CREATE2 salt, because the salt names the address;
 `contracts/deployments/RELEASE.json` maps the release to every address.
 
-## Unreleased
+## Blockulator 2.1 (2026-10-21)
 
-FP127 v5: in source, not yet deployed (salt `FP127 v5`, 55 ops, 19,863
-bytes of runtime). v4 stays live at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`.
+Both rulers round once: every FP127 transcendental to the nearest word,
+every FP256 op correctly rounded or exact, and the directed ops for the
+token edge. Deployed 2026-10-21, Sepolia blocks 11,966,114 to 11,966,639.
+
+| component | version | Sepolia |
+|---|---|---|
+| FP127 | FP127 v5, 55 ops, 19,863 bytes | `0x619176d72D7a12390F8970802943D344c0fd3fE2` |
+| FP256 | FP256 v4, 37 ops, 24,512 bytes | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
+| FP256X | FP256X v4, 5 ops, 22,266 bytes | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
+| FP256X2 | FP256X2 v4, 10 ops, 19,889 bytes | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
+| FP256X3 | FP256X3 v4, 15 ops, 6,844 bytes | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
+| LadderRunner | FP127 ladder v9 | `0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5` |
+| EdgeRunner | FP127 ladder v9 | `0xcA89eeA1831c38B62d2d3332ECbb8A57BaF246fF` |
+
+Records: `contracts/deployments/{RELEASE,FP127,FP256,Ladder}.md`. FP127
+and the four FP256 objects are verified on Sourcify and Blockscout and pass
+their smoke tests against the live contracts; the thirteen ladder contracts
+are verified on Sourcify. FP127 v5's first send ran out of gas under the
+old 20M deploy limit and created nothing; `DEPLOY_GAS` is now 40M and every
+deploy target rejects a reverted receipt. The earlier objects (FP127 v1 to
+v4, FP256 releases one to three, ladder v1 to v8) stay deployed.
+
+### FP127 v5
+
+Salt `FP127 v5`, 55 ops, 19,863 bytes of runtime, deployed 2026-10-21 at
+`0x619176d72D7a12390F8970802943D344c0fd3fE2`.
 
 - Every transcendental returns the nearest word. `exp`, `exp2`, `exp10`,
   `expm1`, `sinh`, `cosh` and `tanh` round once from a double-word kernel
@@ -52,14 +76,10 @@ bytes of runtime). v4 stays live at `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1`
     ~12,600 → ~9,760.
   - `exp2frac` runs inline throughout.
 
-FP256 release four, not yet deployed: correctly rounded, and the edge.
+### FP256 release four
 
-| component | version | Sepolia |
-|---|---|---|
-| FP256 | FP256 v4, 37 ops, 24,512 bytes | not yet deployed |
-| FP256X | FP256X v4, 5 ops, 22,266 bytes | not yet deployed |
-| FP256X2 | FP256X2 v4, 10 ops, 19,889 bytes | not yet deployed |
-| FP256X3 | FP256X3 v4, 15 ops, 6,844 bytes | not yet deployed |
+Correctly rounded, and the edge. Four objects, deployed 2026-10-21 at the
+addresses in the table above.
 
 - Every FP256 op is correctly rounded or exact: 0 misrounded of 364,658
   random inputs (281,821 before #79's ops), and 0 when every input is
@@ -103,6 +123,13 @@ FP256 release four, not yet deployed: correctly rounded, and the edge.
   zero. Salts `FP256X2 v4` and `FP256X3 v4`; `make predict-fp256x2`,
   `-fp256x3` and their deploy and verify targets. 67 ops in all.
 
+### Ladder v9
+
+Salt `FP127 ladder v9`, deployed 2026-10-21: the eleven adapters, with
+`LadderFP127` calling FP127 v5, `LadderFP127Lib` inlining it and
+`LadderFP256` inlining release four, and both runners. The datasets and the
+live runners now compute the same code again.
+
 ## Blockulator 2.0 (2026-10-16)
 
 Two rulers in one word: FP127 for the money range, FP256 for everything.
@@ -115,7 +142,7 @@ Two rulers in one word: FP127 for the money range, FP256 for everything.
 | EdgeRunner | FP127 ladder v8 | `0x09b8fC41E872279A749a0221AE23D124079AcB44` |
 
 - FP256, a 256-bit binary float: sign, 19-bit exponent, 236-bit fraction,
-  about 71 digits from 10^−78,900 to 10^78,900, no NaN or infinity.
+  about 71 digits from 10^−78,913 to 10^78,913, no NaN or infinity.
   Release three adds log1p, expm1, erf, erfc, normCdf, both Lambert branches,
   powu and compound; exp, ln, log1p, expm1 and the erf family return the
   correctly rounded word at every committed vector.
