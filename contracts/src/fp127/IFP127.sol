@@ -105,9 +105,21 @@ interface IFP127 {
     ///      of two.
     function log2Up(int256 x) external pure returns (int256 r);
     /// @notice sqrt(x) for x >= 0.
-    /// @dev Reverts with OutOfRange for x < 0 (the Huff read garbage). Initial
-    ///      guess 2^floor((128 + msb)/2), times sqrt(2) when the exponent is
-    ///      odd, then seven Newton steps. Verbatim port of FP127_SQRT.
+    /// @dev Reverts with OutOfRange for x < 0 (the Huff read garbage). The
+    ///      floor of sqrt(N), N = x 2^128: for x < 2^128, N fits a word and
+    ///      isqrtw takes it whole; above, isqrtw of x shifted up by an even
+    ///      amount gives sqrt(N) to 2^-126 relative, one Newton step with the
+    ///      512-bit divu takes it below one unit, and a 512-bit compare steps
+    ///      back from floor + 1. v4 (the Huff's FP127_SQRT, sqrtv4) ran seven
+    ///      divu Newton steps from 2^floor((128 + msb)/2), a seed within a
+    ///      factor sqrt2 below the root, and returned the last iterate: the
+    ///      floor s, except that the seventh step can land on s + 1 when
+    ///      D = (s + 1)^2 - N is tiny. D = 1 is the iteration's two-cycle
+    ///      between s and s + 1; for D >= 2 an iterate at s or s + 1 steps to
+    ///      s, and one above s + 1 (after six steps, within sqrt(N) 2^-161.7 of
+    ///      the root) steps to under sqrt(N) (1 + 2^-324.4), which reaches
+    ///      s + 1 only if D < N 2^-323.4 = x 2^-195.4. Wherever D < x 2^-192 + 2,
+    ///      sqrtv4 runs, so every result is v4's.
     function sqrt(int256 x) external pure returns (int256 r);
     /// @notice x^y = 2^(y * log2(x)) for x >= 0, rounded to nearest.
     /// @dev Special cases in Huff order: y == 0 gives 1 (including 0^0); x == 0

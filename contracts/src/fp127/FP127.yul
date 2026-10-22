@@ -801,9 +801,43 @@ object "FP127" {
                 r := shl(128, add(sub(msb(x), 128), iszero(iszero(and(x, sub(x, 1))))))
             }
 
+            function isqrtw(z) -> y {
+                y := 181
+                let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
+                b := or(b, shl(6, lt(0xffffffffffffffffff, shr(b, z))))
+                b := or(b, shl(5, lt(0xffffffffff, shr(b, z))))
+                b := or(b, shl(4, lt(0xffffff, shr(b, z))))
+                y := shl(shr(1, b), y)
+                y := shr(18, mul(y, add(shr(b, z), 65536)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := shr(1, add(y, div(z, y)))
+                y := sub(y, lt(div(z, y), y))
+            }
+
             function fp127_sqrt(x) -> r {
                 if slt(x, 0) { rev(0x7db3aba7) }
-                if iszero(x) { r := 0 leave }
+                if iszero(x) { leave }
+                switch shr(128, x)
+                case 0 { r := isqrtw(shl(128, x)) }
+                default {
+                    let sh := and(sub(255, msb(x)), not(1))
+                    r := shl(sub(64, shr(1, sh)), isqrtw(shl(sh, x)))
+                    r := shr(1, add(r, divu(x, r)))
+                    let h, l := mul512(r, r)
+                    if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
+                }
+                // D = (r + 1)^2 - N, 512 bits, below x 2^-192 + 2: where v4 may have stopped on r + 1
+                let h, l := mul512(add(r, 1), add(r, 1))
+                h := sub(sub(h, shr(128, x)), lt(l, shl(128, x)))
+                if and(iszero(h), lt(sub(l, shl(128, x)), add(shr(192, x), 2))) { r := sqrtv4(x) }
+            }
+
+            function sqrtv4(x) -> r {
                 let e := add(128, msb(x))
                 let y := shl(shr(1, e), 1)
                 if and(e, 1) { y := mulraw(y, 0x16a09e667f3bcc908b2fb1366ea957d3e) }
