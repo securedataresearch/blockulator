@@ -6,173 +6,279 @@ object "FP127" {
     }
     object "runtime" {
         code {
-            switch shr(224, calldataload(0))
-            case 0x17cdc976 { /* sinh(int256) */
-                ret(fp127_sinh(calldataload(4)))
+            let dsel := shr(224, calldataload(0))
+            switch lt(dsel, 0x92b0c5b2)
+            case 0 {
+                switch lt(dsel, 0xb47ca3c7)
+                case 0 {
+                    switch lt(dsel, 0xdbbb06d2)
+                    case 0 {
+                        switch lt(dsel, 0xe2bec1fe)
+                        case 0 {
+                            switch dsel
+                            case 0xe2bec1fe { /* divUp(int256,int256) */
+                                ret(fp127_divUp(calldataload(4), calldataload(36)))
+                            }
+                            case 0xe46751e3 { /* exp(int256) */
+                                ret(fp127_exp(calldataload(4)))
+                            }
+                            case 0xebf274be { /* avg(int256,int256) */
+                                ret(fp127_avg(calldataload(4), calldataload(36)))
+                            }
+                            case 0xff78cf2d { /* zeroFloorSub(int256,int256) */
+                                ret(fp127_zeroFloorSub(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0xdbbb06d2 { /* exp2(int256) */
+                                ret(fp127_exp2(calldataload(4)))
+                            }
+                            case 0xddb29e92 { /* divDown(int256,int256) */
+                                ret(fp127_divDown(calldataload(4), calldataload(36)))
+                            }
+                            case 0xe0d68737 { /* log2(int256) */
+                                ret(fp127_log2(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch lt(dsel, 0xc479210c)
+                        case 0 {
+                            switch dsel
+                            case 0xc479210c { /* hypot(int256,int256) */
+                                ret(fp127_hypot(calldataload(4), calldataload(36)))
+                            }
+                            case 0xc6285a68 { /* atanh(int256) */
+                                ret(fp127_atanh(calldataload(4)))
+                            }
+                            case 0xd4b6188c { /* cbrt(int256) */
+                                ret(fp127_cbrt(calldataload(4)))
+                            }
+                            case 0xda3ff648 { /* floor(int256) */
+                                ret(fp127_floor(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0xb47ca3c7 { /* log10(int256) */
+                                ret(fp127_log10(calldataload(4)))
+                            }
+                            case 0xb8846d69 { /* powu(int256,int256) */
+                                ret(fp127_powu(calldataload(4), calldataload(36)))
+                            }
+                            case 0xbbe93d91 { /* mul(int256,int256) */
+                                ret(fp127_mul(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                }
+                default {
+                    switch lt(dsel, 0xa5f3c23b)
+                    case 0 {
+                        switch lt(dsel, 0xadefc37b)
+                        case 0 {
+                            switch dsel
+                            case 0xadefc37b { /* sub(int256,int256) */
+                                ret(fp127_sub(calldataload(4), calldataload(36)))
+                            }
+                            case 0xae2785ac { /* frac(int256) */
+                                ret(fp127_frac(calldataload(4)))
+                            }
+                            case 0xae610b48 { /* sign(int256) */
+                                ret(fp127_sign(calldataload(4)))
+                            }
+                            case 0xae94abc8 { /* lambertWm1(int256) */
+                                ret(fp127_lambertWm1(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0xa5f3c23b { /* add(int256,int256) */
+                                ret(fp127_add(calldataload(4), calldataload(36)))
+                            }
+                            case 0xa79456da { /* erfc(int256) */
+                                ret(fp127_erfc(calldataload(4)))
+                            }
+                            case 0xaa13e96a { /* cosh(int256) */
+                                ret(fp127_cosh(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch lt(dsel, 0xa13ed853)
+                        case 0 {
+                            switch dsel
+                            case 0xa13ed853 { /* gavg(int256,int256) */
+                                ret(fp127_gavg(calldataload(4), calldataload(36)))
+                            }
+                            case 0xa1985bb6 { /* log2Up(int256) */
+                                ret(fp127_log2Up(calldataload(4)))
+                            }
+                            case 0xa2745c74 { /* toFixed18(int256) */
+                                ret(fp127_toFixed18(calldataload(4)))
+                            }
+                            case 0xa31e7db8 { /* compound(int256,int256) */
+                                ret(fp127_compound(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x92b0c5b2 { /* pow(int256,int256) */
+                                ret(fp127_pow(calldataload(4), calldataload(36)))
+                            }
+                            case 0x973fe005 { /* expm1(int256) */
+                                ret(fp127_expm1(calldataload(4)))
+                            }
+                            case 0x9aea0a13 { /* fromFixed18(int256) */
+                                ret(fp127_fromFixed18(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                }
             }
-            case 0x1aabb2f7 { /* mulUp(int256,int256) */
-                ret(fp127_mulUp(calldataload(4), calldataload(36)))
+            default {
+                switch lt(dsel, 0x58b4370b)
+                case 0 {
+                    switch lt(dsel, 0x7b8d0f0c)
+                    case 0 {
+                        switch lt(dsel, 0x84e13b60)
+                        case 0 {
+                            switch dsel
+                            case 0x84e13b60 { /* lerp(int256,int256,int256) */
+                                ret(fp127_lerp(calldataload(4), calldataload(36), calldataload(68)))
+                            }
+                            case 0x8552a5b0 { /* log1p(int256) */
+                                ret(fp127_log1p(calldataload(4)))
+                            }
+                            case 0x8e6f2353 { /* ln(int256) */
+                                ret(fp127_ln(calldataload(4)))
+                            }
+                            case 0x929edbfb { /* pi(int256) */
+                                ret(fp127_pi(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x7b8d0f0c { /* clamp(int256,int256,int256) */
+                                ret(fp127_clamp(calldataload(4), calldataload(36), calldataload(68)))
+                            }
+                            case 0x7b9745a0 { /* normCdf(int256) */
+                                ret(fp127_normCdf(calldataload(4)))
+                            }
+                            case 0x81fe5786 { /* max(int256,int256) */
+                                ret(fp127_max(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch lt(dsel, 0x63b03896)
+                        case 0 {
+                            switch dsel
+                            case 0x63b03896 { /* gcd(int256,int256) */
+                                ret(fp127_gcd(calldataload(4), calldataload(36)))
+                            }
+                            case 0x665df460 { /* sqrt(int256) */
+                                ret(fp127_sqrt(calldataload(4)))
+                            }
+                            case 0x6de23d34 { /* lambertW0(int256) */
+                                ret(fp127_lambertW0(calldataload(4)))
+                            }
+                            case 0x7a959e36 { /* erf(int256) */
+                                ret(fp127_erf(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x58b4370b { /* round(int256) */
+                                ret(fp127_round(calldataload(4)))
+                            }
+                            case 0x5ad78e8a { /* factorial(int256) */
+                                ret(fp127_factorial(calldataload(4)))
+                            }
+                            case 0x5e1f05c7 { /* tanh(int256) */
+                                ret(fp127_tanh(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                }
+                default {
+                    switch lt(dsel, 0x32154abe)
+                    case 0 {
+                        switch lt(dsel, 0x43509138)
+                        case 0 {
+                            switch dsel
+                            case 0x43509138 { /* div(int256,int256) */
+                                ret(fp127_div(calldataload(4), calldataload(36)))
+                            }
+                            case 0x4b8d10e0 { /* mulDown(int256,int256) */
+                                ret(fp127_mulDown(calldataload(4), calldataload(36)))
+                            }
+                            case 0x4c0dafa2 { /* exp10(int256) */
+                                ret(fp127_exp10(calldataload(4)))
+                            }
+                            case 0x54a53dc1 { /* neg(int256) */
+                                ret(fp127_neg(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x32154abe { /* toFixed18Down(int256) */
+                                ret(fp127_toFixed18Down(calldataload(4)))
+                            }
+                            case 0x3a02c983 { /* inv(int256) */
+                                ret(fp127_inv(calldataload(4)))
+                            }
+                            case 0x42fba7ae { /* ceil(int256) */
+                                ret(fp127_ceil(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                    default {
+                        switch lt(dsel, 0x2110b689)
+                        case 0 {
+                            switch dsel
+                            case 0x2110b689 { /* dist(int256,int256) */
+                                ret(fp127_dist(calldataload(4), calldataload(36)))
+                            }
+                            case 0x27066ea4 { /* toFixed18Up(int256) */
+                                ret(fp127_toFixed18Up(calldataload(4)))
+                            }
+                            case 0x29aa9cbe { /* min(int256,int256) */
+                                ret(fp127_min(calldataload(4), calldataload(36)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                        default {
+                            switch dsel
+                            case 0x17cdc976 { /* sinh(int256) */
+                                ret(fp127_sinh(calldataload(4)))
+                            }
+                            case 0x1aabb2f7 { /* mulUp(int256,int256) */
+                                ret(fp127_mulUp(calldataload(4), calldataload(36)))
+                            }
+                            case 0x1b5ac4b5 { /* abs(int256) */
+                                ret(fp127_abs(calldataload(4)))
+                            }
+                            default { revert(0, 0) }
+                        }
+                    }
+                }
             }
-            case 0x1b5ac4b5 { /* abs(int256) */
-                ret(fp127_abs(calldataload(4)))
-            }
-            case 0x2110b689 { /* dist(int256,int256) */
-                ret(fp127_dist(calldataload(4), calldataload(36)))
-            }
-            case 0x27066ea4 { /* toFixed18Up(int256) */
-                ret(fp127_toFixed18Up(calldataload(4)))
-            }
-            case 0x29aa9cbe { /* min(int256,int256) */
-                ret(fp127_min(calldataload(4), calldataload(36)))
-            }
-            case 0x32154abe { /* toFixed18Down(int256) */
-                ret(fp127_toFixed18Down(calldataload(4)))
-            }
-            case 0x3a02c983 { /* inv(int256) */
-                ret(fp127_inv(calldataload(4)))
-            }
-            case 0x42fba7ae { /* ceil(int256) */
-                ret(fp127_ceil(calldataload(4)))
-            }
-            case 0x43509138 { /* div(int256,int256) */
-                ret(fp127_div(calldataload(4), calldataload(36)))
-            }
-            case 0x4b8d10e0 { /* mulDown(int256,int256) */
-                ret(fp127_mulDown(calldataload(4), calldataload(36)))
-            }
-            case 0x4c0dafa2 { /* exp10(int256) */
-                ret(fp127_exp10(calldataload(4)))
-            }
-            case 0x54a53dc1 { /* neg(int256) */
-                ret(fp127_neg(calldataload(4)))
-            }
-            case 0x58b4370b { /* round(int256) */
-                ret(fp127_round(calldataload(4)))
-            }
-            case 0x5ad78e8a { /* factorial(int256) */
-                ret(fp127_factorial(calldataload(4)))
-            }
-            case 0x5e1f05c7 { /* tanh(int256) */
-                ret(fp127_tanh(calldataload(4)))
-            }
-            case 0x63b03896 { /* gcd(int256,int256) */
-                ret(fp127_gcd(calldataload(4), calldataload(36)))
-            }
-            case 0x665df460 { /* sqrt(int256) */
-                ret(fp127_sqrt(calldataload(4)))
-            }
-            case 0x6de23d34 { /* lambertW0(int256) */
-                ret(fp127_lambertW0(calldataload(4)))
-            }
-            case 0x7a959e36 { /* erf(int256) */
-                ret(fp127_erf(calldataload(4)))
-            }
-            case 0x7b8d0f0c { /* clamp(int256,int256,int256) */
-                ret(fp127_clamp(calldataload(4), calldataload(36), calldataload(68)))
-            }
-            case 0x7b9745a0 { /* normCdf(int256) */
-                ret(fp127_normCdf(calldataload(4)))
-            }
-            case 0x81fe5786 { /* max(int256,int256) */
-                ret(fp127_max(calldataload(4), calldataload(36)))
-            }
-            case 0x84e13b60 { /* lerp(int256,int256,int256) */
-                ret(fp127_lerp(calldataload(4), calldataload(36), calldataload(68)))
-            }
-            case 0x8552a5b0 { /* log1p(int256) */
-                ret(fp127_log1p(calldataload(4)))
-            }
-            case 0x8e6f2353 { /* ln(int256) */
-                ret(fp127_ln(calldataload(4)))
-            }
-            case 0x929edbfb { /* pi(int256) */
-                ret(fp127_pi(calldataload(4)))
-            }
-            case 0x92b0c5b2 { /* pow(int256,int256) */
-                ret(fp127_pow(calldataload(4), calldataload(36)))
-            }
-            case 0x973fe005 { /* expm1(int256) */
-                ret(fp127_expm1(calldataload(4)))
-            }
-            case 0x9aea0a13 { /* fromFixed18(int256) */
-                ret(fp127_fromFixed18(calldataload(4)))
-            }
-            case 0xa13ed853 { /* gavg(int256,int256) */
-                ret(fp127_gavg(calldataload(4), calldataload(36)))
-            }
-            case 0xa1985bb6 { /* log2Up(int256) */
-                ret(fp127_log2Up(calldataload(4)))
-            }
-            case 0xa2745c74 { /* toFixed18(int256) */
-                ret(fp127_toFixed18(calldataload(4)))
-            }
-            case 0xa31e7db8 { /* compound(int256,int256) */
-                ret(fp127_compound(calldataload(4), calldataload(36)))
-            }
-            case 0xa5f3c23b { /* add(int256,int256) */
-                ret(fp127_add(calldataload(4), calldataload(36)))
-            }
-            case 0xa79456da { /* erfc(int256) */
-                ret(fp127_erfc(calldataload(4)))
-            }
-            case 0xaa13e96a { /* cosh(int256) */
-                ret(fp127_cosh(calldataload(4)))
-            }
-            case 0xadefc37b { /* sub(int256,int256) */
-                ret(fp127_sub(calldataload(4), calldataload(36)))
-            }
-            case 0xae2785ac { /* frac(int256) */
-                ret(fp127_frac(calldataload(4)))
-            }
-            case 0xae610b48 { /* sign(int256) */
-                ret(fp127_sign(calldataload(4)))
-            }
-            case 0xae94abc8 { /* lambertWm1(int256) */
-                ret(fp127_lambertWm1(calldataload(4)))
-            }
-            case 0xb47ca3c7 { /* log10(int256) */
-                ret(fp127_log10(calldataload(4)))
-            }
-            case 0xb8846d69 { /* powu(int256,int256) */
-                ret(fp127_powu(calldataload(4), calldataload(36)))
-            }
-            case 0xbbe93d91 { /* mul(int256,int256) */
-                ret(fp127_mul(calldataload(4), calldataload(36)))
-            }
-            case 0xc479210c { /* hypot(int256,int256) */
-                ret(fp127_hypot(calldataload(4), calldataload(36)))
-            }
-            case 0xc6285a68 { /* atanh(int256) */
-                ret(fp127_atanh(calldataload(4)))
-            }
-            case 0xd4b6188c { /* cbrt(int256) */
-                ret(fp127_cbrt(calldataload(4)))
-            }
-            case 0xda3ff648 { /* floor(int256) */
-                ret(fp127_floor(calldataload(4)))
-            }
-            case 0xdbbb06d2 { /* exp2(int256) */
-                ret(fp127_exp2(calldataload(4)))
-            }
-            case 0xddb29e92 { /* divDown(int256,int256) */
-                ret(fp127_divDown(calldataload(4), calldataload(36)))
-            }
-            case 0xe0d68737 { /* log2(int256) */
-                ret(fp127_log2(calldataload(4)))
-            }
-            case 0xe2bec1fe { /* divUp(int256,int256) */
-                ret(fp127_divUp(calldataload(4), calldataload(36)))
-            }
-            case 0xe46751e3 { /* exp(int256) */
-                ret(fp127_exp(calldataload(4)))
-            }
-            case 0xebf274be { /* avg(int256,int256) */
-                ret(fp127_avg(calldataload(4), calldataload(36)))
-            }
-            case 0xff78cf2d { /* zeroFloorSub(int256,int256) */
-                ret(fp127_zeroFloorSub(calldataload(4), calldataload(36)))
-            }
-            default { revert(0, 0) }
 
             function ret(v) {
                 mstore(0, v)
