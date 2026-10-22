@@ -3163,6 +3163,39 @@ library FP256Lib {
                 r := or(shl(2, p1), shr(254, p0))
             }
 
+            function shr512(p1, p0, n) -> r {
+                switch lt(n, 256)
+                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
+                default { r := shr(sub(n, 256), p1) }
+            }
+
+            function erfasym(Y, uy, v) -> D, eg, er {
+                let y2 := mulwu(Y, Y)
+                let ey := add(uy, uy)
+                if shr(255, y2) {
+                    y2 := shr(1, y2)
+                    ey := add(ey, 1)
+                }
+                let W1 := div254(shl(254, 1), y2)
+                let w := shr(add(ey, 1), W1)
+                let term := shr(sub(ey, 7), W1)
+                let T := sub(0, term)
+                for { let mm := 3 } term { mm := add(mm, 2) } {
+                    term := mulwu(term, mul(mm, w))
+                    switch and(mm, 2)
+                    case 2 { T := add(T, term) }
+                    default { T := sub(T, term) }
+                }
+                let Q := divh(shl(255, 1), mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
+                let p1, p0 := mul512(sub(0, T), Q)
+                p1, p0 := mul512(sub(Q, shr(6, p1)), v)
+                D := shr512(p1, p0, 255)
+                let t := sub(255, msb(D))
+                D := shl(t, D)
+                eg := sub(sub(0, uy), add(1, t))
+                er := 64
+            }
+
             function erfcxcf(Y, uy) -> R, eg, n {
                 let y2 := mulwu(Y, Y)
                 let ey := add(uy, uy)
@@ -3361,12 +3394,6 @@ library FP256Lib {
                 if f { v := exp2frac(f) }
             }
 
-            function shr512(p1, p0, n) -> r {
-                switch lt(n, 256)
-                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
-                default { r := shr(sub(n, 256), p1) }
-            }
-
             function expnegsq(u, m, h) -> kk, v {
                 let p1, p0 := mul512(m, m)
                 let a1, a0 := mul512(p0, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
@@ -3402,7 +3429,10 @@ library FP256Lib {
                     er := 192
                 }
                 default {
-                    D, ee, er := erfcfv(Y, uy, v)
+                    // the series from y = 18, where it is cheaper than the fraction (measured)
+                    switch or(sgt(uy, 4), and(eq(uy, 4), iszero(lt(Y, 0x4800000000000000000000000000000000000000000000000000000000000000))))
+                    case 0 { D, ee, er := erfcfv(Y, uy, v) }
+                    default { D, ee, er := erfasym(Y, uy, v) }
                     ee := add(ee, kk)
                 }
             }
@@ -3927,6 +3957,39 @@ library FP256Lib {
                 r := or(shl(2, p1), shr(254, p0))
             }
 
+            function shr512(p1, p0, n) -> r {
+                switch lt(n, 256)
+                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
+                default { r := shr(sub(n, 256), p1) }
+            }
+
+            function erfasym(Y, uy, v) -> D, eg, er {
+                let y2 := mulwu(Y, Y)
+                let ey := add(uy, uy)
+                if shr(255, y2) {
+                    y2 := shr(1, y2)
+                    ey := add(ey, 1)
+                }
+                let W1 := div254(shl(254, 1), y2)
+                let w := shr(add(ey, 1), W1)
+                let term := shr(sub(ey, 7), W1)
+                let T := sub(0, term)
+                for { let mm := 3 } term { mm := add(mm, 2) } {
+                    term := mulwu(term, mul(mm, w))
+                    switch and(mm, 2)
+                    case 2 { T := add(T, term) }
+                    default { T := sub(T, term) }
+                }
+                let Q := divh(shl(255, 1), mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
+                let p1, p0 := mul512(sub(0, T), Q)
+                p1, p0 := mul512(sub(Q, shr(6, p1)), v)
+                D := shr512(p1, p0, 255)
+                let t := sub(255, msb(D))
+                D := shl(t, D)
+                eg := sub(sub(0, uy), add(1, t))
+                er := 64
+            }
+
             function erfcxcf(Y, uy) -> R, eg, n {
                 let y2 := mulwu(Y, Y)
                 let ey := add(uy, uy)
@@ -4125,12 +4188,6 @@ library FP256Lib {
                 if f { v := exp2frac(f) }
             }
 
-            function shr512(p1, p0, n) -> r {
-                switch lt(n, 256)
-                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
-                default { r := shr(sub(n, 256), p1) }
-            }
-
             function expnegsq(u, m, h) -> kk, v {
                 let p1, p0 := mul512(m, m)
                 let a1, a0 := mul512(p0, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
@@ -4166,7 +4223,10 @@ library FP256Lib {
                     er := 192
                 }
                 default {
-                    D, ee, er := erfcfv(Y, uy, v)
+                    // the series from y = 18, where it is cheaper than the fraction (measured)
+                    switch or(sgt(uy, 4), and(eq(uy, 4), iszero(lt(Y, 0x4800000000000000000000000000000000000000000000000000000000000000))))
+                    case 0 { D, ee, er := erfcfv(Y, uy, v) }
+                    default { D, ee, er := erfasym(Y, uy, v) }
                     ee := add(ee, kk)
                 }
             }
@@ -4694,6 +4754,39 @@ library FP256Lib {
                 r := or(shl(2, p1), shr(254, p0))
             }
 
+            function shr512(p1, p0, n) -> r {
+                switch lt(n, 256)
+                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
+                default { r := shr(sub(n, 256), p1) }
+            }
+
+            function erfasym(Y, uy, v) -> D, eg, er {
+                let y2 := mulwu(Y, Y)
+                let ey := add(uy, uy)
+                if shr(255, y2) {
+                    y2 := shr(1, y2)
+                    ey := add(ey, 1)
+                }
+                let W1 := div254(shl(254, 1), y2)
+                let w := shr(add(ey, 1), W1)
+                let term := shr(sub(ey, 7), W1)
+                let T := sub(0, term)
+                for { let mm := 3 } term { mm := add(mm, 2) } {
+                    term := mulwu(term, mul(mm, w))
+                    switch and(mm, 2)
+                    case 2 { T := add(T, term) }
+                    default { T := sub(T, term) }
+                }
+                let Q := divh(shl(255, 1), mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
+                let p1, p0 := mul512(sub(0, T), Q)
+                p1, p0 := mul512(sub(Q, shr(6, p1)), v)
+                D := shr512(p1, p0, 255)
+                let t := sub(255, msb(D))
+                D := shl(t, D)
+                eg := sub(sub(0, uy), add(1, t))
+                er := 64
+            }
+
             function erfcxcf(Y, uy) -> R, eg, n {
                 let y2 := mulwu(Y, Y)
                 let ey := add(uy, uy)
@@ -4892,12 +4985,6 @@ library FP256Lib {
                 if f { v := exp2frac(f) }
             }
 
-            function shr512(p1, p0, n) -> r {
-                switch lt(n, 256)
-                case 1 { r := or(shl(sub(256, n), p1), shr(n, p0)) }
-                default { r := shr(sub(n, 256), p1) }
-            }
-
             function expnegsq(u, m, h) -> kk, v {
                 let p1, p0 := mul512(m, m)
                 let a1, a0 := mul512(p0, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
@@ -4933,7 +5020,10 @@ library FP256Lib {
                     er := 192
                 }
                 default {
-                    D, ee, er := erfcfv(Y, uy, v)
+                    // the series from y = 18, where it is cheaper than the fraction (measured)
+                    switch or(sgt(uy, 4), and(eq(uy, 4), iszero(lt(Y, 0x4800000000000000000000000000000000000000000000000000000000000000))))
+                    case 0 { D, ee, er := erfcfv(Y, uy, v) }
+                    default { D, ee, er := erfasym(Y, uy, v) }
                     ee := add(ee, kk)
                 }
             }

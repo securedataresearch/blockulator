@@ -231,7 +231,8 @@ The bounds, and what they give:
 | powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it | as pow | 2^−233 ULP |
 | erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 10.6 | 2^−499 rel. | 2^−262 ULP |
 | erf, erfc, Φ, ½ ≤ y < 6 | 192 | 2 × g's 81 + 8 | 11.3 | 2^−444 rel. | 2^−207 ULP |
-| erfc, Φ, y ≥ 6 | 32n + 64 | A and B gain 2^−251 a step | 186 | 2^−392 rel. | 2^−155 ULP |
+| erfc, Φ, 6 ≤ y < 18 | 32n + 64 | A and B gain 2^−251 a step | 186 | 2^−392 rel. | 2^−155 ULP |
+| erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 76 terms), w's floor 2^−254, Q's 2 units, v's 6, two floors: under 48; the remainder below the first omitted term | 6.2 | 2^−392 rel. | 2^−155 ULP |
 | lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 17 + 16·⌊2^255/\|h\|⌋; 10 / 20 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: Φ/q² within 2.4 / 3.7, ρ within 16 / 24, τ within 8 / 17, so 8q + 3 / 17\|q\| + 3 | 0.07, 0.10 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
 | exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.54 | 2^−492 rel. | 2^−255 ULP |
 | log2, near one | 8 | d P within 3, times log2 e: 3 log2 e + 2 | 4.64 | 2^−497 rel. | 2^−260 ULP |
@@ -270,7 +271,7 @@ Lambert W's branch point). None is known.
 | `powu(x, n)` | FP256 | x^n for a plain integer n: below 2^16 binary exponentiation on a 256-bit significand, exact when it fits, tested when not; pow when the test fails and from 2^16; correctly rounded for \|n\| < 2^237 (n is a number above) | `Overflow`, `DivisionByZero` for 0^negative |
 | `compound(rate, n)` | FP256 | (1 + rate)^n without a rounded 1 + rate: log2(1 + rate) as log1p takes it, its product with n, 2^t; ties exact | `OutOfRange` below −1, `DivisionByZero` for −1 with n < 0, `Overflow` |
 | `erf` | FP256X | below ½, x (2/√π) e^(−x²) Σ (2x²)^k/(2k+1)!!; above, 1 − erfc; ±1 from \|x\| ≥ 13 | never |
-| `erfc` | FP256X | e^(−x²)·g(x), g from 45 Taylor anchors on [½, 6] and a continued fraction beyond, e^(−x²) from the exact square: 71 digits to the underflow near x = 427 | never |
+| `erfc` | FP256X | e^(−x²)·g(x), g from 45 Taylor anchors on [½, 6] and a continued fraction on [6, 18); the asymptotic series e^(−x²)/(x√π) Σ (−1)^m (½)_m/x^(2m) (DLMF 7.12.1, the remainder below the first omitted term, 76 terms at 18 and 18 at 430) from x = 18, where it is cheaper than the fraction; e^(−x²) from the exact square: 71 digits to the underflow near x = 427 | never |
 | `normCdf` | FP256X | Φ(x) = erfc(−x/√2)/2, the left tail to about x = −603; exactly one from x ≥ 13√2 | never |
 | `lambertW0` | FP256X | W e^W = x, W ≥ −1: near −1/e sixth-order steps in q = 1 + W (two at 2^−126, one at word precision with a bound); elsewhere a table-free seed, fourth-order log-form steps at 2^−126 and one at word precision with a bound; the rounding test, the wide step on a miss | `OutOfRange` below −1/e |
 | `lambertWm1` | FP256X | W ≤ −1 on [−1/e, 0): the same stages and test, the wide step on a miss | `OutOfRange` outside [−1/e, 0) |
@@ -347,7 +348,7 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 | ln, log1p | 8,500–9,400 | 31,200–37,600 | 126,400 |
 | pow, powu | 5,700–14,800 | 59,900–68,000 | 99,500 |
 | compound | 17,000 | 68,100 | 161,000 |
-| erf, erfc, normCdf | 17,600–27,600 | 101,000–109,000 | 419,300 (the continued fraction) |
+| erf, erfc, normCdf | 17,600–18,500 | 97,600–105,200 | 418,200 (the continued fraction in two words) |
 | lambertW0, lambertWm1 | 29,700–34,000 | 66,900–71,700 | 92,400 |
 | the directed ops | 500–2,000 | | 2,000 |
 | exp2, exp10 | 7,500–7,600 | 30,000 | 30,300 |
