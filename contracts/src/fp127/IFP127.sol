@@ -282,22 +282,9 @@ interface IFP127 {
     ///      2^-8, 2^-16, 2^-32, where x^(2K+2) / (2K+3)! <= 2^-200; its mulg is
     ///      inline and unsigned.
     function sinh(int256 x) external pure returns (int256 r);
-    /// @notice cosh(x), rounded to nearest. For |x| < 1 the even series
-    ///         1 + x^2/(1*2) (1 + x^2/(3*4) (1 + ...)) at 2^-192, K = 23 terms
-    ///         (fewer for a smaller |x|), within 3 units of 2^-192 of cosh:
-    ///         nearest unless cosh is within 3 2^-64 ULP of a midpoint. Beyond,
-    ///         (e^|x| + e^-|x|) / 2 from the double-word kernel, summed before
-    ///         the one rounding. cosh(0) is exactly one.
-    /// @dev Below 2^-64, exactly one: cosh - 1 < x^2 / 2 (1 + x^2 / 12) < 2^-129,
-    ///      half an ULP, so the nearest word is one. The series takes K = 20,
-    ///      17, 13, 9, 5, 2 terms below 1/2, 1/4, 1/16, 2^-8, 2^-16, 2^-32,
-    ///      where x^(2K+2) / (2K+2)! <= 2^-200 (K = 23 at |x| < 1: 48! > 2^202).
-    ///      Each Horner step floors once (a unit) and the next step divides that
-    ///      by (2k)(2k-1) >= 2, so the K floors sum to under 1.55 units; the
-    ///      floored x^2 moves cosh by at most sinh(x)/(2x) < 0.6 unit; the tail
-    ///      is below 2^-8 unit: under 2.2, measured at 1.83 on 2,000 inputs by
-    ///      precise_model.py measure (cosh_series). Its mulg is inline and
-    ///      unsigned.
+    /// @notice cosh(x) = (e^x + e^-x) / 2, rounded to nearest: both halves from
+    ///         the double-word kernel, summed before the one rounding. cosh(0) is
+    ///         exactly one.
     function cosh(int256 x) external pure returns (int256 r);
     /// @notice tanh(x), rounded to nearest. For |x| < 1/4, u / (u + 2) with
     ///         u = e^(2|x|) - 1 at 2^-192; up to |x| < 46, (1 - w) / (1 + w) with

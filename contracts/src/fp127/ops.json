@@ -574,7 +574,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "cosh(x), rounded to nearest. For |x| < 1 the even series 1 + x^2/(1*2) (1 + x^2/(3*4) (1 + ...)) at 2^-192, K = 23 terms (fewer for a smaller |x|), within 3 units of 2^-192 of cosh: nearest unless cosh is within 3 2^-64 ULP of a midpoint. Beyond, (e^|x| + e^-|x|) / 2 from the double-word kernel, summed before the one rounding. cosh(0) is exactly one.",
+      "notice": "cosh(x) = (e^x + e^-x) / 2, rounded to nearest: both halves from the double-word kernel, summed before the one rounding. cosh(0) is exactly one.",
       "domain": "|x| <= 88",
       "reverts": "Overflow() beyond that"
     },
