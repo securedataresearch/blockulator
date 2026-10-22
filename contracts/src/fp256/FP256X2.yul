@@ -864,10 +864,16 @@ object "FP256X2" {
             }
 
             function cbrtseed(m, rr) -> y {
-                let g := div(add(shl(253, add(2, rr)), shr(1, log2m(shl(18, m)))), 3)
-                let ip := iszero(lt(g, 0x2000000000000000000000000000000000000000000000000000000000000000))
-                if ip { g := sub(g, 0x2000000000000000000000000000000000000000000000000000000000000000) }
-                y := shr(sub(17, ip), exp2frac(shl(1, g)))
+                let l := add(0xbf5da1f0001eb537, shr(64, mul(0x428a2f98d728ae22, shr(172, m))))
+                y := shr(42, mul(l, and(shr(shl(6, rr), 0x50a28be635ca2b8980000000000000006597fa94f5b8f20b), 0xffffffffffffffff)))
+            }
+
+            function cbrtw(n, y) -> r {
+                r := div(add(shl(1, y), div(n, mul(y, y))), 3)
+                r := div(add(shl(1, r), div(n, mul(r, r))), 3)
+                r := div(add(shl(1, r), div(n, mul(r, r))), 3)
+                r := div(add(shl(1, r), div(n, mul(r, r))), 3)
+                r := sub(r, gt(mul(r, r), div(n, r)))
             }
 
             function fp256_cbrt(x) -> r {
@@ -881,9 +887,22 @@ object "FP256X2" {
                     q := sub(q, 1)
                 }
                 let n2, n1, n0 := shl3(m, add(rr, 477))
-                let y := cbrtseed(m, rr)
+                let j := 153
+                let sh := add(18, rr)
+                if eq(rr, 2) {
+                    j := 154
+                    sh := 17
+                }
+                let n := shl(sh, m)
+                let y := cbrtw(n, cbrtseed(m, rr))
+                let y2 := mul(y, y)
+                y := add(add(shl(j, y), div(shl(sub(j, 72), sub(n, mul(y2, y))), shr(72, mul(3, y2)))), 1)
+                let p1, p0 := mul512(y, y)
+                let c2, c1, c0 := mul3(p1, p0, y)
+                c2, c1, c0 := sub3(c2, c1, c0, n2, n1, n0)
+                let t1, t0 := mul512(p0, 3)
+                y := sub(y, div(or(shl(212, c2), shr(44, c1)), add(shr(44, add(mul(3, p1), t1)), 1)))
                 for {} cubegt(y, n2, n1, n0) {} { y := sub(y, 1) }
-                for {} iszero(cubegt(add(y, 1), n2, n1, n0)) {} { y := add(y, 1) }
                 r := normround(s, add(q, 0x4005e), y)
             }
 

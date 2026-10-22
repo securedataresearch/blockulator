@@ -670,9 +670,9 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 13593,
-   "gasP99": 14434,
-   "gasMax": 14626
+   "gasMedian": 3526,
+   "gasP99": 3552,
+   "gasMax": 3552
   },
   {
    "lib": "fp256",

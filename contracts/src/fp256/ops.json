@@ -709,7 +709,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "The cube root, cbrt(-x) = -cbrt(x): floor(cbrt(N)) of the significand scaled to N = m 2^(477 + rr), 714 to 716 bits, from a kernel seed corrected by exact three-word cubes, then rounded once. Exact for perfect cubes; never overflows.",
+      "notice": "The cube root, cbrt(-x) = -cbrt(x): floor(cbrt(N)) of the significand scaled to N = m 2^(477 + rr), 714 to 716 bits, by Newton with precision doubling (a seed from the top bits, four steps in one word to 85 bits, two residual steps to 170 and 239) and an exact three-word cube at the end, then rounded once. Exact for perfect cubes; never overflows.",
       "domain": "any number",
       "reverts": "OutOfRange() for a word that is not a number"
     },

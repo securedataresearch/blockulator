@@ -530,7 +530,7 @@ PROBES = {
               "lwlog", "lwexp", "lwln", "powslow", "compslow", "wln1ps",
               "erfser", "erfcxa", "erfcxcf", "expnegsq",
               # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp
-              "hser", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cubegt",
+              "hser", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cbrtw", "cubegt",
               "isqrtw", "lerp3"],
     "fp127": ["expk", "log2m", "erfs", "erfcf", "lwfsc", "lwm1", "lwfin",
               "l2p", "powus"],
