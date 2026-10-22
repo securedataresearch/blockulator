@@ -45,7 +45,7 @@ Gas is the inline library's (FP256Lib) own cost on these inputs, median / 99th p
 | log2 | 8,000 | 8,000 | 0 | 0 | 8,414 / 11,090 / 36,190 | 0.14% |
 | log10 | 8,000 | 8,000 | 0 | 0 | 8,642 / 10,992 / 34,606 | 0.16% |
 | log2Up | 3,800 | 3,800 | 0 | 0 | 949 / 955 / 955 | — |
-| cbrt | 4,000 | 4,000 | 0 | 0 | 3,526 / 3,552 / 3,552 | — |
+| cbrt | 4,000 | 4,000 | 0 | 0 | 3,569 / 3,595 / 3,595 | — |
 | sinh | 8,000 | 8,000 | 0 | 0 | 8,686 / 8,699 / 8,711 | 0 |
 | cosh | 8,000 | 8,000 | 0 | 0 | 8,498 / 8,669 / 33,254 | 0.01% |
 | tanh | 8,000 | 8,000 | 0 | 0 | 16,356 / 16,369 / 16,369 | 0 |
@@ -95,7 +95,7 @@ The first 4,000 inputs of each op again, through a test-only copy of FP256Lib wh
 
 ## FP127
 
-*nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, median / p99 / largest; *fallback* is the share of inputs that took the double-word decider (ln, log2, log10, pow and cbrt near a midpoint or, for pow and cbrt, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).
+*nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, median / p99 / largest; *fallback* is the share of inputs that took the double-word decider (ln, log2, log10 and pow near a midpoint or, for pow, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).
 
 | op | inputs | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |
 |---|---:|---:|---:|---:|---:|---:|---|---:|---:|
@@ -106,7 +106,7 @@ The first 4,000 inputs of each op again, through a test-only copy of FP256Lib wh
 | ln | 4,000 | 4,000 | 4,000 | 0.5 | 0.252 | 129.3 | 1,987 / 2,013 | 3,410 / 3,689 / 3,786 | 0 |
 | log2 | 4,000 | 4,000 | 4,000 | 0.5 | 0.245 | 129.2 | 2,020 / 1,970 | 3,194 / 3,478 / 3,552 | 0 |
 | pow | 3,970 | 3,970 | 3,970 | 0.5 | 0.245 | 129.0 | 1,992 / 1,955 | 6,121 / 16,088 / 18,842 | 6.75% |
-| cbrt | 4,000 | 4,000 | 4,000 | 0.5 | 0.254 | 129.3 | 1,986 / 2,007 | 6,019 / 16,183 / 18,443 | 36.95% |
+| cbrt | 4,000 | 4,000 | 4,000 | 0.5 | 0.254 | 129.3 | 1,986 / 2,007 | 2,173 / 2,234 / 2,944 | — |
 | expm1 | 3,987 | 3,987 | 3,987 | 0.5 | 0.238 | 129.2 | 2,121 / 1,860 | 2,066 / 6,788 / 7,056 | — |
 | erf | 2,000 | 2,000 | 2,000 | 0.5 | 0.239 | — | 1,037 / 963 | 4,881 / 25,103 / 36,440 | — |
 | erfc | 2,000 | 2,000 | 2,000 | 0.5 | 0.247 | 129.0 | 1,014 / 937 | 4,755 / 21,818 / 36,433 | — |

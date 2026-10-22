@@ -164,13 +164,29 @@ interface IFP127 {
     ///         grid the rate itself would have been the first loss.
     function compound(int256 rate, int256 n) external pure returns (int256 r);
     /// @notice Cube root, defined for all x: cbrt(-x) = -cbrt(x). Rounded to
-    ///         nearest; exact for perfect cubes.
-    /// @dev v5: 2^(log2|x| / 3), with log2 from l2p (2^-299), the division by
-    ///      three done exactly on the 512-bit value and the fraction through the
-    ///      double-word kernel. v4 was pow(|x|, 1/3) with the exponent 1/3
-    ///      floored to 128 bits, which put large results 1.6e14 ULPs off. The
-    ///      one-word log2 and 2^t go first, as in pow (pow2t), and decide when
-    ///      their error bound cannot change the rounding.
+    ///         nearest (decided exactly); exact for perfect cubes.
+    /// @dev The result is cbrt(N) for N = |x| 2^256, a 512-bit integer whose
+    ///      root has up to 171 bits, by Newton with precision doubling and an
+    ///      exact finish. z = |x| 2^sh with sh = 1 mod 3 puts z in [2^253,
+    ///      2^256) and N = z 2^(3j) exactly, j = (256 - sh)/3 in 1..85. The
+    ///      seed is the minimax line through cbrt(t) on [1, 2) in the top 65
+    ///      bits of z (within 2^-7.07) times 2^((253 + e)/3 - 22) for e = msb(z)
+    ///      - 253 from a packed word; cbrtw takes it to Y = floor(cbrt(z)) in
+    ///      four word steps. From y0 = Y 2^j, under the root R by less than
+    ///      2^j, the Newton step y0 + (z - Y^3) 2^j / (3 Y^2) has a word
+    ///      numerator (z - Y^3 <= 3Y^2 + 3Y; both sides are taken at 2^-2 so
+    ///      the shifted numerator fits), lands at or above R and under
+    ///      R + (R - y0)^2 / y0 < R + 2^(j - 84) <= R + 1.6, and with the floor
+    ///      and one added the iterate is in [floor(R), floor(R) + 3]: exact
+    ///      two-word cubes step it down to the floor. The midpoint test is
+    ///      exact too: round up iff 8 (N - y^3) >= 12 y^2 + 6 y + 1, the cube of
+    ///      2y + 1 against 8N on the residual (never a tie: one side is odd).
+    ///      v5 was 2^(log2|x| / 3) through the one-word kernel with the
+    ///      double-word fallback (l2p) on 37% of inputs; this is 8 to 20 times
+    ///      cheaper and differs from it only where that kernel's 2^-299 bound
+    ///      would have straddled a midpoint, which no vector or sweep input does.
+    ///      v4 was pow(|x|, 1/3) with the exponent 1/3 floored to 128 bits,
+    ///      which put large results 1.6e14 ULPs off.
     function cbrt(int256 x) external pure returns (int256 r);
     /// @notice Geometric mean sqrt(a * b). Reverts with OutOfRange if a * b < 0.
     function gavg(int256 a, int256 b) external pure returns (int256 r);

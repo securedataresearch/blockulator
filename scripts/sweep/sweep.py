@@ -511,7 +511,7 @@ def score():
            "divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows "
            "the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, "
            "median / p99 / largest; *fallback* is the share of inputs that took the double-word decider "
-           "(ln, log2, log10, pow and cbrt near a midpoint or, for pow and cbrt, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).",
+           "(ln, log2, log10 and pow near a midpoint or, for pow, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).",
            "",
            "| op | inputs | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |",
            "|---|---:|---:|---:|---:|---:|---:|---|---:|---:|"]

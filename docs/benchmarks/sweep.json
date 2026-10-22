@@ -670,9 +670,9 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 3526,
-   "gasP99": 3552,
-   "gasMax": 3552
+   "gasMedian": 3569,
+   "gasP99": 3595,
+   "gasMax": 3595
   },
   {
    "lib": "fp256",
@@ -1537,12 +1537,9 @@
    "minBits": 129.3,
    "below": 1986,
    "above": 2007,
-   "gasMedian": 6019,
-   "gasP99": 16183,
-   "gasMax": 18443,
-   "fallback": 1478,
-   "fallbackRuns": 1478,
-   "fallbackPct": 36.95
+   "gasMedian": 2173,
+   "gasP99": 2234,
+   "gasMax": 2944
   },
   {
    "lib": "fp127",
