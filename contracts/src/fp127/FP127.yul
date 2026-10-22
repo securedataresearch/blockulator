@@ -1318,38 +1318,42 @@ object "FP127" {
             }
 
             function lnc(r, k) -> L {
-                let j := shl(4, k)
+                let j := shl(6, k)
                 if iszero(lt(r, 0x5a827999fcef32422cbec4d9baa55f50)) {
                     r := shr(126, mul(r, 0x2d413cccfe779921165f626cdd52afa8))
-                    j := add(j, 8)
+                    j := add(j, 32)
                 }
                 if iszero(lt(r, 0x4c1bf828c6dc54b7a356918c17217b7b)) {
                     r := shr(126, mul(r, 0x35d13f32b5a75abd0e69a2ee640b4ff8))
-                    j := add(j, 4)
+                    j := add(j, 16)
                 }
                 if iszero(lt(r, 0x45cae0f1f545eb737df23143ac529e48)) {
                     r := shr(126, mul(r, 0x3ab031b9f7490e4bb40b5d6cdc1b953f))
-                    j := add(j, 2)
+                    j := add(j, 8)
                 }
                 if iszero(lt(r, 0x42d561b3e6243d8a62e4adc610aa60d9)) {
                     r := shr(126, mul(r, 0x3d495f454921b30b1ee7431ebb6603f1))
+                    j := add(j, 4)
+                }
+                if iszero(lt(r, 0x4166c34c5615d0eb9f1523ada3290600)) {
+                    r := shr(126, mul(r, 0x3ea0ecb6dc8a80ce9f096ec50c575ff3))
+                    j := add(j, 2)
+                }
+                if iszero(lt(r, 0x40b268f9de0183b9bdf2b293de8a6f7a)) {
+                    r := shr(126, mul(r, 0x3f4f83033d21b05d214fce964c783b81))
                     j := add(j, 1)
                 }
                 let s := sdiv(shl(126, sub(r, 0x40000000000000000000000000000000)), add(r, 0x40000000000000000000000000000000))
                 let s2 := sar(126, mul(s, s))
-                let A := 0x2c8590b21642c8590b21642c8590b21
-                A := add(0x30c30c30c30c30c30c30c30c30c30c3, sar(126, mul(s2, A)))
-                A := add(0x35e50d79435e50d79435e50d79435e5, sar(126, mul(s2, A)))
-                A := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, sar(126, mul(s2, A)))
-                A := add(0x4444444444444444444444444444444, sar(126, mul(s2, A)))
-                A := add(0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec5, sar(126, mul(s2, A)))
-                A := add(0x5d1745d1745d1745d1745d1745d1746, sar(126, mul(s2, A)))
-                A := add(0x71c71c71c71c71c71c71c71c71c71c7, sar(126, mul(s2, A)))
-                A := add(0x9249249249249249249249249249249, sar(126, mul(s2, A)))
-                A := add(0xccccccccccccccccccccccccccccccd, sar(126, mul(s2, A)))
-                A := add(0x15555555555555555555555555555555, sar(126, mul(s2, A)))
+                let A := 0x4446135483304695b31cd2087781804
+                A := add(0x4ec4ec491eccde6dc9ec3dc71cf3623, sar(126, mul(s2, A)))
+                A := add(0x5d1745d1746646dc577e7d058db642b, sar(126, mul(s2, A)))
+                A := add(0x71c71c71c71c71bed60c1d9b8a55f08, sar(126, mul(s2, A)))
+                A := add(0x92492492492492492496556bf318f39, sar(126, mul(s2, A)))
+                A := add(0xcccccccccccccccccccccccbd3dcdb3, sar(126, mul(s2, A)))
+                A := add(0x155555555555555555555555555556c2, sar(126, mul(s2, A)))
                 A := add(0x40000000000000000000000000000000, sar(126, mul(s2, A)))
-                L := add(mul(j, 0xb17217f7d1cf79abc9e3b39803f2f6b), shl(2, sar(125, mul(s, A))))
+                L := add(mul(j, 0x2c5c85fdf473de6af278ece600fcbdb), shl(2, sar(125, mul(s, A))))
             }
 
             function lnc0(r, k) -> L {
@@ -1401,55 +1405,85 @@ object "FP127" {
                 R := add(sdiv(add(shl(112, 15), sar(126, mul(qa, add(shl(112, 25), sar(126, mul(qa, add(shl(112, 18), sar(126, mul(qa, shl(112, 6)))))))))), 24), sar(126, mul(tau, R)))
             }
 
-            function lwbs128(qa, tau) -> S {
-                S := add(sdiv(add(shl(112, 3), sar(126, mul(qa, add(shl(112, 4), sar(126, mul(qa, shl(112, 2))))))), 6), sar(126, mul(tau, lwb3(qa, tau))))
-                S := add(sar(1, add(shl(112, 1), sar(14, qa))), sar(126, mul(tau, S)))
-                S := add(shl(112, 1), sar(126, mul(tau, S)))
+            function lwsp(p) -> S {
+                S := 0x14ee40204d4fb035a5072487f3ebf9656803310925c907
+                S := add(sub(0, 0x1f689a9e4896ed7ed43aa3bf322ba75095393713e51a82), mulg(p, S))
+                S := add(0x19116160251533ddbbc5974e7b5acc887a6e822094400f, mulg(p, S))
+                S := add(sub(0, 0x262e2db8c1d1bea453d23382925ade80dc41701aec1b27), mulg(p, S))
+                S := add(0x443610ed26c86e9469406eeddfb43c95e526e73084ea1d, mulg(p, S))
+                S := add(sub(0, 0x68c4d166bc1d92ae554a1e7ec7843e6fc88993ed4e286b), mulg(p, S))
+                S := add(0x9fd601efbb37e7bee31c27eb50a58607c67ab61f19523b, mulg(p, S))
+                S := add(sub(0, 0xf9958e639d31740ed2d77de17707109b73263b0c788e82), mulg(p, S))
+                S := add(0x18a2dd0dc238b49099b4561e947671ca2207e5ff508079a, mulg(p, S))
+                S := add(sub(0, 0x27644709e3c72decfb5dba4ca0029e14c5e45dc00ebc22b), mulg(p, S))
+                S := add(0x400b2486add336f9345d3d436084597a1e9ab4653831233, mulg(p, S))
+                S := add(sub(0, 0x6a6ef05dc692903294e2aa085f839905fc3baf4ed004887), mulg(p, S))
+                S := add(0xb6480f3313346deb8eebb899ed985e1bd1b6200184fb985, mulg(p, S))
+                S := add(sub(0, 0x14629b7fbf47c3693c9ad15d08b56556e66efac971ea4325), mulg(p, S))
+                S := add(0x271c71c71bd24011b07579148ff1ca9f9fbaf354cfd0ba4c, mulg(p, S))
+                S := add(sub(0, 0x5555555554676edb5ce69c2b3038f63b108e8248e60966e3), mulg(p, S))
+                S := add(0x1000000000000000000000000000000000000000000000000, mulg(p, S))
             }
 
-            function lwq128(Q, ep, sg, Y, k) -> Qn, at {
-                let qa := shr(sub(sub(0, ep), 126), Q)
-                if sg { qa := sub(0, qa) }
-                let j := 126
-                if qa { j := sub(126, msb(absw(qa))) }
-                let K := add(2, div(130, add(j, 2)))
-                if gt(K, 35) { K := 35 }
-                let u := 0x40000000000000000000000000000000
-                for { let i := K } gt(i, 2) { i := sub(i, 1) } {
-                    u := add(0x40000000000000000000000000000000, sdiv(sar(126, mul(qa, u)), i))
+            function lwqs(q192, sg, q256) -> qn, at {
+                let E1 := 0
+                switch sg
+                case 0 {
+                    let xh, xl := expk(shl(64, q192), 0)
+                    E1 := xh
                 }
-                let G := add(0x40000000000000000000000000000000, sar(127, mul(sub(qa, 0x40000000000000000000000000000000), u)))
-                let E := add(add(0x40000000000000000000000000000000, qa), sar(127, mul(qa, sar(126, mul(qa, u)))))
-                let Rr := divu(shl(add(2, k), hmul(mul(Q, Q), shl(130, G))), Y)
-                let rho := sub(Rr, 0x100000000000000000000000000000000)
-                let tau := sdiv(shl(126, sar(128, mul(rho, G))), shr(128, mul(E, Rr)))
-                Qn := sub(Q, sar(126, mul(Q, sar(112, mul(tau, lwbs128(qa, tau))))))
+                default {
+                    let xh, xl := expk(sub(0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, shl(64, q192)), 0xe7b876206debac98559552fb4afa1b10ed2eae35c138214427573b291169b825)
+                    E1 := shr(1, sub(0, xh))
+                }
+                let T := divu(E1, q192)
+                let N := 0
+                switch sg
+                case 0 { N := sub(0x1000000000000000000000000000000000000000000000000, mulg(T, sub(0x1000000000000000000000000000000000000000000000000, q192))) }
+                default { N := sub(mulg(T, add(0x1000000000000000000000000000000000000000000000000, q192)), 0x1000000000000000000000000000000000000000000000000) }
+                // Phi - y at 2^-256, its sign
+                let ph, pl := smul512(q192, N)
+                let d := sub(or(shl(128, ph), shr(128, pl)), q256)
+                let ng := slt(d, 0)
+                if ng { d := sub(0, d) }
+                let E := add(0x1000000000000000000000000000000000000000000000000, shr(64, E1))
+                if sg { E := sub(0x1000000000000000000000000000000000000000000000000, shr(64, E1)) }
+                let den := mulg(or(shl(128, hmul(q192, q192)), shr(128, mul(q192, q192))), E)
+                let tau := divg(d, den)
+                if ng { tau := sub(0, tau) }
+                // S = 1 + tau (b1 + tau (b2 + tau R)), b1 and b2 at 2^-192, R = b3 + tau (b4 + tau b5) at 2^-112 (lwb3)
+                let qa := shr(66, q192)
+                if sg { qa := sub(0, qa) }
+                let S := shl(80, lwb3(qa, sar(66, tau)))
+                let qs := q192
+                if sg { qs := sub(0, qs) }
+                S := add(sdiv(add(shl(192, 3), mulg(qs, add(shl(192, 4), mulg(qs, shl(192, 2))))), 6), mulg(tau, S))
+                S := add(sar(1, add(0x1000000000000000000000000000000000000000000000000, qs)), mulg(tau, S))
+                S := add(0x1000000000000000000000000000000000000000000000000, mulg(tau, S))
+                qn := sub(q192, mulg(q192, mulg(tau, S)))
                 at := absw(tau)
             }
 
-            function lwbr(q, sg) -> w {
-                let nb := msb(q)
-                let Y := shl(sub(254, nb), q)
+            function lwbr(q256, sg) -> w {
+                let nb := msb(q256)
+                let Y := shl(sub(254, nb), q256)
                 let ey := sub(nb, 510)
                 let k := sub(2, and(ey, 1))
-                let eqs := sar(1, add(sub(ey, 254), k))
-                let ep := add(eqs, 128)
+                let ep := add(sar(1, add(sub(ey, 254), k)), 128)
                 let P := isqrt(shr(add(1, k), Y))
-                let p := shr(sub(sub(0, ep), 126), P)
-                let s0 := add(0x40000000000000000000000000000000, div(mul(11, shr(126, mul(p, p))), 72))
-                switch sg
-                case 0 { s0 := sub(s0, div(p, 3)) }
-                default { s0 := add(s0, div(p, 3)) }
-                let Q := shr(126, mul(P, s0))
-                for { let i := 0 } lt(i, 4) { i := add(i, 1) } {
+                let p := shl(add(ep, 192), P)
+                if slt(add(ep, 192), 0) { p := shr(sub(sub(0, ep), 192), P) }
+                if sg { p := sub(0, p) }
+                let q := mulg(absw(p), lwsp(p))
+                for { let i := 0 } lt(i, 2) { i := add(i, 1) } {
                     let at := 0
-                    Q, at := lwq128(Q, ep, sg, Y, k)
-                    if lt(at, 0x4000000000000000000000000) { break }
+                    q, at := lwqs(q, sg, q256)
+                    if lt(at, 0x10000000000000000000000000000000000000) { break }
                 }
-                let qw := shl(2, shr(sub(sub(0, ep), 126), Q))
+                q := sar(64, add(q, 0x8000000000000000))
                 switch sg
-                case 0 { w := sub(qw, 0x100000000000000000000000000000000) }
-                default { w := sub(sub(0, 0x100000000000000000000000000000000), qw) }
+                case 0 { w := sub(q, 0x100000000000000000000000000000000) }
+                default { w := sub(sub(0, 0x100000000000000000000000000000000), q) }
             }
 
             function lwfin(x, w) -> r {
@@ -1498,8 +1532,8 @@ object "FP127" {
                 let w := 0
                 switch slt(x, 0x20000000000000000000000000000000)
                 case 1 {
-                    if slt(x, sub(0, 0x2f16ac6c59de6f8d5d6f63c1482a7c86)) {
-                        r := lwfin(x, lwbr(lwq(x), 0))
+                    if slt(x, sub(0, 0x5267adbd9d4543376382ee923e4a59ec)) {
+                        r := lwbr(lwq(x), 0)
                         leave
                     }
                     // the origin cubic, |x| < 0.184; its error is about 8/3 x^3 relative
@@ -1521,8 +1555,8 @@ object "FP127" {
             function fp127_lambertWm1(x) -> r {
                 if slt(x, sub(0, 0x5e2d58d8b3bcdf1abadec7829054f90d)) { rev(0x7db3aba7) }
                 if iszero(slt(x, 0)) { rev(0x7db3aba7) }
-                if slt(x, sub(0, 0x46a202a286cda7540c2715a1ec3fbaca)) {
-                    r := lwfin(x, lwbr(lwq(x), 1))
+                if slt(x, sub(0, 0x5267adbd9d4543376382ee923e4a59ec)) {
+                    r := lwbr(lwq(x), 1)
                     leave
                 }
                 let rr, kk := lnm(sub(0, x))

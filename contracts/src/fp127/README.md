@@ -165,13 +165,15 @@ Newton on y³ = |x|·2^256 with precision doubling (a seed from the bits, four
 word steps, one residual step, exact cubes) and an exact midpoint test.
 `ln`, `log2` and `log10` round the one-word kernel when its 2^-145 error
 bound cannot change the answer and fall back to `l2p` within 2^-145 of a
-midpoint (about one input in 2^17). Lambert W runs a seed from a
-table-free logarithm (or, near −1/e, sixth-order steps in q = 1 + W on
-(q − 1)e^q + 1 = 1 + e·x, whose error is q times the precision), one-word
-fourth-order log-form steps at 2^-126 until one starts within 2^-32, and
-ends with one Newton step whose residual comes from the double-word
-exponential (`precise_model.py lambertw` measures at least 120 correct
-bits before it). `scripts/fp127/generators/precise_model.py` models the
+midpoint (about one input in 2^17). Lambert W near −1/e (1 + e·x < 1/8)
+seeds q = 1 + W by a degree-16 fit in √(2(1 + e·x)) and takes one
+sixth-order step on the double-word exp kernel (q within 5 units of 2^-192
+whatever q, so the word is nearest unless within 5·2^-64 ULP of a
+midpoint); elsewhere it seeds from a crude logarithm, runs one-word
+fourth-order log-form steps at 2^-126 on a table-driven logarithm until one
+starts within 2^-22, and ends with one Newton step whose residual comes
+from the double-word exponential (`precise_model.py lambertw` measures
+both). `scripts/fp127/generators/precise_model.py` models the
 kernels in integers and measures them.
 
 Rounding directions of the arithmetic are inherited from the Huff and

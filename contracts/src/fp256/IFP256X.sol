@@ -39,23 +39,24 @@ interface IFP256X {
     ///         one from x >= 13 sqrt 2.
     function normCdf(int256 x) external pure returns (int256 r);
     /// @notice The principal branch of Lambert W, W(x) e^W(x) = x, W >= -1.
-    ///         Below 1 + e x = 1/2 (x < -0.184) the unknown is q = 1 + W on
-    ///         (q - 1) e^q + 1 = 1 + e x, with 1 + e x exact: a seed from
-    ///         sqrt(2 (1 + e x)), sixth-order steps at 2^-126 (none to two),
-    ///         one at word precision whose error is q times the precision, so
-    ///         the branch point costs none, and one rounding when the bound
-    ///         clears the rounding boundary. Elsewhere x (1 - x + 3x^2/2) or
-    ///         Winitzki's seed from a table-free logarithm, fourth-order
-    ///         log-form steps at 2^-126 (one or two) and one at word precision
+    ///         Below 1 + e x = 1/8 (x < -0.322) the unknown is q = 1 + W on
+    ///         (q - 1) e^q + 1 = 1 + e x, with 1 + e x exact: the seed p S(p),
+    ///         p = sqrt(2 (1 + e x)), S a degree-16 fit (2^-44.8), and one
+    ///         sixth-order step with e^q - 1 from the wide exp kernel, whose
+    ///         error is 5 units of 2^-254 whatever q, so the branch point costs
+    ///         no precision; one rounding when that clears the rounding
+    ///         boundary. Elsewhere x (1 - x + 3x^2/2) or Winitzki's seed from a
+    ///         crude logarithm, fourth-order log-form steps at 2^-126 (one or
+    ///         two, with a table-driven logarithm) and one at word precision
     ///         with a bound (no e^w, so the whole range up to W = 181,700
     ///         works), tested the same way. On a miss one Newton step at
     ///         2^-510 (the residual in three words) and one rounding:
     ///         correctly rounded. W rounds to x below 2^-238.
     function lambertW0(int256 x) external pure returns (int256 r);
     /// @notice The secondary real branch of Lambert W, W(x) <= -1. Below
-    ///         1 + e x = 1/4 (x < -0.276) as lambertW0 in q = 1 + W (negative
+    ///         1 + e x = 1/8 (x < -0.322) as lambertW0 in q = 1 + W (negative
     ///         here); above, the asymptotic seed L - ln(-L) + ln(-L)/L, L =
-    ///         ln(-x), from the table-free logarithm, lambertW0's fourth-order
+    ///         ln(-x), from the crude logarithm, lambertW0's fourth-order
     ///         log-form steps (one to three at 2^-126, one at word precision;
     ///         no e^w: W reaches about -181,700 at the bottom of the format),
     ///         its rounding test and, on a miss, its Newton step at 2^-510:

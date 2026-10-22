@@ -74,26 +74,6 @@ object "FP256X" {
                 default { r := shr(sub(n, 256), p1) }
             }
 
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
             function divh(a, b) -> q {
                 let prod0 := shl(255, a)
                 let prod1 := shr(1, a)
@@ -319,6 +299,11 @@ object "FP256X" {
                     leave
                 }
                 rh, rl := wshr(z2, z1, sub(n, 256))
+            }
+
+            function wmulf(h, l, m, n) -> rh, rl {
+                let z2, z1, z0 := mul3(h, l, m)
+                rh, rl := shr3(z2, z1, z0, n)
             }
 
             function wdivs(h, l, k) -> qh, ql {
@@ -912,7 +897,7 @@ object "FP256X" {
                 r := normround(0, 0x3fffe, D2)
             }
 
-            function lwy(m) -> Y, ey {
+            function lwy(m) -> Y, ey, yh, yl {
                 let p1, p0 := mul512(m, 0xadf85458a2bb4a9aafdc5620273d3cf1d8b9c583ce2d3695a9e13641146433fb)
                 let c1, c0 := mul512(m, 0x3324e7738926cfbe5f4bf8d8d8c31d763da06c80abb1185eb4f7c7b5757f5958)
                 let t := or(shl(2, c1), shr(254, c0))
@@ -923,6 +908,8 @@ object "FP256X" {
                 let dh := sub(sub(0x100000000000000000000000000000000000000000000000000000000000, hi), iszero(iszero(lo)))
                 if slt(dh, 0) { rev(0x7db3aba7) }
                 if iszero(or(dh, dl)) { leave }
+                yh := or(shl(18, dh), shr(238, dl))
+                yl := shl(18, dl)
                 let n := msb(dl)
                 if dh { n := add(256, msb(dh)) }
                 Y := shl(sub(254, n), dl)
@@ -931,38 +918,42 @@ object "FP256X" {
             }
 
             function lnc(r, k) -> L {
-                let j := shl(4, k)
+                let j := shl(6, k)
                 if iszero(lt(r, 0x5a827999fcef32422cbec4d9baa55f50)) {
                     r := shr(126, mul(r, 0x2d413cccfe779921165f626cdd52afa8))
-                    j := add(j, 8)
+                    j := add(j, 32)
                 }
                 if iszero(lt(r, 0x4c1bf828c6dc54b7a356918c17217b7b)) {
                     r := shr(126, mul(r, 0x35d13f32b5a75abd0e69a2ee640b4ff8))
-                    j := add(j, 4)
+                    j := add(j, 16)
                 }
                 if iszero(lt(r, 0x45cae0f1f545eb737df23143ac529e48)) {
                     r := shr(126, mul(r, 0x3ab031b9f7490e4bb40b5d6cdc1b953f))
-                    j := add(j, 2)
+                    j := add(j, 8)
                 }
                 if iszero(lt(r, 0x42d561b3e6243d8a62e4adc610aa60d9)) {
                     r := shr(126, mul(r, 0x3d495f454921b30b1ee7431ebb6603f1))
+                    j := add(j, 4)
+                }
+                if iszero(lt(r, 0x4166c34c5615d0eb9f1523ada3290600)) {
+                    r := shr(126, mul(r, 0x3ea0ecb6dc8a80ce9f096ec50c575ff3))
+                    j := add(j, 2)
+                }
+                if iszero(lt(r, 0x40b268f9de0183b9bdf2b293de8a6f7a)) {
+                    r := shr(126, mul(r, 0x3f4f83033d21b05d214fce964c783b81))
                     j := add(j, 1)
                 }
                 let s := sdiv(shl(126, sub(r, 0x40000000000000000000000000000000)), add(r, 0x40000000000000000000000000000000))
                 let s2 := sar(126, mul(s, s))
-                let A := 0x2c8590b21642c8590b21642c8590b21
-                A := add(0x30c30c30c30c30c30c30c30c30c30c3, sar(126, mul(s2, A)))
-                A := add(0x35e50d79435e50d79435e50d79435e5, sar(126, mul(s2, A)))
-                A := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, sar(126, mul(s2, A)))
-                A := add(0x4444444444444444444444444444444, sar(126, mul(s2, A)))
-                A := add(0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec5, sar(126, mul(s2, A)))
-                A := add(0x5d1745d1745d1745d1745d1745d1746, sar(126, mul(s2, A)))
-                A := add(0x71c71c71c71c71c71c71c71c71c71c7, sar(126, mul(s2, A)))
-                A := add(0x9249249249249249249249249249249, sar(126, mul(s2, A)))
-                A := add(0xccccccccccccccccccccccccccccccd, sar(126, mul(s2, A)))
-                A := add(0x15555555555555555555555555555555, sar(126, mul(s2, A)))
+                let A := 0x4446135483304695b31cd2087781804
+                A := add(0x4ec4ec491eccde6dc9ec3dc71cf3623, sar(126, mul(s2, A)))
+                A := add(0x5d1745d1746646dc577e7d058db642b, sar(126, mul(s2, A)))
+                A := add(0x71c71c71c71c71bed60c1d9b8a55f08, sar(126, mul(s2, A)))
+                A := add(0x92492492492492492496556bf318f39, sar(126, mul(s2, A)))
+                A := add(0xcccccccccccccccccccccccbd3dcdb3, sar(126, mul(s2, A)))
+                A := add(0x155555555555555555555555555556c2, sar(126, mul(s2, A)))
                 A := add(0x40000000000000000000000000000000, sar(126, mul(s2, A)))
-                L := add(mul(j, 0xb17217f7d1cf79abc9e3b39803f2f6b), shl(2, sar(125, mul(s, A))))
+                L := add(mul(j, 0x2c5c85fdf473de6af278ece600fcbdb), shl(2, sar(125, mul(s, A))))
             }
 
             function lnc0(r, k) -> L {
@@ -1103,13 +1094,6 @@ object "FP256X" {
                 r := lwfix(x, w)
             }
 
-            function lwu2(qa, K) -> u {
-                u := 0x4000000000000000000000000000000000000000000000000000000000000000
-                for { let k := K } gt(k, 2) { k := sub(k, 1) } {
-                    u := add(0x4000000000000000000000000000000000000000000000000000000000000000, sdiv(mulw(qa, u), k))
-                }
-            }
-
             function lwbs(qa, tau) -> S {
                 S := add(sdiv(add(shl(240, 3), mulw(qa, add(shl(240, 4), mulw(qa, shl(240, 2))))), 6), mulw(tau, shl(128, lwb3(sar(128, qa), sar(128, tau)))))
                 S := add(sar(1, add(shl(240, 1), sar(14, qa))), mulw(tau, S))
@@ -1122,81 +1106,105 @@ object "FP256X" {
                 R := add(sdiv(add(shl(112, 15), sar(126, mul(qa, add(shl(112, 25), sar(126, mul(qa, add(shl(112, 18), sar(126, mul(qa, shl(112, 6)))))))))), 24), sar(126, mul(tau, R)))
             }
 
-            function lwbs128(qa, tau) -> S {
-                S := add(sdiv(add(shl(112, 3), sar(126, mul(qa, add(shl(112, 4), sar(126, mul(qa, shl(112, 2))))))), 6), sar(126, mul(tau, lwb3(qa, tau))))
-                S := add(sar(1, add(shl(112, 1), sar(14, qa))), sar(126, mul(tau, S)))
-                S := add(shl(112, 1), sar(126, mul(tau, S)))
+            function lwsp(p) -> S {
+                S := 0x53b90081353ec0d6941c921fcfafe595a00cc42497241ae655363581fda94
+                S := add(sub(0, 0x7da26a79225bb5fb50ea8efcc8ae9d4254e4dc4f946a07e0bfe6de0579346), mulw(p, S))
+                S := add(0x644585809454cf76ef165d39ed6b3221e9ba088251003ceff2f71f7c0c755, mulw(p, S))
+                S := add(sub(0, 0x98b8b6e30746fa914f48ce0a496b7a037105c06bb06c9d7f684c61cf6fd46), mulw(p, S))
+                S := add(0x110d843b49b21ba51a501bbb77ed0f257949b9cc213a87345be9ca07b63737, mulw(p, S))
+                S := add(sub(0, 0x1a313459af0764ab9552879fb1e10f9bf22264fb538a1aa117eae1bb53021a), mulw(p, S))
+                S := add(0x27f5807beecdf9efb8c709fad4296181f19ead87c6548eb20db7222ab50a4c, mulw(p, S))
+                S := add(sub(0, 0x3e656398e74c5d03b4b5df785dc1c426dcc98ec31e23a08ebd7c71dc546983), mulw(p, S))
+                S := add(0x628b743708e2d24266d1587a51d9c728881f97fd4201e6904b1872252776b5, mulw(p, S))
+                S := add(sub(0, 0x9d911c278f1cb7b3ed76e932800a7853179177003af08ad833049761583efd), mulw(p, S))
+                S := add(0x1002c921ab74cdbe4d174f50d821165e87a6ad194e0c48cc71d0e1d0a3a51bb, mulw(p, S))
+                S := add(sub(0, 0x1a9bbc1771a4a40ca538aa8217e0e6417f0eebd3b401221c91c8d7a77ccffbb), mulw(p, S))
+                S := add(0x2d9203ccc4cd1b7ae3baee267b661786f46d8800613ee614953eb058ced39ae, mulw(p, S))
+                S := add(sub(0, 0x518a6dfefd1f0da4f26b457422d5955b99bbeb25c7a90c9258e8aaf51a88dc3), mulw(p, S))
+                S := add(0x9c71c71c6f490046c1d5e4523fc72a7e7eebcd533f42e92e99d9f2e603d55fc, mulw(p, S))
+                S := add(sub(0, 0x155555555519dbb6d739a70acc0e3d8ec423a092398259b8ab5412b03b634978), mulw(p, S))
+                S := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(p, S))
             }
 
-            function lwq128(Q, ep, sg, Y, k) -> Qn, at {
-                let qa := shr(sub(sub(0, ep), 126), Q)
-                if sg { qa := sub(0, qa) }
-                let j := 126
-                if qa { j := sub(126, msb(absw(qa))) }
-                let K := add(2, div(130, add(j, 2)))
-                if gt(K, 35) { K := 35 }
-                let u := 0x40000000000000000000000000000000
-                for { let i := K } gt(i, 2) { i := sub(i, 1) } {
-                    u := add(0x40000000000000000000000000000000, sdiv(sar(126, mul(qa, u)), i))
+            function lwphi(sg, q254, qh, ql) -> fh, fl, E252 {
+                let eh := 0
+                let el := 0
+                switch sg
+                case 0 {
+                    eh, el := wexpm1(qh, ql)
+                    E252 := add(shr(2, eh), 0x1000000000000000000000000000000000000000000000000000000000000000)
                 }
-                let G := add(0x40000000000000000000000000000000, sar(127, mul(sub(qa, 0x40000000000000000000000000000000), u)))
-                let E := add(add(0x40000000000000000000000000000000, qa), sar(127, mul(qa, sar(126, mul(qa, u)))))
-                // (1 + rho) 2^128 = Q^2 G 2^(k + 2) 2^128 / Y
-                let Rr := divu(shl(add(2, k), mulhi(mul(Q, Q), shl(130, G))), Y)
-                let rho := sub(Rr, 0x100000000000000000000000000000000)
-                let tau := sdiv(shl(126, sar(128, mul(rho, G))), shr(128, mul(E, Rr)))
-                Qn := sub(Q, sar(126, mul(Q, sar(112, mul(tau, lwbs128(qa, tau))))))
-                at := absw(tau)
+                default {
+                    let k2, xh, xl := wexpr(1, sub(0, 1), qh, ql)
+                    // 1 + E1 = (1 + X)/2
+                    xh, xl := wshr(add(xh, 0x4000000000000000000000000000000000000000000000000000000000000000), xl, 1)
+                    E252 := shr(2, xh)
+                    eh, el := wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, xh, xl)
+                }
+                let m := sub(0x4000000000000000000000000000000000000000000000000000000000000000, q254)
+                if sg { m := add(0x4000000000000000000000000000000000000000000000000000000000000000, q254) }
+                let ph, pl := wmulf(eh, el, m, 254)
+                switch sg
+                case 0 { fh, fl := wsub(qh, ql, ph, pl) }
+                default { fh, fl := wsub(ph, pl, qh, ql) }
             }
 
-            function lwq254(Qa, eqs, sg, Y, k) -> qn, at {
-                let qa := shr(sub(sub(0, eqs), 254), Qa)
+            function lwtau(fh, fl, yh, yl, Qa, eqs, E252) -> tau {
+                let dh, dl := wsub(fh, fl, yh, yl)
+                let ng := slt(dh, 0)
+                if ng { dh, dl := wsub(0, 0, dh, dl) }
+                if iszero(or(dh, dl)) { leave }
+                let h, l, e := norm3(0, dh, dl)
+                // q^2 (1 + E1) = B 2^(2 eqs + 256); (Phi - y) = h 2^(e - 254)
+                let B := mulwu(mulwu(Qa, Qa), E252)
+                // B in [2^249, 2^255): normalised into [2^254, 2^255) for div254 (a < 2b)
+                let d := sub(msb(B), 254)
+                let sh := sub(sub(sub(e, shl(1, eqs)), 509), d)
+                tau := shr(sub(0, sh), div254(shr(1, h), shl(sub(0, d), B)))
+                if sgt(sh, sub(0, 8)) { tau := 0x4000000000000000000000000000000000000000000000000000000000000000 }
+                if ng { tau := sub(0, tau) }
+            }
+
+            function lwq510(Qa, eqs, sg, yh, yl) -> qn, at {
+                let q254 := shr(sub(sub(0, eqs), 254), Qa)
+                let qh := 0
+                let ql := 0
+                let s := add(eqs, 510)
+                switch lt(s, 256)
+                case 1 {
+                    qh := shr(sub(256, s), Qa)
+                    ql := shl(s, Qa)
+                }
+                default { qh := shl(sub(s, 256), Qa) }
+                let fh, fl, E252 := lwphi(sg, q254, qh, ql)
+                let tau := lwtau(fh, fl, yh, yl, Qa, eqs, E252)
+                let qa := q254
                 if sg { qa := sub(0, qa) }
-                let j := sub(254, msb(absw(qa)))
-                let K := add(2, div(261, add(j, 3)))
-                if gt(K, 58) { K := 58 }
-                let u2 := lwu2(qa, K)
-                let G := add(0x4000000000000000000000000000000000000000000000000000000000000000, sar(1, mulw(sub(qa, 0x4000000000000000000000000000000000000000000000000000000000000000), u2)))
-                let E := add(add(0x4000000000000000000000000000000000000000000000000000000000000000, qa), sar(1, mulw(qa, mulw(qa, u2))))
-                let Rr := div254(shl(k, mulwu(mulwu(Qa, Qa), G)), Y)
-                let rho := sub(Rr, 0x4000000000000000000000000000000000000000000000000000000000000000)
-                let tau := sdiv254(mulw(rho, G), mulwu(E, Rr))
                 qn := shr(sub(sub(0, eqs), 254), sub(Qa, mulw(Qa, mulw(tau, lwbs(qa, tau)))))
                 at := absw(tau)
             }
 
-            function lwbr(x, sg, Y, ey) -> r {
+            function lwbr(x, sg, Y, ey, yh, yl) -> r {
                 let k := sub(2, and(ey, 1))
                 let eqs := sar(1, add(sub(ey, 254), k))
                 let ep := add(eqs, 128)
                 let P := isqrt(shr(add(1, k), Y))
-                let p := shr(sub(sub(0, ep), 126), P)
-                let s0 := add(0x40000000000000000000000000000000, div(mul(11, shr(126, mul(p, p))), 72))
-                switch sg
-                case 0 { s0 := sub(s0, div(p, 3)) }
-                default { s0 := add(s0, div(p, 3)) }
-                let Q := shr(126, mul(P, s0))
-                for { let i := 0 } lt(i, 4) { i := add(i, 1) } {
-                    let at := 0
-                    Q, at := lwq128(Q, ep, sg, Y, k)
-                    if lt(at, 0x4000000000000000000000000) { break }
-                }
-                let Qa := shl(128, Q)
+                // p at 2^-254, signed as the branch
+                let p := shl(add(ep, 254), P)
+                if slt(add(ep, 254), 0) { p := shr(sub(sub(0, ep), 254), P) }
+                if sg { p := sub(0, p) }
+                let Qa := mulwu(shl(128, P), lwsp(p))
                 let qn := 0
-                for { let i := 0 } lt(i, 3) { i := add(i, 1) } {
+                for { let i := 0 } lt(i, 2) { i := add(i, 1) } {
                     let at := 0
-                    qn, at := lwq254(Qa, eqs, sg, Y, k)
-                    if lt(at, 0x400000000000000000000000000000000000000000000000000000) { break }
+                    qn, at := lwq510(Qa, eqs, sg, yh, yl)
+                    if or(lt(at, 0x400000000000000000000000000000000000000000000000000000), lt(qn, 0x4000000000000000000000000000000000000000000000000)) { break }
                     Qa := shl(sub(sub(0, eqs), 254), qn)
                 }
                 let D := sub(0x4000000000000000000000000000000000000000000000000000000000000000, qn)
-                let err := 10
-                if sg {
-                    D := add(0x4000000000000000000000000000000000000000000000000000000000000000, qn)
-                    err := 20
-                }
+                if sg { D := add(0x4000000000000000000000000000000000000000000000000000000000000000, qn) }
                 r := normround(1, 0x3ffff, D)
-                if rbad(D, err) { r := lwfix(x, r) }
+                if rbad(D, 5) { r := lwfix(x, r) }
             }
 
             function fp256_lambertW0(x) -> r {
@@ -1206,10 +1214,10 @@ object "FP256X" {
                 if s {
                     if sgt(u, sub(0, 2)) { rev(0x7db3aba7) }
                     if eq(u, sub(0, 2)) {
-                        let Y, ey := lwy(m)
+                        let Y, ey, yh, yl := lwy(m)
                         if iszero(Y) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
-                        if slt(ey, sub(0, 255)) {
-                            r := lwbr(x, 0, Y, ey)
+                        if slt(ey, sub(0, 257)) {
+                            r := lwbr(x, 0, Y, ey, yh, yl)
                             leave
                         }
                     }
@@ -1228,10 +1236,10 @@ object "FP256X" {
                 let u := sub(e, 0x3ffff)
                 if or(iszero(s), sgt(u, sub(0, 2))) { rev(0x7db3aba7) }
                 if eq(u, sub(0, 2)) {
-                    let Y, ey := lwy(m)
+                    let Y, ey, yh, yl := lwy(m)
                     if iszero(Y) { r := 0xbffff00000000000000000000000000000000000000000000000000000000000 leave }
-                    if slt(ey, sub(0, 256)) {
-                        r := lwbr(x, 1, Y, ey)
+                    if slt(ey, sub(0, 257)) {
+                        r := lwbr(x, 1, Y, ey, yh, yl)
                         leave
                     }
                 }
