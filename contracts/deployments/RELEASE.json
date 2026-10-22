@@ -49,21 +49,19 @@
   }
  },
  "live": {
-  "pendingLiveCheck": true,
-  "pendingNote": "TODO: the numbers below are Blockulator 2.0's check through the ladder v8 runners. The re-check through the v9 runners (livecap.py, liveedges.py) is running; it replaces liveRunner, liveChecked, liveMismatches, liveBlock and liveDate and drops pendingLiveCheck.",
   "ladder": {
-   "liveRunner": "0xEf689d3782490066fE911a6dD33357f59caE40fE",
-   "liveChecked": 9373,
+   "liveRunner": "0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5",
+   "liveChecked": 9383,
    "liveMismatches": 0,
-   "liveBlock": 11929034,
-   "liveDate": "2026-10-16"
+   "liveBlock": 11966662,
+   "liveDate": "2026-10-22"
   },
   "edges": {
-   "liveRunner": "0x09b8fC41E872279A749a0221AE23D124079AcB44",
+   "liveRunner": "0xcA89eeA1831c38B62d2d3332ECbb8A57BaF246fF",
    "liveChecked": 1511,
    "liveMismatches": 0,
-   "liveBlock": 11929015,
-   "liveDate": "2026-10-16"
+   "liveBlock": 11966815,
+   "liveDate": "2026-10-22"
   }
  }
 }

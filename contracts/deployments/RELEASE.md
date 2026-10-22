@@ -17,9 +17,9 @@ CREATE2 salt, since the salt names the address. Machine-readable copy:
 
 FP127 v5 and the four FP256 release-four objects pass their smoke tests
 against the live contracts (`make smoke-sepolia`, `make smoke-fp256-sepolia`).
-The live re-check of the ladder and the edges through the v9 runners
-(`scripts/ladder/livecap.py`, `scripts/ladder/liveedges.py`) is pending;
-`RELEASE.json` marks it with `"pendingLiveCheck": true`.
+Checked live on 2026-10-22: 9,383 ladder cells through LadderRunner at block
+11,966,662 and 1,511 edge cells through EdgeRunner at block 11,966,815, 0
+mismatches (`scripts/ladder/livecap.py`, `scripts/ladder/liveedges.py`).
 
 ## Blockulator 2.0
 

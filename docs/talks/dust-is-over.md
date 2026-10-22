@@ -355,5 +355,5 @@ Thank you.
 | option walk | d₁ = −7: WAD 4, binary128 28, FP127 25, FP256 66; d₁ = −12: WAD 0, binary128 27, FP127 3, FP256 66 | ladder: deep-tail-option, slow-walk / reference, N = 10,000 |
 | gas | WAD (Solady) mul 126, add 111, sqrt 393, ln 556, exp 430, pow 1,275; FP127Lib 263 / 124 / 1,584 / 865 / 6,455 / 5,175, normCdf 12,871; FP256Lib 1,133 / 1,262 / 2,698 / 7,308 / 7,759 / 11,848, normCdf 36,240 | gas.md, gas256.md (inline medians) |
 | FP256 format | 1 + 19 + 236 bits, 237-bit significand, ~71 digits, 10^±78,913 | contracts/src/fp256/README.md |
-| live check | Blockulator 2.1: through the ladder v9 runners, pending (`pendingLiveCheck` in RELEASE.json); 2.0 (2026-10-16): 9,373 ladder cells + 1,511 edge cells, 0 mismatches | RELEASE.json |
+| live check | Blockulator 2.1 (2026-10-22, ladder v9 runners): 9,383 ladder cells + 1,511 edge cells, 0 mismatches | RELEASE.json |
 | addresses | Blockulator 2.1: FP127 v5 0x619176d7…3fE2, FP256 0xA3C8C870…a6c9 (+ FP256X 0x175246B2…40d0, X2 0xE655bB8b…c697, X3 0x59D51481…2383) | RELEASE.md |

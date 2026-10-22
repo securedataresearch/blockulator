@@ -302,9 +302,8 @@ state in the format, and round toward the protocol at the edge.
 
 **Before the talk:** 3.2 and 3.3 describe FP127 v5 and FP256 release four, deployed on
 Sepolia on 2026-10-21 as Blockulator 2.1 and the same code inline through `forge install`,
-so "the deployed contract" and "the library" are both true. Check that `RELEASE.json`
-carries the live re-check through the ladder v9 runners (no `pendingLiveCheck`) before
-slide 17 is shown.
+so "the deployed contract" and "the library" are both true. Slide 17 shows the live
+re-check through the ladder v9 runners (2026-10-22: 9,383 + 1,511 cells, 0 mismatches).
 
 ---
 
