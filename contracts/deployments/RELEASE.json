@@ -1,32 +1,56 @@
 {
- "release": "Blockulator 2.0",
- "date": "2026-10-16",
+ "release": "Blockulator 2.1",
+ "date": "2026-10-21",
  "chainId": 11155111,
  "network": "sepolia",
  "note": "The public name for this release. Component versions (salts) name addresses and stay in each record.",
  "components": {
   "FP127": {
-   "version": "FP127 v4",
-   "address": "0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1",
+   "version": "FP127 v5",
+   "address": "0x619176d72D7a12390F8970802943D344c0fd3fE2",
+   "block": 11966457,
    "record": "contracts/deployments/FP127.md"
   },
   "FP256": {
-   "version": "FP256 v3",
-   "address": "0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be",
+   "version": "FP256 v4",
+   "address": "0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9",
+   "block": 11966126,
+   "record": "contracts/deployments/FP256.md"
+  },
+  "FP256X": {
+   "version": "FP256X v4",
+   "address": "0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0",
+   "block": 11966129,
+   "record": "contracts/deployments/FP256.md"
+  },
+  "FP256X2": {
+   "version": "FP256X2 v4",
+   "address": "0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697",
+   "block": 11966115,
+   "record": "contracts/deployments/FP256.md"
+  },
+  "FP256X3": {
+   "version": "FP256X3 v4",
+   "address": "0x59D51481cb2EA924EC17FE263cd05b90CEF22383",
+   "block": 11966114,
    "record": "contracts/deployments/FP256.md"
   },
   "LadderRunner": {
-   "version": "FP127 ladder v8",
-   "address": "0xEf689d3782490066fE911a6dD33357f59caE40fE",
+   "version": "FP127 ladder v9",
+   "address": "0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5",
+   "block": 11966638,
    "record": "contracts/deployments/Ladder.md"
   },
   "EdgeRunner": {
-   "version": "FP127 ladder v8",
-   "address": "0x09b8fC41E872279A749a0221AE23D124079AcB44",
+   "version": "FP127 ladder v9",
+   "address": "0xcA89eeA1831c38B62d2d3332ECbb8A57BaF246fF",
+   "block": 11966639,
    "record": "contracts/deployments/Ladder.md"
   }
  },
  "live": {
+  "pendingLiveCheck": true,
+  "pendingNote": "TODO: the numbers below are Blockulator 2.0's check through the ladder v8 runners. The re-check through the v9 runners (livecap.py, liveedges.py) is running; it replaces liveRunner, liveChecked, liveMismatches, liveBlock and liveDate and drops pendingLiveCheck.",
   "ladder": {
    "liveRunner": "0xEf689d3782490066fE911a6dD33357f59caE40fE",
    "liveChecked": 9373,
