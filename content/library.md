@@ -55,7 +55,7 @@ contract StaticcallExample {
 
 ## Inline form
 
-`FP127Lib.sol`: the same Yul in `memory-safe` assembly, one `internal pure` function per op. No external call: about 1,300 gas cheaper than the `staticcall` on `add` and `mul`, 240 on `sqrt` and 470 on `exp`; on `pow`, the erf family and Lambert W the deployed object is cheaper.
+`FP127Lib.sol`: the same Yul in `memory-safe` assembly, one `internal pure` function per op. No external call: about 800 gas cheaper than the `staticcall` on `add` and `mul` and 590 on `sqrt`; on `exp`, `pow`, the erf family and Lambert W the deployed object is cheaper (medians in [`gas.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas.md)).
 
 Compile it with `via_ir = true` (in `foundry.toml`): solc's legacy pipeline leaves the heavy ops 2–22% dearer than the same Yul in the object, and through the IR they match it ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
 
@@ -224,7 +224,7 @@ The example test runs both forms at random rates up to about 12% a year, with ra
 
 The trade-offs:
 
-- **An `exp` on every read.** An accrual drops from an `exp` and a `mul` (6,605 + 543 gas, median) to an `add` (289). A read rises from a storage load to an `exp` ([`gas.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas.md)). If you read the index every time you accrue it, you save almost nothing.
+- **An `exp` on every read.** An accrual drops from an `exp` and a `mul` (6,455 + 263 gas, median) to an `add` (124). A read rises from a storage load to an `exp` ([`gas.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas.md)). If you read the index every time you accrue it, you save almost nothing.
 - **Nearest since v5.** `exp` returns the nearest word in v5, deployed and inline. The v4 object does not promise that.
 - **A wall at 88.** FP127's `exp` reverts above 88, an index of about 1.65 × 10^38. For more room, read through FP256: `FP256Lib.exp(FP256Lib.fromFP127(logIndex))`.
 - **A continuous rate only.** With a rate per period, L gains n × `log1p(r)`. `log1p` rounds once, and that rounding is added n times. In two runs of 100 accruals, each of up to 86,400 periods, that read was 136,497 and 156,064 units off. `mul(index, compound(r, n))` was 47.6 and 48.4 off. For a rate per period, use `compound`.

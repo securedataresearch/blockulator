@@ -133,11 +133,15 @@
 </svg>
 {%- endcomponent %}
 
-{#- Median digits per form against N with a min–max band over all inputs. key = "digits" or "digitsFormat". -#}
+{#- Median digits per form against N with a min–max band over all inputs. key = "digits" or "digitsFormat".
+    Each series is labelled at its line end. The labels are placed after every line is drawn: the ends are
+    sorted by x, then by y, as fixed-width strings ("1xxxxx|1yyyyy|form", hundredths of a unit offset by 100000
+    so string order is numeric order, joined by ";" since the template engine has no array append), and within one x a label sits at least `gap` below the one above it,
+    then at least `gap` above the one below it, inside the plot. -#}
 {% component ladderband(summary: map, key: string, ladder: array, log10: map, cap: integer) -%}
 {%- set series = ["fp256", "fp127", "quad", "solady", "abdk", "prb", "balancer", "aave", "morpho", "maker"] -%}
 {%- set labels = {"fp256": "FP256", "fp127": "FP127", "quad": "Quad", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
-{%- set dy = {"fp256": -17, "fp127": -6, "quad": 6, "solady": -11, "abdk": 0, "prb": 11, "balancer": 22, "aave": -22, "morpho": 33, "maker": -33} -%}
+{%- set gap = 12 -%}
 {%- set W = 640 %}{% set H = 300 %}{% set L = 44 %}{% set R = 86 %}{% set T = 16 %}{% set B = 40 -%}
 {%- set pw = W - L - R %}{% set ph = H - T - B -%}
 <svg viewBox="0 0 {{ W }} {{ H }}" width="100%" style="max-width:{{ W }}px;display:block">
@@ -149,14 +153,33 @@
 {%- endfor %}
 <text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 1 }}" text-anchor="middle">N steps</text>
 <text class="tick" transform="translate(11 {{ T + ph / 2 }}) rotate(-90)" text-anchor="middle">correct digits</text>
+{%- set_global ends = "" %}
 {%- for f in series %}{% if summary[f] is defined %}{% set_global med = "" %}{% set_global top = "" %}{% set_global bot = "" %}{% set_global lastx = 0 %}{% set_global lasty = 0 %}{% set_global any = false %}
 {%- for n in ladder %}{% set row = summary[f][n | str] %}{% if row[key] is defined %}{% set_global any = true %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set d = row[key] %}{% set ym = T + ph - ph * d.median / cap %}{% set ymax = T + ph - ph * d.max / cap %}{% set ymin = T + ph - ph * d.min / cap %}{% set_global med = med ~ x ~ "," ~ ym ~ " " %}{% set_global top = top ~ x ~ "," ~ ymax ~ " " %}{% set_global bot = x ~ "," ~ ymin ~ " " ~ bot %}{% set_global lastx = x %}{% set_global lasty = ym %}{% endif %}{% endfor %}
 {%- if any %}
 <polygon class="band s-{{ f }}" points="{{ top }}{{ bot }}"/>
 <polyline class="s-{{ f }}" points="{{ med }}"/>
 {%- for n in ladder %}{% set row = summary[f][n | str] %}{% if row[key] is defined %}<circle class="s-{{ f }}" cx="{{ L + pw * (log10[n | str] | float) / 4 }}" cy="{{ T + ph - ph * row[key].median / cap }}" r="3"><title>{{ labels[f] }} N={{ n }}: median {{ row[key].median }}, range {{ row[key].min }}–{{ row[key].max }} over {{ row.count }} inputs{% if row.reverts %}, {{ row.reverts }} reverted{% endif %}</title></circle>{% endif %}{% endfor %}
-<text class="s-{{ f }} lbl" x="{{ lastx + 8 }}" y="{{ lasty + 4 + dy[f] }}">{{ labels[f] }}</text>
+{%- set_global ends = ends ~ ";" ~ (((lastx * 100) | round | int) + 100000) ~ "|" ~ (((lasty * 100) | round | int) + 100000) ~ "|" ~ f %}
 {%- endif %}{% endif %}{% endfor %}
+{#- top down: each label at least gap below the one above it at the same x -#}
+{%- set_global placed = "" %}{% set_global px = "" %}{% set_global prev = -1000 %}
+{%- for e in ends | split(pat=";") | sort %}{% if e != "" %}{% set p = e | split(pat="|") %}
+{%- if p[0] != px %}{% set_global px = p[0] %}{% set_global prev = -1000 %}{% endif %}
+{%- set want = ((p[1] | int) - 100000) / 100 + 4 %}
+{%- if want < prev + gap %}{% set_global ya = prev + gap %}{% else %}{% set_global ya = want %}{% endif %}
+{%- set_global prev = ya %}
+{%- set_global placed = placed ~ ";" ~ p[0] ~ "|" ~ (((ya * 100) | round | int) + 100000) ~ "|" ~ p[2] %}
+{%- endif %}{% endfor %}
+{#- bottom up: keep each label inside the plot and at least gap above the one below it -#}
+{%- set_global px = "" %}{% set_global next = 0 %}
+{%- for e in placed | split(pat=";") | reverse %}{% if e != "" %}{% set p = e | split(pat="|") %}
+{%- if p[0] != px %}{% set_global px = p[0] %}{% set_global next = T + ph + 4 + gap %}{% endif %}
+{%- set y0 = ((p[1] | int) - 100000) / 100 %}
+{%- if y0 > next - gap %}{% set_global yb = next - gap %}{% else %}{% set_global yb = y0 %}{% endif %}
+{%- set_global next = yb %}
+<text class="s-{{ p[2] }} lbl" x="{{ ((p[0] | int) - 100000) / 100 + 8 }}" y="{{ yb }}">{{ labels[p[2]] }}</text>
+{%- endif %}{% endfor %}
 </svg>
 {%- endcomponent %}
 

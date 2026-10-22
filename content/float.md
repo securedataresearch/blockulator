@@ -12,7 +12,7 @@ FP127 has 38 digits at 1, 8 at 10^−30 and nothing outside 2^−128 to 2^127; t
 
 ## The word
 
-Sign in bit 255, a 19-bit exponent (bias 262,143), a 236-bit fraction with an implicit one: 237 significant bits, about 71 digits, from 10^−78,900 to 10^78,900. No NaN, no infinity, no subnormals, no negative zero. Zero is the all-zero word; any other word with exponent 0 reverts `OutOfRange`. Equality is bit equality.
+Sign in bit 255, a 19-bit exponent (bias 262,143), a 236-bit fraction with an implicit one: 237 significant bits, about 71 digits, from 10^−78,913 to 10^78,913. No NaN, no infinity, no subnormals, no negative zero. Zero is the all-zero word; any other word with exponent 0 reverts `OutOfRange`. Equality is bit equality.
 
 {{ <wordstrip format="fp256" /> }}
 
@@ -24,7 +24,7 @@ Rounding: once per op (Lambert W iterates), ties away from zero. Overflow revert
 |---|---:|---|
 | FP127 | 38 at 1 | 2^−128 to 2^127 (±1.7 × 10^38) |
 | ABDKMathQuad | 34 | 10^±4,932 |
-| FP256 | 71 | 10^±78,900 |
+| FP256 | 71 | 10^±78,913 |
 
 ## Deployed form
 
@@ -180,7 +180,7 @@ function index() external view returns (int256) {
 }
 ```
 
-In FP256 the gain is gas more than digits. In the example test, an FP256 index multiplied 1,000 times ends 9.2 to 13.8 parts in 2^236 from the log read. Each `exp` and `mul` rounds to nearest at 237 bits, so the errors stay tiny and partly cancel. What you save is the `exp` and `mul` on every accrual (7,866 + 1,388 gas, median, in [`gas256.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas256.md)). You pay an `exp` on every read instead. This fits a continuous rate only. With a rate per period r, L gains n × log1p(r), and that rounding is added n times; use `compound(r, n)` there. The [FP127 page](/library/#keep-an-index-as-its-logarithm) has the measured numbers.
+In FP256 the gain is gas more than digits. In the example test, an FP256 index multiplied 1,000 times ends 9.2 to 13.8 parts in 2^236 from the log read. Each `exp` and `mul` rounds to nearest at 237 bits, so the errors stay tiny and partly cancel. What you save is the `exp` and `mul` on every accrual (7,759 + 1,133 gas, median, in [`gas256.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas256.md)). You pay an `exp` on every read instead. This fits a continuous rate only. With a rate per period r, L gains n × log1p(r), and that rounding is added n times; use `compound(r, n)` there. The [FP127 page](/library/#keep-an-index-as-its-logarithm) has the measured numbers.
 
 The snippets are compiled and run on the replays' own integers in [`test/examples/Integrating.t.sol`]({{ config.extra.repo }}/blob/master/test/examples/Integrating.t.sol).
 

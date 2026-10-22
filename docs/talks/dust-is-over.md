@@ -304,13 +304,13 @@ on a ruler with no ends.
 Slide, gas, inline:
 
     op           WAD     FP127    FP256
-    mul           321      531    1,388
-    add           502      289    1,462
-    sqrt          622    3,632    2,816
-    ln            731    1,035    6,950
-    exp           547    5,366    7,336
-    pow         1,605    6,654   11,094
-    normCdf         —   23,487   35,809
+    mul           126      263    1,133
+    add           111      124    1,262
+    sqrt          393    1,584    2,698
+    ln            556      865    7,308
+    exp           430    6,455    7,759
+    pow         1,275    5,175   11,848
+    normCdf         —   12,871   36,240
 
 Cheaper math is cheaper because it gives up digits. Every row on this slide, the
 cheap column included, is in the tables you've just seen, so you know exactly
@@ -329,7 +329,7 @@ ends, there's nothing left to improve but gas. There won't be a better answer,
 because there isn't a better answer.
 
 Both are on chain. Every cell of the step table and the edges table, nearly
-eleven thousand of them, was re-run against the live contracts on Sepolia today. It's called Blockulator 2.0.
+eleven thousand of them, was re-run against the live contracts on Sepolia today. It's called Blockulator 2.1.
 
 Use FP127 and FP256. Stop using the others.
 
@@ -353,7 +353,7 @@ Thank you.
 | edges table | each row as shown; zero = below the finest mark; revert = the library refused | edges: ln, exp, mul, normCdf, pow, sqrt |
 | per-second rate | 5% / 31,536,000 = 1.59e-9 | exact |
 | option walk | d₁ = −7: WAD 4, binary128 28, FP127 25, FP256 66; d₁ = −12: WAD 0, binary128 27, FP127 3, FP256 66 | ladder: deep-tail-option, slow-walk / reference, N = 10,000 |
-| gas | WAD (Solady) mul 321, add 502, sqrt 622, ln 731, exp 547, pow 1,605; FP127Lib 531 / 289 / 3,632 / 1,035 / 5,366 / 6,654, normCdf 23,487; FP256Lib 1,388 / 1,462 / 2,816 / 6,950 / 7,336 / 11,094, normCdf 35,809 | gas.json, gas256.json (inline medians) |
-| FP256 format | 1 + 19 + 236 bits, 237-bit significand, ~71 digits, 10^±78,900 | contracts/src/fp256/README.md |
-| live check | 9,373 ladder cells + 1,511 edge cells, 0 mismatches, 2026-10-16 | RELEASE.md |
-| addresses | FP127 v4 0x6cFbCB92…c1d1, FP256 v3 0x67eFfb11…61be | RELEASE.md |
+| gas | WAD (Solady) mul 126, add 111, sqrt 393, ln 556, exp 430, pow 1,275; FP127Lib 263 / 124 / 1,584 / 865 / 6,455 / 5,175, normCdf 12,871; FP256Lib 1,133 / 1,262 / 2,698 / 7,308 / 7,759 / 11,848, normCdf 36,240 | gas.md, gas256.md (inline medians) |
+| FP256 format | 1 + 19 + 236 bits, 237-bit significand, ~71 digits, 10^±78,913 | contracts/src/fp256/README.md |
+| live check | Blockulator 2.1: through the ladder v9 runners, pending (`pendingLiveCheck` in RELEASE.json); 2.0 (2026-10-16): 9,373 ladder cells + 1,511 edge cells, 0 mismatches | RELEASE.json |
+| addresses | Blockulator 2.1: FP127 v5 0x619176d7…3fE2, FP256 0xA3C8C870…a6c9 (+ FP256X 0x175246B2…40d0, X2 0xE655bB8b…c697, X3 0x59D51481…2383) | RELEASE.md |
