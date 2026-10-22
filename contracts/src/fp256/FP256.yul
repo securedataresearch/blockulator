@@ -136,14 +136,14 @@ object "FP256" {
             }
 
             function msb(x) -> r {
-                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
-                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
-                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
-                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
-                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
-                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
-                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
-                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+                if iszero(x) { leave }
+                r := shl(7, lt(0xffffffffffffffffffffffffffffffff, x))
+                r := or(r, shl(6, lt(0xffffffffffffffff, shr(r, x))))
+                r := or(r, shl(5, lt(0xffffffff, shr(r, x))))
+                r := or(r, shl(4, lt(0xffff, shr(r, x))))
+                r := or(r, shl(3, lt(0xff, shr(r, x))))
+                r := or(r, byte(and(0x1f, shr(shr(r, x), 0x8421084210842108cc6318c6db6d54be)),
+                    0x0706060506020504060203020504030106050205030304010505030400000000))
             }
 
             function mul512(a, b) -> p1, p0 {
@@ -868,21 +868,24 @@ object "FP256" {
             }
 
             function pack(s, e, m) -> r {
-                if sgt(e, 0x7ffff) { rev(0x35278d12) }
-                if slt(e, 1) { r := 0 leave }
+                if gt(sub(e, 1), 0x7fffe) {
+                    if sgt(e, 0x7ffff) { rev(0x35278d12) }
+                    leave
+                }
                 r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
             }
 
             function normround(s, e, D) -> r {
                 let n := msb(D)
-                e := add(e, sub(n, 254))
                 D := shl(sub(255, n), D)
-                let m := add(shr(19, D), and(shr(18, D), 1))
-                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
-                    m := 0x100000000000000000000000000000000000000000000000000000000000
-                    e := add(e, 1)
-                }
-                r := pack(s, e, m)
+                let m := shr(1, add(shr(18, D), 1))
+                r := pack(s, add(add(e, sub(n, 254)), shr(237, m)), m)
+            }
+
+            function normtop(s, e, D) -> r {
+                let t := shr(255, D)
+                let m := shr(1, add(shr(add(17, t), D), 1))
+                r := pack(s, add(add(e, t), shr(237, m)), m)
             }
 
             function check(x) {
@@ -890,58 +893,87 @@ object "FP256" {
             }
 
             function key(x) -> k {
-                check(x)
-                k := x
-                if slt(x, 0) { k := sub(0, and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) }
+                k := xor(x, shr(1, sar(255, x)))
             }
 
-            function addsub(a, b, flip) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                sb := xor(sb, flip)
-                if iszero(eb) { r := a leave }
-                if iszero(ea) { r := or(shl(255, sb), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) leave }
+            function check2(a, b) {
+                if iszero(mul(and(shr(236, a), 0x7ffff), and(shr(236, b), 0x7ffff))) {
+                    check(a)
+                    check(b)
+                }
+            }
+
+            function addsub(a, b, flip, h) -> r {
+                let sx := shr(255, a)
+                let sy := xor(shr(255, b), flip)
+                let x := a
+                let y := b
                 if lt(and(a, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), and(b, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)) {
-                    let t := sa sa := sb sb := t
-                    t := ea ea := eb eb := t
-                    t := ma ma := mb mb := t
+                    x := b
+                    y := a
+                    let t := sx
+                    sx := sy
+                    sy := t
                 }
-                let d := sub(ea, eb)
-                ma := shl(18, ma)
-                mb := shl(18, mb)
-                switch eq(sa, sb)
-                case 1 { ma := add(ma, shr(d, mb)) }
+                let ex := and(shr(236, x), 0x7ffff)
+                let mx := shl(18, or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000))
+                let ey := and(shr(236, y), 0x7ffff)
+                if iszero(ey) {
+                    check(a)
+                    check(b)
+                    if x { r := normtop(sx, sub(ex, h), mx) }
+                    leave
+                }
+                let d := sub(ex, ey)
+                let my := shl(18, or(and(y, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000))
+                switch eq(sx, sy)
+                case 1 { mx := add(mx, shr(d, my)) }
                 default {
-                    ma := sub(sub(ma, shr(d, mb)), iszero(iszero(and(mb, sub(shl(d, 1), 1)))))
-                    if iszero(ma) { r := 0 leave }
+                    mx := sub(sub(mx, shr(d, my)), iszero(iszero(and(my, sub(shl(d, 1), 1)))))
+                    if lt(d, 2) {
+                        if mx { r := normround(sx, sub(ex, h), mx) }
+                        leave
+                    }
+                    mx := shl(1, mx)
+                    ex := sub(ex, 1)
                 }
-                r := normround(sa, ea, ma)
+                r := normtop(sx, sub(ex, h), mx)
             }
 
             function fp256_add(a, b) -> r {
-                r := addsub(a, b, 0)
+                r := addsub(a, b, 0, 0)
             }
 
             function fp256_sub(a, b) -> r {
-                r := addsub(a, b, 1)
+                r := addsub(a, b, 1, 0)
             }
 
             function fp256_mul(a, b) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                if or(iszero(ea), iszero(eb)) { r := 0 leave }
+                let ea := and(shr(236, a), 0x7ffff)
+                let eb := and(shr(236, b), 0x7ffff)
+                if iszero(mul(ea, eb)) {
+                    check(a)
+                    check(b)
+                    leave
+                }
+                let ma := or(and(a, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+                let mb := or(and(b, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
                 let p0 := mul(ma, mb)
                 let mm := mulmod(ma, mb, not(0))
                 let p1 := sub(sub(mm, p0), lt(mm, p0))
-                r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
+                r := normtop(shr(255, xor(a, b)), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
             }
 
             function fp256_div(a, b) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                if iszero(eb) { rev(0x23d359a3) }
-                if iszero(ea) { r := 0 leave }
-                r := normround(xor(sa, sb), sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb))
+                let ea := and(shr(236, a), 0x7ffff)
+                let eb := and(shr(236, b), 0x7ffff)
+                if iszero(mul(ea, eb)) {
+                    check(a)
+                    check(b)
+                    if iszero(eb) { rev(0x23d359a3) }
+                    leave
+                }
+                r := normtop(shr(255, xor(a, b)), sub(add(ea, 0x3ffff), add(eb, 1)), divh(or(and(a, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000), or(and(b, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)))
             }
 
             function isqrt(n) -> y {
@@ -1586,35 +1618,40 @@ object "FP256" {
             }
 
             function fp256_neg(x) -> r {
-                check(x)
-                r := x
-                if x { r := xor(x, 0x8000000000000000000000000000000000000000000000000000000000000000) }
+                r := xor(x, 0x8000000000000000000000000000000000000000000000000000000000000000)
+                if iszero(and(x, 0x7ffff00000000000000000000000000000000000000000000000000000000000)) {
+                    check(x)
+                    r := 0
+                }
             }
 
             function fp256_abs(x) -> r {
-                check(x)
                 r := and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                if iszero(and(x, 0x7ffff00000000000000000000000000000000000000000000000000000000000)) { check(x) }
             }
 
             function fp256_sign(x) -> r {
-                check(x)
-                r := 0
-                if x { r := or(0x3ffff00000000000000000000000000000000000000000000000000000000000, and(x, 0x8000000000000000000000000000000000000000000000000000000000000000)) }
+                r := or(0x3ffff00000000000000000000000000000000000000000000000000000000000, and(x, 0x8000000000000000000000000000000000000000000000000000000000000000))
+                if iszero(and(x, 0x7ffff00000000000000000000000000000000000000000000000000000000000)) {
+                    check(x)
+                    r := 0
+                }
             }
 
             function fp256_cmp(a, b) -> r {
+                check2(a, b)
                 let ka := key(a)
                 let kb := key(b)
                 r := sub(sgt(ka, kb), slt(ka, kb))
             }
 
             function fp256_lt(a, b) -> r {
+                check2(a, b)
                 r := slt(key(a), key(b))
             }
 
             function fp256_eq(a, b) -> r {
-                check(a)
-                check(b)
+                check2(a, b)
                 r := eq(a, b)
             }
 
@@ -1650,13 +1687,32 @@ object "FP256" {
             }
 
             function fp256_fromFixed18(x) -> r {
-                if iszero(x) { r := 0 leave }
-                r := fp256_div(normround(slt(x, 0), 0x400fd, absw(x)), 0x4003abc16d674ec8000000000000000000000000000000000000000000000000)
+                if iszero(x) { leave }
+                // |x| as a number, as normround(s, 0x400fd, |x|) forms it: significand
+                // m (rounded once; a carry c into 2^237 moves the exponent) at exponent
+                // 0x3ffff + n + c. Then div by 10^18 (significand 10^18 2^177, exponent
+                // 0x3ffff + 59) on the significands: the same two roundings as before,
+                // without packing and unpacking the word in between. div's quotient
+                // floor(m 2^255 / (10^18 2^177)) = floor(m 2^60 / 5^18) is two word
+                // divisions by 5^18 < 2^42, m split at bit 100.
+                let u := absw(x)
+                let n := msb(u)
+                let m := shr(1, add(shr(18, shl(sub(255, n), u)), 1))
+                let c := shr(237, m)
+                m := shr(c, m)
+                let A := shl(60, shr(100, m))
+                let q := add(shl(100, div(A, 3814697265625)), div(add(shl(100, mod(A, 3814697265625)), shl(60, and(m, 0xfffffffffffffffffffffffff))), 3814697265625))
+                r := normtop(slt(x, 0), add(add(n, c), 0x3ffc3), q)
             }
 
             function fp256_toFixed18(x) -> r {
-                let s, e, m := unpack(x)
-                if iszero(e) { r := 0 leave }
+                let e := and(shr(236, x), 0x7ffff)
+                if iszero(e) {
+                    check(x)
+                    leave
+                }
+                let s := shr(255, x)
+                let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
                 let k := sub(0x400eb, e)
                 if iszero(sgt(k, 0)) { rev(0x35278d12) }
                 if sgt(k, 297) { r := 0 leave }
@@ -1713,8 +1769,13 @@ object "FP256" {
             }
 
             function touint(x, up) -> r {
-                let s, e, m := unpack(x)
-                if iszero(e) { leave }
+                let e := and(shr(236, x), 0x7ffff)
+                if iszero(e) {
+                    check(x)
+                    leave
+                }
+                let s := shr(255, x)
+                let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
                 if s { rev(0x7db3aba7) }
                 let u := sub(e, 0x3ffff)
                 if slt(u, 0) {
@@ -1753,8 +1814,13 @@ object "FP256" {
             }
 
             function fltdir(x, up) -> r {
-                let s, e, m := unpack(x)
-                if iszero(e) { leave }
+                let e := and(shr(236, x), 0x7ffff)
+                if iszero(e) {
+                    check(x)
+                    leave
+                }
+                let s := shr(255, x)
+                let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
                 let u := sub(e, 0x3ffff)
                 if iszero(slt(u, 236)) {
                     r := x
