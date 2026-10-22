@@ -101,6 +101,11 @@ import {FP256Lib} from "fp256/FP256Lib.sol";
 int256 g = FP256Lib.pow(FP256Lib.add(FP256Lib.ONE, r), FP256Lib.fromUint(31536000));
 ```
 
+Compile the inline libraries with `via_ir = true` (in `foundry.toml`). Without
+it, solc's legacy pipeline leaves their heavy ops 5–27% dearer than the same
+Yul in the deployed object; through the IR they match it
+([`docs/benchmarks/profile.md`](docs/benchmarks/profile.md)).
+
 Through the deployed objects: `IFP127(0x6cFb…c1d1).ln(x)` and
 `IFP256(0x67eF…61be).exp(x)`; the FP127 examples are compiled and tested in
 [`test/examples/`](test/examples/). Every op is a view, so from a script or
