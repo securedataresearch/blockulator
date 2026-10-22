@@ -233,6 +233,54 @@ v5 transcendental within half an ULP, where v4 had `exp` at 4e32, `pow` at
 4.8e34, `cbrt` at 1.6e14, `compound` at 1.3e6, Lambert W at 1,153 and `ln`,
 `log2` at 1.31 and 1.88 ULPs.
 
+## Two builds: shanghai and osaka
+
+`FP127.yul` and `FP127Lib.sol` are the **shanghai** build (solc 0.8.24,
+evmVersion shanghai) and run on any EVM chain. `make gen` also writes the
+**osaka** build, `osaka/FP127.yul` and the opt-in `osaka/FP127LibOsaka.sol`:
+the same source with `msb(x)` as `255 - clz(x)` on the CLZ opcode
+(EIP-7939, Fusaka/Osaka), guarded so that msb(0) is still 0. It is compiled
+by solc 0.8.38 for evmVersion osaka (`make build-osaka`, pinned in
+`scripts/fp127/stdjson.py`) and returns the same word or the same revert as
+the shanghai object on every input: `make test-osaka` fuzzes every export of
+both builds and the osaka inline library against each other and runs the
+precision vectors on the osaka object. The 19 msb sites never see zero
+(each is guarded or nonzero by construction), and the guard keeps the
+shanghai value anyway.
+
+Where it saves (`make bench-osaka`,
+[`docs/benchmarks/gas-osaka.md`](../../../docs/benchmarks/gas-osaka.md),
+medians through the object): about 250 to 300 gas per leading-bit count,
+so `log2`, `ln`, `log10` and `log2Up` 300 to 310 (28 to 40%), `sqrt`,
+`gavg`, `hypot` 247, `cbrt` 323, `powu` 222, `pow` 203, `lambertW0` 1,605,
+`lambertWm1` 1,091. Ops without a leading-bit count cost the same. `pi`
+costs 766 more: solc folds the shanghai `sqrt(2)` into a constant, but
+does not evaluate `clz` at compile time.
+
+**Which to use.** On a chain with CLZ, the osaka object or library: same
+results, less gas. Elsewhere, or when unsure, the shanghai one. Osaka code
+deploys fine on a chain without CLZ, but there every call that reaches msb
+fails and burns its gas, so probe the chain first (`make probe-clz
+RPC=<url>`; every `deploy-*-osaka-*` target does). As of 2026-10-22:
+
+| chain | CLZ | since |
+|---|---|---|
+| Ethereum mainnet, Sepolia, Hoodi | yes | Fusaka: 2025-12-03 (mainnet), 2025-10-14 (Sepolia) |
+| Arbitrum One | yes | ArbOS 51, 2026-01-08 |
+| OP Mainnet, Unichain | yes | Upgrade 19 "Karst", 2026-07-08 |
+| Base | yes | "Azul", 2026-05-28 |
+| Polygon PoS | yes | Lisovo, 2026-03-04 |
+| BNB Chain | yes | Osaka / Mendel, 2026-04-28 |
+| Gnosis | yes | 2026-04-14 |
+| Scroll, Linea | yes | Galileo (Scroll); Linea by probe |
+| zkSync Era, Avalanche C-Chain, Polygon zkEVM | **no** | |
+
+Dates, sources and the probe are in
+[`contracts/deployments/README.md`](../../deployments/README.md#two-builds-shanghai-and-osaka).
+The osaka object deploys with its own salt, "FP127 v6 osaka"
+(`make predict-fp127-osaka`, `deploy-fp127-osaka-sepolia`,
+`verify-fp127-osaka-sepolia`); it is not deployed yet.
+
 ## Gas
 
 `make bench` runs `test/fp127/GasLadder.t.sol` over an input ladder per op

@@ -338,6 +338,54 @@ of `ln`, `log1p` and `expm1` meet the same ties (x ± x²/2), and their
 remainder x³/3 is at least 2^−236 ULP there, well inside what the second
 stage resolves.
 
+## Two builds: shanghai and osaka
+
+The four objects and `FP256Lib.sol` are the **shanghai** build (solc 0.8.24,
+evmVersion shanghai) and run on any EVM chain. `make gen-fp256` also writes
+the **osaka** build in `osaka/`: the four objects and the opt-in
+`FP256LibOsaka.sol`, the same source with `msb(x)` as `255 - clz(x)` on the
+CLZ opcode (EIP-7939) and `ctz` on CLZ of the lowest set bit, both guarded
+so that f(0) is still 0. solc 0.8.38 builds them for evmVersion osaka with
+0.8.24's optimizer sequence (`make build-osaka`); with 0.8.38's own
+sequence the core would not fit. Sizes: FP256 24,419, FP256X 23,317,
+FP256X2 20,846, FP256X3 6,605. `make test-osaka` fuzzes every export of
+both builds and the osaka library against each other (the same word or the
+same revert) and runs the precision vectors on the osaka objects.
+
+The branchless msb costs 168 gas; on CLZ it costs about 14, so every op
+with a leading-bit count saves about 154 gas per count (`make bench-osaka`,
+[`docs/benchmarks/gas-osaka.md`](../../../docs/benchmarks/gas-osaka.md),
+medians through the object): `mulDown`/`mulUp`, `divDown`/`divUp`, `sqrt`,
+`exp` and the conversions from integers 154 (10 to 22%), `ln`, `log2`,
+`log10` and `pow` about 480, `lerp` 1,077, `lambertWm1` 838, `atanh` 797,
+`factorial` 770. `add`, `sub`, `mul`, `div` and the comparisons do not
+count leading bits since #128 and cost the same.
+
+**Which to use.** On a chain with CLZ, the osaka objects or library: same
+results, less gas. Elsewhere, or when unsure, the shanghai ones. Osaka code
+deploys fine on a chain without CLZ, but there every call that reaches msb
+fails and burns its gas, so probe first (`make probe-clz RPC=<url>`; every
+`deploy-*-osaka-*` target does). As of 2026-10-22:
+
+| chain | CLZ | since |
+|---|---|---|
+| Ethereum mainnet, Sepolia, Hoodi | yes | Fusaka: 2025-12-03 (mainnet), 2025-10-14 (Sepolia) |
+| Arbitrum One | yes | ArbOS 51, 2026-01-08 |
+| OP Mainnet, Unichain | yes | Upgrade 19 "Karst", 2026-07-08 |
+| Base | yes | "Azul", 2026-05-28 |
+| Polygon PoS | yes | Lisovo, 2026-03-04 |
+| BNB Chain | yes | Osaka / Mendel, 2026-04-28 |
+| Gnosis | yes | 2026-04-14 |
+| Scroll, Linea | yes | Galileo (Scroll); Linea by probe |
+| zkSync Era, Avalanche C-Chain, Polygon zkEVM | **no** | |
+
+Dates, sources and the probe are in
+[`contracts/deployments/README.md`](../../deployments/README.md#two-builds-shanghai-and-osaka).
+Salts "FP256 v5 osaka", "FP256X v5 osaka", "FP256X2 v5 osaka", "FP256X3 v5
+osaka"; targets `predict-<o>-osaka`, `deploy-<o>-osaka-sepolia`,
+`verify-<o>-osaka-sepolia` for `<o>` in fp256, fp256x, fp256x2, fp256x3.
+None is deployed yet.
+
 ## Gas
 
 [`docs/benchmarks/gas256.md`](../../../docs/benchmarks/gas256.md) has every
