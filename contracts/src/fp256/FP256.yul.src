@@ -4198,20 +4198,13 @@ function fp256_log10(x) -> r {
 
 // ---- hyperbolic functions ----------------------------------------------------
 
-/// x^2 at 2^-254, floored, for |x| = m 2^(u - 236) < 1/2.
-function sqfix(u, m) -> x2 {
-    let p1, p0 := mul512(m, m)
-    x2 := shr512(p1, p0, sub(218, shl(1, u)))
-}
-
-/// sum_k x2^k / (2k + b)! at 2^-254 for x2 < 1/4 (b = 1: sinh x / x; b = 0:
-/// cosh x), Horner from k = 25 (truncation below 2^-257).
-function hser(x2, b) -> t {
-    t := 0x4000000000000000000000000000000000000000000000000000000000000000
-    for { let k := 25 } k { k := sub(k, 1) } {
-        let j := add(shl(1, k), b)
-        t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(mulwu(x2, t), mul(j, sub(j, 1))))
-    }
+/// e^|x| - 1 at 2^-254 for 2^-8 <= |x| = m 2^(u - 236) < 1 from exp's
+/// unrounded kernel: 2^f within 6 units of 2^-254, doubled once when |x|
+/// log2 e passes one, so U is within 6 units below 1/(log2 e) and 12 above.
+function em1k(u, m) -> U {
+    let k, f := explog2(u, m)
+    let kk, v := exp2kv(0, k, f)
+    U := sub(shl(kk, v), 0x4000000000000000000000000000000000000000000000000000000000000000)
 }
 
 /// hser in two words for |x| = m 2^(u - 236) < 1/2: x^2 at 2^-510, Horner
@@ -4253,26 +4246,50 @@ function hypw(s, u, m, kk, c) -> r {
 /// @export sinh(int256 x) returns (int256 r)
 /// @domain |x| below about 181,705
 /// @reverts Overflow() when sinh(x) does not fit; OutOfRange() for a word that is not a number
-/// @notice sinh(x). Below 1/2, x sum x^2k / (2k + 1)! at 2^-254 (no
-///         cancellation, so the relative precision holds all the way down);
-///         above, (e^|x| - e^-|x|) / 2 from exp's unrounded kernel and its
-///         reciprocal. One rounding when the bound clears the rounding
-///         boundary, else the series or both exponentials in two words:
-///         correctly rounded.
+/// @notice sinh(x) = (U + U/(1 + U)) / 2 with U = e^|x| - 1 from expm1's
+///         machinery: below 2^-8, x times T = (e^|x| - 1)/|x| from its
+///         series (no cancellation, so the relative precision holds all the
+///         way down); to 1/2, U from exp's unrounded kernel; above, (e^|x| -
+///         e^-|x|) / 2 from that kernel and its reciprocal. One rounding when
+///         the bound clears the rounding boundary, else the series or both
+///         exponentials in two words: correctly rounded.
 function fp256_sinh(x) -> r {
     let s, e, m := unpack(x)
     if iszero(e) { leave }
     let u := sub(e, 0x3ffff)
     if slt(u, sub(0, 1)) {
-        let p1, p0 := mul512(m, hser(sqfix(u, m), 1))
-        // the series within 3 units of 2^-254, so D within 2 x 3 + 1
-        let D := or(shl(20, p1), shr(236, p0))
-        if rbad(D, 8) {
-            let th, tl := hserw(u, m, 1)
-            r := xwide(s, u, m, th, tl)
-            leave
+        switch slt(u, sub(0, 8))
+        case 1 {
+            // T = (e^|x| - 1)/|x| from expm1's series, within 2 units of 2^-254
+            // and half of |x|'s floor: 2.5. 2 sinh(x)/x = T + T/(1 + |x| T), with
+            // |x| T within 2.1 units (its floor, |x|'s through T, T's through
+            // |x|), the quotient within 2.5 + 2.1 + 1 and the sum within 8.1:
+            // D = m (T + q) / 2^236, twice sinh at x's exponent, within 2 x 8.1 + 1
+            let df := tofixed254(0, u, m)
+            let T := expm1series(df)
+            let q := div254(T, add(0x4000000000000000000000000000000000000000000000000000000000000000, mulwu(df, T)))
+            let p1, p0 := mul512(m, add(T, q))
+            let D := or(shl(20, p1), shr(236, p0))
+            if rbad(D, 18) {
+                let th, tl := hserw(u, m, 1)
+                r := xwide(s, u, m, th, tl)
+                leave
+            }
+            r := normround(s, sub(e, 1), D)
         }
-        r := normround(s, e, D)
+        default {
+            // U = e^|x| - 1 from exp's unrounded kernel, within 6 units of
+            // 2^-254 (|x| log2 e < 1); 2 sinh|x| = U + U/(1 + U), the quotient's
+            // slope in U under one, so it is within 6 + 1 and the sum within 13
+            let U := em1k(u, m)
+            let D := add(U, div254(U, add(U, 0x4000000000000000000000000000000000000000000000000000000000000000)))
+            if rbad(D, 14) {
+                let th, tl := hserw(u, m, 1)
+                r := xwide(s, u, m, th, tl)
+                leave
+            }
+            r := normround(s, 0x3fffe, D)
+        }
         leave
     }
     if sgt(u, 17) { rev(0x35278d12) }
@@ -4339,25 +4356,46 @@ function tanhw2(s, u, m, kk) -> r {
 /// @export tanh(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
-/// @notice tanh(x). Below 1/2, x times sinh's series over cosh's (both at
-///         2^-254, all terms positive); above, 1 - 2/(e^2|x| + 1) from exp's
-///         unrounded kernel. One rounding when the bound clears the rounding
-///         boundary, else the same in two words: correctly rounded. Exactly
-///         +-1 once 2|x| log2 e passes 240.
+/// @notice tanh(x) = U/(U + 2) with U = e^2|x| - 1 from expm1's machinery:
+///         below 2^-9, x times T/(1 + |x| T) with T = (e^2|x| - 1)/(2|x|) from
+///         its series; to 1/2, U from exp's unrounded kernel; above, 1 -
+///         2/(e^2|x| + 1) from that kernel. One rounding when the bound
+///         clears the rounding boundary, else sinh's and cosh's series or
+///         the exponential in two words: correctly rounded. Exactly +-1 once
+///         2|x| log2 e passes 240.
 function fp256_tanh(x) -> r {
     let s, e, m := unpack(x)
     if iszero(e) { leave }
     let u := sub(e, 0x3ffff)
     if slt(u, sub(0, 1)) {
-        let x2 := sqfix(u, m)
-        let p1, p0 := mul512(m, div254(hser(x2, 1), hser(x2, 0)))
-        // both series within 3 units, the quotient within 7, D within 2 x 7 + 1
-        let D := or(shl(20, p1), shr(236, p0))
-        if rbad(D, 16) {
-            r := tanhw1(s, u, m)
-            leave
+        switch slt(u, sub(0, 9))
+        case 1 {
+            // T = (e^2|x| - 1)/(2|x|) from expm1's series, within 2 units of
+            // 2^-254 and |x|'s floor through 2|x|: 3. tanh(x)/x = T/(1 + |x| T)
+            // with |x| T within 2.1, the quotient within 3 + 2.1 + 1: D = m F / 2^236
+            // within 2 x 6.1 + 1
+            let df := tofixed254(0, u, m)
+            let T := expm1series(shl(1, df))
+            let p1, p0 := mul512(m, div254(T, add(0x4000000000000000000000000000000000000000000000000000000000000000, mulwu(df, T))))
+            let D := or(shl(20, p1), shr(236, p0))
+            if rbad(D, 14) {
+                r := tanhw1(s, u, m)
+                leave
+            }
+            r := normround(s, e, D)
         }
-        r := normround(s, e, D)
+        default {
+            // U = e^2|x| - 1 from exp's unrounded kernel at 2|x|, within 12
+            // units of 2^-254; tanh|x| = U/(U + 2), whose slope in U, 2/(U + 2)^2,
+            // is under 1/2: D within 6 + 1
+            let U := em1k(add(u, 1), m)
+            let D := div254(U, add(U, 0x8000000000000000000000000000000000000000000000000000000000000000))
+            if rbad(D, 8) {
+                r := tanhw1(s, u, m)
+                leave
+            }
+            r := normround(s, 0x3ffff, D)
+        }
         leave
     }
     r := or(shl(255, s), 0x3ffff00000000000000000000000000000000000000000000000000000000000)
@@ -4405,27 +4443,36 @@ function atanhw2(s, uu1, a1, uu2, a2) -> r {
 /// @export atanh(int256 x) returns (int256 r)
 /// @domain |x| < 1
 /// @reverts OutOfRange() for |x| >= 1 or a word that is not a number
-/// @notice atanh(x). Below 2^-4, x times the mean of log1p's series at x and
-///         -x (the even terms, sum x^2k / (2k + 1)); above, (log2(1 + |x|) -
-///         log2(1 - |x|)) ln 2 / 2 with both arguments exact under their
-///         leading bits (no cancellation: the logarithms have opposite
-///         signs). One rounding when the bound clears the rounding boundary,
-///         else the same in two words: correctly rounded.
+/// @notice atanh(x) = log1p(y) / 2 for y = 2|x|/(1 - |x|): below 2^-6, x
+///         times R P with R = 1/(1 - |x|) and P = ln(1 + y)/y from log1p's
+///         series at y = 2|x| R (no cancellation, so the relative precision
+///         holds all the way down); above, (log2(1 + |x|) - log2(1 - |x|))
+///         ln 2 / 2 with both arguments exact under their leading bits (the
+///         logarithms have opposite signs). One rounding when the bound
+///         clears the rounding boundary, else the odd series or the two
+///         logarithms in two words: correctly rounded.
 function fp256_atanh(x) -> r {
     let s, e, m := unpack(x)
     if iszero(e) { leave }
     let u := sub(e, 0x3ffff)
     if iszero(slt(u, 0)) { rev(0x7db3aba7) }
-    if slt(u, sub(0, 4)) {
-        let df := tofixed254(0, u, m)
-        let p := 0
-        switch slt(u, sub(0, 8))
-        case 1 { p := add(ln1pseries(df), ln1pseries(sub(0, df))) }
-        default { p := add(ln1pwide(df), ln1pwide(sub(0, df))) }
-        let p1, p0 := mul512(m, shr(1, p))
-        // each series within 3 units of 2^-254, the mean within 3.5, D within 2 x 3.5 + 1
+    if slt(u, sub(0, 6)) {
+        // R = 1/(1 - |x|) at 2^-254 within 2.1 units (|x|'s floor through R^2,
+        // the quotient's floor); y = 2 floor(|x| R) within 4.2; P = ln(1 + y)/y
+        // from log1p's series within 3 at y, 5.1 with y's error (P' under 1/2);
+        // atanh(x)/|x| = R P within 2.1 + 5.2 + 1: D = m R P / 2^236 within
+        // 2 x 8.3 + 1. y is under 2^-5 here (the 64-term series' band) and
+        // under 2^-9 past u = -10 (the 32-term one's)
+        let xf := tofixed254(0, u, m)
+        let R := div254(0x4000000000000000000000000000000000000000000000000000000000000000, sub(0x4000000000000000000000000000000000000000000000000000000000000000, xf))
+        let y := shl(1, mulwu(xf, R))
+        let P := 0
+        switch slt(u, sub(0, 10))
+        case 1 { P := ln1pseries(y) }
+        default { P := ln1pwide(y) }
+        let p1, p0 := mul512(m, mulwu(R, P))
         let D := or(shl(20, p1), shr(236, p0))
-        if rbad(D, 12) {
+        if rbad(D, 18) {
             r := atanhw1(s, u, m)
             leave
         }

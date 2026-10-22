@@ -44,29 +44,34 @@ interface IFP256X2 {
     ///         three words: correctly rounded, exact at the powers of ten that
     ///         are numbers (10^0 to 10^102).
     function log10(int256 x) external pure returns (int256 r);
-    /// @notice sinh(x). Below 1/2, x sum x^2k / (2k + 1)! at 2^-254 (no
-    ///         cancellation, so the relative precision holds all the way down);
-    ///         above, (e^|x| - e^-|x|) / 2 from exp's unrounded kernel and its
-    ///         reciprocal. One rounding when the bound clears the rounding
-    ///         boundary, else the series or both exponentials in two words:
-    ///         correctly rounded.
+    /// @notice sinh(x) = (U + U/(1 + U)) / 2 with U = e^|x| - 1 from expm1's
+    ///         machinery: below 2^-8, x times T = (e^|x| - 1)/|x| from its
+    ///         series (no cancellation, so the relative precision holds all the
+    ///         way down); to 1/2, U from exp's unrounded kernel; above, (e^|x| -
+    ///         e^-|x|) / 2 from that kernel and its reciprocal. One rounding when
+    ///         the bound clears the rounding boundary, else the series or both
+    ///         exponentials in two words: correctly rounded.
     function sinh(int256 x) external pure returns (int256 r);
     /// @notice cosh(x) = (e^|x| + e^-|x|) / 2 from exp's unrounded kernel and
     ///         its reciprocal, summed before the one rounding (no cancellation);
     ///         else both exponentials in two words: correctly rounded. Exactly
     ///         one below 2^-118.
     function cosh(int256 x) external pure returns (int256 r);
-    /// @notice tanh(x). Below 1/2, x times sinh's series over cosh's (both at
-    ///         2^-254, all terms positive); above, 1 - 2/(e^2|x| + 1) from exp's
-    ///         unrounded kernel. One rounding when the bound clears the rounding
-    ///         boundary, else the same in two words: correctly rounded. Exactly
-    ///         +-1 once 2|x| log2 e passes 240.
+    /// @notice tanh(x) = U/(U + 2) with U = e^2|x| - 1 from expm1's machinery:
+    ///         below 2^-9, x times T/(1 + |x| T) with T = (e^2|x| - 1)/(2|x|) from
+    ///         its series; to 1/2, U from exp's unrounded kernel; above, 1 -
+    ///         2/(e^2|x| + 1) from that kernel. One rounding when the bound
+    ///         clears the rounding boundary, else sinh's and cosh's series or
+    ///         the exponential in two words: correctly rounded. Exactly +-1 once
+    ///         2|x| log2 e passes 240.
     function tanh(int256 x) external pure returns (int256 r);
-    /// @notice atanh(x). Below 2^-4, x times the mean of log1p's series at x and
-    ///         -x (the even terms, sum x^2k / (2k + 1)); above, (log2(1 + |x|) -
-    ///         log2(1 - |x|)) ln 2 / 2 with both arguments exact under their
-    ///         leading bits (no cancellation: the logarithms have opposite
-    ///         signs). One rounding when the bound clears the rounding boundary,
-    ///         else the same in two words: correctly rounded.
+    /// @notice atanh(x) = log1p(y) / 2 for y = 2|x|/(1 - |x|): below 2^-6, x
+    ///         times R P with R = 1/(1 - |x|) and P = ln(1 + y)/y from log1p's
+    ///         series at y = 2|x| R (no cancellation, so the relative precision
+    ///         holds all the way down); above, (log2(1 + |x|) - log2(1 - |x|))
+    ///         ln 2 / 2 with both arguments exact under their leading bits (the
+    ///         logarithms have opposite signs). One rounding when the bound
+    ///         clears the rounding boundary, else the odd series or the two
+    ///         logarithms in two words: correctly rounded.
     function atanh(int256 x) external pure returns (int256 r);
 }

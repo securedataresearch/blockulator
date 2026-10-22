@@ -162,7 +162,10 @@ The second stage:
 - `sinh` and `cosh` from 1/2: e^|x| = 2^k (1 + E) by `wexp` and e^−|x| by
   `wrecip`, summed or subtracted in two words; below 1/2 `sinh` is x times
   sum x^2k/(2k + 1)! in two words. `tanh`: (1 − w)/(1 + w) with w =
-  e^−2|x| by `wexp`, or the two series' quotient below 1/2.
+  e^−2|x| by `wexp`, or the two series' quotient below 1/2. (The fast
+  paths below 1/2 compose sinh and tanh from expm1's one-word machinery,
+  and atanh below 2^−6 from log1p's; only the second stages keep a
+  series of their own.)
 - `atanh`: below 2^−4, x sum x^2k/(2k + 1) in two words; above, (uu1 −
   uu2) ln 2 plus wln of the exact mantissas of 1 + |x| and 1 − |x|, three
   words, halved in the one rounding.
@@ -221,10 +224,11 @@ The bounds, and what they give:
 | log2 | 38 | log2m 37, the shift into Lm 1 | 2.25 | 2^−489 rel. | 2^−252 ULP |
 | log10, near one | 8 | ln's 5, times log10 e: 5 log10 e + 2 | 1.30 | 2^−497 rel. | 2^−260 ULP |
 | log10 | 16 | (37 + 1) log10 2 + 2 | 1.68 | 2^−489 rel. | 2^−252 ULP |
-| sinh, tanh, \|x\| < ½ | 8, 16 | the series within 3; tanh's quotient within 7 | 2.91, 3.52 | 2^−500 rel. | 2^−263 ULP |
+| sinh, \|x\| < 2^−8; to ½ | 18; 14 | expm1's series T within 2.5, \|x\|T within 2.1, the quotient T/(1 + \|x\|T) and the sum: 2 × 8.1 + 1; the kernel's U = e^\|x\| − 1 within 6, U/(1 + U) within 7 | 5.55; 3.92 | 2^−500 rel. | 2^−263 ULP |
+| tanh, \|x\| < 2^−9; to ½ | 14; 8 | T = (e^2\|x\| − 1)/(2\|x\|) within 3, the quotient T/(1 + \|x\|T) within 6.1: 2 × 6.1 + 1; U = e^2\|x\| − 1 within 12, U/(U + 2) has slope under ½: 6 + 1 | 3.68; 1.66 | 2^−500 rel. | 2^−263 ULP |
 | sinh, cosh | 16 | v within 6, 2^508/v within 7, the shift 1 | 4.76 | 2^−500 rel. | 2^−263 ULP |
 | tanh | 8 | 2/(V + 1) within 6 × 0.54 + 2 | 0.99 | 2^−500 rel. | 2^−263 ULP |
-| atanh, \|x\| < 2^−4 | 12 | two series within 3, their mean 3.5 | 3.55 | 2^−500 rel. | 2^−263 ULP |
+| atanh, \|x\| < 2^−6 | 18 | R = 1/(1 − \|x\|) within 2.1, y = 2\|x\|R within 4.2, log1p's series P within 3 + 2.1, RP within 8.3: 2 × 8.3 + 1 | 4.38 | 2^−500 rel. | 2^−263 ULP |
 | atanh | 32 | two log2m within 37, halved by the shift: 38 ln 2 + 2 | 3.72 | 2^−491 rel. | 2^−254 ULP |
 
 `scripts/fp256/generators/bounds.py` recomputes each D as the Yul does (the
@@ -274,9 +278,9 @@ Lambert W's branch point). None is known.
 | `log10` | FP256X2 | log2 x times log10 2, the test; ln's series times log10 e near one; exact at 10^0 to 10^102 | `OutOfRange` for x ≤ 0 |
 | `log2Up` | FP256X2 | ⌈log2 x⌉ as a number, exact | `OutOfRange` for x ≤ 0 |
 | `cbrt` | FP256X2 | the floor of the cube root at 238+ bits from a kernel seed and exact cubes, one rounding; odd | never |
-| `sinh`, `cosh` | FP256X2 | x sum x^2k/(2k+1)! below ½ (sinh); (e^\|x\| ∓ e^−\|x\|)/2 from exp's unrounded kernel and its reciprocal; cosh exactly one below 2^−118 | `Overflow` beyond about 181,705 |
-| `tanh` | FP256X2 | x S/C (sinh's and cosh's series) below ½; 1 − 2/(e^2\|x\| + 1) above; ±1 once 2\|x\| log2 e passes 240 | never |
-| `atanh` | FP256X2 | x times the even part of log1p's series below 2^−4; (log2(1 + \|x\|) − log2(1 − \|x\|)) ln 2 / 2 from the exact arguments above | `OutOfRange` for \|x\| ≥ 1 |
+| `sinh`, `cosh` | FP256X2 | sinh = (U + U/(1 + U))/2 with U = e^\|x\| − 1 from expm1's machinery below ½ (its series below 2^−8, exp's unrounded kernel above); (e^\|x\| ∓ e^−\|x\|)/2 from that kernel and its reciprocal otherwise; cosh exactly one below 2^−118 | `Overflow` beyond about 181,705 |
+| `tanh` | FP256X2 | U/(U + 2) with U = e^2\|x\| − 1 from expm1's machinery below ½ (its series below 2^−9, the kernel above); 1 − 2/(e^2\|x\| + 1) above; ±1 once 2\|x\| log2 e passes 240 | never |
+| `atanh` | FP256X2 | log1p(y)/2 for y = 2\|x\|/(1 − \|x\|): x R P from log1p's series below 2^−6; (log2(1 + \|x\|) − log2(1 − \|x\|)) ln 2 / 2 from the exact arguments above | `OutOfRange` for \|x\| ≥ 1 |
 | `min`, `max`, `clamp` | FP256X3 | one of the words, through the comparison key; clamp is min(hi, max(lo, x)), hi when lo > hi | `OutOfRange` |
 | `avg` | FP256X3 | (a + b)/2 from add's aligned sum, its exponent one lower: one rounding, no overflow | `OutOfRange` |
 | `dist`, `zeroFloorSub` | FP256X3 | \|a − b\| and max(0, a − b), sub's one rounding | `Overflow` |
