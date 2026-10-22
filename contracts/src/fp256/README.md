@@ -57,9 +57,9 @@ the inline library holds everything.
 | object | ops | runtime | salt | Sepolia address (CREATE2 proxy) |
 |---|---|---:|---|---|
 | FP256 | the arithmetic, the edge (directed ops), exp, ln, log1p, expm1, pow, powu, compound, the comparisons and conversions: 37 | 24,512 | `FP256 v4` | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
-| FP256X | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 22,266 | `FP256X v4` | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
-| FP256X2 | exp2, exp10, log2, log10, log2Up, cbrt, sinh, cosh, tanh, atanh: 10 | 19,889 | `FP256X2 v4` | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
-| FP256X3 | min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg, hypot: 15 | 6,844 | `FP256X3 v4` | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
+| FP256X | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 22,288 | `FP256X v4` | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
+| FP256X2 | exp2, exp10, log2, log10, log2Up, cbrt, sinh, cosh, tanh, atanh: 10 | 21,297 | `FP256X2 v4` | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
+| FP256X3 | min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg, hypot: 15 | 6,592 | `FP256X3 v4` | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
 
 The split is by family, as
 [#79](https://github.com/securedataresearch/blockulator/issues/79) asks:
@@ -162,7 +162,10 @@ The second stage:
 - `sinh` and `cosh` from 1/2: e^|x| = 2^k (1 + E) by `wexp` and e^−|x| by
   `wrecip`, summed or subtracted in two words; below 1/2 `sinh` is x times
   sum x^2k/(2k + 1)! in two words. `tanh`: (1 − w)/(1 + w) with w =
-  e^−2|x| by `wexp`, or the two series' quotient below 1/2.
+  e^−2|x| by `wexp`, or the two series' quotient below 1/2. (The fast
+  paths below 1/2 compose sinh and tanh from expm1's one-word machinery,
+  and atanh below 2^−6 from log1p's; only the second stages keep a
+  series of their own.)
 - `atanh`: below 2^−4, x sum x^2k/(2k + 1) in two words; above, (uu1 −
   uu2) ln 2 plus wln of the exact mantissas of 1 + |x| and 1 − |x|, three
   words, halved in the one rounding.
@@ -186,8 +189,10 @@ least 544 bits under the sum (or the other two cancel exactly and the term
 is the value); two such terms lie more than 546 bits under the third, which
 fixes the result up to the sign of their sum. The window is four words of
 memory just past the free memory pointer, which lerp reads and never moves
-(memory-safe temporary memory); it is the one op that uses memory beyond
-the scratch space.
+(memory-safe temporary memory), and the three terms, computed once, are
+the fifteen words after it (sign, magnitude, last-bit exponent and top
+position each); it is the one op that uses memory beyond the scratch
+space.
 
 pow, compound and powu compute exact ties exactly: when x^y has at most 238
 significant bits (y = n/2^j with j ≤ 7 and n ≤ 150, the odd part of x a
@@ -219,10 +224,11 @@ The bounds, and what they give:
 | log2 | 38 | log2m 37, the shift into Lm 1 | 2.25 | 2^−489 rel. | 2^−252 ULP |
 | log10, near one | 8 | ln's 5, times log10 e: 5 log10 e + 2 | 1.30 | 2^−497 rel. | 2^−260 ULP |
 | log10 | 16 | (37 + 1) log10 2 + 2 | 1.68 | 2^−489 rel. | 2^−252 ULP |
-| sinh, tanh, \|x\| < ½ | 8, 16 | the series within 3; tanh's quotient within 7 | 2.91, 3.52 | 2^−500 rel. | 2^−263 ULP |
+| sinh, \|x\| < 2^−8; to ½ | 18; 14 | expm1's series T within 2.5, \|x\|T within 2.1, the quotient T/(1 + \|x\|T) and the sum: 2 × 8.1 + 1; the kernel's U = e^\|x\| − 1 within 6, U/(1 + U) within 7 | 5.55; 3.92 | 2^−500 rel. | 2^−263 ULP |
+| tanh, \|x\| < 2^−9; to ½ | 14; 8 | T = (e^2\|x\| − 1)/(2\|x\|) within 3, the quotient T/(1 + \|x\|T) within 6.1: 2 × 6.1 + 1; U = e^2\|x\| − 1 within 12, U/(U + 2) has slope under ½: 6 + 1 | 3.68; 1.66 | 2^−500 rel. | 2^−263 ULP |
 | sinh, cosh | 16 | v within 6, 2^508/v within 7, the shift 1 | 4.76 | 2^−500 rel. | 2^−263 ULP |
 | tanh | 8 | 2/(V + 1) within 6 × 0.54 + 2 | 0.99 | 2^−500 rel. | 2^−263 ULP |
-| atanh, \|x\| < 2^−4 | 12 | two series within 3, their mean 3.5 | 3.55 | 2^−500 rel. | 2^−263 ULP |
+| atanh, \|x\| < 2^−6 | 18 | R = 1/(1 − \|x\|) within 2.1, y = 2\|x\|R within 4.2, log1p's series P within 3 + 2.1, RP within 8.3: 2 × 8.3 + 1 | 4.38 | 2^−500 rel. | 2^−263 ULP |
 | atanh | 32 | two log2m within 37, halved by the shift: 38 ln 2 + 2 | 3.72 | 2^−491 rel. | 2^−254 ULP |
 
 `scripts/fp256/generators/bounds.py` recomputes each D as the Yul does (the
@@ -272,9 +278,9 @@ Lambert W's branch point). None is known.
 | `log10` | FP256X2 | log2 x times log10 2, the test; ln's series times log10 e near one; exact at 10^0 to 10^102 | `OutOfRange` for x ≤ 0 |
 | `log2Up` | FP256X2 | ⌈log2 x⌉ as a number, exact | `OutOfRange` for x ≤ 0 |
 | `cbrt` | FP256X2 | the floor of the cube root at 238+ bits by Newton with precision doubling from a seed in the bits, an exact cube at the end, one rounding; odd | never |
-| `sinh`, `cosh` | FP256X2 | x sum x^2k/(2k+1)! below ½ (sinh); (e^\|x\| ∓ e^−\|x\|)/2 from exp's unrounded kernel and its reciprocal; cosh exactly one below 2^−118 | `Overflow` beyond about 181,705 |
-| `tanh` | FP256X2 | x S/C (sinh's and cosh's series) below ½; 1 − 2/(e^2\|x\| + 1) above; ±1 once 2\|x\| log2 e passes 240 | never |
-| `atanh` | FP256X2 | x times the even part of log1p's series below 2^−4; (log2(1 + \|x\|) − log2(1 − \|x\|)) ln 2 / 2 from the exact arguments above | `OutOfRange` for \|x\| ≥ 1 |
+| `sinh`, `cosh` | FP256X2 | sinh = (U + U/(1 + U))/2 with U = e^\|x\| − 1 from expm1's machinery below ½ (its series below 2^−8, exp's unrounded kernel above); (e^\|x\| ∓ e^−\|x\|)/2 from that kernel and its reciprocal otherwise; cosh exactly one below 2^−118 | `Overflow` beyond about 181,705 |
+| `tanh` | FP256X2 | U/(U + 2) with U = e^2\|x\| − 1 from expm1's machinery below ½ (its series below 2^−9, the kernel above); 1 − 2/(e^2\|x\| + 1) above; ±1 once 2\|x\| log2 e passes 240 | never |
+| `atanh` | FP256X2 | log1p(y)/2 for y = 2\|x\|/(1 − \|x\|): x R P from log1p's series below 2^−6; (log2(1 + \|x\|) − log2(1 − \|x\|)) ln 2 / 2 from the exact arguments above | `OutOfRange` for \|x\| ≥ 1 |
 | `min`, `max`, `clamp` | FP256X3 | one of the words, through the comparison key; clamp is min(hi, max(lo, x)), hi when lo > hi | `OutOfRange` |
 | `avg` | FP256X3 | (a + b)/2 from add's aligned sum, its exponent one lower: one rounding, no overflow | `OutOfRange` |
 | `dist`, `zeroFloorSub` | FP256X3 | \|a − b\| and max(0, a − b), sub's one rounding | `Overflow` |
@@ -327,15 +333,15 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 | ln, log1p | 8,500–9,400 | 31,200–37,600 | 126,400 |
 | pow, powu | 5,700–14,800 | 59,900–68,000 | 99,500 |
 | compound | 17,000 | 68,100 | 161,000 |
-| erf, erfc, normCdf | 17,600–34,200 | 101,000–112,700 | 430,100 (the continued fraction) |
+| erf, erfc, normCdf | 17,600–27,600 | 101,000–109,000 | 419,300 (the continued fraction) |
 | lambertW0, lambertWm1 | 29,700–34,000 | 66,900–71,700 | 92,400 |
 | the directed ops | 500–2,000 | | 2,000 |
 | exp2, exp10 | 7,500–7,600 | 30,000 | 30,300 |
 | log2, log10 | 8,400–8,600 | 31,600–31,800 | 36,200 |
-| sinh, cosh | 8,500–8,700 | 14,800–32,800 | 43,700 |
-| tanh, atanh | 16,400–17,000 | 21,500–30,800 | 88,500 |
+| sinh, cosh | 8,400–8,500 | 14,400–32,700 | 43,600 |
+| tanh, atanh | 8,400–13,900 | 15,200–22,700 | 80,800 |
 | cbrt, gavg, hypot | 3,800–13,600 | | 14,600 |
-| lerp | 12,000 | | 12,800 |
+| lerp | 7,900 | | 9,000 |
 | gcd | 5,500 | | 10,400 |
 | factorial | 1.22M | | 2.45M (n = 20,366) |
 

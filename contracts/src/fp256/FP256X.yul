@@ -716,23 +716,32 @@ object "FP256X" {
                 let an := am
                 let bm := 0
                 let bn := am
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, then one rounded
-                    // shift of 0 to 4 bits, set by A, brings all four back under 2^252
-                    // (B'/A'' = y/K stays just under one). Written out: no calls in the loop
-                    let c := mul(k, w)
+                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
+                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
+                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
+                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
+                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
+                // needs no shift of its own; a zero shift would change nothing, so it
+                // is skipped). Written out: no calls in the loop
+                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
                     let p0 := mul(c, am)
                     let mm := mulmod(c, am, not(0))
                     let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
                     p0 := mul(c, bm)
                     mm := mulmod(c, bm, not(0))
                     let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    let sh := add(add(gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)), add(gt(a2, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(a2, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
-                    let hf := shr(1, shl(sh, 1))
-                    am := shr(sh, add(an, hf))
-                    an := shr(sh, add(a2, hf))
-                    bm := shr(sh, add(bn, hf))
-                    bn := shr(sh, add(b2, hf))
+                    am := an
+                    an := a2
+                    bm := bn
+                    bn := b2
+                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                        let hf := shl(sub(sh, 1), 1)
+                        am := shr(sh, add(am, hf))
+                        an := shr(sh, add(a2, hf))
+                        bm := shr(sh, add(bm, hf))
+                        bn := shr(sh, add(b2, hf))
+                    }
                 }
                 let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
                 let sb := sub(253, msb(bn))

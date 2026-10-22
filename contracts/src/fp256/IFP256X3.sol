@@ -30,9 +30,10 @@ interface IFP256X3 {
     /// @notice 1 / x: div's exact quotient floor(2^491 / m), rounded once.
     function inv(int256 x) external pure returns (int256 r);
     /// @notice a + t (b - a), rounded once from the exact value: a, t b and
-    ///         -t a summed exactly in a 1,024-bit window (terms far under it
-    ///         enter as their floor or their sign), so cancellation costs
-    ///         nothing and no intermediate can overflow. t is not clamped.
+    ///         -t a (computed once, in memory) summed exactly in a 1,024-bit
+    ///         window (terms far under it enter as their floor or their sign),
+    ///         so cancellation costs nothing and no intermediate can overflow.
+    ///         t is not clamped.
     function lerp(int256 a, int256 b, int256 t) external pure returns (int256 r);
     /// @notice x - floor(x), rounded once: in [0, 1), and exact for x >= 0;
     ///         a negative x within 2^-238 of an integer gives exactly 1, the
