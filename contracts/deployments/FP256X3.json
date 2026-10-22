@@ -1,0 +1,33 @@
+{
+ "contract": "FP256X3",
+ "chainId": 11155111,
+ "network": "sepolia",
+ "address": "0x59D51481cb2EA924EC17FE263cd05b90CEF22383",
+ "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+ "salt": "0x4650323536583320763400000000000000000000000000000000000000000000",
+ "saltAscii": "FP256X3 v4",
+ "initCodeHash": "0x3e6016f365223f19b923f2b9fa651890899006bceebbce9b0b9c6d557e9d2047",
+ "runtimeKeccak": "0xeffbe5551a627f01e05fe13f512ece01c67fb2d161a379f31087d66c92a8d777",
+ "runtimeBytes": 6844,
+ "source": "contracts/src/fp256/FP256X3.yul",
+ "sourceCommit": "8e65894",
+ "compiler": {
+  "language": "Yul",
+  "solc": "0.8.24+commit.e11b9ed9",
+  "optimizer": true,
+  "runs": 200,
+  "evmVersion": "shanghai"
+ },
+ "txHash": "0x252161af138136f30fce0d5627ddb5435a1322261a28b7686f11005fdb3064fc",
+ "block": 11966114,
+ "verification": {
+  "sourcify": "https://sourcify.dev/server/v2/contract/11155111/0x59D51481cb2EA924EC17FE263cd05b90CEF22383",
+  "sourcifyRepo": "https://repo.sourcify.dev/11155111/0x59D51481cb2EA924EC17FE263cd05b90CEF22383",
+  "blockscout": "https://eth-sepolia.blockscout.com/address/0x59D51481cb2EA924EC17FE263cd05b90CEF22383?tab=contract",
+  "etherscan": "unverified: the Etherscan API has no Yul path"
+ },
+ "abi": "contracts/src/fp256/abiX3.json",
+ "deployedBy": "0xe6306669b2f188d616bfb518e7b9255d001d731d",
+ "gasUsed": 10796734,
+ "explorerTx": "https://sepolia.etherscan.io/tx/0x252161af138136f30fce0d5627ddb5435a1322261a28b7686f11005fdb3064fc"
+}

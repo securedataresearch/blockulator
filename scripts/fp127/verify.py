@@ -59,6 +59,10 @@ def sourcify(chain: int, address: str) -> bool:
         if job.get("isJobCompleted"):
             print(f"sourcify result: {json.dumps(job)[:600]}")
             ok = job.get("contract", {}).get("match") in ("exact_match", "match")
+            if not ok and job.get("error", {}).get("customCode") == "already_verified":
+                # a re-run: the job is refused, so ask Sourcify what it already holds
+                s, t = http("GET", f"{SOURCIFY}/v2/contract/{chain}/{address}")
+                ok = s == 200 and json.loads(t).get("match") in ("exact_match", "match")
             if ok:
                 print(f"sourcify: verified  {SOURCIFY}/v2/contract/{chain}/{address}")
             return ok
