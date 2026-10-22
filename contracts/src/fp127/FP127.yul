@@ -1313,11 +1313,139 @@ object "FP127" {
                 default { w := 0 }
             }
 
-            function lwfsc(x, w) -> wn {
-                let wp1 := add(w, 0x100000000000000000000000000000000)
-                let iv := fp127_inv(wp1)
-                let rr := mulraw(sub(w, fp127_div(x, expf(w))), iv)
-                wn := sub(w, mulraw(rr, add(0x100000000000000000000000000000000, sar(1, mulraw(mulraw(rr, add(wp1, 0x100000000000000000000000000000000)), iv)))))
+            function lnc(r, k) -> L {
+                let j := shl(4, k)
+                if iszero(lt(r, 0x5a827999fcef32422cbec4d9baa55f50)) {
+                    r := shr(126, mul(r, 0x2d413cccfe779921165f626cdd52afa8))
+                    j := add(j, 8)
+                }
+                if iszero(lt(r, 0x4c1bf828c6dc54b7a356918c17217b7b)) {
+                    r := shr(126, mul(r, 0x35d13f32b5a75abd0e69a2ee640b4ff8))
+                    j := add(j, 4)
+                }
+                if iszero(lt(r, 0x45cae0f1f545eb737df23143ac529e48)) {
+                    r := shr(126, mul(r, 0x3ab031b9f7490e4bb40b5d6cdc1b953f))
+                    j := add(j, 2)
+                }
+                if iszero(lt(r, 0x42d561b3e6243d8a62e4adc610aa60d9)) {
+                    r := shr(126, mul(r, 0x3d495f454921b30b1ee7431ebb6603f1))
+                    j := add(j, 1)
+                }
+                let s := sdiv(shl(126, sub(r, 0x40000000000000000000000000000000)), add(r, 0x40000000000000000000000000000000))
+                let s2 := sar(126, mul(s, s))
+                let A := 0x2c8590b21642c8590b21642c8590b21
+                A := add(0x30c30c30c30c30c30c30c30c30c30c3, sar(126, mul(s2, A)))
+                A := add(0x35e50d79435e50d79435e50d79435e5, sar(126, mul(s2, A)))
+                A := add(0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, sar(126, mul(s2, A)))
+                A := add(0x4444444444444444444444444444444, sar(126, mul(s2, A)))
+                A := add(0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec5, sar(126, mul(s2, A)))
+                A := add(0x5d1745d1745d1745d1745d1745d1746, sar(126, mul(s2, A)))
+                A := add(0x71c71c71c71c71c71c71c71c71c71c7, sar(126, mul(s2, A)))
+                A := add(0x9249249249249249249249249249249, sar(126, mul(s2, A)))
+                A := add(0xccccccccccccccccccccccccccccccd, sar(126, mul(s2, A)))
+                A := add(0x15555555555555555555555555555555, sar(126, mul(s2, A)))
+                A := add(0x40000000000000000000000000000000, sar(126, mul(s2, A)))
+                L := add(mul(j, 0xb17217f7d1cf79abc9e3b39803f2f6b), shl(2, sar(125, mul(s, A))))
+            }
+
+            function lnc0(r, k) -> L {
+                let t := sub(r, 0x40000000000000000000000000000000)
+                let P := add(sub(0, 0x193a803a4689b1e7d4fe8cc4f525bca5), sar(126, mul(0x6c624f4ace937ad74c72c1900aebb69, t)))
+                P := add(0x3ecce60a25db5c9757959e657fdbf429, sar(126, mul(P, t)))
+                P := add(0x95fd7e22848b1d16f2f2bb6adf6c7, sar(126, mul(P, t)))
+                L := add(mul(k, 0xb17217f7d1cf79abc9e3b39803f2f6af), shl(2, P))
+            }
+
+            function lnm(v) -> r, k {
+                let n := msb(v)
+                r := shr(sub(n, 126), v)
+                if lt(n, 126) { r := shl(sub(126, n), v) }
+                k := sub(n, 128)
+            }
+
+            function lwf127(x, w) -> wn, au {
+                let aw := absw(w)
+                let ax := absw(x)
+                let nw := msb(aw)
+                let nx := msb(ax)
+                let k := sub(nw, nx)
+                let r := div(shr(3, shl(sub(255, nw), aw)), shr(129, shl(sub(255, nx), ax)))
+                if lt(r, 0x40000000000000000000000000000000) {
+                    r := shl(1, r)
+                    k := sub(k, 1)
+                }
+                let hs := sar(28, add(w, 0x100000000000000000000000000000000))
+                let u := sdiv(shl(100, add(w, lnc(r, k))), hs)
+                let v := sdiv(shl(100, u), hs)
+                let uv := sar(128, mul(u, v))
+                wn := mulraw(w, add(sub(add(sub(0x100000000000000000000000000000000, u), sar(1, uv)), sar(1, sar(128, mul(uv, v)))), sdiv(sar(128, mul(sar(128, mul(u, u)), v)), 3)))
+                au := absw(u)
+            }
+
+            function lwfast(x, w) -> r {
+                r := w
+                for { let i := 0 } lt(i, 4) { i := add(i, 1) } {
+                    let au := 0
+                    r, au := lwf127(x, r)
+                    if lt(au, 0x400000000000000000000000000) { break }
+                }
+            }
+
+            function lwb3(qa, tau) -> R {
+                R := sdiv(add(shl(112, 1890), sar(126, mul(qa, add(shl(112, 4410), sar(126, mul(qa, add(shl(112, 4760), sar(126, mul(qa, add(shl(112, 3052), sar(126, mul(qa, add(shl(112, 1200), sar(126, mul(qa, shl(112, 240)))))))))))))))), 1440)
+                R := add(sdiv(add(shl(112, 105), sar(126, mul(qa, add(shl(112, 210), sar(126, mul(qa, add(shl(112, 190), sar(126, mul(qa, add(shl(112, 96), sar(126, mul(qa, shl(112, 24))))))))))))), 120), sar(126, mul(tau, R)))
+                R := add(sdiv(add(shl(112, 15), sar(126, mul(qa, add(shl(112, 25), sar(126, mul(qa, add(shl(112, 18), sar(126, mul(qa, shl(112, 6)))))))))), 24), sar(126, mul(tau, R)))
+            }
+
+            function lwbs128(qa, tau) -> S {
+                S := add(sdiv(add(shl(112, 3), sar(126, mul(qa, add(shl(112, 4), sar(126, mul(qa, shl(112, 2))))))), 6), sar(126, mul(tau, lwb3(qa, tau))))
+                S := add(sar(1, add(shl(112, 1), sar(14, qa))), sar(126, mul(tau, S)))
+                S := add(shl(112, 1), sar(126, mul(tau, S)))
+            }
+
+            function lwq128(Q, ep, sg, Y, k) -> Qn, at {
+                let qa := shr(sub(sub(0, ep), 126), Q)
+                if sg { qa := sub(0, qa) }
+                let j := 126
+                if qa { j := sub(126, msb(absw(qa))) }
+                let K := add(2, div(130, add(j, 2)))
+                if gt(K, 35) { K := 35 }
+                let u := 0x40000000000000000000000000000000
+                for { let i := K } gt(i, 2) { i := sub(i, 1) } {
+                    u := add(0x40000000000000000000000000000000, sdiv(sar(126, mul(qa, u)), i))
+                }
+                let G := add(0x40000000000000000000000000000000, sar(127, mul(sub(qa, 0x40000000000000000000000000000000), u)))
+                let E := add(add(0x40000000000000000000000000000000, qa), sar(127, mul(qa, sar(126, mul(qa, u)))))
+                let Rr := divu(shl(add(2, k), hmul(mul(Q, Q), shl(130, G))), Y)
+                let rho := sub(Rr, 0x100000000000000000000000000000000)
+                let tau := sdiv(shl(126, sar(128, mul(rho, G))), shr(128, mul(E, Rr)))
+                Qn := sub(Q, sar(126, mul(Q, sar(112, mul(tau, lwbs128(qa, tau))))))
+                at := absw(tau)
+            }
+
+            function lwbr(q, sg) -> w {
+                let nb := msb(q)
+                let Y := shl(sub(254, nb), q)
+                let ey := sub(nb, 510)
+                let k := sub(2, and(ey, 1))
+                let eqs := sar(1, add(sub(ey, 254), k))
+                let ep := add(eqs, 128)
+                let P := isqrt(shr(add(1, k), Y))
+                let p := shr(sub(sub(0, ep), 126), P)
+                let s0 := add(0x40000000000000000000000000000000, div(mul(11, shr(126, mul(p, p))), 72))
+                switch sg
+                case 0 { s0 := sub(s0, div(p, 3)) }
+                default { s0 := add(s0, div(p, 3)) }
+                let Q := shr(126, mul(P, s0))
+                for { let i := 0 } lt(i, 4) { i := add(i, 1) } {
+                    let at := 0
+                    Q, at := lwq128(Q, ep, sg, Y, k)
+                    if lt(at, 0x4000000000000000000000000) { break }
+                }
+                let qw := shl(2, shr(sub(sub(0, ep), 126), Q))
+                switch sg
+                case 0 { w := sub(qw, 0x100000000000000000000000000000000) }
+                default { w := sub(sub(0, 0x100000000000000000000000000000000), qw) }
             }
 
             function lwfin(x, w) -> r {
@@ -1354,18 +1482,6 @@ object "FP127" {
                 q := or(shl(130, ph), shr(126, pl))
             }
 
-            function lwbp(q, principal) -> w {
-                let p := isqrt(shl(1, q))
-                let p2 := mulraw(p, p)
-                let p3 := mulraw(p2, p)
-                let p4 := mulraw(p2, p2)
-                let odd := add(p, div(mul(p3, 11), 72))
-                let even := add(div(p2, 3), div(mul(p4, 43), 540))
-                switch principal
-                case 1 { w := sub(sub(odd, even), 0x100000000000000000000000000000000) }
-                default { w := sub(sub(0, add(odd, even)), 0x100000000000000000000000000000000) }
-            }
-
             function fp127_lambertW0(x) -> r {
                 if slt(x, sub(0, 0x5e2d58d8b3bcdf1abadec7829054f90d)) { rev(0x7db3aba7) }
                 // W(x) = x - x^2 + ...: below 2^-65 the x^2 is under a quarter ULP
@@ -1376,95 +1492,40 @@ object "FP127" {
                     leave
                 }
                 let w := 0
-                // the Halley steps the seed needs (scripts/fp127/generators/precise_model.py lambertw)
-                let n := 3
-                switch or(lt(absw(x), 0x8000000000000000000000000000000), and(slt(x, 0), sgt(x, sub(0, 0x40000000000000000000000000000000))))
+                switch slt(x, 0x20000000000000000000000000000000)
                 case 1 {
-                    // the origin series, -1/4 < x < 2^-5; its error is about 8/3 x^4
+                    if slt(x, sub(0, 0x2f16ac6c59de6f8d5d6f63c1482a7c86)) {
+                        r := lwfin(x, lwbr(lwq(x), 0))
+                        leave
+                    }
+                    // the origin cubic, |x| < 0.184; its error is about 8/3 x^3 relative
                     let x2 := mulraw(x, x)
                     w := add(sub(x, x2), mulraw(x2, add(x, sar(1, x))))
-                    if lt(absw(x), 0x8000000000000000000000000000000) {
-                        n := 2
-                        if lt(absw(x), 0x80000000000000000000000000000) { n := 1 }
-                        if lt(absw(x), 0x800000000000000000000000) { n := 0 }
-                    }
+                    if lt(absw(x), 0x8000000000000000000000) { r := lwfin(x, w) leave }
                 }
                 default {
-                    switch slt(x, 0)
-                    case 1 {
-                        let qq := lwq(x)
-                        if lt(qq, 0x1000000000000000000000000000000000000000000000000000000) {
-                            r := lwfin(x, lwbp(qq, 1))
-                            leave
-                        }
-                        let q := add(0x100000000000000000000000000000000, mulraw(x, 0x2b7e151628aed2a6abf7158809cf4f3c7))
-                        if slt(q, 0) { q := 0 }
-                        let p := fp127_sqrt(shl(1, q))
-                        let p2 := mulraw(p, p)
-                        w := sub(p, 0x100000000000000000000000000000000)
-                        w := sub(w, div(p2, 3))
-                        w := add(w, div(mul(mulraw(p2, p), 11), 72))
-                        // 1 + e x below 2^-8: two steps; below 2^-28: one
-                        if lt(qq, 0x100000000000000000000000000000000000000000000000000000000000000) {
-                            n := 2
-                            if lt(qq, 0x1000000000000000000000000000000000000000000000000000000000) { n := 1 }
-                        }
-                    }
-                    default {
-                        // ln(1 + x); for x within ONE of the top of the range 1 + x would
-                        // wrap, and ln(x) is the same seed to far more bits than needed.
-                        let xp := x
-                        if slt(x, 0x7ffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffff) { xp := add(x, 0x100000000000000000000000000000000) }
-                        let l := lnf(xp)
-                        let l1 := lnf(add(l, 0x100000000000000000000000000000000))
-                        w := mulraw(l, sub(0x100000000000000000000000000000000, fp127_div(l1, add(l, 0x200000000000000000000000000000000))))
-                    }
+                    let rr, kk := lnm(add(0x100000000000000000000000000000000, x))
+                    let L := lnc0(rr, kk)
+                    rr, kk := lnm(add(0x100000000000000000000000000000000, L))
+                    let l1 := lnc0(rr, kk)
+                    let t := sdiv(shl(100, l1), shr(28, add(0x200000000000000000000000000000000, L)))
+                    w := sub(L, shr(110, mul(shr(18, L), t)))
                 }
-                for {} n { n := sub(n, 1) } { w := lwfsc(x, w) }
-                r := lwfin(x, w)
-            }
-
-            function lwm1(lx, w) -> wn {
-                let f := sub(add(w, lnf(sub(0, w))), lx)
-                let iv := fp127_inv(add(w, 0x100000000000000000000000000000000))
-                let sn := mulraw(mulraw(w, f), iv)
-                wn := sub(w, mulraw(sn, sub(0x100000000000000000000000000000000, sar(1, mulraw(mulraw(f, iv), iv)))))
+                r := lwfin(x, lwfast(x, w))
             }
 
             function fp127_lambertWm1(x) -> r {
                 if slt(x, sub(0, 0x5e2d58d8b3bcdf1abadec7829054f90d)) { rev(0x7db3aba7) }
                 if iszero(slt(x, 0)) { rev(0x7db3aba7) }
-                let w := 0
-                let n := 3
-                let lx := lnf(sub(0, x))
-                switch slt(x, sub(0, 0x40000000000000000000000000000000))
-                case 1 {
-                    let qq := lwq(x)
-                    if lt(qq, 0x1000000000000000000000000000000000000000000000000000000) {
-                        r := lwfin(x, lwbp(qq, 0))
-                        leave
-                    }
-                    let q := add(0x100000000000000000000000000000000, mulraw(x, 0x2b7e151628aed2a6abf7158809cf4f3c7))
-                    let p := fp127_sqrt(shl(1, q))
-                    let p2 := mulraw(p, p)
-                    w := sub(sub(0, 0x100000000000000000000000000000000), p)
-                    w := sub(w, div(p2, 3))
-                    w := sub(w, div(mul(mulraw(p2, p), 11), 72))
-                    // 1 + e x below 2^-8: two steps; below 2^-28: one
-                    if lt(qq, 0x100000000000000000000000000000000000000000000000000000000000000) {
-                        n := 2
-                        if lt(qq, 0x1000000000000000000000000000000000000000000000000000000000) { n := 1 }
-                    }
+                if slt(x, sub(0, 0x46a202a286cda7540c2715a1ec3fbaca)) {
+                    r := lwfin(x, lwbr(lwq(x), 1))
+                    leave
                 }
-                default {
-                    let ll := lnf(sub(0, lx))
-                    w := add(sub(lx, ll), fp127_div(ll, lx))
-                    // the asymptotic seed: two steps for -x below 2^-8, four from 2^-4
-                    if sgt(x, sub(0, 0x1000000000000000000000000000000)) { n := 2 }
-                    if slt(x, sub(0, 0x10000000000000000000000000000000)) { n := 4 }
-                }
-                for {} n { n := sub(n, 1) } { w := lwm1(lx, w) }
-                r := lwfin(x, w)
+                let rr, kk := lnm(sub(0, x))
+                let lx := lnc0(rr, kk)
+                rr, kk := lnm(sub(0, lx))
+                let ll := lnc0(rr, kk)
+                r := lwfin(x, lwfast(x, add(sub(lx, ll), sdiv(shl(100, ll), sar(28, lx)))))
             }
 
             function exp2g(t) -> v {

@@ -30,13 +30,13 @@ The v5 kernels work on a double word (DW): a pair (hi, lo) read as
             double word is skipped. fastpow checks the bound against the
             true error and the result against op_pow / op_cbrt.
 
-  lambertw  Lambert W's one-word iterations in real arithmetic: each seed,
-            the Halley steps the Yul gives it, and the correct bits left for
-            the double-word step lwfin, -log2(|w - W| max(1, 1/|1 + W|) /
-            max(1, |W|)), worst over a grid of d points per octave. The
-            one-word arithmetic itself stops near 126 bits; every region must
-            reach 120 so lwfin, which squares the error, lands far below the
-            grid (v4 ran four doubling FSC steps and an Iacono-Boyd step).
+  lambertw  Lambert W's one-word stages in integers, as the Yul runs them:
+            the seeds (a crude logarithm), the fourth-order log-form steps
+            at 2^-126 or the sixth-order steps in q = 1 + W near -1/e, and
+            the correct bits left for the double-word step lwfin,
+            -log2(|w - W| / max(1, |W|)), with where lwfin's Newton step
+            lands, -log2(err^2 / |1 + W|), worst over a grid of d points per
+            octave: at least 88 before and 176 after in every region.
 
 Every product floors, every shift drops bits below the grid, exactly as the
 Yul; Python's >> floors signed integers as Yul's sar does.
@@ -398,76 +398,212 @@ def fastpow(n=20000):
 
 
 # ---------------------------------------------------------------------------
-# Lambert W: seeds and Halley step counts (real arithmetic)
+# Lambert W: the one-word stages before lwfin, as the Yul forms them (v6)
 # ---------------------------------------------------------------------------
 
+LN2_128 = 0xb17217f7d1cf79abc9e3b39803f2f6af
+SQRT2_126 = 0x5a827999fcef32422cbec4d9baa55f50
+E_254 = 0xadf85458a2bb4a9aafdc5620273d3cf1d8b9c583ce2d3695a9e13641146433fb
+
+
+def sdiv(a, b):
+    """Yul's sdiv: truncation toward zero."""
+    q = abs(a) // abs(b)
+    return -q if (a < 0) != (b < 0) else q
+
+
+T_STAGES = [(0x5a827999fcef32422cbec4d9baa55f50, 0x2d413cccfe779921165f626cdd52afa8, 8),
+            (0x4c1bf828c6dc54b7a356918c17217b7b, 0x35d13f32b5a75abd0e69a2ee640b4ff8, 4),
+            (0x45cae0f1f545eb737df23143ac529e48, 0x3ab031b9f7490e4bb40b5d6cdc1b953f, 2),
+            (0x42d561b3e6243d8a62e4adc610aa60d9, 0x3d495f454921b30b1ee7431ebb6603f1, 1)]
+ATANH_C = [0x2c8590b21642c8590b21642c8590b21, 0x30c30c30c30c30c30c30c30c30c30c3, 0x35e50d79435e50d79435e50d79435e5,
+           0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c4, 0x4444444444444444444444444444444, 0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec5,
+           0x5d1745d1745d1745d1745d1745d1746, 0x71c71c71c71c71c71c71c71c71c71c7, 0x9249249249249249249249249249249,
+           0xccccccccccccccccccccccccccccccd, 0x15555555555555555555555555555555, 0x40000000000000000000000000000000]
+LN2_124 = 0xb17217f7d1cf79abc9e3b39803f2f6b
+LNC0 = [0x6c624f4ace937ad74c72c1900aebb69, -0x193a803a4689b1e7d4fe8cc4f525bca5, 0x3ecce60a25db5c9757959e657fdbf429, 0x95fd7e22848b1d16f2f2bb6adf6c7]
+
+
+def lw_lnc(r, k):
+    """The Yul's lnc: k ln 2 + ln r at 2^-128, r in [2^126, 2^127): four reduction stages, 12 odd terms."""
+    j = 16 * k
+    for T, I, dj in T_STAGES:
+        if r >= T:
+            r = (r * I) >> 126
+            j += dj
+    s = sdiv((r - (1 << 126)) << 126, r + (1 << 126))
+    s2 = (s * s) >> 126
+    A = ATANH_C[0]
+    for c in ATANH_C[1:]:
+        A = c + ((s2 * A) >> 126)
+    return j * LN2_124 + (((s * A) >> 125) << 2)
+
+
+def lw_lnc0(r, k):
+    """The Yul's lnc0: the crude logarithm for the seeds (a degree-3 fit, 2^-10.8)."""
+    t = r - (1 << 126)
+    P = LNC0[0]
+    for c in LNC0[1:]:
+        P = c + ((P * t) >> 126)
+    return k * LN2_128 + (P << 2)
+
+
+def lw_lnm(v):
+    n = msb(v)
+    r = v >> (n - 126) if n >= 126 else v << (126 - n)
+    return r, n - 128
+
+
+def lw_f127(x, w):
+    """The Yul's lwf127: the fourth-order log-form step at 2^-126, (w', |u| 2^128)."""
+    aw, ax = abs(w), abs(x)
+    nw, nx = msb(aw), msb(ax)
+    k = nw - nx
+    r = ((aw << (255 - nw)) >> 3) // ((ax << (255 - nx)) >> 129)
+    if r < 1 << 126:
+        r <<= 1
+        k -= 1
+    hs = (w + ONE) >> 28
+    u = sdiv((w + lw_lnc(r, k)) << 100, hs)
+    v = sdiv(u << 100, hs)
+    uv = (u * v) >> 128
+    fac = ONE - u + (uv >> 1) - (((uv * v) >> 128) >> 1) + sdiv((((u * u) >> 128) * v) >> 128, 3)
+    return (w * fac) >> 128, abs(u)
+
+
+def lw_fast(x, w):
+    n = 0
+    for _ in range(4):
+        w, au = lw_f127(x, w)
+        n += 1
+        if au < 1 << 106:
+            break
+    return w, n
+
+
+def lw_bs128(qa, tau):
+    C = lambda n: n << 112
+    m = lambda a, b: (a * b) >> 126
+    h = lambda co: __import__("functools").reduce(lambda acc, cc: C(cc) + m(qa, acc), co[1:], C(co[0]))
+    v = sdiv(h([240, 1200, 3052, 4760, 4410, 1890]), 1440)
+    v = sdiv(h([24, 96, 190, 210, 105]), 120) + m(tau, v)
+    v = sdiv(h([6, 18, 25, 15]), 24) + m(tau, v)
+    v = sdiv(h([2, 4, 3]), 6) + m(tau, v)
+    v = ((C(1) + (qa >> 14)) >> 1) + m(tau, v)
+    return C(1) + m(tau, v)
+
+
+def lw_q128(Q, ep, sg, Y, k):
+    """The Yul's lwq128 (FP256's): (Q', |tau| 2^126)."""
+    one = 1 << 126
+    qa = Q >> (-ep - 126)
+    if sg:
+        qa = -qa
+    j = 126 - msb(abs(qa)) if qa else 126
+    Kt = min(2 + 130 // (j + 2), 35)
+    u = one
+    for i in range(Kt, 2, -1):
+        u = one + sdiv((qa * u) >> 126, i)
+    G = one + (((qa - one) * u) >> 127)
+    E = one + qa + ((qa * ((qa * u) >> 126)) >> 127)
+    Rr = ((((Q * Q * G) >> 126) << (2 + k)) << 128) // Y
+    rho = Rr - ONE
+    tau = sdiv(((rho * G) >> 128) << 126, (E * Rr) >> 128)
+    return Q - ((Q * ((tau * lw_bs128(qa, tau)) >> 112)) >> 126), abs(tau)
+
+
+def lw_q(x):
+    """The Yul's lwq: 1 + e x at 2^-256, floored (0 < x + 1/e)."""
+    return ((x * E_254) >> 126) & M256
+
+
+def lw_br(q, sg):
+    """The Yul's lwbr: w = -1 +- q at 2^-128 from q = 1 + e x at 2^-256, and the step count."""
+    nb = msb(q)
+    Y = q << (254 - nb)
+    ey = nb - 510
+    k = 2 - (ey & 1)
+    eq = (ey - 254 + k) >> 1
+    ep = eq + 128
+    n = Y >> (1 + k)
+    P = int(msqrt(mpf(n)))
+    while P * P > n:
+        P -= 1
+    while (P + 1) * (P + 1) <= n:
+        P += 1
+    p = P >> (-ep - 126)
+    s0 = (1 << 126) + (11 * ((p * p) >> 126)) // 72
+    s0 = s0 + p // 3 if sg else s0 - p // 3
+    Q = (P * s0) >> 126
+    cnt = 0
+    for _ in range(4):
+        Q, at = lw_q128(Q, ep, sg, Y, k)
+        cnt += 1
+        if at < 1 << 102:
+            break
+    qw = (Q >> (-ep - 126)) << 2
+    return (-ONE - qw if sg else qw - ONE), cnt
+
+
 def lw_w0(x):
-    """W0's seed and Halley step count, as fp127_lambertW0 chooses them."""
-    ax = abs(x)
-    if ax < mpf(2) ** -5 or -mpf(1) / 4 < x < 0:
-        w = x - x * x + x * x * (x + x / 2)
-        n = 3 if ax >= mpf(2) ** -5 else 2 if ax >= mpf(2) ** -13 else 1 if ax >= mpf(2) ** -33 else 0
-        return w, n
-    if x < 0:
-        q = 1 + E_ * x
-        p = msqrt(2 * q)
-        n = 3 if q >= mpf(2) ** -8 else 2 if q >= mpf(2) ** -28 else 1
-        return -1 + p - p * p / 3 + p ** 3 * 11 / 72, n
-    lg = log(1 + x)
-    return lg * (1 - log(1 + lg) / (lg + 2)), 3
+    """W0's one-word stages, as fp127_lambertW0 runs them: (w before lwfin, steps)."""
+    if x < 0x20000000000000000000000000000000:
+        if x < -0x2f16ac6c59de6f8d5d6f63c1482a7c86:
+            return lw_br(lw_q(x), 0)
+        x2 = (x * x) >> 128
+        w = x - x2 + ((x2 * (x + (x >> 1))) >> 128)
+        if abs(x) < 1 << 87:
+            return w, 0
+        return lw_fast(x, w)
+    L = lw_lnc0(*lw_lnm(ONE + x))
+    l1 = lw_lnc0(*lw_lnm(ONE + L))
+    t = sdiv(l1 << 100, (2 * ONE + L) >> 28)
+    return lw_fast(x, L - (((L >> 18) * t) >> 110))
 
 
 def lw_wm1(x):
-    """W-1's seed and Halley step count, as fp127_lambertWm1 chooses them."""
-    if x < -mpf(1) / 4:
-        q = 1 + E_ * x
-        p = msqrt(2 * q)
-        n = 3 if q >= mpf(2) ** -8 else 2 if q >= mpf(2) ** -28 else 1
-        return -1 - p - p * p / 3 - p ** 3 * 11 / 72, n
-    lx = log(-x)
-    ll = log(-lx)
-    return lx - ll + ll / lx, 4 if x < -mpf(2) ** -4 else 3 if x <= -mpf(2) ** -8 else 2
-
-
-def lw_halley0(x, w):
-    """lwfsc: Halley on w e^w - x, f''/f' = (w + 2)/(w + 1)."""
-    iv = 1 / (w + 1)
-    r = (w - x * exp(-w)) * iv
-    return w - r * (1 + r * (w + 2) * iv / 2)
-
-
-def lw_halleym1(lx, w):
-    """lwm1: Halley on w + ln(-w) - ln(-x)."""
-    f = w + log(-w) - lx
-    iv = 1 / (w + 1)
-    return w - f * w * iv * (1 - f * iv * iv / 2)
+    """W-1's one-word stages, as fp127_lambertWm1 runs them."""
+    if x < -0x46a202a286cda7540c2715a1ec3fbaca:
+        return lw_br(lw_q(x), 1)
+    lx = lw_lnc0(*lw_lnm(-x))
+    ll = lw_lnc0(*lw_lnm(-lx))
+    return lw_fast(x, lx - ll + sdiv(ll << 100, lx >> 28))
 
 
 def lw_measure(d=8):
+    """The correct bits lwfin starts from, -log2(|w - W| / max(1, |W|)), and
+    where its Newton step lands, -log2(err^2 / |1 + W|), worst over a grid
+    of d points per octave, by region and step count: every region must
+    reach 88 before (the fast stage stops at a step that starts within
+    2^-22; near -1/e the word's 2^-128 grid itself, q = 1 + W being within
+    2^-124 q) and 176 after, far below the grid."""
     mp.dps = 300
-    nie = -1 / E_
-    pos = [mpf(2) ** (k / d) for k in range(-65 * d, 127 * d)]
-    neg = [-mpf(2) ** (-k / d) for k in range(2 * d, 65 * d)]
-    mid = [-mpf(1) / 4 + (nie + mpf(1) / 4) * (1 - mpf(2) ** -(k / d)) for k in range(1, 40 * d)]
-    near = [x for x in ((mpf(2) ** (-k / d) - 1) / E_ for k in range(1, 40 * d)) if x < -mpf(1) / 4]
-    small = [-mpf(2) ** (-k / d) for k in range(2 * d, 128 * d)]
-    for name, xs, seed, step, br in (
-            ("W0, x > 0", pos, lw_w0, lw_halley0, 0), ("W0, -1/4 < x < 0", neg, lw_w0, lw_halley0, 0),
-            ("W0, -1/e < x <= -1/4", mid + near, lw_w0, lw_halley0, 0),
-            ("W-1, -1/4 <= x < 0", small, lw_wm1, lw_halleym1, -1),
-            ("W-1, -1/e < x < -1/4", mid + near, lw_wm1, lw_halleym1, -1)):
+    emin = -0x5e2d58d8b3bcdf1abadec7829054f90d
+    pos = [fx(mpf(2) ** (k / d), 128) for k in range(-65 * d, 127 * d)]
+    neg = [-fx(mpf(2) ** (-k / d), 128) for k in range(2 * d, 65 * d)]
+    mid = [emin + int((mpf(-emin) - mpf(2) ** 125) * (1 - mpf(2) ** -(k / d))) for k in range(1, 40 * d)]
+    near = [emin + int(mpf(2) ** (128 - k / d)) for k in range(1, 128 * d) if emin + int(mpf(2) ** (128 - k / d)) < -(1 << 126)]
+    small = [-fx(mpf(2) ** (-k / d), 128) for k in range(2 * d, 128 * d)]
+    for name, xs, run, br in (
+            ("W0, x > 0", pos, lw_w0, 0), ("W0, -1/4 < x < 0", neg, lw_w0, 0),
+            ("W0, -1/e < x <= -1/4", mid + near, lw_w0, 0),
+            ("W-1, -1/4 <= x < 0", small, lw_wm1, -1),
+            ("W-1, -1/e < x < -1/4", mid + near, lw_wm1, -1)):
         by = {}
         for x in xs:
-            W = lambertw(x, br).real
-            w, n = seed(x)
-            arg = log(-x) if br else x
-            for _ in range(n):
-                w = step(arg, w)
-            err = abs(w - W) * max(1, 1 / abs(1 + W)) / max(1, abs(W))
+            if x < emin or x == 0:
+                continue
+            xv = mpf(x) / ONE
+            W = lambertw(xv, br).real
+            w, n = run(x)
+            err = abs(mpf(w) / ONE - W) / max(1, abs(W))
+            land = err * err / abs(1 + W)
             b = 999.0 if err == 0 else float(-log(err, 2))
-            by[n] = min(by.get(n, 999.0), b)
-        print(f"{name:22s} worst bits before lwfin, by Halley steps: "
-              + ", ".join(f"{n}: {b:.1f}" for n, b in sorted(by.items())))
+            b2 = 999.0 if land == 0 else float(-log(land, 2))
+            cur = by.get(n, (999.0, 999.0))
+            by[n] = (min(cur[0], b), min(cur[1], b2))
+        print(f"{name:22s} worst bits before lwfin (and after its squaring, err^2 / |1 + W|), by one-word steps: "
+              + ", ".join(f"{n}: {b:.1f} ({b2:.0f})" for n, (b, b2) in sorted(by.items())))
     mp.dps = 220
 
 

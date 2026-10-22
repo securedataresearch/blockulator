@@ -82,7 +82,8 @@ def match_tests() -> list[str]:
     """forge's --match-test for the selected ops (every test when all are selected)."""
     if SEL is None:
         return []
-    return ["--match-test", "^test_(noop|(fp256|fp127)_(" + "|".join(sorted(SEL)) + ")x?)$"]
+    # forge 1.7 matches the signature, test_x(), so the end allows the parentheses
+    return ["--match-test", "^test_(noop|(fp256|fp127)_(" + "|".join(sorted(SEL)) + ")x?)(\\(\\))?$"]
 
 
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "erfc", "normCdf", "compound",
