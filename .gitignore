@@ -34,3 +34,6 @@ test/sweep/probe/
 test/profile/gen/
 out-viair/
 cache-viair/
+test/osaka/gen/
+out-osaka/
+cache-osaka/

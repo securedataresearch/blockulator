@@ -13,11 +13,27 @@ Usage:
     uv run scripts/fp127/gen.py [--lib ...] --probe-lib <path>  # test only: gas probes on
                                                                # the profiled helpers
     (add --forced to either for the forced second stage, as --wide-lib)
+    uv run scripts/fp127/gen.py [--lib ...] --evm osaka [--check]
+                                                               # the osaka build: each object and an
+                                                               # opt-in inline library under osaka/,
+                                                               # msb (and ctz) on the CLZ opcode
+    uv run scripts/fp127/gen.py [--lib ...] [--evm osaka] --lib-user <path>
+                                                               # test only: an external wrapper of
+                                                               # the inline library, one function per export
+    uv run scripts/fp127/gen.py --objects [fp127|fp256]        # the deployed objects' make stems
+                                                               # (fp127 fp256 fp256x ...); the
+                                                               # Makefile loops over this list
 
 An export may carry `/// @object <Name>` to go into a second deployed object
 (FP256's release four splits FP256 and FP256X). Each object then holds only
 its exports and their callees and gets its own interface and ABI; the
 inline library holds every export.
+
+`--evm osaka` is the second build of every deployed object. The source is
+shared; only the leading-bit count changes: msb(x) becomes 255 - clz(x)
+(EIP-7939, Fusaka/Osaka, solc >= 0.8.31) behind the same zero guard, and
+FP256's ctz uses clz directly. Its outputs go to osaka/ beside the source and
+never touch the shanghai files, whose bytes stay as they are.
 
 The generator is deterministic. CI runs --check so the committed outputs can
 never drift from the source.
@@ -25,6 +41,7 @@ never drift from the source.
 from __future__ import annotations
 
 import argparse
+import os
 import difflib
 import json
 import re
@@ -37,6 +54,33 @@ from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
 SOLIDITY_PRAGMA = "^0.8.24"
+# The target. "shanghai" is the default build; "osaka" rewrites the helpers
+# in OSAKA_CLZ (osaka_body) and writes to OSAKA_DIR (see main).
+EVM = "shanghai"
+OSAKA_DIR = "osaka"
+OSAKA_PRAGMA = "^0.8.31"   # the first solc with the clz builtin
+# The osaka bodies of the leading-bit helpers: msb(x) = 255 - clz(x), and
+# ctz on the lowest set bit isolated. Both keep f(0) = 0, the shanghai
+# helpers' value at zero, since 255 - clz(0) wraps to 2^256 - 1. The guard
+# keeps the shanghai body's shape for the optimizer: where the shanghai body
+# leaves early (FP256's msb, which #128 wrote so that the optimizer would
+# not inline it at its 35 sites) the osaka one does too and stays a function;
+# where it does not (FP127's binary search, inlined) the osaka body is a
+# plain `if` and is inlined, so constant arguments still fold.
+OSAKA_CLZ = {"msb": "clz(x)", "ctz": "clz(and(x, sub(0, x)))"}
+
+
+def osaka_body(name: str, shanghai: str) -> str:
+    expr = OSAKA_CLZ[name]
+    if re.search(r"\bleave\b", strip_comments(shanghai)):
+        body = (f"    // osaka: CLZ (EIP-7939); {name}(0) = 0, and the leave keeps it a function\n"
+                f"    if iszero(x) {{ leave }}\n"
+                f"    r := sub(255, {expr})")
+    else:
+        body = (f"    // osaka: CLZ (EIP-7939); {name}(0) = 0\n"
+                f"    if x {{ r := sub(255, {expr}) }}")
+    return f"function {name}(x) -> r {{\n{body}\n}}"
+
 
 # One generator, two libraries. Everything that names the library lives here;
 # the parser, validator and emitters are shared.
@@ -47,6 +91,10 @@ LIBS = {
         "one": "int256 internal constant ONE = int256(1) << 128;",
         "iface_notice": "Interface of the deployed FP127 object. Values are signed 127.128\n///         fixed-point: one int256 whose value is raw / 2^128.",
         "lib_notice": "Inlinable FP127: signed 127.128 fixed-point, one int256 per value,\n///         value = raw / 2^128. Every function body is the same Yul that the\n///         deployed FP127 object runs, so the two agree by construction.",
+        "objects": {
+            "FP127": {"iface": "IFP127", "abi": "abi.json",
+                      "salt": {"shanghai": "FP127 v5", "osaka": "FP127 v6 osaka"}},
+        },
     },
     "fp256": {
         "src": ROOT / "contracts" / "src" / "fp256" / "FP256.yul.src",
@@ -56,19 +104,38 @@ LIBS = {
         "lib_notice": "Inlinable FP256: 256-bit binary floating point, one int256 per value\n///         (sign, 19-bit exponent, 236-bit fraction). Every function body is the\n///         same Yul that the deployed FP256 and FP256X objects run, so the three\n///         agree by construction.",
         # release four: two deployed objects from the one source
         "objects": {
-            "FP256": {"iface": "IFP256", "abi": "abi.json"},
+            "FP256": {"iface": "IFP256", "abi": "abi.json",
+                      "salt": {"shanghai": "FP256 v4", "osaka": "FP256 v5 osaka"}},
             "FP256X": {"iface": "IFP256X", "abi": "abiX.json",
+                       "salt": {"shanghai": "FP256X v4", "osaka": "FP256X v5 osaka"},
                        "iface_notice": "Interface of the deployed FP256X object, FP256's extension: the\n///         error function family and Lambert W on the same 256-bit binary\n///         floating point words as IFP256 (sign bit 255, a 19-bit biased\n///         exponent, bias 262143, a 236-bit fraction; zero is the all-zero word)."},
             # #79: the ops FP127 has, two more objects
             "FP256X2": {"iface": "IFP256X2", "abi": "abiX2.json",
+                        "salt": {"shanghai": "FP256X2 v4", "osaka": "FP256X2 v5 osaka"},
                         "iface_notice": "Interface of the deployed FP256X2 object, FP256's second extension:\n///         exp2, exp10, log2, log10, log2Up, cbrt and the hyperbolic\n///         functions on the same 256-bit binary floating point words as IFP256."},
             "FP256X3": {"iface": "IFP256X3", "abi": "abiX3.json",
+                        "salt": {"shanghai": "FP256X3 v4", "osaka": "FP256X3 v5 osaka"},
                         "iface_notice": "Interface of the deployed FP256X3 object, FP256's third extension:\n///         the algebraic ops FP127 has (min, max, clamp, avg, dist,\n///         zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg,\n///         hypot) on the same 256-bit binary floating point words as IFP256."},
         },
         "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
     },
 }
 LIB = LIBS["fp127"]
+# The objects table above is the one list of deployed objects: each object's
+# name, its library and its CREATE2 salt in each build. The Makefile loops
+# over `gen.py --objects`, and stdjson.py and deploy.py read DEPLOYED, so a
+# re-layout (or a new salt) edits only the table.
+#   key (FP_LIB, the make target stem) -> (object name, library, salts)
+DEPLOYED = {name.lower(): (name, lib, meta["salt"])
+            for lib, cfg in LIBS.items() for name, meta in cfg["objects"].items()}
+
+
+def print_objects(lib: str = "all") -> None:
+    """The make target stems of the deployed objects (of one library, or
+    all), space-separated."""
+    print(" ".join(k for k, (_, l, _) in DEPLOYED.items() if lib in ("all", l)))
+
+
 SRC = LIB["src"]
 OUT_DIR = SRC.parent
 OBJECT_NAME = LIB["object"]
@@ -365,7 +432,25 @@ def closure(src: Source, root: str) -> list[Func]:
 # ---------------------------------------------------------------------------
 
 def banner() -> str:
+    if EVM == "osaka":
+        return (f"// GENERATED by scripts/fp127/gen.py --evm osaka from {SRC.name}. Do not edit.\n"
+                "// The osaka build: msb uses the CLZ opcode (EIP-7939). Compile with\n"
+                "// evmVersion osaka (solc >= 0.8.31) and deploy only where CLZ exists.\n")
     return f"// GENERATED by scripts/fp127/gen.py from {SRC.name}. Do not edit.\n"
+
+
+def to_osaka(src: Source) -> Source:
+    """The same source with the leading-bit helpers on CLZ (osaka_body)."""
+    funcs = dict(src.funcs)
+    for name in OSAKA_CLZ:
+        if name not in funcs:
+            continue
+        f = funcs[name]
+        text = osaka_body(name, f.text)
+        open_idx = text.index("{")
+        calls = set(_CALL_RE.findall(strip_comments(text[open_idx:])))
+        funcs[name] = Func(f.name, f.params, f.rets, text, calls)
+    return Source(src.header, src.errors, funcs, src.exports)
 
 
 def _indent(text: str, n: int) -> str:
@@ -647,6 +732,10 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool = False,
             what += ", with the rounding test forced to fail (every call takes the second stage)"
         notice = (f"TEST ONLY. {LIB_NAME} instrumented: {what}.\n///         "
                   "Results are unchanged. Generated for make sweep / make profile; never\n///         deploy or import it.")
+    elif EVM == "osaka":
+        notice = (LIB["lib_notice"] + "\n///         The osaka build: msb uses the CLZ opcode (EIP-7939). It needs\n"
+                  "///         solc >= 0.8.31 with evmVersion osaka, and a chain with CLZ: on\n"
+                  f"///         one without it every call fails. {LIB_NAME} is the default.")
     elif wide:
         notice = "TEST ONLY. " + LIB_NAME + " with the rounding test forced to fail, so every\n///         correctly rounded op returns its wide second stage. Generated for\n///         make sweep's second-stage pass; never deploy or import it."
     else:
@@ -656,8 +745,9 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool = False,
     if count or probe:
         dev = (f"Not memory-safe: the records live at {COUNT_SLOT:#x} and above, which the\n"
                "///      calling test pre-expands.")
+    pragma = OSAKA_PRAGMA if EVM == "osaka" else SOLIDITY_PRAGMA
     return f"""// SPDX-License-Identifier: MIT
-pragma solidity {SOLIDITY_PRAGMA};
+pragma solidity {pragma};
 {banner()}
 /// @title {lib_name}
 /// @notice {notice}
@@ -721,6 +811,44 @@ def emit_ops(src: Source) -> str:
     return json.dumps({"errors": src.errors, "ops": ops}, indent=2, ensure_ascii=False) + "\n"
 
 
+def emit_lib_user(src: Source, path: Path, lib_name: str, lib_path: Path) -> str:
+    """Test only: an external contract with one function per export that
+    calls the inline library, so a test can call it like the object."""
+    rel = Path(os.path.relpath(lib_path, path.resolve().parent)).as_posix()
+    if not rel.startswith("."):
+        rel = "./" + rel
+    fns = []
+    for e in src.exports:
+        ins = ", ".join(f"{p.type} {p.name}" for p in e.inputs)
+        outs = ", ".join(p.type for p in e.outputs)
+        args = ", ".join(p.name for p in e.inputs)
+        fns.append(f"    function {e.sol_name}({ins}) external pure returns ({outs}) "
+                   f"{{ return {lib_name}.{e.sol_name}({args}); }}")
+    pragma = OSAKA_PRAGMA if EVM == "osaka" else SOLIDITY_PRAGMA
+    return f"""// SPDX-License-Identifier: MIT
+pragma solidity {pragma};
+{banner()}
+import {{{lib_name}}} from "{rel}";
+
+/// @notice TEST ONLY. {lib_name} behind an external call per export.
+contract {path.stem} {{
+{chr(10).join(fns)}
+}}
+"""
+
+
+def osaka_lib_name() -> str:
+    return LIB_NAME + "Osaka"
+
+
+def emit_osaka(src: Source) -> dict[str, str]:
+    """The osaka build's files, by path relative to the source directory:
+    each deployed object and the opt-in inline library."""
+    out = {f"{OSAKA_DIR}/{name}.yul": emit_object(src, name) for name in objects()}
+    out[f"{OSAKA_DIR}/{osaka_lib_name()}.sol"] = emit_library(src, osaka_lib_name())
+    return out
+
+
 def emit_all(src: Source) -> dict[str, str]:
     out = {"ops.json": emit_ops(src)}
     for name, meta in objects().items():
@@ -746,8 +874,17 @@ def main() -> int:
     ap.add_argument("--count-lib", type=Path, default=None, help="write only the test-only library that counts rounding-test fallbacks here")
     ap.add_argument("--probe-lib", type=Path, default=None, help="write only the test-only library with gas probes on the profiled helpers here")
     ap.add_argument("--forced", action="store_true", help="with --count-lib or --probe-lib: also force the rounding test to fail, as --wide-lib")
+    ap.add_argument("--evm", choices=["shanghai", "osaka"], default="shanghai",
+                    help="osaka: write (or --check) the osaka build under osaka/, msb on CLZ")
+    ap.add_argument("--lib-user", type=Path, default=None, help="write only the test-only external wrapper of the inline library here")
+    ap.add_argument("--objects", nargs="?", const="all", choices=["all", *sorted(LIBS)],
+                    help="print the deployed objects (of one library, default all) and exit")
     args = ap.parse_args()
-    global LIB, SRC, OUT_DIR, OBJECT_NAME, LIB_NAME, IFACE_NAME
+    global LIB, SRC, OUT_DIR, OBJECT_NAME, LIB_NAME, IFACE_NAME, EVM
+    if args.objects:
+        print_objects(args.objects)
+        return 0
+    EVM = args.evm
     LIB = LIBS[args.lib]
     SRC = args.src or LIB["src"]
     OUT_DIR = args.out or SRC.parent
@@ -757,6 +894,17 @@ def main() -> int:
     raw = args.src.read_text()
     src = parse(raw)
     validate(src, raw)
+    if EVM == "osaka":
+        src = to_osaka(src)
+    if args.lib_user:
+        if EVM == "osaka":
+            name, lib_path = osaka_lib_name(), OUT_DIR / OSAKA_DIR / f"{osaka_lib_name()}.sol"
+        else:
+            name, lib_path = LIB_NAME, OUT_DIR / f"{LIB_NAME}.sol"
+        args.lib_user.parent.mkdir(parents=True, exist_ok=True)
+        args.lib_user.write_text(emit_lib_user(src, args.lib_user, name, lib_path.resolve()))
+        print(f"wrote {args.lib_user} ({args.lib_user.stem}: wraps {name})")
+        return 0
     if args.wide_lib:
         name = args.wide_lib.stem
         args.wide_lib.parent.mkdir(parents=True, exist_ok=True)
@@ -775,7 +923,7 @@ def main() -> int:
             print(f"wrote {path} ({path.stem}: {kind} on {', '.join(names)}{', rbad forced to 1' if args.forced else ''})")
     if args.count_lib or args.probe_lib:
         return 0
-    outputs = emit_all(src)
+    outputs = emit_osaka(src) if EVM == "osaka" else emit_all(src)
 
     if args.check:
         dirty = False
@@ -790,12 +938,13 @@ def main() -> int:
                 ):
                     sys.stderr.write(line + "\n")
         if dirty:
-            sys.stderr.write(f"run: uv run scripts/fp127/gen.py --lib {args.lib}\n")
+            sys.stderr.write(f"run: uv run scripts/fp127/gen.py --lib {args.lib}{' --evm osaka' if EVM == 'osaka' else ''}\n")
             return 1
-        print(f"gen-check ok: {len(src.exports)} exports, {len(src.funcs)} functions")
+        print(f"gen-check ok{' (osaka)' if EVM == 'osaka' else ''}: {len(src.exports)} exports, {len(src.funcs)} functions")
         return 0
 
     for name, text in outputs.items():
+        (args.out / name).parent.mkdir(parents=True, exist_ok=True)
         (args.out / name).write_text(text)
     print(f"wrote {', '.join(outputs)} ({len(src.exports)} exports, {len(src.funcs)} functions)")
     for e in sorted(src.exports, key=lambda e: int(e.selector, 16)):

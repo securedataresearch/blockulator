@@ -7,11 +7,16 @@ object, and the bytecode proofs built on it.
     uv run scripts/fp127/stdjson.py onchain <rpc> <address>   # compare the live runtime to the artifact
     FP_LIB=fp256 uv run scripts/fp127/stdjson.py artifact     # compile FP256.yul with solc and write out/FP256.yul/FP256.json
     FP_LIB=fp256x uv run scripts/fp127/stdjson.py artifact    # the same for FP256X.yul (release four's second object)
+    FP_EVM=osaka FP_LIB=fp127 uv run scripts/fp127/stdjson.py artifact   # the osaka build of an object:
+                                                      # contracts/src/<lib>/osaka/<Object>.yul -> out/osaka/<Object>.yul/<Object>.json
 
-The input uses language "Yul" and the settings from foundry.toml (solc
-0.8.24, optimizer on, 200 runs, shanghai). `check` is the proof that this
-input reproduces the artifact's init and runtime bytecode exactly; the same
-input is what the explorers receive from verify.py.
+FP_LIB is any key of gen.py's DEPLOYED (the objects table). The shanghai
+input uses language "Yul" and the settings from foundry.toml (solc 0.8.24,
+optimizer on, 200 runs, shanghai); the osaka build (FP_EVM=osaka) the same
+with solc 0.8.38 and evmVersion osaka, the pinned settings of BUILDS below.
+`check` is the proof that this input reproduces the artifact's init and
+runtime bytecode exactly; the same input is what the explorers receive from
+verify.py.
 """
 from __future__ import annotations
 
@@ -25,19 +30,43 @@ from pathlib import Path
 from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
-# FP_LIB=fp256 selects the second library and FP_LIB=fp256x its second
-# object (release four), fp256x2 and fp256x3 its third and fourth (#79);
-# the proofs are otherwise identical
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gen import DEPLOYED  # noqa: E402
+
+# The two pinned builds. shanghai is foundry.toml's default profile and the
+# deployed release; osaka is the CLZ build (gen.py --evm osaka), one pinned
+# solc with the clz builtin. Its sources and artifacts live under osaka/.
+#
+# The osaka build pins solc 0.8.24's default Yul optimizer sequence (STEPS_0824,
+# read out of the 0.8.24 binary). 0.8.26 and later default to a different
+# sequence, which builds the unchanged shanghai FP256.yul at 25,074 bytes
+# against 0.8.24's 24,451, over the 24,576 limit; with this sequence 0.8.38
+# builds it at 24,456 and the osaka FP256 at 24,414. It also keeps the two
+# builds' code shapes alike, so the gas table compares msb and little else.
+STEPS_0824 = ("dhfoDgvulfnTUtnIf[xa[r]EscLMcCTUtTOntnfDIulLculVcul [j]Tpeulxa[rul]xa[r]cLgvif"
+              "CTUca[r]LSsTFOtfDnca[r]Iulc]jmul[jul] VcTOcul jmul")
+BUILDS = {
+    "shanghai": {"solc": "0.8.24", "long": "v0.8.24+commit.e11b9ed9", "evm": "shanghai", "dir": ""},
+    "osaka": {"solc": "0.8.38", "long": "v0.8.38+commit.1835d247", "evm": "osaka", "dir": "osaka/",
+              "steps": STEPS_0824},
+}
+# FP_LIB selects the object (fp127, fp256, fp256x, ...: DEPLOYED's keys) and
+# FP_EVM the build; the proofs are otherwise identical
 LIB = os.environ.get("FP_LIB", "fp127")
-CONTRACT = {"fp127": "FP127", "fp256": "FP256", "fp256x": "FP256X", "fp256x2": "FP256X2", "fp256x3": "FP256X3"}[LIB]
-LIB_DIR = {"fp256x": "fp256", "fp256x2": "fp256", "fp256x3": "fp256"}.get(LIB, LIB)
-SOURCE = ROOT / "contracts" / "src" / LIB_DIR / f"{CONTRACT}.yul"
-ARTIFACT = ROOT / "out" / f"{CONTRACT}.yul" / f"{CONTRACT}.json"
-SOURCE_UNIT = f"contracts/src/{LIB_DIR}/{CONTRACT}.yul"
-SOLC_VERSION = "0.8.24"
-SOLC_LONG = "v0.8.24+commit.e11b9ed9"
-EVM_VERSION = "shanghai"
+EVM = os.environ.get("FP_EVM", "shanghai")
+if LIB not in DEPLOYED or EVM not in BUILDS:
+    sys.exit(f"FP_LIB must be one of {sorted(DEPLOYED)} and FP_EVM one of {sorted(BUILDS)}")
+CONTRACT, LIB_DIR, _ = DEPLOYED[LIB]
+BUILD = BUILDS[EVM]
+SOURCE_UNIT = f"contracts/src/{LIB_DIR}/{BUILD['dir']}{CONTRACT}.yul"
+SOURCE = ROOT / SOURCE_UNIT
+ARTIFACT = ROOT / "out" / BUILD["dir"] / f"{CONTRACT}.yul" / f"{CONTRACT}.json"
+SOLC_VERSION = BUILD["solc"]
+SOLC_LONG = BUILD["long"]
+EVM_VERSION = BUILD["evm"]
 RUNS = 200
+OPTIMIZER_DETAILS = ({"details": {"yul": True, "yulDetails": {"optimizerSteps": BUILD["steps"]}}}
+                     if "steps" in BUILD else {})
 
 
 def std_input() -> dict:
@@ -45,7 +74,7 @@ def std_input() -> dict:
         "language": "Yul",
         "sources": {SOURCE_UNIT: {"content": SOURCE.read_text()}},
         "settings": {
-            "optimizer": {"enabled": True, "runs": RUNS},
+            "optimizer": {"enabled": True, "runs": RUNS, **OPTIMIZER_DETAILS},
             "evmVersion": EVM_VERSION,
             "outputSelection": {"*": {"*": ["evm.bytecode.object", "evm.deployedBytecode.object"]}},
         },
@@ -74,7 +103,8 @@ def find_solc() -> str:
         v = subprocess.run([s, "--version"], capture_output=True, text=True).stdout
         if SOLC_VERSION in v:
             return s
-    sys.exit(f"solc {SOLC_VERSION} not found; run `forge build` once so svm installs it")
+    sys.exit(f"solc {SOLC_VERSION} not found; run `forge build` once so svm installs it"
+             + (" (osaka: `forge build --profile osaka`, or `svm install 0.8.38`)" if EVM == "osaka" else ""))
 
 
 def compile_std(inp: dict) -> tuple[str, str]:
@@ -96,7 +126,7 @@ def cmd_artifact() -> int:
         "abi": [],
         "bytecode": {"object": "0x" + init_s},
         "deployedBytecode": {"object": "0x" + rt_s},
-        "_doc": f"written by scripts/fp127/stdjson.py artifact (FP_LIB={LIB}) from {SOURCE_UNIT} with solc {SOLC_LONG}",
+        "_doc": f"written by scripts/fp127/stdjson.py artifact (FP_LIB={LIB}{' FP_EVM=osaka' if EVM == 'osaka' else ''}) from {SOURCE_UNIT} with solc {SOLC_LONG}",
     }, indent=1) + "\n")
     print(f"wrote {ARTIFACT.relative_to(ROOT)}: init {len(init_s)//2} bytes, runtime {len(rt_s)//2} bytes, keccak {keccak_hex(rt_s)}")
     return 0
