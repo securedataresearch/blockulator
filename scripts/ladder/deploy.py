@@ -20,6 +20,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from Crypto.Hash import keccak
@@ -96,7 +97,12 @@ def cmd_deploy(rpc: str) -> int:
         print(f"{'':16} tx {receipt['transactionHash']} block {int(receipt['blockNumber'], 16)} gasUsed {int(receipt['gasUsed'], 16):,} status {status}")
         if status != 1:
             return 1
-        if not deployed(rpc, c["address"]):
+        # a public RPC can answer from a node a block behind the receipt's
+        for _ in range(10):
+            if deployed(rpc, c["address"]):
+                break
+            time.sleep(3)
+        else:
             print("no code at the predicted address")
             return 1
     return 0
