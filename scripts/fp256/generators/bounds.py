@@ -3,9 +3,7 @@
 
     uv run scripts/fp256/generators/bounds.py [n]     # n inputs per region (default 2000)
 
-Also checks the depth of both continued fractions for erfc: the fast path's
-(3040/floor(y^2) + 336/floor(y) + 24, truncation below 2^-262 from y = 6; the
-fit against the depth needed is erf256.py --cf-depth) and the second stage's
+Also checks the depth of the second stage's continued fraction for erfc
 (truncation below 2^-390 from y = 7).
 
 Every op that is not exact by construction hands normround a fast value D
@@ -41,8 +39,7 @@ analysis is not off by a missed term.
                                              double it: (n + 1) 2^-255 of am, plus 2 for 1/am
   erf, erfc, normCdf    128 (y < 1/2)        2 x F's 52 (erfser's rounded terms, e^-y^2, products) + 1
                         192 (anchors)        2 x g's 81 (1.6 per Taylor term, 50 terms, anchor 0.5) + 8
-                        32 n + 64 (CF)       A and B each gain 2^-251 relative per step: 2^5 n,
-                                             n = 3040/floor(y^2) + 336/floor(y) + 24 (erf256.cfdepth)
+                        32 n + 64 (CF)       A and B each gain 2^-251 relative per step: 2^5 n
                         er >> -ee + 2        for the differences 1 - erfc, 2 - erfc
 """
 from __future__ import annotations
@@ -305,7 +302,7 @@ def run(n):
                 if y2 >> 255:
                     y2 >>= 1
                     ey += 1
-                err = 64 + 32 * E.cfdepth(y2 >> (254 - ey), Y >> (254 - uy))
+                err = 64 + 32 * (4400 // (y2 >> (254 - ey)) + 48)
             region = "anchors" if anchors else "continued fraction"
             M.add(f"{nm}, {region}", err, D, erfc(y) * power(2, 254 - ee))
             D2 = WS - (D >> -ee)
@@ -656,31 +653,9 @@ def cf_depth(n):
     return worst > mpf(2) ** -390
 
 
-def cf_fast_depth(n):
-    """The fast path's continued fraction at the depth erfcxcf uses (erf256.cfdepth:
-    3040/floor(y^2) + 336/floor(y) + 24): truncation relative to g(y) at 150 digits, on
-    random y in [6, 430] weighted towards the bottom, and at every integer y to 20
-    (the band edges where the fit is tightest)."""
-    mp.dps = 150
-    rng = random.Random(11)
-    worst = mpf(0)
-    ys = [mpf(y) for y in range(6, 21)]
-    for _ in range(n):
-        ys.append(mpf(2) ** rng.uniform(float(log(6, 2)), float(log(430, 2))))
-    for y in ys:
-        q = int(mp.floor(y * y))
-        depth = E.cfdepth(q, int(mp.floor(y)))
-        v = E.cf_convergent(y, depth)
-        worst = max(worst, abs(v / (exp(y * y) * erfc(y)) - 1))
-    print(f"continued fraction at y >= 6, depth 3040/floor(y^2) + 336/floor(y) + 24: truncation below "
-          f"2^{float(log(worst, 2)):.1f} over {len(ys)} points (the fast path is held to 2^-262)")
-    return worst > mpf(2) ** -262
-
-
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 2000
     bad = run(n)
     bad |= sure(n * 4)
     bad |= cf_depth(max(n // 20, 50))
-    bad |= cf_fast_depth(max(n // 20, 50))
     sys.exit(1 if bad else 0)

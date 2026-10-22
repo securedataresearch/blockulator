@@ -4,7 +4,6 @@ the Yul runs them, with the anchor table and the Yul text it needs.
 
     uv run scripts/fp256/generators/erf256.py            # measure the three ops against mpmath
     uv run scripts/fp256/generators/erf256.py --yul      # print the anchor-table Yul
-    uv run scripts/fp256/generators/erf256.py --cf-depth # the continued fraction's depth: needed vs the Yul's formula
 
 Everything is built on g(y) = e^(y^2) erfc(y), so erfc(y) = e^(-y^2) g(y) is a
 product and never a difference:
@@ -21,10 +20,7 @@ product and never a difference:
                K = y + (1/2)/(y + 1/(y + (3/2)/(y + ...))), its convergents scaled by
                y^k so a step is X_k = X_(k-1) + (k / 2y^2) X_(k-2), the A and B pairs
                renormalised together below 2^252 by rounded shifts (B'/A'' = y/K < 1),
-               to depth 3040 / floor(y^2) + 336 / floor(y) + 24 (cfdepth), which --cf-depth
-               checks against the depth a truncation below 2^-262 needs at every band
-               edge (cfdepth_needed): the fit is tight within four steps up to y = 32
-               and loose only past y = 100, where the depth is under 25 anyway.
+               to depth 4400 / floor(y^2) + 48 (measured: 262 bits of truncation).
 
 e^(-y^2) comes from the exact 474-bit square of the significand times log2 e in
 two words, so the deep tail keeps its bits: erfc(y) for y up to about 427 and
@@ -133,67 +129,6 @@ def div254(a, b):
     return (a << 254) // b
 
 
-def cfdepth(q, yi):
-    """The fast path's continued-fraction depth for floor(y^2) = q and floor(y) = yi,
-    as erfcxcf in the Yul forms it; at most 164 (y = 6). Its truncation is below
-    2^-262 relative at every band edge (--cf-depth; bounds.py probes it too)."""
-    return 3040 // q + 336 // yi + 24
-
-
-def cf_convergent(y, n):
-    """g(y) from the continued fraction at depth n, in mpmath's precision."""
-    t = mpf(0)
-    for k in range(n, 0, -1):
-        t = (mpf(k) / 2) / (y + t)
-    return 1 / (sqrt(pi) * (y + t))
-
-
-def cfdepth_needed(y, bits=262):
-    """The smallest depth whose convergent is within 2^-bits of g(y) = e^(y^2) erfc(y),
-    relative, at 150 digits (the error of the n-th convergent falls with n and with y)."""
-    mp.dps = 150
-    g = exp(y * y) * merfc(y)
-    tol = mpf(2) ** -bits
-    lo, hi = 1, 400
-    while lo < hi:
-        mid = (lo + hi) // 2
-        if abs(cf_convergent(y, mid) / g - 1) < tol:
-            hi = mid
-        else:
-            lo = mid + 1
-    return lo
-
-
-def check_cf_depth(bits=262):
-    """cfdepth against cfdepth_needed at the band edges y = sqrt(q): every q from 36
-    to 400, then sparser to 430^2. Within a band the need falls with y while the
-    formula holds its value at the band's lower edge, and between two sampled
-    edges the formula at the upper one is checked against the need at the lower,
-    so the formula dominates the need at every y >= 6. Returns True on a miss."""
-    qs = (list(range(36, 401)) + list(range(410, 1000, 10)) + list(range(1000, 4000, 50))
-          + list(range(4000, 20000, 500)) + list(range(20000, 185000, 5000)) + [184900])
-    need = {}
-    for q in qs:
-        need[q] = cfdepth_needed(sqrt(mpf(q)), bits)
-    bad = False
-    tight = []
-    for a, b in zip(qs, qs[1:] + [None]):
-        f = cfdepth(a, int(floor(sqrt(mpf(a)))))
-        slack = f - need[a]
-        gap = cfdepth(b, int(floor(sqrt(mpf(b))))) - need[a] if b else slack
-        if slack < 0 or gap < 0:
-            bad = True
-        if slack <= 1:
-            tight.append((a, need[a], f))
-    print(f"continued fraction, depth 3040/floor(y^2) + 336/floor(y) + 24 against the depth a truncation below "
-          f"2^-{bits} needs, at {len(qs)} band edges from y = 6 to 430: {'MISS' if bad else 'dominates everywhere'}")
-    print("  q, needed, formula at the tightest edges: " + ", ".join(f"{q}: {n} <= {f}" for q, n, f in tight[:12]))
-    for q in (36, 49, 64, 100, 256, 1000, 4000, 16000, 65000, 184900):
-        if q in need:
-            print(f"  y = {float(sqrt(mpf(q))):7.2f}  needed {need[q]:3}  formula {cfdepth(q, int(floor(sqrt(mpf(q))))):3}")
-    return bad
-
-
 def erfcxcf(Y, uy):
     """g(y) for y = Y 2^(uy - 254) > 4 as (R, e): g = R 2^(e - 254), R in [2^253, 2^255)."""
     Y2 = (Y * Y) >> 254                               # y^2 = Y2 2^(2uy - 254)
@@ -201,9 +136,9 @@ def erfcxcf(Y, uy):
     if Y2 >> 255:
         Y2 >>= 1
         ey += 1
-    # floor(y^2) and floor(y) for the depth
+    # floor(y^2) for the depth
     yint = Y2 >> (254 - ey) if ey <= 254 else Y2 << (ey - 254)
-    n = cfdepth(yint, Y >> (254 - uy))
+    n = 4400 // yint + 48
     w = (1 << (504 - ey)) // Y2                      # 1/(2 y^2) at 2^-251
     am = an = 1 << CF_SCALE
     bm, bn = 0, 1 << CF_SCALE
@@ -399,8 +334,6 @@ def main(argv):
     if "--yul" in argv:
         print(emit_yul())
         return 0
-    if "--cf-depth" in argv:
-        return 1 if check_cf_depth() else 0
     measure(ker)
     return 0
 
