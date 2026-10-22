@@ -1,8 +1,8 @@
 {
- "generated": "2026-10-21",
+ "generated": "2026-10-22",
  "description": "Terminal precision: each scenario is N identical steps run through each library in its native representation for several inputs, against the same loop in exact arithmetic (mpmath, 200 digits), twice: from the exact parameters (digits) and from the parameters as the library received them (digitsFormat). See methodology.",
  "versions": {
-  "fp127": "fbbdc20",
+  "fp127": "261c283",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -130899,9 +130899,5 @@
  ],
  "liveRunner": "0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5",
  "liveSelector": "0x281dbbfe",
- "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell.",
- "liveChecked": 9383,
- "liveMismatches": 0,
- "liveBlock": 11966662,
- "liveDate": "2026-10-22"
+ "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell."
 }

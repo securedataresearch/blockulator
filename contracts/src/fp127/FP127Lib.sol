@@ -5415,14 +5415,17 @@ library FP127Lib {
             _r := fp127_expm1(_x)
         }
     }
-    /// @notice sinh(x), rounded to nearest. For |x| < 1 the odd series
-    ///         x (1 + x^2/(2*3) (1 + x^2/(4*5) ...)) at 2^-192, 20 terms
-    ///         (fewer for a smaller |x|); beyond, (e^|x| - e^-|x|) / 2 from the
-    ///         double-word kernel, the difference taken before the one rounding.
-    /// @dev Below 2^-65, x itself (x^3/6 is under one unit of 2^-192). The
-    ///      series takes K = 19, 16, 13, 8, 5, 2 terms below 1/2, 1/4, 1/16,
-    ///      2^-8, 2^-16, 2^-32, where x^(2K+2) / (2K+3)! <= 2^-200; its mulg is
-    ///      inline and unsigned.
+    /// @notice sinh(x), rounded to nearest: (u + u/(1+u)) / 2 with u = e^|x| - 1
+    ///         from one double-word exp at 2^-192, u/(1+u) = 1 - e^-|x| by one
+    ///         division, the difference taken before the one rounding. The value
+    ///         before rounding is within 3 units of 2^-192 plus 2^-299 relative
+    ///         of sinh, so the result is nearest unless sinh is within 3 2^-64
+    ///         ULP (2^-44 ULP at the top of the range) of a midpoint.
+    /// @dev e^|x| = 2^n (1 + s) from expx; e^|x| / 2 is sc192(n - 1) (floors
+    ///      once, kernel 2^-300 relative), e^-|x| / 2 is einvhalf (floors once,
+    ///      plus 2^-63 unit); the subtraction is exact (precise_model.py
+    ///      measure: op_sinh). Below 2^-65, x itself: x^3/6 is under one unit
+    ///      of 2^-192. v5 ran an odd series below 1 and two exps beyond.
     function sinh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
@@ -5430,6 +5433,36 @@ library FP127Lib {
                 r := sub(xor(x, m), m)
             }
 
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function divg(a, b) -> r {
+                let qh := divu(a, b)
+                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
+                r := add(shl(64, qh), shr(64, ql))
+            }
+
+            function einvhalf(n, sh) -> v {
+                v := divg(shl(sub(254, n), 1), or(0x8000000000000000000000000000000000000000000000000000000000000000, shr(1, sh)))
+            }
+
             function expmul(sh, sl, ch, cl) -> rh, rl {
                 let pl := mul(sh, ch)
                 let mm := mulmod(sh, ch, not(0))
@@ -5565,31 +5598,6 @@ library FP127Lib {
                 sh, sl := expk(rh, rl)
             }
 
-            function sc192(n, sh, sl) -> vh, vl {
-                let e := add(n, 192)
-                switch lt(e, 256)
-                case 1 { vl := add(shr(sub(256, e), sh), shl(e, 1)) }
-                default {
-                    let k := sub(512, e)
-                    vh := add(shr(k, sh), shl(sub(e, 256), 1))
-                    vl := or(shl(sub(e, 256), sh), shr(k, sl))
-                }
-            }
-
-            function ehalf(x) -> vh, vl {
-                let n, sh, sl := expx(x)
-                vh, vl := sc192(sub(n, 1), sh, sl)
-            }
-
-            function mulg(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(64, p1), shr(192, p0))
-            }
-
             function rev(sel) {
                 mstore(0x00, shl(224, sel))
                 revert(0x00, 0x04)
@@ -5602,51 +5610,44 @@ library FP127Lib {
                 r := or(shl(192, h), shr(64, l))
             }
 
-            function round64(r) -> q {
-                q := sar(64, add(r, 0x8000000000000000))
+            function sc192(n, sh, sl) -> vh, vl {
+                let e := add(n, 192)
+                switch lt(e, 256)
+                case 1 { vl := add(shr(sub(256, e), sh), shl(e, 1)) }
+                default {
+                    let k := sub(512, e)
+                    vh := add(shr(k, sh), shl(sub(e, 256), 1))
+                    vl := or(shl(sub(e, 256), sh), shr(k, sl))
+                }
             }
 
             function fp127_sinh(x) -> r {
                 if iszero(x) { r := 0 leave }
                 let ax := absw(x)
                 if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
-                if lt(ax, 0x100000000000000000000000000000000) {
-                    if lt(ax, 0x8000000000000000) { r := x leave }
-                    let xs := shl(64, x)
-                    let x2 := mulg(xs, xs)
-                    let v := 0x1000000000000000000000000000000000000000000000000
-                    let k := 20
-                    if lt(ax, 0x80000000000000000000000000000000) {
-                        k := 19
-                        if lt(ax, 0x40000000000000000000000000000000) { k := 16 }
-                        if lt(ax, 0x10000000000000000000000000000000) { k := 13 }
-                        if lt(ax, 0x1000000000000000000000000000000) { k := 8 }
-                        if lt(ax, 0x10000000000000000000000000000) { k := 5 }
-                        if lt(ax, 0x1000000000000000000000000) { k := 2 }
-                    }
-                    let l := 0
-                    let h := 0
-                    for {} k { k := sub(k, 1) } {
-                        let k2 := shl(1, k)
-                        l := mul(x2, v)
-                        h := mulmod(x2, v, not(0))
-                        v := add(0x1000000000000000000000000000000000000000000000000, div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), mul(k2, add(k2, 1))))
-                    }
-                    r := round64(mulg(xs, v))
-                    leave
-                }
-                let vh, vl := ehalf(ax)
-                let wh, wl := ehalf(sub(0, ax))
-                r := rnd192(sub(sub(vh, wh), lt(vl, wl)), sub(vl, wl))
+                if lt(ax, 0x8000000000000000) { r := x leave }
+                let n, sh, sl := expx(ax)
+                let vh, vl := sc192(sub(n, 1), sh, sl)
+                let w := einvhalf(n, sh)
+                r := rnd192(sub(vh, lt(vl, w)), sub(vl, w))
                 if slt(x, 0) { r := sub(0, r) }
             }
 
             _r := fp127_sinh(_x)
         }
     }
-    /// @notice cosh(x) = (e^x + e^-x) / 2, rounded to nearest: both halves from
-    ///         the double-word kernel, summed before the one rounding. cosh(0) is
-    ///         exactly one.
+    /// @notice cosh(x), rounded to nearest: 1 + u (u/(1+u)) / 2 with u = e^|x| - 1
+    ///         from one double-word exp at 2^-192 and u/(1+u) = 1 - e^-|x| by one
+    ///         division, which is (e^|x| + e^-|x|) / 2 summed before the one
+    ///         rounding. The value before rounding is within 3 units of 2^-192
+    ///         plus 2^-299 relative of cosh, so the result is nearest unless
+    ///         cosh is within 3 2^-64 ULP (2^-44 ULP at the top of the range)
+    ///         of a midpoint. cosh(0) is exactly one.
+    /// @dev e^|x| / 2 is sc192(n - 1) (floors once, kernel 2^-300 relative),
+    ///      e^-|x| / 2 is einvhalf (floors once, plus 2^-63 unit); the sum is
+    ///      exact (precise_model.py measure: op_cosh). Below 2^-64, exactly one:
+    ///      cosh - 1 < x^2 / 2 (1 + x^2 / 12) < 2^-129, half an ULP. v5 ran two
+    ///      exps at every x.
     function cosh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
@@ -5654,6 +5655,36 @@ library FP127Lib {
                 r := sub(xor(x, m), m)
             }
 
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function divg(a, b) -> r {
+                let qh := divu(a, b)
+                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
+                r := add(shl(64, qh), shr(64, ql))
+            }
+
+            function einvhalf(n, sh) -> v {
+                v := divg(shl(sub(254, n), 1), or(0x8000000000000000000000000000000000000000000000000000000000000000, shr(1, sh)))
+            }
+
             function expmul(sh, sl, ch, cl) -> rh, rl {
                 let pl := mul(sh, ch)
                 let mm := mulmod(sh, ch, not(0))
@@ -5789,22 +5820,6 @@ library FP127Lib {
                 sh, sl := expk(rh, rl)
             }
 
-            function sc192(n, sh, sl) -> vh, vl {
-                let e := add(n, 192)
-                switch lt(e, 256)
-                case 1 { vl := add(shr(sub(256, e), sh), shl(e, 1)) }
-                default {
-                    let k := sub(512, e)
-                    vh := add(shr(k, sh), shl(sub(e, 256), 1))
-                    vl := or(shl(sub(e, 256), sh), shr(k, sl))
-                }
-            }
-
-            function ehalf(x) -> vh, vl {
-                let n, sh, sl := expx(x)
-                vh, vl := sc192(sub(n, 1), sh, sl)
-            }
-
             function rev(sel) {
                 mstore(0x00, shl(224, sel))
                 revert(0x00, 0x04)
@@ -5817,13 +5832,25 @@ library FP127Lib {
                 r := or(shl(192, h), shr(64, l))
             }
 
+            function sc192(n, sh, sl) -> vh, vl {
+                let e := add(n, 192)
+                switch lt(e, 256)
+                case 1 { vl := add(shr(sub(256, e), sh), shl(e, 1)) }
+                default {
+                    let k := sub(512, e)
+                    vh := add(shr(k, sh), shl(sub(e, 256), 1))
+                    vl := or(shl(sub(e, 256), sh), shr(k, sl))
+                }
+            }
+
             function fp127_cosh(x) -> r {
                 let ax := absw(x)
                 if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
-                let vh, vl := ehalf(ax)
-                let wh, wl := ehalf(sub(0, ax))
-                let l := add(vl, wl)
-                r := rnd192(add(add(vh, wh), lt(l, vl)), l)
+                if lt(ax, 0x10000000000000000) { r := 0x100000000000000000000000000000000 leave }
+                let n, sh, sl := expx(ax)
+                let vh, vl := sc192(sub(n, 1), sh, sl)
+                let l := add(vl, einvhalf(n, sh))
+                r := rnd192(add(vh, lt(l, vl)), l)
             }
 
             _r := fp127_cosh(_x)
@@ -6086,14 +6113,50 @@ library FP127Lib {
             _r := fp127_tanh(_x)
         }
     }
-    /// @notice atanh(x) = (ln(1 + x) - ln(1 - x)) / 2, both logarithms taken
-    ///         unrounded at 2^-192 and the difference scaled and rounded once.
-    ///         Both arguments are exact in 127.128.
+    /// @notice atanh(x) = log1p(2|x| / (1 - |x|)) / 2: the quotient at 2^-192 by
+    ///         one division, one unrounded logarithm of 1 + it, scaled by ln2/2
+    ///         and rounded once. The value before rounding is within 2^-146
+    ///         (the one-word log's 2^-145, scaled) plus 2 units of 2^-192 of
+    ///         atanh, so the result is nearest unless atanh is within 2^-18 ULP
+    ///         of a midpoint.
+    /// @dev q = floor(2|x| 2^192 / (1 - |x|)) floors once, which moves the log by
+    ///      under 1.5 units; 2^192 + q read as a 127.128 word is 2^64 (1 + q), so
+    ///      log2g of it less 64 is log2((1 + |x|) / (1 - |x|)); the final mulg
+    ///      floors once (precise_model.py measure: op_atanh). Within 2^-62 of
+    ///      +-1 the quotient would pass 2^255 and the v5 form runs instead: the
+    ///      difference of the two logs of the exact words 1 + |x| and 1 - |x|,
+    ///      within 2^-145 plus one unit.
     function atanh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
                 let m := sar(255, x)
                 r := sub(xor(x, m), m)
+            }
+
+            function divu(a, b) -> q {
+                let prod0 := shl(128, a)
+                let prod1 := shr(128, a)
+                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function divg(a, b) -> r {
+                let qh := divu(a, b)
+                let ql := divu(sub(shl(128, a), mul(qh, b)), b)
+                r := add(shl(64, qh), shr(64, ql))
             }
 
             function log2poly(f) -> r {
@@ -6205,9 +6268,17 @@ library FP127Lib {
 
             function fp127_atanh(x) -> r {
                 let one := 0x100000000000000000000000000000000
-                if iszero(lt(absw(x), one)) { rev(0x7db3aba7) }
+                let ax := absw(x)
+                if iszero(lt(ax, one)) { rev(0x7db3aba7) }
                 if iszero(x) { r := 0 leave }
-                r := round64(mulg(sub(log2g(add(one, x)), log2g(sub(one, x))), 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b17))
+                switch lt(ax, 0xfffffffffffffffc0000000000000000)
+                case 1 {
+                    let q := add(0x1000000000000000000000000000000000000000000000000, divg(shl(1, ax), sub(one, ax)))
+                    r := sub(log2g(q), 0x40000000000000000000000000000000000000000000000000)
+                }
+                default { r := sub(log2g(add(one, ax)), log2g(sub(one, ax))) }
+                r := round64(mulg(r, 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b17))
+                if slt(x, 0) { r := sub(0, r) }
             }
 
             _r := fp127_atanh(_x)
