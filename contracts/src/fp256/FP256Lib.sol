@@ -3203,23 +3203,32 @@ library FP256Lib {
                 let an := am
                 let bm := 0
                 let bn := am
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, then one rounded
-                    // shift of 0 to 4 bits, set by A, brings all four back under 2^252
-                    // (B'/A'' = y/K stays just under one). Written out: no calls in the loop
-                    let c := mul(k, w)
+                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
+                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
+                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
+                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
+                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
+                // needs no shift of its own; a zero shift would change nothing, so it
+                // is skipped). Written out: no calls in the loop
+                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
                     let p0 := mul(c, am)
                     let mm := mulmod(c, am, not(0))
                     let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
                     p0 := mul(c, bm)
                     mm := mulmod(c, bm, not(0))
                     let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    let sh := add(add(gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)), add(gt(a2, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(a2, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
-                    let hf := shr(1, shl(sh, 1))
-                    am := shr(sh, add(an, hf))
-                    an := shr(sh, add(a2, hf))
-                    bm := shr(sh, add(bn, hf))
-                    bn := shr(sh, add(b2, hf))
+                    am := an
+                    an := a2
+                    bm := bn
+                    bn := b2
+                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                        let hf := shl(sub(sh, 1), 1)
+                        am := shr(sh, add(am, hf))
+                        an := shr(sh, add(a2, hf))
+                        bm := shr(sh, add(bm, hf))
+                        bn := shr(sh, add(b2, hf))
+                    }
                 }
                 let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
                 let sb := sub(253, msb(bn))
@@ -3960,23 +3969,32 @@ library FP256Lib {
                 let an := am
                 let bm := 0
                 let bn := am
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, then one rounded
-                    // shift of 0 to 4 bits, set by A, brings all four back under 2^252
-                    // (B'/A'' = y/K stays just under one). Written out: no calls in the loop
-                    let c := mul(k, w)
+                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
+                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
+                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
+                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
+                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
+                // needs no shift of its own; a zero shift would change nothing, so it
+                // is skipped). Written out: no calls in the loop
+                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
                     let p0 := mul(c, am)
                     let mm := mulmod(c, am, not(0))
                     let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
                     p0 := mul(c, bm)
                     mm := mulmod(c, bm, not(0))
                     let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    let sh := add(add(gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)), add(gt(a2, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(a2, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
-                    let hf := shr(1, shl(sh, 1))
-                    am := shr(sh, add(an, hf))
-                    an := shr(sh, add(a2, hf))
-                    bm := shr(sh, add(bn, hf))
-                    bn := shr(sh, add(b2, hf))
+                    am := an
+                    an := a2
+                    bm := bn
+                    bn := b2
+                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                        let hf := shl(sub(sh, 1), 1)
+                        am := shr(sh, add(am, hf))
+                        an := shr(sh, add(a2, hf))
+                        bm := shr(sh, add(bm, hf))
+                        bn := shr(sh, add(b2, hf))
+                    }
                 }
                 let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
                 let sb := sub(253, msb(bn))
@@ -4720,23 +4738,32 @@ library FP256Lib {
                 let an := am
                 let bm := 0
                 let bn := am
-                for { let k := 1 } iszero(gt(k, n)) { k := add(k, 1) } {
-                    // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, then one rounded
-                    // shift of 0 to 4 bits, set by A, brings all four back under 2^252
-                    // (B'/A'' = y/K stays just under one). Written out: no calls in the loop
-                    let c := mul(k, w)
+                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
+                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
+                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
+                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
+                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
+                // needs no shift of its own; a zero shift would change nothing, so it
+                // is skipped). Written out: no calls in the loop
+                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
                     let p0 := mul(c, am)
                     let mm := mulmod(c, am, not(0))
                     let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
                     p0 := mul(c, bm)
                     mm := mulmod(c, bm, not(0))
                     let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    let sh := add(add(gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)), add(gt(a2, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(a2, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
-                    let hf := shr(1, shl(sh, 1))
-                    am := shr(sh, add(an, hf))
-                    an := shr(sh, add(a2, hf))
-                    bm := shr(sh, add(bn, hf))
-                    bn := shr(sh, add(b2, hf))
+                    am := an
+                    an := a2
+                    bm := bn
+                    bn := b2
+                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
+                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
+                        let hf := shl(sub(sh, 1), 1)
+                        am := shr(sh, add(am, hf))
+                        an := shr(sh, add(a2, hf))
+                        bm := shr(sh, add(bm, hf))
+                        bn := shr(sh, add(b2, hf))
+                    }
                 }
                 let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
                 let sb := sub(253, msb(bn))
@@ -10463,9 +10490,10 @@ library FP256Lib {
         }
     }
     /// @notice a + t (b - a), rounded once from the exact value: a, t b and
-    ///         -t a summed exactly in a 1,024-bit window (terms far under it
-    ///         enter as their floor or their sign), so cancellation costs
-    ///         nothing and no intermediate can overflow. t is not clamped.
+    ///         -t a (computed once, in memory) summed exactly in a 1,024-bit
+    ///         window (terms far under it enter as their floor or their sign),
+    ///         so cancellation costs nothing and no intermediate can overflow.
+    ///         t is not clamped.
     function lerp(int256 _a, int256 _b, int256 _t) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function msb(x) -> r {
@@ -10523,6 +10551,15 @@ library FP256Lib {
                 r := normround(xor(sa, sb), sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)))
             }
 
+            function lget(p, i) -> sg, n1, n0, f, h {
+                let q := add(p, add(0x80, mul(i, 0xa0)))
+                sg := mload(q)
+                n1 := mload(add(q, 0x20))
+                n0 := mload(add(q, 0x40))
+                f := mload(add(q, 0x60))
+                h := mload(add(q, 0x80))
+            }
+
             function lgt(h1, h2, y1, y0) -> g, z {
                 let x1 := mload(0x00)
                 let x0 := mload(0x20)
@@ -10533,74 +10570,41 @@ library FP256Lib {
                 }
             }
 
-            function mul512(a, b) -> p1, p0 {
-                p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                p1 := sub(sub(mm, p0), lt(mm, p0))
-            }
-
-            function lterm(a, b, t, i) -> sg, n1, n0, f {
-                let sa, ea, ma := unpack(a)
-                let st, et, mt := unpack(t)
-                f := sub(ea, 0x400eb)
-                switch i
-                case 0 {
-                    sg := sa
-                    n0 := ma
-                }
-                case 1 {
-                    let sb, eb, mb := unpack(b)
-                    if eb {
-                        sg := xor(st, sb)
-                        n1, n0 := mul512(mt, mb)
-                        f := add(sub(eb, 0x400eb), sub(et, 0x400eb))
-                    }
-                }
-                default {
-                    sg := xor(1, xor(st, sa))
-                    n1, n0 := mul512(mt, ma)
-                    f := add(f, sub(et, 0x400eb))
-                }
-            }
-
             function wshl(h, l, n) -> rh, rl {
                 rh := or(shl(n, h), shr(sub(256, n), l))
                 rl := shl(n, l)
             }
 
-            function lmag(a, b, t, i) -> sg, h, m1, m0 {
+            function lmag(p, i) -> sg, h, m1, m0 {
                 let n1 := 0
                 let n0 := 0
                 let f := 0
-                sg, n1, n0, f := lterm(a, b, t, i)
-                let w := add(msb(n0), 1)
-                if n1 { w := add(msb(n1), 257) }
-                h := add(f, w)
-                let sh := sub(512, w)
+                sg, n1, n0, f, h := lget(p, i)
+                let sh := sub(512, sub(h, f))
                 switch lt(sh, 256)
                 case 1 { m1, m0 := wshl(n1, n0, sh) }
                 default { m1 := shl(sub(sh, 256), n0) }
             }
 
-            function lcmp(a, b, t, k, h1) -> sg, g, z {
+            function lcmp(p, k, h1) -> sg, g, z {
                 let h2 := 0
                 let y1 := 0
                 let y0 := 0
-                sg, h2, y1, y0 := lmag(a, b, t, k)
+                sg, h2, y1, y0 := lmag(p, k)
                 g, z := lgt(h1, h2, y1, y0)
             }
 
-            function lmag0(a, b, t, i) -> sg, h {
+            function lmag0(p, i) -> sg, h {
                 let m1 := 0
                 let m0 := 0
-                sg, h, m1, m0 := lmag(a, b, t, i)
+                sg, h, m1, m0 := lmag(p, i)
                 mstore(0x00, m1)
                 mstore(0x20, m0)
             }
 
-            function lsign2(a, b, t, i, k) -> c {
-                let s1, h1 := lmag0(a, b, t, i)
-                let s2, g, z := lcmp(a, b, t, k, h1)
+            function lsign2(p, i, k) -> c {
+                let s1, h1 := lmag0(p, i)
+                let s2, g, z := lcmp(p, k, h1)
                 c := add(s1, 1)
                 if eq(s1, s2) { leave }
                 if z {
@@ -10682,19 +10686,9 @@ library FP256Lib {
                 r := normround(ng, e, w)
             }
 
-            function mzero() -> p {
-                p := mload(0x40)
-                if lt(p, 0x80) { p := 0x80 }
-                mstore(p, 0)
-                mstore(add(p, 0x20), 0)
-                mstore(add(p, 0x40), 0)
-                mstore(add(p, 0x60), 0)
-            }
-
-            function lerpfar(a, b, t, j, i, k) -> r {
-                let c := lsign2(a, b, t, i, k)
-                let sg, n1, n0, f := lterm(a, b, t, j)
-                let p := mzero()
+            function lerpfar(p, j, i, k) -> r {
+                let c := lsign2(p, i, k)
+                let sg, n1, n0, f, h := lget(p, j)
                 macc(p, 0, n1, n0, 46)
                 if and(iszero(iszero(c)), iszero(eq(sub(c, 1), sg))) { macc(p, 1, 0, 1, 0) }
                 r := mround(p, sg, sub(f, 46))
@@ -10714,8 +10708,8 @@ library FP256Lib {
                 default { rl := shr(sub(n, 256), h) }
             }
 
-            function laddf(p, a, b, t, i, L) -> ix {
-                let sg, n1, n0, f := lterm(a, b, t, i)
+            function laddf(p, i, L) -> ix {
+                let sg, n1, n0, f, h := lget(p, i)
                 let k := sub(L, f)
                 switch lt(k, 256)
                 case 1 { ix := iszero(iszero(and(n0, sub(shl(k, 1), 1)))) }
@@ -10725,8 +10719,8 @@ library FP256Lib {
                 macc(p, sg, n1, n0, 0)
             }
 
-            function laddi(p, a, b, t, i, L) {
-                let sg, n1, n0, f := lterm(a, b, t, i)
+            function laddi(p, i, L) {
+                let sg, n1, n0, f, h := lget(p, i)
                 macc(p, sg, n1, n0, sub(f, L))
             }
 
@@ -10747,10 +10741,9 @@ library FP256Lib {
                 default { r := fp256_neg(fp256_mul(t, a)) }
             }
 
-            function lerpw(a, b, t, L, tr) -> r {
-                let p := mzero()
+            function lerpw(p, a, b, t, L, tr) -> r {
                 for { let i := 0 } lt(i, 3) { i := add(i, 1) } {
-                    if iszero(and(tr, shl(i, 1))) { laddi(p, a, b, t, i, L) }
+                    if iszero(and(tr, shl(i, 1))) { laddi(p, i, L) }
                 }
                 let ix := 0
                 if tr {
@@ -10758,7 +10751,7 @@ library FP256Lib {
                         r := lone(a, b, t, msb(tr))
                         leave
                     }
-                    ix := laddf(p, a, b, t, msb(tr), L)
+                    ix := laddf(p, msb(tr), L)
                 }
                 // W = floor(X / 2^L); for X < 0, floor(|X| / 2^L) is -W, or -W - 1 = not W
                 // when bits were dropped
@@ -10773,30 +10766,72 @@ library FP256Lib {
                 r := mround(p, ng, L)
             }
 
-            function ltopi(a, b, t, i) -> h {
-                let sg, n1, n0, f := lterm(a, b, t, i)
-                h := add(f, add(msb(n0), 1))
+            function lset(q, sg, n1, n0, f) {
+                mstore(q, sg)
+                mstore(add(q, 0x20), n1)
+                mstore(add(q, 0x40), n0)
+                mstore(add(q, 0x60), f)
+                let h := add(f, add(msb(n0), 1))
                 if n1 { h := add(f, add(msb(n1), 257)) }
+                mstore(add(q, 0x80), h)
             }
 
-            function ltr(a, b, t, i, L) -> x {
-                let sg, n1, n0, f := lterm(a, b, t, i)
+            function mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function lput1(q, b, st, ft, mt, fa) {
+                let sb, eb, mb := unpack(b)
+                switch eb
+                case 0 { lset(q, 0, 0, 0, fa) }
+                default {
+                    let n1, n0 := mul512(mt, mb)
+                    lset(q, xor(st, sb), n1, n0, add(sub(eb, 0x400eb), ft))
+                }
+            }
+
+            function lput(p, a, b, t) {
+                let sa, ea, ma := unpack(a)
+                let st, et, mt := unpack(t)
+                let f := sub(ea, 0x400eb)
+                let ft := sub(et, 0x400eb)
+                lset(add(p, 0x80), sa, 0, ma, f)
+                let n1, n0 := mul512(mt, ma)
+                lset(add(p, 0x1c0), xor(1, xor(st, sa)), n1, n0, add(f, ft))
+                lput1(add(p, 0x120), b, st, ft, mt, f)
+            }
+
+            function ltr(p, i, L) -> x {
+                let sg, n1, n0, f, h := lget(p, i)
                 x := and(slt(f, L), iszero(iszero(or(n1, n0))))
             }
 
+            function mzero() -> p {
+                p := mload(0x40)
+                if lt(p, 0x80) { p := 0x80 }
+                mstore(p, 0)
+                mstore(add(p, 0x20), 0)
+                mstore(add(p, 0x40), 0)
+                mstore(add(p, 0x60), 0)
+            }
+
             function lerp3(a, b, t) -> r {
-                let H := ltopi(a, b, t, 0)
-                let h := ltopi(a, b, t, 1)
+                let p := mzero()
+                lput(p, a, b, t)
+                let H := mload(add(p, 0x100))
+                let h := mload(add(p, 0x1a0))
                 if sgt(h, H) { H := h }
-                h := ltopi(a, b, t, 2)
+                h := mload(add(p, 0x240))
                 if sgt(h, H) { H := h }
                 let L := sub(H, 1020)
-                let tr := or(or(ltr(a, b, t, 0, L), shl(1, ltr(a, b, t, 1, L))), shl(2, ltr(a, b, t, 2, L)))
+                let tr := or(or(ltr(p, 0, L), shl(1, ltr(p, 1, L))), shl(2, ltr(p, 2, L)))
                 switch tr
-                case 3 { r := lerpfar(a, b, t, 2, 0, 1) }
-                case 5 { r := lerpfar(a, b, t, 1, 0, 2) }
-                case 6 { r := lerpfar(a, b, t, 0, 1, 2) }
-                default { r := lerpw(a, b, t, L, tr) }
+                case 3 { r := lerpfar(p, 2, 0, 1) }
+                case 5 { r := lerpfar(p, 1, 0, 2) }
+                case 6 { r := lerpfar(p, 0, 1, 2) }
+                default { r := lerpw(p, a, b, t, L, tr) }
             }
 
             function fp256_lerp(a, b, t) -> r {
@@ -13586,12 +13621,13 @@ library FP256Lib {
             _r := fp256_log10(_x)
         }
     }
-    /// @notice sinh(x). Below 1/2, x sum x^2k / (2k + 1)! at 2^-254 (no
-    ///         cancellation, so the relative precision holds all the way down);
-    ///         above, (e^|x| - e^-|x|) / 2 from exp's unrounded kernel and its
-    ///         reciprocal. One rounding when the bound clears the rounding
-    ///         boundary, else the series or both exponentials in two words:
-    ///         correctly rounded.
+    /// @notice sinh(x) = (U + U/(1 + U)) / 2 with U = e^|x| - 1 from expm1's
+    ///         machinery: below 2^-8, x times T = (e^|x| - 1)/|x| from its
+    ///         series (no cancellation, so the relative precision holds all the
+    ///         way down); to 1/2, U from exp's unrounded kernel; above, (e^|x| -
+    ///         e^-|x|) / 2 from that kernel and its reciprocal. One rounding when
+    ///         the bound clears the rounding boundary, else the series or both
+    ///         exponentials in two words: correctly rounded.
     function sinh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function divu(a, b) -> q {
@@ -13707,12 +13743,48 @@ library FP256Lib {
                 k := shr512(p1, p0, add(sh, 254))
             }
 
-            function hser(x2, b) -> t {
-                t := 0x4000000000000000000000000000000000000000000000000000000000000000
-                for { let k := 25 } k { k := sub(k, 1) } {
-                    let j := add(shl(1, k), b)
-                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(mulwu(x2, t), mul(j, sub(j, 1))))
-                }
+            function em1k(u, m) -> U {
+                let k, f := explog2(u, m)
+                let kk, v := exp2kv(0, k, f)
+                U := sub(shl(kk, v), 0x4000000000000000000000000000000000000000000000000000000000000000)
+            }
+
+            function mulw(a, b) -> r {
+                let p1, p0 := mul512(a, b)
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function expm1tail(df) -> p {
+                p := 0x7cb3c065cbd5df3292d019f2a7628819cffac21b76c8
+                p := add(0xbb0da098b1c0cecbdc3826ebfb13cc26b7f82329322c2, mulw(df, p))
+                p := add(0x10ce396db7f8529450c90b7f338ec7577a874b28b381f78, mulw(df, p))
+                p := add(0x171b8ef6dcf5718bef146fcee6e45218487a0757f6d2b457, mulw(df, p))
+                p := add(0x1e542ba402022507a9cad2bf8f0babbfdf2029a373f48cb25, mulw(df, p))
+                p := add(0x25e9368d0282ae49943d876f72ce96afd6e8340c50f1afdeed, mulw(df, p))
+                p := add(0x2d04f0c772fb2ef7600910d4585552f0cf33bdcea01f00d8b9e, mulw(df, p))
+                p := add(0x32a58ee0615a94d64c0a32eee35ffd4ee91a35887422e0f3d121, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e333, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e3337, mulw(df, p))
+                p := add(0x3272e95180f93a4175be28bbf47c9d519a311b52ebaebe12dd5003c, mulw(df, p))
+                p := add(0x2c248c2750da12f9470663a475ed09a766eaf7e88e38e65081a60347, mulw(df, p))
+            }
+
+            function expm1series(df) -> p {
+                p := expm1tail(df)
+                p := add(0x23ddb1dff1b12f6a89b530f59fd097d8039ee96cf38e3b216956e2a95, mulw(df, p))
+                p := add(0x1ae64567f544e38fe747e4b837dc71e202b72f11b6aaac590f0129fef9, mulw(df, p))
+                p := add(0x127e4fb7789f5c72ef016d3ea6678e4b61ddf05c2d95567d3a50ccdf4b2, mulw(df, p))
+                p := add(0xb8ef1d2ab6399c7d560e4472800b8ef1d2ab6399c7d560e4472800b8ef2, mulw(df, p))
+                p := add(0x680680680680680680680680680680680680680680680680680680680680, mulw(df, p))
+                p := add(0x3403403403403403403403403403403403403403403403403403403403403, mulw(df, p))
+                p := add(0x16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c17, mulw(df, p))
+                p := add(0x88888888888888888888888888888888888888888888888888888888888889, mulw(df, p))
+                p := add(0x2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0x2000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
             }
 
             function wdivs(h, l, k) -> qh, ql {
@@ -13958,9 +14030,11 @@ library FP256Lib {
                 b := iszero(gt(d, err))
             }
 
-            function sqfix(u, m) -> x2 {
-                let p1, p0 := mul512(m, m)
-                x2 := shr512(p1, p0, sub(218, shl(1, u)))
+            function tofixed254(s, u, m) -> t {
+                switch slt(u, sub(0, 18))
+                case 1 { t := shr(sub(sub(0, 18), u), m) }
+                default { t := shl(add(u, 18), m) }
+                if s { t := sub(0, t) }
             }
 
             function unpack(x) -> s, e, m {
@@ -14001,15 +14075,38 @@ library FP256Lib {
                 if iszero(e) { leave }
                 let u := sub(e, 0x3ffff)
                 if slt(u, sub(0, 1)) {
-                    let p1, p0 := mul512(m, hser(sqfix(u, m), 1))
-                    // the series within 3 units of 2^-254, so D within 2 x 3 + 1
-                    let D := or(shl(20, p1), shr(236, p0))
-                    if rbad(D, 8) {
-                        let th, tl := hserw(u, m, 1)
-                        r := xwide(s, u, m, th, tl)
-                        leave
+                    switch slt(u, sub(0, 8))
+                    case 1 {
+                        // T = (e^|x| - 1)/|x| from expm1's series, within 2 units of 2^-254
+                        // and half of |x|'s floor: 2.5. 2 sinh(x)/x = T + T/(1 + |x| T), with
+                        // |x| T within 2.1 units (its floor, |x|'s through T, T's through
+                        // |x|), the quotient within 2.5 + 2.1 + 1 and the sum within 8.1:
+                        // D = m (T + q) / 2^236, twice sinh at x's exponent, within 2 x 8.1 + 1
+                        let df := tofixed254(0, u, m)
+                        let T := expm1series(df)
+                        let q := div254(T, add(0x4000000000000000000000000000000000000000000000000000000000000000, mulwu(df, T)))
+                        let p1, p0 := mul512(m, add(T, q))
+                        let D := or(shl(20, p1), shr(236, p0))
+                        if rbad(D, 18) {
+                            let th, tl := hserw(u, m, 1)
+                            r := xwide(s, u, m, th, tl)
+                            leave
+                        }
+                        r := normround(s, sub(e, 1), D)
                     }
-                    r := normround(s, e, D)
+                    default {
+                        // U = e^|x| - 1 from exp's unrounded kernel, within 6 units of
+                        // 2^-254 (|x| log2 e < 1); 2 sinh|x| = U + U/(1 + U), the quotient's
+                        // slope in U under one, so it is within 6 + 1 and the sum within 13
+                        let U := em1k(u, m)
+                        let D := add(U, div254(U, add(U, 0x4000000000000000000000000000000000000000000000000000000000000000)))
+                        if rbad(D, 14) {
+                            let th, tl := hserw(u, m, 1)
+                            r := xwide(s, u, m, th, tl)
+                            leave
+                        }
+                        r := normround(s, 0x3fffe, D)
+                    }
                     leave
                 }
                 if sgt(u, 17) { rev(0x35278d12) }
@@ -14398,11 +14495,13 @@ library FP256Lib {
             _r := fp256_cosh(_x)
         }
     }
-    /// @notice tanh(x). Below 1/2, x times sinh's series over cosh's (both at
-    ///         2^-254, all terms positive); above, 1 - 2/(e^2|x| + 1) from exp's
-    ///         unrounded kernel. One rounding when the bound clears the rounding
-    ///         boundary, else the same in two words: correctly rounded. Exactly
-    ///         +-1 once 2|x| log2 e passes 240.
+    /// @notice tanh(x) = U/(U + 2) with U = e^2|x| - 1 from expm1's machinery:
+    ///         below 2^-9, x times T/(1 + |x| T) with T = (e^2|x| - 1)/(2|x|) from
+    ///         its series; to 1/2, U from exp's unrounded kernel; above, 1 -
+    ///         2/(e^2|x| + 1) from that kernel. One rounding when the bound
+    ///         clears the rounding boundary, else sinh's and cosh's series or
+    ///         the exponential in two words: correctly rounded. Exactly +-1 once
+    ///         2|x| log2 e passes 240.
     function tanh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function divu(a, b) -> q {
@@ -14518,12 +14617,48 @@ library FP256Lib {
                 k := shr512(p1, p0, add(sh, 254))
             }
 
-            function hser(x2, b) -> t {
-                t := 0x4000000000000000000000000000000000000000000000000000000000000000
-                for { let k := 25 } k { k := sub(k, 1) } {
-                    let j := add(shl(1, k), b)
-                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(mulwu(x2, t), mul(j, sub(j, 1))))
-                }
+            function em1k(u, m) -> U {
+                let k, f := explog2(u, m)
+                let kk, v := exp2kv(0, k, f)
+                U := sub(shl(kk, v), 0x4000000000000000000000000000000000000000000000000000000000000000)
+            }
+
+            function mulw(a, b) -> r {
+                let p1, p0 := mul512(a, b)
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function expm1tail(df) -> p {
+                p := 0x7cb3c065cbd5df3292d019f2a7628819cffac21b76c8
+                p := add(0xbb0da098b1c0cecbdc3826ebfb13cc26b7f82329322c2, mulw(df, p))
+                p := add(0x10ce396db7f8529450c90b7f338ec7577a874b28b381f78, mulw(df, p))
+                p := add(0x171b8ef6dcf5718bef146fcee6e45218487a0757f6d2b457, mulw(df, p))
+                p := add(0x1e542ba402022507a9cad2bf8f0babbfdf2029a373f48cb25, mulw(df, p))
+                p := add(0x25e9368d0282ae49943d876f72ce96afd6e8340c50f1afdeed, mulw(df, p))
+                p := add(0x2d04f0c772fb2ef7600910d4585552f0cf33bdcea01f00d8b9e, mulw(df, p))
+                p := add(0x32a58ee0615a94d64c0a32eee35ffd4ee91a35887422e0f3d121, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e333, mulw(df, p))
+                p := add(0x35cfe7ce67703e23b0cad61dd195fd23d7abd8e0fb650f030e3337, mulw(df, p))
+                p := add(0x3272e95180f93a4175be28bbf47c9d519a311b52ebaebe12dd5003c, mulw(df, p))
+                p := add(0x2c248c2750da12f9470663a475ed09a766eaf7e88e38e65081a60347, mulw(df, p))
+            }
+
+            function expm1series(df) -> p {
+                p := expm1tail(df)
+                p := add(0x23ddb1dff1b12f6a89b530f59fd097d8039ee96cf38e3b216956e2a95, mulw(df, p))
+                p := add(0x1ae64567f544e38fe747e4b837dc71e202b72f11b6aaac590f0129fef9, mulw(df, p))
+                p := add(0x127e4fb7789f5c72ef016d3ea6678e4b61ddf05c2d95567d3a50ccdf4b2, mulw(df, p))
+                p := add(0xb8ef1d2ab6399c7d560e4472800b8ef1d2ab6399c7d560e4472800b8ef2, mulw(df, p))
+                p := add(0x680680680680680680680680680680680680680680680680680680680680, mulw(df, p))
+                p := add(0x3403403403403403403403403403403403403403403403403403403403403, mulw(df, p))
+                p := add(0x16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c16c17, mulw(df, p))
+                p := add(0x88888888888888888888888888888888888888888888888888888888888889, mulw(df, p))
+                p := add(0x2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab, mulw(df, p))
+                p := add(0x2000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
+                p := add(0x4000000000000000000000000000000000000000000000000000000000000000, mulw(df, p))
             }
 
             function msb(x) -> r {
@@ -14571,11 +14706,6 @@ library FP256Lib {
                 let d := sub(low, half)
                 if lt(low, half) { d := sub(half, low) }
                 b := iszero(gt(d, err))
-            }
-
-            function sqfix(u, m) -> x2 {
-                let p1, p0 := mul512(m, m)
-                x2 := shr512(p1, p0, sub(218, shl(1, u)))
             }
 
             function wdivs(h, l, k) -> qh, ql {
@@ -14803,6 +14933,13 @@ library FP256Lib {
                 r := round2(s, 0x3feff, eh, el)
             }
 
+            function tofixed254(s, u, m) -> t {
+                switch slt(u, sub(0, 18))
+                case 1 { t := shr(sub(sub(0, 18), u), m) }
+                default { t := shl(add(u, 18), m) }
+                if s { t := sub(0, t) }
+            }
+
             function unpack(x) -> s, e, m {
                 s := shr(255, x)
                 e := and(shr(236, x), 0x7ffff)
@@ -14819,15 +14956,34 @@ library FP256Lib {
                 if iszero(e) { leave }
                 let u := sub(e, 0x3ffff)
                 if slt(u, sub(0, 1)) {
-                    let x2 := sqfix(u, m)
-                    let p1, p0 := mul512(m, div254(hser(x2, 1), hser(x2, 0)))
-                    // both series within 3 units, the quotient within 7, D within 2 x 7 + 1
-                    let D := or(shl(20, p1), shr(236, p0))
-                    if rbad(D, 16) {
-                        r := tanhw1(s, u, m)
-                        leave
+                    switch slt(u, sub(0, 9))
+                    case 1 {
+                        // T = (e^2|x| - 1)/(2|x|) from expm1's series, within 2 units of
+                        // 2^-254 and |x|'s floor through 2|x|: 3. tanh(x)/x = T/(1 + |x| T)
+                        // with |x| T within 2.1, the quotient within 3 + 2.1 + 1: D = m F / 2^236
+                        // within 2 x 6.1 + 1
+                        let df := tofixed254(0, u, m)
+                        let T := expm1series(shl(1, df))
+                        let p1, p0 := mul512(m, div254(T, add(0x4000000000000000000000000000000000000000000000000000000000000000, mulwu(df, T))))
+                        let D := or(shl(20, p1), shr(236, p0))
+                        if rbad(D, 14) {
+                            r := tanhw1(s, u, m)
+                            leave
+                        }
+                        r := normround(s, e, D)
                     }
-                    r := normround(s, e, D)
+                    default {
+                        // U = e^2|x| - 1 from exp's unrounded kernel at 2|x|, within 12
+                        // units of 2^-254; tanh|x| = U/(U + 2), whose slope in U, 2/(U + 2)^2,
+                        // is under 1/2: D within 6 + 1
+                        let U := em1k(add(u, 1), m)
+                        let D := div254(U, add(U, 0x8000000000000000000000000000000000000000000000000000000000000000))
+                        if rbad(D, 8) {
+                            r := tanhw1(s, u, m)
+                            leave
+                        }
+                        r := normround(s, 0x3ffff, D)
+                    }
                     leave
                 }
                 r := or(shl(255, s), 0x3ffff00000000000000000000000000000000000000000000000000000000000)
@@ -14847,12 +15003,14 @@ library FP256Lib {
             _r := fp256_tanh(_x)
         }
     }
-    /// @notice atanh(x). Below 2^-4, x times the mean of log1p's series at x and
-    ///         -x (the even terms, sum x^2k / (2k + 1)); above, (log2(1 + |x|) -
-    ///         log2(1 - |x|)) ln 2 / 2 with both arguments exact under their
-    ///         leading bits (no cancellation: the logarithms have opposite
-    ///         signs). One rounding when the bound clears the rounding boundary,
-    ///         else the same in two words: correctly rounded.
+    /// @notice atanh(x) = log1p(y) / 2 for y = 2|x|/(1 - |x|): below 2^-6, x
+    ///         times R P with R = 1/(1 - |x|) and P = ln(1 + y)/y from log1p's
+    ///         series at y = 2|x| R (no cancellation, so the relative precision
+    ///         holds all the way down); above, (log2(1 + |x|) - log2(1 - |x|))
+    ///         ln 2 / 2 with both arguments exact under their leading bits (the
+    ///         logarithms have opposite signs). One rounding when the bound
+    ///         clears the rounding boundary, else the odd series or the two
+    ///         logarithms in two words: correctly rounded.
     function atanh(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function mul512(a, b) -> p1, p0 {
@@ -15348,16 +15506,23 @@ library FP256Lib {
                 if iszero(e) { leave }
                 let u := sub(e, 0x3ffff)
                 if iszero(slt(u, 0)) { rev(0x7db3aba7) }
-                if slt(u, sub(0, 4)) {
-                    let df := tofixed254(0, u, m)
-                    let p := 0
-                    switch slt(u, sub(0, 8))
-                    case 1 { p := add(ln1pseries(df), ln1pseries(sub(0, df))) }
-                    default { p := add(ln1pwide(df), ln1pwide(sub(0, df))) }
-                    let p1, p0 := mul512(m, shr(1, p))
-                    // each series within 3 units of 2^-254, the mean within 3.5, D within 2 x 3.5 + 1
+                if slt(u, sub(0, 6)) {
+                    // R = 1/(1 - |x|) at 2^-254 within 2.1 units (|x|'s floor through R^2,
+                    // the quotient's floor); y = 2 floor(|x| R) within 4.2; P = ln(1 + y)/y
+                    // from log1p's series within 3 at y, 5.1 with y's error (P' under 1/2);
+                    // atanh(x)/|x| = R P within 2.1 + 5.2 + 1: D = m R P / 2^236 within
+                    // 2 x 8.3 + 1. y is under 2^-5 here (the 64-term series' band) and
+                    // under 2^-9 past u = -10 (the 32-term one's)
+                    let xf := tofixed254(0, u, m)
+                    let R := div254(0x4000000000000000000000000000000000000000000000000000000000000000, sub(0x4000000000000000000000000000000000000000000000000000000000000000, xf))
+                    let y := shl(1, mulwu(xf, R))
+                    let P := 0
+                    switch slt(u, sub(0, 10))
+                    case 1 { P := ln1pseries(y) }
+                    default { P := ln1pwide(y) }
+                    let p1, p0 := mul512(m, mulwu(R, P))
                     let D := or(shl(20, p1), shr(236, p0))
-                    if rbad(D, 12) {
+                    if rbad(D, 18) {
                         r := atanhw1(s, u, m)
                         leave
                     }

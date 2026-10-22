@@ -87,7 +87,7 @@ def match_tests() -> list[str]:
 
 
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "erfc", "normCdf", "compound",
-          "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up"]
+          "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "atanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up"]
 TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
        "min", "max", "avg", "dist", "zeroFloorSub", "gcd", "gavg", "hypot"}
 THREE = {"clamp", "lerp"}
@@ -151,6 +151,11 @@ def gen():
     re = random.Random(SEED + 6)
     write("fp127_erfc", [f127(re, 100, 131) for _ in range(S // 2)])
     write("fp127_compound", [f127(rng, 80, 123) for _ in range(S)], [rng.randint(1, 40_000_000) << 128 for _ in range(S)])
+    # atanh joined the FP127 sweep for the second gas pass, on its own stream: |x| from 2^-68 up
+    # to 1, the last quarter within 2^-1..2^-120 of +-1
+    ra = random.Random(SEED + 7)
+    write("fp127_atanh", [f127(ra, 60, 127) for _ in range(3 * S // 4)]
+          + [(ONE - (ra.getrandbits(ra.randint(8, 127)) | 1)) * ra.choice((1, -1)) for _ in range(S // 4)])
     # FP127 v5: the rest of the exponential family, the hyperbolics, powu and the directed edge ops
     rv = random.Random(SEED + 5)
     write("fp127_exp2", [f127(rv, 100, 134) for _ in range(S)])
@@ -369,6 +374,7 @@ def truth127(op, a, b):
         "sinh": lambda: mp.sinh(x) * ONE,
         "cosh": lambda: mp.cosh(x) * ONE,
         "tanh": lambda: mp.tanh(x) * ONE,
+        "atanh": lambda: mp.atanh(x) * ONE,
         "powu": lambda: mp.power(x, int(mp.floor(y))) * ONE,
         "mulUp": lambda: mpf(A) * B / ONE,
         "divUp": lambda: mpf(A) * ONE / B,

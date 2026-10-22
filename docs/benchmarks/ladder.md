@@ -1,6 +1,6 @@
 # Terminal precision ladder
 
-Generated 2026-10-21 by `make ladder`. Versions: fp127 fbbdc20, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
+Generated 2026-10-22 by `make ladder`. Versions: fp127 e2df2b5, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, forge forge Version: 1.7.1.
 
 Each scenario is run for several inputs; the first table is the reference input in full (`digits / digitsFormat / gas per step`, where digits is against the exact truth and digitsFormat against the truth from the parameters as the library received them), the second is the summary over all inputs (`median (min–max)` digits, capped at 40). Full values, both truths, signed errors and raw words are in ladder.json; the method is in the Methodology section at the end.
 
@@ -608,7 +608,7 @@ Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, 
 | 100 | `5.904291981569546` | 35 / 37 / 1,246 | 35 / 37 / 660 | 16 / 17 / 1,283 | 16 / 16 / 971 | 16 / 16 / 1,941 | 30 / 30 / 4,131 | 16 / 16 / 1,711 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 69 / 69 / 1,991 |
 | 365 | `3.76450175108814` | 35 / 37 / 1,006 | 35 / 37 / 455 | 16 / 17 / 577 | 16 / 16 / 450 | 16 / 16 / 990 | 30 / 30 / 1,938 | 16 / 16 / 859 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 68 / 68 / 1,455 |
 | 1000 | `0.9741872197637135` | 34 / 36 / 949 | 34 / 36 / 405 | 15 / 16 / 409 | 15 / 15 / 325 | 15 / 15 / 763 | 29 / 29 / 1,410 | 15 / 15 / 655 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 68 / 68 / 1,359 |
-| 10000 | `4.263958353856216e-34` | 3 / 3 / 931 | 3 / 3 / 374 | 0 / 0 / 317 | 0 / 0 / 256 | 0 / 0 / 640 | 27 / 27 / 1,087 | reverts `0xd4794efd` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 66 / 66 / 1,255 |
+| 10000 | `4.263958353856216e-34` | 3 / 3 / 931 | 3 / 3 / 374 | 0 / 0 / 317 | 0 / 0 / 256 | 0 / 0 / 640 | 27 / 27 / 1,087 | reverts `0xd4794efd` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 66 / 66 / 1,253 |
 
 ### All inputs (6): digits, median (min–max)
 

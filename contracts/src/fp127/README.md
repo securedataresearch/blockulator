@@ -123,9 +123,9 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `pi(terms)` | Ramanujan's 1914 series, floor(terms) terms, 1 ≤ terms ≤ 7; five terms give 36 digits, 230 ULP from π, and more add nothing | `OutOfRange` |
 | `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
 | `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −90 | `Overflow` above 88 |
-| `sinh`, `cosh` | \|x\| ≤ 88; the odd series at 2^-192 for sinh below 1 | `Overflow` |
+| `sinh`, `cosh` | \|x\| ≤ 88; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192, within 3 units of 2^-192; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
 | `tanh(x)` | all x; ±1 exactly from \|x\| = 46 | never |
-| `atanh(x)` | \|x\| < 1, both logs unrounded at 2^-192 | `OutOfRange` |
+| `atanh(x)` | \|x\| < 1; log1p(2\|x\|/(1 − \|x\|))/2, one division and one unrounded log at 2^-192 | `OutOfRange` |
 | `erf(x)`, `erfc(x)` | all x; series to 4, continued fraction beyond, at 2^-192; erfc(9.3) is one ULP, zero beyond | never |
 | `normCdf(x)` | Φ(x) = erfc(−x/√2)/2, the N(d) of Black-Scholes; Φ(−13) is two ULPs, Φ(−14) is zero, Φ(14) is one | never |
 
