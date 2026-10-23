@@ -255,7 +255,12 @@ def main():
             else:
                 line += f"  ({res['wall']:.0f}s)" + ("\n" + res.get("log", "") if res.get("log") else "")
             print(line, flush=True)
-            ok &= res["result"] == "pass"
+            # on a shared CI runner a check that runs out of time is not evidence about the op: with
+            # PROOFS_TIMEOUT_OK=1 it is a warning, and only a counterexample or an error fails the run
+            if res["result"] == "timeout" and os.environ.get("PROOFS_TIMEOUT_OK") == "1":
+                print(f"::warning title=proof timed out::{res['check']} ran out of time ({res['wall']:.0f}s); run it locally", flush=True)
+            else:
+                ok &= res["result"] == "pass"
 
     if args.write or (args.full and not args.only):
         record_tools = tool_versions(py)

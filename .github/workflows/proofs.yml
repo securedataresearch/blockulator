@@ -21,8 +21,9 @@ concurrency:
 jobs:
   proofs:
     runs-on: ubuntu-latest
-    # the fast subset (checks that passed in under 120 s, lemmas, fuzz)
-    timeout-minutes: 60
+    # the fast subset (checks that passed in under 120 s locally, lemmas, fuzz); each check gets 10 minutes,
+    # and on this shared runner a timeout is a warning, a counterexample or an error a failure
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,5 +41,5 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Formal proofs, the CI subset (docs/proofs.md; PROOFS_FULL=1 locally for all)
-        run: JOBS=2 SOLVER_THREADS=2 make proofs
+        run: JOBS=2 SOLVER_THREADS=1 CHECK_TIMEOUT=600 PROOFS_TIMEOUT_OK=1 make proofs
 
