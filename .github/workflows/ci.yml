@@ -84,6 +84,9 @@ jobs:
       - name: Runtime size
         run: make size
 
+      - name: Inline size table is current (one solc compile per op, legacy and via_ir)
+        run: make size-inline-check
+
       - uses: actions/upload-artifact@v4
         with:
           name: fp127-reports

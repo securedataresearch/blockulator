@@ -1,4 +1,4 @@
-.PHONY: gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size size-inline size-inline-check predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 
@@ -28,6 +28,8 @@ help:
 	@echo "  make talk             - The talk deck, one plot per slide from the data -> docs/talks/dust-is-over.pdf"
 	@echo "  make pi-compare       - Ramanujan's series through each library's primitives -> docs/benchmarks/pi.md"
 	@echo "  make size             - Print the deployed FP127 runtime size in bytes"
+	@echo "  make size-inline      - Bytecode each op adds inlined through FP127Lib / FP256Lib, legacy and via_ir -> docs/benchmarks/size.{json,md}"
+	@echo "  make size-inline-check - Fail if size.json / size.md are stale"
 	@echo "  make gen-inputs       - Generate scripts/ladder/inputs.json (every input floored into each representation) from scenarios.json"
 	@echo "  make gen-inputs-check - Fail if inputs.json is stale"
 	@echo "  make ladder           - Terminal-precision ladder: every scenario x input x library x N -> docs/benchmarks/ladder.json + ladder.md"
@@ -170,6 +172,14 @@ precision-report-fp256:
 
 size: build
 	@$(DEPLOY) size $(FP127_OBJECTS)
+
+# The bytecode each op adds when inlined through FP127Lib / FP256Lib, legacy and
+# via_ir: one throwaway contract per op (in a temp dir) against a baseline, by
+# solc directly. Needs only solc 0.8.38 (forge build installs it).
+size-inline:
+	@$(PY) scripts/size/inline.py
+size-inline-check:
+	@$(PY) scripts/size/inline.py --check
 
 bench: build
 	@forge test --match-contract "^GasLadder$$" -vv | $(PY) scripts/fp127/gas_to_json.py
