@@ -1,4 +1,4 @@
-.PHONY: gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp19 predict-fp19 deploy-fp19-sepolia verify-fp19-sepolia smoke-fp19-sepolia bench-fp19 precision-report-fp19 gen-fp19 vectors-fp19 size-fp19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
+.PHONY: home-data gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp19 predict-fp19 deploy-fp19-sepolia verify-fp19-sepolia smoke-fp19-sepolia bench-fp19 precision-report-fp19 gen-fp19 vectors-fp19 size-fp19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
 
 PY := uv run
 
@@ -50,6 +50,7 @@ help:
 	@echo "  make replays-fetch    - (network, read-only) re-pin scripts/replays/*.json from the attack transactions"
 	@echo "  make predict-ladder   - CREATE2 addresses of the ladder adapters and runner"
 	@echo "  make site             - Build the Zola site into public/ (pinned Zola is downloaded if none is installed)"
+	@echo "  make home-data        - static/data/home.json, the home page's tables and charts, from the datasets"
 	@echo "  make site-check       - zola check, the symlinked data test, and deno task test"
 	@echo "  make readme-assets    - regenerate the README chart, badges and tables from the datasets"
 	@echo "  make pack             - Stage the npm/Soldeer package in dist/contracts/ and check both dry runs' file lists (publishes nothing)"
@@ -343,7 +344,12 @@ verify-ladder-sepolia: build
 site:
 	@./build.sh
 
+# The home page's tables and charts, one small file from the measured datasets (scripts/site/home.py)
+home-data:
+	@$(PY) python scripts/site/home.py
+
 site-check: site
+	@$(PY) python scripts/site/home.py --check
 	@test -f public/data/ladder.json && test -f public/data/ops.json
 	@test -f public/contracts/build/abis/badge-factory-v2.json && test -f public/contracts/src/identity/badge.vy
 	@(test -x ./zola && ./zola check --skip-external-links) || zola check --skip-external-links
