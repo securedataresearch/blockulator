@@ -66,6 +66,9 @@ jobs:
       - name: BlockulatorWad to the last wei (known values, Solady's reverts, fuzzing against exact roots and fullMulDiv)
         run: FOUNDRY_FUZZ_RUNS=5000 forge test --match-path "test/wad/*"
 
+      - name: Typed API (FP127Type, FP256Type) equals the raw libraries; gas both ways, default profile and via_ir
+        run: FOUNDRY_FUZZ_RUNS=5000 make typed
+
       - name: Gas ladder
         run: make bench && cat docs/benchmarks/gas.md
 
@@ -97,6 +100,9 @@ jobs:
 
   proofs:
     runs-on: ubuntu-latest
+    # the fast subset only (checks that passed in under 120 s, lemmas, fuzz); the full
+    # symbolic runs are local (PROOFS_FULL=1 make proofs). A run past 15 minutes is a regression.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
