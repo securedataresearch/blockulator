@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Random-input accuracy sweep of the inline FP127 and FP256 libraries against
+"""Random-input accuracy sweep of the inline FP127 and FP19 libraries against
 correctly rounded truth.
 
     uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score
@@ -10,14 +10,14 @@ correctly rounded truth.
                                            # runner is a smaller contract; the re-baseline runs everything)
 
 Release four adds the directed ops, powu and lambertWm1, and a second pass: the
-same inputs (the first 4,000 of each) through a test-only copy of FP256Lib whose
+same inputs (the first 4,000 of each) through a test-only copy of FP19Lib whose
 rounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly
 rounded op returns its wide second stage. That pass is generated into
 test/sweep/wide/ (not committed) and removed after the run.
 
-A third pass runs every op on all its inputs through test-only copies of FP256Lib
+A third pass runs every op on all its inputs through test-only copies of FP19Lib
 and FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:
-FP256's rbad firing, FP127's double-word l2p and powu's 512-bit powus), generated into
+FP19's rbad firing, FP127's double-word l2p and powu's 512-bit powus), generated into
 test/sweep/count/ and removed after the run: the *fallback* column is the share of
 inputs that left the fast path. Its results must equal the plain pass's word for word.
 
@@ -25,7 +25,7 @@ Gas is the inline library call alone: Sweep.t.sol reads gasleft() on either side
 the one call, after its dispatch, and subtracts the same window around an assignment.
 
 Inputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not
-committed. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:
+committed. FP19 results are compared with the word the oracle (scripts/fp19/oracle.py:
 exact rationals and mpmath at 300 digits, half away from zero) returns, as a signed
 distance in ULPs. FP127 results are compared with the real truth at 200 digits, as
 |got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.
@@ -43,7 +43,7 @@ from fractions import Fraction
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "scripts" / "fp256"))
+sys.path.insert(0, str(ROOT / "scripts" / "fp19"))
 import oracle as O  # noqa: E402
 from mpmath import mp, mpf, e as E, lambertw, log  # noqa: E402
 
@@ -60,7 +60,7 @@ T256 = 1 << 256
 ONE = 1 << 128
 BIAS = 0x3FFFF
 SEED, SEED_LW = 20261020, 7
-OPS256 = ["add", "mul", "div", "sqrt", "exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf",
+OPS19 = ["add", "mul", "div", "sqrt", "exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf",
           "compound", "lambertW0", "lambertWm1", "powu",
           "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp",
           "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up",
@@ -68,8 +68,8 @@ OPS256 = ["add", "mul", "div", "sqrt", "exp", "ln", "log1p", "expm1", "pow", "er
           "exp2", "exp10", "log2", "log10", "log2Up", "cbrt", "sinh", "cosh", "tanh", "atanh",
           "min", "max", "clamp", "avg", "dist", "zeroFloorSub", "inv", "lerp", "frac", "round",
           "factorial", "gavg", "hypot"]
-# the ops with a wide second stage, swept again through FP256LibWide
-WIDE256 = ["exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf", "compound", "lambertW0",
+# the ops with a wide second stage, swept again through FP19LibWide
+WIDE19 = ["exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf", "compound", "lambertW0",
            "lambertWm1", "powu", "exp2", "exp10", "log2", "log10", "sinh", "cosh", "tanh", "atanh"]
 WIDE_N = 4000
 PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp", "toFixed18Down", "toFixed18Up"}
@@ -85,7 +85,7 @@ def match_tests() -> list[str]:
     if SEL is None:
         return []
     # forge 1.7 matches the signature, test_x(), so the end allows the parentheses
-    return ["--match-test", "^test_(noop|(fp256|fp127|wad)_(" + "|".join(sorted(SEL)) + ")x?)(\\(\\))?$"]
+    return ["--match-test", "^test_(noop|(fp19|fp127|wad)_(" + "|".join(sorted(SEL)) + ")x?)(\\(\\))?$"]
 
 
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "erfc", "normCdf", "compound",
@@ -97,7 +97,7 @@ THREE = {"clamp", "lerp"}
 
 # ---- inputs ----------------------------------------------------------------
 
-def f256(rng, emin, emax, neg=0.5):
+def f19(rng, emin, emax, neg=0.5):
     e = rng.randint(emin, emax)
     f = rng.getrandbits(236)
     s = 1 if rng.random() < neg else 0
@@ -124,20 +124,20 @@ def gen():
     D.mkdir(parents=True, exist_ok=True)
     rng = random.Random(SEED)
     N, S = 20000, 4000
-    write("fp256_add", [f256(rng, -40, 40) for _ in range(S)], [f256(rng, -40, 40) for _ in range(S)])
-    write("fp256_mul", [f256(rng, -400, 400) for _ in range(S)], [f256(rng, -400, 400) for _ in range(S)])
-    write("fp256_div", [f256(rng, -400, 400) for _ in range(S)], [f256(rng, -400, 400) for _ in range(S)])
-    write("fp256_sqrt", [f256(rng, -400, 400, 0) for _ in range(S)])
-    write("fp256_exp", [f256(rng, -30, 9) for _ in range(N)])
-    write("fp256_ln", [f256(rng, -300, 300, 0) for _ in range(N // 2)] + [f256(rng, -1, 0, 0) for _ in range(N // 2)])
-    write("fp256_log1p", [f256(rng, -60, 4, 0.3) for _ in range(N)])
-    write("fp256_expm1", [f256(rng, -60, 6) for _ in range(N)])
-    write("fp256_pow", [f256(rng, -2, 2, 0) for _ in range(N)], [f256(rng, -8, 6) for _ in range(N)])
-    write("fp256_erf", [f256(rng, -8, 2) for _ in range(S)])
-    write("fp256_erfc", [f256(rng, -8, 4) for _ in range(S)])
-    write("fp256_normCdf", [f256(rng, -8, 4) for _ in range(S)])
-    write("fp256_compound", [f256(rng, -40, -5) for _ in range(S)], [rng.randint(1, 40_000_000) for _ in range(S)])
-    write("fp256_lambertW0", [f256(rng, -10, 8, 0) for _ in range(S // 2)])
+    write("fp19_add", [f19(rng, -40, 40) for _ in range(S)], [f19(rng, -40, 40) for _ in range(S)])
+    write("fp19_mul", [f19(rng, -400, 400) for _ in range(S)], [f19(rng, -400, 400) for _ in range(S)])
+    write("fp19_div", [f19(rng, -400, 400) for _ in range(S)], [f19(rng, -400, 400) for _ in range(S)])
+    write("fp19_sqrt", [f19(rng, -400, 400, 0) for _ in range(S)])
+    write("fp19_exp", [f19(rng, -30, 9) for _ in range(N)])
+    write("fp19_ln", [f19(rng, -300, 300, 0) for _ in range(N // 2)] + [f19(rng, -1, 0, 0) for _ in range(N // 2)])
+    write("fp19_log1p", [f19(rng, -60, 4, 0.3) for _ in range(N)])
+    write("fp19_expm1", [f19(rng, -60, 6) for _ in range(N)])
+    write("fp19_pow", [f19(rng, -2, 2, 0) for _ in range(N)], [f19(rng, -8, 6) for _ in range(N)])
+    write("fp19_erf", [f19(rng, -8, 2) for _ in range(S)])
+    write("fp19_erfc", [f19(rng, -8, 4) for _ in range(S)])
+    write("fp19_normCdf", [f19(rng, -8, 4) for _ in range(S)])
+    write("fp19_compound", [f19(rng, -40, -5) for _ in range(S)], [rng.randint(1, 40_000_000) for _ in range(S)])
+    write("fp19_lambertW0", [f19(rng, -10, 8, 0) for _ in range(S // 2)])
     write("fp127_mul", [f127(rng, 100, 200) for _ in range(S)], [f127(rng, 60, 160) for _ in range(S)])
     write("fp127_div", [f127(rng, 100, 200) for _ in range(S)], [f127(rng, 100, 200) for _ in range(S)])
     write("fp127_sqrt", [f127(rng, 1, 254, 0) for _ in range(S)])
@@ -208,36 +208,36 @@ def gen4():
     rng = random.Random(SEED + 4)
     S, N = 4000, 20000
     # W0 on the negative side and near -1/e; W-1 on [-1/e, 0)
-    w0neg = [f256(rng, -64, -3, 1) for _ in range(S // 4)] + near_branch(rng, S // 4)
-    write("fp256_lambertWm1", [f256(rng, -300, -3, 1) for _ in range(S // 2)] + near_branch(rng, S // 2))
-    write("fp256_powu", [f256(rng, -2, 2) for _ in range(S)],
+    w0neg = [f19(rng, -64, -3, 1) for _ in range(S // 4)] + near_branch(rng, S // 4)
+    write("fp19_lambertWm1", [f19(rng, -300, -3, 1) for _ in range(S // 2)] + near_branch(rng, S // 2))
+    write("fp19_powu", [f19(rng, -2, 2) for _ in range(S)],
           [rng.choice([1, -1]) * rng.randint(2, 1 << rng.randint(2, 20)) for _ in range(S)])
     for op in ("mulDown", "mulUp"):
-        write(f"fp256_{op}", [f256(rng, -400, 400) for _ in range(S)], [f256(rng, -400, 400) for _ in range(S)])
+        write(f"fp19_{op}", [f19(rng, -400, 400) for _ in range(S)], [f19(rng, -400, 400) for _ in range(S)])
     for op in ("divDown", "divUp"):
-        write(f"fp256_{op}", [f256(rng, -400, 400) for _ in range(S)], [f256(rng, -400, 400) for _ in range(S)])
+        write(f"fp19_{op}", [f19(rng, -400, 400) for _ in range(S)], [f19(rng, -400, 400) for _ in range(S)])
     # amounts: integers and near-integers to 2^256, a few negatives and tiny values
     for op in ("toUintDown", "toUintUp"):
-        write(f"fp256_{op}", [f256(rng, -4, 255, 0.05) for _ in range(S)])
+        write(f"fp19_{op}", [f19(rng, -4, 255, 0.05) for _ in range(S)])
     for op in ("toIntDown", "toIntUp", "floor", "ceil"):
-        write(f"fp256_{op}", [f256(rng, -4, 254) for _ in range(S)])
+        write(f"fp19_{op}", [f19(rng, -4, 254) for _ in range(S)])
     for op in ("fromUintDown", "fromUintUp"):
-        write(f"fp256_{op}", [rng.getrandbits(rng.randint(200, 256)) for _ in range(S)])
+        write(f"fp19_{op}", [rng.getrandbits(rng.randint(200, 256)) for _ in range(S)])
     for op in ("toFixed18Down", "toFixed18Up"):
-        write(f"fp256_{op}", [f256(rng, -80, 190) for _ in range(S)])
+        write(f"fp19_{op}", [f19(rng, -80, 190) for _ in range(S)])
     # wider ranges for the ops whose second stage has more than one branch,
     # appended to the op's own rows ("x" files, merged by load)
     E = S // 2
-    write("fp256_expx", [f256(rng, 9, 17) for _ in range(E)])
-    write("fp256_expm1x", [f256(rng, 6, 17) for _ in range(E)])
-    write("fp256_log1px", [f256(rng, 4, 300, 0) for _ in range(E // 2)] + [f256(rng, -4, -1, 1) for _ in range(E // 2)])
-    write("fp256_powx", [f256(rng, -300, 300, 0) for _ in range(E)], [f256(rng, -20, 10) for _ in range(E)])
-    write("fp256_compoundx", [f256(rng, -4, 8, 0.3) for _ in range(E // 2)] + [f256(rng, -1, -1, 1) for _ in range(E // 2)],
+    write("fp19_expx", [f19(rng, 9, 17) for _ in range(E)])
+    write("fp19_expm1x", [f19(rng, 6, 17) for _ in range(E)])
+    write("fp19_log1px", [f19(rng, 4, 300, 0) for _ in range(E // 2)] + [f19(rng, -4, -1, 1) for _ in range(E // 2)])
+    write("fp19_powx", [f19(rng, -300, 300, 0) for _ in range(E)], [f19(rng, -20, 10) for _ in range(E)])
+    write("fp19_compoundx", [f19(rng, -4, 8, 0.3) for _ in range(E // 2)] + [f19(rng, -1, -1, 1) for _ in range(E // 2)],
           [rng.choice([1, -1]) * rng.randint(1, 1 << rng.randint(1, 12)) for _ in range(E)])
-    write("fp256_erfcx", [f256(rng, 4, 8) for _ in range(E)])
-    write("fp256_normCdfx", [f256(rng, 4, 9, 0.8) for _ in range(E)])
-    write("fp256_powux", [f256(rng, -40, 40) for _ in range(E)], [rng.choice([1, -1]) * rng.randint(2, 200) for _ in range(E)])
-    write("fp256_lambertW0x", w0neg + [f256(rng, 8, 18, 0) for _ in range(E // 2)] + [f256(rng, 1000, 200000, 0) for _ in range(E // 2)])
+    write("fp19_erfcx", [f19(rng, 4, 8) for _ in range(E)])
+    write("fp19_normCdfx", [f19(rng, 4, 9, 0.8) for _ in range(E)])
+    write("fp19_powux", [f19(rng, -40, 40) for _ in range(E)], [rng.choice([1, -1]) * rng.randint(2, 200) for _ in range(E)])
+    write("fp19_lambertW0x", w0neg + [f19(rng, 8, 18, 0) for _ in range(E // 2)] + [f19(rng, 1000, 200000, 0) for _ in range(E // 2)])
     gen79()
 
 
@@ -251,36 +251,36 @@ def gen79():
     """#79's inputs, from their own seed."""
     rng = random.Random(SEED + 79)
     S, N = 4000, 8000
-    write("fp256_exp2", [f256(rng, -40, 18) for _ in range(N)])
-    write("fp256_exp10", [f256(rng, -40, 16) for _ in range(N)])
+    write("fp19_exp2", [f19(rng, -40, 18) for _ in range(N)])
+    write("fp19_exp10", [f19(rng, -40, 16) for _ in range(N)])
     for op in ("log2", "log10"):
-        write(f"fp256_{op}", [f256(rng, -300, 300, 0) for _ in range(N // 2)] + [f256(rng, -1, 0, 0) for _ in range(N // 4)]
+        write(f"fp19_{op}", [f19(rng, -300, 300, 0) for _ in range(N // 2)] + [f19(rng, -1, 0, 0) for _ in range(N // 4)]
               + near_one(rng, N // 4))
-    write("fp256_log2Up", [f256(rng, -300, 300, 0.05) for _ in range(S)])
-    write("fp256_cbrt", [f256(rng, -1000, 1000) for _ in range(S)])
+    write("fp19_log2Up", [f19(rng, -300, 300, 0.05) for _ in range(S)])
+    write("fp19_cbrt", [f19(rng, -1000, 1000) for _ in range(S)])
     for op in ("sinh", "cosh", "tanh"):
-        write(f"fp256_{op}", [f256(rng, -130, 8) for _ in range(N // 2)] + [f256(rng, -3, 3) for _ in range(N // 2)])
-    write("fp256_atanh", [f256(rng, -130, -1) for _ in range(N // 2)] + [f256(rng, -5, -1) for _ in range(N // 2)])
-    pair = lambda lo, hi: ([f256(rng, lo, hi) for _ in range(S)], [f256(rng, lo, hi) for _ in range(S)])
+        write(f"fp19_{op}", [f19(rng, -130, 8) for _ in range(N // 2)] + [f19(rng, -3, 3) for _ in range(N // 2)])
+    write("fp19_atanh", [f19(rng, -130, -1) for _ in range(N // 2)] + [f19(rng, -5, -1) for _ in range(N // 2)])
+    pair = lambda lo, hi: ([f19(rng, lo, hi) for _ in range(S)], [f19(rng, lo, hi) for _ in range(S)])
     for op in ("min", "max", "avg", "dist", "zeroFloorSub"):
-        write(f"fp256_{op}", *pair(-300, 300))
-    write("fp256_inv", [f256(rng, -400, 400) for _ in range(S)])
+        write(f"fp19_{op}", *pair(-300, 300))
+    write("fp19_inv", [f19(rng, -400, 400) for _ in range(S)])
     for op in ("frac", "round"):
-        write(f"fp256_{op}", [f256(rng, -4, 240) for _ in range(S)])
+        write(f"fp19_{op}", [f19(rng, -4, 240) for _ in range(S)])
     # the draws of the removed gcd's inputs, so every later op keeps its inputs
-    [f256(rng, -2, 300) for _ in range(2 * S)]
+    [f19(rng, -2, 300) for _ in range(2 * S)]
     # hypot near its own exponents (where the sum of squares is exact) and far apart
-    ha = [f256(rng, -400, 400) for _ in range(S)]
+    ha = [f19(rng, -400, 400) for _ in range(S)]
     hb = [(((x >> 236) & 0x7FFFF) + rng.randint(-130, 130)) << 236 | rng.getrandbits(236) | (rng.getrandbits(1) << 255) for x in ha]
-    write("fp256_hypot", ha, hb)
-    write("fp256_gavg", [f256(rng, -400, 400, 0) for _ in range(S)], [f256(rng, -400, 400, 0) for _ in range(S)])
-    write("fp256_clamp", [f256(rng, -5, 5) for _ in range(S)], [f256(rng, -5, 5) for _ in range(S)], [f256(rng, -5, 5) for _ in range(S)])
+    write("fp19_hypot", ha, hb)
+    write("fp19_gavg", [f19(rng, -400, 400, 0) for _ in range(S)], [f19(rng, -400, 400, 0) for _ in range(S)])
+    write("fp19_clamp", [f19(rng, -5, 5) for _ in range(S)], [f19(rng, -5, 5) for _ in range(S)], [f19(rng, -5, 5) for _ in range(S)])
     # lerp, eight shapes: b near a (b - a cancels), t near -a/(b - a) (the sum
     # cancels), t near one (a (1 - t) cancels), exponents spread by 600, by
     # 200,000, a far under t b, and plain
     la, lb, lt = [], [], []
     for i in range(N):
-        a, b, t = f256(rng, -40, 40), f256(rng, -40, 40), f256(rng, -3, 3)
+        a, b, t = f19(rng, -40, 40), f19(rng, -40, 40), f19(rng, -3, 3)
         kind = i % 8
         if kind == 0:
             b = a ^ rng.getrandbits(rng.randint(1, 236))
@@ -290,15 +290,15 @@ def gen79():
         elif kind == 2:
             t = (BIAS << 236) ^ rng.getrandbits(rng.randint(1, 236)) ^ (rng.getrandbits(1) << 255) ^ (rng.getrandbits(1) << 236)
         elif kind == 3:
-            a, b, t = f256(rng, -600, 600), f256(rng, -600, 600), f256(rng, -800, 800)
+            a, b, t = f19(rng, -600, 600), f19(rng, -600, 600), f19(rng, -800, 800)
         elif kind == 4:
-            a, b, t = f256(rng, -200000, 200000), f256(rng, -200000, 200000), f256(rng, -60000, 60000)
+            a, b, t = f19(rng, -200000, 200000), f19(rng, -200000, 200000), f19(rng, -60000, 60000)
         elif kind == 5:
-            a = f256(rng, -3000, -300)
+            a = f19(rng, -3000, -300)
         la.append(a), lb.append(b), lt.append(t)
-    write("fp256_lerp", la, lb, lt)
+    write("fp19_lerp", la, lb, lt)
     # factorial over its whole domain, and past it
-    write("fp256_factorial", [O.encode(Fraction(n)) for n in range(0, 20370)])
+    write("fp19_factorial", [O.encode(Fraction(n)) for n in range(0, 20370)])
 
 
 
@@ -309,7 +309,7 @@ def s256(v):
     return v - T256 if v >> 255 else v
 
 
-def key256(w):
+def key19(w):
     w %= T256
     return -(w & (T256 // 2 - 1)) if w >> 255 else w
 
@@ -319,13 +319,13 @@ EXTRA = ["exp", "expm1", "log1p", "pow", "compound", "erfc", "normCdf", "powu", 
 
 def load(name):
     lib, op = name.split("_", 1)
-    if lib in ("fp256", "wide") and op in EXTRA and (D / f"fp256_{op}x.json").exists():
+    if lib in ("fp19", "wide") and op in EXTRA and (D / f"fp19_{op}x.json").exists():
         return load1(name) + load1(name + "x")
     return load1(name)
 
 
 def load1(name):
-    src = name.replace("wide_", "fp256_")
+    src = name.replace("wide_", "fp19_")
     j = json.loads((D / f"{src}.json").read_text())
     a = [int(x, 16) for x in j["a"]]
     b = [int(x, 16) for x in j.get("b", [])] or [0] * len(a)
@@ -339,7 +339,7 @@ def load1(name):
     return list(zip(a, b, c, outs, gas))
 
 
-def job256(args):
+def job19(args):
     op, a, b, c, out = args
     mp.dps = 300        # the oracle's precision; gen() lowers it for the FP127 Lambert inputs
     try:
@@ -351,7 +351,7 @@ def job256(args):
         return ("gotrev", None)
     if op in PLAIN:
         return ("ok", int(out, 16) - ref % T256 if op.startswith("toUint") else s256(int(out, 16)) - s256(ref))
-    return ("ok", key256(int(out, 16)) - key256(ref))
+    return ("ok", key19(int(out, 16)) - key19(ref))
 
 
 def truth127(op, a, b):
@@ -403,11 +403,11 @@ def job127(args):
     return ("ok", float(err), bits, near, abs(t) >= ONE)
 
 
-def summarize256(op, res):
+def summarize19(op, res):
     st = Counter(r[0] for r in res)
     errs = [r[1] for r in res if r[0] == "ok"]
     c = Counter(errs)
-    return {"lib": "fp256", "op": op, "n": len(errs), "status": dict(st), "correctlyRounded": c.get(0, 0),
+    return {"lib": "fp19", "op": op, "n": len(errs), "status": dict(st), "correctlyRounded": c.get(0, 0),
             "misrounded": len(errs) - c.get(0, 0), "maxUlp": max((abs(x) for x in errs), default=0),
             "hist": {str(k): v for k, v in sorted(c.items())}}
 
@@ -441,19 +441,19 @@ def summarize127(op, res):
 def score():
     rows = []
     with mpc.Pool() as pool:
-        for op in OPS256:
+        for op in OPS19:
             if not selected(op):
                 continue
-            data = load(f"fp256_{op}")
-            res = pool.map(job256, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=64)
-            rows.append(dict(summarize256(op, res), **gasstats([g for *_, g in data]), **fallback("fp256", op, data)))
+            data = load(f"fp19_{op}")
+            res = pool.map(job19, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=64)
+            rows.append(dict(summarize19(op, res), **gasstats([g for *_, g in data]), **fallback("fp19", op, data)))
             print(json.dumps(rows[-1]), flush=True)
-        for op in WIDE256:
+        for op in WIDE19:
             if not selected(op) or not (D / f"wide_{op}.out").exists():
                 continue
             data = load(f"wide_{op}")
-            res = pool.map(job256, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=16)
-            rows.append(dict(summarize256(op, res), stage="second", **gasstats([g for *_, g in data])))
+            res = pool.map(job19, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=16)
+            rows.append(dict(summarize19(op, res), stage="second", **gasstats([g for *_, g in data])))
             print(json.dumps(rows[-1]), flush=True)
         for op in OPS127 + ["lambertW0", "lambertWm1"]:
             if not selected(op):
@@ -474,18 +474,18 @@ def score():
     md = ["# Random-input accuracy sweep",
           "",
           "Generated by `make sweep` (`scripts/sweep/sweep.py`, `test/sweep/Sweep.t.sol`) from seeded random "
-          "inputs. FP256 is compared with the correctly rounded word (scripts/fp256/oracle.py, 300 digits, "
+          "inputs. FP19 is compared with the correctly rounded word (scripts/fp19/oracle.py, 300 digits, "
           "ties away from zero); FP127 with the real truth at 200 digits, in units of 2^-128. "
           "Data: `sweep.json`.",
           "",
-          "## FP256",
+          "## FP19",
           "",
           "Release four: every op below is correctly rounded or exact by construction; the "
           "directed ops (Down: toward minus infinity, Up: toward plus infinity) are compared "
           "with the exact value rounded in their direction, the plain-integer ones (toUint, "
           "toInt) as integers.",
           "",
-          "Gas is the inline library's (FP256Lib) own cost on these inputs, median / 99th "
+          "Gas is the inline library's (FP19Lib) own cost on these inputs, median / 99th "
           "percentile / largest, the second stage's runs included where the fast value's "
           "error bound reached the rounding boundary. *Fallback* is the share of inputs whose "
           "rounding test fired (a dash: the op has none).",
@@ -493,14 +493,14 @@ def score():
           "| op | inputs | correctly rounded | misrounded | max ULP | gas median / p99 / max | fallback |",
           "|---|---:|---:|---:|---:|---:|---:|"]
     for r in rows:
-        if r["lib"] == "fp256" and "stage" not in r:
+        if r["lib"] == "fp19" and "stage" not in r:
             md.append(f"| {r['op']} | {r['n']:,} | {r['correctlyRounded']:,} | {r['misrounded']:,} | {r['maxUlp']} | "
                       f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} | {pct(r)} |")
-    if any(r.get("stage") and r["lib"] == "fp256" for r in rows):
+    if any(r.get("stage") and r["lib"] == "fp19" for r in rows):
         md += ["",
                "### The second stage alone",
                "",
-               "The first 4,000 inputs of each op again, through a test-only copy of FP256Lib whose "
+               "The first 4,000 inputs of each op again, through a test-only copy of FP19Lib whose "
                "rounding test always fails, so every result comes from the wide second stage "
                "(two words at 2^-510) that normally runs only when the fast value is too close to "
                "a tie.",
@@ -508,7 +508,7 @@ def score():
                "| op | inputs | correctly rounded | misrounded | max ULP | gas median / p99 / max |",
                "|---|---:|---:|---:|---:|---:|"]
         for r in rows:
-            if r.get("stage") and r["lib"] == "fp256":
+            if r.get("stage") and r["lib"] == "fp19":
                 md.append(f"| {r['op']} | {r['n']:,} | {r['correctlyRounded']:,} | {r['misrounded']:,} | {r['maxUlp']} | "
                           f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} |")
     md += ["",
@@ -541,7 +541,7 @@ pragma solidity ^0.8.24;
 // GENERATED by scripts/sweep/sweep.py for the second-stage pass; removed after the run.
 
 import {Test} from "forge-std/Test.sol";
-import {FP256LibWide} from "./FP256LibWide.sol";
+import {FP19LibWide} from "./FP19LibWide.sol";
 
 contract SweepWide is Test {
     string constant DIR = "cache/sweep/";
@@ -563,7 +563,7 @@ contract SweepWide is Test {
     }
 
     function _run(string memory op, bool two) internal {
-        string memory path = string.concat(DIR, "fp256_", op, ".json");
+        string memory path = string.concat(DIR, "fp19_", op, ".json");
         if (!vm.exists(path)) return;
         string memory j = vm.readFile(path);
         bytes32[] memory a = vm.parseJsonBytes32Array(j, ".a");
@@ -588,15 +588,15 @@ contract SweepWide is Test {
 
 
 def run_wide():
-    """Generate FP256LibWide and its runner, run them, remove them."""
+    """Generate FP19LibWide and its runner, run them, remove them."""
     wd = ROOT / "test" / "sweep" / "wide"
-    names = [op for op in WIDE256 if selected(op)] + [f"{op}x" for op in EXTRA if selected(op)]
+    names = [op for op in WIDE19 if selected(op)] + [f"{op}x" for op in EXTRA if selected(op)]
     if not names:
         return
-    subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", "fp256", "--wide-lib",
-                    str(wd / "FP256LibWide.sol")], cwd=ROOT, check=True)
+    subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", "fp19", "--wide-lib",
+                    str(wd / "FP19LibWide.sol")], cwd=ROOT, check=True)
     fn = {f"{op}x": op for op in EXTRA}
-    disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = FP256LibWide.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
+    disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = FP19LibWide.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
                       for n in names)
     runs = "\n".join(f'    function test_{n}() public {{ this.runOne("{n}", {"true" if fn.get(n, n) in TWO else "false"}); }}' for n in names)
     (wd / "SweepWide.t.sol").write_text(WIDE_TEST % (disp, WIDE_N, WIDE_N, runs))
@@ -688,9 +688,9 @@ def rec_words(kind: str) -> int:
 
 
 def base_op(name: str) -> str:
-    """fp256_erfcx -> erfc, fp127_erf -> erf: the op behind an input file's name."""
+    """fp19_erfcx -> erfc, fp127_erf -> erf: the op behind an input file's name."""
     op = name.split("_", 1)[1] if "_" in name else name
-    return op[:-1] if name.startswith("fp256_") and op.endswith("x") and op[:-1] in EXTRA else op
+    return op[:-1] if name.startswith("fp19_") and op.endswith("x") and op[:-1] in EXTRA else op
 
 
 def nargs(name: str) -> int:
@@ -702,20 +702,20 @@ def nargs(name: str) -> int:
 
 def wide_names() -> list[str]:
     """The input files of the second-stage pass, as run_wide runs them."""
-    return [f"fp256_{op}" for op in WIDE256] + [f"fp256_{op}x" for op in EXTRA]
+    return [f"fp19_{op}" for op in WIDE19] + [f"fp19_{op}x" for op in EXTRA]
 
 
 def run_instrumented(kind: str, forced: bool = False):
     """Generate the count or probe libraries and their runner, run them on the
-    swept inputs, remove them. forced: FP256 only, with the rounding test
+    swept inputs, remove them. forced: FP19 only, with the rounding test
     forced to fail as in run_wide (gen.py --forced), on the same first WIDE_N
     inputs of the ops with a second stage; the outputs are <kind>wide_*.out."""
     tag = kind + ("wide" if forced else "")
     Tag = tag.capitalize()
     wd = ROOT / "test" / "sweep" / tag
-    libs = ("fp256",) if forced else ("fp256", "fp127")
+    libs = ("fp19",) if forced else ("fp19", "fp127")
     if kind == "count" and not forced:
-        libs += ("wad",)   # BlockulatorWad's fallback share; make profile's probes stay FP256's and FP127's
+        libs += ("wad",)   # BlockulatorWad's fallback share; make profile's probes stay FP19's and FP127's
     for lib in libs:
         subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", lib, f"--{kind}-lib",
                         str(wd / f"{lib.upper()}Lib{Tag}.sol")] + (["--forced"] if forced else []), cwd=ROOT, check=True)
@@ -728,7 +728,7 @@ def run_instrumented(kind: str, forced: bool = False):
             continue
         if name.startswith("wad_") and "wad" not in libs:
             continue
-        expr = (expr.replace("FP256Lib.", f"FP256Lib{Tag}.").replace("FP127Lib.", f"FP127Lib{Tag}.")
+        expr = (expr.replace("FP19Lib.", f"FP19Lib{Tag}.").replace("FP127Lib.", f"FP127Lib{Tag}.")
                 .replace("BlockulatorWad.", f"WADLib{Tag}."))
         disp.append(f'        if (op == "{name}") {{ g0 = gasleft(); r = {expr}; g = gasleft(); }}')
         if name != "noop":
@@ -753,7 +753,7 @@ def load_rec(kind: str, name: str):
     """The instrumented pass's lines for an input file (with the x rows, as
     load): (out, gas, [record words]) per input."""
     lib, op = name.split("_", 1)
-    names = [name] + ([name + "x"] if lib == "fp256" and op in EXTRA and (D / f"{name}x.json").exists() else [])
+    names = [name] + ([name + "x"] if lib == "fp19" and op in EXTRA and (D / f"{name}x.json").exists() else [])
     rows = []
     for n in names:
         path = D / f"{kind}_{n}.out"
@@ -799,7 +799,7 @@ def main():
     if args[:1] == ["--ops"]:
         SEL = set(args[1].split(","))
         args = args[2:]
-        unknown = SEL - set(OPS256) - set(OPS127) - {"lambertW0", "lambertWm1"} - set(WD.FUNCS)
+        unknown = SEL - set(OPS19) - set(OPS127) - {"lambertW0", "lambertWm1"} - set(WD.FUNCS)
         if unknown:
             sys.exit(f"--ops: not swept: {', '.join(sorted(unknown))}")
     if args != ["score"]:

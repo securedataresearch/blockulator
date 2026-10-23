@@ -1,5 +1,5 @@
 {
- "about": "Formal proofs of FP127's and FP256's core arithmetic and directed rounding: docs/proofs.md",
+ "about": "Formal proofs of FP127's and FP19's core arithmetic and directed rounding: docs/proofs.md",
  "tools": {
   "halmos": "0.3.3",
   "solver": "bitwuzla 0.8.1",
@@ -339,12 +339,12 @@
    "reproduce": "python3 test/proofs/run.py --only '^(check_fp127_fromFixed18)$'"
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "add",
    "status": "in-progress",
    "spec": "a + b rounded to nearest (237 bits, ties away)",
    "checks": [
-    "check_fp256_add"
+    "check_fp19_add"
    ],
    "lemmas": [],
    "seconds": null,
@@ -355,12 +355,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "sub",
    "status": "in-progress",
    "spec": "a - b rounded to nearest",
    "checks": [
-    "check_fp256_sub"
+    "check_fp19_sub"
    ],
    "lemmas": [],
    "seconds": null,
@@ -371,12 +371,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "mul",
    "status": "in-progress",
    "spec": "a b rounded to nearest",
    "checks": [
-    "check_fp256_mul"
+    "check_fp19_mul"
    ],
    "lemmas": [
     "L1",
@@ -390,12 +390,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "mulDown",
    "status": "in-progress",
    "spec": "a b rounded toward -inf",
    "checks": [
-    "check_fp256_mulDown"
+    "check_fp19_mulDown"
    ],
    "lemmas": [
     "L1",
@@ -409,12 +409,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "mulUp",
    "status": "in-progress",
    "spec": "a b rounded toward +inf",
    "checks": [
-    "check_fp256_mulUp"
+    "check_fp19_mulUp"
    ],
    "lemmas": [
     "L1",
@@ -428,15 +428,15 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "div",
    "status": "in-progress",
    "spec": "a / b rounded to nearest",
    "checks": [
-    "check_fp256_div"
+    "check_fp19_div"
    ],
    "lemmas": [
-    "K256",
+    "K19",
     "L3"
    ],
    "seconds": null,
@@ -447,15 +447,15 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "divDown",
    "status": "in-progress",
    "spec": "a / b rounded toward -inf",
    "checks": [
-    "check_fp256_divDown"
+    "check_fp19_divDown"
    ],
    "lemmas": [
-    "K256",
+    "K19",
     "L3"
    ],
    "seconds": null,
@@ -466,15 +466,15 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "divUp",
    "status": "in-progress",
    "spec": "a / b rounded toward +inf",
    "checks": [
-    "check_fp256_divUp"
+    "check_fp19_divUp"
    ],
    "lemmas": [
-    "K256",
+    "K19",
     "L3"
    ],
    "seconds": null,
@@ -485,15 +485,15 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "inv",
    "status": "in-progress",
    "spec": "1 / x rounded to nearest",
    "checks": [
-    "check_fp256_inv"
+    "check_fp19_inv"
    ],
    "lemmas": [
-    "K256"
+    "K19"
    ],
    "seconds": null,
    "paths": null,
@@ -503,7 +503,7 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "sqrt",
    "status": "fuzzed",
    "spec": "sqrt(x) rounded to nearest",
@@ -514,15 +514,15 @@
    "fast_checks": [],
    "note": "FuzzProofs against the exact integer root",
    "tool": "forge fuzz, 3,000 runs",
-   "reproduce": "FOUNDRY_PROFILE=proofs forge test --match-contract FuzzProofs --match-test fp256_sqrt"
+   "reproduce": "FOUNDRY_PROFILE=proofs forge test --match-contract FuzzProofs --match-test fp19_sqrt"
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "floor",
    "status": "in-progress",
    "spec": "the integral number at or below x",
    "checks": [
-    "check_fp256_floor"
+    "check_fp19_floor"
    ],
    "lemmas": [],
    "seconds": null,
@@ -533,12 +533,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "ceil",
    "status": "in-progress",
    "spec": "the integral number at or above x",
    "checks": [
-    "check_fp256_ceil"
+    "check_fp19_ceil"
    ],
    "lemmas": [],
    "seconds": null,
@@ -549,12 +549,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "round",
    "status": "in-progress",
    "spec": "the nearest integral number, halves away from zero",
    "checks": [
-    "check_fp256_round"
+    "check_fp19_round"
    ],
    "lemmas": [],
    "seconds": null,
@@ -565,12 +565,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "toUintDown",
    "status": "in-progress",
    "spec": "floor(x) as uint256",
    "checks": [
-    "check_fp256_toUintDown"
+    "check_fp19_toUintDown"
    ],
    "lemmas": [],
    "seconds": null,
@@ -581,12 +581,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "toUintUp",
    "status": "in-progress",
    "spec": "ceil(x) as uint256",
    "checks": [
-    "check_fp256_toUintUp"
+    "check_fp19_toUintUp"
    ],
    "lemmas": [],
    "seconds": null,
@@ -597,12 +597,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "toIntDown",
    "status": "in-progress",
    "spec": "floor(x) as int256",
    "checks": [
-    "check_fp256_toIntDown"
+    "check_fp19_toIntDown"
    ],
    "lemmas": [],
    "seconds": null,
@@ -613,12 +613,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "toIntUp",
    "status": "in-progress",
    "spec": "ceil(x) as int256",
    "checks": [
-    "check_fp256_toIntUp"
+    "check_fp19_toIntUp"
    ],
    "lemmas": [],
    "seconds": null,
@@ -629,12 +629,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "toFixed18",
    "status": "in-progress",
    "spec": "x 10^18 to the nearest integer, halves away",
    "checks": [
-    "check_fp256_toFixed18"
+    "check_fp19_toFixed18"
    ],
    "lemmas": [
     "L1"
@@ -647,12 +647,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "toFixed18Down",
    "status": "in-progress",
    "spec": "floor(x 10^18)",
    "checks": [
-    "check_fp256_toFixed18Down"
+    "check_fp19_toFixed18Down"
    ],
    "lemmas": [
     "L1"
@@ -665,12 +665,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "toFixed18Up",
    "status": "in-progress",
    "spec": "ceil(x 10^18)",
    "checks": [
-    "check_fp256_toFixed18Up"
+    "check_fp19_toFixed18Up"
    ],
    "lemmas": [
     "L1"
@@ -683,12 +683,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "fromUint",
    "status": "in-progress",
    "spec": "x rounded to nearest",
    "checks": [
-    "check_fp256_fromUint"
+    "check_fp19_fromUint"
    ],
    "lemmas": [],
    "seconds": null,
@@ -699,12 +699,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "fromUintDown",
    "status": "in-progress",
    "spec": "x truncated to 237 bits",
    "checks": [
-    "check_fp256_fromUintDown"
+    "check_fp19_fromUintDown"
    ],
    "lemmas": [],
    "seconds": null,
@@ -715,12 +715,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "fromUintUp",
    "status": "in-progress",
    "spec": "x rounded up to 237 bits",
    "checks": [
-    "check_fp256_fromUintUp"
+    "check_fp19_fromUintUp"
    ],
    "lemmas": [],
    "seconds": null,
@@ -731,12 +731,12 @@
    "reproduce": ""
   },
   {
-   "lib": "FP256",
+   "lib": "FP19",
    "op": "fromFixed18",
    "status": "in-progress",
    "spec": "round(round(x) / 10^18), each to nearest (one rounding below 2^237)",
    "checks": [
-    "check_fp256_fromFixed18"
+    "check_fp19_fromFixed18"
    ],
    "lemmas": [
     "K18",
@@ -827,7 +827,7 @@
    "text": "divq(a, b) = floor(a 2^128 / b): S1-S6, B1-B3"
   },
   {
-   "lemma": "K256",
+   "lemma": "K19",
    "result": "proved",
    "text": "divh(a, b) = floor(a 2^255 / b): S1-S6, B1-B3"
   }
@@ -839,12 +839,12 @@
    "runs": 3000
   },
   {
-   "test": "testFuzz_K256",
+   "test": "testFuzz_K19",
    "result": "pass",
    "runs": 3000
   },
   {
-   "test": "testFuzz_K256_significands",
+   "test": "testFuzz_K19_significands",
    "result": "pass",
    "runs": 3000
   },
@@ -859,12 +859,12 @@
    "runs": 3000
   },
   {
-   "test": "testFuzz_fp256_sqrt",
+   "test": "testFuzz_fp19_sqrt",
    "result": "pass",
    "runs": 3000
   },
   {
-   "test": "testFuzz_fp256_sqrt_near_squares",
+   "test": "testFuzz_fp19_sqrt_near_squares",
    "result": "pass",
    "runs": 3000
   },

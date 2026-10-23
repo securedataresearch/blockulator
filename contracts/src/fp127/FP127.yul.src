@@ -1112,7 +1112,7 @@ function fp127_exp10(x) -> r {
 // ---------------------------------------------------------------------------
 
 /// log2(m) at 2^-192 for m = mm 2^-192 in [1, 2), unrounded. Two additive
-/// levels by word-only operations (kernel192.py, as FP256's log2m): i =
+/// levels by word-only operations (kernel192.py, as FP19's log2m): i =
 /// floor(16 w) for mm = 1 + w, 1 + w1 = (1 + w)/(1 + i/16) as w1 = 16 (w -
 /// i/16)/(16 + i) by one shift and one div, floored at 2^-256, and
 /// log2(1 + i/16) (at 2^-255, rounded) added from a table; then the same
@@ -2191,7 +2191,7 @@ function lwb3(qa, tau) -> R {
 
 
 /// S(p) = (1 + W)/p for p = +-sqrt(2 (1 + e x)) (+ on W0, - on W-1), the
-/// seed's factor, by a degree-16 Chebyshev fit on [-1/2, 1/2] (FP256's
+/// seed's factor, by a degree-16 Chebyshev fit on [-1/2, 1/2] (FP19's
 /// lwsp; relative error under 2^-44.8, the constant term exactly 1),
 /// Horner at 2^-192 on p at 2^-192.
 function lwsp(p) -> S {

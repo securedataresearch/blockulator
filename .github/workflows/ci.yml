@@ -29,6 +29,9 @@ jobs:
       - name: Python deps
         run: uv sync --frozen
 
+      - name: No old library names (scripts/gates.py names; deployed salts excepted)
+        run: uv run scripts/gates.py --only names
+
       - name: Generated files are current
         run: make gen-check
 
@@ -40,7 +43,7 @@ jobs:
 
       - name: The exp/log kernels are their generators' Yul (fits, models, bounds)
         run: |
-          uv run scripts/fp256/generators/kernel254.py --check
+          uv run scripts/fp19/generators/kernel254.py --check
           uv run scripts/fp127/generators/kernel192.py --check
           uv run scripts/fp127/generators/expk.py --check
 
@@ -55,12 +58,12 @@ jobs:
           uv run scripts/fp127/precision_report.py
           git diff --exit-code docs/fp127/precision.json docs/fp127/precision.md
 
-      - name: FP256 tests and precision report
+      - name: FP19 tests and precision report
         run: |
-          FOUNDRY_FUZZ_RUNS=2000 forge test --match-path "test/fp256/*" -vv | grep -E "PREC|Suite result|tests passed"
-          uv run scripts/fp127/precision_report.py --lib fp256
-          git diff --exit-code docs/fp256/precision.json docs/fp256/precision.md
-          make size-fp256
+          FOUNDRY_FUZZ_RUNS=2000 forge test --match-path "test/fp19/*" -vv | grep -E "PREC|Suite result|tests passed"
+          uv run scripts/fp127/precision_report.py --lib fp19
+          git diff --exit-code docs/fp19/precision.json docs/fp19/precision.md
+          make size-fp19
 
       - name: Library-page examples
         run: forge test --match-path "test/examples/*"
@@ -71,14 +74,14 @@ jobs:
       - name: BlockulatorWad to the last wei (known values, Solady's reverts, fuzzing against exact roots and fullMulDiv)
         run: FOUNDRY_FUZZ_RUNS=5000 forge test --match-path "test/wad/*"
 
-      - name: Typed API (FP127Type, FP256Type) equals the raw libraries; gas both ways, default profile and via_ir
+      - name: Typed API (FP127Type, FP19Type) equals the raw libraries; gas both ways, default profile and via_ir
         run: FOUNDRY_FUZZ_RUNS=5000 make typed
 
       - name: Gas ladder
         run: make bench && cat docs/benchmarks/gas.md
 
-      - name: FP256 gas ladder
-        run: make bench-fp256
+      - name: FP19 gas ladder
+        run: make bench-fp19
 
       - name: Terminal-precision ladder is current
         run: make ladder-check

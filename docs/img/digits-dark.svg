@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 380" width="820" height="380" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
-<defs><linearGradient id="gfp256" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f6f3" stop-opacity="0.1"/><stop offset="1" stop-color="#f6f6f3" stop-opacity="0"/></linearGradient><linearGradient id="gfp127" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#43b592" stop-opacity="0.22"/><stop offset="1" stop-color="#43b592" stop-opacity="0"/></linearGradient><linearGradient id="gwarn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a5c" stop-opacity="0.22"/><stop offset="1" stop-color="#ff7a5c" stop-opacity="0"/></linearGradient></defs>
+<defs><linearGradient id="gfp19" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f6f3" stop-opacity="0.1"/><stop offset="1" stop-color="#f6f6f3" stop-opacity="0"/></linearGradient><linearGradient id="gfp127" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#43b592" stop-opacity="0.22"/><stop offset="1" stop-color="#43b592" stop-opacity="0"/></linearGradient><linearGradient id="gwarn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a5c" stop-opacity="0.22"/><stop offset="1" stop-color="#ff7a5c" stop-opacity="0"/></linearGradient></defs>
 <text x="40" y="22" font-size="17" font-weight="600" fill="#f6f6f3">Leave a market alone and its interest goes wrong</text>
 <text x="40" y="40" font-size="12.5" fill="#9a9d97">Correct digits of $10,000 at 5% APR, accrued in one step after N days without an update</text>
 <line x1="40" x2="650" y1="336.0" y2="336.0" stroke="#2a2e33"/><text x="33" y="340.0" font-size="11.5" text-anchor="end" fill="#9a9d97">0</text>
@@ -22,9 +22,9 @@
 <polyline points="40.0,201.7 85.9,202.1 146.6,200.9 192.5,202.5 238.4,200.9 299.1,201.7 345.0,200.9 430.7,202.5 497.5,202.5 650.0,203.7" fill="none" stroke="#d08ac0" stroke-width="2" stroke-linejoin="round" stroke-dasharray="4 2"/>
 <polygon points="40.0,182.7 85.9,181.9 146.6,177.9 192.5,182.7 238.4,182.7 299.1,182.7 345.0,182.7 430.7,183.1 497.5,185.1 650.0,188.6 650,336 40,336" fill="url(#gfp127)"/>
 <polyline points="40.0,182.7 85.9,181.9 146.6,177.9 192.5,182.7 238.4,182.7 299.1,182.7 345.0,182.7 430.7,183.1 497.5,185.1 650.0,188.6" fill="none" stroke="#43b592" stroke-width="3.25" stroke-linejoin="round"/>
-<polygon points="40.0,53.2 85.9,52.8 146.6,52.8 192.5,52.8 238.4,52.8 299.1,52.8 345.0,52.8 430.7,52.8 497.5,52.8 650.0,52.8 650,336 40,336" fill="url(#gfp256)"/>
+<polygon points="40.0,53.2 85.9,52.8 146.6,52.8 192.5,52.8 238.4,52.8 299.1,52.8 345.0,52.8 430.7,52.8 497.5,52.8 650.0,52.8 650,336 40,336" fill="url(#gfp19)"/>
 <polyline points="40.0,53.2 85.9,52.8 146.6,52.8 192.5,52.8 238.4,52.8 299.1,52.8 345.0,52.8 430.7,52.8 497.5,52.8 650.0,52.8" fill="none" stroke="#f6f6f3" stroke-width="3.25" stroke-linejoin="round"/>
-<text x="658" y="56.8" font-size="13" font-weight="600" fill="#f6f6f3">FP256 71</text>
+<text x="658" y="56.8" font-size="13" font-weight="600" fill="#f6f6f3">FP19 71</text>
 <text x="658" y="192.6" font-size="13" font-weight="600" fill="#43b592">FP127 37</text>
 <text x="658" y="207.7" font-size="13" font-weight="600" fill="#d08ac0">binary128 33</text>
 <text x="658" y="269.3" font-size="13" font-weight="600" fill="#d3c68a">WAD libraries, 64.64 17</text>

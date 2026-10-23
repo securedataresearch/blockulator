@@ -6,22 +6,22 @@ template = "home.html"
 [extra]
 eyebrow = "Blockulator 2.2 · Secure Data Research"
 headline = "The definitive source for precision."
-sub = "When the amounts are large or the call is free, 18 digits are not enough. FP127 keeps 38 and FP256 keeps 71, every op correctly rounded and checked on chain. On gas, FP127 costs less than PRBMath, ABDK and OpenZeppelin on most ops, and FP256 less than binary128."
+sub = "Blockulator brings real scientific calculations to the blockchain with convergent iterations. It is the perfect companion for smart contracts, agents, and browser applications."
 cta_primary_text = "See the results"
 cta_primary_href = "/results/"
 cta_secondary_text = "Use the library"
 cta_secondary_href = "/library/"
 chart_title = "Leave a market alone and its interest goes wrong"
 chart_scenario = "accrual-continuous"
-chart_note = "$10,000 at 5% APR, accrued in one step after N days without an update. Aave and Morpho ship a three-term expansion of e<sup>x</sup>: {proto365} correct digits after a year ({proto365i} of the interest alone), {proto10k} after 10,000 days, ${short} short. FP127 keeps {fp127}, FP256 {fp256}."
-ask_title = "Use FP127 and FP256."
+chart_note = "$10,000 at 5% APR, accrued in one step after N days without an update. Aave and Morpho ship a three-term expansion of e<sup>x</sup>: {proto365} correct digits after a year ({proto365i} of the interest alone), {proto10k} after 10,000 days, ${short} short. FP127 keeps {fp127}, FP19 {fp19}."
+ask_title = "Use FP127 and FP19."
 ask_text = "Both are a <code>forge install</code> away. Integration engineering is free."
 ask_primary_text = "Email us"
 ask_primary_href = "mailto:sam@securedataresearch.net?subject=Blockulator%20integration"
 ask_secondary_text = "Read the write-up"
 ask_secondary_href = "/writeup/"
 pitch_title = "Twice the digits, at the same gas"
-pitch_note = "One <code>int256</code> per number, every op tested against exact arithmetic. FP256 carries twice binary128's digits, FP127 twice PRBMath's, and the gas sits next to them."
+pitch_note = "One <code>int256</code> per number, every op tested against exact arithmetic. FP19 carries twice binary128's digits, FP127 twice PRBMath's, and the gas sits next to them."
 wad_title = "Correct to the last wei"
 wad_functions = ["expWad", "lnWad", "powWad"]
 wad_note = "The WAD libraries round exp, ln and pow wrong on {lo}–{hi}% of inputs, by at least one wei. BlockulatorWad keeps Solady's names and is wrong on none: 0 of {n} results across {fns} functions and rounding directions."
@@ -31,13 +31,13 @@ wad_source = "Seeded inputs over each function's domain, including those whose e
 label = "the word"
 title = "128 fixed bits, 237 floating"
 href = "/why/#where-the-bits-go-in-wad"
-text = "WAD gives the fraction 60 bits. FP127 gives it 128. FP256 floats 237 significant bits out to 10<sup>±78,913</sup>."
+text = "WAD gives the fraction 60 bits. FP127 gives it 128. FP19 floats 237 significant bits out to 10<sup>±78,913</sup>."
 
 [[extra.steps]]
 label = "the ladder"
 title = "Measured over N steps"
 # {scenarios}, {inputs} and {others} are counted from static/data/ladder.json by templates/home.html.
-text = "FP127, FP256 and {others} other libraries, {scenarios} scenarios, {inputs} inputs, N = 1 to 10,000, against 300-digit arithmetic."
+text = "FP127, FP19 and {others} other libraries, {scenarios} scenarios, {inputs} inputs, N = 1 to 10,000, against 300-digit arithmetic."
 
 [[extra.steps]]
 label = "two forms"

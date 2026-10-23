@@ -19,7 +19,7 @@ import {FP127Lib} from "./FP127Lib.sol";
 ///      words, which order as the values do in two's complement.
 ///      Names follow FP127Lib's ops. Functions that take a plain integer
 ///      instead of an FP127 carry the prefix (`fp127FromWad`), so this file
-///      and FP256Type.sol can be imported into one scope; only ONE and PI then
+///      and FP19Type.sol can be imported into one scope; only ONE and PI then
 ///      need an alias (`import {ONE as ONE127} from ...`), as PRBMath's UNIT.
 
 type FP127 is int256;

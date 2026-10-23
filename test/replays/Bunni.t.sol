@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
+import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 
 // Bunni v2 exploit replay, Ethereum tx 0x1c27c4d6...beb97b (block 23273098, index 84).
 //
@@ -380,7 +380,7 @@ contract BunniReplay is Test {
         uint256 deployed; // balance - balance.mulDiv(shares, totalSupply)   BunniHubLogic.sol:478
         uint256 up; //       balance - balance.mulDivUp(shares, totalSupply) (the fix)
         int256 fp127; //     sub(i, div(mul(i, s), T)) in 127.128
-        int256 fp256; //     the same in FP256
+        int256 fp19; //     the same in FP19
         uint256 exactNum; // idle0 * T_k: the exact idle balance is exactNum / T_0
     }
 
@@ -457,7 +457,7 @@ contract BunniReplay is Test {
         i.deployed = i.deployed - SoladyMath.mulDiv(i.deployed, shares, T);
         i.up = i.up - SoladyMath.mulDivUp(i.up, shares, T);
         i.fp127 = FP127Lib.sub(i.fp127, FP127Lib.div(FP127Lib.mul(i.fp127, int256(shares) << 128), int256(T) << 128));
-        i.fp256 = FP256Lib.sub(i.fp256, FP256Lib.div(FP256Lib.mul(i.fp256, FP256Lib.fromUint(shares)), FP256Lib.fromUint(T)));
+        i.fp19 = FP19Lib.sub(i.fp19, FP19Lib.div(FP19Lib.mul(i.fp19, FP19Lib.fromUint(shares)), FP19Lib.fromUint(T)));
         // exact: idle * (T - s) / T; with idle = exactNum / T_0 and exactNum = idle0 * T this is exact
         require(i.exactNum % T == 0, "exactNum = idle0 * T");
         i.exactNum = i.exactNum / T * (T - shares);
@@ -479,7 +479,7 @@ contract BunniReplay is Test {
         Pool memory p = _start();
         r.idle0 = _u(".start.idle");
         r.T0 = p.totalSupply;
-        r.idle = Idle(r.idle0, r.idle0, int256(r.idle0) << 128, FP256Lib.fromUint(r.idle0), r.idle0 * r.T0);
+        r.idle = Idle(r.idle0, r.idle0, int256(r.idle0) << 128, FP19Lib.fromUint(r.idle0), r.idle0 * r.T0);
         uint256[] memory shares = _ua(".steps.shares");
         assertEq(shares.length, N);
         r.active = new uint256[](N + 1);
@@ -566,12 +566,12 @@ contract BunniReplay is Test {
         assertLt(lDep * 100, lStart * 16, "deployed: liquidity fell below 16% of its start");
         uint256 lUp = _formUp(r, q);
         uint256 l127 = _formFp127(r, q);
-        uint256 l256 = _formFp256(r, q);
+        uint256 l19 = _formFp19(r, q);
         uint256 lEx = _formExact(r, q);
         // every non-deployed form leaves the pool bound by the USDT estimate, at one liquidity
         assertEq(lUp, lEx, "mulDivUp liquidity");
         assertEq(l127, lEx, "FP127 liquidity");
-        assertEq(l256, lEx, "FP256 liquidity");
+        assertEq(l19, lEx, "FP19 liquidity");
     }
 
     function _formStart(Run memory r, BunniMath.LdfQuery memory q) internal view returns (uint256) {
@@ -610,11 +610,11 @@ contract BunniReplay is Test {
         return x.totalLiquidity;
     }
 
-    function _formFp256(Run memory r, BunniMath.LdfQuery memory q) internal view returns (uint256) {
-        int256 a = FP256Lib.sub(FP256Lib.fromUint(r.balance0), r.idle.fp256);
-        assertEq(_fp256Floor(a), 35, "FP256: floor 35");
-        BunniMath.LdfResult memory x = BunniMath.queryLDF(q, r.balance0, r.balance1, r.balance0 - _fp256Floor(a));
-        _emit("fp256", string.concat(_kv("active0", uint256(a)), _kv("L", x.totalLiquidity)));
+    function _formFp19(Run memory r, BunniMath.LdfQuery memory q) internal view returns (uint256) {
+        int256 a = FP19Lib.sub(FP19Lib.fromUint(r.balance0), r.idle.fp19);
+        assertEq(_fp19Floor(a), 35, "FP19: floor 35");
+        BunniMath.LdfResult memory x = BunniMath.queryLDF(q, r.balance0, r.balance1, r.balance0 - _fp19Floor(a));
+        _emit("fp19", string.concat(_kv("active0", uint256(a)), _kv("L", x.totalLiquidity)));
         return x.totalLiquidity;
     }
 
@@ -628,8 +628,8 @@ contract BunniReplay is Test {
         return x.totalLiquidity;
     }
 
-    /// floor of a non-negative FP256 word (README: value = (2^236 + F) * 2^(E - 262143 - 236))
-    function _fp256Floor(int256 x) internal pure returns (uint256) {
+    /// floor of a non-negative FP19 word (README: value = (2^236 + F) * 2^(E - 262143 - 236))
+    function _fp19Floor(int256 x) internal pure returns (uint256) {
         uint256 w = uint256(x);
         require(w >> 255 == 0, "negative");
         if (w == 0) return 0;

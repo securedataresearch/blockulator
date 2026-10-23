@@ -12,8 +12,13 @@ words, bytes of headroom, cells checked). On a failure the log's last lines
 follow, so the cause is visible without reading the whole log. The exit code
 is 1 if any gate failed.
 
+The names gate fails on the library's old name anywhere outside lib/, in a
+file or a path, except the salt literals of contracts already deployed (on a
+line that says salt), whose bytes fix their addresses, and the site's redirects
+from old URLs (Zola `aliases`).
+
 The sweep gate compares the fresh sweep.json with the committed one (git HEAD):
-FP256 must have 0 misrounded in both passes, and no FP127 row may have fewer
+FP19 must have 0 misrounded in both passes, and no FP127 row may have fewer
 nearest results than before.
 """
 from __future__ import annotations
@@ -57,6 +62,21 @@ def sizes(out: str) -> tuple[bool, str]:
                       + (f"; OVER: {', '.join(over)}" if over else ""))
 
 
+OLD = "fp" "256"  # split, so this file passes its own gate
+SALT_LITERAL = re.compile(OLD.upper() + r"[A-Z0-9]* v\d+")
+
+
+def names_check() -> tuple[bool, str, str]:
+    """Every use of the old name that is not a deployed salt, as git grep lines."""
+    grep = subprocess.run(["git", "grep", "-n", "-i", "-I", OLD, "--", ".", ":!lib"], cwd=ROOT, capture_output=True, text=True).stdout
+    bad = [l for l in grep.splitlines()
+           if not (re.search(r"(?i)salt", l) and not re.search(rf"(?i){OLD}", SALT_LITERAL.sub("", l)))
+           and not re.search(r"^content/[^:]+:\d+:aliases = ", l)]
+    files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True).stdout.splitlines()
+    bad += [f"path {f}" for f in files if OLD in f.lower() and not f.startswith("lib/")]
+    return not bad, f"{len(bad)} uses of the old name" if bad else "no old names", "\n".join(bad)
+
+
 def sweep_check() -> tuple[bool, str]:
     new = json.loads((ROOT / "docs/benchmarks/sweep.json").read_text())["rows"]
     try:
@@ -67,17 +87,17 @@ def sweep_check() -> tuple[bool, str]:
     key = lambda r: (r["lib"], r["op"], r.get("stage"))  # noqa: E731
     before = {key(r): r for r in old}
     mis = [f"{r['op']}{'/' + r['stage'] if r.get('stage') else ''}={r['misrounded']}"
-           for r in new if r["lib"] == "fp256" and r.get("misrounded")]
+           for r in new if r["lib"] == "fp19" and r.get("misrounded")]
     worse = [r["op"] for r in new if r["lib"] == "fp127" and key(r) in before
              and r.get("nearest", 0) < before[key(r)].get("nearest", 0)]
-    n256 = sum(1 for r in new if r["lib"] == "fp256")
+    n19 = sum(1 for r in new if r["lib"] == "fp19")
     n127 = sum(1 for r in new if r["lib"] == "fp127")
     # BlockulatorWad: every row, both passes, at 0 wrong wei (and its rows present)
     wad = [r for r in new if r["lib"] == "wad"]
     wrong = [f"{r['op']}{'/' + r['stage'] if r.get('stage') else ''}={r['wrong']}" for r in wad if r.get("wrong")]
     mis += wrong
     ok = not mis and not worse and bool(wad)
-    msg = (f"FP256 {n256} rows, misrounded {len(mis) - len(wrong)}; FP127 {n127} rows, nearest fell on {len(worse)}; "
+    msg = (f"FP19 {n19} rows, misrounded {len(mis) - len(wrong)}; FP127 {n127} rows, nearest fell on {len(worse)}; "
            f"WAD {len(wad)} rows, {sum(r['n'] for r in wad):,} results, wrong {len(wrong)}")
     if mis:
         msg += f" [{', '.join(mis[:8])}]"
@@ -96,11 +116,12 @@ def main() -> int:
 
     sweep = "make sweep" + (f" OPS={a.ops}" if a.ops else "")
     gates = [
+        ("names", None),
         ("gen-check", "make gen-check vectors-check gen-inputs-check gen-edges-check"),
         ("build", "make build"),
         ("test", "make test"),
-        ("bounds", "uv run scripts/fp256/generators/bounds.py"),
-        ("size", "make size size-fp256 size-inline-check"),
+        ("bounds", "uv run scripts/fp19/generators/bounds.py"),
+        ("size", "make size size-fp19 size-inline-check"),
         ("ladder", "make ladder-check"),
         ("edges", "make edges-check"),
         ("sweep", sweep),
@@ -116,8 +137,15 @@ def main() -> int:
         tty = sys.stdout.isatty()
         if tty:
             print(f"{name:<10} ...", end="", flush=True)
-        ok, out, secs = run(name, cmd)
-        if name == "test":
+        if cmd is None:
+            t = time.time()
+            ok, detail, out = names_check()
+            secs = time.time() - t
+        else:
+            ok, out, secs = run(name, cmd)
+        if name == "names":
+            pass
+        elif name == "test":
             detail = tests(out)
         elif name == "bounds":
             n = out.count("EXCEEDS")

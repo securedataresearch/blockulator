@@ -7,7 +7,7 @@ the compiled inline library symbolically, so one passing run covers all 2^256
 or 2^512 inputs, not a sample of them.
 
 The libraries are the inline forms, [`FP127Lib.sol`](../contracts/src/fp127/FP127Lib.sol)
-and [`FP256Lib.sol`](../contracts/src/fp256/FP256Lib.sol). They are generated
+and [`FP19Lib.sol`](../contracts/src/fp19/FP19Lib.sol). They are generated
 from the same Yul as the deployed objects, and
 [`test/objects/ObjectsEqLib.t.sol`](../test/objects/ObjectsEqLib.t.sol) fuzzes
 every object against its library for equal words and equal reverts. The
@@ -47,30 +47,30 @@ runs.
 | FP127 | `toFixed18Down` | proven | floor(x 10^18 / 2^128) | 19 s | `check_fp127_toFixed18Down` |
 | FP127 | `toFixed18Up` | proven | ceil(x 10^18 / 2^128) | 48 s | `check_fp127_toFixed18Up` |
 | FP127 | `fromFixed18` | proven | trunc(x 2^128 / 10^18); OutOfRange outside [-2^127, 2^127) | 0 s | `check_fp127_fromFixed18` |
-| FP256 | `add` | in-progress | a + b rounded to nearest (237 bits, ties away) | – | `check_fp256_add` |
-| FP256 | `sub` | in-progress | a - b rounded to nearest | – | `check_fp256_sub` |
-| FP256 | `mul` | in-progress (L1, L3) | a b rounded to nearest | – | `check_fp256_mul` |
-| FP256 | `mulDown` | in-progress (L1, L3) | a b rounded toward -inf | – | `check_fp256_mulDown` |
-| FP256 | `mulUp` | in-progress (L1, L3) | a b rounded toward +inf | – | `check_fp256_mulUp` |
-| FP256 | `div` | in-progress (K256, L3) | a / b rounded to nearest | – | `check_fp256_div` |
-| FP256 | `divDown` | in-progress (K256, L3) | a / b rounded toward -inf | – | `check_fp256_divDown` |
-| FP256 | `divUp` | in-progress (K256, L3) | a / b rounded toward +inf | – | `check_fp256_divUp` |
-| FP256 | `inv` | in-progress (K256) | 1 / x rounded to nearest | – | `check_fp256_inv` |
-| FP256 | `sqrt` | fuzzed | sqrt(x) rounded to nearest | – | FuzzProofs |
-| FP256 | `floor` | in-progress | the integral number at or below x | – | `check_fp256_floor` |
-| FP256 | `ceil` | in-progress | the integral number at or above x | – | `check_fp256_ceil` |
-| FP256 | `round` | in-progress | the nearest integral number, halves away from zero | – | `check_fp256_round` |
-| FP256 | `toUintDown` | in-progress | floor(x) as uint256 | – | `check_fp256_toUintDown` |
-| FP256 | `toUintUp` | in-progress | ceil(x) as uint256 | – | `check_fp256_toUintUp` |
-| FP256 | `toIntDown` | in-progress | floor(x) as int256 | – | `check_fp256_toIntDown` |
-| FP256 | `toIntUp` | in-progress | ceil(x) as int256 | – | `check_fp256_toIntUp` |
-| FP256 | `toFixed18` | in-progress (L1) | x 10^18 to the nearest integer, halves away | – | `check_fp256_toFixed18` |
-| FP256 | `toFixed18Down` | in-progress (L1) | floor(x 10^18) | – | `check_fp256_toFixed18Down` |
-| FP256 | `toFixed18Up` | in-progress (L1) | ceil(x 10^18) | – | `check_fp256_toFixed18Up` |
-| FP256 | `fromUint` | in-progress | x rounded to nearest | – | `check_fp256_fromUint` |
-| FP256 | `fromUintDown` | in-progress | x truncated to 237 bits | – | `check_fp256_fromUintDown` |
-| FP256 | `fromUintUp` | in-progress | x rounded up to 237 bits | – | `check_fp256_fromUintUp` |
-| FP256 | `fromFixed18` | in-progress (K18, L5) | round(round(x) / 10^18), each to nearest (one rounding below 2^237) | – | `check_fp256_fromFixed18` |
+| FP19 | `add` | in-progress | a + b rounded to nearest (237 bits, ties away) | – | `check_fp19_add` |
+| FP19 | `sub` | in-progress | a - b rounded to nearest | – | `check_fp19_sub` |
+| FP19 | `mul` | in-progress (L1, L3) | a b rounded to nearest | – | `check_fp19_mul` |
+| FP19 | `mulDown` | in-progress (L1, L3) | a b rounded toward -inf | – | `check_fp19_mulDown` |
+| FP19 | `mulUp` | in-progress (L1, L3) | a b rounded toward +inf | – | `check_fp19_mulUp` |
+| FP19 | `div` | in-progress (K19, L3) | a / b rounded to nearest | – | `check_fp19_div` |
+| FP19 | `divDown` | in-progress (K19, L3) | a / b rounded toward -inf | – | `check_fp19_divDown` |
+| FP19 | `divUp` | in-progress (K19, L3) | a / b rounded toward +inf | – | `check_fp19_divUp` |
+| FP19 | `inv` | in-progress (K19) | 1 / x rounded to nearest | – | `check_fp19_inv` |
+| FP19 | `sqrt` | fuzzed | sqrt(x) rounded to nearest | – | FuzzProofs |
+| FP19 | `floor` | in-progress | the integral number at or below x | – | `check_fp19_floor` |
+| FP19 | `ceil` | in-progress | the integral number at or above x | – | `check_fp19_ceil` |
+| FP19 | `round` | in-progress | the nearest integral number, halves away from zero | – | `check_fp19_round` |
+| FP19 | `toUintDown` | in-progress | floor(x) as uint256 | – | `check_fp19_toUintDown` |
+| FP19 | `toUintUp` | in-progress | ceil(x) as uint256 | – | `check_fp19_toUintUp` |
+| FP19 | `toIntDown` | in-progress | floor(x) as int256 | – | `check_fp19_toIntDown` |
+| FP19 | `toIntUp` | in-progress | ceil(x) as int256 | – | `check_fp19_toIntUp` |
+| FP19 | `toFixed18` | in-progress (L1) | x 10^18 to the nearest integer, halves away | – | `check_fp19_toFixed18` |
+| FP19 | `toFixed18Down` | in-progress (L1) | floor(x 10^18) | – | `check_fp19_toFixed18Down` |
+| FP19 | `toFixed18Up` | in-progress (L1) | ceil(x 10^18) | – | `check_fp19_toFixed18Up` |
+| FP19 | `fromUint` | in-progress | x rounded to nearest | – | `check_fp19_fromUint` |
+| FP19 | `fromUintDown` | in-progress | x truncated to 237 bits | – | `check_fp19_fromUintDown` |
+| FP19 | `fromUintUp` | in-progress | x rounded up to 237 bits | – | `check_fp19_fromUintUp` |
+| FP19 | `fromFixed18` | in-progress (K18, L5) | round(round(x) / 10^18), each to nearest (one rounding below 2^237) | – | `check_fp19_fromFixed18` |
 <!-- /proofs:table -->
 
 The same data, with paths and the lemma list, is
@@ -87,7 +87,7 @@ The proofs found two FP127 ops leaving their documented semantics; both are fixe
 
 **Halmos.** Each `check_` function in
 [`test/proofs/ProofsFP127.t.sol`](../test/proofs/ProofsFP127.t.sol) and
-[`ProofsFP256.t.sol`](../test/proofs/ProofsFP256.t.sol) calls the op through
+[`ProofsFP19.t.sol`](../test/proofs/ProofsFP19.t.sol) calls the op through
 an external call to the test contract (so a revert comes back as data), calls
 the reference spec, and asserts that both returned the same word or reverted
 with the same 4-byte error. Halmos runs it with symbolic arguments and asks the
@@ -114,7 +114,7 @@ integers through a few primitives built from those opcodes, and each primitive
 is a lemma proved separately over unbounded integers.
 
 **The specs.** [`Ref127.sol`](../test/proofs/Ref127.sol) and
-[`Ref256.sol`](../test/proofs/Ref256.sol) are written from the documented
+[`Ref19.sol`](../test/proofs/Ref19.sol) are written from the documented
 semantics, not from the library code, and are meant to be read:
 
 - FP127: the exact signed 512-bit product (L1, L2), floored or ceiled by a
@@ -122,7 +122,7 @@ semantics, not from the library code, and are meant to be read:
   floor quotient of |a| 2^128 by |b| (the EVM's DIV below 2^256, the kernel
   K127 above) and the exact remainder (MULMOD), re-signed and stepped one
   unit toward the named direction.
-- FP256: `unpack` into sign, biased exponent and 237-bit significand; each op
+- FP19: `unpack` into sign, biased exponent and 237-bit significand; each op
   forms its exact value as (-1)^s (N + d) 2^k, N an integer of up to 512 bits
   and d in [0, 1) known only by whether it is zero (the sticky part); then one
   reference rounding, `toFloat`: the bit length of N by a binary search of
@@ -153,14 +153,14 @@ operations with bit-vector lemmas.
 |---|---|---|
 | L1 | `(MULMOD(a, b, 2^256 - 1) - MUL(a, b) - borrow, MUL(a, b))` is the exact 512-bit a b | every product |
 | L2 | for two's complement a, b, subtracting [a < 0] b and [b < 0] a from that high word gives the exact signed product | FP127 mul, mulDown, mulUp |
-| L3 | the product of two FP256 exponent fields (each below 2^19) is zero iff one of them is | FP256 mul, div and their directed forms, handed to the solver as an assumption |
+| L3 | the product of two FP19 exponent fields (each below 2^19) is zero iff one of them is | FP19 mul, div and their directed forms, handed to the solver as an assumption |
 | L4 | for 2 <= u < 2^256, `DIV(2^256 - u, u) + 1` = floor(2^256 / u) | FP127 inv |
-| L5 | `(x XOR SAR(255, x)) - SAR(255, x)` is \|x\| (the specs' magnitudes, spelled as the libraries spell them so their products meet) | FP127 div, divDown, divUp, inv; FP256 fromFixed18 |
-| K18 | `Kernels.q18(m)` (two word divisions by 5^18, m split at bit 100) = floor(m 2^60 / 5^18), every intermediate a word | FP256 fromFixed18 |
+| L5 | `(x XOR SAR(255, x)) - SAR(255, x)` is \|x\| (the specs' magnitudes, spelled as the libraries spell them so their products meet) | FP127 div, divDown, divUp, inv; FP19 fromFixed18 |
+| K18 | `Kernels.q18(m)` (two word divisions by 5^18, m split at bit 100) = floor(m 2^60 / 5^18), every intermediate a word | FP19 fromFixed18 |
 | K127 | `Kernels.divq(a, b)` = floor(a 2^128 / b) for 0 < a >> 128 < b | FP127 div, divDown, divUp |
-| K256 | `Kernels.divh(a, b)` = floor(a 2^255 / b) for 0 < b, a < 2 b | FP256 div, divDown, divUp, inv |
+| K19 | `Kernels.divh(a, b)` = floor(a 2^255 / b) for 0 < b, a < 2 b | FP19 div, divDown, divUp, inv |
 
-K127 and K256 are Remco Bloemen's mulDiv, copied verbatim into
+K127 and K19 are Remco Bloemen's mulDiv, copied verbatim into
 [`Kernels.sol`](../test/proofs/Kernels.sol) from the library source: the
 remainder's borrow, the division of the divisor's powers of two out of both
 words (a bit-vector lemma for `AND(SUB(0, b), b)`, then the 256 values of the
@@ -175,15 +175,15 @@ exact integer roots.
 
 ## What is and is not covered
 
-- **Covered:** the 17 FP127 and 24 FP256 ops in the table, for all inputs,
+- **Covered:** the 17 FP127 and 24 FP19 ops in the table, for all inputs,
   including which error each revert carries, except FP127 `mulUp`'s window and
   the two square roots.
 - **Square roots: fuzzed.** The result of a Newton iteration is the floor only
   by an argument about the iteration's convergence, which no check here
   closes: the solver would have to relate the iterate's square to the input
   through uninterpreted products. Both are fuzzed against an exact integer
-  root (`testFuzz_fp127_sqrt`, `testFuzz_fp256_sqrt`, and next to exact
-  squares `testFuzz_fp256_sqrt_near_squares`); FP127's has the pinned
+  root (`testFuzz_fp127_sqrt`, `testFuzz_fp19_sqrt`, and next to exact
+  squares `testFuzz_fp19_sqrt_near_squares`); FP127's has the pinned
   counterexample above.
 - **Not covered:** the deployed objects directly (see the top), every other op
   (the transcendentals, `avg`, `lerp`, `hypot`, the comparisons and so on),
@@ -197,7 +197,7 @@ exact integer roots.
 uv tool install halmos==0.3.3      # or: pip install halmos==0.3.3
 make proofs                        # CI's subset: lemmas, the CLZ self-test, the fuzz tests, the checks under two minutes
 make proofs PROOFS_FULL=1          # every check, 50,000 fuzz runs; rewrites proofs.json and the table above
-uv run python test/proofs/run.py --only fp256_add   # one op (any regex on the check names)
+uv run python test/proofs/run.py --only fp19_add   # one op (any regex on the check names)
 ```
 
 Halmos downloads bitwuzla on first use (`HALMOS_ALLOW_DOWNLOAD=1`, which

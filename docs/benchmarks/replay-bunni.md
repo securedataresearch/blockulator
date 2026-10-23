@@ -18,10 +18,10 @@ Token transfers out are unchanged in every row (raw and vault withdrawals floor 
 | deployed (`mulDiv`, floor on the subtrahend) | 4 | -31.63 | 9114083388149667 | -84.3677833% |
 | the fix (`mulDivUp`) | 48 | +12.37 | 58303204633997825 | -0.0000009% |
 | FP127 idle balance | 35.6278053051404733807526976078415462767862 | -9.72e-38 | 58303204633997825 | -0.0000009% |
-| FP256 idle balance | 35.6278053051404733807526976078415462768833 | +1.17e-59 | 58303204633997825 | -0.0000009% |
+| FP19 idle balance | 35.6278053051404733807526976078415462768833 | +1.17e-59 | 58303204633997825 | -0.0000009% |
 | exact rational | 35.627805305140… (= 28436079632320287342378/798142893977739769501) | 0 | 58303204633997825 | -0.0000009% |
 
-Start: active 28 wei, liquidity 58303205157163981. Liquidity takes integer balances, so for FP127, FP256 and exact the active balance is floored before `queryLDF` (the idle balance rounded up: the same direction as the deployed code, applied once instead of 44 times).
+Start: active 28 wei, liquidity 58303205157163981. Liquidity takes integer balances, so for FP127, FP19 and exact the active balance is floored before `queryLDF` (the idle balance rounded up: the same direction as the deployed code, applied once instead of 44 times).
 
 Per step (active USDC, wei; deployed / mulDivUp / exact):
 

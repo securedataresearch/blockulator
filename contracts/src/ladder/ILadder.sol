@@ -6,10 +6,10 @@ pragma solidity ^0.8.24;
 //         in the harness and on Sepolia. Version 4; the adapters that call it
 //         are deployed after it.
 address constant FP127_ADDRESS = 0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4;
-// @notice The FP256 Yul object's CREATE2 address (contracts/deployments/FP256.md);
-//         the FP256 adapter is inline (FP256Lib) and does not call it, so the
+// @notice The FP19 Yul object's CREATE2 address (contracts/deployments/FP19.md);
+//         the FP19 adapter is inline (FP19Lib) and does not call it, so the
 //         ladder does not depend on its deployment.
-address constant FP256_ADDRESS = 0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52;
+address constant FP19_ADDRESS = 0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52;
 
 /// @notice Scenario ids. Mirrors "index" in scripts/ladder/scenarios.json.
 library Scenario {
@@ -31,7 +31,7 @@ library Scenario {
 
 /// @notice Library (form) ids, in the order of LadderRunner's constructor.
 ///         Ids 0 to 4 are the v4 runner's and keep their numbers; 5 to 9 were
-///         added with the v5 runner, 10 (FP256, the float) with v6, 11 to 15
+///         added with the v5 runner, 10 (FP19, the float) with v6, 11 to 15
 ///         (Solmate, OpenZeppelin, Uniswap FullMath, PRBMath UD60x18,
 ///         snekmate) with v12.
 library Form {
@@ -45,7 +45,7 @@ library Form {
     uint8 constant AAVE = 7;
     uint8 constant MORPHO = 8;
     uint8 constant MAKER = 9;
-    uint8 constant FP256 = 10;
+    uint8 constant FP19 = 10;
     uint8 constant SOLMATE = 11;
     uint8 constant OZ = 12;
     uint8 constant UNISWAP = 13;

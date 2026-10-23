@@ -14,7 +14,7 @@ import {LadderBalancer} from "../../contracts/src/ladder/LadderBalancer.sol";
 import {LadderAave} from "../../contracts/src/ladder/LadderAave.sol";
 import {LadderMorpho} from "../../contracts/src/ladder/LadderMorpho.sol";
 import {LadderMaker} from "../../contracts/src/ladder/LadderMaker.sol";
-import {LadderFP256} from "../../contracts/src/ladder/LadderFP256.sol";
+import {LadderFP19} from "../../contracts/src/ladder/LadderFP19.sol";
 import {LadderSolmate} from "../../contracts/src/ladder/LadderSolmate.sol";
 import {LadderOZ} from "../../contracts/src/ladder/LadderOZ.sol";
 import {LadderUniswap} from "../../contracts/src/ladder/LadderUniswap.sol";
@@ -30,8 +30,8 @@ import {LadderSnekmate} from "../../contracts/src/ladder/LadderSnekmate.sol";
 ///         computes the truth and writes docs/benchmarks/edges.json.
 contract Edges is Test {
     string constant INPUTS = "scripts/ladder/edge-inputs.json";
-    string[16] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256", "solmate", "oz", "uniswap", "prbud", "snekmate"];
-    string[16] SCALE = ["fp127", "fp127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray", "fp256", "wad", "wad", "wad", "wad", "wad"];
+    string[16] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate"];
+    string[16] SCALE = ["fp127", "fp127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray", "fp19", "wad", "wad", "wad", "wad", "wad"];
 
     EdgeRunner runner;
     string json;
@@ -58,7 +58,7 @@ contract Edges is Test {
             address(new LadderAave()),
             address(new LadderMorpho()),
             address(new LadderMaker()),
-            address(new LadderFP256()),
+            address(new LadderFP19()),
             address(new LadderSolmate()),
             address(new LadderOZ()),
             address(new LadderUniswap()),

@@ -2,7 +2,7 @@
 
     python test/proofs/run.py            # the fast subset (CI): lemmas, CLZ self-test, fast Halmos checks, fuzz
     python test/proofs/run.py --full     # everything; rewrites docs/benchmarks/proofs.json and docs/proofs.md's table
-    python test/proofs/run.py --only fp256_add   # the checks whose name matches
+    python test/proofs/run.py --only fp19_add   # the checks whose name matches
 
 PROOFS_FULL=1 in the environment is --full. Each Halmos check runs in its own
 process (test/proofs/halmos_clz.py, Halmos with CLZ and commuted products),
@@ -58,32 +58,32 @@ OPS = [
     ("FP127", "toFixed18Down", "proven", "floor(x 10^18 / 2^128)", ["check_fp127_toFixed18Down"], [], ""),
     ("FP127", "toFixed18Up", "proven", "ceil(x 10^18 / 2^128)", ["check_fp127_toFixed18Up"], [], ""),
     ("FP127", "fromFixed18", "proven", "trunc(x 2^128 / 10^18); OutOfRange outside [-2^127, 2^127)", ["check_fp127_fromFixed18"], [], ""),
-    # FP256
-    ("FP256", "add", "proven", "a + b rounded to nearest (237 bits, ties away)", ["check_fp256_add"], [], ""),
-    ("FP256", "sub", "proven", "a - b rounded to nearest", ["check_fp256_sub"], [], ""),
-    ("FP256", "mul", "proven", "a b rounded to nearest", ["check_fp256_mul"], ["L1", "L3"], ""),
-    ("FP256", "mulDown", "proven", "a b rounded toward -inf", ["check_fp256_mulDown"], ["L1", "L3"], ""),
-    ("FP256", "mulUp", "proven", "a b rounded toward +inf", ["check_fp256_mulUp"], ["L1", "L3"], ""),
-    ("FP256", "div", "proven", "a / b rounded to nearest", ["check_fp256_div"], ["K256", "L3"], ""),
-    ("FP256", "divDown", "proven", "a / b rounded toward -inf", ["check_fp256_divDown"], ["K256", "L3"], ""),
-    ("FP256", "divUp", "proven", "a / b rounded toward +inf", ["check_fp256_divUp"], ["K256", "L3"], ""),
-    ("FP256", "inv", "proven", "1 / x rounded to nearest", ["check_fp256_inv"], ["K256"], ""),
-    ("FP256", "sqrt", "fuzzed", "sqrt(x) rounded to nearest", [], [], "FuzzProofs against the exact integer root"),
-    ("FP256", "floor", "proven", "the integral number at or below x", ["check_fp256_floor"], [], ""),
-    ("FP256", "ceil", "proven", "the integral number at or above x", ["check_fp256_ceil"], [], ""),
-    ("FP256", "round", "proven", "the nearest integral number, halves away from zero", ["check_fp256_round"], [], ""),
-    ("FP256", "toUintDown", "proven", "floor(x) as uint256", ["check_fp256_toUintDown"], [], ""),
-    ("FP256", "toUintUp", "proven", "ceil(x) as uint256", ["check_fp256_toUintUp"], [], ""),
-    ("FP256", "toIntDown", "proven", "floor(x) as int256", ["check_fp256_toIntDown"], [], ""),
-    ("FP256", "toIntUp", "proven", "ceil(x) as int256", ["check_fp256_toIntUp"], [], ""),
-    ("FP256", "toFixed18", "proven", "x 10^18 to the nearest integer, halves away", ["check_fp256_toFixed18"], ["L1"], ""),
-    ("FP256", "toFixed18Down", "proven", "floor(x 10^18)", ["check_fp256_toFixed18Down"], ["L1"], ""),
-    ("FP256", "toFixed18Up", "proven", "ceil(x 10^18)", ["check_fp256_toFixed18Up"], ["L1"], ""),
-    ("FP256", "fromUint", "proven", "x rounded to nearest", ["check_fp256_fromUint"], [], ""),
-    ("FP256", "fromUintDown", "proven", "x truncated to 237 bits", ["check_fp256_fromUintDown"], [], ""),
-    ("FP256", "fromUintUp", "proven", "x rounded up to 237 bits", ["check_fp256_fromUintUp"], [], ""),
-    ("FP256", "fromFixed18", "proven", "round(round(x) / 10^18), each to nearest (one rounding below 2^237)",
-     ["check_fp256_fromFixed18"], ["K18", "L5"], ""),
+    # FP19
+    ("FP19", "add", "proven", "a + b rounded to nearest (237 bits, ties away)", ["check_fp19_add"], [], ""),
+    ("FP19", "sub", "proven", "a - b rounded to nearest", ["check_fp19_sub"], [], ""),
+    ("FP19", "mul", "proven", "a b rounded to nearest", ["check_fp19_mul"], ["L1", "L3"], ""),
+    ("FP19", "mulDown", "proven", "a b rounded toward -inf", ["check_fp19_mulDown"], ["L1", "L3"], ""),
+    ("FP19", "mulUp", "proven", "a b rounded toward +inf", ["check_fp19_mulUp"], ["L1", "L3"], ""),
+    ("FP19", "div", "proven", "a / b rounded to nearest", ["check_fp19_div"], ["K19", "L3"], ""),
+    ("FP19", "divDown", "proven", "a / b rounded toward -inf", ["check_fp19_divDown"], ["K19", "L3"], ""),
+    ("FP19", "divUp", "proven", "a / b rounded toward +inf", ["check_fp19_divUp"], ["K19", "L3"], ""),
+    ("FP19", "inv", "proven", "1 / x rounded to nearest", ["check_fp19_inv"], ["K19"], ""),
+    ("FP19", "sqrt", "fuzzed", "sqrt(x) rounded to nearest", [], [], "FuzzProofs against the exact integer root"),
+    ("FP19", "floor", "proven", "the integral number at or below x", ["check_fp19_floor"], [], ""),
+    ("FP19", "ceil", "proven", "the integral number at or above x", ["check_fp19_ceil"], [], ""),
+    ("FP19", "round", "proven", "the nearest integral number, halves away from zero", ["check_fp19_round"], [], ""),
+    ("FP19", "toUintDown", "proven", "floor(x) as uint256", ["check_fp19_toUintDown"], [], ""),
+    ("FP19", "toUintUp", "proven", "ceil(x) as uint256", ["check_fp19_toUintUp"], [], ""),
+    ("FP19", "toIntDown", "proven", "floor(x) as int256", ["check_fp19_toIntDown"], [], ""),
+    ("FP19", "toIntUp", "proven", "ceil(x) as int256", ["check_fp19_toIntUp"], [], ""),
+    ("FP19", "toFixed18", "proven", "x 10^18 to the nearest integer, halves away", ["check_fp19_toFixed18"], ["L1"], ""),
+    ("FP19", "toFixed18Down", "proven", "floor(x 10^18)", ["check_fp19_toFixed18Down"], ["L1"], ""),
+    ("FP19", "toFixed18Up", "proven", "ceil(x 10^18)", ["check_fp19_toFixed18Up"], ["L1"], ""),
+    ("FP19", "fromUint", "proven", "x rounded to nearest", ["check_fp19_fromUint"], [], ""),
+    ("FP19", "fromUintDown", "proven", "x truncated to 237 bits", ["check_fp19_fromUintDown"], [], ""),
+    ("FP19", "fromUintUp", "proven", "x rounded up to 237 bits", ["check_fp19_fromUintUp"], [], ""),
+    ("FP19", "fromFixed18", "proven", "round(round(x) / 10^18), each to nearest (one rounding below 2^237)",
+     ["check_fp19_fromFixed18"], ["K18", "L5"], ""),
 ]
 
 # The fuzz tests (forge, FuzzProofs) and what they cover.
@@ -91,7 +91,7 @@ FUZZ = "FuzzProofs"
 
 
 def contract_of(check):
-    return "ProofsFP127" if check.startswith("check_fp127") else "ProofsFP256"
+    return "ProofsFP127" if check.startswith("check_fp127") else "ProofsFP19"
 
 
 def halmos_python():
@@ -292,7 +292,7 @@ def main():
                 ),
             })
         record = {
-            "about": "Formal proofs of FP127's and FP256's core arithmetic and directed rounding: docs/proofs.md",
+            "about": "Formal proofs of FP127's and FP19's core arithmetic and directed rounding: docs/proofs.md",
             "tools": record_tools,
             "summary": {
                 "ops": len(ops),

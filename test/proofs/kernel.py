@@ -1,12 +1,12 @@
-"""Lemmas K127 and K256: the mulDiv kernels are the exact floor quotient.
+"""Lemmas K127 and K19: the mulDiv kernels are the exact floor quotient.
 
     python test/proofs/kernel.py      # one line per step, exits 1 on any failure
 
-Kernels.divq (FP127's div) and Kernels.divh (FP256's) are Remco Bloemen's
+Kernels.divq (FP127's div) and Kernels.divh (FP19's) are Remco Bloemen's
 mulDiv specialised to the multiplier 2^s, s = 128 and 255:
 
     K127  divq(a, b) = floor(a 2^128 / b)   for 0 < a >> 128 < b
-    K256  divh(a, b) = floor(a 2^255 / b)   for 0 < b, a < 2 b
+    K19  divh(a, b) = floor(a 2^255 / b)   for 0 < b, a < 2 b
 
 The proof follows the code line by line. Each EVM operation is read by its
 definition on unbounded integers (W = 2^256): MUL(x, y) = x y mod W,
@@ -170,7 +170,7 @@ def main():
     for k in (4, 8, 16, 32, 64, 128):
         ok &= S5(k)
     ok &= S6()
-    names = {128: "K127 divq", 255: "K256 divh"}
+    names = {128: "K127 divq", 255: "K19 divh"}
     for s in (128, 255):
         print(f"{'PROVED' if ok else 'FAILED'}  {names[s].split()[0]}  {names[s].split()[1]}(a, b) = floor(a 2^{s} / b): S1-S6, B1-B3")
     print(f"kernel.py: {time.time() - t0:.0f}s")

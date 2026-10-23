@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
+import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 import {BalancerV1Math as B} from "./BalancerV1Math.sol";
 
 /// @title BalancerV1Replay
@@ -21,7 +21,7 @@ import {BalancerV1Math as B} from "./BalancerV1Math.sol";
 ///         an amount in, floor for an amount out):
 ///           bnum1  BNum's own 18-decimal ratio, the amount kept on the 1e-18 grid, one rounding
 ///           fp127  the formula in FP127 (127.128 fixed point), expm1(tW/wI * log1p(pAo/pS))
-///           fp256  the same in FP256 (237-bit float)
+///           fp19  the same in FP19 (237-bit float)
 ///         and one line per call is printed for the 200-digit scoring
 ///         (scripts/replays/balancer_v1.py score):
 ///             BAL|<pool index, 0-based>|<call index>|<kind>|k=v;k=v;...
@@ -114,9 +114,9 @@ contract BalancerV1Replay is Test {
     struct Alt {
         uint256 bnum1;
         int256 r127;
-        int256 r256;
+        int256 r19;
         uint256 u127;
-        uint256 u256;
+        uint256 u19;
     }
 
     function _replay(uint256 p) internal {
@@ -190,11 +190,11 @@ contract BalancerV1Replay is Test {
         // BNum's 18-decimal ratio with the amount kept on the 1e-18 grid and rounded up once
         uint256 den = B.BONE - s.zar;
         m.bnum1 = (s.tokenInRatio * bI - bI * B.BONE + den - 1) / den;
-        (m.r127, m.r256) = _ideal(true, bI, pool.w[c.t], pool.S, pool.tW, c.amt, pool.fee);
+        (m.r127, m.r19) = _ideal(true, bI, pool.w[c.t], pool.S, pool.tW, c.amt, pool.fee);
         m.u127 = uint256(FP127Lib.ceil(m.r127) >> 128);
-        m.u256 = uint256(FP127Lib.ceil(FP256Lib.toFP127(m.r256)) >> 128);
-        assertEq(m.u127, m.u256, "FP127 and FP256 disagree in token units");
-        blocked = m.bnum1 > c.lim && m.u127 > c.lim && m.u256 > c.lim;
+        m.u19 = uint256(FP127Lib.ceil(FP19Lib.toFP127(m.r19)) >> 128);
+        assertEq(m.u127, m.u19, "FP127 and FP19 disagree in token units");
+        blocked = m.bnum1 > c.lim && m.u127 > c.lim && m.u19 > c.lim;
 
         _emit(c, JOIN_POOL_OUT, string.concat(
             string.concat(_state(pool, c, bI), _kv("dep", s.tokenAmountIn), _kv("poolRatio", s.poolRatio), _kv("boo", s.boo)),
@@ -217,11 +217,11 @@ contract BalancerV1Replay is Test {
 
         Alt memory m;
         m.bnum1 = (bO * B.BONE - s.tokenOutRatio * bO) * (B.BONE - s.zaz) / (B.BONE * B.BONE);
-        (m.r127, m.r256) = _ideal(false, bO, pool.w[c.t], pool.S, pool.tW, c.amt, pool.fee);
+        (m.r127, m.r19) = _ideal(false, bO, pool.w[c.t], pool.S, pool.tW, c.amt, pool.fee);
         m.u127 = uint256(FP127Lib.floor(m.r127) >> 128);
-        m.u256 = uint256(FP127Lib.floor(FP256Lib.toFP127(m.r256)) >> 128);
-        assertEq(m.u127, m.u256, "FP127 and FP256 disagree in token units");
-        blocked = c.lim > 0 && m.bnum1 < c.lim && m.u127 < c.lim && m.u256 < c.lim;
+        m.u19 = uint256(FP127Lib.floor(FP19Lib.toFP127(m.r19)) >> 128);
+        assertEq(m.u127, m.u19, "FP127 and FP19 disagree in token units");
+        blocked = c.lim > 0 && m.bnum1 < c.lim && m.u127 < c.lim && m.u19 < c.lim;
         // the dust exits (one token unit out, minAmountOut = 1) are each worth about half a unit
         if (c.lim > 0) assertTrue(blocked, "a dust exit would still pay");
 
@@ -240,8 +240,8 @@ contract BalancerV1Replay is Test {
     }
 
     function _alt(Alt memory m) internal pure returns (string memory) {
-        return string.concat(_kv("bnum1", m.bnum1), _kvi("fp127", m.r127), _kv("fp127u", m.u127), _kvi("fp256", m.r256),
-            _kv("fp256u", m.u256));
+        return string.concat(_kv("bnum1", m.bnum1), _kvi("fp127", m.r127), _kv("fp127u", m.u127), _kvi("fp19", m.r19),
+            _kv("fp19u", m.u19));
     }
 
     /// BPool.sol:392-420 (exitPool): proportional exit, asserted token by token.
@@ -259,14 +259,14 @@ contract BalancerV1Replay is Test {
         }
     }
 
-    /// The stated formula (BMath.sol:146-155 and :184-194) in FP127 and FP256, as raw words:
+    /// The stated formula (BMath.sol:146-155 and :184-194) in FP127 and FP19, as raw words:
     /// join: bI * ((1 + pAo/pS)^(tW/wI) - 1) / (1 - (1 - wI/tW) * sF)
     /// exit: bO * (1 - (1 - pAi/pS)^(tW/wO)) * (1 - (1 - wO/tW) * sF)     (EXIT_FEE = 0)
     /// The power is written expm1(y * log1p(x)) so nothing cancels at small pAo/pS.
     function _ideal(bool join, uint256 b, uint256 w, uint256 pS, uint256 tW, uint256 pA, uint256 fee)
         internal
         pure
-        returns (int256 r127, int256 r256)
+        returns (int256 r127, int256 r19)
     {
         {
             int256 x = FP127Lib.div(_u(pA), _u(pS));
@@ -281,16 +281,16 @@ contract BalancerV1Replay is Test {
             }
         }
         {
-            int256 x = FP256Lib.div(FP256Lib.fromUint(pA), FP256Lib.fromUint(pS));
-            int256 y = FP256Lib.div(FP256Lib.fromUint(tW), FP256Lib.fromUint(w));
-            int256 f = FP256Lib.mul(FP256Lib.sub(FP256Lib.ONE, FP256Lib.div(FP256Lib.fromUint(w), FP256Lib.fromUint(tW))),
-                FP256Lib.div(FP256Lib.fromUint(fee), FP256Lib.fromUint(1e18)));
+            int256 x = FP19Lib.div(FP19Lib.fromUint(pA), FP19Lib.fromUint(pS));
+            int256 y = FP19Lib.div(FP19Lib.fromUint(tW), FP19Lib.fromUint(w));
+            int256 f = FP19Lib.mul(FP19Lib.sub(FP19Lib.ONE, FP19Lib.div(FP19Lib.fromUint(w), FP19Lib.fromUint(tW))),
+                FP19Lib.div(FP19Lib.fromUint(fee), FP19Lib.fromUint(1e18)));
             if (join) {
-                int256 g = FP256Lib.expm1(FP256Lib.mul(y, FP256Lib.log1p(x)));
-                r256 = FP256Lib.div(FP256Lib.mul(FP256Lib.fromUint(b), g), FP256Lib.sub(FP256Lib.ONE, f));
+                int256 g = FP19Lib.expm1(FP19Lib.mul(y, FP19Lib.log1p(x)));
+                r19 = FP19Lib.div(FP19Lib.mul(FP19Lib.fromUint(b), g), FP19Lib.sub(FP19Lib.ONE, f));
             } else {
-                int256 g = FP256Lib.neg(FP256Lib.expm1(FP256Lib.mul(y, FP256Lib.log1p(FP256Lib.neg(x)))));
-                r256 = FP256Lib.mul(FP256Lib.mul(FP256Lib.fromUint(b), g), FP256Lib.sub(FP256Lib.ONE, f));
+                int256 g = FP19Lib.neg(FP19Lib.expm1(FP19Lib.mul(y, FP19Lib.log1p(FP19Lib.neg(x)))));
+                r19 = FP19Lib.mul(FP19Lib.mul(FP19Lib.fromUint(b), g), FP19Lib.sub(FP19Lib.ONE, f));
             }
         }
     }
@@ -341,11 +341,11 @@ contract BalancerV1Replay is Test {
         // rounded toward the pool once, BNum's own ratio already asks for 2
         uint256 num = s.tokenInRatio * DECISIVE_BAL - DECISIVE_BAL * 1e18;
         assertEq((num + (1e18 - s.zar) - 1) / (1e18 - s.zar), 2);
-        (int256 r127, int256 r256) = _ideal(true, DECISIVE_BAL, w, DECISIVE_SUPPLY, tW, DECISIVE_POOL_OUT, fee);
+        (int256 r127, int256 r19) = _ideal(true, DECISIVE_BAL, w, DECISIVE_SUPPLY, tW, DECISIVE_POOL_OUT, fee);
         // exact: 1.5056461731493099... satoshi; toward the pool: 2 > maxAmountIn = 1 -> ERR_LIMIT_IN
         assertGt(r127, (int256(3) << 128) / 2);
         assertEq(FP127Lib.ceil(r127) >> 128, 2);
-        assertEq(FP127Lib.ceil(FP256Lib.toFP127(r256)) >> 128, 2);
+        assertEq(FP127Lib.ceil(FP19Lib.toFP127(r19)) >> 128, 2);
     }
 
     // ---- Precision or direction? -----------------------------------------------------------------
@@ -353,7 +353,7 @@ contract BalancerV1Replay is Test {
     /// The same starting state as the decisive join, with the attacker re-tuned to each rounding
     /// rule (scripts/replays/balancer_v1.py score solves for these amounts at 200 digits and checks
     /// they equal the constants below). Under "nearest, once" the pool computes the exact formula
-    /// (FP127 or FP256, 37+ digits) and rounds the token amount to the nearest unit at the end; the
+    /// (FP127 or FP19, 37+ digits) and rounds the token amount to the nearest unit at the end; the
     /// attacker asks for just under 1.5 units' worth on the join and just over 0.5 on the exit.
     uint256 constant NEAREST_JOIN_P = 687409992083284011;
     uint256 constant NEAREST_EXIT_P = 235740524732716483;
@@ -366,15 +366,15 @@ contract BalancerV1Replay is Test {
         uint256 tW = 50e18;
         uint256 fee = 0.005e18;
         // join at 3 satoshi: 1.4999999999999999982 satoshi, rounded to nearest once -> 1 (pays maxAmountIn = 1)
-        (int256 j127, int256 j256) = _ideal(true, DECISIVE_BAL, w, DECISIVE_SUPPLY, tW, NEAREST_JOIN_P, fee);
+        (int256 j127, int256 j19) = _ideal(true, DECISIVE_BAL, w, DECISIVE_SUPPLY, tW, NEAREST_JOIN_P, fee);
         assertEq(FP127Lib.round(j127) >> 128, 1);
-        assertEq(FP127Lib.round(FP256Lib.toFP127(j256)) >> 128, 1);
+        assertEq(FP127Lib.round(FP19Lib.toFP127(j19)) >> 128, 1);
         assertEq(FP127Lib.ceil(j127) >> 128, 2); // toward the pool it would not
         // exit at 4 satoshi from the supply after that join: just over 0.5 satoshi, to nearest -> 1 (pays minAmountOut = 1)
         uint256 s2 = DECISIVE_SUPPLY + NEAREST_JOIN_P;
-        (int256 x127, int256 x256) = _ideal(false, 4, w, s2, tW, NEAREST_EXIT_P, fee);
+        (int256 x127, int256 x19) = _ideal(false, 4, w, s2, tW, NEAREST_EXIT_P, fee);
         assertEq(FP127Lib.round(x127) >> 128, 1);
-        assertEq(FP127Lib.round(FP256Lib.toFP127(x256)) >> 128, 1);
+        assertEq(FP127Lib.round(FP19Lib.toFP127(x19)) >> 128, 1);
         assertEq(FP127Lib.floor(x127) >> 128, 0); // toward the pool it would not
         // one cycle: balance back to 3 satoshi, the attacker 0.4517 BPT richer (6.99% of the supply)
         assertGt(NEAREST_JOIN_P, NEAREST_EXIT_P);

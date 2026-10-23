@@ -76,7 +76,7 @@
    "runtimeKeccak": "0x1be62bc6a0a6539ea22d5f693072d7e67ec4f2527412c7c5df228fab2685a3a4",
    "deployed": true
   },
-  "LadderFP256": {
+  "LadderFP19": {
    "address": "0xa47a4Fa0aAe8359dABF752ca495625d5315F40e7",
    "initCodeHash": "0xf23d011d3aa79336ad47b01afb33502ab18034c1d67179b7d86956d620a42212",
    "constructorArgs": [],

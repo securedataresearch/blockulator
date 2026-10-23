@@ -67,15 +67,15 @@ SITE_INK, SITE_G500, SITE_EMERALD, SITE_RED, SITE_GOLD, SITE_SAPPHIRE = (
 # ruler, rounded the other way.
 INK, MUTED, FAINT, GRID, SURFACE = "#0b0b0b", "#52514e", "#a9a8a2", "#e4e3df", "#fcfcfb"
 SERIES = {
-    "FP256": SITE_INK,                               # --c-fp256: var(--ink)
+    "FP19": SITE_INK,                               # --c-fp19: var(--ink)
     "FP127": SITE_EMERALD,                           # --c-fp127: var(--emerald)
     "binary128": mix(SITE_SAPPHIRE, SITE_RED, .55),  # --c-quad: --violet, color-mix(in oklab, sapphire 55%, red)
     "64.64": SITE_SAPPHIRE,                          # --c-6464: var(--sapphire)
     "WAD": SITE_GOLD,                                # --c-wad: var(--gold)
 }
 WAD_DARK = mix(SITE_GOLD, SITE_INK, .7)  # a second WAD library beside the first (gas slide): the gold, darker (5.4:1 on SURFACE)
-RULERS = ["WAD", "64.64", "binary128", "FP127", "FP256"]
-FORM = {"WAD": "solady", "64.64": "abdk", "binary128": "quad", "FP127": "fp127lib", "FP256": "fp256"}
+RULERS = ["WAD", "64.64", "binary128", "FP127", "FP19"]
+FORM = {"WAD": "solady", "64.64": "abdk", "binary128": "quad", "FP127": "fp127lib", "FP19": "fp19"}
 DEPLOYED = mix(SITE_SAPPHIRE, SITE_G500, .5)  # --c-protocol: --slate, color-mix(in oklab, sapphire 50%, g-500)
 FIX = SERIES["WAD"]
 
@@ -102,7 +102,7 @@ def figure(w=11.5, h=5.2):
 
 
 def line(ax, xs, ys, name, **kw):
-    hero = name in ("FP127", "FP256")
+    hero = name in ("FP127", "FP19")
     ax.plot(xs, ys, color=SERIES[name], lw=2.8 if hero else 2, marker="o", ms=7, mec=SURFACE, mew=2,
             label=name, zorder=4 if hero else 3, **kw)
 
@@ -150,7 +150,7 @@ def accrual_case(cid: str) -> dict:
 
 
 def pi_table() -> dict[str, list[int]]:
-    want = {"FP256 primitives": "FP256", "FP127Lib primitives": "FP127", "ABDKMathQuad": "binary128",
+    want = {"FP19 primitives": "FP19", "FP127Lib primitives": "FP127", "ABDKMathQuad": "binary128",
             "ABDKMath64x64": "64.64", "Solady": "WAD"}
     lines = [l for l in (BENCH / "pi.md").read_text().splitlines() if l.startswith("|")]
     head = [c.strip() for c in lines[0].strip("|").split("|")]
@@ -200,12 +200,12 @@ def plot_honest() -> str:
     t = c["truth"][c["primaryTruth"]]
     unit = 10.0 ** -c["decimals"]
     rows = [("Aave, as deployed", DEPLOYED, t["deployed"]), ("FP127", SERIES["FP127"], t["fp127"]),
-            ("FP256", SERIES["FP256"], t["fp256"])]
+            ("FP19", SERIES["FP19"], t["fp19"])]
     fig, ax = figure(11.5, 4.6)
-    ax.axvspan(1e-75, unit, color=SERIES["FP256"], alpha=0.06, lw=0, zorder=1)
+    ax.axvspan(1e-75, unit, color=SERIES["FP19"], alpha=0.06, lw=0, zorder=1)
     ax.axvline(unit, color=MUTED, lw=1.4, ls=(0, (4, 4)), zorder=2)
     ax.text(unit * 3, -0.55, f"one unit of {c['symbol']} (10^-{c['decimals']})", fontsize=12, color=MUTED, va="center")
-    ax.text(1e-73, -0.55, "every answer rounds to the same token amount", fontsize=12, color=SERIES["FP256"], va="center")
+    ax.text(1e-73, -0.55, "every answer rounds to the same token amount", fontsize=12, color=SERIES["FP19"], va="center")
     for y, (lab, col, cell) in enumerate(rows):
         e = abs(float(cell["errTokens"]))
         ax.plot([e], [y], "o", ms=14, color=col, mec=SURFACE, mew=2, zorder=4)
@@ -236,13 +236,13 @@ def plot_resupply() -> str:
     times_cap = float(ltv / p["maxLTV"])
     dig = {re.match(r"FP\d+", r[0]).group(): r[2] for r in md_rows(BENCH / "replay-resupply.md", "FP")}
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(12.5, 5.0), gridspec_kw={"wspace": 0.45})
-    names = ["deployed", "FP127", "FP256"]
-    cols = [DEPLOYED, SERIES["FP127"], SERIES["FP256"]]
+    names = ["deployed", "FP127", "FP19"]
+    cols = [DEPLOYED, SERIES["FP127"], SERIES["FP19"]]
     vals = [deployed, float(exact), float(exact)]
     a1.bar(range(3), vals, color=cols, width=0.6, zorder=3)
     a1.axhline(float(exact), color=MUTED, lw=1.2, ls=(0, (4, 4)), zorder=2)
     a1.text(0, 0.03, "0", ha="center", fontsize=15, fontweight="bold")
-    for x, n in ((1, "FP127"), (2, "FP256")):
+    for x, n in ((1, "FP127"), (2, "FP19")):
         a1.text(x, float(exact) + 0.03, f"{dig[n]}\ndigits", ha="center", fontsize=12)
     a1.text(-0.42, float(exact) + 0.13, "the true rate: 0.4999999999999999999995", fontsize=12, color=MUTED)
     a1.set_xticks(range(3), names)
@@ -293,7 +293,7 @@ def plot_bunni() -> str:
     ax.text(x1, seq["deployed"][-1], f"deployed  {seq['deployed'][-1]} wei\nliquidity {dl('deployed'):+.2f}%",
             va="center", fontsize=13)
     ax.text(x1, seq["mulDivUp"][-1], f"mulDivUp  {seq['mulDivUp'][-1]} wei", va="center", fontsize=13)
-    ax.text(x1, float(seq["exact"][-1]), f"FP127, FP256, exact\n{float(seq['exact'][-1]):.4f} wei",
+    ax.text(x1, float(seq["exact"][-1]), f"FP127, FP19, exact\n{float(seq['exact'][-1]):.4f} wei",
             va="center", fontsize=13)
     ax.set_xlim(0, xs[-1])
     ax.set_ylim(0, 55)
@@ -310,7 +310,7 @@ def plot_balancer() -> str:
     """1.4: the true invariant D* across the osETH pool's micro-swap phase, each call charged by each model."""
     s = BALANCER["osETH"]
     models = [("deployed", "deployed (mulDown)", DEPLOYED, 2.5), ("mulUp", "the fix (mulUp)", FIX, 2.5),
-              ("fp256", "FP256", SERIES["FP256"], 4), ("fp127", "FP127", SERIES["FP127"], 2)]
+              ("fp19", "FP19", SERIES["FP19"], 4), ("fp127", "FP127", SERIES["FP127"], 2)]
     fig, ax = figure()
     for m, lab, col, lw in models:
         ys, v = [1.0], 1.0
@@ -326,7 +326,7 @@ def plot_balancer() -> str:
             f"mulUp  ×{float(mm['mulUp']['invariantRatio']):.2f}\n{mm['mulUp']['stepsInvariantFalls']} of {n} calls lower D*",
             va="center", fontsize=13)
     ax.text(x1, float(mm["fp127"]["invariantRatio"]),
-            f"FP127 = FP256 = exact  ×{float(mm['fp127']['invariantRatio']):.4f}\n"
+            f"FP127 = FP19 = exact  ×{float(mm['fp127']['invariantRatio']):.4f}\n"
             f"{mm['fp127']['stepsInvariantFalls']} of {n} calls lower D*", va="center", fontsize=13)
     ax.text(x1, float(mm["deployed"]["invariantRatio"]),
             f"deployed  ×{float(mm['deployed']['invariantRatio']):.3f}\n"
@@ -347,7 +347,7 @@ def plot_balancer_v1() -> str:
     rows = [r for r in rows if r[0].isdigit() and len(r) == 5
             and (r[1].startswith("deployed (the attacker") or r[1].startswith("exact formula"))]
     rules = [("deployed", "deployed", DEPLOYED), ("nearest", "exact, rounded to nearest once", FIX),
-             ("toward", "exact, rounded toward the pool once", SERIES["FP256"])]
+             ("toward", "exact, rounded toward the pool once", SERIES["FP19"])]
     net = {k: [] for k, _, _ in rules}
     for r in rows:
         k = "deployed" if r[1].startswith("deployed") else "nearest" if "nearest" in r[1] else "toward"
@@ -391,8 +391,8 @@ def plot_goal_one() -> str:
 # the rulers as formats: finest mark and largest value, in log10
 FIXED = {"WAD": (-18, math.log10(2**255 / 1e18)), "64.64": (math.log10(2**-64), math.log10(2**63)),
          "FP127": (math.log10(2**-128), math.log10(2**127))}
-FLOAT = {"binary128": 113 * math.log10(2), "FP256": 237 * math.log10(2)}
-FP256_WALL = math.floor((2**18) * math.log10(2))  # exponent 19 bits, bias 2^18 - 1: 10^±78,913
+FLOAT = {"binary128": 113 * math.log10(2), "FP19": 237 * math.log10(2)}
+FP19_WALL = math.floor((2**18) * math.log10(2))  # exponent 19 bits, bias 2^18 - 1: 10^±78,913
 
 
 def digits_at(name: str, e: float):
@@ -413,15 +413,15 @@ def plot_rulers(lit: tuple[str, ...] = ()) -> str:
         pts = [(e, digits_at(name, e)) for e in es]
         xs = [e for e, d in pts if d is not None]
         ys = [d for e, d in pts if d is not None]
-        ax.plot(xs, ys, color=col, lw=3 if name in ("FP127", "FP256") else 2.2, label=name, zorder=4 if col != GRID else 2)
+        ax.plot(xs, ys, color=col, lw=3 if name in ("FP127", "FP19") else 2.2, label=name, zorder=4 if col != GRID else 2)
         if name in FIXED and FIXED[name][1] < 45:
             top = FIXED[name][1]
             ax.plot([top, top], [digits_at(name, top), 0], color=col, lw=1.5, ls=(0, (2, 2)))
             ax.text(top, digits_at(name, top) + 1.5, "revert", ha="center", fontsize=11, color=col if col != GRID else FAINT)
     ax.text(-44, 62, "a fixed ruler: zero below its finest mark,\nrevert above its largest value", fontsize=12,
             color=MUTED, va="top")
-    ax.text(-44, FLOAT["FP256"] + 2.5, f"FP256: {FLOAT['FP256']:.1f} digits out to its walls at 10^±{FP256_WALL:,}",
-            ha="left", fontsize=12, color=SERIES["FP256"])
+    ax.text(-44, FLOAT["FP19"] + 2.5, f"FP19: {FLOAT['FP19']:.1f} digits out to its walls at 10^±{FP19_WALL:,}",
+            ha="left", fontsize=12, color=SERIES["FP19"])
     ax.set_xlabel("size of the number, power of ten")
     ax.set_ylabel("digits the ruler can hold")
     ax.set_xlim(-45, 45)
@@ -433,7 +433,7 @@ def plot_rulers(lit: tuple[str, ...] = ()) -> str:
 
 def plot_ramanujan() -> str:
     t = pi_table()
-    terms = list(range(1, len(t["FP256"]) + 1))
+    terms = list(range(1, len(t["FP19"]) + 1))
     fig, ax = figure()
     for name in RULERS:
         line(ax, terms, t[name], name)
@@ -452,7 +452,7 @@ def plot_ramanujan() -> str:
 
 def plot_newton() -> str:
     """2.3: Balancer's invariant solve, the same Newton iteration on three rulers (worst over the phase)."""
-    rulers = [("deployed", "wei grid", DEPLOYED), ("fp127", "FP127", SERIES["FP127"]), ("fp256", "FP256", SERIES["FP256"])]
+    rulers = [("deployed", "wei grid", DEPLOYED), ("fp127", "FP127", SERIES["FP127"]), ("fp19", "FP19", SERIES["FP19"])]
     fig, ax = figure(11.5, 5.0)
     y, ticks = 0, []
     for pool in ("osETH", "wstETH"):
@@ -501,7 +501,7 @@ def converge_vs_fit() -> tuple[list[int], list[float], list[float]]:
 def plot_converge() -> str:
     widths, newton, fitted = converge_vs_fit()
     fig, ax = figure()
-    ax.plot(widths, newton, color=SERIES["FP256"], lw=2.8, marker="o", ms=7, mec=SURFACE, mew=2, zorder=4,
+    ax.plot(widths, newton, color=SERIES["FP19"], lw=2.8, marker="o", ms=7, mec=SURFACE, mew=2, zorder=4,
             label="converging: Newton's square root")
     ax.plot(widths, fitted, color=SERIES["FP127"], lw=2.8, marker="o", ms=7, mec=SURFACE, mew=2, zorder=4,
             label="fitted: a Taylor polynomial for exp, tuned for 60 bits")
@@ -516,9 +516,9 @@ def plot_converge() -> str:
 
 
 def release_one() -> dict[str, int]:
-    """Release one's worst bits (contracts/deployments/FP256.md): the converging ops
+    """Release one's worst bits (contracts/deployments/FP19.md): the converging ops
     were exact to the 237-bit significand; exp, ln and pow ran on fitted kernels."""
-    text = (DEPLOY / "FP256.md").read_text()
+    text = (DEPLOY / "FP19.md").read_text()
     sec = text[text.index("## Release one"):]
     exp_, ln_, pow_ = (int(x) for x in re.search(r"\((\d+), (\d+) and (\d+) bits at worst", sec).groups())
     return {"add": 237, "sub": 237, "mul": 237, "div": 237, "sqrt": 237, "exp": exp_, "ln": ln_, "pow": pow_}
@@ -526,9 +526,9 @@ def release_one() -> dict[str, int]:
 
 def plot_release() -> str:
     one = release_one()
-    prec = json.loads((ROOT / "docs" / "fp256" / "precision.json").read_text())
+    prec = json.loads((ROOT / "docs" / "fp19" / "precision.json").read_text())
     now = {op: (237 if prec[op]["minBits"] >= 256 else prec[op]["minBits"]) for op in one}
-    exp_sweep = next(r for r in SWEEP["rows"] if r["lib"] == "fp256" and r["op"] == "exp")
+    exp_sweep = next(r for r in SWEEP["rows"] if r["lib"] == "fp19" and r["op"] == "exp")
     fig, ax = figure()
     ops = list(one)
     for x, op in enumerate(ops):
@@ -536,17 +536,17 @@ def plot_release() -> str:
         ax.plot([x, x], [a, b], color=GRID, lw=3, zorder=2)
         ax.plot(x, a, "o", ms=13, color=MUTED, mec=SURFACE, mew=2, zorder=3,
                 label="release one" if x == 0 else None)
-        ax.plot(x, b, "o", ms=13, color=SERIES["FP256"], mec=SURFACE, mew=2, zorder=4,
+        ax.plot(x, b, "o", ms=13, color=SERIES["FP19"], mec=SURFACE, mew=2, zorder=4,
                 label="now" if x == 0 else None)
         if a != b:
             ax.text(x - 0.14, a, f"{a} bits\n{a * math.log10(2):.0f} digits", va="center", ha="right", fontsize=11)
-    ax.axvspan(-0.5, 4.5, color=SERIES["FP256"], alpha=0.05, lw=0)
+    ax.axvspan(-0.5, 4.5, color=SERIES["FP19"], alpha=0.05, lw=0)
     ax.text(2, 185, "converging:\nexact on day one", ha="center", fontsize=14, color=INK)
     ax.text(6, 103, "fitted: had to be refit", ha="center", fontsize=14, color=INK)
     ax.text(6, 89, f"exp now: {exp_sweep['correctlyRounded']:,} of {exp_sweep['n']:,} random inputs correctly rounded",
             ha="center", fontsize=11, color=MUTED)
     ax.set_xticks(range(len(ops)), ops)
-    ax.set_ylabel("worst bits right, FP256 (237 = exact)")
+    ax.set_ylabel("worst bits right, FP19 (237 = exact)")
     ax.set_ylim(80, 250)
     ax.set_xlim(-0.5, len(ops) - 0.5)
     ax.grid(axis="x", visible=False)
@@ -566,13 +566,13 @@ def plot_format_ceiling() -> str:
     ax.axvspan(7.5, 8.5, color=GRID, lw=0, zorder=1)
     ax.text(8, 75.8, "too narrow\nfor uint256", ha="center", va="top", fontsize=11, color=MUTED)
     ax.plot(es, [dig(e) for e in es], color=MUTED, lw=2, zorder=3)
-    marks = {9: "just covers uint256", 11: "", 13: "", 19: "FP256"}
+    marks = {9: "just covers uint256", 11: "", 13: "", 19: "FP19"}
     for e, note in marks.items():
-        col = SERIES["FP256"] if e == 19 else MUTED
+        col = SERIES["FP19"] if e == 19 else MUTED
         ax.plot(e, dig(e), "o", ms=12, color=col, mec=SURFACE, mew=2, zorder=4)
         lab = f"{e} bits: {dig(e):.1f} digits, 10^±{rng(e):,}" + (f"\n{note}" if note else "")
         ax.annotate(lab, (e, dig(e)), xytext=(10, 12), textcoords="offset points", fontsize=12, color=INK)
-    ax.axhline(dig(19), color=SERIES["FP256"], lw=1.2, ls=(0, (4, 4)), zorder=2)
+    ax.axhline(dig(19), color=SERIES["FP19"], lw=1.2, ls=(0, (4, 4)), zorder=2)
     ax.annotate("", xy=(9.0, dig(9)), xytext=(9.0, dig(19)),
                 arrowprops=dict(arrowstyle="<->", color=MUTED, lw=1.4))
     ax.text(9.25, (dig(9) + dig(19)) / 2, f"{dig(9) - dig(19):.1f} digits:\nthe most any\none-word format\ncan add",
@@ -586,13 +586,13 @@ def plot_format_ceiling() -> str:
 
 
 def plot_accuracy() -> str:
-    """3.2: FP256 against the correctly rounded word, seeded random inputs (sweep.json)."""
-    rows = [r for r in SWEEP["rows"] if r["lib"] == "fp256" and "stage" not in r]
-    wide = [r for r in SWEEP["rows"] if r["lib"] == "fp256" and r.get("stage") == "second"]
+    """3.2: FP19 against the correctly rounded word, seeded random inputs (sweep.json)."""
+    rows = [r for r in SWEEP["rows"] if r["lib"] == "fp19" and "stage" not in r]
+    wide = [r for r in SWEEP["rows"] if r["lib"] == "fp19" and r.get("stage") == "second"]
     fig, ax = figure(11.5, 5.4)
     for y, r in enumerate(rows):
         share = 100 * r["correctlyRounded"] / r["n"]
-        ax.barh(y, share, color=SERIES["FP256"], height=0.72, zorder=3)
+        ax.barh(y, share, color=SERIES["FP19"], height=0.72, zorder=3)
         ax.barh(y, 100 - share, left=share, color=SERIES["FP127"], height=0.72, zorder=3)
         note = f"{r['correctlyRounded']:,} / {r['n']:,}"
         if r["misrounded"]:
@@ -604,7 +604,7 @@ def plot_accuracy() -> str:
     ax.set_xticks(range(0, 101, 25), [f"{x}%" for x in range(0, 101, 25)])
     forced = sum(r["n"] for r in wide)
     off = sum(r["misrounded"] for r in wide)
-    ax.set_xlabel("FP256: share of random inputs that return the correctly rounded word\n"
+    ax.set_xlabel("FP19: share of random inputs that return the correctly rounded word\n"
                   f"and {forced:,} more forced through the second stage of {len(wide)} ops: {off} misrounded")
     ax.grid(axis="y", visible=False)
     return svg(fig)
@@ -614,7 +614,7 @@ GAS_OPS = ["mul", "div", "exp", "ln", "pow"]
 
 
 def gas_medians() -> dict[str, dict[str, int]]:
-    """Median gas per op: Solady, PRBMath and FP127Lib from gas.md, FP256Lib from gas256.md."""
+    """Median gas per op: Solady, PRBMath and FP127Lib from gas.md, FP19Lib from gas19.md."""
     def table(path, want):
         # the ladder table only: the file's first table (a typical-inputs table follows)
         text = path.read_text()
@@ -630,13 +630,13 @@ def gas_medians() -> dict[str, dict[str, int]]:
                     out[k][cells[0]] = int(cells[i].split("/")[1].strip().replace(",", ""))
         return out
     g = table(BENCH / "gas.md", {"Solady": "Solady", "PRBMath": "PRBMath SD59x18", "FP127": "FP127Lib (inline)"})
-    g.update(table(BENCH / "gas256.md", {"FP256": "FP256Lib (inline)"}))
+    g.update(table(BENCH / "gas19.md", {"FP19": "FP19Lib (inline)"}))
     return g
 
 
 def plot_gas() -> str:
     g = gas_medians()
-    libs = [("Solady", SERIES["WAD"]), ("PRBMath", WAD_DARK), ("FP127", SERIES["FP127"]), ("FP256", SERIES["FP256"])]
+    libs = [("Solady", SERIES["WAD"]), ("PRBMath", WAD_DARK), ("FP127", SERIES["FP127"]), ("FP19", SERIES["FP19"])]
     fig, ax = figure()
     w = 0.2
     for i, (lib, col) in enumerate(libs):
@@ -665,7 +665,7 @@ def plot_live() -> str:
     rows = [("the ladder: every scenario, input, library and N", live["ladder"]),
             ("the edges: every probe and library", live["edges"])]
     for y, (lab, st) in enumerate(rows):
-        ax.barh(y, st["liveChecked"], color=SERIES["FP256"], height=0.55, zorder=3)
+        ax.barh(y, st["liveChecked"], color=SERIES["FP19"], height=0.55, zorder=3)
         ax.text(st["liveChecked"] + 120, y, f'{st["liveChecked"]:,} cells, {st["liveMismatches"]} mismatches',
                 va="center", fontsize=15)
         ax.text(0, y + 0.42, f'{lab} — block {st["liveBlock"]:,}', fontsize=12, color=MUTED)
@@ -684,10 +684,10 @@ def plot_close() -> str:
     ax.axis("off")
     ax.text(0, 0.78, "FP127", fontsize=30, fontweight="bold", color=SERIES["FP127"], transform=ax.transAxes)
     ax.text(0, 0.62, c["FP127"]["address"], fontsize=17, family="DejaVu Sans Mono", transform=ax.transAxes)
-    ax.text(0, 0.40, "FP256", fontsize=30, fontweight="bold", color=SERIES["FP256"], transform=ax.transAxes)
-    ax.text(0, 0.24, c["FP256"]["address"], fontsize=17, family="DejaVu Sans Mono", transform=ax.transAxes)
-    # FP256's other objects, smaller: the elementary, hyperbolic and special functions
-    extra = [k for k in ("FP256E", "FP256H", "FP256S") if k in c]
+    ax.text(0, 0.40, "FP19", fontsize=30, fontweight="bold", color=SERIES["FP19"], transform=ax.transAxes)
+    ax.text(0, 0.24, c["FP19"]["address"], fontsize=17, family="DejaVu Sans Mono", transform=ax.transAxes)
+    # FP19's other objects, smaller: the elementary, hyperbolic and special functions
+    extra = [k for k in ("FP19E", "FP19H", "FP19S") if k in c]
     if extra:
         ax.text(0, 0.135, "  ·  ".join(f'{k} {c[k]["address"][:10]}…{c[k]["address"][-4:]}' for k in extra),
                 fontsize=11.5, family="DejaVu Sans Mono", color=MUTED, transform=ax.transAxes)
@@ -731,7 +731,7 @@ SLIDES = [
      "Computed with mpmath at each width: Newton's sqrt(2), and a Taylor polynomial for exp tuned for 60 bits "
      "(the shortest within 2^-60 on [0, ln 2]), at x = ln 2. scripts/talk/deck.py: converge_vs_fit"),
     ("Release one, and now", plot_release,
-     "Worst bits over the committed vectors. Release one: contracts/deployments/FP256.md; now: docs/fp256/precision.json "
+     "Worst bits over the committed vectors. Release one: contracts/deployments/FP19.md; now: docs/fp19/precision.json "
      "(precision.md) and docs/benchmarks/sweep.json"),
     # part 3: the last library
     ("The format ceiling", plot_format_ceiling,
@@ -742,10 +742,10 @@ SLIDES = [
      "docs/benchmarks/sweep.json (sweep.md)"),
     ("What it costs", plot_gas,
      "Median gas over each op's input ladder, inline libraries. docs/benchmarks/gas.md (Solady, PRBMath SD59x18, FP127Lib); "
-     "docs/benchmarks/gas256.md (FP256Lib)"),
-    ("Both goals, met", lambda: plot_rulers(lit=("FP127", "FP256")), FORMATS),
+     "docs/benchmarks/gas19.md (FP19Lib)"),
+    ("Both goals, met", lambda: plot_rulers(lit=("FP127", "FP19")), FORMATS),
     ("Checked on chain", plot_live, "contracts/deployments/RELEASE.json"),
-    ("Use FP127 and FP256", plot_close, f"{RELEASE['release']}. Sepolia; CLZ (Osaka) required; MIT licence. contracts/deployments/RELEASE.json"),
+    ("Use FP127 and FP19", plot_close, f"{RELEASE['release']}. Sepolia; CLZ (Osaka) required; MIT licence. contracts/deployments/RELEASE.json"),
 ]
 
 CSS = f"""

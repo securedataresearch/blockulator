@@ -4,35 +4,35 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
+import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 
 /// @title ViaIrBench
 /// @notice make profile's build-setting bench: the inline libraries on
 ///         typical inputs beside the Yul objects. make profile runs it twice,
 ///         under the default profile (via_ir = false) and under
 ///         [profile.viair] (via_ir = true), and asks whether compiling the
-///         caller through the IR closes the gap between FP127Lib / FP256Lib
+///         caller through the IR closes the gap between FP127Lib / FP19Lib
 ///         and the objects, which solc compiles with its Yul optimizer.
 ///         Prints VIA|lib|op|i|form|gas: form inline is the library call
-///         alone (timed inside lib127 / lib256, net of the "id" window, as the
+///         alone (timed inside lib127 / lib19, net of the "id" window, as the
 ///         gas ladders do; the result is stored to memory inside the window
 ///         so the IR optimizer can neither drop nor move the call), form
 ///         object the whole staticcall. The trivial ops (abs, neg, ...) give
 ///         the object's own call and dispatch cost per selector position.
 contract ViaIrBench is Test {
     address internal fp127;
-    address internal fp256;
-    address internal fp256e;
-    address internal fp256h;
-    address internal fp256s;
+    address internal fp19;
+    address internal fp19e;
+    address internal fp19h;
+    address internal fp19s;
     uint256 constant N = 8;
 
     function setUp() public {
         fp127 = _deploy("out/FP127.yul/FP127.json");
-        fp256 = _deploy("out/FP256.yul/FP256.json");
-        fp256e = _deploy("out/FP256E.yul/FP256E.json");
-        fp256h = _deploy("out/FP256H.yul/FP256H.json");
-        fp256s = _deploy("out/FP256S.yul/FP256S.json");
+        fp19 = _deploy("out/FP19.yul/FP19.json");
+        fp19e = _deploy("out/FP19E.yul/FP19E.json");
+        fp19h = _deploy("out/FP19H.yul/FP19H.json");
+        fp19s = _deploy("out/FP19S.yul/FP19S.json");
     }
 
     function _deploy(string memory artifact) internal returns (address d) {
@@ -76,35 +76,35 @@ contract ViaIrBench is Test {
         g = g0 - g;
     }
 
-    function lib256(bytes32 op, int256 x, int256 y) external view returns (uint256 g) {
+    function lib19(bytes32 op, int256 x, int256 y) external view returns (uint256 g) {
         uint256 g0;
         int256 r;
         if (op == "id") { g0 = gasleft(); r = x; assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "abs") { g0 = gasleft(); r = FP256Lib.abs(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "neg") { g0 = gasleft(); r = FP256Lib.neg(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "sign") { g0 = gasleft(); r = FP256Lib.sign(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "cmp") { g0 = gasleft(); r = FP256Lib.cmp(x, y); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "lt") { g0 = gasleft(); r = FP256Lib.lt(x, y); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "eq") { g0 = gasleft(); r = FP256Lib.eq(x, y); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "add") { g0 = gasleft(); r = FP256Lib.add(x, y); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "mul") { g0 = gasleft(); r = FP256Lib.mul(x, y); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "div") { g0 = gasleft(); r = FP256Lib.div(x, y); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "sqrt") { g0 = gasleft(); r = FP256Lib.sqrt(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "exp") { g0 = gasleft(); r = FP256Lib.exp(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "ln") { g0 = gasleft(); r = FP256Lib.ln(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "pow") { g0 = gasleft(); r = FP256Lib.pow(x, y); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "erf") { g0 = gasleft(); r = FP256Lib.erf(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "normCdf") { g0 = gasleft(); r = FP256Lib.normCdf(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "lambertW0") { g0 = gasleft(); r = FP256Lib.lambertW0(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "lambertWm1") { g0 = gasleft(); r = FP256Lib.lambertWm1(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "min") { g0 = gasleft(); r = FP256Lib.min(x, y); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "max") { g0 = gasleft(); r = FP256Lib.max(x, y); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "exp2") { g0 = gasleft(); r = FP256Lib.exp2(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "log2") { g0 = gasleft(); r = FP256Lib.log2(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "cbrt") { g0 = gasleft(); r = FP256Lib.cbrt(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "cosh") { g0 = gasleft(); r = FP256Lib.cosh(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "tanh") { g0 = gasleft(); r = FP256Lib.tanh(x); assembly { mstore(0, r) } g = gasleft(); }
-        if (op == "hypot") { g0 = gasleft(); r = FP256Lib.hypot(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "abs") { g0 = gasleft(); r = FP19Lib.abs(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "neg") { g0 = gasleft(); r = FP19Lib.neg(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "sign") { g0 = gasleft(); r = FP19Lib.sign(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "cmp") { g0 = gasleft(); r = FP19Lib.cmp(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "lt") { g0 = gasleft(); r = FP19Lib.lt(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "eq") { g0 = gasleft(); r = FP19Lib.eq(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "add") { g0 = gasleft(); r = FP19Lib.add(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "mul") { g0 = gasleft(); r = FP19Lib.mul(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "div") { g0 = gasleft(); r = FP19Lib.div(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "sqrt") { g0 = gasleft(); r = FP19Lib.sqrt(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "exp") { g0 = gasleft(); r = FP19Lib.exp(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "ln") { g0 = gasleft(); r = FP19Lib.ln(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "pow") { g0 = gasleft(); r = FP19Lib.pow(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "erf") { g0 = gasleft(); r = FP19Lib.erf(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "normCdf") { g0 = gasleft(); r = FP19Lib.normCdf(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "lambertW0") { g0 = gasleft(); r = FP19Lib.lambertW0(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "lambertWm1") { g0 = gasleft(); r = FP19Lib.lambertWm1(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "min") { g0 = gasleft(); r = FP19Lib.min(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "max") { g0 = gasleft(); r = FP19Lib.max(x, y); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "exp2") { g0 = gasleft(); r = FP19Lib.exp2(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "log2") { g0 = gasleft(); r = FP19Lib.log2(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "cbrt") { g0 = gasleft(); r = FP19Lib.cbrt(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "cosh") { g0 = gasleft(); r = FP19Lib.cosh(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "tanh") { g0 = gasleft(); r = FP19Lib.tanh(x); assembly { mstore(0, r) } g = gasleft(); }
+        if (op == "hypot") { g0 = gasleft(); r = FP19Lib.hypot(x, y); assembly { mstore(0, r) } g = gasleft(); }
         require(g0 != 0, "op");
         g = g0 - g;
     }
@@ -112,7 +112,7 @@ contract ViaIrBench is Test {
     // ---- measurement ----------------------------------------------------
 
     function _inline(bool is127, bytes32 op, int256 x, int256 y) internal view returns (int256) {
-        bytes4 sel = is127 ? this.lib127.selector : this.lib256.selector;
+        bytes4 sel = is127 ? this.lib127.selector : this.lib19.selector;
         (bool ok, bytes memory out) = address(this).staticcall(abi.encodeWithSelector(sel, op, x, y));
         if (!ok) return -1;
         (, bytes memory outId) = address(this).staticcall(abi.encodeWithSelector(sel, bytes32("id"), x, y));
@@ -132,23 +132,23 @@ contract ViaIrBench is Test {
     }
 
     function _one(bool is127, string memory op, uint256 i, int256 x, int256 y, bool two) internal view {
-        address t = is127 ? fp127 : _obj256(op);
+        address t = is127 ? fp127 : _obj19(op);
         bytes memory data = two ? abi.encodeWithSignature(string.concat(op, "(int256,int256)"), x, y)
                                 : abi.encodeWithSignature(string.concat(op, "(int256)"), x);
-        string memory lib = is127 ? "fp127" : "fp256";
+        string memory lib = is127 ? "fp127" : "fp19";
         _emit(lib, op, i, "inline", _inline(is127, bytes32(bytes(op)), x, y));
         _emit(lib, op, i, "object", _object(t, data));
     }
 
-    function _obj256(string memory op) internal view returns (address) {
+    function _obj19(string memory op) internal view returns (address) {
         bytes32 h = keccak256(bytes(op));
         if (h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
-            || h == keccak256("lambertW0") || h == keccak256("lambertWm1") || h == keccak256("factorial")) return fp256s;
-        if (h == keccak256("sinh") || h == keccak256("cosh") || h == keccak256("tanh") || h == keccak256("atanh")) return fp256h;
+            || h == keccak256("lambertW0") || h == keccak256("lambertWm1") || h == keccak256("factorial")) return fp19s;
+        if (h == keccak256("sinh") || h == keccak256("cosh") || h == keccak256("tanh") || h == keccak256("atanh")) return fp19h;
         if (h == keccak256("exp") || h == keccak256("exp2") || h == keccak256("exp10") || h == keccak256("expm1")
             || h == keccak256("ln") || h == keccak256("log2") || h == keccak256("log10") || h == keccak256("log2Up")
-            || h == keccak256("log1p") || h == keccak256("pow") || h == keccak256("powu") || h == keccak256("compound")) return fp256e;
-        return fp256;
+            || h == keccak256("log1p") || h == keccak256("pow") || h == keccak256("powu") || h == keccak256("compound")) return fp19e;
+        return fp19;
     }
 
     // ---- typical inputs, as the gas ladders draw them -------------------
@@ -166,8 +166,8 @@ contract ViaIrBench is Test {
         if (sgn < 0 || (sgn == 0 && (h >> 64) & 1 == 1)) x = -x;
     }
 
-    /// FP256: exponent uniform in [elo, ehi], 236 random fraction bits.
-    function _t256(string memory op, uint256 i, int256 elo, int256 ehi, int256 sgn) internal pure returns (int256) {
+    /// FP19: exponent uniform in [elo, ehi], 236 random fraction bits.
+    function _t19(string memory op, uint256 i, int256 elo, int256 ehi, int256 sgn) internal pure returns (int256) {
         uint256 h = _rnd(op, i);
         int256 e = elo + int256(h % uint256(ehi - elo + 1));
         uint256 f = (uint256(keccak256(abi.encode(h))) >> 20) & ((uint256(1) << 236) - 1);
@@ -183,12 +183,12 @@ contract ViaIrBench is Test {
         for (uint256 i; i < N; i++) _one(true, op, i, _t127(op, i, -8, 8, 0), _t127(op, i + 100, -8, 8, 0), true);
     }
 
-    function _u256(string memory op, int256 elo, int256 ehi, int256 sgn) internal view {
-        for (uint256 i; i < N; i++) _one(false, op, i, _t256(op, i, elo, ehi, sgn), 0, false);
+    function _u19(string memory op, int256 elo, int256 ehi, int256 sgn) internal view {
+        for (uint256 i; i < N; i++) _one(false, op, i, _t19(op, i, elo, ehi, sgn), 0, false);
     }
 
-    function _b256(string memory op) internal view {
-        for (uint256 i; i < N; i++) _one(false, op, i, _t256(op, i, -8, 8, 0), _t256(op, i + 100, -8, 8, 0), true);
+    function _b19(string memory op) internal view {
+        for (uint256 i; i < N; i++) _one(false, op, i, _t19(op, i, -8, 8, 0), _t19(op, i + 100, -8, 8, 0), true);
     }
 
     function test_viair_fp127() public view {
@@ -218,35 +218,35 @@ contract ViaIrBench is Test {
         _u127("lambertWm1", -30, -3, -1);
     }
 
-    function test_viair_fp256() public view {
-        _object(fp256, abi.encodeWithSignature("abs(int256)", int256(1)));
-        _object(fp256e, abi.encodeWithSignature("exp(int256)", int256(1)));
-        _object(fp256h, abi.encodeWithSignature("sinh(int256)", int256(1)));
-        _object(fp256s, abi.encodeWithSignature("erf(int256)", int256(1)));
-        _u256("abs", -8, 8, 0);
-        _u256("neg", -8, 8, 0);
-        _u256("sign", -8, 8, 0);
-        _b256("cmp");
-        _b256("lt");
-        _b256("eq");
-        _b256("add");
-        _b256("mul");
-        _b256("div");
-        _u256("sqrt", -300, 300, 1);
-        _u256("exp", -6, 5, 0);
-        _u256("ln", -60, 60, 1);
-        for (uint256 i; i < N; i++) _one(false, "pow", i, _t256("pow", i, -4, 4, 1), _t256("pow", i + 100, -4, 3, 0), true);
-        _u256("erf", -6, 2, 0);
-        _u256("normCdf", -4, 3, 0);
-        _u256("lambertW0", -10, 40, 1);
-        _u256("lambertWm1", -60, -3, -1);
-        _b256("min");
-        _b256("max");
-        _u256("exp2", -6, 6, 0);
-        _u256("log2", -60, 60, 1);
-        _u256("cbrt", -300, 300, 0);
-        _u256("cosh", -6, 5, 0);
-        _u256("tanh", -6, 4, 0);
-        _b256("hypot");
+    function test_viair_fp19() public view {
+        _object(fp19, abi.encodeWithSignature("abs(int256)", int256(1)));
+        _object(fp19e, abi.encodeWithSignature("exp(int256)", int256(1)));
+        _object(fp19h, abi.encodeWithSignature("sinh(int256)", int256(1)));
+        _object(fp19s, abi.encodeWithSignature("erf(int256)", int256(1)));
+        _u19("abs", -8, 8, 0);
+        _u19("neg", -8, 8, 0);
+        _u19("sign", -8, 8, 0);
+        _b19("cmp");
+        _b19("lt");
+        _b19("eq");
+        _b19("add");
+        _b19("mul");
+        _b19("div");
+        _u19("sqrt", -300, 300, 1);
+        _u19("exp", -6, 5, 0);
+        _u19("ln", -60, 60, 1);
+        for (uint256 i; i < N; i++) _one(false, "pow", i, _t19("pow", i, -4, 4, 1), _t19("pow", i + 100, -4, 3, 0), true);
+        _u19("erf", -6, 2, 0);
+        _u19("normCdf", -4, 3, 0);
+        _u19("lambertW0", -10, 40, 1);
+        _u19("lambertWm1", -60, -3, -1);
+        _b19("min");
+        _b19("max");
+        _u19("exp2", -6, 6, 0);
+        _u19("log2", -60, 60, 1);
+        _u19("cbrt", -300, 300, 0);
+        _u19("cosh", -6, 5, 0);
+        _u19("tanh", -6, 4, 0);
+        _b19("hypot");
     }
 }

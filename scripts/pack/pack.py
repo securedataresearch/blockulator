@@ -8,7 +8,7 @@ root LICENSE and the sources under contracts/src, laid out so that one import
 path works in every install:
 
     @blockulator/contracts/fp127/FP127Lib.sol    fp127/  <- contracts/src/fp127
-    @blockulator/contracts/fp256/FP256Lib.sol    fp256/  <- contracts/src/fp256
+    @blockulator/contracts/fp19/FP19Lib.sol    fp19/  <- contracts/src/fp19
     @blockulator/contracts/wad/BlockulatorWad.sol wad/   <- contracts/src/wad
     @blockulator/contracts/deployments/FP127.json        <- contracts/deployments
 
@@ -38,7 +38,7 @@ SOLDEER_NAME = "blockulator"
 # typed values, say) joins the package without an edit here.
 LAYOUT = {
     "fp127": (ROOT / "contracts/src/fp127", ["*.sol", "*.yul", "abi*.json"]),
-    "fp256": (ROOT / "contracts/src/fp256", ["*.sol", "*.yul", "abi*.json"]),
+    "fp19": (ROOT / "contracts/src/fp19", ["*.sol", "*.yul", "abi*.json"]),
     "wad": (ROOT / "contracts/src/wad", ["*.sol"]),
     "deployments": (ROOT / "contracts/deployments", ["*.json"]),
 }
@@ -46,18 +46,18 @@ LAYOUT = {
 REQUIRED = [
     "package.json", "README.md", "LICENSE",
     "fp127/FP127Lib.sol", "fp127/IFP127.sol", "fp127/FP127.yul", "fp127/abi.json",
-    "fp256/FP256Lib.sol", "fp256/IFP256.sol", "fp256/IFP256E.sol", "fp256/IFP256H.sol",
-    "fp256/IFP256S.sol", "fp256/FP256.yul", "fp256/FP256E.yul", "fp256/FP256H.yul",
-    "fp256/FP256S.yul", "fp256/abi.json", "fp256/abiE.json", "fp256/abiH.json",
-    "fp256/abiS.json", "wad/BlockulatorWad.sol",
-    "deployments/FP127.json", "deployments/FP256.json", "deployments/RELEASE.json",
+    "fp19/FP19Lib.sol", "fp19/IFP19.sol", "fp19/IFP19E.sol", "fp19/IFP19H.sol",
+    "fp19/IFP19S.sol", "fp19/FP19.yul", "fp19/FP19E.yul", "fp19/FP19H.yul",
+    "fp19/FP19S.yul", "fp19/abi.json", "fp19/abiE.json", "fp19/abiH.json",
+    "fp19/abiS.json", "wad/BlockulatorWad.sol",
+    "deployments/FP127.json", "deployments/FP19.json", "deployments/RELEASE.json",
 ]
 
 # every published path must match one of these
 ALLOWED = re.compile(
     r"^(package\.json|README\.md|LICENSE"
-    r"|(fp127|fp256|wad)/[A-Za-z0-9_]+\.(sol|yul)"
-    r"|(fp127|fp256)/abi[A-Z]?\.json"
+    r"|(fp127|fp19|wad)/[A-Za-z0-9_]+\.(sol|yul)"
+    r"|(fp127|fp19)/abi[A-Z]?\.json"
     r"|deployments/[A-Za-z0-9_.]+\.json)$"
 )
 # and none of these, wherever they sit

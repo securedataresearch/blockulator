@@ -1,6 +1,6 @@
 {
  "generated": "2026-10-16",
- "description": "Aave v3 and Morpho Blue accrual as deployed on Ethereum mainnet, against a 200-digit truth of the formula each says it approximates, with FP127 and FP256 computing the same formula for contrast.",
+ "description": "Aave v3 and Morpho Blue accrual as deployed on Ethereum mainnet, against a 200-digit truth of the formula each says it approximates, with FP127 and FP19 computing the same formula for contrast.",
  "pins": {
   "aave": {
    "repo": "aave-dao/aave-v3-origin",
@@ -213,7 +213,7 @@
       "digitsBalance": 38.51,
       "digitsInterest": 35.42
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.57065e-66",
       "relBalance": "-5.568e-72",
       "digitsBalance": 71.25,
@@ -244,7 +244,7 @@
       "digitsBalance": 33.84,
       "digitsInterest": 30.44
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.00809e-62",
       "relBalance": "5.006e-68",
       "digitsBalance": 67.3,
@@ -303,7 +303,7 @@
       "digitsBalance": 38.48,
       "digitsInterest": 35.38
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.33831e-67",
       "relBalance": "1.338e-73",
       "digitsBalance": 72.87,
@@ -334,7 +334,7 @@
       "digitsBalance": 34.27,
       "digitsInterest": 30.83
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.89739e-61",
       "relBalance": "-1.897e-67",
       "digitsBalance": 66.72,
@@ -393,7 +393,7 @@
       "digitsBalance": 38.35,
       "digitsInterest": 35.98
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.2253e-66",
       "relBalance": "-2.219e-72",
       "digitsBalance": 71.65,
@@ -424,7 +424,7 @@
       "digitsBalance": 33.0,
       "digitsInterest": 30.44
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.5138e-61",
       "relBalance": "3.504e-67",
       "digitsBalance": 66.46,
@@ -483,7 +483,7 @@
       "digitsBalance": 38.36,
       "digitsInterest": 35.99
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.29281e-66",
       "relBalance": "6.277e-72",
       "digitsBalance": 71.2,
@@ -514,7 +514,7 @@
       "digitsBalance": 33.43,
       "digitsInterest": 30.83
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.33103e-60",
       "relBalance": "-1.328e-66",
       "digitsBalance": 65.88,
@@ -573,7 +573,7 @@
       "digitsBalance": 38.45,
       "digitsInterest": 35.9
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.6813e-68",
       "relBalance": "-5.672e-74",
       "digitsBalance": 73.25,
@@ -604,7 +604,7 @@
       "digitsBalance": 33.47,
       "digitsInterest": 30.67
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.69532e-60",
       "relBalance": "2.691e-66",
       "digitsBalance": 65.57,
@@ -663,7 +663,7 @@
       "digitsBalance": 38.33,
       "digitsInterest": 35.05
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.0719e-66",
       "relBalance": "-6.07e-72",
       "digitsBalance": 71.22,
@@ -694,7 +694,7 @@
       "digitsBalance": 35.16,
       "digitsInterest": 31.71
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.57107e-63",
       "relBalance": "2.57e-69",
       "digitsBalance": 68.59,
@@ -753,7 +753,7 @@
       "digitsBalance": 38.33,
       "digitsInterest": 35.17
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.46124e-66",
       "relBalance": "4.46e-72",
       "digitsBalance": 71.35,
@@ -784,7 +784,7 @@
       "digitsBalance": 35.12,
       "digitsInterest": 31.57
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.47145e-63",
       "relBalance": "-4.47e-69",
       "digitsBalance": 68.35,
@@ -843,7 +843,7 @@
       "digitsBalance": 38.69,
       "digitsInterest": 37.25
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.23787e-66",
       "relBalance": "2.219e-72",
       "digitsBalance": 71.65,
@@ -874,7 +874,7 @@
       "digitsBalance": 33.78,
       "digitsInterest": 31.71
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.21151e-62",
       "relBalance": "6.159e-68",
       "digitsBalance": 67.21,
@@ -933,7 +933,7 @@
       "digitsBalance": 38.39,
       "digitsInterest": 36.71
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.85094e-66",
       "relBalance": "-2.832e-72",
       "digitsBalance": 71.55,
@@ -964,7 +964,7 @@
       "digitsBalance": 33.74,
       "digitsInterest": 31.57
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.07934e-61",
       "relBalance": "-1.072e-67",
       "digitsBalance": 66.97,
@@ -1023,7 +1023,7 @@
       "digitsBalance": 38.56,
       "digitsInterest": 37.67
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.93719e-66",
       "relBalance": "4.655e-72",
       "digitsBalance": 71.33,
@@ -1054,7 +1054,7 @@
       "digitsBalance": 32.94,
       "digitsInterest": 31.7
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.57299e-61",
       "relBalance": "4.312e-67",
       "digitsBalance": 66.37,
@@ -1113,7 +1113,7 @@
       "digitsBalance": 38.33,
       "digitsInterest": 37.37
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.44125e-66",
       "relBalance": "-2.329e-72",
       "digitsBalance": 71.63,
@@ -1144,7 +1144,7 @@
       "digitsBalance": 32.89,
       "digitsInterest": 31.56
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-7.86646e-61",
       "relBalance": "-7.505e-67",
       "digitsBalance": 66.12,
@@ -1203,7 +1203,7 @@
       "digitsBalance": 38.56,
       "digitsInterest": 38.17
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.22644e-66",
       "relBalance": "-3.284e-72",
       "digitsBalance": 71.48,
@@ -1234,7 +1234,7 @@
       "digitsBalance": 32.31,
       "digitsInterest": 31.66
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.37814e-60",
       "relBalance": "1.848e-66",
       "digitsBalance": 65.73,
@@ -1293,7 +1293,7 @@
       "digitsBalance": 38.29,
       "digitsInterest": 37.8
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.28078e-66",
       "relBalance": "-6.767e-72",
       "digitsBalance": 71.17,
@@ -1324,7 +1324,7 @@
       "digitsBalance": 32.26,
       "digitsInterest": 31.52
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.93564e-60",
       "relBalance": "-3.216e-66",
       "digitsBalance": 65.49,
@@ -1383,7 +1383,7 @@
       "digitsBalance": 38.34,
       "digitsInterest": 37.2
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.90875e-66",
       "relBalance": "2.767e-72",
       "digitsBalance": 71.56,
@@ -1414,7 +1414,7 @@
       "digitsBalance": 31.33,
       "digitsInterest": 30.02
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.41206e-58",
       "relBalance": "1.343e-64",
       "digitsBalance": 63.87,
@@ -1474,7 +1474,7 @@
       "digitsBalance": 38.56,
       "digitsInterest": 31.52
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.8552e-66",
       "relBalance": "1.645e-72",
       "digitsBalance": 71.78,
@@ -1505,7 +1505,7 @@
       "digitsBalance": 36.94,
       "digitsInterest": 29.52
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.13832e-65",
       "relBalance": "6.56e-72",
       "digitsBalance": 71.18,
@@ -1565,7 +1565,7 @@
       "digitsBalance": 38.32,
       "digitsInterest": 30.84
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.29226e-65",
       "relBalance": "-5.955e-72",
       "digitsBalance": 71.23,
@@ -1596,7 +1596,7 @@
       "digitsBalance": 37.23,
       "digitsInterest": 29.64
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.74064e-64",
       "relBalance": "8.022e-71",
       "digitsBalance": 70.1,
@@ -1656,7 +1656,7 @@
       "digitsBalance": 38.72,
       "digitsInterest": 30.31
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.78965e-68",
       "relBalance": "1.982e-72",
       "digitsBalance": 71.7,
@@ -1687,7 +1687,7 @@
       "digitsBalance": 36.41,
       "digitsInterest": 27.68
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.09461e-65",
       "relBalance": "-5.726e-70",
       "digitsBalance": 69.24,
@@ -1747,7 +1747,7 @@
       "digitsBalance": 38.4,
       "digitsInterest": 27.99
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.55005e-66",
       "relBalance": "-7.142e-72",
       "digitsBalance": 71.15,
@@ -1778,7 +1778,7 @@
       "digitsBalance": 36.57,
       "digitsInterest": 26.05
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.5605e-64",
       "relBalance": "-3.295e-70",
       "digitsBalance": 69.48,
@@ -1838,7 +1838,7 @@
       "digitsBalance": 38.58,
       "digitsInterest": 31.05
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.25782e-70",
       "relBalance": "4.676e-73",
       "digitsBalance": 72.33,
@@ -1869,7 +1869,7 @@
       "digitsBalance": 36.59,
       "digitsInterest": 28.62
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.99506e-67",
       "relBalance": "-2.863e-70",
       "digitsBalance": 69.54,
@@ -1929,7 +1929,7 @@
       "digitsBalance": 38.4,
       "digitsInterest": 28.75
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.1346e-67",
       "relBalance": "-6.267e-72",
       "digitsBalance": 71.2,
@@ -1960,7 +1960,7 @@
       "digitsBalance": 37.38,
       "digitsInterest": 27.44
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.05137e-65",
       "relBalance": "-3.087e-70",
       "digitsBalance": 69.51,
@@ -2020,7 +2020,7 @@
       "digitsBalance": 38.45,
       "digitsInterest": 34.06
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.29637e-64",
       "relBalance": "-1.099e-72",
       "digitsBalance": 71.96,
@@ -2051,7 +2051,7 @@
       "digitsBalance": 34.53,
       "digitsInterest": 29.74
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.50338e-60",
       "relBalance": "-2.122e-68",
       "digitsBalance": 67.67,
@@ -2111,7 +2111,7 @@
       "digitsBalance": 38.35,
       "digitsInterest": 33.64
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.22551e-63",
       "relBalance": "9.49e-72",
       "digitsBalance": 71.02,
@@ -2142,7 +2142,7 @@
       "digitsBalance": 36.25,
       "digitsInterest": 31.29
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.78993e-60",
       "relBalance": "-3.709e-68",
       "digitsBalance": 67.43,
@@ -2202,7 +2202,7 @@
       "digitsBalance": 38.59,
       "digitsInterest": 31.79
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.86833e-67",
       "relBalance": "-3.073e-72",
       "digitsBalance": 71.51,
@@ -2233,7 +2233,7 @@
       "digitsBalance": 36.46,
       "digitsInterest": 29.23
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.67213e-64",
       "relBalance": "5.794e-70",
       "digitsBalance": 69.24,
@@ -2293,7 +2293,7 @@
       "digitsBalance": 38.43,
       "digitsInterest": 30.3
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "9.68555e-66",
       "relBalance": "1.287e-72",
       "digitsBalance": 71.89,
@@ -2324,7 +2324,7 @@
       "digitsBalance": 36.12,
       "digitsInterest": 27.38
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.04146e-62",
       "relBalance": "1.384e-69",
       "digitsBalance": 68.86,
@@ -2384,7 +2384,7 @@
       "digitsBalance": 38.98,
       "digitsInterest": 33.26
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.11075e-73",
       "relBalance": "1.62e-74",
       "digitsBalance": 73.79,
@@ -2415,7 +2415,7 @@
       "digitsBalance": 34.16,
       "digitsInterest": 28.29
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.90337e-66",
       "relBalance": "-3.596e-67",
       "digitsBalance": 66.44,
@@ -2475,7 +2475,7 @@
       "digitsBalance": 38.48,
       "digitsInterest": 30.42
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.9806e-68",
       "relBalance": "5.361e-72",
       "digitsBalance": 71.27,
@@ -2506,7 +2506,7 @@
       "digitsBalance": 34.14,
       "digitsInterest": 25.75
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.67822e-63",
       "relBalance": "3.018e-67",
       "digitsBalance": 66.52,
@@ -2566,7 +2566,7 @@
       "digitsBalance": 38.33,
       "digitsInterest": 30.6
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.82016e-70",
       "relBalance": "-9.456e-72",
       "digitsBalance": 71.02,
@@ -2597,7 +2597,7 @@
       "digitsBalance": 35.28,
       "digitsInterest": 27.42
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.52917e-68",
       "relBalance": "-6.26e-70",
       "digitsBalance": 69.2,
@@ -2657,7 +2657,7 @@
       "digitsBalance": 38.64,
       "digitsInterest": 28.63
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.70156e-67",
       "relBalance": "-4.747e-72",
       "digitsBalance": 71.32,
@@ -2688,7 +2688,7 @@
       "digitsBalance": 35.55,
       "digitsInterest": 24.67
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.67521e-64",
       "relBalance": "-4.673e-69",
       "digitsBalance": 68.33,
@@ -2748,7 +2748,7 @@
       "digitsBalance": 38.6,
       "digitsInterest": 35.56
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.56031e-66",
       "relBalance": "-7.401e-72",
       "digitsBalance": 71.13,
@@ -2779,7 +2779,7 @@
       "digitsBalance": 33.99,
       "digitsInterest": 30.27
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.67226e-61",
       "relBalance": "-3.476e-67",
       "digitsBalance": 66.46,
@@ -2839,7 +2839,7 @@
       "digitsBalance": 38.55,
       "digitsInterest": 35.87
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.23607e-67",
       "relBalance": "-4.513e-73",
       "digitsBalance": 72.35,
@@ -2870,7 +2870,7 @@
       "digitsBalance": 33.52,
       "digitsInterest": 30.73
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.11328e-60",
       "relBalance": "-1.186e-66",
       "digitsBalance": 65.93,
@@ -2930,7 +2930,7 @@
       "digitsBalance": 38.41,
       "digitsInterest": 34.61
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.54288e-65",
       "relBalance": "-1.907e-72",
       "digitsBalance": 71.72,
@@ -2961,7 +2961,7 @@
       "digitsBalance": 32.98,
       "digitsInterest": 28.95
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.08993e-61",
       "relBalance": "5.055e-68",
       "digitsBalance": 67.3,
@@ -3021,7 +3021,7 @@
       "digitsBalance": 38.72,
       "digitsInterest": 35.39
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.6914e-71",
       "relBalance": "1.273e-71",
       "digitsBalance": 70.9,
@@ -3052,7 +3052,7 @@
       "digitsBalance": 32.18,
       "digitsInterest": 28.26
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.1851e-65",
       "relBalance": "8.917e-66",
       "digitsBalance": 65.05,
@@ -3112,7 +3112,7 @@
       "digitsBalance": 39.52,
       "digitsInterest": 33.97
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.7974e-70",
       "relBalance": "1.431e-72",
       "digitsBalance": 71.84,
@@ -3143,7 +3143,7 @@
       "digitsBalance": 32.44,
       "digitsInterest": 26.23
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.00343e-63",
       "relBalance": "7.989e-66",
       "digitsBalance": 65.1,
@@ -3203,7 +3203,7 @@
       "digitsBalance": 38.72,
       "digitsInterest": 36.37
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.09076e-67",
       "relBalance": "-1.882e-72",
       "digitsBalance": 71.73,
@@ -3234,7 +3234,7 @@
       "digitsBalance": 32.97,
       "digitsInterest": 30.27
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.74524e-62",
       "relBalance": "-9.912e-67",
       "digitsBalance": 66.0,
@@ -3294,7 +3294,7 @@
       "digitsBalance": 38.3,
       "digitsInterest": 33.13
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "7.19476e-67",
       "relBalance": "2.97e-72",
       "digitsBalance": 71.53,
@@ -3325,7 +3325,7 @@
       "digitsBalance": 34.04,
       "digitsInterest": 28.71
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.77313e-61",
       "relBalance": "-1.97e-66",
       "digitsBalance": 65.71,
@@ -3385,7 +3385,7 @@
       "digitsBalance": 39.05,
       "digitsInterest": 37.07
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "7.23916e-69",
       "relBalance": "2.707e-73",
       "digitsBalance": 72.57,
@@ -3416,7 +3416,7 @@
       "digitsBalance": 33.38,
       "digitsInterest": 30.87
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.68955e-62",
       "relBalance": "-1.38e-66",
       "digitsBalance": 65.86,
@@ -3476,7 +3476,7 @@
       "digitsBalance": 38.55,
       "digitsInterest": 35.38
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.67585e-67",
       "relBalance": "-2.512e-72",
       "digitsBalance": 71.6,
@@ -3507,7 +3507,7 @@
       "digitsBalance": 33.06,
       "digitsInterest": 29.71
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.23574e-61",
       "relBalance": "8.444e-67",
       "digitsBalance": 66.07,
@@ -3567,7 +3567,7 @@
       "digitsBalance": 38.31,
       "digitsInterest": 33.09
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.29441e-68",
       "relBalance": "-8.737e-72",
       "digitsBalance": 71.06,
@@ -3598,7 +3598,7 @@
       "digitsBalance": 33.93,
       "digitsInterest": 28.34
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.21076e-64",
       "relBalance": "1.264e-67",
       "digitsBalance": 66.9,
@@ -3658,7 +3658,7 @@
       "digitsBalance": 38.78,
       "digitsInterest": 31.18
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.73179e-67",
       "relBalance": "-9.39e-73",
       "digitsBalance": 72.03,
@@ -3689,7 +3689,7 @@
       "digitsBalance": 33.92,
       "digitsInterest": 26.12
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.37898e-62",
       "relBalance": "3.47e-68",
       "digitsBalance": 67.46,
@@ -3749,7 +3749,7 @@
       "digitsBalance": 39.1,
       "digitsInterest": 35.21
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.58847e-68",
       "relBalance": "-3.486e-73",
       "digitsBalance": 72.46,
@@ -3780,7 +3780,7 @@
       "digitsBalance": 33.49,
       "digitsInterest": 29.17
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.4572e-62",
       "relBalance": "5.393e-67",
       "digitsBalance": 66.27,
@@ -3840,7 +3840,7 @@
       "digitsBalance": 38.71,
       "digitsInterest": 33.19
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.58161e-67",
       "relBalance": "-7.774e-73",
       "digitsBalance": 72.11,
@@ -3871,7 +3871,7 @@
       "digitsBalance": 33.87,
       "digitsInterest": 28.25
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.0092e-61",
       "relBalance": "5.584e-67",
       "digitsBalance": 66.25,
@@ -3931,7 +3931,7 @@
       "digitsBalance": 38.56,
       "digitsInterest": 35.22
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.90999e-69",
       "relBalance": "5.023e-72",
       "digitsBalance": 71.3,
@@ -3962,7 +3962,7 @@
       "digitsBalance": 33.39,
       "digitsInterest": 29.32
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.66883e-64",
       "relBalance": "-3.118e-67",
       "digitsBalance": 66.51,
@@ -4022,7 +4022,7 @@
       "digitsBalance": 38.48,
       "digitsInterest": 33.44
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "7.05072e-68",
       "relBalance": "5.314e-72",
       "digitsBalance": 71.27,
@@ -4053,7 +4053,7 @@
       "digitsBalance": 33.65,
       "digitsInterest": 28.23
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.92981e-63",
       "relBalance": "-2.962e-67",
       "digitsBalance": 66.53,
@@ -4113,7 +4113,7 @@
       "digitsBalance": 38.52,
       "digitsInterest": 34.8
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.59677e-67",
       "relBalance": "8.57e-72",
       "digitsBalance": 71.07,
@@ -4144,7 +4144,7 @@
       "digitsBalance": 33.73,
       "digitsInterest": 29.68
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.48267e-62",
       "relBalance": "-4.525e-67",
       "digitsBalance": 66.34,
@@ -4204,7 +4204,7 @@
       "digitsBalance": 38.34,
       "digitsInterest": 33.25
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.30303e-67",
       "relBalance": "3.384e-73",
       "digitsBalance": 72.47,
@@ -4235,7 +4235,7 @@
       "digitsBalance": 33.47,
       "digitsInterest": 28.17
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.44731e-61",
       "relBalance": "3.596e-67",
       "digitsBalance": 66.44,
@@ -4295,7 +4295,7 @@
       "digitsBalance": 38.59,
       "digitsInterest": 37.14
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.80841e-68",
       "relBalance": "9.734e-73",
       "digitsBalance": 72.01,
@@ -4326,7 +4326,7 @@
       "digitsBalance": 33.18,
       "digitsInterest": 31.08
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.11206e-62",
       "relBalance": "-7.32e-67",
       "digitsBalance": 66.14,
@@ -4386,7 +4386,7 @@
       "digitsBalance": 39.04,
       "digitsInterest": 32.3
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-7.62081e-65",
       "relBalance": "-7.331e-73",
       "digitsBalance": 72.13,
@@ -4417,7 +4417,7 @@
       "digitsBalance": 36.86,
       "digitsInterest": 29.94
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.01587e-62",
       "relBalance": "9.773e-71",
       "digitsBalance": 70.01,
@@ -4477,7 +4477,7 @@
       "digitsBalance": 39.11,
       "digitsInterest": 35.3
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.4255e-68",
       "relBalance": "-2.219e-73",
       "digitsBalance": 72.65,
@@ -4508,7 +4508,7 @@
       "digitsBalance": 33.78,
       "digitsInterest": 30.08
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.60955e-62",
       "relBalance": "4.061e-67",
       "digitsBalance": 66.39,
@@ -4568,7 +4568,7 @@
       "digitsBalance": 38.54,
       "digitsInterest": 37.2
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.20299e-71",
       "relBalance": "-2.167e-72",
       "digitsBalance": 71.66,
@@ -4599,7 +4599,7 @@
       "digitsBalance": 33.9,
       "digitsInterest": 31.28
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.1094e-65",
       "relBalance": "1.091e-66",
       "digitsBalance": 65.96,
@@ -4659,7 +4659,7 @@
       "digitsBalance": 38.61,
       "digitsInterest": 34.31
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.92049e-70",
       "relBalance": "-8.203e-73",
       "digitsBalance": 72.09,
@@ -4690,7 +4690,7 @@
       "digitsBalance": 34.4,
       "digitsInterest": 30.0
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.00605e-64",
       "relBalance": "-2.105e-67",
       "digitsBalance": 66.68,
@@ -4750,7 +4750,7 @@
       "digitsBalance": 38.29,
       "digitsInterest": 35.93
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.32188e-68",
       "relBalance": "-3.958e-72",
       "digitsBalance": 71.4,
@@ -4781,7 +4781,7 @@
       "digitsBalance": 33.02,
       "digitsInterest": 30.46
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.62801e-63",
       "relBalance": "5.154e-67",
       "digitsBalance": 66.29,
@@ -4841,7 +4841,7 @@
       "digitsBalance": 38.48,
       "digitsInterest": 35.26
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.10683e-67",
       "relBalance": "5.338e-72",
       "digitsBalance": 71.27,
@@ -4872,7 +4872,7 @@
       "digitsBalance": 33.3,
       "digitsInterest": 29.92
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.67593e-62",
       "relBalance": "-1.147e-66",
       "digitsBalance": 65.94,
@@ -4932,7 +4932,7 @@
       "digitsBalance": 38.35,
       "digitsInterest": 36.16
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.11319e-71",
       "relBalance": "-3.813e-72",
       "digitsBalance": 71.42,
@@ -4963,7 +4963,7 @@
       "digitsBalance": 33.04,
       "digitsInterest": 30.41
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.13645e-66",
       "relBalance": "1.107e-66",
       "digitsBalance": 65.96,
@@ -5023,7 +5023,7 @@
       "digitsBalance": 38.48,
       "digitsInterest": 33.93
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.06502e-70",
       "relBalance": "-1.3e-72",
       "digitsBalance": 71.89,
@@ -5054,7 +5054,7 @@
       "digitsBalance": 33.85,
       "digitsInterest": 29.2
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.39038e-64",
       "relBalance": "7.268e-67",
       "digitsBalance": 66.14,
@@ -5114,7 +5114,7 @@
       "digitsBalance": 38.39,
       "digitsInterest": 33.81
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.91759e-67",
       "relBalance": "2.507e-72",
       "digitsBalance": 71.6,
@@ -5145,7 +5145,7 @@
       "digitsBalance": 34.47,
       "digitsInterest": 29.68
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.2517e-63",
       "relBalance": "2.944e-68",
       "digitsBalance": 67.53,
@@ -5205,7 +5205,7 @@
       "digitsBalance": 38.91,
       "digitsInterest": 33.71
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.12483e-67",
       "relBalance": "6.551e-73",
       "digitsBalance": 72.18,
@@ -5236,7 +5236,7 @@
       "digitsBalance": 34.66,
       "digitsInterest": 29.22
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.70839e-63",
       "relBalance": "5.072e-68",
       "digitsBalance": 67.29,
@@ -5296,7 +5296,7 @@
       "digitsBalance": 38.47,
       "digitsInterest": 34.43
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.11684e-65",
       "relBalance": "-5.854e-72",
       "digitsBalance": 71.23,
@@ -5327,7 +5327,7 @@
       "digitsBalance": 34.96,
       "digitsInterest": 30.41
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.5761e-61",
       "relBalance": "-6.507e-68",
       "digitsBalance": 67.19,
@@ -5387,7 +5387,7 @@
       "digitsBalance": 38.58,
       "digitsInterest": 35.05
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.3334e-65",
       "relBalance": "-2.947e-72",
       "digitsBalance": 71.53,
@@ -5418,7 +5418,7 @@
       "digitsBalance": 34.66,
       "digitsInterest": 30.01
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.16721e-61",
       "relBalance": "6.525e-68",
       "digitsBalance": 67.19,
@@ -5478,7 +5478,7 @@
       "digitsBalance": 38.28,
       "digitsInterest": 33.07
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.24658e-70",
       "relBalance": "2.448e-72",
       "digitsBalance": 71.61,
@@ -5509,7 +5509,7 @@
       "digitsBalance": 34.57,
       "digitsInterest": 29.13
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.8562e-67",
       "relBalance": "-1.15e-68",
       "digitsBalance": 67.94,
@@ -5569,7 +5569,7 @@
       "digitsBalance": 38.8,
       "digitsInterest": 28.67
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.48468e-66",
       "relBalance": "3.982e-72",
       "digitsBalance": 71.4,
@@ -5600,7 +5600,7 @@
       "digitsBalance": 34.56,
       "digitsInterest": 24.42
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.26206e-62",
       "relBalance": "2.368e-68",
       "digitsBalance": 67.63,
@@ -5660,7 +5660,7 @@
       "digitsBalance": 38.77,
       "digitsInterest": 27.98
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.43077e-74",
       "relBalance": "8.633e-72",
       "digitsBalance": 71.06,
@@ -5691,7 +5691,7 @@
       "digitsBalance": 34.36,
       "digitsInterest": 23.55
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.84485e-71",
       "relBalance": "-9.189e-69",
       "digitsBalance": 68.04,
@@ -5751,7 +5751,7 @@
       "digitsBalance": 38.23,
       "digitsInterest": 20.43
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.46737e-67",
       "relBalance": "-3.754e-72",
       "digitsBalance": 71.43,
@@ -5782,7 +5782,7 @@
       "digitsBalance": 33.92,
       "digitsInterest": 15.83
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.77272e-62",
       "relBalance": "-1.49e-67",
       "digitsBalance": 66.83,
@@ -5842,7 +5842,7 @@
       "digitsBalance": 38.42,
       "digitsInterest": 33.41
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.56211e-65",
       "relBalance": "4.456e-72",
       "digitsBalance": 71.35,
@@ -5873,7 +5873,7 @@
       "digitsBalance": 35.05,
       "digitsInterest": 29.96
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.13536e-62",
       "relBalance": "2.512e-69",
       "digitsBalance": 68.6,
@@ -5933,7 +5933,7 @@
       "digitsBalance": 39.36,
       "digitsInterest": 33.32
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.80349e-63",
       "relBalance": "7.193e-72",
       "digitsBalance": 71.14,
@@ -5964,7 +5964,7 @@
       "digitsBalance": 36.27,
       "digitsInterest": 29.75
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.89159e-61",
       "relBalance": "2.748e-69",
       "digitsBalance": 68.56,
@@ -6024,7 +6024,7 @@
       "digitsBalance": 38.27,
       "digitsInterest": 32.81
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.13118e-73",
       "relBalance": "5.198e-72",
       "digitsBalance": 71.28,
@@ -6055,7 +6055,7 @@
       "digitsBalance": 33.81,
       "digitsInterest": 28.07
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.54252e-68",
       "relBalance": "3.543e-67",
       "digitsBalance": 66.45,
@@ -6115,7 +6115,7 @@
       "digitsBalance": 38.57,
       "digitsInterest": 30.24
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.95971e-71",
       "relBalance": "1.366e-72",
       "digitsBalance": 71.86,
@@ -6146,7 +6146,7 @@
       "digitsBalance": 33.71,
       "digitsInterest": 25.05
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.48935e-66",
       "relBalance": "-6.843e-68",
       "digitsBalance": 67.16,
@@ -6206,7 +6206,7 @@
       "digitsBalance": 38.43,
       "digitsInterest": 31.47
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.00584e-72",
       "relBalance": "-7.804e-73",
       "digitsBalance": 72.11,
@@ -6237,7 +6237,7 @@
       "digitsBalance": 35.86,
       "digitsInterest": 28.62
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.89756e-69",
       "relBalance": "-1.905e-69",
       "digitsBalance": 68.72,
@@ -6297,7 +6297,7 @@
       "digitsBalance": 39.59,
       "digitsInterest": 28.55
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.11305e-69",
       "relBalance": "-6.314e-73",
       "digitsBalance": 72.2,
@@ -6328,7 +6328,7 @@
       "digitsBalance": 36.37,
       "digitsInterest": 25.99
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.44388e-66",
       "relBalance": "1.954e-69",
       "digitsBalance": 68.71,
@@ -6388,7 +6388,7 @@
       "digitsBalance": 38.31,
       "digitsInterest": 31.36
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.20645e-70",
       "relBalance": "8.957e-73",
       "digitsBalance": 72.05,
@@ -6419,7 +6419,7 @@
       "digitsBalance": 35.51,
       "digitsInterest": 28.5
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.66256e-68",
       "relBalance": "1.234e-70",
       "digitsBalance": 69.91,
@@ -6479,7 +6479,7 @@
       "digitsBalance": 38.4,
       "digitsInterest": 29.48
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "7.62825e-68",
       "relBalance": "4.402e-72",
       "digitsBalance": 71.36,
@@ -6510,7 +6510,7 @@
       "digitsBalance": 36.14,
       "digitsInterest": 26.72
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.98682e-65",
       "relBalance": "-1.147e-69",
       "digitsBalance": 68.94,
@@ -6570,7 +6570,7 @@
       "digitsBalance": 38.65,
       "digitsInterest": 32.88
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.54346e-67",
       "relBalance": "-2.522e-72",
       "digitsBalance": 71.6,
@@ -6601,7 +6601,7 @@
       "digitsBalance": 35.99,
       "digitsInterest": 29.94
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.4142e-65",
       "relBalance": "-7.128e-71",
       "digitsBalance": 70.15,
@@ -6661,7 +6661,7 @@
       "digitsBalance": 38.36,
       "digitsInterest": 31.22
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.36459e-65",
       "relBalance": "-6.785e-72",
       "digitsBalance": 71.17,
@@ -6692,7 +6692,7 @@
       "digitsBalance": 36.41,
       "digitsInterest": 29.07
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.82513e-63",
       "relBalance": "-3.68e-70",
       "digitsBalance": 69.43,
@@ -6752,7 +6752,7 @@
       "digitsBalance": 39.46,
       "digitsInterest": 29.58
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.68411e-72",
       "relBalance": "2.496e-72",
       "digitsBalance": 71.6,
@@ -6783,7 +6783,7 @@
       "digitsBalance": 34.72,
       "digitsInterest": 25.0
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.50694e-70",
       "relBalance": "-4.191e-70",
       "digitsBalance": 69.38,
@@ -6843,7 +6843,7 @@
       "digitsBalance": 38.62,
       "digitsInterest": 24.95
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-9.52767e-67",
       "relBalance": "-3.05e-72",
       "digitsBalance": 71.52,
@@ -6874,7 +6874,7 @@
       "digitsBalance": 34.58,
       "digitsInterest": 19.32
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.10774e-62",
       "relBalance": "3.546e-68",
       "digitsBalance": 67.45,
@@ -6934,7 +6934,7 @@
       "digitsBalance": 38.22,
       "digitsInterest": 29.46
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.94704e-73",
       "relBalance": "1.147e-71",
       "digitsBalance": 70.94,
@@ -6965,7 +6965,7 @@
       "digitsBalance": 34.73,
       "digitsInterest": 25.69
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.93688e-69",
       "relBalance": "-2.319e-67",
       "digitsBalance": 66.63,
@@ -7025,7 +7025,7 @@
       "digitsBalance": 38.81,
       "digitsInterest": 24.64
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.98737e-69",
       "relBalance": "-1.854e-72",
       "digitsBalance": 71.73,
@@ -7056,7 +7056,7 @@
       "digitsBalance": 36.33,
       "digitsInterest": 21.79
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.30098e-64",
       "relBalance": "-1.971e-67",
       "digitsBalance": 66.71,
@@ -7116,7 +7116,7 @@
       "digitsBalance": 38.55,
       "digitsInterest": 34.01
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.08553e-67",
       "relBalance": "1.268e-73",
       "digitsBalance": 72.9,
@@ -7147,7 +7147,7 @@
       "digitsBalance": 35.15,
       "digitsInterest": 29.98
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.41914e-62",
       "relBalance": "-1.816e-68",
       "digitsBalance": 67.74,
@@ -7207,7 +7207,7 @@
       "digitsBalance": 38.44,
       "digitsInterest": 33.68
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.11289e-66",
       "relBalance": "-1.662e-72",
       "digitsBalance": 71.78,
@@ -7238,7 +7238,7 @@
       "digitsBalance": 35.22,
       "digitsInterest": 29.86
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.61848e-62",
       "relBalance": "-5.261e-69",
       "digitsBalance": 68.28,
@@ -7298,7 +7298,7 @@
       "digitsBalance": 38.65,
       "digitsInterest": 34.84
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.26686e-65",
       "relBalance": "1.615e-72",
       "digitsBalance": 71.79,
@@ -7329,7 +7329,7 @@
       "digitsBalance": 34.8,
       "digitsInterest": 30.18
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.14281e-61",
       "relBalance": "-1.038e-67",
       "digitsBalance": 66.98,
@@ -7389,7 +7389,7 @@
       "digitsBalance": 38.92,
       "digitsInterest": 34.29
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.96743e-65",
       "relBalance": "-1.552e-72",
       "digitsBalance": 71.81,
@@ -7420,7 +7420,7 @@
       "digitsBalance": 34.58,
       "digitsInterest": 29.66
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.94067e-61",
       "relBalance": "2.32e-68",
       "digitsBalance": 67.63,
@@ -7480,7 +7480,7 @@
       "digitsBalance": 39.17,
       "digitsInterest": 35.58
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.86051e-72",
       "relBalance": "3.856e-72",
       "digitsBalance": 71.41,
@@ -7511,7 +7511,7 @@
       "digitsBalance": 32.6,
       "digitsInterest": 28.8
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.50951e-66",
       "relBalance": "-1.508e-66",
       "digitsBalance": 65.82,
@@ -7571,7 +7571,7 @@
       "digitsBalance": 38.48,
       "digitsInterest": 32.22
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.52585e-70",
       "relBalance": "5.514e-72",
       "digitsBalance": 71.26,
@@ -7602,7 +7602,7 @@
       "digitsBalance": 32.85,
       "digitsInterest": 26.25
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.78462e-64",
       "relBalance": "-1.154e-66",
       "digitsBalance": 65.94,
@@ -7662,7 +7662,7 @@
       "digitsBalance": 38.67,
       "digitsInterest": 33.15
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.68092e-65",
       "relBalance": "1.42e-72",
       "digitsBalance": 71.85,
@@ -7693,7 +7693,7 @@
       "digitsBalance": 35.41,
       "digitsInterest": 29.88
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.9615e-61",
       "relBalance": "-7.569e-69",
       "digitsBalance": 68.12,
@@ -7753,7 +7753,7 @@
       "digitsBalance": 38.61,
       "digitsInterest": 33.02
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.62268e-64",
       "relBalance": "6.68e-72",
       "digitsBalance": 71.18,
@@ -7784,7 +7784,7 @@
       "digitsBalance": 35.31,
       "digitsInterest": 29.55
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.15795e-61",
       "relBalance": "2.95e-69",
       "digitsBalance": 68.53,
@@ -7844,7 +7844,7 @@
       "digitsBalance": 38.66,
       "digitsInterest": 35.38
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.61033e-67",
       "relBalance": "-1.142e-71",
       "digitsBalance": 70.94,
@@ -7875,7 +7875,7 @@
       "digitsBalance": 33.95,
       "digitsInterest": 30.39
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.10022e-63",
       "relBalance": "9.192e-68",
       "digitsBalance": 67.04,
@@ -7935,7 +7935,7 @@
       "digitsBalance": 38.5,
       "digitsInterest": 34.85
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.22857e-67",
       "relBalance": "4.469e-72",
       "digitsBalance": 71.35,
@@ -7966,7 +7966,7 @@
       "digitsBalance": 34.46,
       "digitsInterest": 30.72
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.30244e-64",
       "relBalance": "1.565e-68",
       "digitsBalance": 67.81,
@@ -8026,7 +8026,7 @@
       "digitsBalance": 38.42,
       "digitsInterest": 34.36
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.30092e-65",
       "relBalance": "-3.552e-72",
       "digitsBalance": 71.45,
@@ -8057,7 +8057,7 @@
       "digitsBalance": 34.45,
       "digitsInterest": 29.91
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "9.22269e-62",
       "relBalance": "2.518e-68",
       "digitsBalance": 67.6,
@@ -8117,7 +8117,7 @@
       "digitsBalance": 38.45,
       "digitsInterest": 33.86
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.34495e-65",
       "relBalance": "5.227e-72",
       "digitsBalance": 71.28,
@@ -8148,7 +8148,7 @@
       "digitsBalance": 34.55,
       "digitsInterest": 29.83
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "9.59745e-63",
       "relBalance": "2.139e-69",
       "digitsBalance": 68.67,
@@ -8210,7 +8210,7 @@
       "digitsBalance": 34.06,
       "digitsInterest": 30.1
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.21177e-65",
       "relBalance": "-6.876e-72",
       "digitsBalance": 71.16,
@@ -8272,7 +8272,7 @@
       "digitsBalance": 33.21,
       "digitsInterest": 30.1
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-9.91942e-67",
       "relBalance": "6.82e-73",
       "digitsBalance": 72.17,
@@ -8334,7 +8334,7 @@
       "digitsBalance": 33.44,
       "digitsInterest": 30.29
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.51837e-65",
       "relBalance": "-6.536e-72",
       "digitsBalance": 71.18,
@@ -8396,7 +8396,7 @@
       "digitsBalance": 32.5,
       "digitsInterest": 30.29
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.78416e-66",
       "relBalance": "-1.727e-72",
       "digitsBalance": 71.76,
@@ -8458,7 +8458,7 @@
       "digitsBalance": 33.22,
       "digitsInterest": 30.29
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.3937e-65",
       "relBalance": "-1.999e-73",
       "digitsBalance": 72.7,
@@ -8520,7 +8520,7 @@
       "digitsBalance": 32.18,
       "digitsInterest": 30.29
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.28634e-65",
       "relBalance": "3.297e-72",
       "digitsBalance": 71.48,
@@ -8582,7 +8582,7 @@
       "digitsBalance": 32.38,
       "digitsInterest": 30.09
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.72628e-65",
       "relBalance": "-2.398e-72",
       "digitsBalance": 71.62,
@@ -8644,7 +8644,7 @@
       "digitsBalance": 30.9,
       "digitsInterest": 30.13
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.72008e-65",
       "relBalance": "1.425e-72",
       "digitsBalance": 71.85,
@@ -8706,7 +8706,7 @@
       "digitsBalance": 33.64,
       "digitsInterest": 31.97
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.05281e-66",
       "relBalance": "-1.017e-72",
       "digitsBalance": 71.99,
@@ -8768,7 +8768,7 @@
       "digitsBalance": 32.79,
       "digitsInterest": 31.95
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.98461e-66",
       "relBalance": "3.93e-72",
       "digitsBalance": 71.41,
@@ -8830,7 +8830,7 @@
       "digitsBalance": 32.16,
       "digitsInterest": 31.84
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.64391e-65",
       "relBalance": "4.979e-72",
       "digitsBalance": 71.3,
@@ -8892,7 +8892,7 @@
       "digitsBalance": 33.07,
       "digitsInterest": 30.29
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "9.94842e-66",
       "relBalance": "2.049e-72",
       "digitsBalance": 71.69,
@@ -8954,7 +8954,7 @@
       "digitsBalance": 35.61,
       "digitsInterest": 30.47
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.96609e-65",
       "relBalance": "2.231e-72",
       "digitsBalance": 71.65,
@@ -9016,7 +9016,7 @@
       "digitsBalance": 33.94,
       "digitsInterest": 30.14
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.46229e-68",
       "relBalance": "2.869e-72",
       "digitsBalance": 71.54,
@@ -9078,7 +9078,7 @@
       "digitsBalance": 35.3,
       "digitsInterest": 29.87
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.50038e-67",
       "relBalance": "-3.675e-73",
       "digitsBalance": 72.43,
@@ -9140,7 +9140,7 @@
       "digitsBalance": 35.62,
       "digitsInterest": 30.46
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "7.12139e-66",
       "relBalance": "6.462e-73",
       "digitsBalance": 72.19,
@@ -9202,7 +9202,7 @@
       "digitsBalance": 34.83,
       "digitsInterest": 30.18
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.04036e-68",
       "relBalance": "1.804e-72",
       "digitsBalance": 71.74,
@@ -9264,7 +9264,7 @@
       "digitsBalance": 35.94,
       "digitsInterest": 30.11
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.20398e-66",
       "relBalance": "-7.807e-72",
       "digitsBalance": 71.11,
@@ -9326,7 +9326,7 @@
       "digitsBalance": 34.24,
       "digitsInterest": 30.23
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.55494e-67",
       "relBalance": "-1.894e-72",
       "digitsBalance": 71.72,
@@ -9388,7 +9388,7 @@
       "digitsBalance": 34.37,
       "digitsInterest": 29.48
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.72271e-66",
       "relBalance": "3.388e-72",
       "digitsBalance": 71.47,
@@ -9450,7 +9450,7 @@
       "digitsBalance": 36.26,
       "digitsInterest": 29.94
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.25053e-66",
       "relBalance": "-1.936e-72",
       "digitsBalance": 71.71,
@@ -9512,7 +9512,7 @@
       "digitsBalance": 32.55,
       "digitsInterest": 30.24
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.21918e-66",
       "relBalance": "6.328e-69",
       "digitsBalance": 68.2,
@@ -9574,7 +9574,7 @@
       "digitsBalance": 33.1,
       "digitsInterest": 31.96
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.92348e-62",
       "relBalance": "4.515e-72",
       "digitsBalance": 71.35,
@@ -9636,7 +9636,7 @@
       "digitsBalance": 32.24,
       "digitsInterest": 28.04
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.47327e-73",
       "relBalance": "3.679e-72",
       "digitsBalance": 71.43,
@@ -9698,7 +9698,7 @@
       "digitsBalance": 33.48,
       "digitsInterest": 28.04
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-9.36419e-68",
       "relBalance": "-3.484e-72",
       "digitsBalance": 71.46,
@@ -9760,7 +9760,7 @@
       "digitsBalance": 31.15,
       "digitsInterest": 31.15
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.27267e-67",
       "relBalance": "-2.263e-71",
       "digitsBalance": 70.65,
@@ -9822,7 +9822,7 @@
       "digitsBalance": 37.68,
       "digitsInterest": 31.65
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.89956e-66",
       "relBalance": "5.17e-72",
       "digitsBalance": 71.29,
@@ -9884,7 +9884,7 @@
       "digitsBalance": 34.93,
       "digitsInterest": 29.99
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.25293e-67",
       "relBalance": "-2.796e-72",
       "digitsBalance": 71.55,
@@ -9946,7 +9946,7 @@
       "digitsBalance": 34.2,
       "digitsInterest": 29.41
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.60439e-71",
       "relBalance": "1.212e-72",
       "digitsBalance": 71.92,
@@ -10008,7 +10008,7 @@
       "digitsBalance": 34.55,
       "digitsInterest": 28.87
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.84691e-71",
       "relBalance": "3.658e-73",
       "digitsBalance": 72.44,
@@ -10070,7 +10070,7 @@
       "digitsBalance": 35.66,
       "digitsInterest": 31.02
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.05821e-65",
       "relBalance": "1.741e-72",
       "digitsBalance": 71.76,
@@ -10132,7 +10132,7 @@
       "digitsBalance": 33.65,
       "digitsInterest": 29.88
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.43801e-67",
       "relBalance": "-5.193e-72",
       "digitsBalance": 71.28,
@@ -10194,7 +10194,7 @@
       "digitsBalance": 35.4,
       "digitsInterest": 30.86
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.29633e-65",
       "relBalance": "-3.923e-73",
       "digitsBalance": 72.41,
@@ -10256,7 +10256,7 @@
       "digitsBalance": 36.27,
       "digitsInterest": 29.64
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.40391e-64",
       "relBalance": "2.871e-72",
       "digitsBalance": 71.54,
@@ -10318,7 +10318,7 @@
       "digitsBalance": 34.27,
       "digitsInterest": 30.16
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.84216e-66",
       "relBalance": "-1.743e-73",
       "digitsBalance": 72.76,
@@ -10380,7 +10380,7 @@
       "digitsBalance": 36.83,
       "digitsInterest": 30.88
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.09635e-64",
       "relBalance": "4.564e-72",
       "digitsBalance": 71.34,
@@ -10442,7 +10442,7 @@
       "digitsBalance": 32.74,
       "digitsInterest": 31.94
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.53988e-65",
       "relBalance": "-3.272e-72",
       "digitsBalance": 71.49,
@@ -10504,7 +10504,7 @@
       "digitsBalance": 34.2,
       "digitsInterest": 29.94
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.23776e-66",
       "relBalance": "8.642e-73",
       "digitsBalance": 72.06,
@@ -10566,7 +10566,7 @@
       "digitsBalance": 32.15,
       "digitsInterest": 31.84
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.49211e-61",
       "relBalance": "6.237e-72",
       "digitsBalance": 71.21,
@@ -10628,7 +10628,7 @@
       "digitsBalance": 36.39,
       "digitsInterest": 30.5
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.83353e-63",
       "relBalance": "1.581e-71",
       "digitsBalance": 70.8,
@@ -10690,7 +10690,7 @@
       "digitsBalance": 38.2,
       "digitsInterest": 32.88
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-7.99527e-67",
       "relBalance": "-3.384e-72",
       "digitsBalance": 71.47,
@@ -10752,7 +10752,7 @@
       "digitsBalance": 29.26,
       "digitsInterest": 29.25
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.67081e-70",
       "relBalance": "1.17e-71",
       "digitsBalance": 70.93,
@@ -10814,7 +10814,7 @@
       "digitsBalance": 35.9,
       "digitsInterest": 30.08
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.06926e-67",
       "relBalance": "-4.013e-72",
       "digitsBalance": 71.4,
@@ -10876,7 +10876,7 @@
       "digitsBalance": 31.76,
       "digitsInterest": 30.44
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.24155e-71",
       "relBalance": "-6.176e-72",
       "digitsBalance": 71.21,
@@ -10938,7 +10938,7 @@
       "digitsBalance": 35.46,
       "digitsInterest": 30.43
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.32723e-66",
       "relBalance": "1.707e-72",
       "digitsBalance": 71.77,
@@ -11000,7 +11000,7 @@
       "digitsBalance": 32.05,
       "digitsInterest": 31.81
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.38181e-64",
       "relBalance": "1.062e-72",
       "digitsBalance": 71.97,
@@ -11062,7 +11062,7 @@
       "digitsBalance": 36.37,
       "digitsInterest": 30.45
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.99793e-65",
       "relBalance": "-3.576e-72",
       "digitsBalance": 71.45,
@@ -11124,7 +11124,7 @@
       "digitsBalance": 34.13,
       "digitsInterest": 29.91
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.34601e-69",
       "relBalance": "-9.153e-72",
       "digitsBalance": 71.04,
@@ -11186,7 +11186,7 @@
       "digitsBalance": 35.22,
       "digitsInterest": 29.61
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.27538e-64",
       "relBalance": "6.446e-72",
       "digitsBalance": 71.19,
@@ -11248,7 +11248,7 @@
       "digitsBalance": 36.61,
       "digitsInterest": 30.64
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.11185e-65",
       "relBalance": "1.194e-73",
       "digitsBalance": 72.92,
@@ -11310,7 +11310,7 @@
       "digitsBalance": 35.13,
       "digitsInterest": 29.95
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.71587e-66",
       "relBalance": "1.372e-72",
       "digitsBalance": 71.86,
@@ -11372,7 +11372,7 @@
       "digitsBalance": 34.06,
       "digitsInterest": 28.04
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.56687e-70",
       "relBalance": "-2.144e-72",
       "digitsBalance": 71.67,
@@ -11434,7 +11434,7 @@
       "digitsBalance": 35.58,
       "digitsInterest": 29.64
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.64339e-66",
       "relBalance": "-4.625e-72",
       "digitsBalance": 71.33,
@@ -11496,7 +11496,7 @@
       "digitsBalance": 33.05,
       "digitsInterest": 29.57
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.70103e-68",
       "relBalance": "-2.044e-72",
       "digitsBalance": 71.69,
@@ -11558,7 +11558,7 @@
       "digitsBalance": 35.84,
       "digitsInterest": 30.01
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.61778e-65",
       "relBalance": "4.549e-72",
       "digitsBalance": 71.34,
@@ -11620,7 +11620,7 @@
       "digitsBalance": 36.17,
       "digitsInterest": 32.41
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.27709e-68",
       "relBalance": "6.438e-73",
       "digitsBalance": 72.19,
@@ -11682,7 +11682,7 @@
       "digitsBalance": 33.83,
       "digitsInterest": 29.78
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.80799e-71",
       "relBalance": "2.929e-71",
       "digitsBalance": 70.53,
@@ -11744,7 +11744,7 @@
       "digitsBalance": 35.47,
       "digitsInterest": 29.77
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "7.45135e-69",
       "relBalance": "-1.681e-72",
       "digitsBalance": 71.77,
@@ -11806,7 +11806,7 @@
       "digitsBalance": 34.31,
       "digitsInterest": 30.18
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.37803e-69",
       "relBalance": "-2.45e-72",
       "digitsBalance": 71.61,
@@ -11868,7 +11868,7 @@
       "digitsBalance": 34.28,
       "digitsInterest": 29.34
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.61725e-67",
       "relBalance": "1.378e-73",
       "digitsBalance": 72.86,
@@ -11930,7 +11930,7 @@
       "digitsBalance": 34.44,
       "digitsInterest": 29.6
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.36265e-67",
       "relBalance": "-8.345e-74",
       "digitsBalance": 73.08,
@@ -11992,7 +11992,7 @@
       "digitsBalance": 36.21,
       "digitsInterest": 29.83
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-7.30408e-71",
       "relBalance": "3.648e-72",
       "digitsBalance": 71.44,
@@ -12054,7 +12054,7 @@
       "digitsBalance": 34.38,
       "digitsInterest": 29.62
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.68591e-67",
       "relBalance": "-1.432e-73",
       "digitsBalance": 72.84,
@@ -12116,7 +12116,7 @@
       "digitsBalance": 35.45,
       "digitsInterest": 30.74
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.30921e-67",
       "relBalance": "-2.932e-73",
       "digitsBalance": 72.53,
@@ -12178,7 +12178,7 @@
       "digitsBalance": 35.9,
       "digitsInterest": 29.85
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.65829e-67",
       "relBalance": "-1.892e-73",
       "digitsBalance": 72.72,
@@ -12240,7 +12240,7 @@
       "digitsBalance": 35.62,
       "digitsInterest": 29.79
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.78126e-67",
       "relBalance": "-1.559e-72",
       "digitsBalance": 71.81,
@@ -12302,7 +12302,7 @@
       "digitsBalance": 32.58,
       "digitsInterest": 30.4
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.0986e-66",
       "relBalance": "2.706e-71",
       "digitsBalance": 70.57,
@@ -12364,7 +12364,7 @@
       "digitsBalance": 35.62,
       "digitsInterest": 30.17
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.40248e-67",
       "relBalance": "-1.284e-72",
       "digitsBalance": 71.89,
@@ -12426,7 +12426,7 @@
       "digitsBalance": 35.33,
       "digitsInterest": 29.76
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-9.75624e-66",
       "relBalance": "-1.283e-73",
       "digitsBalance": 72.89,
@@ -12488,7 +12488,7 @@
       "digitsBalance": 33.54,
       "digitsInterest": 30.54
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.22464e-67",
       "relBalance": "-8.212e-73",
       "digitsBalance": 72.09,
@@ -12550,7 +12550,7 @@
       "digitsBalance": 32.63,
       "digitsInterest": 30.34
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.30644e-68",
       "relBalance": "7.852e-72",
       "digitsBalance": 71.11,
@@ -12612,7 +12612,7 @@
       "digitsBalance": 34.59,
       "digitsInterest": 29.61
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.90638e-66",
       "relBalance": "4.028e-72",
       "digitsBalance": 71.39,
@@ -12674,7 +12674,7 @@
       "digitsBalance": 35.48,
       "digitsInterest": 29.86
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.42212e-64",
       "relBalance": "-6.878e-73",
       "digitsBalance": 72.16,
@@ -12736,7 +12736,7 @@
       "digitsBalance": 35.99,
       "digitsInterest": 31.23
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.26498e-67",
       "relBalance": "-1.153e-73",
       "digitsBalance": 72.94,
@@ -12798,7 +12798,7 @@
       "digitsBalance": 35.83,
       "digitsInterest": 29.96
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.68968e-65",
       "relBalance": "-6.544e-73",
       "digitsBalance": 72.18,
@@ -12860,7 +12860,7 @@
       "digitsBalance": 36.38,
       "digitsInterest": 30.77
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.19835e-67",
       "relBalance": "-1.375e-74",
       "digitsBalance": 73.86,
@@ -12922,7 +12922,7 @@
       "digitsBalance": 35.12,
       "digitsInterest": 29.75
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.25792e-67",
       "relBalance": "1.692e-72",
       "digitsBalance": 71.77,
@@ -12984,7 +12984,7 @@
       "digitsBalance": 33.15,
       "digitsInterest": 29.25
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.41381e-67",
       "relBalance": "1.086e-71",
       "digitsBalance": 70.96,
@@ -13046,7 +13046,7 @@
       "digitsBalance": 32.34,
       "digitsInterest": 31.89
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.13595e-67",
       "relBalance": "5.892e-72",
       "digitsBalance": 71.23,
@@ -13108,7 +13108,7 @@
       "digitsBalance": 36.27,
       "digitsInterest": 30.3
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.10597e-65",
       "relBalance": "-2.951e-72",
       "digitsBalance": 71.53,
@@ -13170,7 +13170,7 @@
       "digitsBalance": 31.47,
       "digitsInterest": 31.45
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.1386e-64",
       "relBalance": "-7.538e-72",
       "digitsBalance": 71.12,
@@ -13232,7 +13232,7 @@
       "digitsBalance": 36.02,
       "digitsInterest": 29.82
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.77021e-65",
       "relBalance": "8.818e-73",
       "digitsBalance": 72.05,
@@ -13294,7 +13294,7 @@
       "digitsBalance": 35.5,
       "digitsInterest": 30.28
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.91532e-67",
       "relBalance": "6.33e-73",
       "digitsBalance": 72.2,
@@ -13356,7 +13356,7 @@
       "digitsBalance": 35.19,
       "digitsInterest": 29.62
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.9655e-65",
       "relBalance": "1.266e-72",
       "digitsBalance": 71.9,
@@ -13418,7 +13418,7 @@
       "digitsBalance": 35.52,
       "digitsInterest": 31.62
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.3355e-65",
       "relBalance": "1.277e-72",
       "digitsBalance": 71.89,
@@ -13480,7 +13480,7 @@
       "digitsBalance": 36.44,
       "digitsInterest": 31.65
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.86517e-66",
       "relBalance": "-4.315e-72",
       "digitsBalance": 71.37,
@@ -13542,7 +13542,7 @@
       "digitsBalance": 31.16,
       "digitsInterest": 31.16
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.86519e-66",
       "relBalance": "-9.966e-72",
       "digitsBalance": 71.0,
@@ -13604,7 +13604,7 @@
       "digitsBalance": 35.04,
       "digitsInterest": 29.89
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.30481e-65",
       "relBalance": "-2.41e-72",
       "digitsBalance": 71.62,
@@ -13666,7 +13666,7 @@
       "digitsBalance": 34.9,
       "digitsInterest": 30.08
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.16364e-66",
       "relBalance": "-1.769e-72",
       "digitsBalance": 71.75,
@@ -13728,7 +13728,7 @@
       "digitsBalance": 33.64,
       "digitsInterest": 29.92
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.21316e-68",
       "relBalance": "-2.239e-72",
       "digitsBalance": 71.65,
@@ -13790,7 +13790,7 @@
       "digitsBalance": 30.9,
       "digitsInterest": 30.87
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.00934e-67",
       "relBalance": "1.956e-72",
       "digitsBalance": 71.71,
@@ -13852,7 +13852,7 @@
       "digitsBalance": 34.4,
       "digitsInterest": 30.41
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.14842e-67",
       "relBalance": "-1.564e-72",
       "digitsBalance": 71.81,
@@ -13914,7 +13914,7 @@
       "digitsBalance": 36.08,
       "digitsInterest": 30.47
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.03911e-67",
       "relBalance": "-1.226e-72",
       "digitsBalance": 71.91,
@@ -13976,7 +13976,7 @@
       "digitsBalance": 34.62,
       "digitsInterest": 29.46
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.59239e-67",
       "relBalance": "7.106e-73",
       "digitsBalance": 72.15,
@@ -14038,7 +14038,7 @@
       "digitsBalance": 36.75,
       "digitsInterest": 30.75
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.1613e-67",
       "relBalance": "-3.927e-74",
       "digitsBalance": 73.41,
@@ -14100,7 +14100,7 @@
       "digitsBalance": 35.77,
       "digitsInterest": 29.48
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.42705e-67",
       "relBalance": "-1.551e-72",
       "digitsBalance": 71.81,
@@ -14162,7 +14162,7 @@
       "digitsBalance": 36.83,
       "digitsInterest": 29.94
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.53811e-64",
       "relBalance": "1.471e-72",
       "digitsBalance": 71.83,
@@ -14224,7 +14224,7 @@
       "digitsBalance": 35.88,
       "digitsInterest": 31.23
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "9.24037e-67",
       "relBalance": "-8.138e-73",
       "digitsBalance": 72.09,
@@ -14286,7 +14286,7 @@
       "digitsBalance": 32.28,
       "digitsInterest": 29.68
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.18747e-68",
       "relBalance": "8.946e-73",
       "digitsBalance": 72.05,
@@ -14348,7 +14348,7 @@
       "digitsBalance": 33.98,
       "digitsInterest": 30.19
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.37859e-65",
       "relBalance": "-6.438e-73",
       "digitsBalance": 72.19,
@@ -14410,7 +14410,7 @@
       "digitsBalance": 36.11,
       "digitsInterest": 30.53
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.95393e-66",
       "relBalance": "-5.385e-72",
       "digitsBalance": 71.27,
@@ -14472,7 +14472,7 @@
       "digitsBalance": 33.38,
       "digitsInterest": 30.13
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.76528e-67",
       "relBalance": "2.605e-72",
       "digitsBalance": 71.58,
@@ -14534,7 +14534,7 @@
       "digitsBalance": 34.55,
       "digitsInterest": 29.99
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.73531e-65",
       "relBalance": "1.399e-72",
       "digitsBalance": 71.85,
@@ -14596,7 +14596,7 @@
       "digitsBalance": 31.17,
       "digitsInterest": 31.1
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "7.67141e-66",
       "relBalance": "5.447e-72",
       "digitsBalance": 71.26,
@@ -14658,7 +14658,7 @@
       "digitsBalance": 34.84,
       "digitsInterest": 30.1
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.24739e-66",
       "relBalance": "-3.453e-72",
       "digitsBalance": 71.46,
@@ -14720,7 +14720,7 @@
       "digitsBalance": 36.38,
       "digitsInterest": 31.67
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.47438e-67",
       "relBalance": "-7.683e-73",
       "digitsBalance": 72.11,
@@ -14782,7 +14782,7 @@
       "digitsBalance": 33.95,
       "digitsInterest": 29.81
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.18505e-67",
       "relBalance": "3.838e-73",
       "digitsBalance": 72.42,
@@ -14844,7 +14844,7 @@
       "digitsBalance": 35.95,
       "digitsInterest": 30.86
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.50604e-68",
       "relBalance": "-2.891e-72",
       "digitsBalance": 71.54,
@@ -14906,7 +14906,7 @@
       "digitsBalance": 36.39,
       "digitsInterest": 29.85
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.14036e-67",
       "relBalance": "-4.901e-72",
       "digitsBalance": 71.31,
@@ -14968,7 +14968,7 @@
       "digitsBalance": 31.81,
       "digitsInterest": 28.7
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.13569e-67",
       "relBalance": "4.644e-72",
       "digitsBalance": 71.33,
@@ -15030,7 +15030,7 @@
       "digitsBalance": 36.52,
       "digitsInterest": 29.99
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.4626e-66",
       "relBalance": "-3.366e-72",
       "digitsBalance": 71.47,
@@ -15092,7 +15092,7 @@
       "digitsBalance": 36.14,
       "digitsInterest": 31.14
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.64858e-66",
       "relBalance": "-3.222e-73",
       "digitsBalance": 72.49,
@@ -15154,7 +15154,7 @@
       "digitsBalance": 31.39,
       "digitsInterest": 29.49
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-9.13346e-68",
       "relBalance": "-1.447e-72",
       "digitsBalance": 71.84,
@@ -15216,7 +15216,7 @@
       "digitsBalance": 33.92,
       "digitsInterest": 30.09
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.46052e-65",
       "relBalance": "-1.519e-71",
       "digitsBalance": 70.82,
@@ -15278,7 +15278,7 @@
       "digitsBalance": 31.15,
       "digitsInterest": 31.15
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.36756e-65",
       "relBalance": "3.895e-71",
       "digitsBalance": 70.41,
@@ -15340,7 +15340,7 @@
       "digitsBalance": 30.62,
       "digitsInterest": 30.58
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.28113e-65",
       "relBalance": "-2.879e-72",
       "digitsBalance": 71.54,
@@ -15402,7 +15402,7 @@
       "digitsBalance": 35.33,
       "digitsInterest": 30.73
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-9.00656e-68",
       "relBalance": "-5.924e-72",
       "digitsBalance": 71.23,
@@ -15464,7 +15464,7 @@
       "digitsBalance": 34.36,
       "digitsInterest": 29.47
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.21168e-65",
       "relBalance": "2.501e-72",
       "digitsBalance": 71.6,
@@ -15526,7 +15526,7 @@
       "digitsBalance": 34.69,
       "digitsInterest": 31.11
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.8703e-64",
       "relBalance": "1.977e-72",
       "digitsBalance": 71.7,
@@ -15588,7 +15588,7 @@
       "digitsBalance": 33.23,
       "digitsInterest": 28.47
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.65023e-69",
       "relBalance": "7.806e-73",
       "digitsBalance": 72.11,
@@ -15650,7 +15650,7 @@
       "digitsBalance": 34.95,
       "digitsInterest": 30.26
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.85621e-67",
       "relBalance": "9.271e-73",
       "digitsBalance": 72.03,
@@ -15712,7 +15712,7 @@
       "digitsBalance": 36.01,
       "digitsInterest": 30.18
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.95277e-65",
       "relBalance": "7.971e-73",
       "digitsBalance": 72.1,
@@ -15774,7 +15774,7 @@
       "digitsBalance": 35.77,
       "digitsInterest": 29.92
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.29842e-66",
       "relBalance": "5.202e-72",
       "digitsBalance": 71.28,
@@ -15836,7 +15836,7 @@
       "digitsBalance": 34.52,
       "digitsInterest": 29.63
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.09059e-66",
       "relBalance": "-2.854e-72",
       "digitsBalance": 71.54,
@@ -15898,7 +15898,7 @@
       "digitsBalance": 35.41,
       "digitsInterest": 29.82
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.55734e-65",
       "relBalance": "4.387e-72",
       "digitsBalance": 71.36,
@@ -15960,7 +15960,7 @@
       "digitsBalance": 33.1,
       "digitsInterest": 31.96
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.00394e-67",
       "relBalance": "3.73e-72",
       "digitsBalance": 71.43,
@@ -16022,7 +16022,7 @@
       "digitsBalance": 35.98,
       "digitsInterest": 29.97
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.29985e-65",
       "relBalance": "5.449e-72",
       "digitsBalance": 71.26,
@@ -16084,7 +16084,7 @@
       "digitsBalance": 33.48,
       "digitsInterest": 29.89
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.94359e-72",
       "relBalance": "-7.11e-73",
       "digitsBalance": 72.15,
@@ -16146,7 +16146,7 @@
       "digitsBalance": 34.3,
       "digitsInterest": 30.07
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.21616e-64",
       "relBalance": "-6.486e-72",
       "digitsBalance": 71.19,
@@ -16208,7 +16208,7 @@
       "digitsBalance": 33.89,
       "digitsInterest": 30.09
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.12321e-66",
       "relBalance": "-9.707e-73",
       "digitsBalance": 72.01,
@@ -16270,7 +16270,7 @@
       "digitsBalance": 33.94,
       "digitsInterest": 29.98
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.43817e-66",
       "relBalance": "-5.184e-72",
       "digitsBalance": 71.29,
@@ -16332,7 +16332,7 @@
       "digitsBalance": 35.74,
       "digitsInterest": 29.97
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.83473e-66",
       "relBalance": "2.199e-72",
       "digitsBalance": 71.66,
@@ -16394,7 +16394,7 @@
       "digitsBalance": 34.97,
       "digitsInterest": 30.51
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.55327e-67",
       "relBalance": "3.686e-73",
       "digitsBalance": 72.43,
@@ -16456,7 +16456,7 @@
       "digitsBalance": 31.17,
       "digitsInterest": 31.17
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "9.459e-53",
       "relBalance": "3.782e-71",
       "digitsBalance": 70.42,
@@ -16518,7 +16518,7 @@
       "digitsBalance": 33.65,
       "digitsInterest": 30.31
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.45188e-68",
       "relBalance": "1.926e-72",
       "digitsBalance": 71.72,
@@ -16580,7 +16580,7 @@
       "digitsBalance": 32.33,
       "digitsInterest": 31.89
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.48536e-65",
       "relBalance": "8.996e-73",
       "digitsBalance": 72.05,
@@ -16642,7 +16642,7 @@
       "digitsBalance": 32.13,
       "digitsInterest": 31.83
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.37109e-62",
       "relBalance": "5.057e-72",
       "digitsBalance": 71.3,
@@ -16704,7 +16704,7 @@
       "digitsBalance": 31.11,
       "digitsInterest": 31.11
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.60155e-65",
       "relBalance": "2.841e-72",
       "digitsBalance": 71.55,
@@ -16766,7 +16766,7 @@
       "digitsBalance": 33.65,
       "digitsInterest": 29.75
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.58557e-67",
       "relBalance": "-5.866e-72",
       "digitsBalance": 71.23,
@@ -16828,7 +16828,7 @@
       "digitsBalance": 33.74,
       "digitsInterest": 30.26
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.80583e-67",
       "relBalance": "-3.515e-72",
       "digitsBalance": 71.45,
@@ -16890,7 +16890,7 @@
       "digitsBalance": 35.19,
       "digitsInterest": 29.74
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.20995e-66",
       "relBalance": "-2.48e-72",
       "digitsBalance": 71.61,
@@ -16952,7 +16952,7 @@
       "digitsBalance": 33.73,
       "digitsInterest": 29.95
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.63817e-64",
       "relBalance": "4.087e-73",
       "digitsBalance": 72.39,
@@ -17014,7 +17014,7 @@
       "digitsBalance": 34.4,
       "digitsInterest": 29.75
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.60514e-66",
       "relBalance": "-3.77e-72",
       "digitsBalance": 71.42,
@@ -17076,7 +17076,7 @@
       "digitsBalance": 34.78,
       "digitsInterest": 29.84
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.02523e-67",
       "relBalance": "-6.21e-72",
       "digitsBalance": 71.21,
@@ -17138,7 +17138,7 @@
       "digitsBalance": 34.37,
       "digitsInterest": 30.16
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.60739e-65",
       "relBalance": "4.473e-72",
       "digitsBalance": 71.35,
@@ -17200,7 +17200,7 @@
       "digitsBalance": 33.36,
       "digitsInterest": 31.0
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.95818e-68",
       "relBalance": "-2.924e-72",
       "digitsBalance": 71.53,
@@ -17262,7 +17262,7 @@
       "digitsBalance": 37.01,
       "digitsInterest": 29.88
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.29866e-66",
       "relBalance": "2.291e-72",
       "digitsBalance": 71.64,
@@ -17324,7 +17324,7 @@
       "digitsBalance": 33.93,
       "digitsInterest": 30.43
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.0027e-67",
       "relBalance": "2.887e-72",
       "digitsBalance": 71.54,
@@ -17386,7 +17386,7 @@
       "digitsBalance": 34.39,
       "digitsInterest": 30.06
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.94118e-68",
       "relBalance": "3.898e-72",
       "digitsBalance": 71.41,
@@ -17448,7 +17448,7 @@
       "digitsBalance": 34.31,
       "digitsInterest": 29.79
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.25538e-65",
       "relBalance": "-2.986e-72",
       "digitsBalance": 71.52,
@@ -17510,7 +17510,7 @@
       "digitsBalance": 34.8,
       "digitsInterest": 30.27
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.0063e-66",
       "relBalance": "-5.944e-72",
       "digitsBalance": 71.23,
@@ -17572,7 +17572,7 @@
       "digitsBalance": 36.14,
       "digitsInterest": 31.33
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.09767e-65",
       "relBalance": "-7.051e-73",
       "digitsBalance": 72.15,
@@ -17634,7 +17634,7 @@
       "digitsBalance": 35.14,
       "digitsInterest": 30.3
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.28094e-68",
       "relBalance": "3.856e-72",
       "digitsBalance": 71.41,
@@ -17696,7 +17696,7 @@
       "digitsBalance": 33.65,
       "digitsInterest": 29.54
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.64427e-66",
       "relBalance": "-4.523e-72",
       "digitsBalance": 71.34,
@@ -17758,7 +17758,7 @@
       "digitsBalance": 34.05,
       "digitsInterest": 30.46
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.02995e-65",
       "relBalance": "-1.331e-72",
       "digitsBalance": 71.88,
@@ -17820,7 +17820,7 @@
       "digitsBalance": 32.24,
       "digitsInterest": 31.86
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.60247e-66",
       "relBalance": "-2.479e-72",
       "digitsBalance": 71.61,
@@ -17882,7 +17882,7 @@
       "digitsBalance": 36.69,
       "digitsInterest": 31.82
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.56531e-65",
       "relBalance": "-2.758e-72",
       "digitsBalance": 71.56,
@@ -17944,7 +17944,7 @@
       "digitsBalance": 33.72,
       "digitsInterest": 29.82
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.54953e-67",
       "relBalance": "-6.105e-72",
       "digitsBalance": 71.21,
@@ -18006,7 +18006,7 @@
       "digitsBalance": 33.64,
       "digitsInterest": 29.96
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.85958e-67",
       "relBalance": "1.492e-72",
       "digitsBalance": 71.83,
@@ -18068,7 +18068,7 @@
       "digitsBalance": 33.96,
       "digitsInterest": 30.99
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.87956e-66",
       "relBalance": "5.471e-72",
       "digitsBalance": 71.26,
@@ -18130,7 +18130,7 @@
       "digitsBalance": 33.91,
       "digitsInterest": 29.49
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.241e-65",
       "relBalance": "4.208e-72",
       "digitsBalance": 71.38,
@@ -18192,7 +18192,7 @@
       "digitsBalance": 30.98,
       "digitsInterest": 30.97
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "5.71701e-63",
       "relBalance": "2.256e-71",
       "digitsBalance": 70.65,
@@ -18254,7 +18254,7 @@
       "digitsBalance": 34.41,
       "digitsInterest": 29.68
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.76002e-67",
       "relBalance": "-5.149e-72",
       "digitsBalance": 71.29,
@@ -18316,7 +18316,7 @@
       "digitsBalance": 34.54,
       "digitsInterest": 30.64
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.90583e-68",
       "relBalance": "1.524e-72",
       "digitsBalance": 71.82,
@@ -18378,7 +18378,7 @@
       "digitsBalance": 35.44,
       "digitsInterest": 30.24
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-9.56316e-66",
       "relBalance": "-2.499e-72",
       "digitsBalance": 71.6,
@@ -18440,7 +18440,7 @@
       "digitsBalance": 35.27,
       "digitsInterest": 29.71
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.68952e-65",
       "relBalance": "-6.733e-72",
       "digitsBalance": 71.17,
@@ -18502,7 +18502,7 @@
       "digitsBalance": 35.54,
       "digitsInterest": 30.4
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.44875e-65",
       "relBalance": "1.411e-72",
       "digitsBalance": 71.85,
@@ -18564,7 +18564,7 @@
       "digitsBalance": 37.31,
       "digitsInterest": 29.66
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.1993e-64",
       "relBalance": "5.098e-72",
       "digitsBalance": 71.29,
@@ -18626,7 +18626,7 @@
       "digitsBalance": 34.3,
       "digitsInterest": 29.36
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.56887e-66",
       "relBalance": "3.669e-72",
       "digitsBalance": 71.44,
@@ -18688,7 +18688,7 @@
       "digitsBalance": 36.49,
       "digitsInterest": 31.32
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.00796e-66",
       "relBalance": "-4.298e-72",
       "digitsBalance": 71.37,
@@ -18750,7 +18750,7 @@
       "digitsBalance": 33.0,
       "digitsInterest": 29.47
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.05968e-65",
       "relBalance": "-3.319e-72",
       "digitsBalance": 71.48,
@@ -18812,7 +18812,7 @@
       "digitsBalance": 34.45,
       "digitsInterest": 30.3
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.69558e-66",
       "relBalance": "-5.019e-72",
       "digitsBalance": 71.3,
@@ -18874,7 +18874,7 @@
       "digitsBalance": 34.59,
       "digitsInterest": 29.87
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.77448e-67",
       "relBalance": "4.376e-72",
       "digitsBalance": 71.36,
@@ -18936,7 +18936,7 @@
       "digitsBalance": 33.94,
       "digitsInterest": 29.66
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-5.09499e-66",
       "relBalance": "-4.406e-72",
       "digitsBalance": 71.36,
@@ -18998,7 +18998,7 @@
       "digitsBalance": 31.31,
       "digitsInterest": 31.26
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.26931e-64",
       "relBalance": "-3.623e-72",
       "digitsBalance": 71.44,
@@ -19060,7 +19060,7 @@
       "digitsBalance": 36.43,
       "digitsInterest": 30.38
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.49881e-65",
       "relBalance": "4.916e-72",
       "digitsBalance": 71.31,
@@ -19122,7 +19122,7 @@
       "digitsBalance": 34.62,
       "digitsInterest": 29.8
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.59664e-66",
       "relBalance": "3.816e-72",
       "digitsBalance": 71.42,
@@ -19184,7 +19184,7 @@
       "digitsBalance": 34.88,
       "digitsInterest": 30.15
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.6471e-65",
       "relBalance": "2.914e-72",
       "digitsBalance": 71.54,
@@ -19246,7 +19246,7 @@
       "digitsBalance": 35.39,
       "digitsInterest": 31.4
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.56151e-72",
       "relBalance": "-4.748e-72",
       "digitsBalance": 71.32,
@@ -19308,7 +19308,7 @@
       "digitsBalance": 34.21,
       "digitsInterest": 29.87
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.8332e-65",
       "relBalance": "1.762e-72",
       "digitsBalance": 71.75,
@@ -19370,7 +19370,7 @@
       "digitsBalance": 34.62,
       "digitsInterest": 30.02
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.7062e-66",
       "relBalance": "-1.719e-72",
       "digitsBalance": 71.76,
@@ -19432,7 +19432,7 @@
       "digitsBalance": 34.5,
       "digitsInterest": 29.55
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.16918e-62",
       "relBalance": "-2.893e-68",
       "digitsBalance": 67.54,
@@ -19494,7 +19494,7 @@
       "digitsBalance": 30.69,
       "digitsInterest": 30.68
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.70101e-62",
       "relBalance": "-1.179e-71",
       "digitsBalance": 70.93,
@@ -19556,7 +19556,7 @@
       "digitsBalance": 35.49,
       "digitsInterest": 30.05
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.429e-66",
       "relBalance": "-4.228e-72",
       "digitsBalance": 71.37,
@@ -19618,7 +19618,7 @@
       "digitsBalance": 34.33,
       "digitsInterest": 29.44
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-7.68057e-66",
       "relBalance": "-1.68e-73",
       "digitsBalance": 72.77,
@@ -19680,7 +19680,7 @@
       "digitsBalance": 36.51,
       "digitsInterest": 30.15
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.1099e-68",
       "relBalance": "-1.488e-72",
       "digitsBalance": 71.83,
@@ -19742,7 +19742,7 @@
       "digitsBalance": 34.73,
       "digitsInterest": 30.04
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.7834e-65",
       "relBalance": "-5.48e-72",
       "digitsBalance": 71.26,
@@ -19804,7 +19804,7 @@
       "digitsBalance": 34.59,
       "digitsInterest": 29.7
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.57934e-66",
       "relBalance": "2.822e-72",
       "digitsBalance": 71.55,
@@ -19866,7 +19866,7 @@
       "digitsBalance": 35.42,
       "digitsInterest": 30.1
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.24097e-65",
       "relBalance": "-4.385e-72",
       "digitsBalance": 71.36,
@@ -19928,7 +19928,7 @@
       "digitsBalance": 35.03,
       "digitsInterest": 30.04
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.06742e-65",
       "relBalance": "7.235e-72",
       "digitsBalance": 71.14,
@@ -19990,7 +19990,7 @@
       "digitsBalance": 35.71,
       "digitsInterest": 29.88
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.11943e-67",
       "relBalance": "1.04e-73",
       "digitsBalance": 72.98,
@@ -20052,7 +20052,7 @@
       "digitsBalance": 34.42,
       "digitsInterest": 30.24
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.00755e-67",
       "relBalance": "-2.56e-73",
       "digitsBalance": 72.59,
@@ -20114,7 +20114,7 @@
       "digitsBalance": 33.22,
       "digitsInterest": 28.04
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.14357e-68",
       "relBalance": "-7.693e-74",
       "digitsBalance": 73.11,
@@ -20176,7 +20176,7 @@
       "digitsBalance": 31.76,
       "digitsInterest": 31.67
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.86989e-65",
       "relBalance": "1.016e-71",
       "digitsBalance": 70.99,
@@ -20238,7 +20238,7 @@
       "digitsBalance": 35.63,
       "digitsInterest": 30.91
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.61771e-69",
       "relBalance": "-2.257e-72",
       "digitsBalance": 71.65,
@@ -20300,7 +20300,7 @@
       "digitsBalance": 33.48,
       "digitsInterest": 29.83
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.27156e-66",
       "relBalance": "2.295e-72",
       "digitsBalance": 71.64,
@@ -20362,7 +20362,7 @@
       "digitsBalance": 32.31,
       "digitsInterest": 29.88
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.73975e-67",
       "relBalance": "-5.06e-72",
       "digitsBalance": 71.3,
@@ -20424,7 +20424,7 @@
       "digitsBalance": 34.75,
       "digitsInterest": 29.81
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.04337e-66",
       "relBalance": "2.397e-73",
       "digitsBalance": 72.62,
@@ -20486,7 +20486,7 @@
       "digitsBalance": 33.14,
       "digitsInterest": 28.04
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "8.8825e-68",
       "relBalance": "3.248e-72",
       "digitsBalance": 71.49,
@@ -20548,7 +20548,7 @@
       "digitsBalance": 36.78,
       "digitsInterest": 30.74
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.74681e-65",
       "relBalance": "6.445e-72",
       "digitsBalance": 71.19,
@@ -20610,7 +20610,7 @@
       "digitsBalance": 34.72,
       "digitsInterest": 29.88
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.41517e-66",
       "relBalance": "-6.829e-73",
       "digitsBalance": 72.17,
@@ -20672,7 +20672,7 @@
       "digitsBalance": 35.6,
       "digitsInterest": 29.77
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.32002e-65",
       "relBalance": "9.687e-73",
       "digitsBalance": 72.01,
@@ -20734,7 +20734,7 @@
       "digitsBalance": 34.33,
       "digitsInterest": 29.8
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.2123e-66",
       "relBalance": "5.893e-73",
       "digitsBalance": 72.23,
@@ -20796,7 +20796,7 @@
       "digitsBalance": 34.21,
       "digitsInterest": 29.34
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.05768e-71",
       "relBalance": "2.471e-72",
       "digitsBalance": 71.61,
@@ -20858,7 +20858,7 @@
       "digitsBalance": 36.3,
       "digitsInterest": 30.25
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.08326e-67",
       "relBalance": "-2.861e-72",
       "digitsBalance": 71.54,
@@ -20920,7 +20920,7 @@
       "digitsBalance": 35.92,
       "digitsInterest": 30.97
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.66832e-65",
       "relBalance": "5.757e-72",
       "digitsBalance": 71.24,
@@ -20982,7 +20982,7 @@
       "digitsBalance": 36.13,
       "digitsInterest": 29.91
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-7.61419e-73",
       "relBalance": "1.681e-72",
       "digitsBalance": 71.77,
@@ -21044,7 +21044,7 @@
       "digitsBalance": 32.86,
       "digitsInterest": 30.01
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.29031e-67",
       "relBalance": "-4.77e-72",
       "digitsBalance": 71.32,
@@ -21106,7 +21106,7 @@
       "digitsBalance": 33.52,
       "digitsInterest": 29.89
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.19198e-64",
       "relBalance": "-2.855e-72",
       "digitsBalance": 71.54,
@@ -21168,7 +21168,7 @@
       "digitsBalance": 34.08,
       "digitsInterest": 28.04
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.51111e-68",
       "relBalance": "8.816e-73",
       "digitsBalance": 72.05,
@@ -21230,7 +21230,7 @@
       "digitsBalance": 29.64,
       "digitsInterest": 29.62
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.40913e-66",
       "relBalance": "-8.366e-72",
       "digitsBalance": 71.08,
@@ -21292,7 +21292,7 @@
       "digitsBalance": 36.43,
       "digitsInterest": 30.21
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.02167e-68",
       "relBalance": "3.129e-72",
       "digitsBalance": 71.5,
@@ -21354,7 +21354,7 @@
       "digitsBalance": 36.1,
       "digitsInterest": 32.35
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.53281e-66",
       "relBalance": "3.907e-74",
       "digitsBalance": 73.41,
@@ -21416,7 +21416,7 @@
       "digitsBalance": 32.87,
       "digitsInterest": 30.48
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.31374e-69",
       "relBalance": "5.99e-72",
       "digitsBalance": 71.22,
@@ -21478,7 +21478,7 @@
       "digitsBalance": 34.89,
       "digitsInterest": 29.78
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "7.49044e-66",
       "relBalance": "-8.679e-73",
       "digitsBalance": 72.06,
@@ -21540,7 +21540,7 @@
       "digitsBalance": 31.81,
       "digitsInterest": 29.02
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.91425e-70",
       "relBalance": "1.526e-72",
       "digitsBalance": 71.82,
@@ -21602,7 +21602,7 @@
       "digitsBalance": 35.35,
       "digitsInterest": 30.21
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.42994e-65",
       "relBalance": "9.893e-71",
       "digitsBalance": 70.0,
@@ -21664,7 +21664,7 @@
       "digitsBalance": 36.08,
       "digitsInterest": 30.13
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.00651e-66",
       "relBalance": "2.073e-72",
       "digitsBalance": 71.68,
@@ -21726,7 +21726,7 @@
       "digitsBalance": 35.11,
       "digitsInterest": 30.24
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.63848e-65",
       "relBalance": "2.65e-72",
       "digitsBalance": 71.58,
@@ -21788,7 +21788,7 @@
       "digitsBalance": 34.07,
       "digitsInterest": 30.19
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.50347e-68",
       "relBalance": "-5.743e-73",
       "digitsBalance": 72.24,
@@ -21850,7 +21850,7 @@
       "digitsBalance": 34.77,
       "digitsInterest": 29.65
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-9.00718e-70",
       "relBalance": "-3.676e-72",
       "digitsBalance": 71.43,
@@ -21912,7 +21912,7 @@
       "digitsBalance": 36.69,
       "digitsInterest": 30.2
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.57113e-65",
       "relBalance": "-2.594e-72",
       "digitsBalance": 71.59,
@@ -21974,7 +21974,7 @@
       "digitsBalance": 33.1,
       "digitsInterest": 31.96
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.00112e-64",
       "relBalance": "3.494e-73",
       "digitsBalance": 72.46,
@@ -22036,7 +22036,7 @@
       "digitsBalance": 33.88,
       "digitsInterest": 29.55
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.54848e-66",
       "relBalance": "-4.547e-72",
       "digitsBalance": 71.34,
@@ -22098,7 +22098,7 @@
       "digitsBalance": 30.53,
       "digitsInterest": 30.5
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-9.26837e-68",
       "relBalance": "-1.756e-72",
       "digitsBalance": 71.76,
@@ -22160,7 +22160,7 @@
       "digitsBalance": 33.29,
       "digitsInterest": 28.82
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.05771e-69",
       "relBalance": "-3.441e-72",
       "digitsBalance": 71.46,
@@ -22222,7 +22222,7 @@
       "digitsBalance": 34.6,
       "digitsInterest": 29.77
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.31678e-67",
       "relBalance": "-1.394e-72",
       "digitsBalance": 71.86,
@@ -22284,7 +22284,7 @@
       "digitsBalance": 34.21,
       "digitsInterest": 30.14
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-7.64852e-68",
       "relBalance": "-2.068e-72",
       "digitsBalance": 71.68,
@@ -22346,7 +22346,7 @@
       "digitsBalance": 35.29,
       "digitsInterest": 30.15
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.03608e-65",
       "relBalance": "-3.129e-72",
       "digitsBalance": 71.5,
@@ -22408,7 +22408,7 @@
       "digitsBalance": 33.1,
       "digitsInterest": 31.96
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.97536e-64",
       "relBalance": "4.448e-72",
       "digitsBalance": 71.35,
@@ -22470,7 +22470,7 @@
       "digitsBalance": 35.08,
       "digitsInterest": 30.0
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.78718e-65",
       "relBalance": "-1.29e-72",
       "digitsBalance": 71.89,
@@ -22532,7 +22532,7 @@
       "digitsBalance": 34.9,
       "digitsInterest": 30.09
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.41567e-65",
       "relBalance": "4.749e-73",
       "digitsBalance": 72.32,
@@ -22594,7 +22594,7 @@
       "digitsBalance": 32.43,
       "digitsInterest": 30.2
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.54412e-68",
       "relBalance": "-2.316e-74",
       "digitsBalance": 73.64,
@@ -22656,7 +22656,7 @@
       "digitsBalance": 35.31,
       "digitsInterest": 30.35
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.90372e-66",
       "relBalance": "-5.509e-72",
       "digitsBalance": 71.26,
@@ -22718,7 +22718,7 @@
       "digitsBalance": 35.08,
       "digitsInterest": 30.24
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.75598e-64",
       "relBalance": "-4.018e-72",
       "digitsBalance": 71.4,
@@ -22780,7 +22780,7 @@
       "digitsBalance": 32.73,
       "digitsInterest": 30.25
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.47288e-68",
       "relBalance": "-4.278e-72",
       "digitsBalance": 71.37,
@@ -22842,7 +22842,7 @@
       "digitsBalance": 33.37,
       "digitsInterest": 29.85
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-4.68031e-65",
       "relBalance": "-9.938e-72",
       "digitsBalance": 71.0,
@@ -22904,7 +22904,7 @@
       "digitsBalance": 35.56,
       "digitsInterest": 29.58
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.5889e-64",
       "relBalance": "3.934e-72",
       "digitsBalance": 71.41,
@@ -22966,7 +22966,7 @@
       "digitsBalance": 35.73,
       "digitsInterest": 30.26
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.7517e-65",
       "relBalance": "5.915e-72",
       "digitsBalance": 71.23,
@@ -23028,7 +23028,7 @@
       "digitsBalance": 32.55,
       "digitsInterest": 29.78
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.61963e-67",
       "relBalance": "-4.967e-72",
       "digitsBalance": 71.3,
@@ -23090,7 +23090,7 @@
       "digitsBalance": 34.56,
       "digitsInterest": 30.04
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-8.96665e-66",
       "relBalance": "-4.15e-72",
       "digitsBalance": 71.38,
@@ -23152,7 +23152,7 @@
       "digitsBalance": 36.28,
       "digitsInterest": 29.74
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.79565e-64",
       "relBalance": "6.479e-72",
       "digitsBalance": 71.19,
@@ -23214,7 +23214,7 @@
       "digitsBalance": 36.13,
       "digitsInterest": 30.42
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.48644e-65",
       "relBalance": "-6.869e-72",
       "digitsBalance": 71.16,
@@ -23276,7 +23276,7 @@
       "digitsBalance": 35.22,
       "digitsInterest": 29.82
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.25406e-66",
       "relBalance": "1.541e-72",
       "digitsBalance": 71.81,
@@ -23338,7 +23338,7 @@
       "digitsBalance": 35.41,
       "digitsInterest": 30.46
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.59879e-67",
       "relBalance": "3.698e-72",
       "digitsBalance": 71.43,
@@ -23400,7 +23400,7 @@
       "digitsBalance": 34.16,
       "digitsInterest": 29.79
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.77471e-65",
       "relBalance": "-2.94e-72",
       "digitsBalance": 71.53,
@@ -23462,7 +23462,7 @@
       "digitsBalance": 36.02,
       "digitsInterest": 30.11
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.09923e-65",
       "relBalance": "4.258e-72",
       "digitsBalance": 71.37,
@@ -23524,7 +23524,7 @@
       "digitsBalance": 35.59,
       "digitsInterest": 30.77
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.69129e-67",
       "relBalance": "-7.039e-72",
       "digitsBalance": 71.15,
@@ -23586,7 +23586,7 @@
       "digitsBalance": 35.0,
       "digitsInterest": 30.15
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "6.39501e-67",
       "relBalance": "4.818e-73",
       "digitsBalance": 72.32,
@@ -23648,7 +23648,7 @@
       "digitsBalance": 34.34,
       "digitsInterest": 29.15
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "2.80914e-66",
       "relBalance": "7.01e-72",
       "digitsBalance": 71.15,
@@ -23710,7 +23710,7 @@
       "digitsBalance": 33.31,
       "digitsInterest": 30.1
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-3.78148e-67",
       "relBalance": "-4.033e-72",
       "digitsBalance": 71.39,
@@ -23772,7 +23772,7 @@
       "digitsBalance": 33.38,
       "digitsInterest": 30.27
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.03671e-67",
       "relBalance": "3.358e-73",
       "digitsBalance": 72.47,
@@ -23834,7 +23834,7 @@
       "digitsBalance": 33.11,
       "digitsInterest": 28.19
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.10638e-71",
       "relBalance": "3.741e-72",
       "digitsBalance": 71.43,
@@ -23896,7 +23896,7 @@
       "digitsBalance": 35.61,
       "digitsInterest": 30.43
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.14341e-67",
       "relBalance": "1.808e-72",
       "digitsBalance": 71.74,
@@ -23958,7 +23958,7 @@
       "digitsBalance": 35.69,
       "digitsInterest": 30.17
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-6.3287e-65",
       "relBalance": "-2.847e-72",
       "digitsBalance": 71.55,
@@ -24020,7 +24020,7 @@
       "digitsBalance": 33.27,
       "digitsInterest": 29.3
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.28406e-71",
       "relBalance": "-9.033e-74",
       "digitsBalance": 73.04,
@@ -24082,7 +24082,7 @@
       "digitsBalance": 34.47,
       "digitsInterest": 29.67
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.45417e-66",
       "relBalance": "4.368e-72",
       "digitsBalance": 71.36,
@@ -24144,7 +24144,7 @@
       "digitsBalance": 34.37,
       "digitsInterest": 30.27
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.80516e-67",
       "relBalance": "-2.575e-72",
       "digitsBalance": 71.59,
@@ -24206,7 +24206,7 @@
       "digitsBalance": 32.45,
       "digitsInterest": 30.15
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "7.77343e-68",
       "relBalance": "5.333e-72",
       "digitsBalance": 71.27,
@@ -24268,7 +24268,7 @@
       "digitsBalance": 31.69,
       "digitsInterest": 31.62
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "3.65297e-65",
       "relBalance": "5.025e-72",
       "digitsBalance": 71.3,
@@ -24330,7 +24330,7 @@
       "digitsBalance": 33.71,
       "digitsInterest": 29.65
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "1.91512e-72",
       "relBalance": "3.398e-72",
       "digitsBalance": 71.47,
@@ -24392,7 +24392,7 @@
       "digitsBalance": 36.14,
       "digitsInterest": 29.61
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.09336e-66",
       "relBalance": "-2.328e-72",
       "digitsBalance": 71.63,
@@ -24454,7 +24454,7 @@
       "digitsBalance": 35.17,
       "digitsInterest": 30.32
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.93579e-66",
       "relBalance": "9.047e-73",
       "digitsBalance": 72.04,
@@ -24516,7 +24516,7 @@
       "digitsBalance": 36.07,
       "digitsInterest": 29.91
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "4.88104e-65",
       "relBalance": "4.259e-72",
       "digitsBalance": 71.37,
@@ -24572,7 +24572,7 @@
       "digitsBalance": 39.12,
       "digitsInterest": 37.81
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-2.55921e-68",
       "relBalance": "1.125e-72",
       "digitsBalance": 71.95,
@@ -24628,7 +24628,7 @@
       "digitsBalance": 38.59,
       "digitsInterest": 37.74
      },
-     "fp256": {
+     "fp19": {
       "errTokens": "-1.92315e-68",
       "relBalance": "2.019e-72",
       "digitsBalance": 71.69,

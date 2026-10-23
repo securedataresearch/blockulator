@@ -12,7 +12,7 @@ on:
     paths:
       - "test/proofs/**"
       - "contracts/src/fp127/FP127.yul.src"
-      - "contracts/src/fp256/FP256.yul.src"
+      - "contracts/src/fp19/FP19.yul.src"
 
 concurrency:
   group: proofs

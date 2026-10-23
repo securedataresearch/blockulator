@@ -25,7 +25,7 @@ contract LadderRunner {
     address public immutable aave;
     address public immutable morpho;
     address public immutable maker;
-    address public immutable fp256;
+    address public immutable fp19;
     address public immutable solmate;
     address public immutable oz;
     address public immutable uniswap;
@@ -44,7 +44,7 @@ contract LadderRunner {
         aave = adapters[7];
         morpho = adapters[8];
         maker = adapters[9];
-        fp256 = adapters[10];
+        fp19 = adapters[10];
         solmate = adapters[11];
         oz = adapters[12];
         uniswap = adapters[13];
@@ -63,7 +63,7 @@ contract LadderRunner {
         if (form == Form.AAVE) return aave;
         if (form == Form.MORPHO) return morpho;
         if (form == Form.MAKER) return maker;
-        if (form == Form.FP256) return fp256;
+        if (form == Form.FP19) return fp19;
         if (form == Form.SOLMATE) return solmate;
         if (form == Form.OZ) return oz;
         if (form == Form.UNISWAP) return uniswap;

@@ -1,7 +1,7 @@
 {
   "name": "@blockulator/contracts",
   "version": "0.0.0-dev",
-  "description": "FP127 and FP256: correctly rounded precision math for the EVM, as inline Solidity libraries, interfaces, Yul objects, ABIs and deployment records.",
+  "description": "FP127 and FP19: correctly rounded precision math for the EVM, as inline Solidity libraries, interfaces, Yul objects, ABIs and deployment records.",
   "license": "MIT",
   "author": "Secure Data Research, LLC (https://securedataresearch.net)",
   "homepage": "https://blockulator.com",
@@ -25,7 +25,7 @@
   ],
   "files": [
     "fp127/",
-    "fp256/",
+    "fp19/",
     "wad/",
     "deployments/"
   ],

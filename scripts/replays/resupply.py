@@ -14,7 +14,7 @@ before (pre-state) and the block itself (post-state), and checks every cited
 source line against the verified source on Sourcify. The forge test
 (test/replays/Resupply.t.sol) replays the decisive arithmetic from those
 integers with no network, asserts it equals what happened on chain, and runs
-the same step through divUp, divide-at-the-end, FP127 and FP256. This script
+the same step through divUp, divide-at-the-end, FP127 and FP19. This script
 scores each against exact rational arithmetic (Python Fraction, with mpmath at
 200 digits for the digit counts).
 
@@ -372,7 +372,7 @@ def fp127(raw: int) -> Fraction:
     return Fraction(raw, 1 << 128)
 
 
-def fp256(raw: int) -> Fraction:
+def fp19(raw: int) -> Fraction:
     wd = raw & ((1 << 256) - 1)
     if wd == 0:
         return Fraction(0)
@@ -434,8 +434,8 @@ def score(text: str):
     f1 = R["fp127"]
     rows.append(("FP127 (inline lib), same formula", fp127(f1["rate"]), fp127(f1["ltv"]), f1["solvent"], Fraction(f1["maxBorrow"]),
                  f"LTV ceil to the 1e5 grid: {f1['ltvCeil']:,}"))
-    f2 = R["fp256"]
-    rows.append(("FP256, same formula", fp256(f2["rate"]), fp256(f2["ltv"]), f2["solvent"], Fraction(f2["maxBorrow"]),
+    f2 = R["fp19"]
+    rows.append(("FP19, same formula", fp19(f2["rate"]), fp19(f2["ltv"]), f2["solvent"], Fraction(f2["maxBorrow"]),
                  f"LTV ceil to the 1e5 grid: {f2['ltvCeil']:,}"))
     rows.append(("exact (rational)", exact_rate, exact_ltv, int(exact_ltv <= maxLTV), Fraction(floor(exact_max)), ""))
 
@@ -504,13 +504,13 @@ def render(J, P, B, rows, exact_rate, exact_ltv, exact_max, cliff) -> str:
     L.append("Reading the table: the deployed rate has 0 correct digits (it is 0 where the truth is one half). `divUp` blocks the "
              "attack but is a one-mark ruler too: it reads one half as 1, doubling the LTV and halving what an honest "
              "borrower could take (0.95 reUSD instead of 1.9). Dividing by the price at the end needs no new library and "
-             "gets the verdict and the LTV right to the integer. FP127 and FP256 carry the half and give the exact verdict "
+             "gets the verdict and the LTV right to the integer. FP127 and FP19 carry the half and give the exact verdict "
              "and the exact cap.\n")
     wall = (2 ** 127 * (P["vaultTotalSupply"] + P["deadShares"]) * P["vaultPrecision"] + 10 ** 18 - 1) // 10 ** 18 - 1
     L.append(f"Range: FP127 holds integers below 2^127 ≈ 1.7e38, so its port of this line takes the price as an exact integer "
              f"only while totalAssets stays under {fmt(Fraction(wall, 10**18), 9)} crvUSD with one share outstanding "
              f"({float(Fraction(wall, P['vaultTotalAssets'])):.0f} times the attack's); above that the port reverts (`_q` in the "
-             f"test) rather than floors. FP256 has no such wall.\n")
+             f"test) rather than floors. FP19 has no such wall.\n")
     L.append("## The cliff before the cliff (derived, not on chain)\n")
     L.append("The same vault with one share wei outstanding and other totalAssets. The floored rate is an integer, so the debt "
              "the check sees is understated by up to half long before it reaches zero:\n")
@@ -544,7 +544,7 @@ def render(J, P, B, rows, exact_rate, exact_ltv, exact_max, cliff) -> str:
         L.append(f"- `{c['file']}:{c['line']}` ({c['contract']}): `{c['text']}`")
     L.append("")
     L.append("## Caveat\n")
-    L.append("This replays one division: divUp, dividing last, FP127 and FP256 each reject this borrow, but none of them "
+    L.append("This replays one division: divUp, dividing last, FP127 and FP19 each reject this borrow, but none of them "
              "stops a market from going live against an empty vault whose share price a donation sets, so the floor was the "
              "last check that failed, not the only one.\n")
     L.append("## Reproduce\n")

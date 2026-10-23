@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Inline size: the runtime bytecode each op adds to a contract that calls it
-through FP127Lib or FP256Lib.
+through FP127Lib or FP19Lib.
 
     uv run scripts/size/inline.py            # -> docs/benchmarks/size.json + size.md
     uv run scripts/size/inline.py --keep DIR # also keep the generated contracts in DIR
 
-For every op in contracts/src/{fp127,fp256}/ops.json it writes a throwaway
+For every op in contracts/src/{fp127,fp19}/ops.json it writes a throwaway
 contract with one external function, f(int256 a, int256 b, int256 c), whose
 body is `r = Lib.<op>(a[, b[, c]])`, and a baseline whose body is `r = a`. The
 signature is the same in every contract, so the ABI decoder and dispatch cancel
@@ -46,14 +46,14 @@ from stdjson import SOLC_VERSION, find_solc  # noqa: E402
 
 OUT_JSON = ROOT / "docs" / "benchmarks" / "size.json"
 OUT_MD = ROOT / "docs" / "benchmarks" / "size.md"
-GAS = {"fp127": ROOT / "docs" / "benchmarks" / "gas.json", "fp256": ROOT / "docs" / "benchmarks" / "gas256.json"}
+GAS = {"fp127": ROOT / "docs" / "benchmarks" / "gas.json", "fp19": ROOT / "docs" / "benchmarks" / "gas19.json"}
 LIMIT = 24576
 EVM = "osaka"
 RUNS = 200
 PIPELINES = {"legacy": False, "viaIr": True}
 LIBS = {
     "fp127": ("FP127Lib", "contracts/src/fp127/FP127Lib.sol"),
-    "fp256": ("FP256Lib", "contracts/src/fp256/FP256Lib.sol"),
+    "fp19": ("FP19Lib", "contracts/src/fp19/FP19Lib.sol"),
 }
 # Common combinations: what a contract that uses them together pays.
 BUNDLES = [
@@ -64,17 +64,17 @@ BUNDLES = [
     ("fp127", ["exp", "log2", "sqrt"]),
     ("fp127", ["erf", "erfc", "normCdf"]),
     ("fp127", ["fromFixed18", "toFixed18Down", "toFixed18Up", "mulDown", "mulUp", "compound"]),
-    ("fp256", ["add", "sub", "mul", "div"]),
-    ("fp256", ["exp", "ln"]),
-    ("fp256", ["exp", "ln", "pow"]),
-    ("fp256", ["erf", "erfc", "normCdf"]),
-    ("fp256", ["fromFixed18", "toFixed18Down", "toFixed18Up", "mulDown", "mulUp", "compound"]),
+    ("fp19", ["add", "sub", "mul", "div"]),
+    ("fp19", ["exp", "ln"]),
+    ("fp19", ["exp", "ln", "pow"]),
+    ("fp19", ["erf", "erfc", "normCdf"]),
+    ("fp19", ["fromFixed18", "toFixed18Down", "toFixed18Up", "mulDown", "mulUp", "compound"]),
 ]
 ARGS = ["a", "b", "c"]
 
 
 def returns(lib: str) -> dict[str, str]:
-    """Each Lib function's return type, read from its source (two FP256 ops return uint256)."""
+    """Each Lib function's return type, read from its source (two FP19 ops return uint256)."""
     src = (ROOT / LIBS[lib][1]).read_text()
     return dict(re.findall(r"^    function (\w+)\([^)]*\) internal pure returns \((\w+) ", src, re.M))
 
@@ -128,7 +128,7 @@ def compile_one(path: Path, name: str, via_ir: bool) -> int:
 
 
 def staticcall_overhead(lib: str) -> int | None:
-    """Gas the staticcall to the deployed object adds to add, from gas.json / gas256.json (yul median - lib median)."""
+    """Gas the staticcall to the deployed object adds to add, from gas.json / gas19.json (yul median - lib median)."""
     try:
         s = json.loads(GAS[lib].read_text())["ops"]["add"]["summary"]
         return s["yul"]["median"] - s["lib"]["median"]
@@ -209,14 +209,14 @@ def main() -> int:
     doc = {
         "generated": datetime.date.today().isoformat(),
         "description": ("Runtime bytecode, in bytes, that one op adds to a contract when it is inlined through "
-                        "FP127Lib or FP256Lib, helpers included: the deployed size of a contract with one external "
+                        "FP127Lib or FP19Lib, helpers included: the deployed size of a contract with one external "
                         "function f(int256,int256,int256) returning Lib.op(a[,b[,c]]), minus the same contract "
                         "returning a. legacy is the default foundry profile (via_ir = false), viaIr the same settings "
                         "through the IR. CBOR metadata is off. Each Lib function carries its own copy of its helpers "
                         "and the optimizer merges identical code across them, so a second op that shares a kernel "
                         "with the first adds less than its row: bundles chains several ops in one contract, against "
                         "the sum of their singles. staticcallGas is the gas the external call to the deployed object "
-                        "adds to add (gas.json or gas256.json, yul median minus lib median)."),
+                        "adds to add (gas.json or gas19.json, yul median minus lib median)."),
         "generator": "scripts/size/inline.py (make size-inline)",
         "compiler": {"solc": SOLC_VERSION, "evmVersion": EVM, "optimizerRuns": RUNS, "cbor": False},
         "limit": LIMIT,
@@ -263,7 +263,7 @@ def markdown(d: dict) -> str:
         f"Generated {d['generated']} by `make size-inline` ([`scripts/size/inline.py`](../../scripts/size/inline.py)); "
         "the data is [`size.json`](size.json).",
         "",
-        "The runtime bytecode one op adds to a contract that calls it through `FP127Lib` or `FP256Lib`, helpers "
+        "The runtime bytecode one op adds to a contract that calls it through `FP127Lib` or `FP19Lib`, helpers "
         "included. Each op is compiled alone in a contract with one external function `f(int256,int256,int256)` "
         "returning `Lib.op(a[, b[, c]])`; the delta is against the same contract returning `a`, so the ABI decoder "
         f"and dispatch cancel. solc {c['solc']}, evm {c['evmVersion']}, optimizer {c['optimizerRuns']} runs, CBOR "
@@ -297,14 +297,14 @@ def markdown(d: dict) -> str:
     for b in d["bundles"]:
         L.append(f"| {b['lib'].upper()} | {', '.join('`' + o + '`' for o in b['ops'])} | {fmt(b['legacy'])} | "
                  f"{fmt(b['sumOfSingles']['legacy'])} | {fmt(b['viaIr'])} | {fmt(b['sumOfSingles']['viaIr'])} |")
-    g1, g2 = d["libs"]["fp127"]["staticcallGas"], d["libs"]["fp256"]["staticcallGas"]
+    g1, g2 = d["libs"]["fp127"]["staticcallGas"], d["libs"]["fp19"]["staticcallGas"]
     L += [
         "",
         "## Inline or call the deployed object",
         "",
-        f"Inlining saves the external call: about {g1} gas per call to the deployed FP127 and {g2} to FP256 "
-        "([`gas.json`](gas.json), [`gas256.json`](gas256.json): `add`, object median minus inline median). "
-        "`staticcall` the deployed object instead (for FP256, whichever of FP256, FP256E, FP256H and FP256S holds "
+        f"Inlining saves the external call: about {g1} gas per call to the deployed FP127 and {g2} to FP19 "
+        "([`gas.json`](gas.json), [`gas19.json`](gas19.json): `add`, object median minus inline median). "
+        "`staticcall` the deployed object instead (for FP19, whichever of FP19, FP19E, FP19H and FP19S holds "
         f"the op) when inlining would take the contract near the {fmt(d['limit'])}-byte limit (EIP-170), or when "
         "the op is large and called rarely. Deploying code costs at least 200 gas a byte, so inlining an op of N "
         f"bytes pays for itself only after about 200N / {g1} calls: a small op at once, `pow` after thousands. "

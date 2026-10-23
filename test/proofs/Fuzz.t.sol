@@ -3,10 +3,10 @@ pragma solidity ^0.8.31;
 
 import "forge-std/Test.sol";
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
+import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 import {Kernels} from "./Kernels.sol";
 import {Ref127} from "./Ref127.sol";
-import {Ref256} from "./Ref256.sol";
+import {Ref19} from "./Ref19.sol";
 import {Wide} from "./Wide.sol";
 
 /// @title LongDiv
@@ -46,22 +46,22 @@ contract Lib127 {
     function sqrt(int256 x) external pure returns (int256) { return FP127Lib.sqrt(x); }
 }
 
-contract Lib256 {
-    function sqrt(int256 x) external pure returns (int256) { return FP256Lib.sqrt(x); }
+contract Lib19 {
+    function sqrt(int256 x) external pure returns (int256) { return FP19Lib.sqrt(x); }
 }
 
 /// @title FuzzProofs
 /// @notice The fuzzed half of docs/proofs.md: the division kernels the proofs
-///         take as lemmas (K127, K256) against a long division, and both
+///         take as lemmas (K127, K19) against a long division, and both
 ///         square roots against exact integer roots. Inputs are spread over
 ///         bit lengths, so short and long operands are as likely as random words.
 contract FuzzProofs is Test {
     Lib127 internal l127;
-    Lib256 internal l256;
+    Lib19 internal l19;
 
     function setUp() public {
         l127 = new Lib127();
-        l256 = new Lib256();
+        l19 = new Lib19();
     }
 
     /// A word with a random bit length: x's top (seed % 257) bits cleared.
@@ -81,16 +81,16 @@ contract FuzzProofs is Test {
         assertEq(Kernels.divq(a, b), LongDiv.div(a >> 128, a << 128, b));
     }
 
-    /// K256: Kernels.divh(a, b) = floor(a 2^255 / b) for b > 0, a < 2 b.
-    function testFuzz_K256(uint256 a, uint256 b, uint256 sa, uint256 sb) public pure {
+    /// K19: Kernels.divh(a, b) = floor(a 2^255 / b) for b > 0, a < 2 b.
+    function testFuzz_K19(uint256 a, uint256 b, uint256 sa, uint256 sb) public pure {
         a = spread(a, sa);
         b = spread(b, sb);
         vm.assume(b != 0 && a / 2 < b); // a < 2 b
         assertEq(Kernels.divh(a, b), LongDiv.div(a >> 1, a << 255, b));
     }
 
-    /// K256 where FP256 uses it: two significands in [2^236, 2^237).
-    function testFuzz_K256_significands(uint256 a, uint256 b) public pure {
+    /// K19 where FP19 uses it: two significands in [2^236, 2^237).
+    function testFuzz_K19_significands(uint256 a, uint256 b) public pure {
         a = (a >> 20) | (uint256(1) << 236);
         b = (b >> 20) | (uint256(1) << 236);
         a &= (uint256(1) << 237) - 1;
@@ -139,14 +139,14 @@ contract FuzzProofs is Test {
         l127.sqrt(x);
     }
 
-    /// The reference square root of an FP256 word: the exact integer root of
+    /// The reference square root of an FP19 word: the exact integer root of
     /// the significand scaled to an even exponent and 479+ bits, rounded once
     /// to nearest with the root's remainder as the sticky part.
-    function refSqrt256(int256 x) internal pure returns (bytes4, int256) {
-        Ref256.Num memory n = Ref256.unpack(x);
-        if (!n.valid || n.s == 1) return (Ref256.OUTOFRANGE, 0);
+    function refSqrt19(int256 x) internal pure returns (bytes4, int256) {
+        Ref19.Num memory n = Ref19.unpack(x);
+        if (!n.valid || n.s == 1) return (Ref19.OUTOFRANGE, 0);
         if (n.m == 0) return (0, 0);
-        int256 u = Ref256.ulp(n.e);
+        int256 u = Ref19.ulp(n.e);
         uint256 m = n.m;
         if (u % 2 != 0) {
             m <<= 1;
@@ -158,12 +158,12 @@ contract FuzzProofs is Test {
         uint256 y = LongDiv.isqrt(nh, nl);
         (uint256 sh, uint256 sl) = Wide.umul(y, y);
         bool sticky = sh != nh || sl != nl;
-        return Ref256.toFloat(0, 0, y, sticky, (u - 242) / 2, Ref256.NEAREST);
+        return Ref19.toFloat(0, 0, y, sticky, (u - 242) / 2, Ref19.NEAREST);
     }
 
-    function checkSqrt256(int256 x) internal view {
-        (bytes4 se, int256 sr) = refSqrt256(x);
-        try l256.sqrt(x) returns (int256 r) {
+    function checkSqrt19(int256 x) internal view {
+        (bytes4 se, int256 sr) = refSqrt19(x);
+        try l19.sqrt(x) returns (int256 r) {
             assertEq(se, bytes4(0), "sqrt returned where the spec reverts");
             assertEq(r, sr, "sqrt is not the correctly rounded root");
         } catch (bytes memory err) {
@@ -171,18 +171,18 @@ contract FuzzProofs is Test {
         }
     }
 
-    /// FP256 sqrt on random words: every exponent, both signs, non-numbers.
-    function testFuzz_fp256_sqrt(int256 x) public view {
-        checkSqrt256(x);
+    /// FP19 sqrt on random words: every exponent, both signs, non-numbers.
+    function testFuzz_fp19_sqrt(int256 x) public view {
+        checkSqrt19(x);
     }
 
-    /// FP256 sqrt next to exact squares, where a root lies near a rounding
+    /// FP19 sqrt next to exact squares, where a root lies near a rounding
     /// boundary: (y^2 + d) as a number, y up to 118 bits, d in [-2, 2].
-    function testFuzz_fp256_sqrt_near_squares(uint256 y, uint256 sy, int8 d) public view {
+    function testFuzz_fp19_sqrt_near_squares(uint256 y, uint256 sy, int8 d) public view {
         y = spread(y >> 138, sy) | 1;
         (, uint256 sq) = Wide.umul(y, y);
         int256 dd = int256(d) % 3;
         uint256 v = dd < 0 && sq < uint256(-dd) ? sq : uint256(int256(sq) + dd);
-        checkSqrt256(FP256Lib.fromUint(v));
+        checkSqrt19(FP19Lib.fromUint(v));
     }
 }

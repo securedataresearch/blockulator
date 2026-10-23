@@ -6,7 +6,7 @@
 Writes the home page's accrual chart (correct digits against days without an update, from
 docs/benchmarks/ladder.json) as an SVG for each GitHub theme, and rewrites the README between
 its <!-- name:begin --> / <!-- name:end --> markers: the badges, the "correct to the last wei"
-table (wad.json) and the gas-with-digits table (gas.json, gas256.json). Our libraries come
+table (wad.json) and the gas-with-digits table (gas.json, gas19.json). Our libraries come
 first in every table. Stdlib only.
 """
 import glob
@@ -24,19 +24,19 @@ REPO = "securedataresearch/blockulator"
 
 # precision at 1, as the site's pitch table (templates/components.html pitch)
 # precision at 1, in decimal digits; floating point first, then fixed point
-DIGITS = {"fp256": 71, "quad": 34, "fp127": 38, "abdk": 19, "prb": 18, "prbud": 18, "solady": 18, "solmate": 18,
+DIGITS = {"fp19": 71, "quad": 34, "fp127": 38, "abdk": 19, "prb": 18, "prbud": 18, "solady": 18, "solmate": 18,
           "balancer": 18, "snekmate": 18, "oz": 18}
-NAMES = {"fp256": "FP256", "fp127": "FP127", "quad": "ABDKMathQuad", "abdk": "ABDKMath64x64", "prb": "PRBMath SD59x18",
+NAMES = {"fp19": "FP19", "fp127": "FP127", "quad": "ABDKMathQuad", "abdk": "ABDKMath64x64", "prb": "PRBMath SD59x18",
          "prbud": "PRBMath UD60x18", "solady": "Solady", "solmate": "Solmate", "balancer": "Balancer LogExpMath",
          "snekmate": "snekmate", "oz": "OpenZeppelin Math"}
-FLOAT, FIXED = ("fp256", "quad"), ("fp127", "abdk", "prb", "prbud", "solady", "solmate", "balancer", "snekmate", "oz")
+FLOAT, FIXED = ("fp19", "quad"), ("fp127", "abdk", "prb", "prbud", "solady", "solmate", "balancer", "snekmate", "oz")
 OPS = ["add", "mul", "div", "exp", "ln", "pow", "sqrt"]
 
 # the site's family colours (static/css/site.css), light and dark
 THEMES = {
-    "light": dict(text="#1b1c1c", strong="#0b0c0c", faint="#5f615e", grid="#e3e4e0", fp127="#00694e", fp256="#0b0c0c",
+    "light": dict(text="#1b1c1c", strong="#0b0c0c", faint="#5f615e", grid="#e3e4e0", fp127="#00694e", fp19="#0b0c0c",
                   quad="#8a4f7d", wad="#8f8750", warn="#c4402c", bg="#ffffff"),
-    "dark": dict(text="#e2e3df", strong="#f6f6f3", faint="#9a9d97", grid="#2a2e33", fp127="#43b592", fp256="#f6f6f3",
+    "dark": dict(text="#e2e3df", strong="#f6f6f3", faint="#9a9d97", grid="#2a2e33", fp127="#43b592", fp19="#f6f6f3",
                  quad="#d08ac0", wad="#d3c68a", warn="#ff7a5c", bg="#0d1117"),
 }
 
@@ -64,8 +64,8 @@ def chart(theme):
     font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
     o = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" font-family="{font}">']
     o.append("<defs>" + "".join(
-        f'<linearGradient id="g{k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{c[k]}" stop-opacity="{.10 if k == "fp256" else .22}"/>'
-        f'<stop offset="1" stop-color="{c[k]}" stop-opacity="0"/></linearGradient>' for k in ("fp256", "fp127", "warn")) + "</defs>")
+        f'<linearGradient id="g{k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{c[k]}" stop-opacity="{.10 if k == "fp19" else .22}"/>'
+        f'<stop offset="1" stop-color="{c[k]}" stop-opacity="0"/></linearGradient>' for k in ("fp19", "fp127", "warn")) + "</defs>")
     o.append(f'<text x="{L}" y="22" font-size="17" font-weight="600" fill="{c["strong"]}">Leave a market alone and its interest goes wrong</text>')
     o.append(f'<text x="{L}" y="40" font-size="12.5" fill="{c["faint"]}">Correct digits of $10,000 at 5% APR, accrued in one step after N days without an update</text>')
     for g in (0, 18, 36, 54, 72):
@@ -99,9 +99,9 @@ def chart(theme):
     o.append(f'<circle cx="{yr[0]}" cy="{yr[1]}" r="4.5" fill="{c["warn"]}" stroke="{c["bg"]}" stroke-width="2"/>'
              f'<text x="{yr[0] - 8}" y="{yr[1] + 19}" font-size="12.5" font-weight="600" text-anchor="end" fill="{c["warn"]}">{floor(yr[2])} digits after a year</text>')
     labels.append((lo[-1][1], f"Aave, Morpho {floor(lo[-1][2])}", c["warn"]))
-    for f, name in (("quad", "binary128"), ("fp127", "FP127"), ("fp256", "FP256")):
+    for f, name in (("quad", "binary128"), ("fp127", "FP127"), ("fp19", "FP19")):
         s, _ = series([f])
-        ours = f in ("fp127", "fp256")
+        ours = f in ("fp127", "fp19")
         if ours:
             o.append(f'<polygon points="{pts(s)} {L + pw},{T + ph} {L},{T + ph}" fill="url(#g{f})"/>')
         dash = '' if ours else ' stroke-dasharray="4 2"'
@@ -127,8 +127,8 @@ def median(g, op, form):
 
 
 def gas_block():
-    g127, g256 = load(B / "gas.json"), load(B / "gas256.json")
-    src = {"fp256": (g256, "lib"), "quad": (g256, "quad")} | {l: (g127, "lib" if l == "fp127" else l) for l in FIXED}
+    g127, g19 = load(B / "gas.json"), load(B / "gas19.json")
+    src = {"fp19": (g19, "lib"), "quad": (g19, "quad")} | {l: (g127, "lib" if l == "fp127" else l) for l in FIXED}
     m = {lib: {op: median(g, op, f) for op in OPS} for lib, (g, f) in src.items()}
     m = {lib: v for lib, v in m.items() if any(v.values())}
     typ = {op for op in OPS if "typical" in g127["ops"][op]}
@@ -137,7 +137,7 @@ def gas_block():
     for group, libs in (("floating point", FLOAT), ("fixed point", FIXED)):
         rows.append(f"| *{group}* |" + " |" * (len(OPS) + 1))
         for lib in (l for l in libs if l in m):
-            ours = lib in ("fp256", "fp127")
+            ours = lib in ("fp19", "fp127")
             b = (lambda s: f"**{s}**") if ours else (lambda s: s)
             cells = [b(f"{m[lib][op]:,}") if m[lib][op] is not None else "" for op in OPS]
             rows.append(f"| {b(NAMES[lib])} | {b(str(DIGITS[lib]))} | " + " | ".join(cells) + " |")
@@ -156,11 +156,11 @@ def gas_block():
     mostly = [f"{NAMES[l]} on {code(won('fp127', l))}" for l in others
               if won("fp127", l) != shared("fp127", l) and 2 * len(won("fp127", l)) > len(shared("fp127", l))]
     cheaper = [NAMES[l] for l in others if 2 * len(won("fp127", l)) <= len(shared("fp127", l))]
-    common = shared("fp256", "quad")
-    mean = {l: sum(m[l][op] for op in common) / len(common) for l in ("fp256", "quad")}
+    common = shared("fp19", "quad")
+    mean = {l: sum(m[l][op] for op in common) / len(common) for l in ("fp19", "quad")}
     text = (f"Median gas per inline call, over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder; digits are precision at 1. "
-            f"FP256 is cheaper than ABDKMathQuad on {wins('fp256', 'quad')}, and over these {len(common)} ops carries "
-            f"{DIGITS['fp256'] / DIGITS['quad']:.1f}× its digits at {round(100 * mean['fp256'] / mean['quad'])}% of its mean gas. "
+            f"FP19 is cheaper than ABDKMathQuad on {wins('fp19', 'quad')}, and over these {len(common)} ops carries "
+            f"{DIGITS['fp19'] / DIGITS['quad']:.1f}× its digits at {round(100 * mean['fp19'] / mean['quad'])}% of its mean gas. "
             f"FP127 carries twice the digits of every fixed-point library here; it is cheaper than {say(always)} on every op they share"
             + (f", and than {', and than '.join(mostly)}" if mostly else "") + ". "
             + (f"{say(cheaper)} {'are' if len(cheaper) > 1 else 'is'} cheaper on most ops, at 18 digits; Solady's `add` is the unchecked `rawAdd`." if cheaper else ""))

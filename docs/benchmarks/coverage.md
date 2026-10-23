@@ -1,6 +1,6 @@
 # Comparison coverage
 
-Every function of every comparison library, from the source in `lib/` and `contracts/src/ladder/vendor/`, mapped to the FP127 or FP256 op it computes, or listed as not compared with the reason. The gas harnesses are `test/fp127/GasLadder.t.sol` (`make bench` → [gas.md](gas.md), gas.json) and `test/fp256/GasLadder.t.sol` (`make bench-fp256` → [gas256.md](gas256.md), gas256.json). The exact call behind each cell is `CALLS` in `scripts/fp127/gas_to_json.py`, written to gas.json as `calls`. The bench fails if a measured cell has no `CALLS` entry, or an entry has no cell.
+Every function of every comparison library, from the source in `lib/` and `contracts/src/ladder/vendor/`, mapped to the FP127 or FP19 op it computes, or listed as not compared with the reason. The gas harnesses are `test/fp127/GasLadder.t.sol` (`make bench` → [gas.md](gas.md), gas.json) and `test/fp19/GasLadder.t.sol` (`make bench-fp19` → [gas19.md](gas19.md), gas19.json). The exact call behind each cell is `CALLS` in `scripts/fp127/gas_to_json.py`, written to gas.json as `calls`. The bench fails if a measured cell has no `CALLS` entry, or an entry has no cell.
 
 Versions: Solady v0.1.26, PRBMath v4.2.0 (SD59x18 and UD60x18), ABDK v3.2, Balancer LogExpMath from balancer-v3-monorepo@2b9ce4b1b8ad (vendored), Solmate main@89365b8, OpenZeppelin Contracts v5.7.0 (vendored), Uniswap v4-core v4.0.0 FullMath (vendored), snekmate v0.1.2 (Vyper 0.4.3).
 
@@ -28,7 +28,7 @@ The bar is an established library: published, with tagged releases, maintained, 
 
 **What a cell means.** A number is the median gas over the op's input ladder. An empty cell means the library does not offer the op, and only that. `rev` means the library offers the op but reverted on every ladder input, or every input was outside the function's domain or format. In gas.json, `ops[op].reverts[form]` counts such inputs per form; the medians leave them out. After this audit no `rev` cell remains: every function benched computes on at least part of its op's ladder.
 
-**Which table.** FP127's table compares the WAD libraries (Solady, PRBMath SD59x18 and UD60x18, Balancer, Solmate, OpenZeppelin, Uniswap FullMath, snekmate), 64.64 and binary128. The five added with issue #166 have their entry points in `test/fp127/GasLibs.sol`. FP256's table compares binary128, the other float, and FP127Lib on the same value. The WAD and 64.64 libraries are not repeated on FP256's table: every op they share with FP256 is also an FP127 op, so it is compared there.
+**Which table.** FP127's table compares the WAD libraries (Solady, PRBMath SD59x18 and UD60x18, Balancer, Solmate, OpenZeppelin, Uniswap FullMath, snekmate), 64.64 and binary128. The five added with issue #166 have their entry points in `test/fp127/GasLibs.sol`. FP19's table compares binary128, the other float, and FP127Lib on the same value. The WAD and 64.64 libraries are not repeated on FP19's table: every op they share with FP19 is also an FP127 op, so it is compared there.
 
 **Statuses.**
 - compared: benched before this audit, on the same function.
@@ -38,7 +38,7 @@ The bar is an established library: published, with tagged releases, maintained, 
 - variant: the same function as a benched one (an unchecked twin, an unsigned overload, an alias), not benched again.
 - none: no FP op computes the same function; see "Not compared" below.
 
-Conversions into each library's representation happen once, outside the timed window. They are: WAD = `FP127Lib.toFixed18`; 64.64 = `x >> 64` (REV where it does not fit int128); binary128 = `ABDKMathQuad.from128x128` on FP127's table, and on FP256's a direct repacking of the FP256 word (sign, rebiased exponent, fraction truncated to 112 bits).
+Conversions into each library's representation happen once, outside the timed window. They are: WAD = `FP127Lib.toFixed18`; 64.64 = `x >> 64` (REV where it does not fit int128); binary128 = `ABDKMathQuad.from128x128` on FP127's table, and on FP19's a direct repacking of the FP19 word (sign, rebiased exponent, fraction truncated to 112 bits).
 
 ## Solady FixedPointMathLib (78 functions, counting overloads)
 
@@ -95,8 +95,8 @@ Conversions into each library's representation happen once, outside the timed wi
 | `uncheckedAdd`, `uncheckedSub`, `uncheckedUnary` | add, sub, neg | no | variant: the unchecked twins |
 | `and`, `and2`, `or`, `xor`, `not`, `lshift`, `rshift` | | no | none |
 | `mod` | | no | none |
-| `eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `isZero` | | no | none (FP127 table); not compared on the FP256 table |
-| `convert(int256)`, `convert(SD59x18)` | | no | none (FP127 table); not compared on the FP256 table |
+| `eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `isZero` | | no | none (FP127 table); not compared on the FP19 table |
+| `convert(int256)`, `convert(SD59x18)` | | no | none (FP127 table); not compared on the FP19 table |
 | `intoInt256`, `intoSD1x18`, `intoSD21x18`, `intoUD2x18`, `intoUD21x18`, `intoUD60x18`, `intoUint256`, `intoUint128`, `intoUint40`, `sd`, `sd59x18`, `unwrap`, `wrap` | | no | none |
 
 17 compared, 4 new (2 of them fixed), 3 variants, 30 none; `powu` is domain-limited.
@@ -122,16 +122,16 @@ Conversions into each library's representation happen once, outside the timed wi
 | `add`, `sub`, `mul`, `div`, `neg`, `abs`, `sqrt`, `ln`, `exp` | the same names | yes, both tables | compared |
 | `log_2` | log2 | yes, both tables | compared |
 | `pow_2` | exp2 | yes, both tables | compared |
-| (`div(fromUInt(1), x)`) | inv | yes, both tables | composed; new on FP256's table |
+| (`div(fromUInt(1), x)`) | inv | yes, both tables | composed; new on FP19's table |
 | (`exp(mul(y, ln(x)))`) | pow | yes, both tables | composed |
 | `sign` | sign | yes, both tables | new |
-| `cmp` | cmp (FP256); also `lt` as `cmp(a, b) < 0`, composed | yes, FP256 | new |
-| `eq` | eq (FP256) | yes, FP256 | new |
-| `toUInt` | toUintDown (FP256) | yes, FP256 | new: truncates, which is floor on the ladder's non-negative inputs |
-| `toInt` | toIntDown (FP256) | yes, FP256 | new, domain x ≥ 0: truncation is floor only there |
-| `fromUInt` | fromUintDown (FP256) | yes, FP256 | new: truncates the significand, which is FP256's `fromUintDown`, not its rounding `fromUint` |
-| `from128x128` | fromFP127 (FP256) | yes, FP256 | new: truncates where FP256 rounds to nearest; on FP127's table it is the input conversion |
-| `to128x128` | toFP127 (FP256) | yes, FP256 | new: truncates where FP256 rounds to nearest |
+| `cmp` | cmp (FP19); also `lt` as `cmp(a, b) < 0`, composed | yes, FP19 | new |
+| `eq` | eq (FP19) | yes, FP19 | new |
+| `toUInt` | toUintDown (FP19) | yes, FP19 | new: truncates, which is floor on the ladder's non-negative inputs |
+| `toInt` | toIntDown (FP19) | yes, FP19 | new, domain x ≥ 0: truncation is floor only there |
+| `fromUInt` | fromUintDown (FP19) | yes, FP19 | new: truncates the significand, which is FP19's `fromUintDown`, not its rounding `fromUint` |
+| `from128x128` | fromFP127 (FP19) | yes, FP19 | new: truncates where FP19 rounds to nearest; on FP127's table it is the input conversion |
+| `to128x128` | toFP127 (FP19) | yes, FP19 | new: truncates where FP19 rounds to nearest |
 | `fromInt`, `from64x64`, `to64x64`, `fromOctuple`, `toOctuple`, `fromDouble`, `toDouble`, `isNaN`, `isInfinity` | | no | none |
 | `mostSignificantBit` | | | private |
 
@@ -226,9 +226,9 @@ The `mul` and `div` cells are removed. They measured Solidity's `a * b / 1e18` a
 
 Their accrual maths (Aave `MathUtils`, Morpho `MathLib`, Maker `rpow`) is transcribed for the ladder only. No op table claims to cover them, and they are not on the gas tables.
 
-## FP127Lib on FP256's table
+## FP127Lib on FP19's table
 
-FP256's table shows the same op in FP127Lib on the same value. These ops were missing from that column, though FP127 has them, and are now benched: `floor`, `ceil`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `divDown`, `divUp`, `powu` and `compound` (FP127 takes n << 128 where FP256 takes the plain integer), and `fromFixed18` (the raw WAD had been routed through `toFP127`).
+FP19's table shows the same op in FP127Lib on the same value. These ops were missing from that column, though FP127 has them, and are now benched: `floor`, `ceil`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `divDown`, `divUp`, `powu` and `compound` (FP127 takes n << 128 where FP19 takes the plain integer), and `fromFixed18` (the raw WAD had been routed through `toFP127`).
 
 The 12 cells still empty there are ops FP127 does not have: `cmp`, `lt`, `eq` (a 127.128 word compares as an int256), `fromUint`, `fromUintDown`, `fromUintUp`, `toUintDown`, `toUintUp`, `toIntDown`, `toIntUp`, `fromFP127`, `toFP127`.
 
@@ -248,16 +248,16 @@ One line per function or group, on why no FP op computes the same function.
 - **PRBMath `and`, `and2`, `or`, `xor`, `not`, `lshift`, `rshift`, `mod`:** bitwise and remainder operations on the raw word; no op.
 - **PRBMath `eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `isZero`:**
   - FP127 table: FP127 has no comparison ops, because a 127.128 word compares as an int256, exactly as an SD59x18 does.
-  - FP256 table: FP256's `cmp`, `lt` and `eq` are not compared against PRBMath. That table compares only binary128, the other float, and FP127Lib. FP256's comparisons are measured against Quad's `cmp` and `eq` there.
+  - FP19 table: FP19's `cmp`, `lt` and `eq` are not compared against PRBMath. That table compares only binary128, the other float, and FP127Lib. FP19's comparisons are measured against Quad's `cmp` and `eq` there.
 - **PRBMath `convert(int256)`, `convert(SD59x18)`:** integer ↔ SD59x18, ×1e18 and ÷1e18 toward zero.
   - FP127 table: FP127 has no integer conversions (a shift does it).
-  - FP256 table: not compared, for the same reason as the comparisons. FP256's `fromUint` and `toInt*` are compared against Quad there.
+  - FP19 table: not compared, for the same reason as the comparisons. FP19's `fromUint` and `toInt*` are compared against Quad there.
 - **PRBMath casts (`intoInt256` … `wrap`):** type conversions with range checks, no arithmetic.
-- **ABDK 64.64 `fromInt`, `toInt`, `fromUInt`, `toUInt`, `from128x128`, `to128x128`:** conversions into and out of 64.64 itself. FP127 has none of these (its integer conversions are shifts), and 64.64 is not on FP256's table.
+- **ABDK 64.64 `fromInt`, `toInt`, `fromUInt`, `toUInt`, `from128x128`, `to128x128`:** conversions into and out of 64.64 itself. FP127 has none of these (its integer conversions are shifts), and 64.64 is not on FP19's table.
 - **ABDK 64.64 `muli`, `mulu`, `divi`, `divu`:** 64.64 × integer → integer, and integer ÷ integer → 64.64; no op mixes the two representations.
-- **ABDKMathQuad `fromInt`:** signed integer → binary128. FP256 has only `fromUint` (and its Down/Up), and Quad's `fromUInt` is compared against `fromUintDown`.
+- **ABDKMathQuad `fromInt`:** signed integer → binary128. FP19 has only `fromUint` (and its Down/Up), and Quad's `fromUInt` is compared against `fromUintDown`.
 - **ABDKMathQuad `from64x64`, `to64x64`, `fromOctuple`, `toOctuple`, `fromDouble`, `toDouble`:** conversions to formats no FP library has.
-- **ABDKMathQuad `isNaN`, `isInfinity`:** FP127 and FP256 have no NaN or infinity; they revert instead.
+- **ABDKMathQuad `isNaN`, `isInfinity`:** FP127 and FP19 have no NaN or infinity; they revert instead.
 
 ## Ops no library offers
 
@@ -265,7 +265,7 @@ These are empty on every competitor column, and correctly so:
 
 - Both tables: `exp10`, `hypot`, `round`, `compound`, `lambertWm1` (Solady has W₀ only), `log1p`, `expm1`, `sinh`, `cosh`, `tanh`, `atanh`, `erf`, `erfc`, `normCdf`.
 - FP127 table: the conversions `fromFixed18`, `toFixed18`, `toFixed18Down`, `toFixed18Up`. A WAD library is natively 18-decimal.
-- FP256 table, Quad column: all of the above (the fixed-18 conversions included), plus `lambertW0`, `cbrt`, `log10`, `log2Up`, `gavg`, `avg`, `min`, `max`, `clamp`, `dist`, `zeroFloorSub`, `lerp`, `floor`, `ceil`, `frac`, `factorial`, the directed `mulDown`, `mulUp`, `divDown`, `divUp`, `powu`, `fromUint`, `fromUintUp`, `toUintUp`, `toIntUp`.
+- FP19 table, Quad column: all of the above (the fixed-18 conversions included), plus `lambertW0`, `cbrt`, `log10`, `log2Up`, `gavg`, `avg`, `min`, `max`, `clamp`, `dist`, `zeroFloorSub`, `lerp`, `floor`, `ceil`, `frac`, `factorial`, the directed `mulDown`, `mulUp`, `divDown`, `divUp`, `powu`, `fromUint`, `fromUintUp`, `toUintUp`, `toIntUp`.
 
 ## Precision comparisons
 
@@ -281,7 +281,7 @@ These are empty on every competitor column, and correctly so:
 | table | cells | empty before | empty after | rev |
 |---|---:|---:|---:|---:|
 | FP127 (site columns: Yul, FP127Lib and the five libraries) | 357 → 371 (`clamp`, `lerp` added) | 186 | 181 | 0 |
-| FP256 (object, FP256Lib, FP127Lib, Quad) | 260 | 76 | 55 | 0 |
+| FP19 (object, FP19Lib, FP127Lib, Quad) | 260 | 76 | 55 | 0 |
 
 Issue #166 added five columns to FP127's table (53 ops each): Solmate 11 cells, OpenZeppelin 11, Uniswap FullMath 4, PRBMath UD60x18 18, snekmate 10. None is `rev`.
 
