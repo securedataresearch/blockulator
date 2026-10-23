@@ -1,4 +1,4 @@
-.PHONY: home-data gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp19 predict-fp19 deploy-fp19-sepolia verify-fp19-sepolia smoke-fp19-sepolia bench-fp19 precision-report-fp19 gen-fp19 vectors-fp19 size-fp19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
+.PHONY: rates-verify home-data gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp19 predict-fp19 deploy-fp19-sepolia verify-fp19-sepolia smoke-fp19-sepolia bench-fp19 precision-report-fp19 gen-fp19 vectors-fp19 size-fp19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
 
 PY := uv run
 
@@ -10,6 +10,7 @@ endif
 
 BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
 SEPOLIA_RPC ?= https://ethereum-sepolia-rpc.publicnode.com
+MAINNET_RPC ?= https://ethereum-rpc.publicnode.com
 
 help:
 	@echo "  make gates            - Run every merge gate and print one line each (OPS=a,b sweeps only those ops; QUICK=1 skips the sweep); logs in cache/gates/"
@@ -41,6 +42,7 @@ help:
 	@echo "  make accrual-deployed - Aave v3 / Morpho Blue accrual as deployed vs a 200-digit truth -> docs/benchmarks/accrual-deployed.{json,md}"
 	@echo "  make accrual-verify   - (network) recompile the pinned Aave/Morpho sources, compare runtime bytecode to mainnet"
 	@echo "  make accrual-survey   - (network) refresh scripts/accrual/survey.json from mainnet at the current block"
+	@echo "  make rates-verify     - (network) LadderFraxlend / LadderEuler against the deployed rate models, on a mainnet fork"
 	@echo "  make sweep            - random-input accuracy of every FP127/FP19 op vs correctly rounded truth -> docs/benchmarks/sweep.{json,md}"
 	@echo "  make sweep OPS=a,b    - only those ops (both libraries, both passes); their rows replace the recorded ones"
 	@echo "  make wad              - BlockulatorWad beside Solady and PRBMath on the same inputs: wei error, gas, bytes -> docs/benchmarks/wad.{json,md}"
@@ -209,6 +211,11 @@ accrual-verify: accrual-submodules
 accrual-survey:
 	@$(PY) scripts/accrual/survey.py
 
+# (network) LadderFraxlend and LadderEuler against the deployed FraxLend rate
+# contract and pair and an Euler v2 IRMAdaptiveCurve, on a mainnet fork
+rates-verify: build
+	@forge test --match-contract "^DeployedRates$$" --fork-url $(MAINNET_RPC) -vv
+
 # Replays. Each exploit's deployed arithmetic, bit-exact from integers pinned out of
 # the attack transaction (scripts/replays/*.json), then the same step under the
 # protocol's own fix, FP127, FP19 and exact rationals. Offline; *-fetch re-pins.
@@ -318,7 +325,7 @@ deploy-ladder-sepolia: build
 	@$(PY) scripts/ladder/deploy.py record $(SEPOLIA_RPC)
 
 verify-ladder-sepolia: build
-	@set -e; for c in LadderFP127 LadderFP127Lib LadderABDK LadderSolady LadderPRB LadderQuad LadderBalancer LadderAave LadderMorpho LadderMaker LadderFP19 LadderSolmate LadderOZ LadderUniswap LadderPRBUD; do \
+	@set -e; for c in LadderFP127 LadderFP127Lib LadderABDK LadderSolady LadderPRB LadderQuad LadderBalancer LadderAave LadderMorpho LadderMaker LadderFP19 LadderSolmate LadderOZ LadderUniswap LadderPRBUD LadderFraxlend LadderEuler; do \
 		A=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['$$c']['address'])"); \
 		echo "== $$c $$A"; \
 		forge verify-contract --chain sepolia --verifier sourcify --watch $$A contracts/src/ladder/$$c.sol:$$c || true; \
@@ -326,7 +333,7 @@ verify-ladder-sepolia: build
 	done; \
 	A=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderRunner']['address'])"); \
 	ARGS=$$($(PY) python -c "import json;d=json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderRunner']['constructorArgs'];print('[' + ','.join(d) + ']')"); \
-	ENC=$$(cast abi-encode "f(address[16])" $$ARGS); \
+	ENC=$$(cast abi-encode "f(address[18])" $$ARGS); \
 	S=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderSnekmate']['address'])"); \
 	M=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['SnekmateMath']['address'])"); \
 	echo "== LadderSnekmate $$S (SnekmateMath $$M is Vyper: verify it on Sourcify from contracts/src/ladder/vyper/SnekmateMath.vy, vyper 0.4.3)"; \

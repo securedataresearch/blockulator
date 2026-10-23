@@ -26,14 +26,16 @@ library Scenario {
     uint8 constant ACCRUAL_CONTINUOUS = 10;
     uint8 constant DEEP_TAIL_OPTION = 11;
     uint8 constant DECAY = 12;
-    uint8 constant COUNT = 13;
+    uint8 constant ADAPTIVE_RATE = 13;
+    uint8 constant COUNT = 14;
 }
 
 /// @notice Library (form) ids, in the order of LadderRunner's constructor.
 ///         Ids 0 to 4 are the v4 runner's and keep their numbers; 5 to 9 were
 ///         added with the v5 runner, 10 (FP19, the float) with v6, 11 to 15
 ///         (Solmate, OpenZeppelin, Uniswap FullMath, PRBMath UD60x18,
-///         snekmate) with v12.
+///         snekmate) with v12, and 16 and 17 (the FraxLend and Euler v2
+///         adaptive rate models) in the same v12 runner, before its deploy.
 library Form {
     uint8 constant FP127 = 0;
     uint8 constant FP127LIB = 1;
@@ -51,7 +53,9 @@ library Form {
     uint8 constant UNISWAP = 13;
     uint8 constant PRBUD = 14;
     uint8 constant SNEKMATE = 15;
-    uint8 constant COUNT = 16;
+    uint8 constant FRAXLEND = 16;
+    uint8 constant EULER = 17;
+    uint8 constant COUNT = 18;
 }
 
 /// @notice One-shot op ids for the edges dataset (scripts/ladder/edges.json).

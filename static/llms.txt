@@ -89,10 +89,10 @@ and 2.0 (FP127 v4, FP19 v3) stay live on Sepolia.
 
 ## The precision claim, as data
 
-- /data/ladder.json: thirteen iterated scenarios (daily compounding, an
-  amortising loan, exp(ln(x)) round trips, ...), 87 inputs in all, through
+- /data/ladder.json: fourteen iterated scenarios (daily compounding, an
+  amortising loan, exp(ln(x)) round trips, ...), 98 inputs in all, through
   FP127, FP127Lib, ABDKMath64x64, Solady, PRBMath, ABDKMathQuad, Balancer,
-  Aave, Morpho, Maker and FP19 for N in 1..10000.
+  Aave, Morpho, Maker, FraxLend, Euler v2 and FP19 for N in 1..10000.
   Every cell carries the decoded value, correct significant digits against
   the exact truth (digits) and against the truth from the parameters as the
   library received them (digitsFormat, the arithmetic alone), the signed

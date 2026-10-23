@@ -5,11 +5,11 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Nineteen contracts, salt "FP127 ladder v12": SnekmateMath (the Vyper build of
+Twenty-one contracts, salt "FP127 ladder v12": SnekmateMath (the Vyper build of
 snekmate's math module, out/vyper/SnekmateMath.json from scripts/ladder/vyper.py),
-the sixteen adapters (no constructor arguments, except LadderSnekmate, which
+the eighteen adapters (no constructor arguments, except LadderSnekmate, which
 takes SnekmateMath's address), LadderRunner and EdgeRunner (constructor = the
-sixteen adapter addresses as one array, in form-id order, so their init code
+eighteen adapter addresses as one array, in form-id order, so their init code
 depends on them). Each transaction is sent with the node's
 own gas estimate plus 25%, because Sepolia's code-deposit pricing is not
 what forge's local EVM models (see contracts/deployments/FP127.md).
@@ -35,7 +35,8 @@ SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
             "LadderQuad", "LadderBalancer", "LadderAave", "LadderMorpho", "LadderMaker", "LadderFP19",
-            "LadderSolmate", "LadderOZ", "LadderUniswap", "LadderPRBUD", "LadderSnekmate"]
+            "LadderSolmate", "LadderOZ", "LadderUniswap", "LadderPRBUD", "LadderSnekmate",
+            "LadderFraxlend", "LadderEuler"]
 # Vyper contracts the adapters call, deployed first: name -> the adapter that takes its address
 VYPER = {"SnekmateMath": "LadderSnekmate"}
 RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"

@@ -16,6 +16,8 @@
   {"id": "uniswap", "label": "Uniswap", "short": "Uniswap", "long": "Uniswap v4 FullMath (mulDiv), WAD", "kind": "fixed", "family": "wad", "digits": 18},
   {"id": "maker", "label": "Maker", "short": "Maker", "long": "Maker rpow, RAY", "kind": "fixed", "family": "protocol", "digits": 27},
   {"id": "aave", "label": "Aave", "short": "Aave", "long": "Aave v3 MathUtils, RAY", "kind": "fixed", "family": "protocol", "digits": 27},
-  {"id": "morpho", "label": "Morpho", "short": "Morpho", "long": "Morpho Blue MathLib, WAD", "kind": "fixed", "family": "protocol", "digits": 18}
+  {"id": "morpho", "label": "Morpho", "short": "Morpho", "long": "Morpho Blue MathLib, WAD", "kind": "fixed", "family": "protocol", "digits": 18},
+  {"id": "fraxlend", "label": "FraxLend", "short": "Frax", "long": "FraxLend VariableInterestRate V2, 18 decimals", "kind": "fixed", "family": "protocol", "digits": 18},
+  {"id": "euler", "label": "Euler v2", "short": "Euler", "long": "Euler v2 IRMAdaptiveCurve (ExpLib.wExp), WAD", "kind": "fixed", "family": "protocol", "digits": 18}
  ]
 }

@@ -2,7 +2,7 @@
  "generated": "2026-10-23",
  "description": "Edges: one-shot evaluations at the ends of each library's domain, every probe through every library in its native representation, against mpmath at 200 digits. See methodology.",
  "versions": {
-  "fp127": "fc19340",
+  "fp127": "e0546fb",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -10,6 +10,8 @@
   "balancer": "balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored)",
   "aave": "aave-v3-origin@8305565ae342 (MathUtils, transcribed)",
   "morpho": "morpho-blue@8e26ca6a8dbc (MathLib, transcribed)",
+  "fraxlend": "fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed)",
+  "euler": "evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed)",
   "maker": "dss pot.sol rpow via solady v0.1.26",
   "solmate": "solmate@89365b8 (no tag: v6 predates SignedWadMath)",
   "openzeppelin": "openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored)",
@@ -80,6 +82,14 @@
   },
   {
    "id": "snekmate",
+   "scale": "10**18"
+  },
+  {
+   "id": "fraxlend",
+   "scale": "10**18"
+  },
+  {
+   "id": "euler",
    "scale": "10**18"
   }
  ],
@@ -284,6 +294,18 @@
        "raw": "999999500000",
        "gas": 2124,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -467,6 +489,18 @@
        "raw": "999999999",
        "gas": 2124,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -650,6 +684,18 @@
        "raw": "999999",
        "gas": 2124,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -833,6 +879,18 @@
        "raw": "1000",
        "gas": 2124,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -1016,6 +1074,18 @@
        "raw": "1",
        "gas": 2124,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -1193,6 +1263,18 @@
        "raw": "-1000000",
        "gas": 2124,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -1370,6 +1452,18 @@
        "raw": "-41446531673892822313",
        "gas": 1962,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -1517,6 +1611,18 @@
        "raw": "0",
        "gas": 961,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -1691,6 +1797,18 @@
        "raw": "69077552789821370520",
        "gas": 2151,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -1865,6 +1983,18 @@
        "raw": "87498233533773735992",
        "gas": 2133,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -2053,6 +2183,18 @@
        "raw": "999999999999000000",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -2230,6 +2372,18 @@
        "raw": "2061153622",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -2407,6 +2561,18 @@
        "raw": "93576",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -2584,6 +2750,18 @@
        "raw": "4",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -2761,6 +2939,18 @@
        "raw": "1",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -2932,6 +3122,18 @@
        "raw": "0",
        "gas": 969,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -3103,6 +3305,18 @@
        "raw": "0",
        "gas": 969,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -3274,6 +3488,18 @@
        "raw": "0",
        "gas": 969,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -3445,6 +3671,18 @@
        "raw": "0",
        "gas": 969,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -3616,6 +3854,18 @@
        "raw": "0",
        "gas": 969,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -3787,6 +4037,18 @@
        "raw": "0",
        "gas": 969,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -3970,6 +4232,18 @@
        "raw": "235385266837019985409374931825370535",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -4153,6 +4427,18 @@
        "raw": "4727839468229346561476271316686959161",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -4330,6 +4616,18 @@
        "raw": "12851600114359308275931302861800918186",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -4507,6 +4805,18 @@
        "raw": "114200738981568428366176473371620511594354577",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -4684,6 +4994,18 @@
        "raw": "165163625499400185553676606829675029973668257478519643361",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -4849,6 +5171,18 @@
        "raw": "448961281917434524631091435653736176385156479894731616726",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -5014,6 +5348,18 @@
        "raw": "26881171418161354484134666106240937146178367581647816351662017",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -5179,6 +5525,18 @@
        "raw": "287264955081783193327403347555514383157113488939382447102645775605944385846",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -5326,6 +5684,18 @@
        "raw": "42633899483147210448887772317336192801187663480172483689104239327535544924126",
        "gas": 1463,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -5455,6 +5825,18 @@
        "reason": "0x08c379a0",
        "reasonName": "Error(string): a require with a message (Solmate's wadLn and snekmate's wad_ln below zero)",
        "unsupported": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -5655,6 +6037,18 @@
        "raw": "1000000000000000",
        "gas": 1418,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -5844,6 +6238,18 @@
        "raw": "1000000000000",
        "gas": 1390,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -6033,6 +6439,18 @@
        "raw": "1000000000",
        "gas": 1418,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -6222,6 +6640,18 @@
        "raw": "0",
        "gas": 1362,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -6411,6 +6841,18 @@
        "raw": "0",
        "gas": 1362,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -6591,6 +7033,18 @@
        "raw": "1000000000000000000000000000000000",
        "gas": 1446,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -6771,6 +7225,18 @@
        "raw": "1000000000000000000000000000000000000",
        "gas": 1446,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -6951,6 +7417,18 @@
        "raw": "10000000000000000000000000000000000000",
        "gas": 1446,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -7113,6 +7591,18 @@
        "raw": "100000000000000000000000000000000000000",
        "gas": 1474,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -7239,6 +7729,18 @@
        "reason": "0x00000000",
        "reasonName": "bare revert (require without a reason, or out of gas)",
        "unsupported": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -7436,6 +7938,18 @@
        "raw": "1051271096303477923",
        "gas": 3893,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -7621,6 +8135,18 @@
        "raw": "1001000500135653302",
        "gas": 3893,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -7806,6 +8332,18 @@
        "raw": "1648721269562378572",
        "gas": 3893,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -7991,6 +8529,18 @@
        "raw": "1051271096270325038",
        "gas": 3893,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -8158,6 +8708,18 @@
        "raw": "340256786836286856860557465888263687928205524152513079578",
        "gas": 3893,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -8331,6 +8893,18 @@
        "raw": "0",
        "gas": 3399,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -8516,6 +9090,18 @@
        "raw": "367879257231399841",
        "gas": 3893,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -8701,6 +9287,18 @@
        "raw": "1414213562373095047",
        "gas": 3875,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -8874,6 +9472,18 @@
        "raw": "1",
        "gas": 3929,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -9059,6 +9669,18 @@
        "raw": "31622776585872",
        "gas": 3857,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -9244,6 +9866,18 @@
        "raw": "1000000000",
        "gas": 3731,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -9453,6 +10087,18 @@
        "raw": "0",
        "gas": 1816,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -9650,6 +10296,18 @@
        "raw": "0",
        "gas": 1816,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -9847,6 +10505,18 @@
        "raw": "0",
        "gas": 1816,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -10035,6 +10705,18 @@
        "raw": "100000000000000000000000000000000000000000000000000000000",
        "gas": 1816,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -10211,6 +10893,18 @@
        "raw": "10000000000000000000000000000000000000000000000000000000000",
        "gas": 1816,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -10420,6 +11114,18 @@
        "raw": "333333333333333333",
        "gas": 1868,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -10617,6 +11323,18 @@
        "raw": "0",
        "gas": 1868,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -10814,6 +11532,18 @@
        "raw": "0",
        "gas": 1868,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -10990,6 +11720,18 @@
        "raw": "1000000001000000001000000001000000001000000001000000001000",
        "gas": 1868,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -11133,6 +11875,18 @@
        "reason": "0x08c379a0",
        "reasonName": "Error(string): a require with a message (Solmate's wadLn and snekmate's wad_ln below zero)",
        "unsupported": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -11285,6 +12039,18 @@
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
        "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -11422,6 +12188,18 @@
        "unsupported": false
       },
       "snekmate": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
        "reverted": true,
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
@@ -11567,6 +12345,18 @@
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
        "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -11704,6 +12494,18 @@
        "unsupported": false
       },
       "snekmate": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
        "reverted": true,
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
@@ -11849,6 +12651,18 @@
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
        "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -11986,6 +12800,18 @@
        "unsupported": false
       },
       "snekmate": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
        "reverted": true,
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
@@ -12131,6 +12957,18 @@
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
        "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -12269,6 +13107,18 @@
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
        "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -12403,6 +13253,18 @@
        "unsupported": true
       },
       "snekmate": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
        "reverted": true,
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
@@ -12553,6 +13415,18 @@
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
        "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -12688,6 +13562,18 @@
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
        "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -12819,6 +13705,18 @@
        "unsupported": false
       },
       "snekmate": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
        "reverted": true,
        "reason": "0x7bb9ae15",
        "reasonName": "Unsupported(uint8): the library has no model for this scenario",
@@ -13017,6 +13915,18 @@
        "raw": "999999500000",
        "gas": 2577,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -13200,6 +14110,18 @@
        "raw": "999999998",
        "gas": 2577,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -13383,6 +14305,18 @@
        "raw": "1000000",
        "gas": 2577,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -13566,6 +14500,18 @@
        "raw": "1000",
        "gas": 2577,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -13749,6 +14695,18 @@
        "raw": "1",
        "gas": 2577,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -13932,6 +14890,18 @@
        "raw": "0",
        "gas": 2577,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -14115,6 +15085,18 @@
        "raw": "0",
        "gas": 2577,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -14292,6 +15274,18 @@
        "raw": "-1000000001",
        "gas": 2577,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -14475,6 +15469,18 @@
        "raw": "13815511557963774104",
        "gas": 2577,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -14669,6 +15675,18 @@
        "raw": "1000000500000",
        "gas": 1915,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -14852,6 +15870,18 @@
        "raw": "999999999",
        "gas": 1915,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -15035,6 +16065,18 @@
        "raw": "1000000",
        "gas": 1915,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -15218,6 +16260,18 @@
        "raw": "1000",
        "gas": 1915,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -15401,6 +16455,18 @@
        "raw": "1",
        "gas": 1915,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -15584,6 +16650,18 @@
        "raw": "0",
        "gas": 1915,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -15761,6 +16839,18 @@
        "raw": "-1000000000",
        "gas": 1915,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -15938,6 +17028,18 @@
        "raw": "-999999999999999996",
        "gas": 1915,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -16109,6 +17211,18 @@
        "raw": "-1000000000000000000",
        "gas": 1421,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -16292,6 +17406,18 @@
        "raw": "485165194409790277974777105",
        "gas": 1915,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -16495,6 +17621,18 @@
        "raw": "1051271096303477923",
        "gas": 4555,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -16686,6 +17824,18 @@
        "raw": "1648721269562378572",
        "gas": 4555,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -16877,6 +18027,18 @@
        "raw": "1001000500135653302",
        "gas": 4555,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -17068,6 +18230,18 @@
        "raw": "1105155781616264184",
        "gas": 4555,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -17259,6 +18433,18 @@
        "raw": "1001000500166708341",
        "gas": 4555,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -17438,6 +18624,18 @@
        "raw": "976562499999999",
        "gas": 4537,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -17629,6 +18827,18 @@
        "raw": "1010050167063967054",
        "gas": 4555,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -17832,6 +19042,18 @@
        "raw": "1023999999999999995727",
        "gas": 4361,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -17999,6 +19221,18 @@
        "raw": "340256786836286856860557465888263687928205524152513079578",
        "gas": 4379,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -18178,6 +19412,18 @@
        "raw": "0",
        "gas": 5892,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -18369,6 +19615,18 @@
        "raw": "367879257231399841",
        "gas": 4379,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -18560,6 +19818,18 @@
        "raw": "1051271096303477923",
        "gas": 4379,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -18739,6 +20009,18 @@
        "raw": "99999999999999996131809367149309031965133733797684532895",
        "gas": 4415,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -18924,6 +20206,18 @@
        "raw": "4115226337448559",
        "gas": 5892,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -19115,6 +20409,18 @@
        "raw": "13780612339822270123538",
        "gas": 4379,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -19309,6 +20615,18 @@
        "raw": "112837916",
        "gas": 82427,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -19486,6 +20804,18 @@
        "raw": "520499877813046529",
        "gas": 123957,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -19663,6 +20993,18 @@
        "raw": "842700792949714854",
        "gas": 148187,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -19840,6 +21182,18 @@
        "raw": "999977909502995282",
        "gas": 255528,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -20017,6 +21371,18 @@
        "raw": "999999984577500562",
        "gas": 328277,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -20194,6 +21560,18 @@
        "raw": "999999999998462541",
        "gas": 474067,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -20371,6 +21749,18 @@
        "raw": "999999999999999979",
        "gas": 474067,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -20542,6 +21932,18 @@
        "raw": "1000000000000000000",
        "gas": 473573,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -20713,6 +22115,18 @@
        "raw": "1000000000000000000",
        "gas": 473573,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -20901,6 +22315,18 @@
        "raw": "157299207050285146",
        "gas": 148415,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -21078,6 +22504,18 @@
        "raw": "22090497004718",
        "gas": 255756,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -21255,6 +22693,18 @@
        "raw": "15422499438",
        "gas": 328505,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -21432,6 +22882,18 @@
        "raw": "1537459",
        "gas": 473942,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -21609,6 +23071,18 @@
        "raw": "21",
        "gas": 473942,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -21780,6 +23254,18 @@
        "raw": "0",
        "gas": 473448,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -21951,6 +23437,18 @@
        "raw": "0",
        "gas": 473448,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -22122,6 +23620,18 @@
        "raw": "0",
        "gas": 473448,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -22293,6 +23803,18 @@
        "raw": "0",
        "gas": 473448,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -22464,6 +23986,18 @@
        "raw": "0",
        "gas": 473448,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }
@@ -22658,6 +24192,18 @@
        "raw": "500000000000398942",
        "gas": 87185,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -22835,6 +24381,18 @@
        "raw": "158655253931457057",
        "gas": 139230,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -23012,6 +24570,18 @@
        "raw": "1349898031630151",
        "gas": 208472,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -23189,6 +24759,18 @@
        "raw": "286651705626",
        "gas": 298524,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -23366,6 +24948,18 @@
        "raw": "986587644",
        "gas": 478612,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -23543,6 +25137,18 @@
        "raw": "622",
        "gas": 478612,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -23720,6 +25326,18 @@
        "raw": "52",
        "gas": 478612,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -23897,6 +25515,18 @@
        "raw": "0",
        "gas": 478612,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -24068,6 +25698,18 @@
        "raw": "0",
        "gas": 478118,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -24239,6 +25881,18 @@
        "raw": "0",
        "gas": 478118,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -24410,6 +26064,18 @@
        "raw": "0",
        "gas": 478118,
        "zero": true
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     },
@@ -24587,6 +26253,18 @@
        "raw": "999999713348294374",
        "gas": 298394,
        "zero": false
+      },
+      "fraxlend": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
+      },
+      "euler": {
+       "reverted": true,
+       "reason": "0x7bb9ae15",
+       "reasonName": "Unsupported(uint8): the library has no model for this scenario",
+       "unsupported": true
       }
      }
     }

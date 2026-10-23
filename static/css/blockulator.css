@@ -44,11 +44,11 @@
 :root { --violet: color-mix(in oklab, var(--sapphire) 55%, var(--red)); --slate: color-mix(in oklab, var(--sapphire) 50%, var(--faint)); }
 :root { --c-fp127: var(--emerald); --c-fp19: var(--text-strong); --c-wad: var(--gold); --c-quad: var(--violet); --c-6464: var(--sapphire); --c-protocol: var(--slate); }
 .s-fp127 { --c: var(--c-fp127); } .s-fp19 { --c: var(--c-fp19); } .s-quad { --c: var(--c-quad); } .s-abdk { --c: var(--c-6464); }
-.s-solady, .s-prb, .s-balancer { --c: var(--c-wad); } .s-aave, .s-morpho, .s-maker { --c: var(--c-protocol); }
+.s-solady, .s-prb, .s-balancer { --c: var(--c-wad); } .s-aave, .s-morpho, .s-maker, .s-fraxlend, .s-euler { --c: var(--c-protocol); }
 .chart polyline, .chart circle[class*="s-"] { stroke: var(--c); } .chart circle, .chart text[class*="s-"], .chart polygon { fill: var(--c); }
 .chart polyline.s-quad { stroke-dasharray: 4 2; } .chart polyline.s-abdk { stroke-dasharray: 2 3; }
 .chart polyline.s-solady { stroke-dasharray: 6 4; } .chart polyline.s-prb { stroke-dasharray: 10 3 2 3; } .chart polyline.s-balancer { stroke-dasharray: 8 3; }
-.chart polyline.s-aave { stroke-dasharray: 1 3; } .chart polyline.s-morpho { stroke-dasharray: 6 2 2 2; } .chart polyline.s-maker { stroke-dasharray: 3 3; }
+.chart polyline.s-aave { stroke-dasharray: 1 3; } .chart polyline.s-morpho { stroke-dasharray: 6 2 2 2; } .chart polyline.s-maker { stroke-dasharray: 3 3; } .chart polyline.s-fraxlend { stroke-dasharray: 8 3; } .chart polyline.s-euler { stroke-dasharray: 2 2; }
 .ladder { min-width: 1400px; font-size: 13px; }
 .ladder td.val { font-family: var(--mono); font-size: 12.5px; line-height: 1.5; white-space: nowrap; }
 .ladder .ok { color: var(--emerald); } .ladder .wrong { color: var(--red); } .ladder .truth { color: var(--text-strong); }

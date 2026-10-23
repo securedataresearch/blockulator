@@ -5,13 +5,14 @@ the edges and the precision tables against the code at each commit; gas,
 pi, the replays and the accrual are not diffed in CI.
 
 - [`ladder.md`](ladder.md) / [`ladder.json`](ladder.json): **terminal precision.**
-  Thirteen real calculations expressed as N identical steps (daily compounding,
+  Fourteen real calculations expressed as N identical steps (daily compounding,
   a square-root bonding curve, exp/ln round trips, an amortising loan, a
   running geometric mean, Black-Scholes d1 along a price path, a cumulative
   product of basis-point factors, compounding via one real-exponent pow,
   annual compounding, per-second accrual, continuous accrual, an option
-  walking out of the money priced with N(d), and a decay chain measured as
-  the share released), each for several documented inputs (87 in all), run through FP127 (deployed object
+  walking out of the money priced with N(d), a decay chain measured as
+  the share released, and an adaptive interest rate after an idle period),
+  each for several documented inputs (98 in all), run through FP127 (deployed object
   and inline library), ABDKMath64x64, Solady, PRBMath SD59x18, ABDKMathQuad
   (binary128), Balancer LogExpMath, and the accrual formulas of Aave v3,
   Morpho Blue and Maker (which answer only the accrual scenarios their

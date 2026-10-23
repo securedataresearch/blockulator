@@ -213,9 +213,9 @@
     append), and within one x a label sits at least `gap` below the one above it, then at least `gap` above
     the one below it, inside the plot. -#}
 {% component ladderband(summary: map, key: string, ladder: array, log10: map, W: integer = 640, H: integer = 300) -%}
-{%- set series = ["fp19", "fp127", "quad", "abdk", "maker", "aave", "morpho"] -%}
+{%- set series = ["fp19", "fp127", "quad", "abdk", "maker", "aave", "morpho", "fraxlend", "euler"] -%}
 {%- set wad = ["solady", "prb", "balancer", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
-{%- set labels = {"fp19": "FP19", "fp127": "FP127", "quad": "Quad", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
+{%- set labels = {"fp19": "FP19", "fp127": "FP127", "quad": "Quad", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "fraxlend": "FraxLend", "euler": "Euler", "maker": "Maker", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
 {%- set cap = 72 -%}
 {%- if W > 500 %}{% set L = 44 %}{% set R = 112 %}{% set gap = 13 %}{% set wlbl = "WAD libraries" %}{% else %}{% set L = 34 %}{% set R = 78 %}{% set gap = 13 %}{% set wlbl = "WAD" %}{% endif %}{% set T = 16 %}{% set B = 40 -%}
 {%- set pw = W - L - R %}{% set ph = H - T - B -%}

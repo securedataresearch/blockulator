@@ -20,6 +20,8 @@ import {LadderOZ} from "../../contracts/src/ladder/LadderOZ.sol";
 import {LadderUniswap} from "../../contracts/src/ladder/LadderUniswap.sol";
 import {LadderPRBUD} from "../../contracts/src/ladder/LadderPRBUD.sol";
 import {LadderSnekmate} from "../../contracts/src/ladder/LadderSnekmate.sol";
+import {LadderFraxlend} from "../../contracts/src/ladder/LadderFraxlend.sol";
+import {LadderEuler} from "../../contracts/src/ladder/LadderEuler.sol";
 
 /// @title Ladder
 /// @notice Produces the terminal-precision dataset: every scenario, for every
@@ -35,7 +37,7 @@ import {LadderSnekmate} from "../../contracts/src/ladder/LadderSnekmate.sol";
 /// so the "fp127" form exercises the deployed bytecode exactly as Sepolia does.
 contract Ladder is Test {
     string constant INPUTS = "scripts/ladder/inputs.json";
-    string[16] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate"];
+    string[18] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"];
 
     LadderRunner runner;
     string json;
@@ -68,7 +70,9 @@ contract Ladder is Test {
             address(new LadderOZ()),
             address(new LadderUniswap()),
             address(new LadderPRBUD()),
-            address(new LadderSnekmate(_snekmate()))
+            address(new LadderSnekmate(_snekmate())),
+            address(new LadderFraxlend()),
+            address(new LadderEuler())
         ]);
         json = vm.readFile(INPUTS);
         ladder = vm.parseJsonUintArray(json, ".ladder");
@@ -157,6 +161,7 @@ contract Ladder is Test {
     function test_ladder_accrualContinuous() public view { _scenario(Scenario.ACCRUAL_CONTINUOUS); }
     function test_ladder_deepTailOption() public view { _scenario(Scenario.DEEP_TAIL_OPTION); }
     function test_ladder_decay() public view { _scenario(Scenario.DECAY); }
+    function test_ladder_adaptiveRate() public view { _scenario(Scenario.ADAPTIVE_RATE); }
 
     /// The generic normCdf through Solady's primitives agrees with FP127's op
     /// near the money (the price at N = 0 of the reference input).
@@ -214,6 +219,29 @@ contract Ladder is Test {
         (bool okM, int256 rawM,,,) = runner.run(Scenario.COMPOUND, Form.MAKER, 1, p);
         assertTrue(okM);
         assertEq(rawM, 1.01e27);
+    }
+
+    /// The adaptive-rate models (FraxLend, Euler) answer only their scenario.
+    /// At one update after exactly one half-life FraxLend's F (1 + dt / H)
+    /// is the documented 2x, and Euler's wExp at x = ln 2 is 2 to the wei.
+    function test_rate_models_unsupported_elsewhere() public view {
+        int256[] memory p = new int256[](6);
+        p[0] = 1e9;
+        p[2] = 1e18;
+        p[3] = 86400e18;
+        p[4] = 86400e18;
+        p[5] = 0.693147180559945309e18 / int256(86400);
+        for (uint8 f = Form.FRAXLEND; f <= Form.EULER; f++) {
+            (bool ok,, bytes4 reason,,) = runner.run(Scenario.DECAY, f, 1, p);
+            assertFalse(ok);
+            assertEq(reason, bytes4(keccak256("Unsupported(uint8)")));
+        }
+        (bool okF, int256 rawF,,,) = runner.run(Scenario.ADAPTIVE_RATE, Form.FRAXLEND, 1, p);
+        assertTrue(okF);
+        assertEq(rawF, 2e9);
+        (bool okE, int256 rawE,,,) = runner.run(Scenario.ADAPTIVE_RATE, Form.EULER, 1, p);
+        assertTrue(okE);
+        assertApproxEqAbs(rawE, 2e9, 1);
     }
 
     /// Quad: a NaN result is a revert, not a number.

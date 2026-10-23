@@ -222,9 +222,34 @@ The `mul` and `div` cells are removed. They measured Solidity's `a * b / 1e18` a
 
 10 new, 1 variant, 4 none. snekmate is Vyper: `contracts/src/ladder/vyper/SnekmateMath.vy` exports the module, built by `scripts/ladder/vyper.py` with the compiler snekmate pins (0.4.3). Its gas cells are the module call as that contract times it with `msg.gas`, net of the same window around an assignment, so no external call is in them; on the ladder the adapter makes one staticcall per op, as FP127's deployed form does. snekmate has no square root and no real power: the ladder takes the root with Vyper's built-in `isqrt(x * 10**18)` and pow as `wad_exp(wad_ln(x) * y / 1e18)`, as Solmate composes it; neither is on the gas or WAD tables.
 
-## Aave, Morpho, Maker
+## Protocols: Aave, Morpho, Maker, FraxLend, Euler v2
 
-Their accrual maths (Aave `MathUtils`, Morpho `MathLib`, Maker `rpow`) is transcribed for the ladder only. No op table claims to cover them, and they are not on the gas tables.
+Their maths is transcribed for the ladder only: the accrual of Aave (`MathUtils`), Morpho (`MathLib`) and Maker (`rpow`), and the adaptive rate models of FraxLend (`VariableInterestRate` V2) and Euler v2 (`IRMAdaptiveCurve` with `ExpLib`). No op table claims to cover them, and they are not on the gas tables. Pins and licences are in `contracts/src/ladder/vendor/README.md`; `test/accrual/DeployedAccrual.t.sol` and `test/accrual/DeployedRates.t.sol` (`make rates-verify`, a mainnet fork) check the transcriptions against the deployed code.
+
+Which protocols' deployed maths the ladder measures was decided by a pass over about twenty deployed lending, perps and DAO-run protocols (issue #178), each function read at a pinned commit, the deployed source compared where an explorer serves it, and the error computed against the model the protocol documents:
+
+- **A: in the ladder.** The deployed code departs from the model its own documentation or comments state, on realistic inputs, by more than an exact exp or a finer grid would leave.
+- **B: out, the departure is small or needs unrealistic inputs.**
+- **C: out, exact enough, or the shortcut is the documented model.**
+
+| grade | protocol | function | what the code computes, against what it states | why |
+|---|---|---|---|---|
+| A | FraxLend `VariableInterestRate` V2 (fraxlend @2bed49d4, ISC; rate contract `0x18500cB1…F261`) | `getFullUtilizationInterest`, charged by `FraxlendPairCore._calculateInterest` | One update after dt: F (1 + d² dt / H) above the band, F H / (H + d² dt) below it. The documentation states a half-life: "the increase will be 100% per half-life" at 100% utilisation, "decrease by 50% each half-life" at 0%, 2^(±t/H). The two agree at dt = H only: after 2H one update gives 3× (documented 4×), after H/2 1.5× (documented 1.414×); hourly updates over a half-life give 2.69× and 0.372× (documented 2× and 0.5×). The pair then charges the new rate over the whole interval as simple interest. | Ladder scenario `adaptive-rate`, `LadderFraxlend` |
+| A | Euler v2 `IRMAdaptiveCurve` (evk-periphery @af436991, MIT; factory `0x3EC2d5af…7F42`, 14 deployments) | `_newRateAtTarget` through `ExpLib.wExp` | The comment states rateAtTarget = startRateAtTarget · e^linearAdaptation; `wExp` reduces x by ln 2 and takes 1 + r + r²/2 (Morpho's ExpLib). At the deployed speed (100 per year), 100% utilisation, the stored rate at target is −0.28% off after an idle day and +0.08% after a week; at 0% utilisation, +0.42% after a day. Every later rate multiplies the stored one, so the error stays. | Ladder scenario `adaptive-rate`, `LadderEuler` |
+| B | SparkLend (Aave v3.0.2 fork, BUSL-1.1) | `MathUtils.calculateCompoundedInterest` | The older three-term binomial with floored powers: 6 to 9 digits of the interest against its stated (1 + r/SPY)^n, and the cubic term is 0 for every APR below 3.15%. | A different formula from `LadderAave`'s, but the loss is about $1e-5 on $100M idle a day at 3%; the supply side is the same linear index as Aave's. |
+| B | Compound v3 (Comet, BUSL-1.1) | `accruedInterestIndices` | Simple interest per touch, which the docs state (an APR, "accrues every second"); the index is 15 digits (1e15 in a uint64) and floored at each accrual, about 1.4e-6 of the interest at 1% APR when touched every second. | The accrual is the documented model; the index grid loss is about $10 a year on a $500M market. |
+| C | Compound v2 | `CToken.accrueInterest` | Simple interest per touch; the docs say interest "compounds only during blocks in which" the market is touched. | Documented. |
+| C | Fluid | `LiquidityCalcs.calcExchangePrices` | Linear accrual, the rate in 0.01% steps, storage written past a threshold or after a day; the comments say the rounding favours the protocol. | Deliberate packing. |
+| C | Liquity v1 / v2 | `LiquityMath._decPow` / simple interest | v1's decay constants sit within 4e-16 of their half-lives, about 4e-12 relative over a week; v2's README states simple, non-compounding interest. | Exact enough; documented. |
+| C | crvUSD / LLAMMA | `AMM._rate_mul`, `_p_oracle_up` | 1 + integral(rate, dt) per update, as its docstring states; band prices about 1e-16. | Exact enough, and the licence ("all rights reserved") rules out transcription. |
+| C | GMX v2 | `Precision.applyExponentFactor`, funding, borrowing | PRBMath v2.4.3 pow (about 1e-17), linear borrowing per second. | Exact enough; the funding's end-of-interval rate is a model choice. |
+| C | Synthetix v3 perps | `PerpsMarket.unrecordedFunding` | The trapezoid of a linearly moving rate, exact for a constant velocity. | Exact. |
+| C | Pendle v2 | `MarketMathCore` implied rate | Balancer's LogExpMath, already in the ladder; about 1e-13 relative an hour before expiry. | Exact enough. |
+| C | Euler v2 EVK accrual | `RPow.rpow` in `Cache.initVaultCache` | Ray squaring, half up; about 1e-26. | Exact enough. |
+| C | Ajna, Silo v2 | PRBMath v2 `exp` | About 1e-17. | Exact enough. |
+| C | Ethena sUSDe, Yearn v3, Gearbox v3, Aave v4 (v0.5.x) | vesting, unlocking, linear growth, the Hub's linear index | Linear by design. | The shortcut is the model. |
+| C | Spark SSR oracle | `getConversionRate*` | rpow, the Aave binomial or linear; about 1e-11 over a week. | Exact enough. |
+| – | gTrade | borrowing fee per block | Not verified: no public source could be read. | |
 
 ## FP127Lib on FP19's table
 
@@ -271,7 +296,7 @@ These are empty on every competitor column, and correctly so:
 
 - The precision table on the site (`precisiontable`, from `docs/fp127/precision.json`) is FP127's alone; no other library appears in it.
 - Competitor precision per op is in the edges dataset ([edges.md](edges.md), `make edges`): 15 ops, probed for every library. Its "n/a" cells were checked and are correct:
-  - Aave, Morpho and Maker have no general functions.
+  - Aave, Morpho, Maker, FraxLend and Euler have no general functions.
   - OpenZeppelin and Uniswap FullMath have mul and div (and OpenZeppelin a root) only; PRBMath UD60x18 takes no negative argument, so its negative probes are `ParamOutOfRange`.
   - Only Solady has `lambertW0`, and no library has `lambertWm1`.
   - Libraries without `powu`, `log1p` or the like get them composed from their own primitives in `contracts/src/ladder/Ladder*.sol`. ABDK's `pow` and Solady's `rpow` are already used there as powu.

@@ -125,7 +125,27 @@ def derived(params: dict, name: str):
         return P * r / (1 - (1 + r) ** (-n))
     if name == "rateSec":
         return params["rateAnnual"] / 31536000
+    # adaptive-rate: the documented model r0 e^(speed err t), speed = ln 2 / halfLife
+    if name == "rate0":
+        return params["rateAnnual"] / 31536000
+    if name == "speed":
+        return mp.log(2) / params["halfLife"] if "halfLife" in params else params["speedAnnual"] / 31536000
+    if name == "halfLife":
+        return params["halfLife"] if "halfLife" in params else mp.log(2) / params["speed"]
+    if name == "x":
+        return params["speed"] * adaptive_err(params["util"]) * params["step"]
     raise KeyError(name)
+
+
+def adaptive_err(u):
+    """The documented deviation at utilisation u, the same for both deployed configurations at the
+    scenario's utilisations: Euler's err (target 90%) and FraxLend's signed d^2 (band 75% to 85%)."""
+    euler = (u - mpf("0.9")) / (mpf("0.1") if u > mpf("0.9") else mpf("0.9"))
+    d = (u - mpf("0.85")) / mpf("0.15") if u > mpf("0.85") else (mpf("0.75") - u) / mpf("0.75") if u < mpf("0.75") else mpf(0)
+    frax = d * d if u > mpf("0.85") else -d * d
+    if abs(euler - frax) > mpf(10) ** -150:
+        raise ValueError(f"adaptive-rate: util {u} gives Euler err {euler} but FraxLend d^2 {frax}")
+    return euler
 
 
 def resolve(params: dict, derived_names=()) -> dict:

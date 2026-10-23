@@ -95,7 +95,7 @@ def build(cells: dict) -> dict:
     spec = json.loads(SPEC.read_text())
     inputs = {c["id"]: c for c in json.loads(INPUTS.read_text())["cells"]}
     # FP19 and FP127 first, then the rest in form-id order
-    forms = ["fp19", "fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "solmate", "oz", "uniswap", "prbud", "snekmate"]
+    forms = ["fp19", "fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"]
     ops_out = []
     for op in spec["ops"]:
         probes_out = []
