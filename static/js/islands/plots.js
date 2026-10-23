@@ -1,13 +1,12 @@
 // The home page's charts, one per section, drawn from static/data/home.json, the same rows the
 // tables under them are rendered from (scripts/site/home.py). Observable Plot, pinned.
 // Colour is the library's family (blockulator.css --c-<family>); identity is the label, on the
-// axis or on hover. Floating point and fixed point are drawn apart: stacked panels, or ◆ and ●
-// where one panel holds both. Every chart has axis titles with units and a key.
+// axis or on hover. Floating point is ◆, fixed point ●, or above and below a rule. Every chart has
+// axis titles with units and a key.
 import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.16/+esm";
 
 const KINDS = [["float", "Floating point"], ["fixed", "Fixed point"]];
 const FAMILIES = [["fp19", "FP19"], ["fp127", "FP127 · BlockulatorWad"], ["quad", "binary128 (ABDKMathQuad)"], ["6464", "ABDK 64.64"], ["wad", "WAD libraries"], ["protocol", "Maker, Aave, Morpho"]];
-const GAS_CHART_OPS = ["add", "mul", "div", "mulDown", "divDown", "exp", "ln", "pow", "sqrt"];
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
 let data, lib;
@@ -18,7 +17,6 @@ const label = (id) => lib[id].label;
 const fmt = (n) => n.toLocaleString("en-US");
 const symbol = (d) => (lib[d.lib].kind === "float" ? "diamond2" : "circle");
 const ours = (d) => !!lib[d.lib].ours;
-const kshort = (v) => (v >= 1000 ? v / 1000 + "k" : v);
 
 function base(t, width, extra) {
   return { width, style: { background: "transparent", color: t.text, fontFamily: css("--sans"), fontSize: "12px", overflow: "visible" }, ...extra };
@@ -34,44 +32,46 @@ function key(el, t, ids, symbols = true) {
   el.append(p);
 }
 
-// one panel per kind, stacked, each only as tall as its libraries
-function stacked(el, rows, draw) {
-  for (const [kind, name] of KINDS) {
-    const ids = data.libraries.filter((l) => l.kind === kind && rows.some((r) => r.lib === l.id)).map((l) => l.id);
-    if (!ids.length) continue;
-    const h = document.createElement("div");
-    h.className = "panelhead";
-    h.textContent = name;
-    el.append(h, draw(rows.filter((r) => ids.includes(r.lib)), ids, kind === KINDS[0][0]));
-  }
-}
-
 const charts = {
-  // small multiples, one per op; each row of panels holds as many ops as fit, floating point over fixed point
+  // the trade-off in one picture: digits against gas, each library's gas as a multiple of FP127's on the same ops
+  // (the geometric mean over the ops both offer; the range over them is in the tip)
   gas(el, t, width) {
     const g = data.gas;
-    const ops = GAS_CHART_OPS.filter((o) => g.ops.includes(o));
-    const fit = Math.max(2, Math.floor((width - 128) / 128));
-    const per = Math.ceil(ops.length / Math.ceil(ops.length / fit)); // rows of equal length, never one op alone
-    const rows = g.rows.filter((r) => ops.includes(r.op));
-    for (let i = 0; i < ops.length; i += per) {
-      const chunk = ops.slice(i, i + per);
-      stacked(el, rows.filter((r) => chunk.includes(r.op)), (rs, ids, first) =>
-        Plot.plot(base(t, width, {
-          height: 22 * ids.length + (first ? 40 : 52), marginLeft: 128, marginTop: first ? 28 : 6, marginBottom: first ? 6 : 40,
-          fx: { domain: chunk, label: null, axis: first ? "top" : null, tickFormat: (o) => o + (g.typical.includes(o) ? "ᵗ" : ""), padding: 0.12 },
-          x: { type: "log", domain: [2, 40000], ticks: [10, 100, 1000, 10000], tickFormat: kshort, label: first ? null : "gas per call, log scale →", axis: first ? null : "bottom", grid: true },
-          y: { domain: ids, label: null, tickFormat: (id) => `${label(id)} · ${lib[id].digits} digits`, tickSize: 0 },
-          marks: [
-            Plot.ruleY(rs, { fx: "op", y: "lib", stroke: t.line, strokeOpacity: 0.5 }),
-            Plot.dot(rs, { fx: "op", x: "gas", y: "lib", r: (d) => (ours(d) ? 5.5 : 4.5), fill: colour(t), stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
-            Plot.text(rs.filter(ours), { fx: "op", x: "gas", y: "lib", text: (d) => fmt(d.gas), dx: 8, textAnchor: "start", fontWeight: 600, fill: t.text }),
-            Plot.tip(rs, Plot.pointer({ fx: "op", x: "gas", y: "lib", title: (d) => `${lib[d.lib].long}\n${d.op}: ${fmt(d.gas)} gas per call\n${lib[d.lib].digits} digits at 1` })),
-          ],
-        })),
-      );
+    const ref = new Map(g.rows.filter((r) => r.lib === "fp127").map((r) => [r.op, r.gas]));
+    const per = g.rows.filter((r) => ref.has(r.op)).map((r) => ({ ...r, ratio: r.gas / ref.get(r.op) }));
+    const pts = [...new Set(per.map((r) => r.lib))].map((id) => {
+      const rs = per.filter((r) => r.lib === id);
+      const gm = Math.exp(rs.reduce((s, r) => s + Math.log(r.ratio), 0) / rs.length);
+      return { lib: id, ratio: gm, lo: Math.min(...rs.map((r) => r.ratio)), hi: Math.max(...rs.map((r) => r.ratio)), digits: lib[id].digits, ops: rs.length };
+    });
+    // labels sit just above their dots; where a name would run into one already placed on its level of digits,
+    // it takes the lowest free row above (4.5 digits each), with a leader line back to its dot
+    const [lo, hi] = [0.15, 6], plotW = width - 52 - 30;
+    const px = (r) => ((Math.log(r) - Math.log(lo)) / (Math.log(hi) - Math.log(lo))) * plotW;
+    const rows = new Map();
+    for (const p of [...pts].sort((a, b) => a.ratio - b.ratio)) {
+      const band = Math.round(p.digits / 6), ends = rows.get(band) || [];
+      const x = px(p.ratio), k = ends.findIndex((e) => e < x - 2);
+      const row = k < 0 ? ends.length : k;
+      ends[row] = x + 6 + 6.6 * label(p.lib).length;
+      rows.set(band, ends);
+      p.ly = p.digits + 2.2 + 4.5 * row;
     }
-    key(el, t, [...new Set(rows.map((r) => r.lib))]);
+    el.append(Plot.plot(base(t, width, {
+      height: 480, marginLeft: 52, marginRight: 30, marginBottom: 44, marginTop: 30,
+      x: { type: "log", domain: [lo, hi], label: "gas per call, as a multiple of FP127's on the same ops (log scale) →", tickFormat: (v) => v + "×", ticks: [0.2, 0.3, 0.5, 1, 2, 3, 5] },
+      y: { domain: [0, 76], label: "↑ decimal digits at 1", grid: true },
+      marks: [
+        Plot.ruleX([1], { stroke: t.faint, strokeDasharray: "3 3" }),
+        Plot.text([{ x: 1, y: 75 }], { x: "x", y: "y", text: () => "FP127's gas", dx: 5, textAnchor: "start", fill: t.faint }),
+        Plot.dot(pts.filter((d) => !ours(d)), { x: "ratio", y: "digits", fill: colour(t), r: 8, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
+        Plot.dot(pts.filter(ours), { x: "ratio", y: "digits", fill: colour(t), r: 10.5, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
+        Plot.link(pts.filter((d) => d.ly - d.digits > 3), { x1: "ratio", y1: "digits", x2: "ratio", y2: (d) => d.ly - 0.8, stroke: t.faint, strokeWidth: 0.8 }),
+        Plot.text(pts, { x: "ratio", y: "ly", text: (d) => label(d.lib), dx: 5, textAnchor: "start", fill: t.text, fontWeight: (d) => (ours(d) ? 700 : 500) }),
+        Plot.tip(pts, Plot.pointer({ x: "ratio", y: "digits", title: (d) => `${lib[d.lib].long}\n${d.digits} digits at 1\ngas ${d.ratio.toFixed(2)}× FP127's (geometric mean over ${d.ops} ops; ${d.lo.toFixed(2)}–${d.hi.toFixed(2)}×)` })),
+      ],
+    })));
+    key(el, t, pts.map((p) => p.lib));
   },
 
   accrual(el, t, width) {
@@ -96,7 +96,7 @@ const charts = {
       y: { domain: [0, 76], label: "↑ correct decimal digits", grid: true },
       marks: [
         Plot.line(a.rows, { x: "n", y: "digits", z: "lib", stroke: colour(t), strokeWidth: (d) => (ours(d) ? 3 : 1.6), strokeOpacity: (d) => (ours(d) ? 1 : 0.8), curve: "monotone-x" }),
-        Plot.dot(a.rows.filter((r) => r.n === last), { x: "n", y: "digits", fill: colour(t), r: (d) => (ours(d) ? 4.5 : 3), symbol }),
+        Plot.dot(a.rows.filter((r) => r.n === last), { x: "n", y: "digits", fill: colour(t), r: 6, symbol }),
         Plot.text(labels, { x: last, y: "y", text: "text", dx: 10, textAnchor: "start", fill: colour(t), fontWeight: 600 }),
         Plot.tip(a.rows, Plot.pointer({ x: "n", y: "digits", title: (d) => `${lib[d.lib].long}\nafter ${fmt(d.n)} ${d.n === 1 ? "day" : "days"}: ${d.digits.toFixed(1)} correct digits` })),
       ],
@@ -104,66 +104,99 @@ const charts = {
     key(el, t, [...new Set(a.rows.map((r) => r.lib))]);
   },
 
-  // one panel per library: the share of results off by a wei, per function
+  // one row per function, one dot per library at its share of results off by a wei; equal shares stack apart
   wad(el, t, width) {
     const w = data.wad;
-    const ids = data.libraries.filter((l) => w.rows.some((r) => r.lib === l.id)).map((l) => l.id);
-    const cols = Math.max(2, Math.min(ids.length, Math.floor((width - 110) / 190)));
-    const rows = w.rows.map((r) => ({ ...r, col: ids.indexOf(r.lib) % cols, row: Math.floor(ids.indexOf(r.lib) / cols) }));
-    const nrow = Math.ceil(ids.length / cols);
+    const rows = w.rows.map((r) => ({ ...r, kind: lib[r.lib].ours ? "ours" : "other" }));
     el.append(Plot.plot(base(t, width, {
-      height: nrow * (17 * w.functions.length + 64) + 30,
-      marginLeft: 110, marginRight: 34, marginTop: 26, marginBottom: 40,
-      fx: { label: null, axis: null, padding: 0.18 }, fy: { label: null, axis: null, padding: 0.2 },
-      x: { domain: [0, 100], ticks: [0, 50, 100], tickFormat: (v) => (v === 100 ? "100%" : v), label: "share of results off by ≥ 1 wei →", grid: true },
-      y: { domain: w.functions, label: null, tickSize: 0 },
+      height: w.functions.length * 40 + 70, marginLeft: 116, marginRight: 30, marginBottom: 44, marginTop: 10,
+      fy: { domain: w.functions, label: null, padding: 0 },
+      x: { domain: [-2, 102], ticks: [0, 25, 50, 75, 100], tickFormat: (v) => v + "%", label: "share of results off by ≥ 1 wei →", grid: true },
       marks: [
-        Plot.text(ids.map((id, i) => ({ lib: id, col: i % cols, row: Math.floor(i / cols) })), { fx: "col", fy: "row", frameAnchor: "top-left", dy: -16, text: (d) => label(d.lib), fill: colour(t), fontWeight: 700, fontSize: 12.5 }),
-        Plot.barX(rows, { fx: "col", fy: "row", y: "fn", x: "pct", fill: colour(t), insetTop: 2, insetBottom: 2, rx: 2 }),
-        Plot.text(rows.filter((r) => r.wrong === 0), { fx: "col", fy: "row", y: "fn", x: 0, text: () => "0", dx: 6, textAnchor: "start", fill: t.text, fontWeight: 600 }),
-        Plot.text(rows.filter((r) => r.wrong > 0), { fx: "col", fy: "row", y: "fn", x: "pct", text: (d) => Math.round(d.pct) + "%", dx: 4, textAnchor: "start", fill: t.faint }),
-        Plot.tip(rows, Plot.pointer({ fx: "col", fy: "row", y: "fn", x: "pct", title: (d) => `${lib[d.lib].long}\n${d.fn}: ${fmt(d.wrong)} of ${fmt(d.n)} results off by a wei or more (${d.pct}%)` })),
+        Plot.frame({ anchor: "bottom", stroke: t.line, strokeOpacity: 0.5 }),
+        Plot.dot(rows, Plot.dodgeY("middle", { fy: "fn", x: "pct", r: 7.5, fill: colour(t), stroke: "var(--surface-solid)", strokeWidth: 1.5, padding: 1.5 })),
+        Plot.tip(rows, Plot.pointer({ fy: "fn", x: "pct", title: (d) => `${lib[d.lib].long}\n${d.fn}: ${fmt(d.wrong)} of ${fmt(d.n)} results off by a wei or more (${d.pct}%)` })),
       ],
     })));
-    key(el, t, ids, false);
+    key(el, t, [...new Set(rows.map((r) => r.lib))], false);
   },
 
   ladder(el, t, width) {
     const ld = data.ladder;
     const rows = ld.rows.filter((r) => r.digits != null).map((r) => ({ ...r, title: ld.scenarios.find((s) => s.id === r.scenario).title }));
     el.append(Plot.plot(base(t, width, {
-      height: 28 * ld.scenarios.length + 60, marginLeft: 280, marginRight: 16, marginBottom: 42,
+      height: 32 * ld.scenarios.length + 60, marginLeft: 280, marginRight: 16, marginBottom: 42,
       x: { domain: [0, 76], label: "median correct decimal digits after the last step →", grid: true },
       y: { domain: ld.scenarios.map((s) => s.title), label: null, tickSize: 0 },
       marks: [
         Plot.ruleY(ld.scenarios.map((s) => s.title), { stroke: t.line, strokeOpacity: 0.5 }),
-        Plot.dot(rows.filter((d) => !ours(d)), { x: "digits", y: "title", fill: colour(t), r: 4, fillOpacity: 0.85, symbol }),
-        Plot.dot(rows.filter(ours), { x: "digits", y: "title", fill: colour(t), r: 6, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
+        Plot.dot(rows.filter((d) => !ours(d)), { x: "digits", y: "title", fill: colour(t), r: 6, fillOpacity: 0.9, symbol }),
+        Plot.dot(rows.filter(ours), { x: "digits", y: "title", fill: colour(t), r: 8, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
         Plot.tip(rows, Plot.pointer({ x: "digits", y: "title", title: (d) => `${lib[d.lib].long}\n${d.title}: ${d.digits.toFixed(1)} digits after ${fmt(d.n)} steps` })),
       ],
     })));
     key(el, t, [...new Set(rows.map((r) => r.lib))]);
   },
 
+  // one bar per library over the probes: to the left of zero the ones it fails (to zero, reverts, out of range,
+  // no correct digit), to the right the ones it computes, by how many digits it keeps
   edges(el, t, width) {
     const e = data.edges;
-    const ticks = e.rows.flatMap((r) => r.digits.map((v) => ({ lib: r.lib, digits: v })));
-    stacked(el, e.rows, (rows, ids, first) =>
-      Plot.plot(base(t, width, {
-        height: 24 * ids.length + (first ? 50 : 64), marginLeft: 150, marginTop: first ? 26 : 6, marginRight: 16, marginBottom: first ? 6 : 40,
-        x: { domain: [0, 73], axis: first ? "top" : "bottom", label: "correct decimal digits on each probe →", grid: true },
-        y: { domain: ids, label: null, tickFormat: (id) => `${label(id)} · ${e.rows.find((r) => r.lib === id).computed} probes`, tickSize: 0 },
-        marks: [
-          Plot.tickX(ticks.filter((d) => ids.includes(d.lib)), { x: "digits", y: "lib", stroke: colour(t), strokeOpacity: 0.35, insetTop: 4, insetBottom: 4 }),
-          Plot.dot(rows, { x: "median", y: "lib", fill: colour(t), r: 5.5, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
-          Plot.tip(rows, Plot.pointer({ x: "median", y: "lib", title: (d) => `${lib[d.lib].long}\n${d.computed} probes computed, median ${d.median} digits, fewest ${d.min}\nto zero ${d.zero} · reverted ${d.reverts} · out of range ${d.range} · no such op ${d.unsupported}` })),
-        ],
-      })),
-    );
-    key(el, t, e.rows.map((r) => r.lib));
-    el.lastChild.insertAdjacentHTML("beforeend", `<span class="sym">| one probe</span><span class="sym">● the median</span>`);
+    const CATS = [["range", "out of range"], ["reverts", "reverted"], ["zero", "went to zero"], ["wrong", "no correct digit"],
+                  ["d1", "1–9 digits"], ["d10", "10–17"], ["d18", "18–29"], ["d30", "30 or more"]];
+    const red = css("--red"), em = css("--emerald");
+    const fill = { range: red, reverts: red, zero: red, wrong: red, d1: em, d10: em, d18: em, d30: em };
+    const op = { range: 0.95, reverts: 0.7, zero: 0.45, wrong: 0.25, d1: 0.25, d10: 0.45, d18: 0.7, d30: 0.95 };
+    const ids = KINDS.flatMap(([k]) => data.libraries.filter((l) => l.kind === k && e.rows.some((r) => r.lib === l.id)).map((l) => l.id));
+    const segs = e.rows.flatMap((r) => {
+      const ds = r.digits, nz = ds.filter((d) => d === 0).length - r.zero;
+      const c = { range: r.range, reverts: r.reverts, zero: r.zero, wrong: nz, d1: ds.filter((d) => d >= 1 && d < 10).length,
+                  d10: ds.filter((d) => d >= 10 && d < 18).length, d18: ds.filter((d) => d >= 18 && d < 30).length, d30: ds.filter((d) => d >= 30).length };
+      return CATS.map(([k, name], i) => ({ lib: r.lib, k, name, i, n: i < 4 ? -c[k] : c[k], count: c[k], unsupported: r.unsupported }));
+    }).filter((d) => d.count);
+    const lastFloat = ids.filter((id) => lib[id].kind === "float").pop();
+    el.append(Plot.plot(base(t, width, {
+      height: 26 * ids.length + 80, marginLeft: 120, marginRight: 30, marginBottom: 44,
+      x: { label: "← probes it fails · probes it computes, by correct digits →", tickFormat: (v) => Math.abs(v), grid: true },
+      y: { domain: ids, label: null, tickFormat: label, tickSize: 0, padding: 0.22 },
+      marks: [
+        Plot.barX(segs, { y: "lib", x: "n", fill: (d) => fill[d.k], fillOpacity: (d) => op[d.k], order: "i", inset: 0.5 }),
+        Plot.ruleX([0], { stroke: t.text, strokeWidth: 1.2 }),
+        Plot.ruleY([lastFloat], { dy: 13, stroke: t.line }),
+        Plot.tip(segs, Plot.pointer({ y: "lib", x: "n", title: (d) => `${lib[d.lib].long}\n${d.count} probes: ${d.name}${d.unsupported ? `\n(${d.unsupported} more: no such op)` : ""}` })),
+      ],
+    })));
+    const p = document.createElement("p");
+    p.className = "plotlegend";
+    p.innerHTML = CATS.map(([k, n]) => `<span><i style="background:${fill[k]};opacity:${op[k]}"></i>${n}</span>`).join("") +
+      `<span class="sym">floating point above the line, fixed point below</span>`;
+    el.append(p);
   },
 };
+
+// every dot bursts: it pops in once when its chart first draws (staggered left to right), and on hover it
+// swells with a halo in its own colour when the pointer is nearest it (blockulator.css .plot .dotm)
+function burst(el, first) {
+  const dots = [...el.querySelectorAll('g[aria-label="dot"] > *')];
+  const xs = dots.map((d) => d.getBBox().x), x0 = Math.min(...xs), x1 = Math.max(...xs) || 1;
+  dots.forEach((d, i) => {
+    d.classList.add("dotm");
+    d.style.setProperty("--dc", d.getAttribute("fill") || d.parentNode.getAttribute("fill"));
+    if (first) d.style.setProperty("--delay", `${Math.round(((xs[i] - x0) / (x1 - x0 || 1)) * 420)}ms`);
+    else d.style.animation = "none";
+  });
+  // the halo follows the pointer to the nearest dot within 24px, as the tip does
+  let hot;
+  el.onpointermove = (e) => {
+    let best, bd = 24 * 24;
+    for (const d of dots) {
+      const r = d.getBoundingClientRect(), dx = r.x + r.width / 2 - e.clientX, dy = r.y + r.height / 2 - e.clientY;
+      if (dx * dx + dy * dy < bd) { bd = dx * dx + dy * dy; best = d; }
+    }
+    if (best !== hot) { hot?.classList.remove("hot"); best?.classList.add("hot"); hot = best; }
+  };
+  el.onpointerleave = () => { hot?.classList.remove("hot"); hot = undefined; };
+}
 
 function draw() {
   const t = theme();
@@ -172,6 +205,7 @@ function draw() {
     if (!width || el.dataset.drawn === `${width}${t.text}`) continue;
     el.replaceChildren();
     charts[el.dataset.chart]?.(el, t, width);
+    burst(el, !el.dataset.drawn);
     el.dataset.drawn = `${width}${t.text}`;
   }
 }
