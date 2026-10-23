@@ -77,7 +77,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "e^x = 2^(x log2 e): the 512-bit product of the significand and log2 e in two words (2^-508), split into the integer part and a fraction at 2^-254, then the 2^f kernel (within 6 units of 2^-254) and one rounding when that bound clears the rounding boundary, else e^r - 1 in two words for r = x - k ln 2: correctly rounded. Below 2^-118, 1 + x + x^2/2 floored exactly on the 2^-254 grid (the cubic only breaks ties) and rounded once; a positive x whose lowest bit is 2^-118, below 2^-84, makes that sum an exact tie the kernel cannot see past, so it takes the same path. Exactly one below 2^-238; zero below about -181,700.",
+      "notice": "e^x = 2^(x log2 e): the 512-bit product of the significand and log2 e in two words (2^-508), split into the integer part and a fraction at 2^-254, then the 2^f kernel (within 6.1 units of 2^-254) and one rounding when that bound clears the rounding boundary, else e^r - 1 in two words for r = x - k ln 2: correctly rounded. Below 2^-118, 1 + x + x^2/2 floored exactly on the 2^-254 grid (the cubic only breaks ties) and rounded once; a positive x whose lowest bit is 2^-118, below 2^-84, makes that sum an exact tie the kernel cannot see past, so it takes the same path. Exactly one below 2^-238; zero below about -181,700.",
       "domain": "x < 2^18",
       "reverts": "Overflow() when e^x does not fit (x above about 181,705); OutOfRange() for a word that is not a number"
     },
@@ -89,7 +89,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "ln(x) = (E - bias + log2(M / 2^236)) ln 2: the exponent exactly, the mantissa through the log2 kernel at 2^-254, the sum scaled to fill a word, one product with ln 2 and one rounding when its 40 units clear the rounding boundary, else u ln 2 + ln(mantissa) in two words (one Newton step on the kernel's value): correctly rounded. Within 2^-8 of one, d = x - 1 is exact and ln(1 + d) = d * series(d) at 2^-254 (in two words when needed), so the relative precision holds all the way down.",
+      "notice": "ln(x) = (E - bias + log2(M / 2^236)) ln 2: the exponent exactly, the mantissa through the log2 kernel at 2^-254, the sum scaled to fill a word, one product with ln 2 and one rounding when its 5 units clear the rounding boundary, else u ln 2 + ln(mantissa) in two words (one Newton step on the kernel's value): correctly rounded. Within 2^-8 of one, d = x - 1 is exact and ln(1 + d) = d * (ln 2/2)(1 - y) P(y^2), y = d/(2 + d), at 2^-254 (in two words when needed), so the relative precision holds all the way down.",
       "domain": "x > 0",
       "reverts": "OutOfRange() for x <= 0 or a word that is not a number"
     },
@@ -114,7 +114,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "ln(1 + x) without forming a rounded 1 + x. Below 2^-4, x times the ln series at 2^-254 (32 terms below 2^-8, 64 above), so the relative precision holds all the way down; above, 1 + x exactly on a 2^-254 grid under its leading bit, the log2 kernel and one product with ln 2. Each fast value carries its error bound; when it reaches the rounding boundary the series or ln(1 + x) is recomputed in two words. Correctly rounded.",
+      "notice": "ln(1 + x) without forming a rounded 1 + x. Below 2^-4, x times ln(1 + x)/x = (ln 2/2)(1 - y) P(y^2), y = x/(2 + x), at 2^-254 (P the kernel's minimax polynomial below 2^-8, a wider one above), so the relative precision holds all the way down; above, 1 + x exactly on a 2^-254 grid under its leading bit, the log2 kernel and one product with ln 2. Each fast value carries its error bound; when it reaches the rounding boundary the series or ln(1 + x) is recomputed in two words. Correctly rounded.",
       "domain": "x > -1",
       "reverts": "OutOfRange() for x <= -1 or a word that is not a number"
     },
@@ -126,7 +126,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "e^x - 1 without cancellation. Below 2^-8, x times the series sum x^k / (k + 1)! at 2^-254; above, exp's split of x log2 e and its unrounded 2^f, with the one subtracted on the same 2^-254 grid; each within its bound, recomputed in two words when that reaches the rounding boundary. Correctly rounded; -1 below about -176.",
+      "notice": "e^x - 1 without cancellation. Below 2^-8, x times (e^x - 1)/x from its minimax polynomial at 2^-254; above, exp's split of x log2 e and its unrounded 2^f, with the one subtracted on the same 2^-254 grid; each within its bound, recomputed in two words when that reaches the rounding boundary. Correctly rounded; -1 below about -176.",
       "domain": "x < 2^18",
       "reverts": "Overflow() when e^x - 1 does not fit (x above about 181,705); OutOfRange() for a word that is not a number"
     },
@@ -746,7 +746,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "log2(x) = (E - bias) + log2(M / 2^236): the exponent exactly and the mantissa through the log2 kernel, one rounding when its 38 units clear the rounding boundary; within 2^-8 of one, d = x - 1 exact and d series(d) log2 e. Else the same in two words (pow's wide log2): correctly rounded, exact at powers of two.",
+      "notice": "log2(x) = (E - bias) + log2(M / 2^236): the exponent exactly and the mantissa through the log2 kernel, one rounding when its 4 units clear the rounding boundary; within 2^-8 of one, d = x - 1 exact and d ln1pk(d) log2 e. Else the same in two words (pow's wide log2): correctly rounded, exact at powers of two.",
       "domain": "x > 0",
       "reverts": "OutOfRange() for x <= 0 or a word that is not a number"
     },
@@ -758,7 +758,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "log10(x) = log2(x) log10 2: the exponent exactly, the mantissa through the log2 kernel, one product and one rounding when its 16 units clear the rounding boundary; within 2^-8 of one, ln's series times log10 e. Else u log10 2 + ln(mantissa) log10 e in three words: correctly rounded, exact at the powers of ten that are numbers (10^0 to 10^102).",
+      "notice": "log10(x) = log2(x) log10 2: the exponent exactly, the mantissa through the log2 kernel, one product and one rounding when its 4 units clear the rounding boundary; within 2^-8 of one, ln's series times log10 e. Else u log10 2 + ln(mantissa) log10 e in three words: correctly rounded, exact at the powers of ten that are numbers (10^0 to 10^102).",
       "domain": "x > 0",
       "reverts": "OutOfRange() for x <= 0 or a word that is not a number"
     },
@@ -770,7 +770,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "sinh(x) = (U + U/(1 + U)) / 2 with U = e^|x| - 1 from expm1's machinery: below 2^-8, x times T = (e^|x| - 1)/|x| from its series (no cancellation, so the relative precision holds all the way down); to 1/2, U from exp's unrounded kernel; above, (e^|x| - e^-|x|) / 2 from that kernel and its reciprocal. One rounding when the bound clears the rounding boundary, else the series or both exponentials in two words: correctly rounded.",
+      "notice": "sinh(x) = (U + U/(1 + U)) / 2 with U = e^|x| - 1 from expm1's machinery: below 2^-8, x times T = (e^|x| - 1)/|x| from its polynomial (no cancellation, so the relative precision holds all the way down); to 1/2, U from exp's unrounded kernel; above, (e^|x| - e^-|x|) / 2 from that kernel and its reciprocal. One rounding when the bound clears the rounding boundary, else the series or both exponentials in two words: correctly rounded.",
       "domain": "|x| below about 181,705",
       "reverts": "Overflow() when sinh(x) does not fit; OutOfRange() for a word that is not a number"
     },
@@ -794,7 +794,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "tanh(x) = U/(U + 2) with U = e^2|x| - 1 from expm1's machinery: below 2^-9, x times T/(1 + |x| T) with T = (e^2|x| - 1)/(2|x|) from its series; to 1/2, U from exp's unrounded kernel; above, 1 - 2/(e^2|x| + 1) from that kernel. One rounding when the bound clears the rounding boundary, else sinh's and cosh's series or the exponential in two words: correctly rounded. Exactly +-1 once 2|x| log2 e passes 240.",
+      "notice": "tanh(x) = U/(U + 2) with U = e^2|x| - 1 from expm1's machinery: below 2^-9, x times T/(1 + |x| T) with T = (e^2|x| - 1)/(2|x|) from its polynomial; to 1/2, U from exp's unrounded kernel; above, 1 - 2/(e^2|x| + 1) from that kernel. One rounding when the bound clears the rounding boundary, else sinh's and cosh's series or the exponential in two words: correctly rounded. Exactly +-1 once 2|x| log2 e passes 240.",
       "domain": "any number",
       "reverts": "OutOfRange() for a word that is not a number"
     },

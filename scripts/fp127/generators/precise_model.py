@@ -59,6 +59,9 @@ import sys
 
 from mpmath import mp, mpf, log, exp, e as E_, nint, lambertw, sqrt as msqrt
 
+sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
+import kernel192  # noqa: E402
+
 mp.dps = 220
 
 T256 = 1 << 256
@@ -94,29 +97,6 @@ LOG2_10_192 = 0x35269e12f346e2bf924afdbfd36bf6d3365b157f8deceb53a
 LN2_192 = 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e
 LOG10_2_192 = 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a5
 
-RT = [0x16a09e667f3bcc908b2fb1366ea957d3e3adec1751277509a, 0x1306fe0a31b7152de8d5a46305c85edecbc27343629f502f2,
-      0x1172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f, 0x10b5586cf9890f6298b92b71842a98364291408b3ceb0a2a3,
-      0x1059b0d31585743ae7c548eb68ca417fe53e3495f7df4baf8, 0x102c9a3e778060ee6f7caca4f7a29bde93d70a2cabc5cb89c,
-      0x10163da9fb33356d84a66ae336dcdfa4003ec04c360be2404]
-INV = [0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d, 0xd744fccad69d6af439a68bb9902d3fde1d733af522058b17,
-       0xeac0c6e7dd24392ed02d75b3706e54fac4faace043b7f91c, 0xf5257d152486cc2c7b9d0c7aed980fc36f510308677709f6,
-       0xfa83b2db722a033a7c25bb14315d7fcc8006fe21a95d14dc, 0xfd3e0c0cf486c174853f3a5931e0ee03061b7bb285a60792,
-       0xfe9e115c7b8f884badd25995e79d2f096934ec56be0d2544]
-LOGP = [0x17b3936278bdf3108194c0601c98145899c19988d7a109e4,
-        0xffffffffffffffffe5a2d3ad1b89f389cbff651cf7ab95fe4714e75251ead0a2,
-        0x1c68e97dea5d7cb906ffc2f6119635380dacbddbdad76846,
-        0xffffffffffffffffe138f639b5c64d7b73c55805dc8ec0880317af4040cc591f,
-        0x219350930be11f876593bbdb09daeaf0957b0d080ada26fd,
-        0xffffffffffffffffdb11275e20e1ca8a2b959f17d2678df7a3d4f97c7d9a3098,
-        0x2909627af80540eceaceb43b3f8e62f14a02fcff00efb471,
-        0xffffffffffffffffd1d57135a8fa03d91f80452a64b91d25da559e2ac1044226,
-        0x34c2ec54f5bdb27ec606fef4f1ab11413399ed361fb8e654,
-        0xffffffffffffffffc271ec478bf80516c07df3f92e8ba0238cdf0eef66e111bf,
-        0x49ddb143be6ff9e4b29ccc3bb04619bab966324b8b0e4e6b,
-        0xffffffffffffffffa3aae26b51f407a220bc0097cd935ca2a2c07626cf1eb774,
-        0x7b1c2770e80ff5d27f05548af0be0fefbba4efbc9d3290df,
-        0xffffffffffffffff4755c4d6a3e80f444178012f96e2c1778f63bed2a372430b,
-        0x171547652b82fe1777d0ffda0d23a7d11d6ae94441bacdb6a]
 
 
 def sgn(w):
@@ -159,18 +139,9 @@ def expk(r: int) -> int:
 
 
 def log2m(mm: int) -> int:
-    """log2(m) at 2^-192 for m = mm 2^-192 in [1, 2): the v4 reduction and polynomial."""
-    acc = 0
-    for k in range(7):
-        if mm >= RT[k]:
-            mm = mulg(mm, INV[k])
-            acc += 1 << (192 - k - 1)
-    f = mm - G
-    r = sgn(LOGP[0])
-    for c in LOGP[1:]:
-        r = mulg(r, f) + sgn(c)
-    r = mulg(r, f)
-    return acc + r
+    """log2(m) at 2^-192 for m = mm 2^-192 in [1, 2): kernel192.py's model of
+    the Yul (two additive table levels and a degree-14 minimax polynomial)."""
+    return kernel192.log2m(mm)
 
 
 def msb(x):
@@ -378,23 +349,10 @@ def op_atanh(X: int):
 # pow and cbrt: the one-word value first (pow2t)
 # ---------------------------------------------------------------------------
 
-def _exp2_coeffs():
-    import re
-    from pathlib import Path
-    text = (Path(__file__).resolve().parents[3] / "contracts/src/fp127/FP127.yul.src").read_text()
-    body = text[text.index("function exp2frac"):]
-    return [int(h, 16) for h in re.findall(r"0x[0-9a-f]+", body[: body.index("\n}\n")])]
-
-
-EXP2C = _exp2_coeffs()
-
-
 def exp2frac(f: int) -> int:
-    """2^f at 2^-192 for f in [0, 2^192): the degree-24 polynomial, Horner, floors."""
-    r = EXP2C[0]
-    for c in EXP2C[1:]:
-        r = ((r * f) >> 192) + c
-    return r
+    """2^f at 2^-192 for f in [0, 2^192): kernel192.py's model of the Yul
+    (a 16-entry table and a degree-15 minimax polynomial)."""
+    return kernel192.exp2frac(f)
 
 
 def pow2t(t: int, ay: int):
