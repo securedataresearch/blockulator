@@ -110,7 +110,7 @@
    "seconds": 182.9,
    "paths": 60,
    "fast_checks": [],
-   "note": "reverts Overflow where floor(a b / 2^128) = -2^255 - 1 and the ceiling -2^255 fits; proven on every other input",
+   "note": "proven on every input outside the window where floor(a b / 2^128) = -2^255 - 1 (Halmos, 60 paths); in the window it now returns -2^255 (fixed in #159, regression test test_fp127_mulUp_regression_159)",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
    "reproduce": "python3 test/proofs/run.py --only '^(check_fp127_mulUp_outside)$'"
   },
@@ -201,15 +201,15 @@
   {
    "lib": "FP127",
    "op": "sqrt",
-   "status": "counterexample",
+   "status": "fuzzed",
    "spec": "floor(sqrt(x 2^128)); OutOfRange below zero",
    "checks": [],
    "lemmas": [],
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "returns floor + 1 where x 2^128 + 1 is a perfect square (s + 1)^2 and the Huff's Newton steps end on s + 1, e.g. x = 2^126 + 1",
-   "tool": "forge fuzz, 3,000 runs",
+   "note": "floor(sqrt(x 2^128)) on every fuzzed input (FuzzProofs) and at the former counterexample x = 2^126 k^2 + k (regression test); fixed in #159, no symbolic proof yet",
+   "tool": "forge fuzz",
    "reproduce": "FOUNDRY_PROFILE=proofs forge test --match-contract FuzzProofs --match-test fp127_sqrt"
   },
   {
