@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <script>(function(){var h=location.hash,p=location.pathname;if(p!=='/'&&p!=='/index.html')return;if(h.slice(0,2)!=='#/')return;var s=h.slice(2).split('/'),m={games:'/archive/',vyper:'/archive/',futures:'/archive/',badges:'/badges/',fp127:'/library/',benchmarks:'/results/',about:'/why/'},t=m[s[0]];if(!t)return;if(s[0]==='games'||s[0]==='vyper'||s[0]==='futures')t+='#/'+s.slice(0,2).join('/');location.replace(t);})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f3f4f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0e10" media="(prefers-color-scheme: dark)">
+{#- Critical: the page colour and theme before any stylesheet, so no frame is ever the browser's white or a wrong theme. Mirrors site.css --bg. -#}
+<style id="critical">
+:root { color-scheme: light dark; }
+html { background: #f3f4f0; color: #1b1c1c; }
+@media (prefers-color-scheme: dark) { html { background: #0c0e10; color: #e2e3df; } }
+@view-transition { navigation: auto; }
+</style>
 <title>{% block title %}{{ config.title }}{% endblock title %}</title>
 <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
 <link rel="icon" type="image/png" href="/blockulator_favicon.png">
