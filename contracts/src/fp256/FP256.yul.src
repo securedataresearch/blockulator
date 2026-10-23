@@ -94,22 +94,16 @@ function absw(x) -> r {
     r := sub(xor(x, m), m)
 }
 
-/// Index of the most significant set bit of x > 0, 0..255; msb(0) = 0, and
-/// any other body for it (255 - clz(x) on a target with CLZ) must keep that
-/// guard, since 255 - clz(0) wraps. Every leading-bit count in this file goes
-/// through this one helper. Branchless: five comparisons find the byte, then
-/// a 32-entry byte table indexed by a hash of the top byte (Solady's log2)
-/// gives the bit; the same value as FP127's binary search at half the gas.
-/// The zero test also keeps the optimizer from inlining it at every site.
+/// Index of the most significant set bit of x > 0, 0..255; msb(0) = 0. On
+/// the CLZ opcode (EIP-7939, Osaka): 255 - clz(x), guarded because
+/// 255 - clz(0) wraps. Every leading-bit count in this file goes through this
+/// one helper. The guard leaves rather than branching around the body: a
+/// function with a leave is not inlined, and inlining it at its 35 sites
+/// costs about 450 bytes the core does not have. Release four ran Solady's
+/// branchless log2 here (168 gas; about 14 now).
 function msb(x) -> r {
     if iszero(x) { leave }
-    r := shl(7, lt(0xffffffffffffffffffffffffffffffff, x))
-    r := or(r, shl(6, lt(0xffffffffffffffff, shr(r, x))))
-    r := or(r, shl(5, lt(0xffffffff, shr(r, x))))
-    r := or(r, shl(4, lt(0xffff, shr(r, x))))
-    r := or(r, shl(3, lt(0xff, shr(r, x))))
-    r := or(r, byte(and(0x1f, shr(shr(r, x), 0x8421084210842108cc6318c6db6d54be)),
-        0x0706060506020504060203020504030106050205030304010505030400000000))
+    r := sub(255, clz(x))
 }
 
 /// The 512-bit product of two unsigned words as (hi, lo).
@@ -491,9 +485,10 @@ function mulhi(a, b) -> h {
     h := sub(sub(mm, lo), lt(mm, lo))
 }
 
-/// Index of the lowest set bit of x > 0.
+/// Index of the lowest set bit of x > 0 (the lowest set bit isolated, then
+/// CLZ); ctz(0) = 0.
 function ctz(x) -> r {
-    r := msb(and(x, sub(0, x)))
+    if x { r := sub(255, clz(and(x, sub(0, x)))) }
 }
 
 function wadd(ah, al, bh, bl) -> rh, rl {

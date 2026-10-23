@@ -13,6 +13,9 @@ Usage:
     uv run scripts/fp127/gen.py [--lib ...] --probe-lib <path>  # test only: gas probes on
                                                                # the profiled helpers
     (add --forced to either for the forced second stage, as --wide-lib)
+    uv run scripts/fp127/gen.py --objects [fp127|fp256]        # the deployed objects' make stems
+                                                               # (fp127 fp256 fp256x ...); the
+                                                               # Makefile loops over this list
 
 An export may carry `/// @object <Name>` to go into a second deployed object
 (FP256's release four splits FP256 and FP256X). Each object then holds only
@@ -36,6 +39,10 @@ from pathlib import Path
 from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
+# The inline library inlines the clz builtin (msb), which solc has from
+# 0.8.31 with evmVersion osaka; the interfaces use nothing new and keep the
+# wider pragma, so a caller on an older compiler can still call the objects.
+LIB_PRAGMA = "^0.8.31"
 SOLIDITY_PRAGMA = "^0.8.24"
 
 # One generator, two libraries. Everything that names the library lives here;
@@ -46,29 +53,46 @@ LIBS = {
         "object": "FP127", "lib": "FP127Lib", "iface": "IFP127",
         "one": "int256 internal constant ONE = int256(1) << 128;",
         "iface_notice": "Interface of the deployed FP127 object. Values are signed 127.128\n///         fixed-point: one int256 whose value is raw / 2^128.",
-        "lib_notice": "Inlinable FP127: signed 127.128 fixed-point, one int256 per value,\n///         value = raw / 2^128. Every function body is the same Yul that the\n///         deployed FP127 object runs, so the two agree by construction.",
+        "lib_notice": "Inlinable FP127: signed 127.128 fixed-point, one int256 per value,\n///         value = raw / 2^128. Every function body is the same Yul that the\n///         deployed FP127 object runs, so the two agree by construction.\n///         It uses the CLZ opcode: compile with evmVersion osaka (solc >= 0.8.31)\n///         and run only on a chain that has CLZ (EIP-7939).",
+        "objects": {
+            "FP127": {"iface": "IFP127", "abi": "abi.json", "salt": "FP127 v5"},
+        },
     },
     "fp256": {
         "src": ROOT / "contracts" / "src" / "fp256" / "FP256.yul.src",
         "object": "FP256", "lib": "FP256Lib", "iface": "IFP256",
         "one": "int256 internal constant ONE = int256(0x3ffff) << 236;",
         "iface_notice": "Interface of the deployed FP256 object. Values are 256-bit binary\n///         floating point: one int256 holding sign (bit 255), a 19-bit biased\n///         exponent (bits 254..236, bias 262143) and a 236-bit fraction with an\n///         implicit leading one; zero is the all-zero word.",
-        "lib_notice": "Inlinable FP256: 256-bit binary floating point, one int256 per value\n///         (sign, 19-bit exponent, 236-bit fraction). Every function body is the\n///         same Yul that the deployed FP256 and FP256X objects run, so the three\n///         agree by construction.",
+        "lib_notice": "Inlinable FP256: 256-bit binary floating point, one int256 per value\n///         (sign, 19-bit exponent, 236-bit fraction). Every function body is the\n///         same Yul that the deployed FP256 objects run, so they agree by\n///         construction. It uses the CLZ opcode: compile with evmVersion osaka\n///         (solc >= 0.8.31) and run only on a chain that has CLZ (EIP-7939).",
         # release four: two deployed objects from the one source
         "objects": {
-            "FP256": {"iface": "IFP256", "abi": "abi.json"},
-            "FP256X": {"iface": "IFP256X", "abi": "abiX.json",
+            "FP256": {"iface": "IFP256", "abi": "abi.json", "salt": "FP256 v4"},
+            "FP256X": {"iface": "IFP256X", "abi": "abiX.json", "salt": "FP256X v4",
                        "iface_notice": "Interface of the deployed FP256X object, FP256's extension: the\n///         error function family and Lambert W on the same 256-bit binary\n///         floating point words as IFP256 (sign bit 255, a 19-bit biased\n///         exponent, bias 262143, a 236-bit fraction; zero is the all-zero word)."},
             # #79: the ops FP127 has, two more objects
-            "FP256X2": {"iface": "IFP256X2", "abi": "abiX2.json",
+            "FP256X2": {"iface": "IFP256X2", "abi": "abiX2.json", "salt": "FP256X2 v4",
                         "iface_notice": "Interface of the deployed FP256X2 object, FP256's second extension:\n///         exp2, exp10, log2, log10, log2Up, cbrt and the hyperbolic\n///         functions on the same 256-bit binary floating point words as IFP256."},
-            "FP256X3": {"iface": "IFP256X3", "abi": "abiX3.json",
+            "FP256X3": {"iface": "IFP256X3", "abi": "abiX3.json", "salt": "FP256X3 v4",
                         "iface_notice": "Interface of the deployed FP256X3 object, FP256's third extension:\n///         the algebraic ops FP127 has (min, max, clamp, avg, dist,\n///         zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg,\n///         hypot) on the same 256-bit binary floating point words as IFP256."},
         },
         "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
     },
 }
 LIB = LIBS["fp127"]
+# The objects tables above are the one list of deployed objects: each
+# object's name, library and CREATE2 salt. The Makefile loops over
+# `gen.py --objects`, and stdjson.py and deploy.py read DEPLOYED, so a
+# re-layout or a new salt edits only the tables.
+#   make stem (FP_LIB) -> (object name, library, salt)
+DEPLOYED = {name.lower(): (name, lib, meta["salt"])
+            for lib, cfg in LIBS.items() for name, meta in cfg["objects"].items()}
+
+
+def print_objects(lib: str = "all") -> None:
+    """The make stems of the deployed objects (of one library, or all)."""
+    print(" ".join(k for k, (_, l, _) in DEPLOYED.items() if lib in ("all", l)))
+
+
 SRC = LIB["src"]
 OUT_DIR = SRC.parent
 OBJECT_NAME = LIB["object"]
@@ -657,7 +681,7 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool = False,
         dev = (f"Not memory-safe: the records live at {COUNT_SLOT:#x} and above, which the\n"
                "///      calling test pre-expands.")
     return f"""// SPDX-License-Identifier: MIT
-pragma solidity {SOLIDITY_PRAGMA};
+pragma solidity {LIB_PRAGMA};
 {banner()}
 /// @title {lib_name}
 /// @notice {notice}
@@ -746,8 +770,13 @@ def main() -> int:
     ap.add_argument("--count-lib", type=Path, default=None, help="write only the test-only library that counts rounding-test fallbacks here")
     ap.add_argument("--probe-lib", type=Path, default=None, help="write only the test-only library with gas probes on the profiled helpers here")
     ap.add_argument("--forced", action="store_true", help="with --count-lib or --probe-lib: also force the rounding test to fail, as --wide-lib")
+    ap.add_argument("--objects", nargs="?", const="all", choices=["all", *sorted(LIBS)],
+                    help="print the deployed objects' make stems (of one library, default all) and exit")
     args = ap.parse_args()
     global LIB, SRC, OUT_DIR, OBJECT_NAME, LIB_NAME, IFACE_NAME
+    if args.objects:
+        print_objects(args.objects)
+        return 0
     LIB = LIBS[args.lib]
     SRC = args.src or LIB["src"]
     OUT_DIR = args.out or SRC.parent

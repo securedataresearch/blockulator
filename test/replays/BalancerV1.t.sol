@@ -137,8 +137,10 @@ contract BalancerV1Replay is Test {
                 _exitPool(p, pool, t.x[k]);
             }
         }
-        console.log(string.concat("BALSUM|", vm.toString(p), "|swaps=", vm.toString(c.swaps), ";joins=", vm.toString(c.joins),
-            ";exits=", vm.toString(c.exits), ";joinsBlockedByCeil=", vm.toString(c.joinsBlocked),
+        // split in two: solc 0.8.38's packed encoder runs out of stack on one long concatenation
+        string memory head = string.concat("BALSUM|", vm.toString(p), "|swaps=", vm.toString(c.swaps), ";joins=",
+            vm.toString(c.joins), ";exits=", vm.toString(c.exits));
+        console.log(string.concat(head, ";joinsBlockedByCeil=", vm.toString(c.joinsBlocked),
             ";exitsBlockedByFloor=", vm.toString(c.exitsBlocked), ";finalSupply=", vm.toString(pool.S)));
         // Every attack join paid one token unit for an amount whose exact price was about one and
         // a half: rounded toward the pool, each costs two and reverts on its own maxAmountIn = 1.
@@ -194,9 +196,10 @@ contract BalancerV1Replay is Test {
         assertEq(m.u127, m.u256, "FP127 and FP256 disagree in token units");
         blocked = m.bnum1 > c.lim && m.u127 > c.lim && m.u256 > c.lim;
 
-        _emit(c, JOIN_POOL_OUT, string.concat(_state(pool, c, bI), _kv("dep", s.tokenAmountIn), _kv("poolRatio", s.poolRatio),
-            _kv("boo", s.boo), _kv("ratio", s.tokenInRatio), _kv("newBal", s.newTokenBalanceIn),
-            _kv("afterFee", s.tokenAmountInAfterFee), _kv("zar", s.zar), _alt(m)));
+        _emit(c, JOIN_POOL_OUT, string.concat(
+            string.concat(_state(pool, c, bI), _kv("dep", s.tokenAmountIn), _kv("poolRatio", s.poolRatio), _kv("boo", s.boo)),
+            string.concat(_kv("ratio", s.tokenInRatio), _kv("newBal", s.newTokenBalanceIn),
+                _kv("afterFee", s.tokenAmountInAfterFee), _kv("zar", s.zar), _alt(m))));
 
         pool.bal[c.t] = B.badd(bI, s.tokenAmountIn);
         pool.S = pool.S + c.amt;
@@ -222,17 +225,18 @@ contract BalancerV1Replay is Test {
         // the dust exits (one token unit out, minAmountOut = 1) are each worth about half a unit
         if (c.lim > 0) assertTrue(blocked, "a dust exit would still pay");
 
-        _emit(c, EXIT_POOL_IN, string.concat(_state(pool, c, bO), _kv("dep", s.tokenAmountOut), _kv("poolRatio", s.poolRatio),
-            _kv("boo", s.boo), _kv("ratio", s.tokenOutRatio), _kv("newBal", s.newTokenBalanceOut),
-            _kv("beforeFee", s.tokenAmountOutBeforeSwapFee), _kv("zar", s.zaz), _alt(m)));
+        _emit(c, EXIT_POOL_IN, string.concat(
+            string.concat(_state(pool, c, bO), _kv("dep", s.tokenAmountOut), _kv("poolRatio", s.poolRatio), _kv("boo", s.boo)),
+            string.concat(_kv("ratio", s.tokenOutRatio), _kv("newBal", s.newTokenBalanceOut),
+                _kv("beforeFee", s.tokenAmountOutBeforeSwapFee), _kv("zar", s.zaz), _alt(m))));
 
         pool.bal[c.t] = B.bsub(bO, s.tokenAmountOut);
         pool.S = B.bsub(pool.S, c.amt - B.bmul(c.amt, B.EXIT_FEE));
     }
 
     function _state(Pool memory pool, Call memory c, uint256 bal) internal pure returns (string memory) {
-        return string.concat(_kv("bal", bal), _kv("P", c.amt), _kv("S", pool.S), _kv("w", pool.w[c.t]), _kv("tW", pool.tW),
-            _kv("fee", pool.fee), _kv("lim", c.lim));
+        return string.concat(string.concat(_kv("bal", bal), _kv("P", c.amt), _kv("S", pool.S), _kv("w", pool.w[c.t])),
+            _kv("tW", pool.tW), _kv("fee", pool.fee), _kv("lim", c.lim));
     }
 
     function _alt(Alt memory m) internal pure returns (string memory) {

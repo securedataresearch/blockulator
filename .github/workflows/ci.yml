@@ -33,8 +33,8 @@ jobs:
       - name: Ladder inputs are current
         run: make gen-inputs-check
 
-      - name: Build
-        run: forge build
+      - name: Build (forge for Solidity; stdjson.py for the Yul objects, pinned solc and optimizer sequence)
+        run: make build
 
       - name: Equivalence, behaviour and precision suites
         run: FOUNDRY_FUZZ_RUNS=5000 forge test --match-path "test/fp127/*" -vv | grep -E "PREC|Suite result|tests passed"
@@ -53,6 +53,9 @@ jobs:
 
       - name: Library-page examples
         run: forge test --match-path "test/examples/*"
+
+      - name: Every object equals its inline library (every export, msb-shaped inputs)
+        run: forge test --match-path "test/objects/*"
 
       - name: Gas ladder
         run: make bench && cat docs/benchmarks/gas.md

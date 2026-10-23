@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Standard-JSON input for the FP127 (or, with FP_LIB=fp256, the FP256) Yul
-object, and the bytecode proofs built on it.
+"""Standard-JSON input for a deployed Yul object (FP_LIB, default fp127: any
+make stem of gen.py's objects table), and the bytecode proofs built on it.
 
     uv run scripts/fp127/stdjson.py emit              # print the standard-json input
     uv run scripts/fp127/stdjson.py check             # compile it with solc, compare to the Foundry artifact
@@ -8,10 +8,13 @@ object, and the bytecode proofs built on it.
     FP_LIB=fp256 uv run scripts/fp127/stdjson.py artifact     # compile FP256.yul with solc and write out/FP256.yul/FP256.json
     FP_LIB=fp256x uv run scripts/fp127/stdjson.py artifact    # the same for FP256X.yul (release four's second object)
 
-The input uses language "Yul" and the settings from foundry.toml (solc
-0.8.24, optimizer on, 200 runs, shanghai). `check` is the proof that this
-input reproduces the artifact's init and runtime bytecode exactly; the same
-input is what the explorers receive from verify.py.
+The input uses language "Yul", solc 0.8.38, optimizer on, 200 runs,
+evmVersion osaka (the objects use CLZ), and solc 0.8.24's default Yul
+optimizer sequence (STEPS_0824, below). `artifact` writes every object's
+Foundry-shaped artifact (forge builds no Yul: foundry.toml skips it). `check`
+is the proof that this input reproduces the artifact's init and runtime
+bytecode exactly; the same input is what the explorers receive from
+verify.py.
 """
 from __future__ import annotations
 
@@ -25,19 +28,28 @@ from pathlib import Path
 from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
-# FP_LIB=fp256 selects the second library and FP_LIB=fp256x its second
-# object (release four), fp256x2 and fp256x3 its third and fourth (#79);
-# the proofs are otherwise identical
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gen import DEPLOYED  # noqa: E402
+
 LIB = os.environ.get("FP_LIB", "fp127")
-CONTRACT = {"fp127": "FP127", "fp256": "FP256", "fp256x": "FP256X", "fp256x2": "FP256X2", "fp256x3": "FP256X3"}[LIB]
-LIB_DIR = {"fp256x": "fp256", "fp256x2": "fp256", "fp256x3": "fp256"}.get(LIB, LIB)
+if LIB not in DEPLOYED:
+    sys.exit(f"FP_LIB must be one of {' '.join(DEPLOYED)}")
+CONTRACT, LIB_DIR, _ = DEPLOYED[LIB]
 SOURCE = ROOT / "contracts" / "src" / LIB_DIR / f"{CONTRACT}.yul"
 ARTIFACT = ROOT / "out" / f"{CONTRACT}.yul" / f"{CONTRACT}.json"
 SOURCE_UNIT = f"contracts/src/{LIB_DIR}/{CONTRACT}.yul"
-SOLC_VERSION = "0.8.24"
-SOLC_LONG = "v0.8.24+commit.e11b9ed9"
-EVM_VERSION = "shanghai"
+SOLC_VERSION = "0.8.38"
+SOLC_LONG = "v0.8.38+commit.1835d247"
+EVM_VERSION = "osaka"
 RUNS = 200
+# Pinned: solc 0.8.24's default Yul optimizer sequence, read out of the 0.8.24
+# binary. Every solc from 0.8.26 defaults to a different sequence, which on
+# these objects inlines more and builds larger: the FP256 core of master
+# (24,451 bytes under 0.8.24) comes out at 25,074 under 0.8.26 to 0.8.38,
+# over the 24,576-byte limit, and with this sequence at 24,456. The objects
+# are size-bound, so the sequence is part of the build.
+STEPS_0824 = ("dhfoDgvulfnTUtnIf[xa[r]EscLMcCTUtTOntnfDIulLculVcul [j]Tpeulxa[rul]xa[r]cLgvif"
+              "CTUca[r]LSsTFOtfDnca[r]Iulc]jmul[jul] VcTOcul jmul")
 
 
 def std_input() -> dict:
@@ -45,7 +57,8 @@ def std_input() -> dict:
         "language": "Yul",
         "sources": {SOURCE_UNIT: {"content": SOURCE.read_text()}},
         "settings": {
-            "optimizer": {"enabled": True, "runs": RUNS},
+            "optimizer": {"enabled": True, "runs": RUNS,
+                          "details": {"yul": True, "yulDetails": {"optimizerSteps": STEPS_0824}}},
             "evmVersion": EVM_VERSION,
             "outputSelection": {"*": {"*": ["evm.bytecode.object", "evm.deployedBytecode.object"]}},
         },
@@ -74,7 +87,7 @@ def find_solc() -> str:
         v = subprocess.run([s, "--version"], capture_output=True, text=True).stdout
         if SOLC_VERSION in v:
             return s
-    sys.exit(f"solc {SOLC_VERSION} not found; run `forge build` once so svm installs it")
+    sys.exit(f"solc {SOLC_VERSION} not found; run `forge build` once so svm installs it (foundry.toml pins it)")
 
 
 def compile_std(inp: dict) -> tuple[str, str]:
@@ -87,9 +100,10 @@ def compile_std(inp: dict) -> tuple[str, str]:
 
 
 def cmd_artifact() -> int:
-    """Compile with solc and write the Foundry-shaped artifact. FP256.yul is
-    kept out of forge's own build (foundry.toml `skip`): Foundry 1.8 batches
-    every Yul source into one solc call, and Yul mode takes exactly one."""
+    """Compile with solc and write the Foundry-shaped artifact. The Yul
+    objects are kept out of forge's own build (foundry.toml `skip`): Foundry
+    batches every Yul source into one solc call, Yul mode takes exactly one,
+    and forge cannot pin the optimizer sequence for Yul alone."""
     init_s, rt_s = compile_std(std_input())
     ARTIFACT.parent.mkdir(parents=True, exist_ok=True)
     ARTIFACT.write_text(json.dumps({
