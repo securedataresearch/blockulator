@@ -2,7 +2,7 @@
  "generated": "2026-10-22",
  "description": "Edges: one-shot evaluations at the ends of each library's domain, every probe through every library in its native representation, against mpmath at 200 digits. See methodology.",
  "versions": {
-  "fp127": "5d38f98",
+  "fp127": "cf03224",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",

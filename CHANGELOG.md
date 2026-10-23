@@ -28,9 +28,9 @@ minimax polynomial, log2 by two additive 16-entry levels, one division and a
 degree-12 minimax polynomial in y², ln(1 + d)/d and (e^d − 1)/d near zero by
 minimax polynomials in place of the Taylor series, every product's high word
 in line and the top polynomial steps in one word. Sweep medians, inline:
-exp 7,077 → 3,241, ln 7,640 → 3,623, log1p 8,727 → 2,558, expm1 6,523 →
-2,390, pow 14,011 → 5,844, compound 16,113 → 6,246, sinh 7,331 → 3,565,
-atanh 12,606 → 5,073, erf 16,962 → 12,932, lambertW0 14,524 → 10,623.
+exp 7,077 → 3,299, ln 7,640 → 3,623, log1p 8,727 → 2,558, expm1 6,523 →
+2,390, pow 14,011 → 5,902, compound 16,113 → 6,304, sinh 7,331 → 3,613,
+atanh 12,606 → 5,073, erf 16,962 → 12,990, lambertW0 14,524 → 10,623.
 FP256E is 21,598 bytes and FP256H 13,021.
 
 FP127's one-word kernels get the same treatment (salt `FP127 v6` at the

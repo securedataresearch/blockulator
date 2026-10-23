@@ -2,7 +2,7 @@
  "generated": "2026-10-22",
  "description": "Terminal precision: each scenario is N identical steps run through each library in its native representation for several inputs, against the same loop in exact arithmetic (mpmath, 200 digits), twice: from the exact parameters (digits) and from the parameters as the library received them (digitsFormat). See methodology.",
  "versions": {
-  "fp127": "5d38f98",
+  "fp127": "cf03224",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",

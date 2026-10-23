@@ -447,25 +447,30 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 
 | op | fast path | second stage | largest seen |
 |---|---:|---:|---:|
-| exp, expm1 | 7,200–7,700 | 29,300–29,800 | 45,700 |
-| ln, log1p | 8,500–9,400 | 31,200–37,600 | 126,400 |
-| pow, powu | 5,700–14,800 | 59,900–68,000 | 99,500 |
-| compound | 17,000 | 68,100 | 161,000 |
-| erf, erfc, normCdf | 17,600–18,500 | 97,600–105,200 | 418,200 (the continued fraction in two words) |
-| lambertW0, lambertWm1 | 29,700–34,000 | 66,900–71,700 | 92,400 |
-| the directed ops | 500–2,000 | | 2,000 |
-| exp2, exp10 | 7,500–7,600 | 30,000 | 30,300 |
-| log2, log10 | 8,400–8,600 | 31,600–31,800 | 36,200 |
-| sinh, cosh | 8,400–8,500 | 14,400–32,700 | 43,600 |
-| tanh, atanh | 8,400–13,900 | 15,200–22,700 | 80,800 |
-| cbrt, gavg, hypot | 3,800–13,600 | | 14,600 |
-| lerp | 7,900 | | 9,000 |
-| factorial | 1.22M | | 2.45M (n = 20,366) |
+| exp, expm1 | 2,400–3,300 | 25,100–25,300 | 40,800 |
+| ln, log1p | 2,600–3,600 | 26,000–28,400 | 112,100 |
+| pow, powu | 5,000–5,900 | 54,200–54,300 | 88,300 |
+| compound | 6,300 | 54,800 | 142,200 |
+| erf, erfc, normCdf | 13,000–13,900 | 92,500–100,200 | 411,700 (the continued fraction in two words) |
+| lambertW0, lambertWm1 | 10,600–13,200 | 40,900–43,100 | 63,600 |
+| the directed ops | 400–1,000 | | 1,000 |
+| exp2, exp10 | 3,100–3,200 | 25,800 | 26,000 |
+| log2, log10 | 3,700 | 26,300–26,400 | 28,400 |
+| sinh, cosh | 3,600 | 9,200–27,300 | 38,700 |
+| tanh, atanh | 3,600–5,100 | 8,000–17,100 | 75,400 |
+| cbrt, gavg, hypot | 2,100–3,500 | | 3,900 |
+| lerp | 5,900 | | 6,900 |
+| factorial | 1.07M | | 2.14M (n = 20,366) |
 
-The second stage runs for about 2·err/2^w of inputs, w = 17..19 the bits
-under D's significand: 6 in 100,000 for exp, more for pow at large
-|y log2 x| and in the continued fraction's region, where the rigorous bound
-is thirteen times the largest error measured.
+Blockulator 2.2's kernels (above) took the exp/log fast paths from 6,900–
+17,700 to 2,400–6,300 and, through e^(−y²), log2m and the wide stage's
+inputs, erf's and Lambert W's by a quarter; the second stage, which keeps
+release four's two-word series, by about 4,000. The second stage runs for
+about 2·err/2^w of inputs, w = 17..19 the bits under D's significand: 5 in
+100,000 for exp, 2 in 10,000 for ln (from 3 in 1,000 with release two's
+log2 bound), more for pow at large |y log2 x| and in the continued
+fraction's region, where the rigorous bound is thirteen times the largest
+error measured.
 
 ## What changed from FP127's conventions
 
