@@ -4,6 +4,21 @@ A release is the public name for a set of deployed contracts. Each contract
 keeps its own version in its CREATE2 salt, because the salt names the address;
 `contracts/deployments/RELEASE.json` maps the release to every address.
 
+## Unreleased
+
+FP127's exp kernel and division, same words (FP127 takes a new salt at the
+next deploy):
+
+- `expk` works in X form (H·2^-256 + L·2^-384): three 16-entry table levels
+  and a degree-16 minimax corrector, never above the truth, within 2^-311
+  relative (`scripts/fp127/generators/expk.py`). `exp` 5,360 → 2,716 gas
+  (typical, inline), `exp2` 5,687 → 2,668, `exp10` 5,555 → 2,982, `expm1`,
+  `sinh`, `cosh`, `tanh` about −40%, Lambert W about −28%.
+- `div`, `divDown` and `divUp` share an exact core, two 64-bit digits when
+  both operands are under 2^64: `div` 649 → 412, `divDown`/`divUp` 818 → 475.
+- The FP127 object is 20,776 bytes (2.2: 21,858): one copy of the kernel
+  where the optimizer had made three.
+
 ## Blockulator 2.2 (2026-10-22)
 
 The second gas pass: every result the same word (FP256 correctly rounded,

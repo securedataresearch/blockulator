@@ -268,7 +268,8 @@ division in two 64-bit digits (|a|·2^64 fits a word and every remainder is
 below |b| < 2^192, so shifted by 64 it fits too: three `div`s and a `mod`);
 a third digit when only |b| is under 2^64; Bloemen's mulDiv (`divu`)
 beyond. 2.2 ran the mulDiv for every |a| ≥ 1. The directed forms add one
-`mulmod` for exactness. Same words and the same reverts.
+`mulmod` for exactness. Same words and the same reverts: `div` 649 → 412
+gas on the ladder (PRBMath 509), `divDown` and `divUp` 818 → 475.
 
 **The double-word exp kernel (after 2.2).** `expk` works in X form, a value
 H·2^-256 + L·2^-384 with L a small word: about 300 bits are what the
@@ -289,8 +290,8 @@ test corrects n by one (on the 2^-128 grid x − m·ln 2 stays 2^-137 from 0
 for every 0 < |m| ≤ 300, so the test cannot be fooled). The rounding reads
 only the kernel's high word: with e = n + 129 the word is half of
 2^e + ⌊sh·2^(e−256)⌋ + 1, and the low word is under one unit of that sum.
-`exp` 5,360 → 2,583 gas (the 8 typical inputs of `gas.json`, inline),
-`expk` 4,046 → 2,202. `scripts/fp127/generators/expk.py` fits and certifies
+`exp` 5,360 → 2,716 gas (the typical median of `gas.json`, inline;
+PRBMath 2,816), `expk` alone 4,046 → about 2,200. `scripts/fp127/generators/expk.py` fits and certifies
 g, models the kernel in exact integers, checks that the source holds its
 Yul verbatim and measures it against its bound; `precise_model.py` takes
 it from there. The pinned optimizer had made three copies of the kernel
