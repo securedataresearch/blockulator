@@ -21,7 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "static" / "data"
 OUT = DATA / "home.json"
-GAS_OPS = ["add", "mul", "div", "exp", "ln", "pow", "sqrt"]
+CORE_OPS = ["add", "mul", "div", "exp", "ln", "pow", "sqrt"]  # first, in this order; then every op three other libraries offer
 ACCRUAL = "accrual-continuous"
 ACCRUAL_COLS = [1, 10, 100, 365, 1000, 10000]
 
@@ -44,14 +44,14 @@ def gas_section(reg: dict) -> dict:
         s = (o.get("typical") or o)["summary"].get(form)
         return s["median"] if s else None
 
-    rows = []
-    for lib in reg:
-        for op in GAS_OPS:
-            v = median(g19, op, "lib") if lib == "fp19" else median(g127, op, "lib" if lib == "fp127" else lib)
-            if v is not None:
-                rows.append({"lib": lib, "op": op, "gas": v})
-    typical = [op for op in GAS_OPS if "typical" in g127["ops"][op]]
-    return {"ops": GAS_OPS, "typical": typical, "rows": rows}
+    def value(lib, op):
+        return median(g19, op, "lib") if lib == "fp19" else median(g127, op, "lib" if lib == "fp127" else lib)
+
+    offered = {op: [lib for lib in reg if value(lib, op) is not None] for op in g127["ops"]}
+    ops = CORE_OPS + sorted((op for op, libs in offered.items() if sum(not reg[l].get("ours") for l in libs) >= 3 and op not in CORE_OPS), key=lambda o: (-len(offered[o]), o))
+    rows = [{"lib": lib, "op": op, "gas": value(lib, op)} for lib in reg for op in ops if value(lib, op) is not None]
+    typical = [op for op in ops if "typical" in g127["ops"][op]]
+    return {"ops": ops, "typical": typical, "rows": rows}
 
 
 def accrual_section(reg: dict) -> dict:
@@ -116,7 +116,10 @@ def edges_section(reg: dict) -> dict:
 def wad_section(reg: dict) -> dict:
     d = load("wad.json")
     wrong_somewhere = {r["function"] for r in d["rows"] if r["lib"] != "blockulator" and r["wrongWei"]}
-    fns = list(dict.fromkeys(r["function"] for r in d["rows"] if r["lib"] == "blockulator" and r["function"] in wrong_somewhere))
+    # every function another library offers: the ones they get wrong first, then the ones every library gets exact
+    offered = {r["function"] for r in d["rows"] if r["lib"] != "blockulator"}
+    ours_order = [r["function"] for r in d["rows"] if r["lib"] == "blockulator" and r["function"] in offered]
+    fns = list(dict.fromkeys([f for f in ours_order if f in wrong_somewhere] + ours_order))
     rows = [{"lib": r["lib"], "fn": r["function"], "pct": round(r["wrongWeiPct"], 2), "wrong": r["wrongWei"], "n": r["valued"], "maxWei": r.get("maxWei")}
             for lib in reg for r in d["rows"] if r["lib"] == lib and r["function"] in fns]
     ours = [r for r in d["rows"] if r["lib"] == "blockulator"]
@@ -131,7 +134,7 @@ KINDS = [("float", "Floating point"), ("fixed", "Fixed point")]
 
 
 def head(l: dict) -> dict:
-    return {k: l[k] for k in ("id", "label", "long", "family")} | {"ours": bool(l.get("ours"))}
+    return {k: l[k] for k in ("id", "label", "short", "long", "family")} | {"ours": bool(l.get("ours"))}
 
 
 def grouped(libs: list[dict], rows: list[dict], cells) -> list[dict]:
@@ -141,11 +144,27 @@ def grouped(libs: list[dict], rows: list[dict], cells) -> list[dict]:
             for kind, name in KINDS if any(l["kind"] == kind and l["id"] in have for l in libs)]
 
 
+def libcols(libs: list[dict], have: set, rows: list[dict], cell) -> dict:
+    """A table whose columns are libraries, grouped floating point | fixed point; rows are {key, label, href?};
+    cell(library, row) gives {v (text or None), h (shade 0..1, optional), why (hover, optional)}."""
+    groups = [{"name": name, "cols": [head(l) for l in libs if l["kind"] == kind and l["id"] in have]} for kind, name in KINDS]
+    groups = [g | {"span": len(g["cols"])} for g in groups if g["cols"]]
+    cols = [c for g in groups for c in g["cols"]]
+    return {"colgroups": groups, "cols": cols,
+            "rows": [r | {"cells": [cell(c, r) | {"ours": c["ours"]} for c in cols]} for r in rows]}
+
+
 def tables(out: dict, libs: list[dict]) -> None:
     g = out["gas"]
     by = {(r["lib"], r["op"]): r["gas"] for r in g["rows"]}
-    g["table"] = {"cols": ["digits"] + [o + ("ᵗ" if o in g["typical"] else "") for o in g["ops"]],
-                  "groups": grouped(libs, g["rows"], lambda l: [str(l["digits"])] + [f"{by[l['id'], o]:,}" if (l["id"], o) in by else None for o in g["ops"]])}
+    rows = [{"key": "digits", "label": "digits at 1", "unit": True}] + [{"key": o, "label": o + ("ᵗ" if o in g["typical"] else ""), "code": True} for o in g["ops"]]
+
+    def gcell(c, r):
+        if r["key"] == "digits":
+            return {"v": str(next(l["digits"] for l in libs if l["id"] == c["id"]))}
+        v = by.get((c["id"], r["key"]))
+        return {"v": f"{v:,}" if v is not None else None, "why": f"{c['long']}: {r['key']}, median gas per call" if v is not None else "not offered"}
+    g["table"] = libcols(libs, {r["lib"] for r in g["rows"]}, rows, gcell)
 
     a = out["accrual"]
     by = {(r["lib"], r["n"]): r["digits"] for r in a["rows"]}
@@ -154,25 +173,25 @@ def tables(out: dict, libs: list[dict]) -> None:
 
     w = out["wad"]
     by = {(r["lib"], r["fn"]): r for r in w["rows"]}
-    cols = [l for l in libs if any(r["lib"] == l["id"] for r in w["rows"])]
 
-    def wcell(l, f):
-        r = by.get((l["id"], f))
-        return None if not r else f"0 of {r['n']:,}" if l.get("ours") else "0" if not r["wrong"] else f"{round(r['pct'])}%"
-    w["table"] = {"cols": [head(l) for l in cols], "rows": [{"fn": f, "cells": [wcell(l, f) for l in cols]} for f in w["functions"]]}
+    def wcell(c, r):
+        x = by.get((c["id"], r["key"]))
+        if not x:
+            return {"v": None, "why": "not offered"}
+        v = f"0 of {x['n']:,}" if c["ours"] else "0" if not x["wrong"] else f"{round(x['pct'])}%"
+        return {"v": v, "why": f"{c['long']}: {x['wrong']:,} of {x['n']:,} results off by a wei or more"}
+    w["table"] = libcols(libs, {r["lib"] for r in w["rows"]}, [{"key": f, "label": f, "code": True} for f in w["functions"]], wcell)
 
     ld = out["ladder"]
     by = {(r["lib"], r["scenario"]): r for r in ld["rows"]}
-    colgroups = [{"name": name, "cols": [head(l) for l in libs if l["kind"] == kind and any(r["lib"] == l["id"] for r in ld["rows"])]} for kind, name in KINDS]
-    order = [c for cg in colgroups for c in cg["cols"]]
 
-    def lcell(c, s):
-        r = by.get((c["id"], s["id"]))
-        if not r or r["digits"] is None:
-            return {"v": None, "why": r["status"] if r else "not measured"}
-        return {"v": f"{r['digits']:.1f}", "h": round(r["digits"] / 72, 3), "ours": c["ours"]}
-    ld["table"] = {"colgroups": [cg | {"span": len(cg["cols"])} for cg in colgroups], "cols": order,
-                   "rows": [{"id": s["id"], "title": s["title"], "cells": [lcell(c, s) for c in order]} for s in ld["scenarios"]]}
+    def lcell(c, r):
+        x = by.get((c["id"], r["key"]))
+        if not x or x["digits"] is None:
+            return {"v": None, "why": x["status"] if x else "not measured"}
+        return {"v": f"{x['digits']:.1f}", "h": round(x["digits"] / 72, 3), "why": f"{c['long']}: median digits after {x['n']:,} steps"}
+    ld["table"] = libcols(libs, {r["lib"] for r in ld["rows"]},
+                          [{"key": s["id"], "label": s["title"], "href": f"/results/ladder/#{s['id']}"} for s in ld["scenarios"]], lcell)
 
     e = out["edges"]
     by = {r["lib"]: r for r in e["rows"]}
