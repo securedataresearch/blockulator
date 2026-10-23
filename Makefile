@@ -21,6 +21,7 @@ help:
 	@echo "  make vectors-check    - Fail if the vectors are stale"
 	@echo "  make build            - gen-check + forge build"
 	@echo "  make test             - gen-check + vectors-check + equivalence, behaviour and precision suites"
+	@echo "  make typed            - The typed API (FP127Type, FP256Type) against the raw libraries: same results and reverts, gas both ways, default profile and via_ir"
 	@echo "  make precision-report - Rewrite docs/fp127/precision.md from docs/fp127/precision.json"
 	@echo "  make bench            - Gas ladder for every op and form -> docs/benchmarks/gas.json + gas.md"
 	@echo "  make talk             - The talk deck, one plot per slide from the data -> docs/talks/dust-is-over.pdf"
@@ -133,6 +134,20 @@ test: gen-check vectors-check
 	@forge test --match-path "test/examples/*" -q
 	@forge test --match-path "test/objects/*"
 	@forge test --match-path "test/wad/*"
+	@$(MAKE) -s typed
+
+# The typed API (FP127Type.sol, FP256Type.sol) against the raw libraries: the
+# same words and reverts under fuzzing, and each op's gas both ways, under the
+# default profile and again through the IR, where no difference is allowed.
+.PHONY: typed
+typed:
+	@mkdir -p cache/typed-ir
+	@forge test --match-path "test/typed/*" -vv > cache/typed-ir/default.log || { cat cache/typed-ir/default.log; exit 1; }
+	@grep -E "TYPED\|.*\|worst|Suite result" cache/typed-ir/default.log
+	@TYPED_GAS_TOL=0 FOUNDRY_SRC=test/typed FOUNDRY_TEST=test/typed FOUNDRY_SCRIPT=test/typed \
+		FOUNDRY_OUT=cache/typed-ir/out FOUNDRY_CACHE_PATH=cache/typed-ir/cache FOUNDRY_VIA_IR=true \
+		forge test --match-test test_gas -vv > cache/typed-ir/via-ir.log || { cat cache/typed-ir/via-ir.log; exit 1; }
+	@grep -E "TYPED\|.*\|worst|Suite result" cache/typed-ir/via-ir.log
 
 size-fp256: build
 	@$(DEPLOY) size $(FP256_OBJECTS)

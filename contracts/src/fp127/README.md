@@ -16,6 +16,7 @@ This directory holds **one hand-written file** and five generated ones.
 | `abi.json` | generated: ABI of the deployed object |
 | `ops.json` | generated: op table (signature, selector, domain, reverts) for the site |
 | `FP127Caller.sol` | hand-written: thin `staticcall` harness around a deployed object |
+| `FP127Type.sol` | hand-written: the typed API, `type FP127 is int256` with operators over `FP127Lib` |
 
 ```
 make gen              # regenerate the five outputs
@@ -130,6 +131,36 @@ members.
 8. Reverts go through `rev(sel)` with a selector declared by
    `/// @error Name() 0xselector`. The generator checks every selector
    against keccak and every `rev(...)` literal against the declared list.
+
+## Typed API
+
+`FP127Type.sol` is opt-in: `type FP127 is int256`, with `+ - * /`, unary
+`-` and `< > <= >= == !=` bound globally, and every other op attached, so
+`x.exp()` and `a.mulUp(b)` work. `*` is `mul` (floor) and `/` is `div`
+(truncated toward zero); the directed forms keep their names. Each function
+is a pure free function that only re-types its arguments, so the words and
+reverts are `FP127Lib`'s. Conversions: `FP127.wrap` / `unwrap` (or `fp127(raw)`,
+as PRBMath's `sd()`), `fp127FromWad(uint256)` and `toWadDown` / `toWadUp` for
+unsigned WADs, `fp127FromFixed18` and `toFixed18*` for signed ones,
+`fp127FromInt` / `toIntDown` / `toIntUp`, and the constants `ONE` and `PI`.
+`FP256Type.sol` holds the typed FP127 ↔ FP256 conversions.
+
+```solidity
+import {FP127, ONE, PI, fp127FromWad} from "fp127/FP127Type.sol";
+
+FP127 b = fp127FromWad(1.5e18) * ONE.exp();  // 1.5e; * is FP127Lib.mul
+FP127 r = (b - ONE).ln() / PI + -ONE;        // operators and attached ops
+bool inside = r >= -ONE && r <= ONE;
+uint256 paid = b.toWadDown();                // 4077422742688567853, floored
+```
+
+`make typed` (part of `make test`) fuzzes every typed function against the
+raw call, result and revert data byte for byte, and compares the gas of one
+small contract per op in each form. Through the IR (`via_ir = true`) every
+op costs exactly the same. Under the legacy pipeline the wrapper is one more
+internal call: 37 to 78 gas, nothing on the comparisons, and 112 to 114 on
+`floor`, `frac` and `sign`, which the legacy optimizer inlines whole into a
+raw caller but not through the wrapper.
 
 ## ABI
 
