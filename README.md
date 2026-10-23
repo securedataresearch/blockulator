@@ -230,7 +230,8 @@ blockulator/
 
 ## Build and test
 
-Needs `forge` (solc 0.8.24 is installed on first build), `uv`, `deno`, and
+Needs `forge` (solc 0.8.38 is installed on first build; everything targets
+evm osaka, since the libraries use the CLZ opcode), `uv`, `deno`, and
 `zola` 0.23 for the site (`build.sh` downloads it when absent).
 
 ```bash
