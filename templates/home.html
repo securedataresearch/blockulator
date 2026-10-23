@@ -32,8 +32,11 @@
 
 <section class="block">
   <h2>{{ x.chart_title }}</h2>
-  <p class="note">{{ x.chart_note | replace(from="{proto365}", to=yr.aave["365"].digits ~ "") | replace(from="{proto10k}", to=yr.aave["10000"].digits ~ "") | replace(from="{short}", to=short | round | num_format) | replace(from="{fp127}", to=yr.fp127["10000"].digits ~ "") | replace(from="{fp256}", to=yr.fp256["10000"].digits ~ "") | safe }}</p>
-  <figure class="figure chart digitchart" role="img" aria-label="Correct digits of one accrual after 1 to 10,000 days without an update. After 10,000 days: FP256 {{ yr.fp256['10000'].digits }}, FP127 {{ yr.fp127['10000'].digits }}, binary128 {{ yr.quad['10000'].digits }}, the WAD libraries and 64.64 {{ yr.solady['10000'].digits }}, Aave and Morpho {{ yr.aave['10000'].digits }}.">
+{#- whole digits, each capped at what its format holds (digitsCapped), so FP256 reads 71, never a lucky 72 -#}
+{%- set dg = {"aave365": yr.aave["365"].digitsCapped | float | round(method="floor") | int, "aave10000": yr.aave["10000"].digitsCapped | float | round(method="floor") | int, "fp12710000": yr.fp127["10000"].digitsCapped | float | round(method="floor") | int, "fp25610000": yr.fp256["10000"].digitsCapped | float | round(method="floor") | int, "quad10000": yr.quad["10000"].digitsCapped | float | round(method="floor") | int, "solady10000": yr.solady["10000"].digitsCapped | float | round(method="floor") | int} -%}
+{%- set p365i = yr.aave["365"].interestCapped | float | round(method="floor") | int -%}
+  <p class="note">{{ x.chart_note | replace(from="{proto365}", to=dg.aave365 ~ "") | replace(from="{proto365i}", to=p365i ~ "") | replace(from="{proto10k}", to=dg.aave10000 ~ "") | replace(from="{short}", to=short | round | num_format) | replace(from="{fp127}", to=dg.fp12710000 ~ "") | replace(from="{fp256}", to=dg.fp25610000 ~ "") | safe }}</p>
+  <figure class="figure chart digitchart" role="img" aria-label="Correct digits of one accrual after 1 to 10,000 days without an update. After 10,000 days: FP256 {{ dg.fp25610000 }}, FP127 {{ dg.fp12710000 }}, binary128 {{ dg.quad10000 }}, the WAD libraries and 64.64 {{ dg.solady10000 }}, Aave and Morpho {{ dg.aave10000 }}.">
     <div class="wide">{{ <ladderchart cells={yr} ladder={d.ladder} log10={d.ladderLog10} W={720} H={340} /> }}</div>
     <div class="narrow">{{ <ladderchart cells={yr} ladder={d.ladder} log10={d.ladderLog10} W={360} H={300} /> }}</div>
   </figure>

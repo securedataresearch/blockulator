@@ -10,7 +10,8 @@ import {FP256Lib} from "../fp256/FP256Lib.sol";
 ///         parameters to nearest); the sign is bit 255, so the sign test is
 ///         overridden. Every op the edges ask for is the library's own
 ///         (pow, log1p, expm1, erf, erfc, normCdf, both Lambert branches, powu
-///         and compound); the scenarios' composite recipes run through them.
+///         and compound); per-second accrual is compound, as FP127's is; the
+///         scenarios' other composite recipes run through them.
 contract LadderFP256 is LadderBase {
     function _isNeg(int256 x) internal pure override returns (bool) { return x < 0; }
     function _one() internal pure override returns (int256) { return FP256Lib.ONE; }
@@ -32,4 +33,8 @@ contract LadderFP256 is LadderBase {
     function _lambertWm1(int256 x) internal view override returns (int256) { return FP256Lib.lambertWm1(x); }
     function _powu(int256 x, int256 n) internal view override returns (int256) { return FP256Lib.powu(x, n); }
     function _compoundOp(int256 rate, int256 n) internal view override returns (int256) { return FP256Lib.compound(rate, n); }
+    /// compound: (1 + rs)^steps correctly rounded, without forming a rounded
+    /// 1 + rs (a per-second rate needs 266 bits for it), as FP127 does with
+    /// its compound; the default would round 1 + rs to 237 bits and raise it.
+    function _accrue(int256 b, int256 rs, uint256 steps) internal view override returns (int256) { return _mul(b, FP256Lib.compound(rs, int256(steps))); }
 }

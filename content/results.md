@@ -9,4 +9,4 @@ group = "results"
 n = 10000
 +++
 
-Each scenario repeats one step N times in every library's own representation and compares the result with the same loop in 300-digit arithmetic. Daily compounding: FP127 keeps 34 digits, Solady 14. The per-second accrual a lending market runs: 29 against 8.5.
+Each scenario repeats one step N times in every library's own representation and compares the result with the same loop in 300-digit arithmetic. Daily compounding: FP127 keeps 34.8 digits, Solady 14.8. Per-second accrual, which Maker compounds with rpow: Maker keeps 18.3, FP127 29.8 and FP256 71.2. FP127's 29.8 is the rate's own rounding: a per-second rate floored to 2<sup>−128</sup> holds about 29 digits, and against the rate as the format holds it FP127 keeps 40.

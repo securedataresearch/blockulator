@@ -37,34 +37,34 @@ lending protocol does not call it once. It accrues interest every block,
 and after N accruals the rounding has been applied N times.
 
 Take $10,000 at 10% APR, compounded daily ([compound](/results/ladder/#compound)). After one day ABDK
-and the WAD libraries are right to 19 digits. After a year the WAD libraries are right to 16;
-after 10,000 steps, 15. FP127 goes from 38 to 34 over the same ladder. The slopes are the same, about one digit per decade of N.
+and the WAD libraries are right to 19.5 digits. After a year WAD libraries are right to 16.9;
+after 10,000 steps, 15.5. FP127 goes from 38.8 to 34.8 over the same ladder. The slopes are the same, about one digit per decade of N.
 The intercept is twenty digits apart, and the intercept is what you keep.
 
 The round trip makes the mechanism visible: `x = exp(ln(x))` should be the
-identity ([round trip](/results/ladder/#roundtrip)). PRBMath drifts from 16 digits to 12 by N = 10,000.
-Solady returns 1.5 exactly at every N, but not because it rounds well:
-`lnWad` and `expWad` both truncate (each ends in a right shift), and at 1.5
-their approximation errors happen to land the floor back on the same word.
-That is grid luck. From 2 it drifts from 18 digits to 14 by N = 10,000, and
-from 0.1 from 17 to 12. FP127 rounds both steps to the nearest 2<sup>−128</sup>,
-so it returns the identical word on every step and holds 38 digits at
-N = 10,000. It did not always: the first Yul port floored every step of exp and
+identity ([round trip](/results/ladder/#roundtrip)). PRBMath drifts from 16.9 digits to 12.9 by N = 10,000; Solady returns exactly 1.5 at every N, but by luck of the grid:
+expWad and lnWad both truncate (each ends in a right shift), and at 1.5 the
+two truncations happen to land back on the starting word. Two of its ten
+inputs come back exact; the others drift to 14 digits by N = 10,000.
+FP127 rounds to nearest at 2<sup>−128</sup> and returns the
+identical word on every step, holding 38.7 digits at N = 10,000. It did not always: the first Yul port floored every step of exp and
 ln, came back 8 ULPs low on each round trip, and lost a digit per decade of
 N. Rounding to nearest with guard bits fixed it, and the ladder is where
 that showed.
 
 Subtraction is worse. An amortising loan is `b = b·(1+r) − payment` every
 day, and near payoff the balance is a small difference of two large
-numbers. At N = 365, one payment before the loan clears, the WAD libraries are
-down to 15 digits and FP127 to 34 ([amortise](/results/ladder/#amortise)). Fifteen digits of a $840 balance is still fine. Fifteen
-digits of a position that is a basis point from liquidation across a
-million accounts is not, and the ladder is where you find out which case
-you are in.
+numbers. A $300,000 loan at 5% paid daily over 10,001 days has one payment
+left at N = 10,000, and there WAD libraries are down to 11.9 digits
+and FP127 to 31.2 ([amortise](/results/ladder/#amortise)); after a year, with the balance still large, they had 17.2 and 36.5.
+Twelve digits of a $55 balance is still fine. Twelve digits of a position
+that is a basis point from liquidation across a million accounts is not,
+and the ladder is where you find out which case you are in.
 
-The arithmetic for N = 365: the rate's rounding, 2.7 × 10<sup>−20</sup> a day
-carried 365 times, is 10<sup>−17</sup> of the balance: 16 digits. The 365 floored
-`mulWad`s alone leave 19.
+The arithmetic for N = 10,000: the rate and the payment floored to 10<sup>−18</sup>,
+carried 10,000 times into a balance five thousand times smaller than the
+loan, leave 11.9 digits on their own; the 10,000 floored `mulWad`s alone
+leave 15.7.
 
 The ladder measures each cell twice, and the second measurement says where
 the loss comes from. Against the exact inputs, FP127 is right to 36 digits
@@ -73,7 +73,7 @@ them, it is right to 40 ([compound, N = 365](/results/ladder/#compound)). The
 rate's rounding to 2<sup>−128</sup>, applied once and carried N times, sets the 36;
 the 365 floored multiplications cost about two of the 42 digits the grid
 holds at that balance. The WAD libraries lose part of theirs the
-same way, 16 against exact inputs and 19 against rounded ones at N = 365,
+same way, 16.9 against exact inputs and 19.7 against rounded ones at N = 365,
 and the rest to the arithmetic.
 
 ## What it costs
