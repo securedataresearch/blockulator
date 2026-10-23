@@ -21,13 +21,15 @@
 {%- set ops = load_data(path=pre ~ "ops.json") -%}
 {%- set prec = load_data(path=pre ~ "precision.json") -%}
 {%- set gas = load_data(path=pre ~ "gas.json") -%}
+{%- set sizes = load_data(path="static/data/size.json") -%}{% set size = sizes.libs[lib] -%}
+{%- set bytesnote = "\"Bytes inline\" is the runtime code one op adds to a contract that calls it through <code>" ~ (lib == "fp256" and "FP256Lib" or "FP127Lib") ~ "</code>, helpers included (default profile, legacy pipeline; hover for via_ir). Ops that share a kernel add less together than their rows (size.json's bundles). Inlining saves about " ~ size.staticcallGas ~ " gas a call; <code>staticcall</code> the deployed object instead when inlining would take a contract near the 24,576-byte limit, or for a large op called rarely." -%}
 {%- set proofs = load_data(path="static/data/proofs.json") -%}
 {%- set_global proven = "," %}{% for q in proofs.ops %}{% if q.lib | lower == lib and q.status == "proven" %}{% set_global proven = proven ~ q.op ~ "," %}{% endif %}{% endfor -%}
 {#- FP256 ops whose result is always the exact value; every other FP256 op is correctly rounded (CR) -#}
 {%- set exact256 = ["neg", "abs", "sign", "cmp", "lt", "eq", "min", "max", "clamp", "floor", "ceil", "round", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "log2Up"] -%}
 <div class="scroll">
 <table class="optable">
-<thead><tr><th>op</th><th>what</th><th>domain</th><th>reverts</th><th class="num">bits (min/mean)</th><th class="num">gas, object</th><th class="num">gas, inline</th></tr></thead>
+<thead><tr><th>op</th><th>what</th><th>domain</th><th>reverts</th><th class="num">bits (min/mean)</th><th class="num">gas, object</th><th class="num">gas, inline</th><th class="num">bytes inline</th></tr></thead>
 <tbody>
 {%- for o in ops.ops %}
 {%- set p = prec[o.name] %}
@@ -45,6 +47,7 @@
 {%- else %}
 <td class="num"></td><td class="num"></td>
 {%- endif %}
+{%- if o.name in size.ops %}{% set z = size.ops[o.name] %}<td class="num" title="via_ir: {{ z.viaIr | num_format }}">{{ z.legacy | num_format }}</td>{% else %}<td class="num"></td>{% endif %}
 </tr>
 {%- endfor %}
 </tbody>
@@ -52,9 +55,9 @@
 </div>
 {%- set_global nt = 0 %}{% for name, g in gas.ops %}{% if g.typical is defined %}{% set_global nt = nt + 1 %}{% endif %}{% endfor %}
 {%- if lib == "fp256" %}
-<p class="note">Bits against exact rationals and mpmath at 300 decimal places over the committed vectors. <strong>CR</strong>: the correctly rounded word at every vector, to nearest or in the direction the name gives; <strong>exact</strong>: the result is always the exact value. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed object that holds the op (FP256, FP256E, FP256H or FP256S); "inline" is <code>FP256Lib</code>. Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>.</p>
+<p class="note">Bits against exact rationals and mpmath at 300 decimal places over the committed vectors. <strong>CR</strong>: the correctly rounded word at every vector, to nearest or in the direction the name gives; <strong>exact</strong>: the result is always the exact value. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed object that holds the op (FP256, FP256E, FP256H or FP256S); "inline" is <code>FP256Lib</code>. {{ bytesnote | safe }} Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>, <a href="/data/size.json">size.json</a>.</p>
 {%- else %}
-<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed FP127; "inline" is <code>FP127Lib</code>. Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>.</p>
+<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed FP127; "inline" is <code>FP127Lib</code>. {{ bytesnote | safe }} Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>, <a href="/data/size.json">size.json</a>.</p>
 {%- endif %}
 {%- endcomponent %}
 

@@ -100,7 +100,7 @@ def main() -> int:
         ("build", "make build"),
         ("test", "make test"),
         ("bounds", "uv run scripts/fp256/generators/bounds.py"),
-        ("size", "make size size-fp256"),
+        ("size", "make size size-fp256 size-inline-check"),
         ("ladder", "make ladder-check"),
         ("edges", "make edges-check"),
         ("sweep", sweep),

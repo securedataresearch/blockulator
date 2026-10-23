@@ -48,6 +48,13 @@ pi, the replays and the accrual are not diffed in CI.
   fits, gas on typical and swept inputs, and the bytes one call adds.
   Produced by `make wad` (`scripts/sweep/wad.py`); BlockulatorWad's gate rows
   (both passes, 0 wrong wei) are in `sweep.md`.
+- [`size.md`](size.md) / [`size.json`](size.json): **inline size.** The
+  runtime bytecode each FP127 and FP256 op adds when inlined through
+  `FP127Lib` or `FP256Lib`, helpers included, under the default profile and
+  under via_ir; a few common bundles against the sum of their ops; and when to
+  `staticcall` the deployed object instead. Produced by `make size-inline`
+  (`scripts/size/inline.py`, one throwaway contract per op against a
+  baseline); CI checks it with `make size-inline-check`.
 - [`sweep.md`](sweep.md) / [`sweep.json`](sweep.json): **per-op accuracy on
   random inputs.** Every FP256 op against the correctly rounded word and every
   FP127 op against the real truth, 1,500 to 20,000 seeded inputs each,

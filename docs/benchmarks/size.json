@@ -1,0 +1,731 @@
+{
+ "generated": "2026-10-23",
+ "description": "Runtime bytecode, in bytes, that one op adds to a contract when it is inlined through FP127Lib or FP256Lib, helpers included: the deployed size of a contract with one external function f(int256,int256,int256) returning Lib.op(a[,b[,c]]), minus the same contract returning a. legacy is the default foundry profile (via_ir = false), viaIr the same settings through the IR. CBOR metadata is off. Each Lib function carries its own copy of its helpers and the optimizer merges identical code across them, so a second op that shares a kernel with the first adds less than its row: bundles chains several ops in one contract, against the sum of their singles. staticcallGas is the gas the external call to the deployed object adds to add (gas.json or gas256.json, yul median minus lib median).",
+ "generator": "scripts/size/inline.py (make size-inline)",
+ "compiler": {
+  "solc": "0.8.38",
+  "evmVersion": "osaka",
+  "optimizerRuns": 200,
+  "cbor": false
+ },
+ "limit": 24576,
+ "baseline": {
+  "legacy": 118,
+  "viaIr": 63
+ },
+ "libs": {
+  "fp127": {
+   "staticcallGas": 570,
+   "summary": {
+    "legacy": {
+     "min": {
+      "op": "sign",
+      "bytes": 8
+     },
+     "median": 480,
+     "max": {
+      "op": "pow",
+      "bytes": 10153
+     }
+    },
+    "viaIr": {
+     "min": {
+      "op": "sign",
+      "bytes": 10
+     },
+     "median": 321,
+     "max": {
+      "op": "pow",
+      "bytes": 9604
+     }
+    }
+   },
+   "sum": {
+    "legacy": 111514,
+    "viaIr": 102062
+   },
+   "ops": {
+    "fromFixed18": {
+     "legacy": 86,
+     "viaIr": 41
+    },
+    "toFixed18": {
+     "legacy": 54,
+     "viaIr": 39
+    },
+    "toFixed18Down": {
+     "legacy": 77,
+     "viaIr": 39
+    },
+    "toFixed18Up": {
+     "legacy": 92,
+     "viaIr": 62
+    },
+    "add": {
+     "legacy": 75,
+     "viaIr": 33
+    },
+    "sub": {
+     "legacy": 75,
+     "viaIr": 33
+    },
+    "mul": {
+     "legacy": 119,
+     "viaIr": 68
+    },
+    "div": {
+     "legacy": 480,
+     "viaIr": 321
+    },
+    "mulDown": {
+     "legacy": 128,
+     "viaIr": 68
+    },
+    "mulUp": {
+     "legacy": 211,
+     "viaIr": 118
+    },
+    "divDown": {
+     "legacy": 498,
+     "viaIr": 333
+    },
+    "divUp": {
+     "legacy": 499,
+     "viaIr": 337
+    },
+    "exp2": {
+     "legacy": 4333,
+     "viaIr": 3943
+    },
+    "exp": {
+     "legacy": 4533,
+     "viaIr": 4157
+    },
+    "exp10": {
+     "legacy": 4484,
+     "viaIr": 4141
+    },
+    "log2": {
+     "legacy": 7141,
+     "viaIr": 6571
+    },
+    "ln": {
+     "legacy": 7335,
+     "viaIr": 6818
+    },
+    "log10": {
+     "legacy": 7335,
+     "viaIr": 6818
+    },
+    "log2Up": {
+     "legacy": 106,
+     "viaIr": 56
+    },
+    "sqrt": {
+     "legacy": 753,
+     "viaIr": 655
+    },
+    "pow": {
+     "legacy": 10153,
+     "viaIr": 9604
+    },
+    "powu": {
+     "legacy": 1212,
+     "viaIr": 1151
+    },
+    "compound": {
+     "legacy": 1268,
+     "viaIr": 1173
+    },
+    "cbrt": {
+     "legacy": 600,
+     "viaIr": 472
+    },
+    "gavg": {
+     "legacy": 852,
+     "viaIr": 726
+    },
+    "hypot": {
+     "legacy": 903,
+     "viaIr": 761
+    },
+    "inv": {
+     "legacy": 135,
+     "viaIr": 84
+    },
+    "abs": {
+     "legacy": 74,
+     "viaIr": 34
+    },
+    "neg": {
+     "legacy": 70,
+     "viaIr": 28
+    },
+    "sign": {
+     "legacy": 8,
+     "viaIr": 10
+    },
+    "min": {
+     "legacy": 51,
+     "viaIr": 15
+    },
+    "max": {
+     "legacy": 51,
+     "viaIr": 15
+    },
+    "clamp": {
+     "legacy": 76,
+     "viaIr": 33
+    },
+    "avg": {
+     "legacy": 46,
+     "viaIr": 20
+    },
+    "zeroFloorSub": {
+     "legacy": 101,
+     "viaIr": 45
+    },
+    "dist": {
+     "legacy": 122,
+     "viaIr": 51
+    },
+    "lerp": {
+     "legacy": 219,
+     "viaIr": 100
+    },
+    "floor": {
+     "legacy": 17,
+     "viaIr": 19
+    },
+    "ceil": {
+     "legacy": 90,
+     "viaIr": 46
+    },
+    "frac": {
+     "legacy": 16,
+     "viaIr": 18
+    },
+    "round": {
+     "legacy": 103,
+     "viaIr": 48
+    },
+    "factorial": {
+     "legacy": 118,
+     "viaIr": 62
+    },
+    "lambertW0": {
+     "legacy": 8427,
+     "viaIr": 7807
+    },
+    "lambertWm1": {
+     "legacy": 8112,
+     "viaIr": 7527
+    },
+    "log1p": {
+     "legacy": 7422,
+     "viaIr": 6878
+    },
+    "expm1": {
+     "legacy": 5090,
+     "viaIr": 4651
+    },
+    "sinh": {
+     "legacy": 4898,
+     "viaIr": 4400
+    },
+    "cosh": {
+     "legacy": 4888,
+     "viaIr": 4394
+    },
+    "tanh": {
+     "legacy": 5183,
+     "viaIr": 4769
+    },
+    "atanh": {
+     "legacy": 2967,
+     "viaIr": 2711
+    },
+    "erf": {
+     "legacy": 3270,
+     "viaIr": 3210
+    },
+    "erfc": {
+     "legacy": 3245,
+     "viaIr": 3219
+    },
+    "normCdf": {
+     "legacy": 3313,
+     "viaIr": 3330
+    }
+   }
+  },
+  "fp256": {
+   "staticcallGas": 464,
+   "summary": {
+    "legacy": {
+     "min": {
+      "op": "abs",
+      "bytes": 108
+     },
+     "median": 544,
+     "max": {
+      "op": "powu",
+      "bytes": 13272
+     }
+    },
+    "viaIr": {
+     "min": {
+      "op": "abs",
+      "bytes": 55
+     },
+     "median": 443,
+     "max": {
+      "op": "normCdf",
+      "bytes": 12843
+     }
+    }
+   },
+   "sum": {
+    "legacy": 197199,
+    "viaIr": 183316
+   },
+   "ops": {
+    "add": {
+     "legacy": 632,
+     "viaIr": 508
+    },
+    "sub": {
+     "legacy": 633,
+     "viaIr": 511
+    },
+    "mul": {
+     "legacy": 337,
+     "viaIr": 276
+    },
+    "div": {
+     "legacy": 444,
+     "viaIr": 366
+    },
+    "sqrt": {
+     "legacy": 531,
+     "viaIr": 443
+    },
+    "exp": {
+     "legacy": 6232,
+     "viaIr": 5823
+    },
+    "ln": {
+     "legacy": 6518,
+     "viaIr": 5010
+    },
+    "pow": {
+     "legacy": 12512,
+     "viaIr": 10977
+    },
+    "log1p": {
+     "legacy": 6315,
+     "viaIr": 6349
+    },
+    "expm1": {
+     "legacy": 7802,
+     "viaIr": 8000
+    },
+    "erf": {
+     "legacy": 12261,
+     "viaIr": 12409
+    },
+    "erfc": {
+     "legacy": 12336,
+     "viaIr": 12638
+    },
+    "normCdf": {
+     "legacy": 12389,
+     "viaIr": 12843
+    },
+    "lambertW0": {
+     "legacy": 10726,
+     "viaIr": 10026
+    },
+    "lambertWm1": {
+     "legacy": 10460,
+     "viaIr": 10183
+    },
+    "powu": {
+     "legacy": 13272,
+     "viaIr": 11752
+    },
+    "compound": {
+     "legacy": 11735,
+     "viaIr": 11506
+    },
+    "neg": {
+     "legacy": 108,
+     "viaIr": 56
+    },
+    "abs": {
+     "legacy": 108,
+     "viaIr": 55
+    },
+    "sign": {
+     "legacy": 116,
+     "viaIr": 64
+    },
+    "cmp": {
+     "legacy": 178,
+     "viaIr": 106
+    },
+    "lt": {
+     "legacy": 173,
+     "viaIr": 100
+    },
+    "eq": {
+     "legacy": 129,
+     "viaIr": 82
+    },
+    "fromUint": {
+     "legacy": 234,
+     "viaIr": 141
+    },
+    "fromFP127": {
+     "legacy": 244,
+     "viaIr": 158
+    },
+    "toFP127": {
+     "legacy": 313,
+     "viaIr": 249
+    },
+    "fromFixed18": {
+     "legacy": 325,
+     "viaIr": 272
+    },
+    "toFixed18": {
+     "legacy": 351,
+     "viaIr": 260
+    },
+    "mulDown": {
+     "legacy": 449,
+     "viaIr": 364
+    },
+    "mulUp": {
+     "legacy": 450,
+     "viaIr": 366
+    },
+    "divDown": {
+     "legacy": 544,
+     "viaIr": 443
+    },
+    "divUp": {
+     "legacy": 545,
+     "viaIr": 446
+    },
+    "toUintDown": {
+     "legacy": 284,
+     "viaIr": 159
+    },
+    "toUintUp": {
+     "legacy": 285,
+     "viaIr": 186
+    },
+    "toIntDown": {
+     "legacy": 304,
+     "viaIr": 238
+    },
+    "toIntUp": {
+     "legacy": 305,
+     "viaIr": 247
+    },
+    "floor": {
+     "legacy": 376,
+     "viaIr": 303
+    },
+    "ceil": {
+     "legacy": 377,
+     "viaIr": 310
+    },
+    "toFixed18Down": {
+     "legacy": 447,
+     "viaIr": 344
+    },
+    "toFixed18Up": {
+     "legacy": 448,
+     "viaIr": 351
+    },
+    "fromUintDown": {
+     "legacy": 302,
+     "viaIr": 132
+    },
+    "fromUintUp": {
+     "legacy": 303,
+     "viaIr": 225
+    },
+    "min": {
+     "legacy": 184,
+     "viaIr": 113
+    },
+    "max": {
+     "legacy": 184,
+     "viaIr": 113
+    },
+    "clamp": {
+     "legacy": 242,
+     "viaIr": 163
+    },
+    "avg": {
+     "legacy": 633,
+     "viaIr": 515
+    },
+    "dist": {
+     "legacy": 660,
+     "viaIr": 520
+    },
+    "zeroFloorSub": {
+     "legacy": 663,
+     "viaIr": 527
+    },
+    "inv": {
+     "legacy": 401,
+     "viaIr": 294
+    },
+    "lerp": {
+     "legacy": 2741,
+     "viaIr": 2684
+    },
+    "frac": {
+     "legacy": 980,
+     "viaIr": 877
+    },
+    "round": {
+     "legacy": 343,
+     "viaIr": 285
+    },
+    "log2Up": {
+     "legacy": 381,
+     "viaIr": 293
+    },
+    "factorial": {
+     "legacy": 777,
+     "viaIr": 558
+    },
+    "cbrt": {
+     "legacy": 960,
+     "viaIr": 849
+    },
+    "gavg": {
+     "legacy": 713,
+     "viaIr": 575
+    },
+    "hypot": {
+     "legacy": 978,
+     "viaIr": 751
+    },
+    "exp2": {
+     "legacy": 5825,
+     "viaIr": 5420
+    },
+    "exp10": {
+     "legacy": 5846,
+     "viaIr": 5568
+    },
+    "log2": {
+     "legacy": 6669,
+     "viaIr": 5129
+    },
+    "log10": {
+     "legacy": 6728,
+     "viaIr": 5398
+    },
+    "sinh": {
+     "legacy": 8007,
+     "viaIr": 7606
+    },
+    "cosh": {
+     "legacy": 6322,
+     "viaIr": 5830
+    },
+    "tanh": {
+     "legacy": 8082,
+     "viaIr": 7814
+    },
+    "atanh": {
+     "legacy": 6047,
+     "viaIr": 6157
+    }
+   }
+  }
+ },
+ "bundles": [
+  {
+   "lib": "fp127",
+   "ops": [
+    "mul",
+    "div"
+   ],
+   "legacy": 582,
+   "viaIr": 372,
+   "sumOfSingles": {
+    "legacy": 599,
+    "viaIr": 389
+   }
+  },
+  {
+   "lib": "fp127",
+   "ops": [
+    "mulDown",
+    "mulUp",
+    "divDown",
+    "divUp"
+   ],
+   "legacy": 805,
+   "viaIr": 526,
+   "sumOfSingles": {
+    "legacy": 1336,
+    "viaIr": 856
+   }
+  },
+  {
+   "lib": "fp127",
+   "ops": [
+    "exp",
+    "ln"
+   ],
+   "legacy": 7768,
+   "viaIr": 7222,
+   "sumOfSingles": {
+    "legacy": 11868,
+    "viaIr": 10975
+   }
+  },
+  {
+   "lib": "fp127",
+   "ops": [
+    "exp",
+    "ln",
+    "pow"
+   ],
+   "legacy": 10925,
+   "viaIr": 10404,
+   "sumOfSingles": {
+    "legacy": 22021,
+    "viaIr": 20579
+   }
+  },
+  {
+   "lib": "fp127",
+   "ops": [
+    "exp",
+    "log2",
+    "sqrt"
+   ],
+   "legacy": 8250,
+   "viaIr": 7610,
+   "sumOfSingles": {
+    "legacy": 12427,
+    "viaIr": 11383
+   }
+  },
+  {
+   "lib": "fp127",
+   "ops": [
+    "erf",
+    "erfc",
+    "normCdf"
+   ],
+   "legacy": 4188,
+   "viaIr": 4568,
+   "sumOfSingles": {
+    "legacy": 9828,
+    "viaIr": 9759
+   }
+  },
+  {
+   "lib": "fp127",
+   "ops": [
+    "fromFixed18",
+    "toFixed18Down",
+    "toFixed18Up",
+    "mulDown",
+    "mulUp",
+    "compound"
+   ],
+   "legacy": 1684,
+   "viaIr": 1434,
+   "sumOfSingles": {
+    "legacy": 1862,
+    "viaIr": 1501
+   }
+  },
+  {
+   "lib": "fp256",
+   "ops": [
+    "add",
+    "sub",
+    "mul",
+    "div"
+   ],
+   "legacy": 1113,
+   "viaIr": 1031,
+   "sumOfSingles": {
+    "legacy": 2046,
+    "viaIr": 1661
+   }
+  },
+  {
+   "lib": "fp256",
+   "ops": [
+    "exp",
+    "ln"
+   ],
+   "legacy": 11838,
+   "viaIr": 10340,
+   "sumOfSingles": {
+    "legacy": 12750,
+    "viaIr": 10833
+   }
+  },
+  {
+   "lib": "fp256",
+   "ops": [
+    "exp",
+    "ln",
+    "pow"
+   ],
+   "legacy": 14918,
+   "viaIr": 13690,
+   "sumOfSingles": {
+    "legacy": 25262,
+    "viaIr": 21810
+   }
+  },
+  {
+   "lib": "fp256",
+   "ops": [
+    "erf",
+    "erfc",
+    "normCdf"
+   ],
+   "legacy": 16431,
+   "viaIr": 15176,
+   "sumOfSingles": {
+    "legacy": 36986,
+    "viaIr": 37890
+   }
+  },
+  {
+   "lib": "fp256",
+   "ops": [
+    "fromFixed18",
+    "toFixed18Down",
+    "toFixed18Up",
+    "mulDown",
+    "mulUp",
+    "compound"
+   ],
+   "legacy": 12755,
+   "viaIr": 12894,
+   "sumOfSingles": {
+    "legacy": 13854,
+    "viaIr": 13203
+   }
+  }
+ ]
+}
