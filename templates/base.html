@@ -78,7 +78,7 @@ html { background: #f3f4f0; color: #1b1c1c; }
 <script>(function(){var h=document.documentElement;if(!h.classList.contains('nvt')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
 document.addEventListener('click',function(e){var a=e.target.closest('a[href]');if(!a||e.defaultPrevented||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||a.target||a.hasAttribute('download'))return;
 var u=new URL(a.href,location.href);if(u.origin!==location.origin||(u.pathname===location.pathname&&u.search===location.search)||/\.(?!html?$)[a-z0-9]+$/i.test(u.pathname))return;
-e.preventDefault();h.classList.add('leaving');setTimeout(function(){location.href=u.href;},90);});
+e.preventDefault();h.classList.add('leaving');setTimeout(function(){location.href=u.href;},parseFloat(getComputedStyle(h).getPropertyValue('--t-out'))||90);});
 addEventListener('pageshow',function(e){if(e.persisted)h.classList.remove('leaving');});})();</script>
 <script>document.addEventListener('click',function(e){var b=e.target.closest('.copy');if(!b||!navigator.clipboard)return;navigator.clipboard.writeText(b.dataset.copy).then(function(){var t=b.textContent;b.textContent='copied';setTimeout(function(){b.textContent=t;},1200);});});</script>
 </body>

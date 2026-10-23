@@ -4,28 +4,14 @@
 {% block content %}
 {%- set d = load_data(path="static/data/ladder.json") -%}
 {%- set e = load_data(path="static/data/edges.json") -%}
-{%- set forms = ["fp19", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
-{%- set short = {"fp127": "FP127", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "fp19": "FP19", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
-{%- set ns = page.extra.n | str -%}
+{%- set h = load_data(path="static/data/home.json") -%}
 <article class="prose doc wide">
 {% include "pagehead.html" %}
 {{ page.content | safe }}
+{{ <plot chart="ladder" src="home" label="Median correct digits after the last step of each scenario, every library; the numbers are in the table below." /> }}
 
-<div class="scroll">
-<table class="matrix">
-<thead><tr><th>scenario</th>{% for f in forms %}<th class="num">{{ short[f] }}</th>{% endfor %}</tr></thead>
-<tbody>
-{%- for sc in d.scenarios %}
-<tr><td><a href="/results/ladder/#{{ sc.id }}">{{ sc.title }}</a></td>
-{%- for f in forms %}{% set row = sc.summary[f][ns] %}{% set rc = sc.inputs[0].cells[f][ns] %}
-<td class="num{% if f == 'fp127' or f == 'fp19' %} ours{% endif %}">{% if rc.reasonName is defined and "Unsupported" in rc.reasonName %}{% elif row.digits is defined %}{% if row.exact == row.count %}<span class="exact">exact</span>{% else %}<span title="range {{ row.digits.min }}–{{ row.digits.max }} over {{ row.count }} inputs">{{ row.digits.median }}</span>{% endif %}{% if row.completed < row.inputs %} <span class="rev meta" title="completed {{ row.completed }} of {{ row.inputs }} inputs">{{ row.completed }}/{{ row.inputs }}</span>{% endif %}{% else %}<span class="rev">rev</span>{% endif %}</td>
-{%- endfor %}
-</tr>
-{%- endfor %}
-</tbody>
-</table>
-</div>
-<p class="small">Median correct digits at N = {{ page.extra.n | num_format }} over the inputs of each scenario that every library with a result completed, against exact inputs, each capped at what its format holds at that magnitude (FP19 71.3, binary128 34.0, the fixed grids by their last place). <span class="rev">k/n</span>: the library completed k of n inputs; <span class="rev">rev</span>: every input reverted. Empty: the library has no model for that scenario. FP127Lib equals FP127 and is left out. One N is a headline; <a href="/results/ladder/">the ladder</a> has every N from 1.</p>
+{{ <libtable t={h.ladder.table} first="scenario · median digits" heat={true} /> }}
+<p class="small">Median correct digits at N = {{ page.extra.n | num_format }} over the inputs of each scenario that every library with a result completed, against exact inputs, each capped at what its format holds at that magnitude (FP19 71.3, binary128 34.0, the fixed grids by their last place). Hover a cell for what it is; — is no number: the library has no model for that scenario, or every input reverted (the ladder page has the counts). FP127Lib equals FP127 and is left out. One N is a headline; <a href="/results/ladder/">the ladder</a> has every N from 1.</p>
 {{ <stamp d={d} script="livecap.py" /> }}
 
 <h2>Where to go next</h2>

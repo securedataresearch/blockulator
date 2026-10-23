@@ -121,6 +121,10 @@ Two rules, each from the replay of a real exploit. The [integration page](/libra
 
 ## The ops
 
+Each op's worst-case precision against its gas. Hover a dot for the op.
+
+{{ <plot chart="libops" arg="fp127" label="Correct bits on the worst input against median gas per call for each op; the numbers are in the table below." /> }}
+
 {{ <optable /> }}
 
 ## For agents

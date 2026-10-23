@@ -31,6 +31,10 @@
   --sans: "Instrument Sans", "Instrument Sans Fallback", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: "JetBrains Mono", "JetBrains Mono Fallback", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --wrap: 1680px; --measure: 46em; --radius: 20px; --radius-s: 12px;
+  /* motion: every transition and animation on the site uses these. Things ease out as they arrive and ease in as they
+     leave; hover and state changes are fast, arrivals medium; leaving is quicker than arriving. */
+  --ease-out: cubic-bezier(.2, .8, .2, 1); --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --t-fast: 160ms; --t-in: 240ms; --t-out: 90ms; --t-slow: 450ms;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -83,7 +87,7 @@ a { color: inherit; }
 .brand img { border-radius: 7px; filter: brightness(0); } /* the mark is a white mask: ink on the light bar */
 @media (prefers-color-scheme: dark) { .brand img { filter: none; } }
 .links { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 15px; }
-.links a { text-decoration: none; color: var(--muted); padding: 7px 12px; border-radius: 999px; transition: background .18s ease, color .18s ease; }
+.links a { text-decoration: none; color: var(--muted); padding: 7px 12px; border-radius: 999px; transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out); }
 .links a:hover { color: var(--text-strong); background: var(--tint); }
 .links a[aria-current] { color: var(--text-strong); background: var(--tint); box-shadow: inset 0 0 0 1px var(--line); }
 .links .cta { color: var(--bg); background: var(--text-strong); margin-left: 6px; }
@@ -103,7 +107,7 @@ a { color: inherit; }
 .hero .sub { margin: 0 0 32px; font-size: clamp(18px, 2.1vw, 21px); line-height: 1.5; color: var(--text); max-width: 33em; text-wrap: pretty; }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; }
 .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 15.5px; line-height: 1;
-  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease; }
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out); }
 .btn.primary { background: var(--text-strong); color: var(--bg); box-shadow: var(--shadow); }
 .btn.primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
 .btn.ghost { color: var(--text-strong); border: 1px solid var(--line-2); background: var(--surface); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
@@ -119,7 +123,7 @@ a { color: inherit; }
 .note { color: var(--muted); max-width: 46em; margin-top: 22px; }
 .note a { color: var(--text-strong); }
 
-.card { padding: 24px 24px 22px; transition: transform .2s ease, box-shadow .2s ease; }
+.card { padding: 24px 24px 22px; transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out); }
 .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .step:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 var(--edge), var(--shadow-lift); }
 .step h3, .story h3 { margin: 8px 0 8px; font-size: 19px; letter-spacing: -.015em; font-weight: 600; color: var(--text-strong); }
@@ -145,12 +149,16 @@ a { color: inherit; }
 .doc h1 { font-size: clamp(32px, 4.4vw, 46px); letter-spacing: -.035em; line-height: 1.08; margin: 0 0 .5em; color: var(--text-strong); font-weight: 600; }
 .doc ul, .doc ol { padding-left: 1.2em; }
 .doc li { margin: .35em 0; }
-.doc a { text-decoration-color: var(--rule); text-underline-offset: 3px; transition: text-decoration-color .15s ease; }
+.doc a { text-decoration-color: var(--rule); text-underline-offset: 3px; transition: text-decoration-color var(--t-fast) var(--ease-out); }
 .doc a:hover { text-decoration-color: var(--text-strong); }
 
 @media (max-width: 900px) { .steps { grid-template-columns: 1fr 1fr; } .stories { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .steps { grid-template-columns: 1fr; } }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .card, .btn, .links a { transition: none; } }
+/* the one reduced-motion rule: nothing moves or fades, anywhere */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after, ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; transition: none !important; }
+}
 
 .figure { margin: 1.4em 0 1.6em; padding: 18px 18px 12px; }
 .figure svg text { font-family: var(--sans); }

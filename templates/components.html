@@ -202,72 +202,12 @@
 {%- if digits <= intlen %}{% set k = pre + digits %}{% else %}{% set k = pre + digits + 1 %}{% endif -%}
 {%- if k >= value | length %}<span class="ok">{{ value }}</span>{% else %}<span class="ok">{{ value[:k] }}</span><span class="wrong">{{ value[k:] }}</span>{% endif -%}
 {%- endcomponent %}
-{#- Median correct digits per library against N, over the inputs every shown library completed at that N
-    (summaryBasis in ladder.json), with each library's min–max over those inputs as a band. key = "digits",
-    "digitsFormat" or "interest"; every value is already capped at what its format holds (prec), so the axis
-    to 72 never clips. The three WAD libraries are one band (lowest to highest of their medians), labelled once;
-    a median whose every input is exact is a ring, not a dot. W and H set the viewBox: the ladder page draws it
-    wide and narrow and CSS shows one, so the text stays legible on a phone. Each series is labelled at its line
-    end: the ends are sorted by x, then y, as fixed-width strings ("1xxxxx|1yyyyy|class|label", hundredths
-    offset by 100000 so string order is numeric order, joined by ";" since the template engine has no array
-    append), and within one x a label sits at least `gap` below the one above it, then at least `gap` above
-    the one below it, inside the plot. -#}
-{% component ladderband(summary: map, key: string, ladder: array, log10: map, W: integer = 640, H: integer = 300) -%}
-{%- set series = ["fp19", "fp127", "quad", "abdk", "maker", "aave", "morpho"] -%}
-{%- set wad = ["solady", "prb", "balancer", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
-{%- set labels = {"fp19": "FP19", "fp127": "FP127", "quad": "Quad", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
-{%- set cap = 72 -%}
-{%- if W > 500 %}{% set L = 44 %}{% set R = 112 %}{% set gap = 13 %}{% set wlbl = "WAD libraries" %}{% else %}{% set L = 34 %}{% set R = 78 %}{% set gap = 13 %}{% set wlbl = "WAD" %}{% endif %}{% set T = 16 %}{% set B = 40 -%}
-{%- set pw = W - L - R %}{% set ph = H - T - B -%}
-<svg viewBox="0 0 {{ W }} {{ H }}" width="100%">
-{%- for g in [0, 18, 36, 54, 72] %}{% set y = T + ph - ph * g / cap %}
-<line class="grid" x1="{{ L }}" x2="{{ L + pw }}" y1="{{ y }}" y2="{{ y }}"/><text class="tick" x="{{ L - 8 }}" y="{{ y + 4 }}" text-anchor="end">{{ g }}</text>
-{%- endfor %}
-{%- for n in [1, 10, 100, 1000, 10000] %}{% set x = L + pw * (log10[n | str] | float) / 4 %}
-<text class="tick" x="{{ x }}" y="{{ H - 14 }}" text-anchor="middle">{{ n | num_format }}</text>
-{%- endfor %}
-<text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 1 }}" text-anchor="middle">N steps</text>
-<text class="tick" transform="translate(11 {{ T + ph / 2 }}) rotate(-90)" text-anchor="middle">correct digits</text>
-{%- set_global ends = "" %}
-{#- the WAD libraries: one band from the lowest to the highest median -#}
-{%- set_global top = "" %}{% set_global bot = "" %}{% set_global lastx = 0 %}{% set_global lasty = 0 %}{% set_global any = false %}{% set_global dots = "" -%}
-{%- for n in ladder %}{% set_global mx = -1 %}{% set_global mn = 999 %}{% set_global tip = "" -%}
-{%- for f in wad %}{% if summary[f] is defined %}{% set row = summary[f][n | str] %}{% if row[key] is defined %}{% set m = row[key].median | float %}{% if m > mx %}{% set_global mx = m %}{% endif %}{% if m < mn %}{% set_global mn = m %}{% endif %}{% set_global tip = tip ~ labels[f] ~ " " ~ row[key].median %}{% if row.completed < row.inputs %}{% set_global tip = tip ~ " (" ~ row.completed ~ "/" ~ row.inputs ~ " completed)" %}{% endif %}{% set_global tip = tip ~ "; " %}{% endif %}{% endif %}{% endfor -%}
-{%- if mx >= 0 %}{% set_global any = true %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global top = top ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global bot = x ~ "," ~ (T + ph - ph * mn / cap) ~ " " ~ bot %}{% set_global lastx = x %}{% set_global lasty = T + ph - ph * (mx + mn) / 2 / cap %}{% set_global dots = dots ~ "<circle class=\"s-solady\" cx=\"" ~ x ~ "\" cy=\"" ~ (T + ph - ph * (mx + mn) / 2 / cap) ~ "\" r=\"3\"><title>WAD libraries N=" ~ n ~ ": " ~ tip ~ "median over the common inputs</title></circle>" %}{% endif -%}
-{%- endfor %}
-{%- if any %}
-<polygon class="wadband s-solady" points="{{ top }}{{ bot }}"/>
-<polyline class="s-solady" points="{{ top }}"/><polyline class="s-solady" points="{{ bot }}"/>
-{{ dots | safe }}
-{%- set_global ends = ends ~ ";" ~ (((lastx * 100) | round | int) + 100000) ~ "|" ~ (((lasty * 100) | round | int) + 100000) ~ "|s-solady|" ~ wlbl %}
-{%- endif %}
-{%- for f in series %}{% if summary[f] is defined %}{% set_global med = "" %}{% set_global top = "" %}{% set_global bot = "" %}{% set_global lastx = 0 %}{% set_global lasty = 0 %}{% set_global any = false %}
-{%- for n in ladder %}{% set row = summary[f][n | str] %}{% if row[key] is defined %}{% set_global any = true %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set d = row[key] %}{% set ym = T + ph - ph * (d.median | float) / cap %}{% set ymax = T + ph - ph * (d.max | float) / cap %}{% set ymin = T + ph - ph * (d.min | float) / cap %}{% set_global med = med ~ x ~ "," ~ ym ~ " " %}{% set_global top = top ~ x ~ "," ~ ymax ~ " " %}{% set_global bot = x ~ "," ~ ymin ~ " " ~ bot %}{% set_global lastx = x %}{% set_global lasty = ym %}{% endif %}{% endfor %}
-{%- if any %}
-<polygon class="band s-{{ f }}" points="{{ top }}{{ bot }}"/>
-<polyline class="s-{{ f }}" points="{{ med }}"/>
-{%- for n in ladder %}{% set row = summary[f][n | str] %}{% if row[key] is defined %}{% set allx = key != "interest" and row.exact is defined and row.exact == row.count %}<circle class="s-{{ f }}{% if allx %} exact{% endif %}" cx="{{ L + pw * (log10[n | str] | float) / 4 }}" cy="{{ T + ph - ph * (row[key].median | float) / cap }}" r="{% if allx %}4.5{% else %}3{% endif %}"><title>{{ labels[f] }} N={{ n }}: {% if allx %}exact on all {{ row.count }} inputs{% else %}median {{ row[key].median }}, range {{ row[key].min }}–{{ row[key].max }} over {{ row.count }} common inputs{% if row.exact %}, {{ row.exact }} exact{% endif %}{% endif %}{% if row.completed < row.inputs %}; completed {{ row.completed }}/{{ row.inputs }}{% endif %}</title></circle>{% endif %}{% endfor %}
-{%- set_global ends = ends ~ ";" ~ (((lastx * 100) | round | int) + 100000) ~ "|" ~ (((lasty * 100) | round | int) + 100000) ~ "|s-" ~ f ~ "|" ~ labels[f] %}
-{%- endif %}{% endif %}{% endfor %}
-{#- top down: each label at least gap below the one above it at the same x -#}
-{%- set_global placed = "" %}{% set_global px = "" %}{% set_global prev = -1000 %}
-{%- for e in ends | split(pat=";") | sort %}{% if e != "" %}{% set p = e | split(pat="|") %}
-{%- if p[0] != px %}{% set_global px = p[0] %}{% set_global prev = -1000 %}{% endif %}
-{%- set want = ((p[1] | int) - 100000) / 100 + 4 %}
-{%- if want < prev + gap %}{% set_global ya = prev + gap %}{% else %}{% set_global ya = want %}{% endif %}
-{%- set_global prev = ya %}
-{%- set_global placed = placed ~ ";" ~ p[0] ~ "|" ~ (((ya * 100) | round | int) + 100000) ~ "|" ~ p[2] ~ "|" ~ p[3] %}
-{%- endif %}{% endfor %}
-{#- bottom up: keep each label inside the plot and at least gap above the one below it -#}
-{%- set_global px = "" %}{% set_global next = 0 %}
-{%- for e in placed | split(pat=";") | reverse %}{% if e != "" %}{% set p = e | split(pat="|") %}
-{%- if p[0] != px %}{% set_global px = p[0] %}{% set_global next = T + ph + 4 + gap %}{% endif %}
-{%- set y0 = ((p[1] | int) - 100000) / 100 %}
-{%- if y0 > next - gap %}{% set_global yb = next - gap %}{% else %}{% set_global yb = y0 %}{% endif %}
-{%- set_global next = yb %}
-<text class="{{ p[2] }} lbl" x="{{ ((p[0] | int) - 100000) / 100 + 8 }}" y="{{ yb }}">{{ p[3] }}</text>
-{%- endif %}{% endfor %}
-</svg>
+{#- One chart from static/js/islands/plots.js: {{ <plot chart="gasops" label="…" /> }}. src is the data file it reads
+    (home.json or pages.json); arg goes to the chart as data-arg (a scenario, an op, a library). The module loads once
+    however many charts a page has. -#}
+{% component plot(chart: string, label: string, src: string = "pages", arg: string = "") -%}
+<div class="plot" data-chart="{{ chart }}" data-src="{{ src }}"{% if arg %} data-arg="{{ arg }}"{% endif %} role="img" aria-label="{{ label }}"></div>
+<script type="module" src="/js/islands/plots.js"></script>
 {%- endcomponent %}
 
 {#- The live check, done once at build time by scripts/ladder/livecap.py or liveedges.py, which write
@@ -336,17 +276,27 @@
 {#- A table whose columns are libraries, grouped floating point | fixed point (scripts/site/home.py libcols):
     t.colgroups[].name/span, t.cols[] the libraries, t.rows[] {label, href?, code?, cells[] {v, h?, why?, ours}}.
     heat shades each cell by h (digits over 72). -#}
-{% component libtable(t: map, first: string, heat: bool = false) -%}
-<div class="tablewrap"><table class="datatable{% if heat %} heat{% endif %}">
+{% component libtable(t: map, first: string, heat: bool = false, cls: string = "") -%}
+{#- scripts/site/home.py libcols: columns are libraries grouped floating | fixed point. A row: label, href or code,
+    note (a line under it), aside (an extra column headed t.aside), why (hover), unit, foot (into tfoot). A cell: v,
+    cls (exact, rev, meta), h (heat shade), why (hover), sub (a k/n or rev after it, subwhy its hover); no v and no
+    sub is "—". -#}
+{%- set ncols = t.cols | length -%}
+<div class="tablewrap"><table class="datatable{% if heat %} heat{% endif %}{% if cls %} {{ cls }}{% endif %}">
   <thead>
-    <tr><th></th>{% for g in t.colgroups %}<th scope="colgroup" colspan="{{ g.span }}" class="group">{{ g.name }}</th>{% endfor %}</tr>
-    <tr><th scope="col">{{ first }}</th>{% for c in t.cols %}<th scope="col" class="num f-{{ c.family }}{% if c.ours %} ours{% endif %}" title="{{ c.long }}">{{ c.short }}</th>{% endfor %}</tr>
+    <tr><th></th>{% if t.aside %}<th></th>{% endif %}{% for g in t.colgroups %}<th scope="colgroup" colspan="{{ g.span }}" class="group">{{ g.name }}</th>{% endfor %}</tr>
+    <tr><th scope="col">{{ first }}</th>{% if t.aside %}<th scope="col">{{ t.aside }}</th>{% endif %}{% for c in t.cols %}<th scope="col" class="num f-{{ c.family }}{% if c.ours %} ours{% endif %}" title="{{ c.long }}">{{ c.short }}</th>{% endfor %}</tr>
   </thead>
-  <tbody>
-  {%- for r in t.rows %}
-  <tr{% if r.unit %} class="unitrow"{% endif %}><th scope="row">{% if r.href %}<a href="{{ r.href }}">{{ r.label }}</a>{% elif r.code %}<code>{{ r.label }}</code>{% else %}{{ r.label }}{% endif %}</th>
-    {%- for c in r.cells %}<td class="num{% if c.ours %} ours{% endif %}"{% if heat and c.h %} style="--h:{{ c.h }}"{% endif %}{% if c.why %} title="{{ c.why }}"{% endif %}>{% if c.v %}{{ c.v }}{% else %}<span class="na">—</span>{% endif %}</td>{% endfor %}</tr>
+  {%- for part in ["tbody", "tfoot"] %}
+  <{{ part }}>
+  {%- for r in t.rows %}{% if (part == "tfoot") == (r.foot | default(value=false)) %}
+  <tr{% if r.unit %} class="unitrow"{% endif %}><th scope="row"{% if r.why %} title="{{ r.why }}"{% endif %}>{% if r.href %}<a href="{{ r.href }}">{{ r.label }}</a>{% elif r.code %}<code>{{ r.label }}</code>{% else %}{{ r.label }}{% endif %}{% if r.note %}<br><span class="meta">{{ r.note }}</span>{% endif %}</th>
+    {%- if t.aside %}<td class="aside"{% if r.asidewhy %} title="{{ r.asidewhy }}"{% endif %}>{{ r.aside | default(value="") }}</td>{% endif %}
+    {%- for c in r.cells %}<td class="num{% if c.ours %} ours{% endif %}"{% if heat and c.h %} style="--h:{{ c.h }}"{% endif %}{% if c.why %} title="{{ c.why }}"{% endif %}>
+      {%- if c.v %}{% if c.cls %}<span class="{{ c.cls }}">{{ c.v }}</span>{% else %}{{ c.v }}{% endif %}{% if c.sub %} <span class="rev meta"{% if c.subwhy %} title="{{ c.subwhy }}"{% endif %}>{{ c.sub }}</span>{% endif %}
+      {%- elif c.sub %}<span class="rev meta">{{ c.sub }}</span>{% else %}<span class="na">—</span>{% endif %}</td>{% endfor %}</tr>
+  {%- endif %}{% endfor %}
+  </{{ part }}>
   {%- endfor %}
-  </tbody>
 </table></div>
 {%- endcomponent %}
