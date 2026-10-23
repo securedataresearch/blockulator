@@ -61,3 +61,23 @@ for the runners. The deployer key is read from `DEPLOYER_KEY` and never
 stored.
 
 Before a merge, `make gates` runs every gate and prints one line each (`OPS=a,b` sweeps only those ops, `QUICK=1` skips the sweep); full logs go to `cache/gates/`.
+
+## Packages
+
+`make pack` stages `@blockulator/contracts` (npm) and `blockulator` (Soldeer)
+in `dist/contracts/` from one tree: `packages/contracts/` (package.json, the
+package README), the LICENSE, and `fp127/`, `fp256/`, `wad/` (the `.sol` and
+`.yul` sources and the ABIs from `contracts/src/`) plus `deployments/` (the
+JSON records). It runs `npm pack --dry-run` and `forge soldeer push --dry-run`
+and fails unless both list exactly the staged files, with no tests, cache or
+secrets and every Solidity import relative. CI runs it. Publishing is manual,
+after the version in `packages/contracts/package.json` is set:
+
+```bash
+make pack
+cd dist/contracts
+npm login
+npm publish --access public
+forge soldeer login
+forge soldeer push blockulator~<version>
+```

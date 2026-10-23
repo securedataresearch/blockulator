@@ -81,6 +81,9 @@ jobs:
       - name: Runtime size
         run: make size
 
+      - name: npm and Soldeer packages (dry runs; nothing is published)
+        run: make pack
+
       - uses: actions/upload-artifact@v4
         with:
           name: fp127-reports
