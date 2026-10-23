@@ -2,9 +2,13 @@
 {% block title %}{{ page.title }} · {{ config.title }}{% endblock title %}
 {% block description %}{{ page.description | default(value=config.description) }}{% endblock description %}
 {% block head %}{% if page.extra.moved is defined %}<script>(function(){var m=[{% for a in page.extra.moved %}"{{ a }}"{% if not loop.last %},{% endif %}{% endfor %}],h=location.hash.slice(1);if(m.indexOf(h)>=0)location.replace("{{ page.extra.moved_to }}#"+h);})();</script>{% endif %}{% endblock head %}
+{#- Every inner page: its head, then lead (before the Markdown), the Markdown, then body. A data page extends this
+    and fills body (and lead, width) instead of repeating the page around them. -#}
 {% block content %}
-<article class="prose doc">
+<article class="prose doc{% block width %}{% endblock width %}">
 {% include "pagehead.html" %}
+{% block lead %}{% endblock lead %}
 {{ page.content | safe }}
+{% block body %}{% endblock body %}
 </article>
 {% endblock content %}

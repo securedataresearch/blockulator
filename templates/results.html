@@ -1,13 +1,9 @@
-{% extends "base.html" %}
-{% block title %}{{ page.title }} · {{ config.title }}{% endblock title %}
-{% block description %}{{ page.description }}{% endblock description %}
-{% block content %}
+{% extends "page.html" %}
+{% block width %} wide{% endblock width %}
+{% block body %}
 {%- set d = load_data(path="static/data/ladder.json") -%}
 {%- set e = load_data(path="static/data/edges.json") -%}
 {%- set h = load_data(path="static/data/home.json") -%}
-<article class="prose doc wide">
-{% include "pagehead.html" %}
-{{ page.content | safe }}
 {{ <plot chart="ladder" src="home" label="Median correct digits after the last step of each scenario, every library; the numbers are in the table below." /> }}
 
 {{ <libtable t={h.ladder.table} first="scenario · median digits" heat={true} /> }}
@@ -23,5 +19,4 @@
 <li><a href="/results/deployed/"><strong>Deployed</strong></a> Aave v3 and Morpho Blue as deployed, against the formula each says it computes.</li>
 <li><a href="/results/incidents/"><strong>Incidents</strong></a> four real exploits replayed from their own transactions, and which ruler would have stopped each.</li>
 </ul>
-</article>
-{% endblock content %}
+{% endblock body %}
