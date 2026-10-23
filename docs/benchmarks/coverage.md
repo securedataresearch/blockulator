@@ -2,7 +2,29 @@
 
 Every function of every comparison library, from the source in `lib/` and `contracts/src/ladder/vendor/`, mapped to the FP127 or FP256 op it computes, or listed as not compared with the reason. The gas harnesses are `test/fp127/GasLadder.t.sol` (`make bench` → [gas.md](gas.md), gas.json) and `test/fp256/GasLadder.t.sol` (`make bench-fp256` → [gas256.md](gas256.md), gas256.json). The exact call behind each cell is `CALLS` in `scripts/fp127/gas_to_json.py`, written to gas.json as `calls`. The bench fails if a measured cell has no `CALLS` entry, or an entry has no cell.
 
-Versions: Solady v0.1.26, PRBMath v4.2.0, ABDK v3.2, Balancer LogExpMath from balancer-v3-monorepo@2b9ce4b1b8ad (vendored).
+Versions: Solady v0.1.26, PRBMath v4.2.0 (SD59x18 and UD60x18), ABDK v3.2, Balancer LogExpMath from balancer-v3-monorepo@2b9ce4b1b8ad (vendored), Solmate main@89365b8, OpenZeppelin Contracts v5.7.0 (vendored), Uniswap v4-core v4.0.0 FullMath (vendored), snekmate v0.1.2 (Vyper 0.4.3).
+
+## Which libraries
+
+The bar is an established library: published, with tagged releases, maintained, used by deployed protocols, and under a licence that lets this repository build it. Each candidate was checked against its official repository on 2026-10-23.
+
+| library | language | verdict | version | why |
+|---|---|---|---|---|
+| Solady `FixedPointMathLib` | Solidity | in (already) | v0.1.26 | |
+| PRBMath SD59x18 | Solidity | in (already) | v4.2.0 | |
+| ABDKMath64x64, ABDKMathQuad | Solidity | in (already) | v3.2 | |
+| Balancer `LogExpMath` | Solidity | in (already) | v3 monorepo @2b9ce4b1b8ad | |
+| **PRBMath UD60x18** | Solidity | **added** | v4.2.0 (the submodule already pinned) | The unsigned half of PRBMath: same release, same users as SD59x18. Its exp, ln and log2 are different code from SD59x18's. |
+| **Solmate** `FixedPointMathLib` + `SignedWadMath` | Solidity | **added** | main@89365b8 (2025-07); submodule `lib/solmate` | 4,300 stars, audited major releases, the maths behind Solmate's ERC4626 and the VRGDAs. The only tag, v6 (2022), predates `SignedWadMath`, so the pin is the main commit that `forge install transmissions11/solmate` fetches. `FixedPointMathLib.sol` is AGPL-3.0-only, so it is a submodule and is not vendored, and the adapter that links it, `LadderSolmate.sol`, is AGPL-3.0-only. `SignedWadMath.sol` is MIT. |
+| **OpenZeppelin** `Math`, `SignedMath` | Solidity | **added** | v5.7.0 (2026-07); vendored, MIT | The most used Solidity library, audited every release. Its maths is integer maths: `mulDiv` with a rounding mode, `sqrt`, the integer logs, `average`. It enters wherever a WAD op is that integer function with 10^18 put in (mulDown = `mulDiv(a, b, 1e18)` and so on). |
+| **Uniswap v4-core** `FullMath` | Solidity | **added** | v4.0.0; vendored, MIT | The `mulDiv` and `mulDivRoundingUp` inside every Uniswap v3 and v4 pool. v3-core's copy needs solc < 0.8; v4-core's is the same algorithm for 0.8. |
+| Uniswap `TickMath` | Solidity | not compared | v4.0.0 | No op computes it: `getSqrtPriceAtTick(t)` is the fixed-base power sqrt(1.0001)^t in Q64.96, and `getTickAtSqrtPrice` its floor log, on the integer tick grid. |
+| DappHub `ds-math` | Solidity | rejected | none | No tagged release, no commit since 2022, GPL-3.0. Its `wmul`/`rmul` are half-up `x * y / WAD`, and its `rpow` is the one Maker deployed, which the ladder already runs as `LadderMaker`. |
+| Balancer `FixedPoint` | Solidity | rejected | | GPL-3.0-or-later, so it cannot be vendored here; Balancer's mulDown/divDown are reproduced in `LadderBalancer` as before. |
+| **snekmate** `math` | Vyper | **added** | v0.1.2 (2025-06), compiled with Vyper 0.4.3 as it requires; submodule `lib/snekmate` | The standard Vyper library, on PyPI and npm, and in production: Curve's twocrypto-ng imports its `math` module, and the modules Curve uses were reviewed in Curve's audits. AGPL-3.0-only, so it is a submodule, and the wrapper that exports it, `contracts/src/ladder/vyper/SnekmateMath.vy`, is AGPL-3.0-only. |
+| Curve tricrypto-ng / twocrypto-ng / stableswap-ng maths | Vyper | rejected | | Licence: "Copyright (c) Curve.Fi, 2020-2023 - all rights reserved", and "only contracts owned by Curve DAO or Swiss Stake GmbH are allowed to call this contract". The functions are compared anyway: `wad_exp` is snekmate's `_wad_exp` (a verbatim copy in tricrypto-ng and stableswap-ng, an import in twocrypto-ng), and snekmate's `_wad_cbrt` is Curve's `_cbrt`, the same constants and seven Newton steps. `geometric_mean` takes three coins; no op does. |
+| huffmate `FixedPointMath` | Huff | rejected | v1.1 (2023-02) | Its README: "unaudited and are not recommended for use in production". No production users found, no release since 2023. Its fixed-point maths is a port of Solmate's, which is compared. |
+| pure-Yul maths libraries | Yul | none exist | | No published, tagged, adopted Yul maths library exists beyond Solady's inline assembly, which is compared. |
 
 **What a cell means.** A number is the median gas over the op's input ladder. An empty cell means the library does not offer the op, and only that. `rev` means the library offers the op but reverted on every ladder input, or every input was outside the function's domain or format. In gas.json, `ops[op].reverts[form]` counts such inputs per form; the medians leave them out. After this audit no `rev` cell remains: every function benched computes on at least part of its op's ladder.
 
