@@ -10,7 +10,7 @@
 > agents get results more precise than a double by calling FP127, and at
 > any magnitude by calling FP256.
 
-Current release: Blockulator 2.2 (FP127 v6 + FP256 v5, ladder v10), live
+Current release: Blockulator 2.2 (FP127 v6 + FP256 v5, ladder v11), live
 on Sepolia since 2026-10-22, every address in
 /contracts/deployments/RELEASE.json. CLZ required: the 2.2 contracts are
 evmVersion osaka builds using the CLZ opcode (EIP-7939); they run on
@@ -102,7 +102,7 @@ and 2.0 (FP127 v4, FP256 v3) stay live on Sepolia.
   format truth), Solady and PRBMath 16, ABDK 17.
 - Any cell can be re-run on chain against the deployed release (FP127 v6,
   FP256 v5, the code the datasets describe): LadderRunner at
-  0xF14Ac5DDA9C0c10C50aa4Be9D219509fAa936A9b (salt "FP127 ladder v10"),
+  0x08b06D93620e7B33cD2d600118a75B45EF779Cec (salt "FP127 ladder v11"),
   run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok,
   int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal), with p
   the input's floored parameters from /data/ladder-inputs.json. Scenario
@@ -118,7 +118,7 @@ and 2.0 (FP127 v4, FP256 v3) stay live on Sepolia.
   each cell with its digits or how the library had no answer (zero below
   its floor, revert, out of range, unsupported); /results/edges/ renders it;
   any cell re-runs through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
-  at 0x5123DaA96A96e550665401Bd56AD0770DDB9004e (selector 0xf833b7d5) with
+  at 0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83 (selector 0xf833b7d5) with
   the arguments from /data/edge-inputs.json.
 - /results/ the headline numbers, /results/ladder/ the ladder, /results/edges/ the cliffs,
   /results/ops/ gas and precision per op, /library/ address, ABI and the op table,

@@ -27,7 +27,7 @@ from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
 PROXY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
-SALT_ASCII = "FP127 ladder v10"
+SALT_ASCII = "FP127 ladder v11"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
@@ -89,9 +89,16 @@ def cmd_deploy(rpc: str) -> int:
             print(f"{c['name']:16} {c['address']}  already deployed")
             continue
         data = SALT + c["init"].hex()
-        est = int(cast("estimate", PROXY, data, "--rpc-url", rpc))
-        gas = est * 5 // 4
-        print(f"{c['name']:16} {c['address']}  estimate {est:,}  sending with {gas:,}")
+        # Public RPCs cap eth_estimateGas (50M on some; publicnode answers "reverted" past its cap),
+        # and LadderFP256's 43 KB deposit needs about 67M. When the estimate fails, send with
+        # LADDER_GAS (default 90M, under Sepolia's 200M block limit); a short limit only reverts.
+        try:
+            est = int(cast("estimate", PROXY, data, "--rpc-url", rpc))
+            gas = est * 5 // 4
+            print(f"{c['name']:16} {c['address']}  estimate {est:,}  sending with {gas:,}")
+        except SystemExit:
+            gas = int(os.environ.get("LADDER_GAS", "90000000"))
+            print(f"{c['name']:16} {c['address']}  no estimate from the RPC  sending with {gas:,}")
         receipt = json.loads(cast("send", PROXY, data, "--rpc-url", rpc, "--private-key", key, "--gas-limit", str(gas), "--json"))
         status = int(receipt["status"], 16) if isinstance(receipt["status"], str) else receipt["status"]
         print(f"{'':16} tx {receipt['transactionHash']} block {int(receipt['blockNumber'], 16)} gasUsed {int(receipt['gasUsed'], 16):,} status {status}")

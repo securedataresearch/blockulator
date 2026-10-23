@@ -11,7 +11,7 @@ FP127 is a signed 127.128 fixed-point library for the EVM: one `int256` per valu
 
 FP256 is its companion for everything outside the money range: a 256-bit binary float in the same `int256`, 237 significant bits (about 71 digits) at any magnitude from 10<sup>−78,913</sup> to 10<sup>78,913</sup>, 65 operations, every one correctly rounded (0 misrounded in 360,590 random inputs). It comes from the same generator in the same two forms, and FP256 v5 (Blockulator 2.2) is deployed on Sepolia as four objects, one idea each ([below](#the-second-ruler)).
 
-The one number that matters: $10,000 at 10% APR compounded daily for a year, one multiplication per day. After 365 steps ABDK is right to 17 digits, Solady, PRBMath and Balancer to 16, ABDKMathQuad to 31, Maker's rpow to 24, FP127 to 36 [compound, N = 365]. The [ladder](/results/ladder/) has thirteen of these scenarios; for Blockulator 2.2, 9,408 of its 9,570 cells were re-run against the chain, and the rest need more gas than a public RPC allows.
+The one number that matters: $10,000 at 10% APR compounded daily for a year, one multiplication per day. After 365 steps ABDK is right to 17 digits, Solady, PRBMath and Balancer to 16, ABDKMathQuad to 31, Maker's rpow to 24, FP127 to 36 [compound, N = 365]. The [ladder](/results/ladder/) has thirteen of these scenarios; for Blockulator 2.2, 9,411 of its 9,570 cells were re-run against the chain, and the rest need more gas than a public RPC allows.
 
 ## Why WAD loses digits
 

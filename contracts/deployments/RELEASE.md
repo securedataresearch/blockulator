@@ -12,8 +12,8 @@ CREATE2 salt, since the salt names the address. Machine-readable copy:
 | FP256E | FP256E v5 | 21,598 | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` | [FP256.md](FP256.md) |
 | FP256H | FP256H v5 | 13,021 | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` | [FP256.md](FP256.md) |
 | FP256S | FP256S v5 | 24,263 | `0x73E8809F163d4358773cc5F25c134997B4b842F4` | [FP256.md](FP256.md) |
-| LadderRunner | FP127 ladder v10 | | `0xF14Ac5DDA9C0c10C50aa4Be9D219509fAa936A9b` | [Ladder.md](Ladder.md) |
-| EdgeRunner | FP127 ladder v10 | | `0x5123DaA96A96e550665401Bd56AD0770DDB9004e` | [Ladder.md](Ladder.md) |
+| LadderRunner | FP127 ladder v11 | | `0x08b06D93620e7B33cD2d600118a75B45EF779Cec` | [Ladder.md](Ladder.md) |
+| EdgeRunner | FP127 ladder v11 | | `0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83` | [Ladder.md](Ladder.md) |
 
 FP256 is now four objects by idea: FP256 the number (43 ops), FP256E the
 elementary functions (12), FP256H the hyperbolic functions (4) and FP256S
@@ -29,9 +29,10 @@ Polygon zkEVM; the list and the probe are in [README.md](README.md#chains-clz-os
 The five objects are verified on Sourcify (`match` on creation and runtime
 bytecode) and Blockscout, and pass their smoke tests against the live
 contracts (`make smoke-sepolia`, `make smoke-fp256-sepolia`). The thirteen
-ladder contracts are `exact_match` on Sourcify. Checked live on 2026-10-23:
-9,408 ladder cells through LadderRunner at block 11,975,057 and 1,511 edge
-cells through EdgeRunner at block 11,975,211, 0 mismatches
+ladder contracts (ladder v11, redeployed 2026-10-23 after #138's adapter
+fix) are `exact_match` on Sourcify. Checked live on 2026-10-23: 9,411 ladder
+cells through LadderRunner at block 11,977,397 and 1,511 edge cells through
+EdgeRunner at block 11,977,550, 0 mismatches
 (`scripts/ladder/livecap.py`, `scripts/ladder/liveedges.py`).
 
 ## Blockulator 2.1
