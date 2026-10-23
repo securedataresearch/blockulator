@@ -116,6 +116,8 @@ def main(argv: list[str]) -> int:
     doc["liveMismatches"] = mismatches
     doc["liveBlock"] = block
     doc["liveDate"] = time.strftime("%Y-%m-%d", time.gmtime())
+    if not mismatches:  # the live runner returns this dataset: it is no longer ahead of it
+        doc.pop("runnersAhead", None)
 
     LADDER.write_text(json.dumps(doc, indent=1) + "\n")
     print(f"updated {LADDER.relative_to(ROOT)}; mismatches: {mismatches}")

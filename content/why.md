@@ -39,35 +39,39 @@ lending protocol does not call it once. It accrues interest every block,
 and after N accruals the rounding has been applied N times.
 
 Take $10,000 at 10% APR, compounded daily [compound]. After one day ABDK
-and the WAD libraries are right to 19 digits. After a year WAD libraries are right to 16
-[compound, N = 365, solady]; after 10,000 steps, 15 [compound, N = 10000,
-solady]. FP127 goes from 38 to 34 over the same ladder [compound, N = 1 and
+and the WAD libraries are right to 19.5 digits. After a year WAD libraries are right to 16.9
+[compound, N = 365, solady]; after 10,000 steps, 15.5 [compound, N = 10000,
+solady]. FP127 goes from 38.8 to 34.8 over the same ladder [compound, N = 1 and
 10000, fp127]. The slopes are the same, about one digit per decade of N.
 The intercept is twenty digits apart, and the intercept is what you keep.
 
 The round trip makes the mechanism visible: `x = exp(ln(x))` should be the
-identity. PRBMath drifts from 16 digits to 12 by N = 10,000 [roundtrip,
-prb]; Solady sits on a fixed point at 1.5 and does not drift, because its
-composed error is under half a unit at 10^-18 and rounding to nearest snaps
-it back; FP127 does the same at 2^-128, returning the identical word on
-every step and holding 38 digits at N = 10,000 [roundtrip, N = 10000,
-fp127]. It did not always: the first Yul port floored every step of exp and
+identity. PRBMath drifts from 16.9 digits to 12.9 by N = 10,000 [roundtrip,
+prb]; Solady returns exactly 1.5 at every N, but by luck of the grid:
+expWad and lnWad both truncate (each ends in a right shift), and at 1.5 the
+two truncations happen to land back on the starting word. Two of its ten
+inputs come back exact; the others drift to 14 digits by N = 10,000
+[roundtrip, solady]. FP127 rounds to nearest at 2^-128 and returns the
+identical word on every step, holding 38.7 digits at N = 10,000 [roundtrip,
+N = 10000, fp127]. It did not always: the first Yul port floored every step of exp and
 ln, came back 8 ULPs low on each round trip, and lost a digit per decade of
 N. Rounding to nearest with guard bits fixed it, and the ladder is where
 that showed.
 
 Subtraction is worse. An amortising loan is `b = b·(1+r) − payment` every
 day, and near payoff the balance is a small difference of two large
-numbers. At N = 365, one payment before the loan clears, WAD libraries are
-down to 15 digits [amortise, N = 365, solady] and FP127 to 34 [amortise,
-N = 365, fp127]. Fifteen digits of a $840 balance is still fine. Fifteen
-digits of a position that is a basis point from liquidation across a
-million accounts is not, and the ladder is where you find out which case
-you are in.
+numbers. A $300,000 loan at 5% paid daily over 10,001 days has one payment
+left at N = 10,000, and there WAD libraries are down to 11.9 digits
+[amortise, N = 10000, solady] and FP127 to 31.2 [amortise, N = 10000,
+fp127]; after a year, with the balance still large, they had 17.2 and 36.5.
+Twelve digits of a $55 balance is still fine. Twelve digits of a position
+that is a basis point from liquidation across a million accounts is not,
+and the ladder is where you find out which case you are in.
 
-The arithmetic for N = 365: the rate's rounding, 2.7 × 10^-20 a day
-carried 365 times, is 10^-17 of the balance: 16 digits. The 365 floored
-`mulWad`s alone leave 19.
+The arithmetic for N = 10,000: the rate and the payment floored to 10^-18,
+carried 10,000 times into a balance five thousand times smaller than the
+loan, leave 11.9 digits on their own; the 10,000 floored `mulWad`s alone
+leave 15.7 [amortise, N = 10000, solady, digitsFormat].
 
 The ladder measures each cell twice, and the second measurement says where
 the loss comes from. Against the exact inputs, FP127 is right to 36 digits
@@ -76,7 +80,7 @@ them, it is right to 40 [compound, N = 365, fp127, digitsFormat]. The
 rate's rounding to 2^-128, applied once and carried N times, sets the 36;
 the 365 floored multiplications cost about two of the 42 digits the grid
 holds at that balance. The WAD libraries lose part of theirs the
-same way, 16 against exact inputs and 19 against rounded ones at N = 365
+same way, 16.9 against exact inputs and 19.7 against rounded ones at N = 365
 [compound, N = 365, solady], and the rest to the arithmetic.
 
 ## What it costs
