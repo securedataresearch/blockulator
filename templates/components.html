@@ -33,10 +33,10 @@
 <td class="num">{% if p.minBits >= 256 %}exact{% else %}{{ p.minBits }} / {{ p.meanBits }}{% endif %}</td>
 {%- if o.name in gas.ops %}
 {%- set s = gas.ops[o.name].summary %}
-<td class="num">{% if s.yul %}{{ s.yul.median }}{% else %}—{% endif %}</td>
-<td class="num">{% if s.lib %}{{ s.lib.median }}{% else %}—{% endif %}</td>
+<td class="num">{% if s.yul %}{{ s.yul.median }}{% endif %}</td>
+<td class="num">{% if s.lib %}{{ s.lib.median }}{% endif %}</td>
 {%- else %}
-<td class="num">—</td><td class="num">—</td>
+<td class="num"></td><td class="num"></td>
 {%- endif %}
 </tr>
 {%- endfor %}
@@ -59,13 +59,13 @@
 <tbody>
 {%- for name, o in gas.ops %}
 <tr><td class="mono">{{ name }}</td>
-{%- for f in forms %}{% set s = o.summary[f] %}<td class="num">{% if s %}{{ s.median }}{% else %}—{% endif %}</td>{% endfor %}
+{%- for f in forms %}{% set s = o.summary[f] %}<td class="num">{% if s %}{{ s.median }}{% endif %}</td>{% endfor %}
 </tr>
 {%- endfor %}
 </tbody>
 </table>
 </div>
-<p class="note">Median gas per op over its input ladder, {{ gas.generated }}. The Yul object column includes the <code>staticcall</code>; the other six are internal library calls. A dash is an op the library does not offer, or that reverted on every ladder input. Min and max per cell are in <a href="/data/gas.json">gas.json</a>; the Huff and FP127Caller columns are in <a href="{{ repo }}/blob/master/docs/benchmarks/gas.md">gas.md</a>. Versions: {% for k, v in gas.versions %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+<p class="note">Median gas per op over its input ladder, {{ gas.generated }}. The Yul object column includes the <code>staticcall</code>; the other six are internal library calls. An empty cell is an op the library does not offer, or that reverted on every ladder input. Min and max per cell are in <a href="/data/gas.json">gas.json</a>; the Huff and FP127Caller columns are in <a href="{{ repo }}/blob/master/docs/benchmarks/gas.md">gas.md</a>. Versions: {% for k, v in gas.versions %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
 {%- endcomponent %}
 
 {% component precisiontable() -%}
@@ -100,11 +100,14 @@
     The WAD libraries and Maker's RAY rpow are one band (lowest to highest of the four at each N);
     every point carries its number in a <title>. Inline SVG, site tokens only. W and H set the viewBox:
     the home page draws it twice, wide and narrow, and CSS shows one, so the text stays legible on a phone. -#}
+{#- The home chart: correct digits against N for one ladder input. Two bands, each a min–max over its forms and
+    labelled once at its end: the WAD libraries with 64.64, and the protocols' own accrual (Aave, Morpho). Three lines:
+    FP256, FP127, binary128. Labels at the right end are pushed apart by at least `gap` so equal ends never stack. -#}
 {% component ladderchart(cells: map, ladder: array, log10: map, W: integer = 720, H: integer = 340) -%}
-{%- set lines = ["fp256", "fp127", "quad", "abdk"] -%}
-{%- set band = ["solady", "prb", "balancer", "maker"] -%}
-{%- set names = {"fp256": "FP256", "fp127": "FP127", "quad": "binary128", "abdk": "64.64"} -%}
-{%- set cap = 72 %}{% set L = 30 %}{% if W > 500 %}{% set R = 120 %}{% else %}{% set R = 100 %}{% endif %}{% set T = 12 %}{% set B = 40 -%}
+{%- set lines = ["fp256", "fp127", "quad"] -%}
+{%- set names = {"fp256": "FP256", "fp127": "FP127", "quad": "binary128"} -%}
+{%- set bcls = ["s-solady", "s-aave"] %}{% if W > 500 %}{% set blbl = ["WAD libraries, 64.64", "Aave, Morpho"] %}{% else %}{% set blbl = ["WAD, 64.64", "Aave, Morpho"] %}{% endif %}{% set bforms = [["solady", "prb", "balancer", "abdk"], ["aave", "morpho"]] -%}
+{%- set cap = 72 %}{% if W > 500 %}{% set L = 30 %}{% set R = 168 %}{% set gap = 15 %}{% else %}{% set L = 26 %}{% set R = 116 %}{% set gap = 13 %}{% endif %}{% set T = 12 %}{% set B = 40 -%}
 {%- set pw = W - L - R %}{% set ph = H - T - B -%}
 <svg viewBox="0 0 {{ W }} {{ H }}" width="100%" aria-hidden="true">
 {%- for g in [0, 18, 36, 54, 72] %}{% set y = T + ph - ph * g / cap %}
@@ -113,23 +116,37 @@
 {%- for n in [1, 10, 100, 1000, 10000] %}{% set x = L + pw * (log10[n | str] | float) / 4 %}
 <text class="tick" x="{{ x }}" y="{{ H - 22 }}" text-anchor="middle">{{ n | num_format }}</text>
 {%- endfor %}
-<text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 4 }}" text-anchor="middle">N steps, log scale</text>
-{%- set yr = L + pw * (log10["365"] | float) / 4 %}
-<line class="guide" x1="{{ yr }}" x2="{{ yr }}" y1="{{ T }}" y2="{{ T + ph }}"/><text class="tick" x="{{ yr + 5 }}" y="{{ T + ph - 6 }}">365</text>
-{%- set_global top = "" %}{% set_global bot = "" %}{% set_global lowl = "" %}{% set_global highl = "" %}{% set_global hi = 0 %}{% set_global lo = 0 %}{% set_global ex = 0 %}{% set_global tip = "" -%}
+<text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 4 }}" text-anchor="middle">days since the last update, log scale</text>
+{%- set yx = L + pw * (log10["365"] | float) / 4 %}
+<line class="guide" x1="{{ yx }}" x2="{{ yx }}" y1="{{ T }}" y2="{{ T + ph }}"/><text class="tick" x="{{ yx + 5 }}" y="{{ T + ph * 0.36 }}">1 year</text>
+{#- label ends, collected as "yyyyyy|text|class" (hundredths offset by 100000 so string order is numeric) -#}
+{%- set_global ends = "" %}{% set_global endx = L + pw -%}
+{%- for bi in [0, 1] %}{% set_global top = "" %}{% set_global bot = "" %}{% set_global lowl = "" %}{% set_global highl = "" %}{% set_global hi = 0 %}{% set_global lo = 0 %}{% set_global tip = "" -%}
 {%- for n in ladder %}{% set_global mx = -1 %}{% set_global mn = 999 -%}
-{%- for f in band %}{% set c = cells[f][n | str] %}{% if c.digits is defined %}{% if c.digits > mx %}{% set_global mx = c.digits %}{% endif %}{% if c.digits < mn %}{% set_global mn = c.digits %}{% endif %}{% endif %}{% endfor -%}
-{%- if mx >= 0 %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global top = top ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global bot = x ~ "," ~ (T + ph - ph * mn / cap) ~ " " ~ bot %}{% set_global lowl = lowl ~ x ~ "," ~ (T + ph - ph * mn / cap) ~ " " %}{% set_global highl = highl ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global hi = mx %}{% set_global lo = mn %}{% set_global ex = x %}{% if n == 365 %}{% set_global tip = mn ~ "–" ~ mx %}{% endif %}{% endif -%}
+{%- for f in bforms[bi] %}{% if cells[f] is defined %}{% set c = cells[f][n | str] %}{% if c.digits is defined %}{% if c.digits > mx %}{% set_global mx = c.digits %}{% endif %}{% if c.digits < mn %}{% set_global mn = c.digits %}{% endif %}{% endif %}{% endif %}{% endfor -%}
+{%- if mx >= 0 %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global top = top ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global bot = x ~ "," ~ (T + ph - ph * mn / cap) ~ " " ~ bot %}{% set_global lowl = lowl ~ x ~ "," ~ (T + ph - ph * mn / cap) ~ " " %}{% set_global highl = highl ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global hi = mx %}{% set_global lo = mn %}{% if n == 365 %}{% if mn == mx %}{% set_global tip = mn ~ "" %}{% else %}{% set_global tip = mn ~ "–" ~ mx %}{% endif %}{% endif %}{% endif -%}
 {%- endfor %}
-<g class="s-solady"><polygon class="wband" points="{{ top }}{{ bot }}"><title>WAD/RAY (Solady, PRBMath, Balancer, Maker rpow) at N = 365: {{ tip }} digits</title></polygon>
-<polyline class="hi" points="{{ highl }}"/><polyline class="lo" points="{{ lowl }}"/>
-<text class="lbl" x="{{ ex + 8 }}" y="{{ T + ph - ph * hi / cap + 4 }}">WAD/RAY {{ lo }}–{{ hi }}</text></g>
-{%- for f in lines %}{% set_global pts = "" %}{% set_global lastx = 0 %}{% set_global lastd = 0 %}
-{%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digits is defined %}{% set d = c.digits %}{% if d > cap %}{% set d = cap %}{% endif %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global pts = pts ~ x ~ "," ~ (T + ph - ph * d / cap) ~ " " %}{% set_global lastx = x %}{% set_global lastd = c.digits %}{% endif %}{% endfor %}
+<g class="{{ bcls[bi] }} band"><polygon class="wband" points="{{ top }}{{ bot }}"><title>{{ blbl[bi] }} after a year: {{ tip }} digits</title></polygon>
+<polyline class="hi" points="{{ highl }}"/><polyline class="lo" points="{{ lowl }}"/></g>
+{%- if lo == hi %}{% set v = lo ~ "" %}{% else %}{% set v = lo ~ "–" ~ hi %}{% endif -%}
+{%- set_global ends = ends ~ ";" ~ (((T + ph - ph * (lo + hi) / 2 / cap + 4) * 100) | round | int + 100000) ~ "|" ~ blbl[bi] ~ " " ~ v ~ "|" ~ bcls[bi] %}
+{%- endfor %}
+{%- for f in lines %}{% set_global pts = "" %}{% set_global lastd = 0 %}
+{%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digits is defined %}{% set d = c.digits %}{% if d > cap %}{% set d = cap %}{% endif %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global pts = pts ~ x ~ "," ~ (T + ph - ph * d / cap) ~ " " %}{% set_global lastd = c.digits %}{% endif %}{% endfor %}
 <g class="s-{{ f }}{% if f == 'fp127' or f == 'fp256' %} ours{% endif %}"><polyline points="{{ pts }}"/>
-{%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digits is defined %}{% set d = c.digits %}{% if d > cap %}{% set d = cap %}{% endif %}<circle cx="{{ L + pw * (log10[n | str] | float) / 4 }}" cy="{{ T + ph - ph * d / cap }}" {% if n == 365 %} class="yr" r="4"{% else %} r="2"{% endif %}><title>{{ names[f] }} at N = {{ n }}: {{ c.digits }} digits</title></circle>{% endif %}{% endfor %}
-<text class="lbl" x="{{ lastx + 8 }}" y="{{ T + ph - ph * lastd / cap + 4 }}">{{ names[f] }} {{ lastd }}</text></g>
+{%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digits is defined %}{% set d = c.digits %}{% if d > cap %}{% set d = cap %}{% endif %}<circle cx="{{ L + pw * (log10[n | str] | float) / 4 }}" cy="{{ T + ph - ph * d / cap }}" {% if n == 365 %} class="yr" r="4"{% else %} r="2"{% endif %}><title>{{ names[f] }} after {{ n }} days: {{ c.digits }} digits</title></circle>{% endif %}{% endfor %}</g>
+{%- set dd = lastd %}{% if dd > cap %}{% set dd = cap %}{% endif -%}
+{%- set_global ends = ends ~ ";" ~ (((T + ph - ph * dd / cap + 4) * 100) | round | int + 100000) ~ "|" ~ names[f] ~ " " ~ lastd ~ "|s-" ~ f %}
 {%- endfor %}
+{#- place the end labels top-down, each at least gap below the one above it, then bottom-up inside the plot -#}
+{%- set_global ys = "" %}{% set_global prev = -1000 -%}
+{%- for e in ends | split(pat=";") | sort %}{% if e != "" %}{% set p = e | split(pat="|") %}{% set want = ((p[0] | int) - 100000) / 100 %}
+{%- if want < prev + gap %}{% set_global ya = prev + gap %}{% else %}{% set_global ya = want %}{% endif %}{% set_global prev = ya -%}
+{%- set_global ys = ys ~ ";" ~ ya ~ "|" ~ p[1] ~ "|" ~ p[2] %}{% endif %}{% endfor -%}
+{%- set_global over = prev - (T + ph + 4) %}{% if over < 0 %}{% set_global over = 0 %}{% endif -%}
+{%- for e in ys | split(pat=";") %}{% if e != "" %}{% set p = e | split(pat="|") %}
+<g class="{{ p[2] }}"><text class="lbl" x="{{ endx + 8 }}" y="{{ (p[0] | float) - over }}">{{ p[1] }}</text></g>
+{%- endif %}{% endfor %}
 </svg>
 {%- endcomponent %}
 
