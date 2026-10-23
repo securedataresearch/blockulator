@@ -1397,9 +1397,9 @@
    "minBits": 128.3,
    "below": 3990,
    "above": 0,
-   "gasMedian": 683,
-   "gasP99": 1025,
-   "gasMax": 1025
+   "gasMedian": 469,
+   "gasP99": 815,
+   "gasMax": 815
   },
   {
    "lib": "fp127",
@@ -1784,9 +1784,9 @@
    "minBits": 128.0,
    "below": 0,
    "above": 4000,
-   "gasMedian": 396,
-   "gasP99": 396,
-   "gasMax": 396
+   "gasMedian": 382,
+   "gasP99": 382,
+   "gasMax": 382
   },
   {
    "lib": "fp127",

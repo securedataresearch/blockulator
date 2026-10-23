@@ -445,10 +445,25 @@ object "FP127" {
             }
 
             function fp127_mulUp(a, b) -> r {
-                r := fp127_mul(a, b)
-                if and(mul(a, b), 0xffffffffffffffffffffffffffffffff) {
-                    if eq(r, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) { rev(0x35278d12) }
-                    r := add(r, 1)
+                let p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                let p1 := sub(sub(mm, p0), lt(mm, p0))
+                p1 := sub(p1, mul(slt(a, 0), b))
+                p1 := sub(p1, mul(slt(b, 0), a))
+                r := or(shl(128, p1), shr(128, p0))
+                let up := iszero(iszero(and(p0, 0xffffffffffffffffffffffffffffffff)))
+                // the floor F fits iff bits 127..255 of p1 agree; the ceiling also fits at
+                // F = -2^255 - 1 (p1 all ones above bit 127, low word 2^255 - 1), #159
+                switch eq(sar(127, p1), sar(255, p1))
+                case 1 {
+                    if up {
+                        if eq(r, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) { rev(0x35278d12) }
+                        r := add(r, 1)
+                    }
+                }
+                default {
+                    if iszero(and(up, and(eq(sar(128, p1), not(0)), eq(r, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))) { rev(0x35278d12) }
+                    r := 0x8000000000000000000000000000000000000000000000000000000000000000
                 }
             }
 
@@ -1433,23 +1448,6 @@ object "FP127" {
                     let h, l := mul512(r, r)
                     if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
                 }
-                // D = (r + 1)^2 - N, 512 bits, below x 2^-192 + 2: where v4 may have stopped on r + 1
-                let h, l := mul512(add(r, 1), add(r, 1))
-                h := sub(sub(h, shr(128, x)), lt(l, shl(128, x)))
-                if and(iszero(h), lt(sub(l, shl(128, x)), add(shr(192, x), 2))) { r := sqrtv4(x) }
-            }
-
-            function sqrtv4(x) -> r {
-                let e := add(128, msb(x))
-                let y := shl(shr(1, e), 1)
-                if and(e, 1) { y := mulraw(y, 0x16a09e667f3bcc908b2fb1366ea957d3e) }
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                r := shr(1, add(y, divu(x, y)))
             }
 
             function sqrn(x) -> r {
