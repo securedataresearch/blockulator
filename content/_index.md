@@ -1,10 +1,10 @@
 +++
 title = "blockulator"
-description = "Blockulator 2.1 by Secure Data Research: FP127, 38 digits at 1 for the money range, and FP256, 71 digits at any magnitude, measured against ABDK, Solady, PRBMath, Balancer, Aave, Morpho and Maker."
+description = "Blockulator 2.2 by Secure Data Research: FP127, 38 digits at 1 for the money range, and FP256, 71 digits at any magnitude, measured against ABDK, Solady, PRBMath, Balancer, Aave, Morpho and Maker."
 template = "home.html"
 
 [extra]
-eyebrow = "Blockulator 2.1 · Secure Data Research"
+eyebrow = "Blockulator 2.2 · Secure Data Research"
 headline = "Dust is Over."
 sub = "Two rulers for EVM arithmetic: FP127 for the money range, FP256 for everything. Round once; never run out of ruler."
 cta_primary_text = "See the results"
@@ -63,7 +63,7 @@ text = "A fixed grid: 38 digits at 1, 32 at 10^−6, 8 at 10^−30."
 [[extra.limits]]
 label = "status"
 title = "Sepolia only"
-text = "No mainnet deployment. Not audited."
+text = "No mainnet deployment. Not audited. Needs the CLZ opcode (Osaka)."
 
 [[extra.limits]]
 label = "two forms"
