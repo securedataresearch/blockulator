@@ -64,13 +64,24 @@ contract StaticcallExample {
 
 Compile it with `via_ir = true` (in `foundry.toml`): solc's legacy pipeline leaves the heavy ops 5–14% dearer than the same Yul in the object (net of its call), and through the IR they come within about −7% to +3% of it, `mul` 263 → 181 and `ln` 1,886 → 1,625 gas on typical inputs; the build takes about 5.5× as long ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
 
+Install it one of three ways; the import path is the same in each:
+
 ```sh
+# Foundry, from git
 forge install securedataresearch/blockulator
-echo "fp127/=lib/blockulator/contracts/src/fp127/" >> remappings.txt
+echo "@blockulator/contracts/=lib/blockulator/contracts/src/" >> remappings.txt
+
+# npm, yarn or pnpm (Hardhat needs no remapping; Foundry reading node_modules needs this one)
+npm install @blockulator/contracts
+echo "@blockulator/contracts/=node_modules/@blockulator/contracts/" >> remappings.txt
+
+# Soldeer
+forge soldeer install blockulator~<version>
+echo "@blockulator/contracts/=dependencies/blockulator-<version>/" >> remappings.txt
 ```
 
 ```solidity
-import {FP127Lib} from "fp127/FP127Lib.sol";
+import {FP127Lib} from "@blockulator/contracts/fp127/FP127Lib.sol";
 
 contract CompoundExample {
     function accrue(int256 principalWad, int256 rateWad, uint256 steps)

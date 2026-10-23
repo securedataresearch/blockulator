@@ -60,15 +60,25 @@ Every op and library: [`gas.md`](docs/benchmarks/gas.md), [`gas256.md`](docs/ben
 
 ## Install
 
+One import path, three ways in:
+
 ```bash
+# Foundry, from git
 forge install securedataresearch/blockulator
-echo "fp127/=lib/blockulator/contracts/src/fp127/" >> remappings.txt
-echo "fp256/=lib/blockulator/contracts/src/fp256/" >> remappings.txt
+echo "@blockulator/contracts/=lib/blockulator/contracts/src/" >> remappings.txt
+
+# npm, yarn or pnpm: Hardhat needs no remapping; Foundry reading node_modules needs this one
+npm install @blockulator/contracts
+echo "@blockulator/contracts/=node_modules/@blockulator/contracts/" >> remappings.txt
+
+# Soldeer
+forge soldeer install blockulator~<version>
+echo "@blockulator/contracts/=dependencies/blockulator-<version>/" >> remappings.txt
 ```
 
 ```solidity
-import {FP127Lib} from "fp127/FP127Lib.sol";
-import {FP256Lib} from "fp256/FP256Lib.sol";
+import {FP127Lib} from "@blockulator/contracts/fp127/FP127Lib.sol";
+import {FP256Lib} from "@blockulator/contracts/fp256/FP256Lib.sol";
 
 int256 grown = FP256Lib.pow(FP256Lib.add(FP256Lib.ONE, rate), FP256Lib.fromUint(31536000));
 uint256 paid = FP256Lib.toUintDown(grown);          // to the user: floor

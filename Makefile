@@ -52,6 +52,7 @@ help:
 	@echo "  make site             - Build the Zola site into public/ (pinned Zola is downloaded if none is installed)"
 	@echo "  make site-check       - zola check, the symlinked data test, and deno task test"
 	@echo "  make readme-assets    - regenerate the README chart, badges and tables from the datasets"
+	@echo "  make pack             - Stage the npm/Soldeer package in dist/contracts/ and check both dry runs' file lists (publishes nothing)"
 	@echo "  make og               - Redraw static/og.png, the link-preview card (scripts/og/og.py)"
 	@echo "  make deploy-ladder-sepolia - Deploy them (reads DEPLOYER_KEY), then record"
 	@echo "  make verify-ladder-sepolia - Verify them on Sourcify (and Etherscan if ETHERSCAN_API_KEY is set)"
@@ -354,6 +355,14 @@ readme-assets:
 
 readme-check:
 	@$(PY) python scripts/readme/assets.py --check
+
+# ---- packages ----------------------------------------------------------------
+# @blockulator/contracts on npm and blockulator on Soldeer, from one staged tree
+# (scripts/pack/pack.py). Publishing is manual: docs/DEVELOPING.md, "Packages".
+
+.PHONY: pack
+pack:
+	@$(PY) scripts/pack/pack.py
 
 og:
 	$(PY) --with pillow python scripts/og/og.py
