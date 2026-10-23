@@ -207,12 +207,11 @@ negative quotient rounds up; `divDown` does not.
 
 **The v5 kernels.** An exponential is split exactly into 2^n 2^f with f a
 512-bit fraction (`y2nf`: the exponent y·log2(b), log2(b) to 2^-384, formed
-as one 768-bit product), and e^(f ln 2) − 1 is evaluated by `expk` to about
-2^-300 relative: the top 16 bits of the argument pick up to eight
-double-word factors e^(v·4^-k) from a 24-entry table, the rest goes to
-u + u²/2 in the double word and a one-word tail. The result is formed at
-2^-192 in two words and rounded once. `l2p` refines the one-word log2 by one
-Newton step through `expk` (2^-299 absolute); `pow` uses it. `cbrt` is
+as one 768-bit product; `exp` and the hyperbolics reduce x = n·ln 2 + r
+directly, `expr`), and e^r − 1 is evaluated by `expk` to 2^-311 relative,
+never above the truth (below). The result is rounded once from the kernel's
+high word. `l2p` refines the one-word log2 by one Newton step through
+`expk` (2^-313 absolute); `pow` uses it. `cbrt` is
 Newton on y³ = |x|·2^256 with precision doubling (a seed from the bits, four
 word steps, one residual step, exact cubes) and an exact midpoint test.
 `ln`, `log2` and `log10` round the one-word kernel when its 2^-145 error
@@ -260,14 +259,44 @@ within 2^-160.5 absolute where v5's seven stages were about 2^-150: 2,594 →
 `scripts/fp256/generators/minimax.py`), models them in exact integers,
 checks that the source holds its Yul verbatim and measures them against
 their bounds; `precise_model.py` and `erf_model.py` take them from there.
-A table-driven `expk` (four 16-entry double-word levels in place of the
-eight 2-bit groups) measured 4,140 gas against 4,485 but needs about
-2.5 KB more than FP127 has, so the double-word kernel keeps its groups; each
-group's factor is now multiplied in line, its constants chosen by the
-group's value, where v5 called an `expmul` helper from 23 cases: bit for
-bit the same, 4,046 gas in the inline library (the object's pinned
-optimizer had inlined the helper at every case, so there the gas is about
-level and the object 1.4 KB smaller).
+Blockulator 2.2's `expk` kept v5's eight 2-bit groups (each factor
+multiplied in line, 4,046 gas in the inline library).
+
+**Division (after 2.2).** `div`, `divDown` and `divUp` share `divw`, the exact
+floor(|a|·2^128 / |b|): when |a| and |b| are both under 2^64 it is long
+division in two 64-bit digits (|a|·2^64 fits a word and every remainder is
+below |b| < 2^192, so shifted by 64 it fits too: three `div`s and a `mod`);
+a third digit when only |b| is under 2^64; Bloemen's mulDiv (`divu`)
+beyond. 2.2 ran the mulDiv for every |a| ≥ 1. The directed forms add one
+`mulmod` for exactness. Same words and the same reverts: `div` 649 → 412
+gas on the ladder (PRBMath 509), `divDown` and `divUp` 818 → 475.
+
+**The double-word exp kernel (after 2.2).** `expk` works in X form, a value
+H·2^-256 + L·2^-384 with L a small word: about 300 bits are what the
+callers round (2^n(1 + s) at 2^-128 with n up to 126), not 512, so every
+product's cross terms are one-word multiplies and no carry is propagated
+until the end. Three 16-entry levels take the top 12 bits of r, each
+e^(j·16^-i) − 1 (at 2^-384) applied in the expm1 form s + c + s·c; the rest,
+u < 2^-12, goes to u + u²·g(u), g the degree-16 minimax polynomial of
+(e^u − 1 − u)/u² on [0, 2^-12] (2^-292.8 relative), its top steps in one
+word, the middle ones on the products' high words and the last three in X
+form. Every constant and product floors and g's constant is lowered by its
+fit's bound, so s never exceeds e^r − 1 and cannot reach 1: within
+2^-311.2 relative, 2^-313.0 measured. `lnmul` gives f·ln 2 in X form with
+its cross terms in one word; `exp` and `expx` (expm1, sinh, cosh, tanh,
+Lambert W's last step) skip the 768-bit exponent product: n comes from
+log2 e at 2^-119 in one word, r = x − n·ln 2 from ln 2 at 2^-384, and one
+test corrects n by one (on the 2^-128 grid x − m·ln 2 stays 2^-137 from 0
+for every 0 < |m| ≤ 300, so the test cannot be fooled). The rounding reads
+only the kernel's high word: with e = n + 129 the word is half of
+2^e + ⌊sh·2^(e−256)⌋ + 1, and the low word is under one unit of that sum.
+`exp` 5,360 → 2,716 gas (the typical median of `gas.json`, inline;
+PRBMath 2,816), `expk` alone 4,046 → about 2,200. `scripts/fp127/generators/expk.py` fits and certifies
+g, models the kernel in exact integers, checks that the source holds its
+Yul verbatim and measures it against its bound; `precise_model.py` takes
+it from there. The pinned optimizer had made three copies of the kernel
+(FunctionSpecializer on Lambert W's literal branch flag); one call with
+chosen arguments keeps one, and FP127 is 1.1 KB smaller than 2.2's.
 
 Version 4 (2026-10-15) adds eleven ops and moves `pow`'s exponent product
 to 2^-192 as well: `log2(x)` is taken unrounded and multiplied by `y` at
