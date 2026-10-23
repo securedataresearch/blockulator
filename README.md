@@ -10,23 +10,23 @@ One `int256` per number, two formats, every op tested against exact arithmetic.
 | **FP256** | 256-bit binary float | 71 digits, everywhere | 10^±78,913 |
 
 - **Round once.** Every FP256 op is correctly rounded: 0 misrounded in 360,590 random inputs, with a stated error bound behind each result. Every FP127 transcendental returns the nearest word (one known exception: `pow` with an exponent near 2^90).
-- **Twice the digits, at the same gas.** FP256 carries twice binary128's digits and is cheaper than ABDKMathQuad on add, mul, div, exp and pow. FP127 carries twice PRBMath's digits and is cheaper on mul, ln and pow.
+- **Twice the digits, at the same gas.** FP256 carries twice binary128's digits and is cheaper than ABDKMathQuad on add, mul, div, exp, ln and pow. FP127 carries twice PRBMath's digits and is cheaper on add, mul, ln and pow.
 - **More than arithmetic.** exp, ln, pow, compound, the hyperbolics, erf and normCdf, Lambert W, cbrt, hypot, and directed rounding at the token edge: 53 ops in FP127, 65 in FP256.
-- **Checked on chain.** Thirteen real calculations, 87 inputs, N up to 10,000 steps, plus 139 edge probes. They are re-run through the deployed contracts wherever a public RPC can execute them, with 0 mismatches.
+- **Checked on chain.** Thirteen real calculations, 87 inputs, N up to 10,000 steps, plus 139 edge probes. They are re-run through the deployed contracts wherever a public RPC can execute them, with 0 mismatches (the corrected ladder's on-chain re-check follows its v11 redeploy).
 
 ## Gas
 
-Inline library, median gas per call. The digits column is precision at 1.
+Inline library, median gas per call: exp, ln and pow over random inputs that take no shortcut, the arithmetic over the input ladder (the site's basis). The digits column is precision at 1.
 
 | | digits | add | mul | div | exp | ln | pow |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| **FP256** | **71** | 662 | 530 | 800 | 3,295 | 3,006 | 5,541 |
-| ABDKMathQuad | 34 | 765 | 688 | 818 | 5,850 | 1,586 | 23,290 |
-| **FP127** | **38** | 124 | 263 | 645 | 6,006 | 600 | 3,537 |
-| PRBMath SD59x18 | 18 | 111 | 485 | 509 | 2,788 | 828 | 9,911 |
-| Solady | 18 | 111 | 126 | 93 | 430 | 556 | 1,275 |
+| **FP256** | **71** | 662 | 530 | 800 | 3,278 | 3,043 | 5,901 |
+| ABDKMathQuad | 34 | 734 | 709 | 818 | 5,668 | 16,356 | 23,467 |
+| **FP127** | **38** | 128 | 267 | 649 | 5,360 | 1,944 | 3,317 |
+| PRBMath SD59x18 | 18 | 189 | 485 | 509 | 2,816 | 7,083 | 10,065 |
+| Solady | 18 | 3 | 126 | 93 | 430 | 556 | 1,279 |
 
-The full tables cover every op and library: [`gas.md`](docs/benchmarks/gas.md) and [`gas256.md`](docs/benchmarks/gas256.md). Compile with `via_ir = true`; it takes another 10–33% off the inline libraries.
+Solady's `add` is its unchecked `rawAdd`. The full tables cover every op and library: [`gas.md`](docs/benchmarks/gas.md) and [`gas256.md`](docs/benchmarks/gas256.md). Compile with `via_ir = true`; it takes another 10–33% off the inline libraries.
 
 ## Use it
 
