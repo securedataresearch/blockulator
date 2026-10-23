@@ -1,4 +1,4 @@
-.PHONY: gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check
 
 PY := uv run
 
@@ -22,11 +22,14 @@ help:
 	@echo "  make vectors-check    - Fail if the vectors are stale"
 	@echo "  make build            - gen-check + forge build"
 	@echo "  make test             - gen-check + vectors-check + equivalence, behaviour and precision suites"
+	@echo "  make typed            - The typed API (FP127Type, FP256Type) against the raw libraries: same results and reverts, gas both ways, default profile and via_ir"
 	@echo "  make precision-report - Rewrite docs/fp127/precision.md from docs/fp127/precision.json"
 	@echo "  make bench            - Gas ladder for every op and form -> docs/benchmarks/gas.json + gas.md"
 	@echo "  make talk             - The talk deck, one plot per slide from the data -> docs/talks/dust-is-over.pdf"
 	@echo "  make pi-compare       - Ramanujan's series through each library's primitives -> docs/benchmarks/pi.md"
 	@echo "  make size             - Print the deployed FP127 runtime size in bytes"
+	@echo "  make size-inline      - Bytecode each op adds inlined through FP127Lib / FP256Lib, legacy and via_ir -> docs/benchmarks/size.{json,md}"
+	@echo "  make size-inline-check - Fail if size.json / size.md are stale"
 	@echo "  make gen-inputs       - Generate scripts/ladder/inputs.json (every input floored into each representation) from scenarios.json"
 	@echo "  make gen-inputs-check - Fail if inputs.json is stale"
 	@echo "  make ladder           - Terminal-precision ladder: every scenario x input x library x N -> docs/benchmarks/ladder.json + ladder.md"
@@ -48,6 +51,7 @@ help:
 	@echo "  make predict-ladder   - CREATE2 addresses of the ladder adapters and runner"
 	@echo "  make site             - Build the Zola site into public/ (pinned Zola is downloaded if none is installed)"
 	@echo "  make site-check       - zola check, the symlinked data test, and deno task test"
+	@echo "  make readme-assets    - regenerate the README chart, badges and tables from the datasets"
 	@echo "  make pack             - Stage the npm/Soldeer package in dist/contracts/ and check both dry runs' file lists (publishes nothing)"
 	@echo "  make og               - Redraw static/og.png, the link-preview card (scripts/og/og.py)"
 	@echo "  make deploy-ladder-sepolia - Deploy them (reads DEPLOYER_KEY), then record"
@@ -135,6 +139,22 @@ test: gen-check vectors-check
 	@forge test --match-path "test/examples/*" -q
 	@forge test --match-path "test/objects/*"
 	@forge test --match-path "test/wad/*"
+	@$(MAKE) -s typed
+
+# The typed API (FP127Type.sol, FP256Type.sol) against the raw libraries: the
+# same words and reverts under fuzzing, and each op's gas both ways, under the
+# default profile and again through the IR, where no difference is allowed.
+# The IR pass sets src to test/typed, and forge >= 1.8 then auto-remaps
+# forge-std/ to lib/forge-std/test/typed/, so its remapping is explicit.
+.PHONY: typed
+typed:
+	@mkdir -p cache/typed-ir
+	@forge test --match-path "test/typed/*" -vv > cache/typed-ir/default.log || { cat cache/typed-ir/default.log; exit 1; }
+	@grep -E "TYPED\|.*\|worst|Suite result" cache/typed-ir/default.log
+	@TYPED_GAS_TOL=0 FOUNDRY_SRC=test/typed FOUNDRY_TEST=test/typed FOUNDRY_SCRIPT=test/typed \
+		FOUNDRY_OUT=cache/typed-ir/out FOUNDRY_CACHE_PATH=cache/typed-ir/cache FOUNDRY_VIA_IR=true \
+		forge test --match-test test_gas -vv --remappings forge-std/=lib/forge-std/src/ > cache/typed-ir/via-ir.log || { cat cache/typed-ir/via-ir.log; exit 1; }
+	@grep -E "TYPED\|.*\|worst|Suite result" cache/typed-ir/via-ir.log
 
 size-fp256: build
 	@$(DEPLOY) size $(FP256_OBJECTS)
@@ -154,6 +174,14 @@ precision-report-fp256:
 
 size: build
 	@$(DEPLOY) size $(FP127_OBJECTS)
+
+# The bytecode each op adds when inlined through FP127Lib / FP256Lib, legacy and
+# via_ir: one throwaway contract per op (in a temp dir) against a baseline, by
+# solc directly. Needs only solc 0.8.38 (forge build installs it).
+size-inline:
+	@$(PY) scripts/size/inline.py
+size-inline-check:
+	@$(PY) scripts/size/inline.py --check
 
 bench: build
 	@forge test --match-contract "^GasLadder$$" -vv | $(PY) scripts/fp127/gas_to_json.py
@@ -310,6 +338,13 @@ site-check: site
 	@test -f public/contracts/build/abis/badge-factory-v2.json && test -f public/contracts/src/identity/badge.vy
 	@(test -x ./zola && ./zola check --skip-external-links) || zola check --skip-external-links
 	@deno task test
+
+# The README's chart (docs/img/digits-*.svg), badges and tables, from the committed datasets
+readme-assets:
+	@$(PY) python scripts/readme/assets.py
+
+readme-check:
+	@$(PY) python scripts/readme/assets.py --check
 
 # ---- packages ----------------------------------------------------------------
 # @blockulator/contracts on npm and blockulator on Soldeer, from one staged tree

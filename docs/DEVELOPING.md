@@ -23,7 +23,7 @@ blockulator/
 ├── docs/talks/                 the talk
 ├── config.toml, build.sh       the Zola site
 ├── content/, templates/        pages and templates; tables and charts are Tera components
-├── static/css/site.css         synced from securedataresearch.net (scripts/sync-sdr.sh)
+├── static/css/site.css         the theme: colour tokens (light, dark), background, glass
 ├── static/js/islands/          scenario tabs; the badges and archive islands
 └── static/data/                symlinks into docs/ and contracts/, served as /data
 ```

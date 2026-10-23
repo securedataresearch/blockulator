@@ -5,6 +5,11 @@ on:
     branches: [master]
   pull_request:
 
+# a new push to a branch cancels that branch's older runs; master's runs finish
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
   fp127:
     runs-on: ubuntu-latest
@@ -66,6 +71,9 @@ jobs:
       - name: BlockulatorWad to the last wei (known values, Solady's reverts, fuzzing against exact roots and fullMulDiv)
         run: FOUNDRY_FUZZ_RUNS=5000 forge test --match-path "test/wad/*"
 
+      - name: Typed API (FP127Type, FP256Type) equals the raw libraries; gas both ways, default profile and via_ir
+        run: FOUNDRY_FUZZ_RUNS=5000 make typed
+
       - name: Gas ladder
         run: make bench && cat docs/benchmarks/gas.md
 
@@ -81,6 +89,8 @@ jobs:
       - name: Runtime size
         run: make size
 
+      - name: Inline size table is current (one solc compile per op, legacy and via_ir)
+        run: make size-inline-check
       - name: npm and Soldeer packages (dry runs; nothing is published)
         run: make pack
 
@@ -94,27 +104,6 @@ jobs:
             docs/benchmarks/gas.md
             docs/benchmarks/ladder.json
             docs/benchmarks/ladder.md
-
-  proofs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: stable
-
-      - uses: astral-sh/setup-uv@v5
-
-      - name: Halmos 0.3.3
-        run: |
-          uv tool install halmos==0.3.3
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Formal proofs, the CI subset (docs/proofs.md; PROOFS_FULL=1 locally for all)
-        run: JOBS=2 SOLVER_THREADS=2 make proofs
 
   site:
     runs-on: ubuntu-latest

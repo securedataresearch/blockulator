@@ -21,13 +21,15 @@
 {%- set ops = load_data(path=pre ~ "ops.json") -%}
 {%- set prec = load_data(path=pre ~ "precision.json") -%}
 {%- set gas = load_data(path=pre ~ "gas.json") -%}
+{%- set sizes = load_data(path="static/data/size.json") -%}{% set size = sizes.libs[lib] -%}
+{%- set bytesnote = "\"Bytes inline\" is the runtime code one op adds to a contract that calls it through <code>" ~ (lib == "fp256" and "FP256Lib" or "FP127Lib") ~ "</code>, helpers included (default profile, legacy pipeline; hover for via_ir). Ops that share a kernel add less together than their rows (size.json's bundles). Inlining saves about " ~ size.staticcallGas ~ " gas a call; <code>staticcall</code> the deployed object instead when inlining would take a contract near the 24,576-byte limit, or for a large op called rarely." -%}
 {%- set proofs = load_data(path="static/data/proofs.json") -%}
 {%- set_global proven = "," %}{% for q in proofs.ops %}{% if q.lib | lower == lib and q.status == "proven" %}{% set_global proven = proven ~ q.op ~ "," %}{% endif %}{% endfor -%}
 {#- FP256 ops whose result is always the exact value; every other FP256 op is correctly rounded (CR) -#}
 {%- set exact256 = ["neg", "abs", "sign", "cmp", "lt", "eq", "min", "max", "clamp", "floor", "ceil", "round", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "log2Up"] -%}
 <div class="scroll">
 <table class="optable">
-<thead><tr><th>op</th><th>what</th><th>domain</th><th>reverts</th><th class="num">bits (min/mean)</th><th class="num">gas, object</th><th class="num">gas, inline</th></tr></thead>
+<thead><tr><th>op</th><th>what</th><th>domain</th><th>reverts</th><th class="num">bits (min/mean)</th><th class="num">gas, object</th><th class="num">gas, inline</th><th class="num">bytes inline</th></tr></thead>
 <tbody>
 {%- for o in ops.ops %}
 {%- set p = prec[o.name] %}
@@ -45,6 +47,7 @@
 {%- else %}
 <td class="num"></td><td class="num"></td>
 {%- endif %}
+{%- if o.name in size.ops %}{% set z = size.ops[o.name] %}<td class="num" title="via_ir: {{ z.viaIr | num_format }}">{{ z.legacy | num_format }}</td>{% else %}<td class="num"></td>{% endif %}
 </tr>
 {%- endfor %}
 </tbody>
@@ -52,9 +55,9 @@
 </div>
 {%- set_global nt = 0 %}{% for name, g in gas.ops %}{% if g.typical is defined %}{% set_global nt = nt + 1 %}{% endif %}{% endfor %}
 {%- if lib == "fp256" %}
-<p class="note">Bits against exact rationals and mpmath at 300 decimal places over the committed vectors. <strong>CR</strong>: the correctly rounded word at every vector, to nearest or in the direction the name gives; <strong>exact</strong>: the result is always the exact value. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed object that holds the op (FP256, FP256E, FP256H or FP256S); "inline" is <code>FP256Lib</code>. Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>.</p>
+<p class="note">Bits against exact rationals and mpmath at 300 decimal places over the committed vectors. <strong>CR</strong>: the correctly rounded word at every vector, to nearest or in the direction the name gives; <strong>exact</strong>: the result is always the exact value. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed object that holds the op (FP256, FP256E, FP256H or FP256S); "inline" is <code>FP256Lib</code>. {{ bytesnote | safe }} Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>, <a href="/data/size.json">size.json</a>.</p>
 {%- else %}
-<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed FP127; "inline" is <code>FP127Lib</code>. Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>.</p>
+<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed FP127; "inline" is <code>FP127Lib</code>. {{ bytesnote | safe }} Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>, <a href="/data/size.json">size.json</a>.</p>
 {%- endif %}
 {%- endcomponent %}
 
@@ -214,6 +217,7 @@
 {%- set cap = 72 %}{% if W > 500 %}{% set L = 30 %}{% set R = 168 %}{% set gap = 15 %}{% else %}{% set L = 26 %}{% set R = 116 %}{% set gap = 13 %}{% endif %}{% set T = 12 %}{% set B = 40 -%}
 {%- set pw = W - L - R %}{% set ph = H - T - B -%}
 <svg viewBox="0 0 {{ W }} {{ H }}" width="100%" aria-hidden="true">
+<defs>{% for f in ["fp256", "fp127", "aave"] %}<linearGradient id="lc-{{ f }}-{{ W }}" x1="0" y1="0" x2="0" y2="1"><stop class="s-{{ f }} a0" offset="0"/><stop class="s-{{ f }} a1" offset="1"/></linearGradient>{% endfor %}</defs>
 {%- for g in [0, 18, 36, 54, 72] %}{% set y = T + ph - ph * g / cap %}
 <line class="grid" x1="{{ L }}" x2="{{ L + pw }}" y1="{{ y }}" y2="{{ y }}"/><text class="tick" x="{{ L - 7 }}" y="{{ y + 4 }}" text-anchor="end">{{ g }}</text>
 {%- endfor %}
@@ -225,19 +229,20 @@
 <line class="guide" x1="{{ yx }}" x2="{{ yx }}" y1="{{ T }}" y2="{{ T + ph }}"/><text class="tick" x="{{ yx + 5 }}" y="{{ T + ph * 0.36 }}">1 year</text>
 {#- label ends, collected as "yyyyyy|text|class" (hundredths offset by 100000 so string order is numeric) -#}
 {%- set_global ends = "" %}{% set_global endx = L + pw -%}
-{%- for bi in [0, 1] %}{% set_global top = "" %}{% set_global bot = "" %}{% set_global lowl = "" %}{% set_global highl = "" %}{% set_global hi = 0 %}{% set_global lo = 0 %}{% set_global tip = "" -%}
+{%- for bi in [0, 1] %}{% set_global top = "" %}{% set_global bot = "" %}{% set_global lowl = "" %}{% set_global highl = "" %}{% set_global hi = 0 %}{% set_global lo = 0 %}{% set_global tip = "" %}{% set_global yrx = 0 %}{% set_global yry = 0 -%}
 {%- for n in ladder %}{% set_global mx = -1 %}{% set_global mn = 999 -%}
 {%- for f in bforms[bi] %}{% if cells[f] is defined %}{% set c = cells[f][n | str] %}{% if c.digitsCapped is defined %}{% set cd = c.digitsCapped | float %}{% if cd > mx %}{% set_global mx = cd %}{% endif %}{% if cd < mn %}{% set_global mn = cd %}{% endif %}{% endif %}{% endif %}{% endfor -%}
-{%- if mx >= 0 %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global top = top ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global bot = x ~ "," ~ (T + ph - ph * mn / cap) ~ " " ~ bot %}{% set_global lowl = lowl ~ x ~ "," ~ (T + ph - ph * mn / cap) ~ " " %}{% set_global highl = highl ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global hi = mx %}{% set_global lo = mn %}{% if n == 365 %}{% if mn == mx %}{% set_global tip = mn ~ "" %}{% else %}{% set_global tip = mn ~ "–" ~ mx %}{% endif %}{% endif %}{% endif -%}
+{%- if mx >= 0 %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global top = top ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global bot = x ~ "," ~ (T + ph - ph * mn / cap) ~ " " ~ bot %}{% set_global lowl = lowl ~ x ~ "," ~ (T + ph - ph * mn / cap) ~ " " %}{% set_global highl = highl ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global hi = mx %}{% set_global lo = mn %}{% if n == 365 %}{% set_global yrx = x %}{% set_global yry = T + ph - ph * mn / cap %}{% set_global yrd = mn %}{% if mn == mx %}{% set_global tip = mn ~ "" %}{% else %}{% set_global tip = mn ~ "–" ~ mx %}{% endif %}{% endif %}{% endif -%}
 {%- endfor %}
-<g class="{{ bcls[bi] }} band"><polygon class="wband" points="{{ top }}{{ bot }}"><title>{{ blbl[bi] }} after a year: {{ tip }} digits</title></polygon>
-<polyline class="hi" points="{{ highl }}"/><polyline class="lo" points="{{ lowl }}"/></g>
+<g class="{{ bcls[bi] }} band">{% if bi == 1 %}<polygon class="area" points="{{ lowl }}{{ L + pw }},{{ T + ph }} {{ L }},{{ T + ph }}" style="fill:url(#lc-aave-{{ W }})"/>{% endif %}<polygon class="wband" points="{{ top }}{{ bot }}"><title>{{ blbl[bi] }} after a year: {{ tip }} digits</title></polygon>
+<polyline class="hi" points="{{ highl }}"/><polyline class="lo" points="{{ lowl }}"/>
+{%- if bi == 1 and yrx > 0 %}<circle class="yr" cx="{{ yrx }}" cy="{{ yry }}" r="4.5"/><text class="note-a" x="{{ yrx - 8 }}" y="{{ yry + 18 }}" text-anchor="end">{{ yrd | round(method="floor") | int }} digits after a year</text>{% endif %}</g>
 {%- set loi = lo | round(method="floor") | int %}{% set hii = hi | round(method="floor") | int %}{% if loi == hii %}{% set v = loi ~ "" %}{% else %}{% set v = loi ~ "–" ~ hii %}{% endif -%}
 {%- set_global ends = ends ~ ";" ~ (((T + ph - ph * (lo + hi) / 2 / cap + 4) * 100) | round | int + 100000) ~ "|" ~ blbl[bi] ~ " " ~ v ~ "|" ~ bcls[bi] %}
 {%- endfor %}
 {%- for f in lines %}{% set_global pts = "" %}{% set_global lastd = 0 %}
 {%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digitsCapped is defined %}{% set d = c.digitsCapped | float %}{% if d > cap %}{% set d = cap %}{% endif %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global pts = pts ~ x ~ "," ~ (T + ph - ph * d / cap) ~ " " %}{% set_global lastd = d %}{% endif %}{% endfor %}
-<g class="s-{{ f }}{% if f == 'fp127' or f == 'fp256' %} ours{% endif %}"><polyline points="{{ pts }}"/>
+<g class="s-{{ f }}{% if f == 'fp127' or f == 'fp256' %} ours{% endif %}">{% if f == 'fp127' or f == 'fp256' %}<polygon class="area" points="{{ pts }}{{ L + pw }},{{ T + ph }} {{ L }},{{ T + ph }}" style="fill:url(#lc-{{ f }}-{{ W }})"/>{% endif %}<polyline points="{{ pts }}"/>
 {%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digitsCapped is defined %}{% set d = c.digitsCapped | float %}{% if d > cap %}{% set d = cap %}{% endif %}<circle cx="{{ L + pw * (log10[n | str] | float) / 4 }}" cy="{{ T + ph - ph * d / cap }}" {% if c.exact %} class="exact" r="4"{% elif n == 365 %} class="yr" r="4"{% else %} r="2"{% endif %}><title>{{ names[f] }} after {{ n }} days: {% if c.exact %}exact{% else %}{{ c.digitsCapped }} digits{% if c.interestCapped is defined %}, {{ c.interestCapped }} of the interest{% endif %}{% endif %}</title></circle>{% endif %}{% endfor %}</g>
 {%- set dd = lastd %}{% if dd > cap %}{% set dd = cap %}{% endif -%}
 {%- set_global ends = ends ~ ";" ~ (((T + ph - ph * dd / cap + 4) * 100) | round | int + 100000) ~ "|" ~ names[f] ~ " " ~ (lastd | round(method="floor") | int) ~ "|s-" ~ f %}
@@ -369,4 +374,91 @@
 </div>
 {%- endfor %}
 </div>
+{%- endcomponent %}
+
+{#- Digits against gas, one point per library: y the digits at 1, x the mean of the inline medians over the pitch table's ops
+    that every library offers (the site's one gas basis). An arrow from each competitor to the one of ours with the same idea
+    (binary128 to FP256, PRBMath to FP127) carries the ratio. Drawn twice, wide and narrow; one shows. -#}
+{% component gasdigits(W: integer = 720, H: integer = 320) -%}
+{%- set g127 = load_data(path="static/data/gas.json") -%}
+{%- set g256 = load_data(path="static/data/fp256/gas.json") -%}
+{%- set oplist = ["add", "mul", "div", "exp", "ln", "pow", "sqrt"] -%}
+{%- set libs = ["fp256", "fp127", "quad", "prb", "solady"] -%}
+{%- set names = {"fp256": "FP256", "quad": "ABDKMathQuad", "fp127": "FP127", "prb": "PRBMath", "solady": "Solady"} -%}
+{%- set digits = {"fp256": 71, "quad": 34, "fp127": 38, "prb": 18, "solady": 18} -%}
+{%- set form = {"fp256": "lib", "quad": "quad", "fp127": "lib", "prb": "prb", "solady": "solady"} -%}
+{%- set file = {"fp256": "g256", "quad": "g256", "fp127": "g127", "prb": "g127", "solady": "g127"} -%}
+{%- set_global ok = "," %}{% set_global nok = 0 -%}
+{%- for op in oplist %}{% set_global all = true %}{% for l in libs %}{% if file[l] == "g256" %}{% set o = g256.ops[op] %}{% else %}{% set o = g127.ops[op] %}{% endif %}{% if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif %}{% if not sm[form[l]] %}{% set_global all = false %}{% endif %}{% endfor %}{% if all %}{% set_global ok = ok ~ op ~ "," %}{% set_global nok = nok + 1 %}{% endif %}{% endfor -%}
+{%- set_global mx = 0 %}{% set_global m256 = 0 %}{% set_global m127 = 0 %}{% set_global mquad = 0 %}{% set_global mprb = 0 %}{% set_global msol = 0 -%}
+{%- for l in libs %}{% set_global sum = 0 -%}
+{%- for op in oplist %}{% if ("," ~ op ~ ",") in ok %}{% if file[l] == "g256" %}{% set o = g256.ops[op] %}{% else %}{% set o = g127.ops[op] %}{% endif %}{% if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif %}{% set_global sum = sum + sm[form[l]].median %}{% endif %}{% endfor -%}
+{%- set m = sum / nok %}{% if m > mx %}{% set_global mx = m %}{% endif -%}
+{%- if l == "fp256" %}{% set_global m256 = m %}{% elif l == "fp127" %}{% set_global m127 = m %}{% elif l == "quad" %}{% set_global mquad = m %}{% elif l == "prb" %}{% set_global mprb = m %}{% else %}{% set_global msol = m %}{% endif -%}
+{%- endfor -%}
+{%- set means = {"fp256": m256, "fp127": m127, "quad": mquad, "prb": mprb, "solady": msol} -%}
+{%- if W > 500 %}{% set L = 40 %}{% set R = 24 %}{% set step = 1000 %}{% else %}{% set L = 32 %}{% set R = 14 %}{% set step = 2000 %}{% endif %}{% set T = 26 %}{% set B = 44 -%}
+{%- set xmax = (mx / step) | round(method="ceil") * step -%}
+{%- set pw = W - L - R %}{% set ph = H - T - B %}{% set cap = 80 -%}
+<svg viewBox="0 0 {{ W }} {{ H }}" width="100%" aria-hidden="true">
+<defs><marker id="gd-ah-{{ W }}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahead" d="M0,1 L10,5 L0,9 z"/></marker>
+<radialGradient id="gd-glow-{{ W }}" cx="0" cy="0" r="1"><stop class="glow0" offset="0"/><stop class="glow1" offset="1"/></radialGradient></defs>
+{#- the better corner: more digits, less gas -#}
+<rect class="better" x="{{ L }}" y="{{ T }}" width="{{ pw * 0.55 }}" height="{{ ph * 0.6 }}" fill="url(#gd-glow-{{ W }})"/>
+<text class="corner" x="{{ L + pw * 0.55 - 8 }}" y="{{ T + 16 }}" text-anchor="end">↖ more digits, less gas</text>
+{%- for g in [0, 20, 40, 60, 80] %}{% set y = T + ph - ph * g / cap %}
+<line class="grid" x1="{{ L }}" x2="{{ L + pw }}" y1="{{ y }}" y2="{{ y }}"/><text class="tick" x="{{ L - 7 }}" y="{{ y + 4 }}" text-anchor="end">{{ g }}</text>
+{%- endfor %}
+{%- for k in range(end=(xmax / step) | int + 1) %}{% set gx = k * step %}{% set x = L + pw * gx / xmax %}
+<text class="tick" x="{{ x }}" y="{{ H - 24 }}" text-anchor="middle">{{ gx | num_format }}</text>
+{%- endfor %}
+<text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 5 }}" text-anchor="middle">mean gas per call over {{ nok }} ops, inline</text>
+<text class="tick" x="{{ L - 7 }}" y="{{ T - 12 }}" text-anchor="end">digits</text>
+{#- arrows: competitor to ours, with the ratio -#}
+{%- for pr in [["quad", "fp256"], ["prb", "fp127"]] %}{% set a = pr[0] %}{% set b = pr[1] -%}
+{%- set x1 = L + pw * means[a] / xmax %}{% set y1 = T + ph - ph * digits[a] / cap %}{% set x2 = L + pw * means[b] / xmax %}{% set y2 = T + ph - ph * digits[b] / cap -%}
+{%- set dx = x2 - x1 %}{% set dy = y2 - y1 -%}
+<line class="arrow" x1="{{ x1 + dx * 0.1 }}" y1="{{ y1 + dy * 0.1 }}" x2="{{ x1 + dx * 0.86 }}" y2="{{ y1 + dy * 0.86 }}" marker-end="url(#gd-ah-{{ W }})"/>
+{%- if W > 500 %}{% set tx = x1 + dx * 0.5 - 12 %}{% set ta = "end" %}{% set ty = y1 + dy * 0.5 + 17 %}
+<text class="ratio" x="{{ tx }}" y="{{ ty }}" text-anchor="{{ ta }}">{{ (digits[b] / digits[a]) | round(precision=1) }}× the digits</text>
+<text class="ratio" x="{{ tx }}" y="{{ ty + 15 }}" text-anchor="{{ ta }}">{{ (means[b] / means[a] * 100) | round | int }}% of the gas</text>{% endif %}
+{%- endfor %}
+{%- for l in libs %}{% set x = L + pw * means[l] / xmax %}{% set y = T + ph - ph * digits[l] / cap %}{% set ours = l == "fp256" or l == "fp127" -%}
+<g class="s-{{ l }}{% if ours %} ours{% endif %}"><circle class="pt" cx="{{ x }}" cy="{{ y }}" r="{% if ours %}7{% else %}5{% endif %}"><title>{{ names[l] }}: {{ digits[l] }} digits, mean {{ means[l] | round | int | num_format }} gas</title></circle>
+{%- if x > L + pw * 0.7 %}<text class="lbl" x="{{ x - 12 }}" y="{{ y - 10 }}" text-anchor="end">{{ names[l] }}</text>
+{%- elif ours %}<text class="lbl" x="{{ x - 12 }}" y="{{ y + 5 }}" text-anchor="end">{{ names[l] }}</text>
+{%- else %}<text class="lbl" x="{{ x + 11 }}" y="{{ y + 4 }}">{{ names[l] }}</text>{% endif %}</g>
+{%- endfor %}
+</svg>
+<p class="cap"><strong>FP256</strong>: {{ (digits.fp256 / digits.quad) | round(precision=1) }}× ABDKMathQuad's digits at {{ (m256 / mquad * 100) | round | int }}% of its gas. <strong>FP127</strong>: {{ (digits.fp127 / digits.prb) | round(precision=1) }}× PRBMath's digits at {{ (m127 / mprb * 100) | round | int }}% of its gas. Gas is the mean of the inline medians over {% for op in oplist %}{% if ("," ~ op ~ ",") in ok %}<code>{{ op }}</code>{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}; Solady is cheapest, at 18 digits.</p>
+{%- endcomponent %}
+
+{#- Correct to the last wei: the share of results off by at least one wei, per function, BlockulatorWad first, from wad.json
+    (scripts/sweep/wad.py; each library scored in its own rounding direction). Drawn twice, wide and narrow; one shows. -#}
+{% component wadbars(W: integer = 640, fns: string = "expWad,lnWad,powWad") -%}
+{%- set d = load_data(path="static/data/wad.json") -%}
+{%- set libs = ["blockulator", "solady", "prb"] -%}
+{%- if W > 500 %}{% set names = {"blockulator": "BlockulatorWad", "solady": "Solady", "prb": "PRBMath"} %}{% set L = 124 %}{% set R = 44 %}{% else %}{% set names = {"blockulator": "Blockulator", "solady": "Solady", "prb": "PRBMath"} %}{% set L = 80 %}{% set R = 34 %}{% endif -%}
+{%- set bh = 16 %}{% set bg = 7 %}{% set gh = 26 %}{% set T = 4 %}{% set gs = gh + 3 * (bh + bg) + 8 -%}
+{%- set fl = fns | split(pat=",") -%}
+{%- set H = T + (fl | length) * gs + 24 -%}
+{%- set pw = W - L - R -%}
+<svg viewBox="0 0 {{ W }} {{ H }}" width="100%" aria-hidden="true">
+{%- for p in [0, 25, 50, 75, 100] %}{% set x = L + pw * p / 100 %}
+<line class="grid" x1="{{ x }}" x2="{{ x }}" y1="{{ T + gh - 4 }}" y2="{{ H - 26 }}"/><text class="tick" x="{{ x }}" y="{{ H - 8 }}" text-anchor="middle">{{ p }}%</text>
+{%- endfor %}
+{%- for fn in fl %}{% set gy = T + loop.index0 * gs -%}
+<text class="fn" x="{{ L - 8 }}" y="{{ gy + 17 }}" text-anchor="end">{{ fn }}</text>
+{%- for l in libs %}{% set y = gy + gh + loop.index0 * (bh + bg) -%}
+{%- set_global row = "" %}{% for r in d.rows %}{% if r.lib == l and r.function == fn %}{% set_global row = r %}{% endif %}{% endfor -%}
+<g class="s-{{ l }}{% if l == 'blockulator' %} ours{% endif %}">
+<text class="name" x="{{ L - 8 }}" y="{{ y + bh - 4 }}" text-anchor="end">{{ names[l] }}</text>
+<rect class="track" x="{{ L }}" y="{{ y }}" width="{{ pw }}" height="{{ bh }}" rx="{{ bh / 2 }}"/>
+{%- if not row %}<text class="val none" x="{{ L + 10 }}" y="{{ y + bh - 4 }}">not offered</text>
+{%- elif row.wrongWei == 0 %}<circle class="zero" cx="{{ L + bh / 2 }}" cy="{{ y + bh / 2 }}" r="{{ bh / 2 - 2 }}"><title>{{ d.libraries[l] }} {{ fn }}: 0 of {{ row.valued | num_format }} results off by a wei</title></circle><text class="val" x="{{ L + bh + 6 }}" y="{{ y + bh - 4 }}">0 wrong of {{ row.valued | num_format }}</text>
+{%- else %}{% set w = pw * row.wrongWeiPct / 100 %}<rect class="bar" x="{{ L }}" y="{{ y }}" width="{{ w }}" height="{{ bh }}" rx="{{ bh / 2 }}"><title>{{ d.libraries[l] }} {{ fn }}: {{ row.wrongWei | num_format }} of {{ row.valued | num_format }} results off by at least one wei</title></rect><text class="val" x="{{ L + w + 6 }}" y="{{ y + bh - 4 }}">{{ row.wrongWeiPct | round | int }}%</text>{% endif %}
+</g>
+{%- endfor %}
+{%- endfor %}
+</svg>
 {%- endcomponent %}

@@ -1,47 +1,46 @@
-/* blockulator additions on top of site.css (synced from securedataresearch.net). No colour literals: tokens only. */
+/* components, on site.css's theme. No colour literals: tokens only. */
 .doc { max-width: 52em; }
 .doc.wide { max-width: var(--wrap); }
 .doc pre, .doc code { font-family: var(--mono); font-size: .88em; }
-.doc pre { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; overflow-x: auto; line-height: 1.5; }
-.doc :not(pre) > code { background: var(--white); border: 1px solid var(--g-100); border-radius: 6px; padding: .08em .35em; }
-.doc table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 1em 0 1.4em; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-.doc th, .doc td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--g-100); vertical-align: top; }
-.doc th { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--g-500); font-weight: 500; background: var(--g-50); }
+.doc pre { background: var(--tint); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 16px 18px; overflow-x: auto; line-height: 1.5; }
+.doc :not(pre) > code { background: var(--tint); border: 1px solid var(--line); border-radius: 6px; padding: .08em .35em; }
+.doc table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 1em 0 1.4em; background: var(--surface-hi); border-radius: var(--radius-s); box-shadow: 0 0 0 1px var(--line); overflow: hidden; }
+.doc th, .doc td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+.doc th { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 500; background: var(--tint); }
 .doc tr:last-child td { border-bottom: 0; }
 .doc td.num, .doc th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .doc .mono { font-family: var(--mono); }
 .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .scroll table { min-width: 640px; }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; font-size: 15px; margin: 0 0 1.4em; }
-.kv dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--g-500); padding-top: 3px; }
+.kv dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding-top: 3px; }
 .kv dd { margin: 0; font-family: var(--mono); font-size: 13.5px; word-break: break-all; }
 .doc .lead { font-size: clamp(19px, 2.1vw, 22px); line-height: 1.5; }
-.copy { font-family: var(--mono); font-size: 12px; border: 1px solid var(--g-200); background: var(--white); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
-.copy:hover { border-color: var(--ink); }
-.btn.solid { background: var(--ink); color: var(--white); text-decoration: none; }
-.btn.solid:hover { background: var(--ink-3); transform: translateY(-1px); }
+.copy { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line-2); background: var(--surface); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+.copy:hover { border-color: var(--text-strong); }
 @media (max-width: 640px) { .kv { grid-template-columns: 1fr; gap: 2px 0; } .kv dd { margin-bottom: 10px; } }
 .optable td { font-size: 14px; }
 .optable th { white-space: nowrap; }
-.optable .sel, .small { font-size: 11.5px; color: var(--g-700); }
+.optable .sel, .small { font-size: 11.5px; color: var(--muted); }
 .optable a { text-decoration: none; }
 .optable a:hover { text-decoration: underline; }
-.optable tr:target td { background: var(--g-50); }
+.optable tr:target td { background: var(--tint); }
 
 /* demo: tabs, chart, ladder table */
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 1.2em 0 1.6em; }
-.tabs a { font-size: 14px; text-decoration: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--g-200); background: var(--white); color: var(--ink-2); }
-.tabs a.on, .tabs a:hover { border-color: var(--ink); background: var(--ink); color: var(--white); }
-.doc .scenario h2 { font-family: var(--sans); font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; text-transform: none; color: var(--ink); margin: 1.2em 0 .4em; }
+.tabs a { font-size: 14px; text-decoration: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); transition: border-color .18s ease, background .18s ease, color .18s ease; }
+.tabs a:hover { border-color: var(--text-strong); }
+.tabs a.on { border-color: var(--text-strong); background: var(--text-strong); color: var(--bg); }
+.doc .scenario h2 { font-family: var(--sans); font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; text-transform: none; color: var(--text-strong); margin: 1.2em 0 .4em; }
 .chart svg text { font-family: var(--sans); }
-.chart .grid { stroke: var(--g-100); stroke-width: 1; }
-.chart .tick { font-size: 12px; fill: var(--g-500); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .tick { font-size: 12px; fill: var(--faint); }
 .chart polyline { fill: none; stroke-width: 2; stroke-linejoin: round; }
-.chart circle { stroke: var(--white); stroke-width: 2; }
+.chart circle { stroke: var(--surface-solid); stroke-width: 2; }
 .chart .lbl { font-size: 12.5px; font-weight: 600; }
 /* one colour per family, the same in the deck (scripts/talk/deck.py): ours emerald and ink, the WAD libraries one gold told apart by dash, the protocols one slate */
-:root { --violet: color-mix(in oklab, var(--sapphire) 55%, var(--red)); --slate: color-mix(in oklab, var(--sapphire) 50%, var(--g-500)); }
-:root { --c-fp127: var(--emerald); --c-fp256: var(--ink); --c-wad: var(--gold); --c-quad: var(--violet); --c-6464: var(--sapphire); --c-protocol: var(--slate); }
+:root { --violet: color-mix(in oklab, var(--sapphire) 55%, var(--red)); --slate: color-mix(in oklab, var(--sapphire) 50%, var(--faint)); }
+:root { --c-fp127: var(--emerald); --c-fp256: var(--text-strong); --c-wad: var(--gold); --c-quad: var(--violet); --c-6464: var(--sapphire); --c-protocol: var(--slate); }
 .s-fp127 { --c: var(--c-fp127); } .s-fp256 { --c: var(--c-fp256); } .s-quad { --c: var(--c-quad); } .s-abdk { --c: var(--c-6464); }
 .s-solady, .s-prb, .s-balancer { --c: var(--c-wad); } .s-aave, .s-morpho, .s-maker { --c: var(--c-protocol); }
 .chart polyline, .chart circle[class*="s-"] { stroke: var(--c); } .chart circle, .chart text[class*="s-"], .chart polygon { fill: var(--c); }
@@ -50,12 +49,12 @@
 .chart polyline.s-aave { stroke-dasharray: 1 3; } .chart polyline.s-morpho { stroke-dasharray: 6 2 2 2; } .chart polyline.s-maker { stroke-dasharray: 3 3; }
 .ladder { min-width: 1400px; font-size: 13px; }
 .ladder td.val { font-family: var(--mono); font-size: 12.5px; line-height: 1.5; white-space: nowrap; }
-.ladder .ok { color: var(--emerald); } .ladder .wrong { color: var(--red); } .ladder .truth { color: var(--ink); }
+.ladder .ok { color: var(--emerald); } .ladder .wrong { color: var(--red); } .ladder .truth { color: var(--text-strong); }
 .ladder .rev { color: var(--red); font-weight: 600; }
-.ladder .meta { font-family: var(--sans); font-size: 11.5px; color: var(--g-700); }
-.verify { margin-top: 4px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--g-200); background: var(--white); border-radius: 999px; padding: 3px 9px; cursor: pointer; }
-.verify:hover:not(:disabled) { border-color: var(--ink); }
-.verify:disabled { color: var(--g-300); cursor: default; }
+.ladder .meta { font-family: var(--sans); font-size: 11.5px; color: var(--muted); }
+.verify { margin-top: 4px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-2); background: var(--surface); border-radius: 999px; padding: 3px 9px; cursor: pointer; }
+.verify:hover:not(:disabled) { border-color: var(--text-strong); }
+.verify:disabled { color: var(--rule); cursor: default; }
 .verify.match { border-color: var(--emerald); color: var(--emerald); } .verify.mismatch { border-color: var(--red); color: var(--red); }
 .gasrow { font-size: 14px; }
 
@@ -67,17 +66,17 @@
 .island-open { display: flex; justify-content: space-between; align-items: center; padding: .6rem 1rem; font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; }
 
 /* demo v2: methodology, toggle, band chart, summary */
-.method { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 20px; margin: 1.2em 0; }
+.method { background: var(--surface-hi); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 14px 20px; margin: 1.2em 0; }
 .method summary { cursor: pointer; font-weight: 600; }
 .method dl { margin: 12px 0 4px; }
-.method dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--g-500); margin-top: 12px; }
+.method dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin-top: 12px; }
 .method dd { margin: 4px 0 0; font-size: 15px; }
-.doc .scenario h3 { font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--g-500); margin: 2em 0 .6em; font-weight: 500; }
+.doc .scenario h3 { font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 2em 0 .6em; font-weight: 500; }
 .toggle { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; margin: 0 0 10px; }
 .toggle label { cursor: pointer; }
 .chart .band { opacity: .14; stroke: none; }
 .ladder { min-width: 2800px; }
-.summary { font-size: 14px; } .summary .meta { color: var(--g-700); font-size: 12px; }
+.summary { font-size: 14px; } .summary .meta { color: var(--muted); font-size: 12px; }
 .inputs { margin: 1em 0 1.4em; } .inputs summary { cursor: pointer; font-weight: 600; }
 .inputlist td { font-size: 13.5px; }
 
@@ -89,17 +88,17 @@
 /* page changes cross-fade; the bar stays put */
 @view-transition { navigation: auto; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .12s; }
-.inner .topbar { view-transition-name: topbar; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; animation-timing-function: ease-out; }
+::view-transition-group(topbar) { animation: none; }
+::view-transition-old(topbar) { display: none; }
+::view-transition-new(topbar) { animation: none; }
 
-/* top bar: a static dark strip on inner pages, over the hero on the home page */
-.topbar { position: relative; z-index: 3; background: var(--ink); }
-.topbar .top { position: static; }
-.home .topbar { position: absolute; inset: 0 0 auto 0; background: transparent; }
-.links a[aria-current] { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; }
-@media (max-width: 640px) { .links a:not(.cta) { display: inline; } .links { gap: 4px 12px; font-size: 14px; } .brand span { display: none; } }
+/* top bar (site.css): sticky on inner pages, fixed over the hero on the home page, the same element and place on both */
+.home .topbar { position: fixed; left: 0; right: 0; }
+@media (max-width: 640px) { .links { gap: 2px; font-size: 14px; } .links a { padding: 6px 9px; } .links .cta { margin-left: 2px; } .brand span { display: none; } }
 
-/* the shader stays hidden until it has drawn a frame (home.html adds .on), then fades in over the CSS gradient */
-canvas.cloth { opacity: 0; transition: opacity .6s ease-out; }
+/* the shader stays hidden until hero.js has drawn its first frame (it adds .on), then fades in over the page background */
+canvas.cloth { opacity: 0; transition: opacity .9s ease-out; }
 canvas.cloth.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { canvas.cloth { transition: none; } ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
 
@@ -107,15 +106,15 @@ canvas.cloth.on { opacity: 1; }
 .pagehead { margin: 0 0 1.6em; }
 .pagehead .subnav { margin: 0 0 1.4em; }
 .doc .pagehead h1 { margin: 0 0 .3em; }
-.pagehead .lead { color: var(--g-700); margin: 0; }
-.doc h2 { font-family: var(--sans); font-size: clamp(22px, 2.6vw, 28px); letter-spacing: -.02em; text-transform: none; color: var(--ink); font-weight: 600; margin: 1.8em 0 .5em; }
+.pagehead .lead { color: var(--muted); margin: 0; }
+.doc h2 { font-family: var(--sans); font-size: clamp(22px, 2.6vw, 28px); letter-spacing: -.02em; text-transform: none; color: var(--text-strong); font-weight: 600; margin: 1.8em 0 .5em; }
 
 /* home: correct digits against N, one line per family, the WAD libraries as one band. Drawn twice (components.html ladderchart); one shows */
 .digitchart { margin: 0 0 14px; max-width: 820px; }
 .digitchart svg { display: block; }
 .digitchart .narrow { display: none; }
 @media (max-width: 560px) { .digitchart .wide { display: none; } .digitchart .narrow { display: block; } }
-.digitchart .guide { stroke: var(--g-300); stroke-width: 1; stroke-dasharray: 2 3; }
+.digitchart .guide { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
 .digitchart .ours polyline { stroke-width: 3; }
 .digitchart .wband { opacity: .3; }
 .digitchart .hi { stroke-width: 1; } .digitchart .lo { stroke-width: 2.5; }
@@ -126,9 +125,9 @@ canvas.cloth.on { opacity: 1; }
 .digitchart .s-aave.band { opacity: 1; }
 .digitchart .s-aave .wband { opacity: .12; }
 .digitchart .s-aave .hi, .digitchart .s-aave .lo { stroke-width: 2.5; }
-.digitchart circle { stroke: none; } .digitchart circle.yr { stroke: var(--white); stroke-width: 1.5; }
+.digitchart circle { stroke: none; } .digitchart circle.yr { stroke: var(--surface-solid); stroke-width: 1.5; }
 .digitchart .lbl { fill: var(--c); font-size: 13px; font-weight: 600; }
-.digitchart .s-solady .lbl { fill: color-mix(in oklab, var(--c) 70%, var(--ink)); }
+.digitchart .s-solady .lbl { fill: color-mix(in oklab, var(--c) 70%, var(--text-strong)); }
 .digitchart .narrow .tick { font-size: 11px; } .digitchart .narrow .lbl { font-size: 11.5px; }
 /* the ladder page's band chart, drawn wide and narrow like the home chart */
 .bandchart svg { display: block; max-width: 640px; }
@@ -137,9 +136,9 @@ canvas.cloth.on { opacity: 1; }
 .bandchart .wadband { opacity: .22; stroke: none; }
 .bandchart .narrow .tick { font-size: 11px; } .bandchart .narrow .lbl { font-size: 11.5px; }
 /* an exact result is a ring, not a number */
-.chart circle.exact { fill: var(--white); stroke: var(--c, var(--ink)); stroke-width: 2; }
+.chart circle.exact { fill: var(--surface-solid); stroke: var(--c, var(--text-strong)); stroke-width: 2; }
 .digitchart circle.exact { stroke: var(--c); stroke-width: 2; }
-.block .note { margin: -16px 0 22px; }
+.block .note { margin: 0 0 24px; }
 .block h2 { text-shadow: none; }
 .home .ask { padding-block: clamp(48px, 7vw, 80px); }
 
@@ -147,12 +146,12 @@ canvas.cloth.on { opacity: 1; }
 .matrix td, .matrix th { white-space: nowrap; padding: 9px 8px; }
 .matrix td { font-size: 14px; }
 .matrix th:first-child, .matrix td:first-child { padding-left: 14px; white-space: normal; min-width: 12em; }
-.matrix td.ours { font-weight: 600; color: var(--ink); background: var(--g-50); }
+.matrix td.ours { font-weight: 600; color: var(--text-strong); background: var(--tint); }
 .matrix a { text-decoration: none; }
 .matrix a:hover { text-decoration: underline; }
 .matrix .rev { color: var(--red); font-size: 12px; }
-.matrix .meta { color: var(--g-700); }
-.stamp { font-size: 14px; background: var(--white); border-left: 3px solid var(--emerald); border-radius: 8px; box-shadow: var(--shadow); padding: 10px 14px; margin: 1em 0 1.4em; }
+.matrix .meta { color: var(--muted); }
+.stamp { font-size: 14px; background: var(--surface-hi); border-left: 3px solid var(--emerald); border-radius: 8px; box-shadow: var(--shadow); padding: 10px 14px; margin: 1em 0 1.4em; }
 .stamp.pending { border-left-color: var(--gold); }
 .stamp.bad { border-left-color: var(--red); }
 .next { list-style: none; padding: 0; }
@@ -160,10 +159,10 @@ canvas.cloth.on { opacity: 1; }
 .next a { margin-right: .4em; }
 
 /* footer */
-.foot { padding-block: 28px 40px; margin-top: clamp(40px, 6vw, 72px); border-top: 1px solid var(--g-200); font-size: 14px; color: var(--g-500); }
+.foot { padding-block: 28px 40px; margin-top: clamp(40px, 6vw, 72px); border-top: 1px solid var(--line-2); font-size: 14px; color: var(--faint); }
 .foot nav { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 8px; }
-.foot a { color: var(--g-700); text-decoration: none; }
-.foot a:hover { color: var(--ink); text-decoration: underline; }
+.foot a { color: var(--muted); text-decoration: none; }
+.foot a:hover { color: var(--text-strong); text-decoration: underline; }
 .foot p { margin: 0; }
 
 /* the scrollbar always has its gutter, so a short page and a long one line up and a page change never shifts the layout sideways */
@@ -176,37 +175,37 @@ code, pre, kbd, .mono { font-variant-ligatures: none; }
 h1, .hero .sub, .block h2, .askcard h2, .doc h2, .step h3 { font-variant-numeric: proportional-nums; }
 
 /* vernier dividers: a 1px rule with a fine tick every 8px and a long one every 80px. Static, so nothing to reduce under prefers-reduced-motion; the ticks repeat, so any width works */
-:root { --vernier: linear-gradient(var(--g-300), var(--g-300)) 0 100% / 100% 1px no-repeat, repeating-linear-gradient(90deg, var(--g-300) 0 1px, transparent 1px 80px) 0 100% / 100% 9px no-repeat, repeating-linear-gradient(90deg, var(--g-300) 0 1px, transparent 1px 8px) 0 100% / 100% 4px no-repeat; }
+:root { --vernier: linear-gradient(var(--rule), var(--rule)) 0 100% / 100% 1px no-repeat, repeating-linear-gradient(90deg, var(--rule) 0 1px, transparent 1px 80px) 0 100% / 100% 9px no-repeat, repeating-linear-gradient(90deg, var(--rule) 0 1px, transparent 1px 8px) 0 100% / 100% 4px no-repeat; }
 .doc hr { border: 0; height: 9px; margin: 2.4em 0; background: var(--vernier); }
 .home .block + .block, .home .block + .ask { position: relative; }
-.home .block + .block::before, .home .block + .ask::before { content: ""; position: absolute; left: 0; right: 0; top: calc(clamp(56px, 8vw, 96px) / 2 - 5px); height: 9px; background: var(--vernier); }
+.home .block + .block::before, .home .block + .ask::before { content: ""; position: absolute; left: 0; right: 0; top: calc(clamp(48px, 7vw, 88px) / 2 - 5px); height: 9px; background: var(--vernier); }
 
 /* word strip: where a format spends its 256-bit word (components.html wordstrip) */
 .s-wad { --c: var(--c-wad); }
 .wordstrip { display: grid; gap: 16px; margin: 1.2em 0 1.6em; }
 .ws-row { display: grid; grid-template-columns: 6.5em 1fr; gap: 5px 12px; align-items: center; }
-.ws-name { font-family: var(--mono); font-size: 12.5px; font-weight: 500; color: var(--ink); }
+.ws-name { font-family: var(--mono); font-size: 12.5px; font-weight: 500; color: var(--text-strong); }
 .ws-bar { position: relative; height: 26px; }
 .ws-bar svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.ws-bar rect.pr { fill: var(--c); } .ws-bar rect.rg { fill: color-mix(in oklab, var(--c) 30%, var(--white)); }
-.ws-bar rect.sg { fill: var(--g-500); } .ws-bar rect.un { fill: var(--g-100); }
+.ws-bar rect.pr { fill: var(--c); } .ws-bar rect.rg { fill: color-mix(in oklab, var(--c) 30%, var(--surface-solid)); }
+.ws-bar rect.sg { fill: var(--faint); } .ws-bar rect.un { fill: var(--line); }
 .ws-bar .radix { stroke: var(--red); stroke-width: 3; }
-.ws-bar .n { position: absolute; top: 0; height: 100%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11.5px; color: var(--ink); pointer-events: none; white-space: nowrap; }
-.ws-bar .n.pr { color: var(--white); } .s-wad .ws-bar .n.pr { color: var(--ink); } .ws-bar .n.un { color: var(--g-500); }
-.ws-key { grid-column: 2; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--g-700); }
+.ws-bar .n { position: absolute; top: 0; height: 100%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11.5px; color: var(--text-strong); pointer-events: none; white-space: nowrap; }
+.ws-bar .n.pr { color: var(--surface-solid); } .s-wad .ws-bar .n.pr { color: var(--text-strong); } .ws-bar .n.un { color: var(--faint); }
+.ws-key { grid-column: 2; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--muted); }
 @media (max-width: 560px) { .ws-row { grid-template-columns: 1fr; } .ws-key { grid-column: 1; } }
-.step h3 a { color: inherit; text-decoration-color: var(--g-300); text-underline-offset: 3px; }
-.step h3 a:hover { text-decoration-color: var(--ink); }
+.step h3 a { color: inherit; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+.step h3 a:hover { text-decoration-color: var(--text-strong); }
 
 /* phone: a Markdown table wider than the column scrolls inside itself, and long inline code or a long number wraps, so no page scrolls sideways */
 @media (max-width: 640px) { .doc > table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; } .doc :not(pre) > code { overflow-wrap: anywhere; } .doc p, .doc li { overflow-wrap: break-word; } }
 
 /* the pitch table (components.html pitch): ours in weight, the typical-input mark small */
-.pitch tr.ours td, .pitch td.ours, .pitch th.ours, .gasall td.ours, .gasall th.ours { font-weight: 600; color: var(--ink); }
-.pitch tr.ours td, .pitch td.ours, .gasall td.ours { background: var(--g-50); }
+.pitch tr.ours td, .pitch td.ours, .pitch th.ours, .gasall td.ours, .gasall th.ours { font-weight: 600; color: var(--text-strong); }
+.pitch tr.ours td, .pitch td.ours, .gasall td.ours { background: var(--tint); }
 .pitch td { white-space: nowrap; }
 @media (max-width: 640px) { .pitch .what { display: none; } .pitch th, .pitch td { padding-inline: 8px; } }
-sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: var(--g-700); }
+sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: var(--muted); }
 .pitchblock .doc { padding-block: 0; }
 .pitchblock .doc table { margin-top: 0; }
 .pitchblock .doc .note { margin: 12px 0 0; font-size: 14.5px; max-width: none; }
@@ -215,11 +214,11 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .optable details.what[open] summary { margin-bottom: 4px; }
 /* edges: digits only, the detail in each cell's title; the last row is the fewest digits per library */
 .edges td.val { font-size: 14px; white-space: nowrap; }
-.edges td.truth { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.edges td.truth { font-family: var(--mono); font-size: 12.5px; color: var(--text-strong); }
 .edges .ok { color: var(--emerald); }
 .edges .rev { color: var(--red); font-weight: 600; font-size: 12.5px; }
-.edges .meta { font-family: var(--sans); font-size: 12px; color: var(--g-700); }
-.edges tfoot td { font-weight: 600; color: var(--ink); background: var(--g-50); border-top: 2px solid var(--g-200); white-space: nowrap; }
+.edges .meta { font-family: var(--sans); font-size: 12px; color: var(--muted); }
+.edges tfoot td { font-weight: 600; color: var(--text-strong); background: var(--tint); border-top: 2px solid var(--line-2); white-space: nowrap; }
 .edges th, .edges td { padding-inline: 8px; }
 
 /* /proofs/: the status of each core op, from proofs.json */
@@ -228,8 +227,75 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .proofs .st { font-weight: 600; white-space: nowrap; }
 .proofs .st-proven { color: var(--emerald); }
 .proofs .st-proven-except, .proofs .st-proven-given-lemma { color: var(--gold); }
-.proofs .st-fuzzed, .proofs .st-unproven, .proofs .st-in-progress { color: var(--g-700); }
+.proofs .st-fuzzed, .proofs .st-unproven, .proofs .st-in-progress { color: var(--muted); }
 .proofs .st-counterexample { color: var(--red); }
-.proofs .meta { font-family: var(--sans); font-size: 12px; color: var(--g-700); }
+.proofs .meta { font-family: var(--sans); font-size: 12px; color: var(--muted); }
 .proofs code.repro { font-size: 11.5px; white-space: normal; word-break: break-all; }
 .optable a.proven { font-family: var(--sans); font-size: 11px; font-weight: 600; color: var(--emerald); text-decoration: none; margin-left: 6px; }
+
+/* ---- comfy pass (#164): sheets, glass charts, the home charts ---- */
+
+/* inner pages: the article is one frosted sheet over the background */
+.inner main > article.doc { margin-block: clamp(20px, 3.5vw, 40px) 0; padding: clamp(24px, 4.5vw, 56px); border: 1px solid var(--line); border-radius: calc(var(--radius) + 6px); background: var(--surface-solid); box-shadow: var(--shadow); }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .inner main > article.doc { background: var(--surface); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); }
+}
+@media (max-width: 640px) { .inner main > article.doc { margin-inline: -6px; padding: 24px 16px; border-radius: var(--radius); } }
+.doc th { background: var(--tint); }
+.doc tbody tr { transition: background .15s ease; }
+.doc tbody tr:hover td { background: var(--tint); }
+.card.story:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 var(--edge), var(--shadow-lift); }
+
+/* home: sections breathe; the pitch table sits on glass like the charts */
+.home main { padding-bottom: 8px; }
+.pitchblock .doc table { background: var(--surface-hi); }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .pitchblock .doc table { background: var(--surface); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); } }
+.home .figure { padding: clamp(14px, 2.4vw, 26px) clamp(12px, 2.4vw, 28px) clamp(10px, 2vw, 20px); margin: 0 0 18px; }
+.home .small { color: var(--muted); max-width: 52em; }
+.step { display: grid; align-content: start; gap: 2px; }
+
+/* charts drawn twice (wide and narrow); one shows */
+.duo svg { display: block; }
+.duo .narrow { display: none; }
+@media (max-width: 560px) { .duo .wide { display: none; } .duo .narrow { display: block; } }
+.chart .tick { fill: var(--faint); }
+.chart stop { stop-color: var(--c); }
+.chart stop.a0 { stop-opacity: .2; } .chart stop.a1 { stop-opacity: 0; }
+.chart .area { stroke: none; }
+.digitchart .s-aave stop.a0 { stop-opacity: .16; } .digitchart .s-fp256 stop.a0 { stop-opacity: .09; }
+.digitchart .note-a { fill: var(--c-warn); font-size: 12.5px; font-weight: 600; }
+.digitchart .s-aave circle.yr { fill: var(--c-warn); stroke: var(--surface-solid); stroke-width: 2; }
+.digitchart .ours polyline { stroke-width: 3.25; stroke-linecap: round; }
+.digitchart .narrow .note-a { font-size: 11px; }
+
+/* gas against digits */
+.gd { max-width: 860px; }
+.gd .better { stroke: none; }
+.gd stop.glow0 { stop-color: var(--c-fp127); stop-opacity: .16; } .gd stop.glow1 { stop-color: var(--c-fp127); stop-opacity: 0; }
+.gd .corner { fill: var(--c-fp127); font-size: 12px; font-weight: 600; letter-spacing: .01em; }
+.gd .arrow { stroke: var(--faint); stroke-width: 1.4; stroke-dasharray: 3 4; fill: none; }
+.gd .ahead { fill: var(--faint); }
+.gd .ratio { fill: var(--muted); font-size: 12px; }
+.gd .pt { fill: var(--c); stroke: var(--surface-solid); stroke-width: 2.5; }
+.gd .ours .pt { stroke-width: 3; }
+.gd .lbl { fill: var(--c); font-size: 13px; font-weight: 600; }
+.gd .ours .lbl { font-size: 15px; }
+.gd .s-solady .lbl, .gd .s-prb .lbl { fill: color-mix(in oklab, var(--c) 66%, var(--text-strong)); }
+.gd .cap { margin: 10px 4px 2px; font-size: 13.5px; color: var(--muted); line-height: 1.5; } .gd .cap strong { color: var(--text-strong); } .gd .cap code { font-family: var(--mono); font-size: .9em; } .gd .narrow .lbl { font-size: 11.5px; } .gd .narrow .ours .lbl { font-size: 13px; } .gd .narrow .corner { font-size: 10.5px; }
+
+/* correct to the last wei */
+.wb { max-width: 760px; }
+.wb .s-blockulator { --c: var(--c-fp127); }
+.wb .track { fill: var(--tint); }
+.wb .bar { fill: var(--c); }
+.wb .s-prb .bar { fill: color-mix(in oklab, var(--c-wad) 55%, var(--surface-solid)); stroke: var(--c-wad); stroke-width: 1; }
+.wb .zero { fill: none; stroke: var(--c); stroke-width: 2.5; }
+.wb .fn { font-family: var(--mono); font-size: 13px; font-weight: 500; fill: var(--text-strong); }
+.wb .name { font-size: 12.5px; fill: var(--muted); }
+.wb .ours .name { fill: var(--text-strong); font-weight: 600; }
+.wb .val { font-size: 12.5px; fill: var(--text); font-weight: 600; }
+.wb .ours .val { fill: var(--c); }
+.wb .val.none { fill: var(--faint); font-weight: 400; }
+.wb .narrow .fn, .wb .narrow .name, .wb .narrow .val { font-size: 11.5px; }
+
+@media (prefers-reduced-motion: reduce) { .doc tbody tr, .card { transition: none; } }

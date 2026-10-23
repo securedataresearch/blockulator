@@ -105,36 +105,27 @@ contract FuzzProofs is Test {
         assertTrue(Ref127.isSqrt(v, r), "sqrt is not the floor of the root");
     }
 
-    /// Counterexample (docs/proofs.md): FP127 sqrt is documented as the floor,
-    /// floor(sqrt(x 2^128)), but where x 2^128 + 1 is a perfect square
-    /// (s + 1)^2 the Huff's seven Newton steps (sqrtv4, kept bit for bit) end
-    /// on s + 1 for every other s: x = 2^126 k^2 + k, k = 1..4, return
-    /// 2^127 k + 1, one unit above the root. This test pins the deviation;
-    /// it fails once the library returns the floor, and then its assertion
-    /// flips and docs/proofs.md and proofs.json move sqrt to fuzzed.
-    function test_fp127_sqrt_counterexample() public view {
+    /// Regression for #159: where x 2^128 + 1 is a perfect square (s + 1)^2 the
+    /// Huff's sqrt (kept bit for bit until #159) returned s + 1; it now returns
+    /// the floor s: x = 2^126 k^2 + k, k = 1..4.
+    function test_fp127_sqrt_regression_159() public view {
         for (uint256 k = 1; k <= 4; k++) {
             int256 x = int256((uint256(1) << 126) * k * k + k);
             int256 r = l127.sqrt(x);
-            assertEq(r, int256((uint256(1) << 127) * k + 1));
-            assertFalse(Ref127.isSqrt(x, r));
-            assertTrue(Ref127.isSqrt(x, r - 1));
+            assertEq(r, int256((uint256(1) << 127) * k));
+            assertTrue(Ref127.isSqrt(x, r));
         }
     }
 
-    /// Counterexample (docs/proofs.md, found by check_fp127_mulUp): mulUp's
-    /// documented revert is "when the rounded product does not fit", but it
-    /// reverts when the floor does not fit: a b / 2^128 = -2^255 - (2^127 + 1)
-    /// / 2^128 has the ceiling -2^255, which fits, and mulUp reverts Overflow.
-    /// Pinned as for sqrt above.
-    function test_fp127_mulUp_counterexample() public {
+    /// Regression for #159: a b / 2^128 = -2^255 - (2^127 + 1) / 2^128 has the
+    /// ceiling -2^255, which fits; mulUp returns it (it reverted Overflow).
+    function test_fp127_mulUp_regression_159() public view {
         int256 a = -int256(0x7fffffffffffffffffffffffffffffff80000000000000000000000000000001);
         int256 b = int256(uint256(1 << 128) + 1);
         (bytes4 se, int256 sr) = Ref127.mulUp(a, b);
         assertEq(se, bytes4(0));
         assertEq(sr, type(int256).min);
-        vm.expectRevert(FP127Lib.Overflow.selector);
-        this.mulUp127(a, b);
+        assertEq(this.mulUp127(a, b), type(int256).min);
     }
 
     function mulUp127(int256 a, int256 b) external pure returns (int256) {

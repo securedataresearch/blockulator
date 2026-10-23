@@ -99,6 +99,19 @@ contract CompoundExample {
 
 Both examples are compiled and tested in `test/examples/` against the [ladder's](/results/ladder/#compound) compound scenario.
 
+## Typed API
+
+`FP127Type.sol` is opt-in: `type FP127 is int256`, with `+ - * /`, unary `-` and `< > <= >= == !=` bound to the library, and every other op attached (`x.exp()`, `a.mulUp(b)`). `fp127FromWad` and `toWadDown` / `toWadUp` convert unsigned WADs, `fp127FromInt` integers, and `ONE` and `PI` are typed constants. Each function only re-types its arguments, so the words and reverts are `FP127Lib`'s, checked under fuzzing in `test/typed/`. Through the IR every op costs the same gas as the raw call; under the legacy pipeline the wrapper is one more internal call, 37 to 114 gas.
+
+```solidity
+import {FP127, ONE, PI, fp127FromWad} from "fp127/FP127Type.sol";
+
+FP127 b = fp127FromWad(1.5e18) * ONE.exp();  // 1.5e; * is FP127Lib.mul
+FP127 r = (b - ONE).ln() / PI + -ONE;        // operators and attached ops
+bool inside = r >= -ONE && r <= ONE;
+uint256 paid = b.toWadDown();                // 4077422742688567853, floored
+```
+
 ## Integrating
 
 Two rules, each from the replay of a real exploit. The [integration page](/library/integrating/) has the replays, the code in both formats and the edge-op tables.

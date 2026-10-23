@@ -77,6 +77,20 @@ int256 balanceWad = FP256Lib.toFixed18(FP256Lib.mul(FP256Lib.fromFixed18(princip
 
 `fromFP127` is exact below 2<sup>109</sup> and rounds once above, `toFP127` rounds to the nearest 2<sup>−128</sup>; `fromFixed18` / `toFixed18` convert to WAD.
 
+## Typed API
+
+`FP256Type.sol` is opt-in: `type FP256 is int256`, with `+ - * /`, unary `-` and `< > <= >= == !=` bound to the library, and every other op attached (`x.exp()`, `a.mulUp(b)`). `fp256FromWad`, `fp256FromInt` and `fp256FromUint` convert in, `toWadDown`, `toUintUp` and the rest convert out, `y.toFP127()` and `toFP256(x)` cross to FP127's type, and `ONE` and `PI` are typed constants. Each function only re-types its arguments, so the words and reverts are `FP256Lib`'s, checked under fuzzing in `test/typed/`. Through the IR every op costs the same gas as the raw call; under the legacy pipeline the wrapper is one more internal call, 36 to 56 gas.
+
+```solidity
+import {FP256, ONE, fp256FromWad, fp256FromInt} from "fp256/FP256Type.sol";
+import {FP127} from "fp127/FP127Type.sol";
+
+FP256 b = fp256FromWad(1.5e18) * ONE.exp();  // 1.5e; * is FP256Lib.mul
+bool between = b > fp256FromInt(4) && b < fp256FromInt(5);
+uint256 charged = b.toUintUp();              // 5, ceiled
+FP127 n = b.toFP127();                       // the nearest 127.128 word
+```
+
 ## Integrating
 
 Two rules, each from the replay of a real exploit. The [integration page](/library/integrating/) has the replays, the code in both formats and the edge-op tables.

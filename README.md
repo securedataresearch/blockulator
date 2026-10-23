@@ -1,34 +1,55 @@
 # Blockulator
 
-**Precision math for the EVM, correctly rounded and verified on chain.**
-One `int256` per number, two formats, every op tested against exact arithmetic.
-[blockulator.com](https://blockulator.com)
+<!-- badges:begin -->
+[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-15%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-500%20forge%20tests-3f6d9c)](test) [![to the last wei](https://img.shields.io/badge/WAD-0%20wrong%20of%20108%2C000-00694e)](docs/benchmarks/wad.md) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
+<!-- badges:end -->
+
+**Exact math for real money.** FP127 and FP256 put precision maths in one `int256`: 38 digits and 71, every op correctly rounded, checked on chain, and now competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/digits-dark.svg">
+  <img alt="Correct digits of one accrual after 1 to 10,000 days without an update: FP256 and FP127 stay flat, binary128 and the WAD libraries hold their format, Aave and Morpho's three-term expansion falls to 1 digit." src="docs/img/digits-light.svg" width="820">
+</picture>
 
 | | what it is | precision | range |
 |---|---|---|---|
-| **FP127** | signed 127.128 fixed point | 38 digits at 1 | money-sized numbers |
 | **FP256** | 256-bit binary float | 71 digits, everywhere | 10^±78,913 |
+| **FP127** | signed 127.128 fixed point | 38 digits at 1 | money-sized numbers |
 
-- **Round once.** Every FP256 op is correctly rounded: 0 misrounded in 360,590 random inputs, with a stated error bound behind each result. Every FP127 transcendental returns the nearest word (one known exception: `pow` with an exponent near 2^90).
-- **Twice the digits, at the same gas.** FP256 carries twice binary128's digits and is cheaper than ABDKMathQuad on add, mul, div, exp, ln and pow. FP127 carries twice PRBMath's digits and is cheaper on add, mul, ln and pow.
-- **More than arithmetic.** exp, ln, pow, compound, the hyperbolics, erf and normCdf, Lambert W, cbrt, hypot, and directed rounding at the token edge: 53 ops in FP127, 65 in FP256.
-- **Checked on chain.** Thirteen real calculations, 87 inputs, N up to 10,000 steps, plus 139 edge probes. They are re-run through the deployed contracts wherever a public RPC can execute them, with 0 mismatches (the corrected ladder's on-chain re-check follows its v11 redeploy).
+## Correct to the last wei
 
-## Gas
+<!-- wad:begin -->
+Results off by at least one wei, against the exact value rounded in each library's own direction, on the same seeded inputs. BlockulatorWad keeps Solady's names and is wrong on **0 of 108,000** results across 27 functions and rounding directions.
 
-Inline library, median gas per call: exp, ln and pow over random inputs that take no shortcut, the arithmetic over the input ladder (the site's basis). The digits column is precision at 1.
+| function | **BlockulatorWad** | Solady | PRBMath |
+|---|---:|---:|---:|
+| `expWad` | **0 of 3,995** | 1,918 of 3,994 (48%) | 2,863 of 3,976 (72%) |
+| `lnWad` | **0 of 3,998** | 957 of 3,998 (24%) | 3,907 of 3,998 (98%) |
+| `log2Wad` | **0 of 3,998** | — | 3,704 of 3,998 (93%) |
+| `log10Wad` | **0 of 3,998** | — | 3,532 of 3,998 (88%) |
+| `powWad` | **0 of 3,461** | 2,243 of 3,380 (66%) | 2,439 of 3,415 (71%) |
+| `lambertW0Wad` | **0 of 3,999** | 1,129 of 3,999 (28%) | — |
 
-| | digits | add | mul | div | exp | ln | pow |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| **FP256** | **71** | 662 | 530 | 800 | 3,278 | 3,043 | 5,901 |
-| ABDKMathQuad | 34 | 734 | 709 | 818 | 5,668 | 16,356 | 23,467 |
-| **FP127** | **38** | 128 | 267 | 412 | 2,716 | 1,944 | 3,317 |
-| PRBMath SD59x18 | 18 | 189 | 485 | 509 | 2,816 | 7,083 | 10,065 |
-| Solady | 18 | 3 | 126 | 93 | 430 | 556 | 1,279 |
+Where they offer them, Solady and PRBMath are exact too on `cbrtWad`, `divWad`, `divWadUp`, `mulWad`, `mulWadUp`, `sDivWad`, `sMulWad`, `sqrtWad`. Versions: BlockulatorWad 9070a12, Solady FixedPointMathLib v0.1.26, PRBMath (UD60x18 / SD59x18) v4.2.0; full table in [`wad.md`](docs/benchmarks/wad.md).
+<!-- wad:end -->
 
-Solady's `add` is its unchecked `rawAdd`. The full tables cover every op and library: [`gas.md`](docs/benchmarks/gas.md) and [`gas256.md`](docs/benchmarks/gas256.md). Compile with `via_ir = true`; it takes another 10–33% off the inline libraries.
+## Twice the digits, at the same gas
 
-## Use it
+<!-- gas:begin -->
+| | digits | add | mul | div | exp<sup>t</sup> | ln<sup>t</sup> | pow<sup>t</sup> | sqrt<sup>t</sup> |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **FP256** | **71** | **662** | **530** | **800** | **3,278** | **3,043** | **5,901** | **1,205** |
+| **FP127** | **38** | **128** | **267** | **412** | **2,716** | **1,944** | **3,317** | **683** |
+| ABDKMathQuad | 34 | 734 | 709 | 818 | 5,668 | 16,356 | 23,467 | 760 |
+| PRBMath SD59x18 | 18 | 189 | 485 | 509 | 2,816 | 7,083 | 10,065 | 978 |
+| Solady | 18 | 3 | 126 | 93 | 430 | 556 | 1,279 | 393 |
+
+Median gas per inline call, over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder; digits are precision at 1. FP256 is cheaper than ABDKMathQuad on `add`, `mul`, `div`, `exp`, `ln` and `pow`, not `sqrt`; FP127 is cheaper than PRBMath on every op here. Over these 7 ops FP256 carries 2.1× Quad's digits at 32% of its mean gas, FP127 2.1× PRBMath's at 43%. Solady is the cheapest, at 18 digits; its `add` is the unchecked `rawAdd`.
+<!-- gas:end -->
+
+Every op and library: [`gas.md`](docs/benchmarks/gas.md), [`gas256.md`](docs/benchmarks/gas256.md). Compile with `via_ir = true`; it takes another 10–33% off the inline libraries.
+
+## Install
 
 One import path, three ways in:
 
@@ -78,13 +99,13 @@ The [integration guide](https://blockulator.com/library/#integrating) has the wo
 | FP256H (hyperbolic) | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` |
 | FP256S (erf, Lambert W) | `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
 
-Every contract is verified on Sourcify and Blockscout. Each library is one Yul source that generates both the deployed object and the inline library, fuzzed to agree bit for bit. More detail: [records](contracts/deployments/RELEASE.md), [FP127](contracts/src/fp127/README.md), [FP256](contracts/src/fp256/README.md), [precision](docs/fp256/precision.md), [the ladder](docs/benchmarks/ladder.md), [the edges](docs/benchmarks/edges.md), [changelog](CHANGELOG.md).
+Every contract is verified on Sourcify and Blockscout. Each library is one Yul source that generates both the deployed object and the inline library, fuzzed to agree bit for bit. More detail: [records](contracts/deployments/RELEASE.md), [FP127](contracts/src/fp127/README.md), [FP256](contracts/src/fp256/README.md), [precision](docs/fp256/precision.md), [the ladder](docs/benchmarks/ladder.md), [the edges](docs/benchmarks/edges.md), [proofs](docs/proofs.md), [changelog](CHANGELOG.md).
 
 ## Learn more
 
 - [The write-up](https://blockulator.com/writeup/): the story, with sources.
 - ["Dust is Over"](docs/talks/outline.md): the talk.
-- [Developing](docs/DEVELOPING.md): layout, build, `make gates`.
+- [Developing](docs/DEVELOPING.md): layout, build, `make gates`. The tables and chart above are `make readme-assets`.
 - [History](docs/fp127/HISTORY.md), and the [EthCC[9] talk](https://www.youtube.com/watch?v=a_tL99NY-yc) from the Huff era.
 
 MIT licensed. [Security](SECURITY.md).

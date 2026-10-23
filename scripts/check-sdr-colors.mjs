@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.join(__dirname, '..');
 
-// Colour literals live in exactly three files: the stylesheet synced from
-// securedataresearch.net, and the two legacy token bridges the archived apps use.
+// Colour literals live in exactly three files: the site's theme (site.css), and the two
+// legacy token bridges the archived apps use; plus base.html's critical block.
 const SKIP = new Set([
     path.join(REPO_ROOT, 'static', 'css', 'site.css'),
     path.join(REPO_ROOT, 'static', 'css', 'legacy', 'tokens.css'),
@@ -44,7 +44,13 @@ function checkFile(file) {
     const text = fs.readFileSync(file, 'utf8');
     const lines = text.split(/\r?\n/);
     const hits = [];
+    // base.html's critical block repeats site.css's --bg (and the theme-color metas) so the first paint is the right colour
+    // before any stylesheet arrives; it is the one place in a template a colour may be written out.
+    let critical = false;
     lines.forEach((raw, idx) => {
+        if (raw.includes('<style id="critical">')) critical = true;
+        if (critical) { if (raw.includes('</style>')) critical = false; return; }
+        if (raw.includes('name="theme-color"')) return;
         if (/^\s*(\/\/|\*|\/\*)/.test(raw)) return;
         const line = stripLineComments(raw);
         if (reHex.test(line) || reRgb.test(line) || reRgba.test(line)) {

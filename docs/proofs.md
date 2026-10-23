@@ -39,7 +39,7 @@ runs.
 | FP127 | `divDown` | proven (K127, L5) | floor(a 2^128 / b) | 3 s | `check_fp127_divDown` |
 | FP127 | `divUp` | proven (K127, L5) | ceil(a 2^128 / b) | 2 s | `check_fp127_divUp` |
 | FP127 | `inv` | proven (L4, L5) | trunc(2^256 / x); DivisionByZero; Overflow | 0 s | `check_fp127_inv` |
-| FP127 | `sqrt` | counterexample | floor(sqrt(x 2^128)); OutOfRange below zero | – | FuzzProofs |
+| FP127 | `sqrt` | fuzzed | floor(sqrt(x 2^128)); OutOfRange below zero | – | FuzzProofs |
 | FP127 | `floor` | proven | 2^128 floor(x / 2^128) | 0 s | `check_fp127_floor` |
 | FP127 | `ceil` | proven | 2^128 ceil(x / 2^128); Overflow at 2^255 | 0 s | `check_fp127_ceil` |
 | FP127 | `round` | proven | 2^128 floor(x / 2^128 + 1/2); Overflow at 2^255 | 0 s | `check_fp127_round` |
@@ -76,45 +76,12 @@ runs.
 The same data, with paths and the lemma list, is
 [`docs/benchmarks/proofs.json`](benchmarks/proofs.json).
 
-## Counterexamples
+## Counterexamples found, and fixed
 
-Two FP127 ops leave their documented semantics. Neither library source is
-changed here; both are pinned as tests in
-[`test/proofs/Fuzz.t.sol`](../test/proofs/Fuzz.t.sol), which fail once the
-library is fixed, so the record cannot go stale.
+The proofs found two FP127 ops leaving their documented semantics; both are fixed in #159 and pinned as regression tests in [`test/proofs/Fuzz.t.sol`](../test/proofs/Fuzz.t.sol).
 
-**FP127 `mulUp` reverts where its result fits.** The documented revert is
-"`Overflow()` when the rounded product does not fit". `mulUp` computes the
-floor (`fp127_mul`, which reverts when the floor does not fit) and then adds
-one. When the floor is -2^255 - 1 and the product is not a multiple of 2^128,
-the ceiling is -2^255, which fits, and `mulUp` reverts instead of returning
-it. For example
-
-```
-a = -0x7fffffffffffffffffffffffffffffff80000000000000000000000000000001
-b =  0x100000000000000000000000000000001        (2^128 + 1)
-a b / 2^128 = -2^255 - (2^127 + 1) / 2^128,  ceil = -2^255 = type(int256).min
-```
-
-`check_fp127_mulUp` finds the failing path; a concrete model needs a factor
-pair of a number in a 2^128-wide window near 2^383, which the solver does not
-produce, so that check ends in a timeout and is not run. `check_fp127_mulUp_outside`
-proves `mulUp` on every other input (the window is the products with floor
--2^255 - 1 and a nonzero remainder).
-
-**FP127 `sqrt` is not always the floor.** The documented result is
-floor(sqrt(x 2^128)). Where x 2^128 + 1 is a perfect square (s + 1)^2, the
-result is s + 1 for every other such s: the Huff's seven Newton steps
-(`sqrtv4`, which the source keeps bit for bit wherever (s + 1)^2 - x 2^128 is
-under x 2^-192 + 2) two-cycle between s and s + 1 there and can stop on the
-upper one. x = 2^126 k^2 + k for k = 1, 2, 3, 4 returns 2^127 k + 1; the floor
-is 2^127 k. Every random input agrees with the floor (the family has measure
-zero), so the fuzz test passes and only the pinned test shows it.
-
-**A documentation slip, not a bug.** FP127 `fromFixed18`'s domain is written
-"|x| < 2^127" with "`OutOfRange()` if |x| >= 2^127", but the op accepts
-x = -2^127 (x 2^128 = -2^255 fits) and returns the right word for it. The spec
-here follows the code: `OutOfRange` outside [-2^127, 2^127).
+- **`sqrt` returned floor + 1** where x·2^128 + 1 is a perfect square (s + 1)^2 (e.g. raw x = 2^126 + 1): the Huff's seven Newton steps, kept bit for bit until #159, could stop one above the floor. FP127 now returns the floor on every input; `sqrt` is fuzzed against the exact root (no symbolic proof yet). `gavg` and `hypot`, built on it, may now be one below the Huff on those inputs.
+- **`mulUp` reverted where its result fits**: where floor(a·b/2^128) = −2^255 − 1 the ceiling −2^255 fits; mulUp now returns it. Proven on every other input.
 
 ## How the proofs work
 
