@@ -39227,12 +39227,12 @@
    },
    "liveMaxN": {
     "fp127": 1000,
-    "fp127lib": 1000,
+    "fp127lib": 10000,
     "abdk": 10000,
     "solady": 10000,
     "prb": 10000,
     "quad": 1000,
-    "balancer": 10000,
+    "balancer": 1000,
     "aave": 10000,
     "morpho": 10000,
     "maker": 10000,
@@ -53291,7 +53291,7 @@
     "aave": 10000,
     "morpho": 10000,
     "maker": 10000,
-    "fp256": 365
+    "fp256": 1000
    }
   },
   {
@@ -64868,7 +64868,7 @@
     "aave": 10000,
     "morpho": 10000,
     "maker": 10000,
-    "fp256": 1000
+    "fp256": 10000
    }
   },
   {
@@ -67578,13 +67578,13 @@
     "fp127lib": 1000,
     "abdk": 1000,
     "solady": 10000,
-    "prb": 1000,
-    "quad": 1000,
+    "prb": 10000,
+    "quad": 365,
     "balancer": 1000,
     "aave": 10000,
     "morpho": 10000,
     "maker": 10000,
-    "fp256": 1000
+    "fp256": 10000
    }
   },
   {
@@ -79226,7 +79226,7 @@
     "aave": 10000,
     "morpho": 10000,
     "maker": 10000,
-    "fp256": 365
+    "fp256": 1000
    }
   },
   {
@@ -130897,7 +130897,11 @@
    }
   }
  ],
- "liveRunner": "0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5",
+ "liveRunner": "0xF14Ac5DDA9C0c10C50aa4Be9D219509fAa936A9b",
  "liveSelector": "0x281dbbfe",
- "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell."
+ "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell.",
+ "liveChecked": 9408,
+ "liveMismatches": 0,
+ "liveBlock": 11975057,
+ "liveDate": "2026-10-23"
 }
