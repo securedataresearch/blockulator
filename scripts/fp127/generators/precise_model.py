@@ -10,12 +10,13 @@ the constants they need and a measurement against mpmath.
 The v5 kernels work on a double word (DW): a pair (hi, lo) read as
 (hi * 2^256 + lo) * 2^-512, a fraction in [0, 1) held to 2^-512.
 
-  expk(r)   e^r - 1 for r in [0, ln 2) as a DW. The top 16 bits of r, in
-            eight 2-bit groups, pick factors e^(v 4^-(g+1)) from a table of
-            DWs (product in the expm1 form s + c + s c, so nothing exceeds 1);
-            the rest, u < 2^-16,
-            goes to u + u^2/2 (DW) + a one-word tail u^3/6 (1 + u/4 (1 + ...))
-            held at 2^-303. Error about 2^-300 relative.
+  expk(r)   e^r - 1 for r in [0, ln 2) as a DW: expk.py's model of the
+            Yul (three 16-entry table levels and the degree-16 minimax
+            polynomial of (e^u - 1 - u)/u^2, in X form, never above the
+            truth; within 2^-311 relative). The Yul takes r in X form, rh
+            2^-256 + rx 2^-384, as lnmul and expr give it (expkx here).
+  expr(x)   e^x's reduction, x = n ln 2 + r, from a one-word log2 e and
+            one correcting test (exp and the expx callers).
   l2p(x)    log2(x) for x > 0 as a 512-bit signed integer at 2^-384 (X384:
             hi word in the 127.128 format, lo the next 256 bits). One Newton
             step from the one-word log2 kernel y0 (2^-150): with
@@ -61,6 +62,7 @@ from mpmath import mp, mpf, log, exp, e as E_, nint, lambertw, sqrt as msqrt
 
 sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
 import kernel192  # noqa: E402
+import expk as expk_model  # noqa: E402
 
 mp.dps = 220
 
@@ -113,29 +115,63 @@ def mulg(a, b):
 # ---------------------------------------------------------------------------
 
 def expk(r: int) -> int:
-    """e^r - 1 at 2^-512 for r in [0, ln 2) at 2^-512 (both as 512-bit ints)."""
-    rh, rl = r >> 256, r & M256
-    uh = rh & ((1 << 240) - 1)
-    U = (uh << 16) | (rl >> 240)                  # u at 2^-272
-    H = H255
-    for k in range(16, 3, -1):
-        H = H255 + (((U * H) >> 256) >> 16) // k
-    u2 = (U * U) >> 256                           # 2^-288
-    u3 = (u2 * U) >> 256                          # 2^-304
-    T = ((u3 * H) >> 256) // 6                    # 2^-303
-    # u + u^2/2: (uh, rl)^2 at 2^-512 is uh^2 + 2 hi(uh rl), the rl^2 term dropped
-    q = uh * uh + ((2 * uh * rl) >> 256)
-    s = ((uh << 256) | rl) + (q >> 1) + (T << 209)
-    top = rh >> 240
-    for g in range(8):
-        v = (top >> (14 - 2 * g)) & 3
-        if v:
-            c = EXPC[g][v - 1]
-            sh, sl, ch, cl = s >> 256, s & M256, c >> 256, c & M256
-            prod = sh * ch + ((sh * cl) >> 256) + ((sl * ch) >> 256)
-            s = s + c + prod
-    assert 0 <= s < 1 << 512
-    return s
+    """e^r - 1 at 2^-512 for r in [0, ln 2) at 2^-512 (both as 512-bit ints):
+    expk.py's model of the Yul."""
+    return expk_model.expk(r)
+
+
+def expkx(rh: int, rx: int) -> int:
+    """The same for r = rh 2^-256 + rx 2^-384 (X form, as the Yul takes it)."""
+    return expk_model.expkx(rh, rx)
+
+
+LN2A, LN2B = LN2H, LN2L >> 128           # ln 2 floored at 2^-256 and the next 128 bits
+LOG2E_119 = 0xb8aa3b295c17f0bbbe87fed0691d3e
+
+
+def lnmul(F: int):
+    """The Yul's lnmul: f ln 2 in X form for f = F 2^-512, floored."""
+    fh, fl = F >> 256, F & M256
+    p = fh * LN2H
+    rx = ((p & M256) >> 128) + (((fh >> 128) * LN2B) >> 128) + (((fl >> 128) * (LN2H >> 128)) >> 128)
+    return p >> 256, rx
+
+
+def expr(X: int):
+    """The Yul's expr: x = n ln 2 + r for |x| < 177, r in X form."""
+    pr = X * LOG2E_119
+    assert abs(pr) < 1 << 255
+    n = pr >> 247
+    v = n * LN2B
+    rh = ((X << 128) - n * LN2A - (v >> 128) - 1) & M256
+    rx = (1 << 128) - (v & ((1 << 128) - 1))
+    if rh > LN2A:
+        if rh > 0xc << 252:
+            n, rh, rx = n - 1, (rh + LN2A) & M256, rx + LN2B
+        else:
+            n, rh, rx = n + 1, (rh - LN2A - 1) & M256, rx + (1 << 128) - LN2B
+    assert 0 <= rh < LN2A
+    return n, rh, rx
+
+
+def pow2tail(n: int, sh: int):
+    """The Yul's rounding of 2^n (1 + s) at 2^-128 from sh alone, e = n + 129
+    in [0, 255]: half of 2^e + floor(sh 2^(e - 256)) + 1; 2^256 (wrapped to
+    0 in the Yul) is Overflow."""
+    e = n + 129
+    assert 0 <= e <= 255
+    v = (1 << e) + (sh >> (256 - e)) + 1
+    return "REVERT" if v >> 256 else v >> 1
+
+
+def y2nf(Y: int, L: int):
+    """n = floor(y L) and f = y L - n at 2^-512 for L a log2 at 2^-384."""
+    t = Y * L
+    return t >> 512, t & M512
+
+
+LOG2E_384 = (0x171547652b82fe1777d0ffda0d23a7d11 << 256) | 0xd6aef551bad2b4b1164a2cd9a342648fbc3887eeaa2ed9ac49b25eeb82d7c168
+LOG2_10_384 = (0x35269e12f346e2bf924afdbfd36bf6d33 << 256) | 0x65b157f8deceb53a46dab2020b9e167419943f7a77547ce8f892faad8eb42f58
 
 
 def log2m(mm: int) -> int:
@@ -168,8 +204,7 @@ def l2p(X: int) -> int:
     y0 = log2m(M >> 63)
     y0 = min(max(y0, 1), G - 1)
     f = G - y0                                    # 2^(-y0) = 2^(f - 1)
-    r = (f * LN2_512) >> 192
-    s = expk(r)
+    s = expkx(*lnmul(f << 320))
     sh, sl = s >> 256, s & M256
     q = ((M << 256) + M * sh + ((M * sl) >> 256)) & M512
     d = q - (1 << 512) if q >> 511 else q          # d = delta * 2^512
@@ -177,20 +212,6 @@ def l2p(X: int) -> int:
     d2 = (d384 * d384) >> 385
     corr = ((d384 - d2) * LOG2E_255) >> 255
     return (e << 384) + (y0 << 192) + corr
-
-
-def redx(X: int, n: int, kint: int, ch: int, cl: int):
-    """r = x A - n ln 2 mod 1 at 2^-512, A = kint + (ch, cl) 2^-512, and the
-    corrected n with r in [0, ln 2)."""
-    r = (X * kint << 384) + (X * ch << 128) + ((X * cl) >> 128) - n * LN2_512
-    r &= M512
-    if r >> 256 > 0xd999999999999999999999999999999999999999999999999999999999999999:
-        n -= 1
-        r = (r + LN2_512) & M512
-    elif r >= LN2_512:
-        n += 1
-        r -= LN2_512
-    return n, r
 
 
 def scaled192(n: int, s: int) -> int:
@@ -208,9 +229,9 @@ def rnd64(v: int) -> int:
 # ---------------------------------------------------------------------------
 
 def exp_parts(X: int):
-    n = mulg(X << 64, LOG2E_192) >> 192
-    n, r = redx(X, n, 1, 0, 0)
-    return n, expk(r)
+    """expx: e^x = 2^n (1 + s)."""
+    n, rh, rx = expr(X)
+    return n, expkx(rh, rx)
 
 
 def op_exp(X):
@@ -220,8 +241,10 @@ def op_exp(X):
         return "REVERT"
     if X < -90 * ONE:
         return 0
-    n, s = exp_parts(X)
-    return rnd64(scaled192(n, s))
+    n, rh, rx = expr(X)
+    if n < -129:
+        return 0
+    return pow2tail(n, expkx(rh, rx) >> 256)
 
 
 def op_exp2(X):
@@ -229,14 +252,21 @@ def op_exp2(X):
         return "REVERT"
     if X < -129 * ONE:
         return 0
-    n, r = redx(X, X >> 128, 0, LN2H, LN2L)
-    return rnd64(scaled192(n, expk(r)))
+    return pow2tail(X >> 128, expkx(*lnmul(((X << 128) & M256) << 256)) >> 256)
+
+
+def pow2r(Y: int, L: int):
+    """The Yul's pow2r: 2^(y L) rounded to nearest, L at 2^-384."""
+    n, f = y2nf(Y, L)
+    if n > 126:
+        return "REVERT"
+    if n < -129:
+        return 0
+    return pow2tail(n, expkx(*lnmul(f)) >> 256)
 
 
 def op_exp10(X):
-    n = mulg(X << 64, LOG2_10_192) >> 192
-    n, r = redx(X, n, 2, LN10H, LN10L)
-    return rnd64(scaled192(n, expk(r)))
+    return pow2r(X, LOG2_10_384)
 
 
 def x384_round(L):
@@ -253,15 +283,8 @@ def op_ln_precise(X):
 
 
 def op_pow(X, Y):
-    L = l2p(X)
-    t = Y * L                       # at 2^-512
-    n, f = t >> 512, t & M512
-    if n >= 127:
-        return "REVERT"
-    if n < -130:
-        return 0
-    r = (f * LN2_512) >> 512
-    return rnd64(scaled192(n, expk(r)))
+    """pow's double-word route (l2p, then pow2r)."""
+    return pow2r(Y, l2p(X))
 
 
 def op_cbrt(X):
@@ -381,7 +404,7 @@ def pow_pre(X, Y):
     n, f = t >> 512, t & M512
     if n >= 127 or n < -130:
         return None
-    return scaled192(n, expk((f * LN2_512) >> 512))
+    return scaled192(n, expkx(*lnmul(f)))
 
 
 def cbrt_pre(X):
@@ -577,9 +600,9 @@ def lw_qs(q192, sg, q256):
     """The Yul's lwqs: one sixth-order step on the double-word exp kernel, (|q|', |tau|) at 2^-192."""
     G1 = 1 << 192
     if not sg:
-        E1 = expk(q192 << 320) >> 256
+        E1 = expkx(q192 << 64, 0) >> 256
     else:
-        E1 = (T256 - (expk(LN2_512 - (q192 << 320)) >> 256)) >> 1
+        E1 = (T256 - (expkx(LN2H - (q192 << 64), LN2B) >> 256)) >> 1
     T = (E1 << 128) // q192
     N = G1 - mulg(T, G1 - q192) if not sg else mulg(T, G1 + q192) - G1
     d = ((q192 * N) >> 128) - q256
@@ -736,9 +759,12 @@ def measure(n=2000):
         rec("l2p (2^-384 units)", abs(mpf(L) - tl * mpf(2) ** 384), X)
         # log2g absolute error at 2^-192
         rec("log2g (2^-192 units)", abs(mpf(log2g(X)) - tl * mpf(2) ** 192), X)
-        # exp ULP error
+        # exp ULP error; a quarter of the draws next to m ln 2, where expr's
+        # one-word n is one off and its test corrects it
         b = rng.randint(100, 134)
         x = rng.getrandbits(b) | (1 << b)
+        if rng.random() < 0.25:
+            x = (rng.randint(-129, 126) * LN2_512 >> 384) + rng.randint(-3, 3)
         x = -x if rng.random() < 0.5 else x
         got = op_exp(x)
         if got != "REVERT":

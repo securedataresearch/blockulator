@@ -1451,9 +1451,9 @@
    "lib": "fp127",
    "op": "div",
    "n": 4000,
-   "median": 657,
-   "p99": 657,
-   "max": 657,
+   "median": 420,
+   "p99": 828,
+   "max": 828,
    "helpers": {},
    "probeCalls": 0,
    "residualPerCall": null
@@ -1473,15 +1473,15 @@
    "lib": "fp127",
    "op": "exp",
    "n": 4000,
-   "median": 5651,
-   "p99": 6385,
-   "max": 6426,
+   "median": 2709,
+   "p99": 2752,
+   "max": 2776,
    "helpers": {
     "expk": {
      "callsPerInput": 0.991,
-     "inclusivePct": 74.4,
-     "exclusivePct": 74.4,
-     "gasPerCall": 3823
+     "inclusivePct": 80.9,
+     "exclusivePct": 80.9,
+     "gasPerCall": 2174
     }
    },
    "probeCalls": 3926,
@@ -1558,29 +1558,29 @@
    "op": "pow",
    "n": 4000,
    "median": 3375,
-   "p99": 13703,
-   "max": 15118,
+   "p99": 8393,
+   "max": 9502,
    "fallback": 270,
    "fallbackRuns": 270,
    "fallbackPct": 6.75,
    "helpers": {
     "expk": {
      "callsPerInput": 0.128,
-     "inclusivePct": 14.0,
-     "exclusivePct": 14.0,
-     "gasPerCall": 4295
+     "inclusivePct": 7.8,
+     "exclusivePct": 7.8,
+     "gasPerCall": 2200
     },
     "log2m": {
      "callsPerInput": 1.0,
-     "inclusivePct": 32.9,
-     "exclusivePct": 32.9,
+     "inclusivePct": 35.7,
+     "exclusivePct": 35.7,
      "gasPerCall": 1289
     },
     "l2p": {
      "callsPerInput": 0.068,
-     "inclusivePct": 9.6,
-     "exclusivePct": 2.2,
-     "gasPerCall": 5531
+     "inclusivePct": 6.2,
+     "exclusivePct": 2.0,
+     "gasPerCall": 3280
     }
    },
    "probeCalls": 4748,
@@ -1615,14 +1615,14 @@
    "op": "expm1",
    "n": 4000,
    "median": 2061,
-   "p99": 6329,
-   "max": 6546,
+   "p99": 5151,
+   "max": 5151,
    "helpers": {
     "expk": {
      "callsPerInput": 0.128,
-     "inclusivePct": 21.1,
-     "exclusivePct": 21.1,
-     "gasPerCall": 4359
+     "inclusivePct": 12.2,
+     "exclusivePct": 12.2,
+     "gasPerCall": 2201
     }
    },
    "probeCalls": 511,
@@ -1704,9 +1704,9 @@
    "lib": "fp127",
    "op": "compound",
    "n": 4000,
-   "median": 9215,
-   "p99": 10831,
-   "max": 33198,
+   "median": 9245,
+   "p99": 10913,
+   "max": 33268,
    "fallback": 15,
    "fallbackRuns": 15,
    "fallbackPct": 0.375,
@@ -1725,15 +1725,15 @@
    "lib": "fp127",
    "op": "exp2",
    "n": 4000,
-   "median": 5361,
-   "p99": 6346,
-   "max": 6372,
+   "median": 2628,
+   "p99": 2674,
+   "max": 2688,
    "helpers": {
     "expk": {
      "callsPerInput": 1.0,
-     "inclusivePct": 74.9,
-     "exclusivePct": 74.9,
-     "gasPerCall": 3806
+     "inclusivePct": 83.3,
+     "exclusivePct": 83.3,
+     "gasPerCall": 2173
     }
    },
    "probeCalls": 4000,
@@ -1743,15 +1743,15 @@
    "lib": "fp127",
    "op": "exp10",
    "n": 4000,
-   "median": 5536,
-   "p99": 6283,
-   "max": 6350,
+   "median": 2958,
+   "p99": 3001,
+   "max": 3015,
    "helpers": {
     "expk": {
      "callsPerInput": 0.989,
-     "inclusivePct": 75.9,
-     "exclusivePct": 75.9,
-     "gasPerCall": 3837
+     "inclusivePct": 73.9,
+     "exclusivePct": 73.9,
+     "gasPerCall": 2175
     }
    },
    "probeCalls": 3920,
@@ -1794,20 +1794,20 @@
    "lib": "fp127",
    "op": "sinh",
    "n": 4000,
-   "median": 5262,
-   "p99": 7324,
-   "max": 7404,
+   "median": 3868,
+   "p99": 4012,
+   "max": 4047,
    "helpers": {
     "expk": {
      "callsPerInput": 1.0,
-     "inclusivePct": 58.8,
-     "exclusivePct": 58.8,
-     "gasPerCall": 3235
+     "inclusivePct": 55.0,
+     "exclusivePct": 55.0,
+     "gasPerCall": 2143
     },
     "einvhalf": {
      "callsPerInput": 1.0,
-     "inclusivePct": 16.7,
-     "exclusivePct": 16.7,
+     "inclusivePct": 23.6,
+     "exclusivePct": 23.6,
      "gasPerCall": 918
     }
    },
@@ -1818,20 +1818,20 @@
    "lib": "fp127",
    "op": "cosh",
    "n": 4000,
-   "median": 5207,
-   "p99": 7269,
-   "max": 7336,
+   "median": 3824,
+   "p99": 3962,
+   "max": 3992,
    "helpers": {
     "expk": {
      "callsPerInput": 1.0,
-     "inclusivePct": 59.5,
-     "exclusivePct": 59.5,
-     "gasPerCall": 3249
+     "inclusivePct": 55.8,
+     "exclusivePct": 55.8,
+     "gasPerCall": 2144
     },
     "einvhalf": {
      "callsPerInput": 1.0,
-     "inclusivePct": 16.8,
-     "exclusivePct": 16.8,
+     "inclusivePct": 23.9,
+     "exclusivePct": 23.9,
      "gasPerCall": 918
     }
    },
@@ -1842,15 +1842,15 @@
    "lib": "fp127",
    "op": "tanh",
    "n": 4000,
-   "median": 4679,
-   "p99": 7192,
-   "max": 7231,
+   "median": 3821,
+   "p99": 6048,
+   "max": 6048,
    "helpers": {
     "expk": {
      "callsPerInput": 0.303,
-     "inclusivePct": 28.2,
-     "exclusivePct": 28.2,
-     "gasPerCall": 4318
+     "inclusivePct": 17.3,
+     "exclusivePct": 17.3,
+     "gasPerCall": 2201
     }
    },
    "probeCalls": 1213,
@@ -1878,9 +1878,9 @@
    "lib": "fp127",
    "op": "powu",
    "n": 4000,
-   "median": 3485,
-   "p99": 4818,
-   "max": 14587,
+   "median": 3494,
+   "p99": 4838,
+   "max": 14599,
    "fallback": 20,
    "fallbackRuns": 20,
    "fallbackPct": 0.5,
@@ -1910,9 +1910,9 @@
    "lib": "fp127",
    "op": "divUp",
    "n": 4000,
-   "median": 817,
-   "p99": 857,
-   "max": 857,
+   "median": 474,
+   "p99": 882,
+   "max": 882,
    "helpers": {},
    "probeCalls": 0,
    "residualPerCall": null
@@ -1921,9 +1921,9 @@
    "lib": "fp127",
    "op": "divDown",
    "n": 4000,
-   "median": 814,
-   "p99": 850,
-   "max": 850,
+   "median": 471,
+   "p99": 879,
+   "max": 879,
    "helpers": {},
    "probeCalls": 0,
    "residualPerCall": null
@@ -1943,45 +1943,45 @@
    "lib": "fp127",
    "op": "lambertW0",
    "n": 1500,
-   "median": 11308,
-   "p99": 13676,
-   "max": 13968,
+   "median": 8152,
+   "p99": 11200,
+   "max": 11250,
    "helpers": {
     "expk": {
      "callsPerInput": 0.891,
-     "inclusivePct": 34.4,
-     "exclusivePct": 34.4,
-     "gasPerCall": 3802
+     "inclusivePct": 24.7,
+     "exclusivePct": 24.7,
+     "gasPerCall": 2173
     },
     "lwf127": {
      "callsPerInput": 0.942,
-     "inclusivePct": 13.1,
-     "exclusivePct": 7.2,
+     "inclusivePct": 16.5,
+     "exclusivePct": 9.1,
      "gasPerCall": 1372
     },
     "lnc": {
      "callsPerInput": 0.942,
-     "inclusivePct": 5.9,
-     "exclusivePct": 5.9,
+     "inclusivePct": 7.4,
+     "exclusivePct": 7.4,
      "gasPerCall": 616
     },
     "lwqs": {
      "callsPerInput": 0.321,
-     "inclusivePct": 26.1,
-     "exclusivePct": 13.3,
-     "gasPerCall": 8009
+     "inclusivePct": 25.7,
+     "exclusivePct": 16.7,
+     "gasPerCall": 6258
     },
     "lwsp": {
      "callsPerInput": 0.321,
-     "inclusivePct": 10.3,
-     "exclusivePct": 10.3,
+     "inclusivePct": 13.0,
+     "exclusivePct": 13.0,
      "gasPerCall": 3160
     },
     "lwfin": {
      "callsPerInput": 0.57,
-     "inclusivePct": 38.4,
-     "exclusivePct": 16.9,
-     "gasPerCall": 6633
+     "inclusivePct": 29.8,
+     "exclusivePct": 14.0,
+     "gasPerCall": 4100
     }
    },
    "probeCalls": 5982,
@@ -1991,45 +1991,45 @@
    "lib": "fp127",
    "op": "lambertWm1",
    "n": 1500,
-   "median": 11101,
-   "p99": 12586,
-   "max": 13198,
+   "median": 7968,
+   "p99": 9352,
+   "max": 11173,
    "helpers": {
     "expk": {
      "callsPerInput": 1.0,
-     "inclusivePct": 39.0,
-     "exclusivePct": 39.0,
-     "gasPerCall": 4312
+     "inclusivePct": 27.6,
+     "exclusivePct": 27.6,
+     "gasPerCall": 2200
     },
     "lwf127": {
      "callsPerInput": 1.994,
-     "inclusivePct": 24.5,
-     "exclusivePct": 13.6,
+     "inclusivePct": 34.0,
+     "exclusivePct": 18.9,
      "gasPerCall": 1361
     },
     "lnc": {
      "callsPerInput": 1.994,
-     "inclusivePct": 10.9,
-     "exclusivePct": 10.9,
+     "inclusivePct": 15.1,
+     "exclusivePct": 15.1,
      "gasPerCall": 605
     },
     "lwqs": {
      "callsPerInput": 0.005,
-     "inclusivePct": 0.3,
+     "inclusivePct": 0.4,
      "exclusivePct": 0.2,
-     "gasPerCall": 8235
+     "gasPerCall": 6391
     },
     "lwsp": {
      "callsPerInput": 0.005,
-     "inclusivePct": 0.1,
-     "exclusivePct": 0.1,
+     "inclusivePct": 0.2,
+     "exclusivePct": 0.2,
      "gasPerCall": 3160
     },
     "lwfin": {
      "callsPerInput": 0.995,
-     "inclusivePct": 64.9,
-     "exclusivePct": 26.2,
-     "gasPerCall": 7223
+     "inclusivePct": 51.5,
+     "exclusivePct": 24.0,
+     "gasPerCall": 4126
     }
    },
    "probeCalls": 8989,
@@ -2995,10 +2995,10 @@
   {
    "lib": "fp127",
    "op": "div",
-   "inlineLegacy": 486,
-   "inlineViaIr": 404,
-   "object": 1085,
-   "objectNet": 495,
+   "inlineLegacy": 420,
+   "inlineViaIr": 310,
+   "object": 1006,
+   "objectNet": 416,
    "selectorRank": 4
   },
   {
@@ -3006,17 +3006,17 @@
    "op": "sqrt",
    "inlineLegacy": 683,
    "inlineViaIr": 547,
-   "object": 1217,
-   "objectNet": 627,
+   "object": 1219,
+   "objectNet": 629,
    "selectorRank": 4
   },
   {
    "lib": "fp127",
    "op": "exp",
-   "inlineLegacy": 5347,
-   "inlineViaIr": 4888,
-   "object": 5340,
-   "objectNet": 4740,
+   "inlineLegacy": 2704,
+   "inlineViaIr": 2375,
+   "object": 3043,
+   "objectNet": 2443,
    "selectorRank": 5
   },
   {
@@ -3033,8 +3033,8 @@
    "op": "pow",
    "inlineLegacy": 3353,
    "inlineViaIr": 3080,
-   "object": 3813,
-   "objectNet": 3194,
+   "object": 3811,
+   "objectNet": 3192,
    "selectorRank": 7
   },
   {
@@ -3049,19 +3049,19 @@
   {
    "lib": "fp127",
    "op": "sinh",
-   "inlineLegacy": 6643,
-   "inlineViaIr": 5961,
-   "object": 6404,
-   "objectNet": 5814,
+   "inlineLegacy": 3955,
+   "inlineViaIr": 3352,
+   "object": 4042,
+   "objectNet": 3452,
    "selectorRank": 4
   },
   {
    "lib": "fp127",
    "op": "cosh",
-   "inlineLegacy": 6783,
-   "inlineViaIr": 6098,
-   "object": 6633,
-   "objectNet": 6023,
+   "inlineLegacy": 3916,
+   "inlineViaIr": 3312,
+   "object": 4059,
+   "objectNet": 3449,
    "selectorRank": 6
   },
   {
@@ -3069,8 +3069,8 @@
    "op": "erf",
    "inlineLegacy": 9332,
    "inlineViaIr": 8622,
-   "object": 9294,
-   "objectNet": 8684,
+   "object": 9316,
+   "objectNet": 8706,
    "selectorRank": 6
   },
   {
@@ -3078,26 +3078,26 @@
    "op": "normCdf",
    "inlineLegacy": 5959,
    "inlineViaIr": 5324,
-   "object": 5992,
-   "objectNet": 5392,
+   "object": 5991,
+   "objectNet": 5391,
    "selectorRank": 5
   },
   {
    "lib": "fp127",
    "op": "lambertW0",
-   "inlineLegacy": 11262,
-   "inlineViaIr": 9943,
-   "object": 10464,
-   "objectNet": 9864,
+   "inlineLegacy": 8131,
+   "inlineViaIr": 6919,
+   "object": 7698,
+   "objectNet": 7098,
    "selectorRank": 5
   },
   {
    "lib": "fp127",
    "op": "lambertWm1",
-   "inlineLegacy": 10864,
-   "inlineViaIr": 9615,
-   "object": 10216,
-   "objectNet": 9597,
+   "inlineLegacy": 7979,
+   "inlineViaIr": 6811,
+   "object": 7654,
+   "objectNet": 7035,
    "selectorRank": 7
   },
   {

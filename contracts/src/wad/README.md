@@ -103,7 +103,9 @@ The transcendental functions run in two stages
    times 10¹⁸ is cut, exactly, into its integer I and the next 256 bits F.
    When F lies farther than the bound from 0 and from 1 (at 2^-256 wei),
    the exact value is strictly between I and I + 1 and the direction picks
-   one. Typically all but a handful of inputs in 100,000 end here.
+   one. On the sweep's inputs, which crowd the wei boundaries, the exact
+   cases and the top of the range, 0 (lambertW0) to 0.9% (exp) go on, 6%
+   for log2 and log10 and 9% for pow, nearly all of them exact values.
 2. **The second stage**, when the bound reaches a wei boundary (or the
    value is above about 2^240 wei, where 2^-254 is too coarse): the value
    from the exact input in two words at 2^-510, with FP256's own

@@ -4,6 +4,43 @@ A release is the public name for a set of deployed contracts. Each contract
 keeps its own version in its CREATE2 salt, because the salt names the address;
 `contracts/deployments/RELEASE.json` maps the release to every address.
 
+## Unreleased
+
+FP127's exp kernel and division, same words (FP127 takes a new salt at the
+next deploy):
+
+- `expk` works in X form (H·2^-256 + L·2^-384): three 16-entry table levels
+  and a degree-16 minimax corrector, never above the truth, within 2^-311
+  relative (`scripts/fp127/generators/expk.py`). `exp` 5,360 → 2,716 gas
+  (typical, inline), `exp2` 5,687 → 2,668, `exp10` 5,555 → 2,982, `expm1`,
+  `sinh`, `cosh`, `tanh` about −40%, Lambert W about −28%.
+- `div`, `divDown` and `divUp` share an exact core, two 64-bit digits when
+  both operands are under 2^64: `div` 649 → 412, `divDown`/`divUp` 818 → 475.
+- The FP127 object is 20,776 bytes (2.2: 21,858): one copy of the kernel
+  where the optimizer had made three.
+
+BlockulatorWad, a third library (`contracts/src/wad/`, inline, no deployed
+object): Solady's `FixedPointMathLib` WAD names, signatures and error
+selectors (mulWad, divWad, sMulWad, sDivWad, sqrtWad, cbrtWad, expWad, lnWad,
+powWad, lambertW0Wad, with log2Wad and log10Wad), explicit `…Up` and `…Down`
+for every one, and PRBMath's exp, ln and pow. Every result is the exact real
+value rounded once in the stated direction:
+
+- mul, div, sqrt and cbrt exactly on 512 bits, in one word where Solady's
+  path applies (mulWad 107 gas, Solady 86); the domains only widen (a result
+  that fits never reverts).
+- exp, ln, log2, log10 and pow on FP256's kernels fed the exact input,
+  lambertW0 on FP256's; a cut at the wei with a stated bound, and a second
+  stage at 2^-510 on the exact input where the bound reaches a wei boundary.
+  expWad 2,357 gas, lnWad 2,415, powWad 4,762 (PRBMath 2,719, 6,980, 9,877).
+- `make sweep`: 27 WAD rows, 0 wrong of 108,000, and 0 of 52,000 through the
+  second stage alone. `make wad` (`docs/benchmarks/wad.md`): on the same
+  inputs Solady's expWad is off by a wei or more on 48%, lnWad 24%, powWad
+  66%, lambertW0Wad 28%; PRBMath's exp, ln, log2, log10 and pow on 72 to 98%.
+- `gen.py --lib wad` builds it from `BlockulatorWad.yul.src` on
+  `FP256.yul.src` (a library on a base source, library only, exports without
+  a leave written into their blocks).
+
 ## Blockulator 2.2 (2026-10-22)
 
 The second gas pass: every result the same word (FP256 correctly rounded,
