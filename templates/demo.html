@@ -54,8 +54,8 @@
 {%- for n in d.ladder %}{% set ns = n | str %}
 <tr><td class="num">{{ n }}</td>
 {%- for f in forms %}{% set row = sc.summary[f][ns] %}
-<td class="num" data-key="digits">{% if row.digits is defined %}{{ row.digits.median }} <span class="meta">({{ row.digits.min }}–{{ row.digits.max }})</span>{% else %}—{% endif %}{% if row.reverts %} <span class="rev meta">{{ row.reverts }} rev</span>{% endif %}</td>
-<td class="num" data-key="digitsFormat" hidden>{% if row.digitsFormat is defined %}{{ row.digitsFormat.median }} <span class="meta">({{ row.digitsFormat.min }}–{{ row.digitsFormat.max }})</span>{% else %}—{% endif %}{% if row.reverts %} <span class="rev meta">{{ row.reverts }} rev</span>{% endif %}</td>
+<td class="num" data-key="digits">{% if row.digits is defined %}{{ row.digits.median }} <span class="meta">({{ row.digits.min }}–{{ row.digits.max }})</span>{% endif %}{% if row.reverts %} <span class="rev meta">{{ row.reverts }} rev</span>{% endif %}</td>
+<td class="num" data-key="digitsFormat" hidden>{% if row.digitsFormat is defined %}{{ row.digitsFormat.median }} <span class="meta">({{ row.digitsFormat.min }}–{{ row.digitsFormat.max }})</span>{% endif %}{% if row.reverts %} <span class="rev meta">{{ row.reverts }} rev</span>{% endif %}</td>
 {%- endfor %}
 </tr>
 {%- endfor %}

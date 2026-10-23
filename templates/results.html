@@ -18,14 +18,14 @@
 {%- for sc in d.scenarios %}
 <tr><td><a href="/results/ladder/#{{ sc.id }}">{{ sc.title }}</a></td>
 {%- for f in forms %}{% set row = sc.summary[f][ns] %}{% set rc = sc.inputs[0].cells[f][ns] %}
-<td class="num{% if f == 'fp127' or f == 'fp256' %} ours{% endif %}">{% if row.digits is defined %}{{ row.digits.median }}{% elif rc.reasonName is defined and "Unsupported" in rc.reasonName %}<span class="meta">—</span>{% else %}<span class="rev">rev</span>{% endif %}</td>
+<td class="num{% if f == 'fp127' or f == 'fp256' %} ours{% endif %}">{% if row.digits is defined %}{{ row.digits.median }}{% elif rc.reasonName is defined and "Unsupported" in rc.reasonName %}{% else %}<span class="rev">rev</span>{% endif %}</td>
 {%- endfor %}
 </tr>
 {%- endfor %}
 </tbody>
 </table>
 </div>
-<p class="small">Median correct digits over each scenario's inputs at N = {{ page.extra.n | num_format }}, against exact inputs; capped at {{ d.digitsCap }}. <span class="rev">rev</span>: every input reverted. —: the library has no model for that scenario. FP127Lib equals FP127 and is left out.</p>
+<p class="small">Median correct digits over each scenario's inputs at N = {{ page.extra.n | num_format }}, against exact inputs; capped at {{ d.digitsCap }}. <span class="rev">rev</span>: every input reverted. Empty: the library has no model for that scenario. FP127Lib equals FP127 and is left out.</p>
 {{ <stamp d={d} script="livecap.py" /> }}
 
 <h2>Where to go next</h2>
