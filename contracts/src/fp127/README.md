@@ -262,7 +262,12 @@ checks that the source holds its Yul verbatim and measures them against
 their bounds; `precise_model.py` and `erf_model.py` take them from there.
 A table-driven `expk` (four 16-entry double-word levels in place of the
 eight 2-bit groups) measured 4,140 gas against 4,485 but needs about
-2.5 KB more than FP127 has, so the double-word kernel stays.
+2.5 KB more than FP127 has, so the double-word kernel keeps its groups; each
+group's factor is now multiplied in line, its constants chosen by the
+group's value, where v5 called an `expmul` helper from 23 cases: bit for
+bit the same, 4,046 gas in the inline library (the object's pinned
+optimizer had inlined the helper at every case, so there the gas is about
+level and the object 1.4 KB smaller).
 
 Version 4 (2026-10-15) adds eleven ops and moves `pow`'s exponent product
 to 2^-192 as well: `log2(x)` is taken unrounded and multiplied by `y` at

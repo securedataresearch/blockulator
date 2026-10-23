@@ -36,10 +36,12 @@ FP256E is 21,598 bytes and FP256H 13,021.
 FP127's one-word kernels get the same treatment (salt `FP127 v6` at the
 deploy): 2^f by one 16-entry table and a degree-15 minimax polynomial
 (2^-146.7 relative, from 2^-145.9), log2 by two additive 16-entry levels and
-a degree-14 minimax polynomial (2^-160.5 absolute, from about 2^-150). Every
-result is the same word; sweep medians: ln 3,215 → 1,934, log2 2,999 →
-1,718, pow 5,861 → 3,375, erf 4,879 → 3,623, atanh 3,715 → 2,750. FP127 is
-23,289 bytes.
+a degree-14 minimax polynomial (2^-160.5 absolute, from about 2^-150). Its
+double-word exp kernel multiplies each table factor in line instead of
+through a helper called from 23 cases. Every result is the same word; sweep
+medians: ln 3,215 → 1,934, log2 2,999 → 1,718, pow 5,861 → 3,375, exp 6,085
+→ 5,651, erf 4,879 → 3,623, atanh 3,715 → 2,750, lambertW0 11,765 → 11,308.
+FP127 is 21,858 bytes (from 22,272).
 
 Migration: `pi(terms)` → `FP127Lib.PI` / `FP256Lib.PI` (the format's word
 nearest π; an object caller copies the literal); `gcd` has no replacement;

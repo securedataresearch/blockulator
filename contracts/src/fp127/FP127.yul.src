@@ -524,7 +524,11 @@ function expf(x) -> r {
 /// e^(v 4^-(g+1)), held as DWs e^(...) - 1 and multiplied in the expm1 form
 /// s + c + s c, so nothing reaches 1. The rest, u < 2^-16, is u + u^2/2 in
 /// the DW plus the tail u^3/6 (1 + u/4 (1 + u/5 (...))) at 2^-303 in one
-/// word. About 2^-300 relative.
+/// word. About 2^-300 relative. Blockulator 2.2 writes each group's product
+/// in line, its constants chosen by the group's value, where v5 called an
+/// expmul helper from 23 cases: the same arithmetic bit for bit, 4,485 ->
+/// 4,046 gas (a table of four 16-entry levels measured 4,140 and needs
+/// about 2.5 KB more than FP127 has).
 function expk(rh, rl) -> sh, sl {
     let uh := and(rh, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
     let u := or(shl(16, uh), shr(240, rl))
@@ -559,61 +563,262 @@ function expk(rh, rl) -> sh, sl {
     sl := add(sl, c)
     sh := add(add(sh, shr(47, t)), lt(sl, c))
     // the top 16 bits of r in eight 2-bit groups, factor e^(v 4^-(g+1)) - 1 for v = 1..3
-    // (r < ln 2 < 3/4, so the first group is never 3)
+    // (r < ln 2 < 3/4, so the first group is never 3), each multiplied in the
+    // expm1 form s + c + s c in line: the top 512 bits of the product, the
+    // low-by-low term dropped (three units of 2^-512 at most)
     let top := shr(240, rh)
-    switch and(shr(14, top), 3)
-    case 1 { sh, sl := expmul(sh, sl, 0x48b5e3c3e81866767bc3b69baabe534ec43887164bbe2b0a993e8cf15a620beb, 0xaf42e6764e4dcdd2ea54de5e35c4e753d8b580404697c3bb339c5d654ee46c7e) }
-    case 2 { sh, sl := expmul(sh, sl, 0xa61298e1e069bc972dfefab6df33f9b1f651f16c130b4759c44bfc906367f2cc, 0x2ef57279a9122e213e6edbf79715991749ed598cf661f23b5c3375002b625e94) }
-    switch and(shr(12, top), 3)
-    case 1 { sh, sl := expmul(sh, sl, 0x1082b577d34ed7d5b1a019e225c9a951ba29557587c246f8c497d80dde7f9e47, 0xa5e9dc384baf5430ade65eea82195eea894368618a85086d29a799ed87d8eee3) }
-    case 2 { sh, sl := expmul(sh, sl, 0x2216045b6f5ccf9ced688384e06b8d4278bf0c84a957057d776b61e502312cd9, 0x787700747515eb769de3228859c3c3042f00e5d3de7c473214b09fc6256b5cc3) }
-    case 3 { sh, sl := expmul(sh, sl, 0x34cb8170b58352d4e0c48cb7c664934508e6b0a713048f18461b695be2e8d011, 0x8e77200d60439f0820dcaf6c3efe2008695116a649e348a5950b9e970fba68de) }
-    switch and(shr(10, top), 3)
-    case 1 { sh, sl := expmul(sh, sl, 0x4080ab55de3917ab864b3e9044e6b456f21041f46276ecb06a421c8bd85d6b8, 0xce700e8f16fe0318b3274ff9356675fd0e661a10682b6250e7ea8bc18be747ba) }
-    case 2 { sh, sl := expmul(sh, sl, 0x8205601127ec98e0bd083aba80c97a6aa5017852446806b13fdf317f61860ec, 0xb8ee41e5f3d3439956fcd31c6db4bddac01ff520b1919ebc2b43604bf4bc0987) }
-    case 3 { sh, sl := expmul(sh, sl, 0xc49236829e8bc292cfe63d64b295ea1da758b460877c903650604546d3fa723, 0xd534ea04e63e3fdd6d3f1128dc70daf6b0a63bf72db287e04c80e232cbe075d2) }
-    switch and(shr(8, top), 3)
-    case 1 { sh, sl := expmul(sh, sl, 0x100802ab55777d28a2a42d26aa9ee67bcf00c930cec0ede3d72020ba06e5484, 0xaeb7a527f5f42403d05e6e4a041a691f57dd2372b8cffeafd5eb85f5feaa9c1c) }
-    case 2 { sh, sl := expmul(sh, sl, 0x202015600445b0c326382bc73689d326f63923ddae1f48d0156896180904c29, 0xb42ff665682d86678a9e2460843f5134654c64dea63391ebcb473706ea73baaf) }
-    case 3 { sh, sl := expmul(sh, sl, 0x304848362076a08d9411a1cee76ca2d65b11db81591418b4e8e6e3e58bab7d2, 0x5124f75a4faea8807380b45aecf4ad31778de68869b4975d8b1f1b79c3098767) }
-    switch and(shr(6, top), 3)
-    case 1 { sh, sl := expmul(sh, sl, 0x400800aab555dde38e6ce86e9277aa54811d5145a7542458df0c6b24e6e541, 0xa1c30e2f0a3983530dbd925bf0f964a5b1c158c748a5c8468fef8f7f8498ef9f) }
-    case 2 { sh, sl := expmul(sh, sl, 0x802005560011127d41d5bd72f4c8f39bae49a2157e9d0d4405a6beeba52138, 0xa3f09509ffb9baea7fafb8e557e7655609365afdff5fa6ca09d63ab87e0decbb) }
-    case 3 { sh, sl := expmul(sh, sl, 0xc04812036081a9ce894e3dfc9a70cc052b6d48cb0a9c1f20ed5fc91840b245, 0x4450743a574ae21ee9e83f5e12d6e408411136539da8c9e874aa86b32a1f93a1) }
-    switch and(shr(4, top), 3)
-    case 1 { sh, sl := expmul(sh, sl, 0x10008002aab5557777d27df7e11e14c4df26269e70cc5f593ae718dc7de726, 0xfb2b0aa954c722fbb00599de15435977c4f8dc721f8f37d53835d039d93a0f31) }
-    case 2 { sh, sl := expmul(sh, sl, 0x20020015560004445b06186326382ab19a3e5c922e8086da9f95cf2e94c476, 0xe15d6eae0597f42aebf829ba43320348d26315e9391ebeb700f660519933feea) }
-    case 3 { sh, sl := expmul(sh, sl, 0x300480480360206769a08b2258a3ac6502165c217f6289cb0e5047b13167d7, 0xa5f3969bc5a9a3b953062e106075409ea8631b47069c1f9fbd6917d3c470a04f) }
-    switch and(shr(2, top), 3)
-    case 1 { sh, sl := expmul(sh, sl, 0x40008000aaab5555ddde38e3c23c3dc3e7ccba4e7ec3b91366a1d063e6ced, 0xa4a227ee8306d193364fe6ddafb38a58abcd3002f0c121e458b404c51e0e56ae) }
-    case 2 { sh, sl := expmul(sh, sl, 0x80020005556000111127d297298c98e0aa8eed408aa1670c9d4708e0aa205, 0xd2d2a236cff00b5eb928d1fa19fbd6b118ac2e5c694882e474a884c42e59e569) }
-    case 3 { sh, sl := expmul(sh, sl, 0xc0048012003600819a9cce89272cd0458082364818c22d6bbe66c60ebe4eb, 0x1a51f0302702cc56249ad525c73e24385aef5eb1e5e8a1a11bb5842a951d9bca) }
-    switch and(top, 3)
-    case 1 { sh, sl := expmul(sh, sl, 0x1000080002aaab555577777d27d34d34ed4ed7d10b93916d52d3ab1315de7, 0x334a736e6726c7a4c2b61ec17f0883f5764aa1c7f388f2fe47ac62c695e01465) }
-    case 2 { sh, sl := expmul(sh, sl, 0x2000200015556000044445b05b6db6f56f5cbce968305267f71726f96b219, 0x1977cf139dd96fbd517650a90fd53f4fa114e59e3f14ffc3367690cd11c440e9) }
-    case 3 { sh, sl := expmul(sh, sl, 0x300048004800360020667699a08afb4a0f7f163405ec24b8dff4482ea0809, 0x9db872448e3f728e8e0dd444c29fb618ce238776485c3f11ae8ca92a6c061f39) }
-}
-
-/// (1 + s)(1 + c) - 1 = s + c + s c for DWs s and c: the top 512 bits of the
-/// product, the low-by-low term dropped (three units of 2^-512 at most).
-function expmul(sh, sl, ch, cl) -> rh, rl {
-    let pl := mul(sh, ch)
-    let mm := mulmod(sh, ch, not(0))
-    let ph := sub(sub(mm, pl), lt(mm, pl))
-    let a := mul(sh, cl)
-    mm := mulmod(sh, cl, not(0))
-    a := sub(sub(mm, a), lt(mm, a))
-    pl := add(pl, a)
-    ph := add(ph, lt(pl, a))
-    a := mul(sl, ch)
-    mm := mulmod(sl, ch, not(0))
-    a := sub(sub(mm, a), lt(mm, a))
-    pl := add(pl, a)
-    ph := add(ph, lt(pl, a))
-    rl := add(sl, cl)
-    rh := add(add(sh, ch), lt(rl, cl))
-    rl := add(rl, pl)
-    rh := add(add(rh, ph), lt(rl, pl))
+    {
+        let v := and(shr(14, top), 3)
+        if v {
+            let ch := 0x48b5e3c3e81866767bc3b69baabe534ec43887164bbe2b0a993e8cf15a620beb
+            let cl := 0xaf42e6764e4dcdd2ea54de5e35c4e753d8b580404697c3bb339c5d654ee46c7e
+            if eq(v, 2) {
+                ch := 0xa61298e1e069bc972dfefab6df33f9b1f651f16c130b4759c44bfc906367f2cc
+                cl := 0x2ef57279a9122e213e6edbf79715991749ed598cf661f23b5c3375002b625e94
+            }
+            let pl := mul(sh, ch)
+            let qm := mulmod(sh, ch, not(0))
+            let ph := sub(sub(qm, pl), lt(qm, pl))
+            let a := mul(sh, cl)
+            qm := mulmod(sh, cl, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            a := mul(sl, ch)
+            qm := mulmod(sl, ch, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            let nl := add(sl, cl)
+            let nh := add(add(sh, ch), lt(nl, cl))
+            sl := add(nl, pl)
+            sh := add(add(nh, ph), lt(sl, pl))
+        }
+    }
+    {
+        let v := and(shr(12, top), 3)
+        if v {
+            let ch := 0x1082b577d34ed7d5b1a019e225c9a951ba29557587c246f8c497d80dde7f9e47
+            let cl := 0xa5e9dc384baf5430ade65eea82195eea894368618a85086d29a799ed87d8eee3
+            if eq(v, 2) {
+                ch := 0x2216045b6f5ccf9ced688384e06b8d4278bf0c84a957057d776b61e502312cd9
+                cl := 0x787700747515eb769de3228859c3c3042f00e5d3de7c473214b09fc6256b5cc3
+            }
+            if eq(v, 3) {
+                ch := 0x34cb8170b58352d4e0c48cb7c664934508e6b0a713048f18461b695be2e8d011
+                cl := 0x8e77200d60439f0820dcaf6c3efe2008695116a649e348a5950b9e970fba68de
+            }
+            let pl := mul(sh, ch)
+            let qm := mulmod(sh, ch, not(0))
+            let ph := sub(sub(qm, pl), lt(qm, pl))
+            let a := mul(sh, cl)
+            qm := mulmod(sh, cl, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            a := mul(sl, ch)
+            qm := mulmod(sl, ch, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            let nl := add(sl, cl)
+            let nh := add(add(sh, ch), lt(nl, cl))
+            sl := add(nl, pl)
+            sh := add(add(nh, ph), lt(sl, pl))
+        }
+    }
+    {
+        let v := and(shr(10, top), 3)
+        if v {
+            let ch := 0x4080ab55de3917ab864b3e9044e6b456f21041f46276ecb06a421c8bd85d6b8
+            let cl := 0xce700e8f16fe0318b3274ff9356675fd0e661a10682b6250e7ea8bc18be747ba
+            if eq(v, 2) {
+                ch := 0x8205601127ec98e0bd083aba80c97a6aa5017852446806b13fdf317f61860ec
+                cl := 0xb8ee41e5f3d3439956fcd31c6db4bddac01ff520b1919ebc2b43604bf4bc0987
+            }
+            if eq(v, 3) {
+                ch := 0xc49236829e8bc292cfe63d64b295ea1da758b460877c903650604546d3fa723
+                cl := 0xd534ea04e63e3fdd6d3f1128dc70daf6b0a63bf72db287e04c80e232cbe075d2
+            }
+            let pl := mul(sh, ch)
+            let qm := mulmod(sh, ch, not(0))
+            let ph := sub(sub(qm, pl), lt(qm, pl))
+            let a := mul(sh, cl)
+            qm := mulmod(sh, cl, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            a := mul(sl, ch)
+            qm := mulmod(sl, ch, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            let nl := add(sl, cl)
+            let nh := add(add(sh, ch), lt(nl, cl))
+            sl := add(nl, pl)
+            sh := add(add(nh, ph), lt(sl, pl))
+        }
+    }
+    {
+        let v := and(shr(8, top), 3)
+        if v {
+            let ch := 0x100802ab55777d28a2a42d26aa9ee67bcf00c930cec0ede3d72020ba06e5484
+            let cl := 0xaeb7a527f5f42403d05e6e4a041a691f57dd2372b8cffeafd5eb85f5feaa9c1c
+            if eq(v, 2) {
+                ch := 0x202015600445b0c326382bc73689d326f63923ddae1f48d0156896180904c29
+                cl := 0xb42ff665682d86678a9e2460843f5134654c64dea63391ebcb473706ea73baaf
+            }
+            if eq(v, 3) {
+                ch := 0x304848362076a08d9411a1cee76ca2d65b11db81591418b4e8e6e3e58bab7d2
+                cl := 0x5124f75a4faea8807380b45aecf4ad31778de68869b4975d8b1f1b79c3098767
+            }
+            let pl := mul(sh, ch)
+            let qm := mulmod(sh, ch, not(0))
+            let ph := sub(sub(qm, pl), lt(qm, pl))
+            let a := mul(sh, cl)
+            qm := mulmod(sh, cl, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            a := mul(sl, ch)
+            qm := mulmod(sl, ch, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            let nl := add(sl, cl)
+            let nh := add(add(sh, ch), lt(nl, cl))
+            sl := add(nl, pl)
+            sh := add(add(nh, ph), lt(sl, pl))
+        }
+    }
+    {
+        let v := and(shr(6, top), 3)
+        if v {
+            let ch := 0x400800aab555dde38e6ce86e9277aa54811d5145a7542458df0c6b24e6e541
+            let cl := 0xa1c30e2f0a3983530dbd925bf0f964a5b1c158c748a5c8468fef8f7f8498ef9f
+            if eq(v, 2) {
+                ch := 0x802005560011127d41d5bd72f4c8f39bae49a2157e9d0d4405a6beeba52138
+                cl := 0xa3f09509ffb9baea7fafb8e557e7655609365afdff5fa6ca09d63ab87e0decbb
+            }
+            if eq(v, 3) {
+                ch := 0xc04812036081a9ce894e3dfc9a70cc052b6d48cb0a9c1f20ed5fc91840b245
+                cl := 0x4450743a574ae21ee9e83f5e12d6e408411136539da8c9e874aa86b32a1f93a1
+            }
+            let pl := mul(sh, ch)
+            let qm := mulmod(sh, ch, not(0))
+            let ph := sub(sub(qm, pl), lt(qm, pl))
+            let a := mul(sh, cl)
+            qm := mulmod(sh, cl, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            a := mul(sl, ch)
+            qm := mulmod(sl, ch, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            let nl := add(sl, cl)
+            let nh := add(add(sh, ch), lt(nl, cl))
+            sl := add(nl, pl)
+            sh := add(add(nh, ph), lt(sl, pl))
+        }
+    }
+    {
+        let v := and(shr(4, top), 3)
+        if v {
+            let ch := 0x10008002aab5557777d27df7e11e14c4df26269e70cc5f593ae718dc7de726
+            let cl := 0xfb2b0aa954c722fbb00599de15435977c4f8dc721f8f37d53835d039d93a0f31
+            if eq(v, 2) {
+                ch := 0x20020015560004445b06186326382ab19a3e5c922e8086da9f95cf2e94c476
+                cl := 0xe15d6eae0597f42aebf829ba43320348d26315e9391ebeb700f660519933feea
+            }
+            if eq(v, 3) {
+                ch := 0x300480480360206769a08b2258a3ac6502165c217f6289cb0e5047b13167d7
+                cl := 0xa5f3969bc5a9a3b953062e106075409ea8631b47069c1f9fbd6917d3c470a04f
+            }
+            let pl := mul(sh, ch)
+            let qm := mulmod(sh, ch, not(0))
+            let ph := sub(sub(qm, pl), lt(qm, pl))
+            let a := mul(sh, cl)
+            qm := mulmod(sh, cl, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            a := mul(sl, ch)
+            qm := mulmod(sl, ch, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            let nl := add(sl, cl)
+            let nh := add(add(sh, ch), lt(nl, cl))
+            sl := add(nl, pl)
+            sh := add(add(nh, ph), lt(sl, pl))
+        }
+    }
+    {
+        let v := and(shr(2, top), 3)
+        if v {
+            let ch := 0x40008000aaab5555ddde38e3c23c3dc3e7ccba4e7ec3b91366a1d063e6ced
+            let cl := 0xa4a227ee8306d193364fe6ddafb38a58abcd3002f0c121e458b404c51e0e56ae
+            if eq(v, 2) {
+                ch := 0x80020005556000111127d297298c98e0aa8eed408aa1670c9d4708e0aa205
+                cl := 0xd2d2a236cff00b5eb928d1fa19fbd6b118ac2e5c694882e474a884c42e59e569
+            }
+            if eq(v, 3) {
+                ch := 0xc0048012003600819a9cce89272cd0458082364818c22d6bbe66c60ebe4eb
+                cl := 0x1a51f0302702cc56249ad525c73e24385aef5eb1e5e8a1a11bb5842a951d9bca
+            }
+            let pl := mul(sh, ch)
+            let qm := mulmod(sh, ch, not(0))
+            let ph := sub(sub(qm, pl), lt(qm, pl))
+            let a := mul(sh, cl)
+            qm := mulmod(sh, cl, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            a := mul(sl, ch)
+            qm := mulmod(sl, ch, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            let nl := add(sl, cl)
+            let nh := add(add(sh, ch), lt(nl, cl))
+            sl := add(nl, pl)
+            sh := add(add(nh, ph), lt(sl, pl))
+        }
+    }
+    {
+        let v := and(top, 3)
+        if v {
+            let ch := 0x1000080002aaab555577777d27d34d34ed4ed7d10b93916d52d3ab1315de7
+            let cl := 0x334a736e6726c7a4c2b61ec17f0883f5764aa1c7f388f2fe47ac62c695e01465
+            if eq(v, 2) {
+                ch := 0x2000200015556000044445b05b6db6f56f5cbce968305267f71726f96b219
+                cl := 0x1977cf139dd96fbd517650a90fd53f4fa114e59e3f14ffc3367690cd11c440e9
+            }
+            if eq(v, 3) {
+                ch := 0x300048004800360020667699a08afb4a0f7f163405ec24b8dff4482ea0809
+                cl := 0x9db872448e3f728e8e0dd444c29fb618ce238776485c3f11ae8ca92a6c061f39
+            }
+            let pl := mul(sh, ch)
+            let qm := mulmod(sh, ch, not(0))
+            let ph := sub(sub(qm, pl), lt(qm, pl))
+            let a := mul(sh, cl)
+            qm := mulmod(sh, cl, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            a := mul(sl, ch)
+            qm := mulmod(sl, ch, not(0))
+            a := sub(sub(qm, a), lt(qm, a))
+            pl := add(pl, a)
+            ph := add(ph, lt(pl, a))
+            let nl := add(sl, cl)
+            let nh := add(add(sh, ch), lt(nl, cl))
+            sl := add(nl, pl)
+            sh := add(add(nh, ph), lt(sl, pl))
+        }
+    }
 }
 
 /// f ln 2 for a DW f, as a DW (ln 2 to 2^-512): the argument of expk for 2^f.

@@ -1417,9 +1417,9 @@
    "minBits": 129.0,
    "below": 2003,
    "above": 1948,
-   "gasMedian": 6085,
-   "gasP99": 6878,
-   "gasMax": 6923
+   "gasMedian": 5651,
+   "gasP99": 6385,
+   "gasMax": 6426
   },
   {
    "lib": "fp127",
@@ -1482,8 +1482,8 @@
    "below": 1992,
    "above": 1955,
    "gasMedian": 3375,
-   "gasP99": 14630,
-   "gasMax": 16077,
+   "gasP99": 13703,
+   "gasMax": 15118,
    "fallback": 270,
    "fallbackRuns": 270,
    "fallbackPct": 6.75
@@ -1524,8 +1524,8 @@
    "below": 2121,
    "above": 1860,
    "gasMedian": 2061,
-   "gasP99": 6781,
-   "gasMax": 7049
+   "gasP99": 6329,
+   "gasMax": 6546
   },
   {
    "lib": "fp127",
@@ -1622,9 +1622,9 @@
    "minBits": 129.0,
    "below": 1960,
    "above": 2040,
-   "gasMedian": 5825,
-   "gasP99": 6840,
-   "gasMax": 6894
+   "gasMedian": 5361,
+   "gasP99": 6346,
+   "gasMax": 6372
   },
   {
    "lib": "fp127",
@@ -1642,9 +1642,9 @@
    "minBits": 129.0,
    "below": 2022,
    "above": 1913,
-   "gasMedian": 5972,
-   "gasP99": 6776,
-   "gasMax": 6841
+   "gasMedian": 5536,
+   "gasP99": 6283,
+   "gasMax": 6350
   },
   {
    "lib": "fp127",
@@ -1684,9 +1684,9 @@
    "minBits": 129.2,
    "below": 1930,
    "above": 1999,
-   "gasMedian": 5709,
-   "gasP99": 7805,
-   "gasMax": 7884
+   "gasMedian": 5262,
+   "gasP99": 7324,
+   "gasMax": 7404
   },
   {
    "lib": "fp127",
@@ -1704,9 +1704,9 @@
    "minBits": 129.0,
    "below": 1976,
    "above": 1948,
-   "gasMedian": 5668,
-   "gasP99": 7753,
-   "gasMax": 7809
+   "gasMedian": 5207,
+   "gasP99": 7269,
+   "gasMax": 7336
   },
   {
    "lib": "fp127",
@@ -1724,8 +1724,8 @@
    "below": 1947,
    "above": 1906,
    "gasMedian": 4679,
-   "gasP99": 7665,
-   "gasMax": 7731
+   "gasP99": 7192,
+   "gasMax": 7231
   },
   {
    "lib": "fp127",
@@ -1860,9 +1860,9 @@
    "minBits": 129.1,
    "below": 662,
    "above": 741,
-   "gasMedian": 11765,
-   "gasP99": 14135,
-   "gasMax": 14443
+   "gasMedian": 11308,
+   "gasP99": 13676,
+   "gasMax": 13968
   },
   {
    "lib": "fp127",
@@ -1879,9 +1879,9 @@
    "minBits": 129.1,
    "below": 747,
    "above": 753,
-   "gasMedian": 11563,
-   "gasP99": 13035,
-   "gasMax": 13616
+   "gasMedian": 11101,
+   "gasP99": 12586,
+   "gasMax": 13198
   }
  ]
 }
