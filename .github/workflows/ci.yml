@@ -29,7 +29,7 @@ jobs:
       - name: Python deps
         run: uv sync --frozen
 
-      - name: No old library names (FP19, formerly FP256; deployed salts excepted)
+      - name: No old library names (scripts/gates.py names; deployed salts excepted)
         run: uv run scripts/gates.py --only names
 
       - name: Generated files are current
