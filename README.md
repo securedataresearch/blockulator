@@ -1,102 +1,32 @@
 # Blockulator
 
-Two rulers for EVM arithmetic, and the measurements that say where each one
-ends: [blockulator.com](https://blockulator.com).
+**Precision math for the EVM, correctly rounded and verified on chain.**
+One `int256` per number, two formats, every op tested against exact arithmetic.
+[blockulator.com](https://blockulator.com)
 
-- **FP127** is a signed 127.128 fixed point: one `int256` holding
-  `value × 2^128`, a grid of 2^−128: 38 digits at 1, 32 at 10^−6, 8 at
-  10^−30. v6 (53 ops, live on Sepolia since 2026-10-22; `pi` is the
-  constant `FP127Lib.PI`): `add` and
-  `sub` exact; every transcendental the nearest word, within half an ULP on
-  every one of 1,500 to 4,000 random inputs per op (`exp`, `pow`, `cbrt`,
-  `ln`, `log2`, `powu`, `compound`, Lambert W and the rest; v4 had `exp` and
-  `pow` off by up to 10^34 ULPs at the top of the range); `pow` with an
-  exponent near 2^90 is the one exception. `mul`, `div` and `sqrt` within one
-  ULP (rounded down, `div` toward zero), with `mulUp`, `mulDown`, `divUp`,
-  `divDown`, `toFixed18Up` and `toFixed18Down` for rounding toward the
-  protocol at the token edge. From 3 × 10^−5 up it holds more digits than any
-  other fixed point or binary128 we measured: 38 at 1 against 34.
-- **FP256** is a 256-bit binary float: one `int256` holding a sign, a 19-bit
-  exponent and a 236-bit fraction, about 71 digits at any magnitude from
-  10^−78,913 to 10^78,913, no NaN, no infinity. v5 (live on
-  Sepolia since 2026-10-22): 65 ops, every one correctly rounded or exact, 0 misrounded of
-  360,590 random inputs ([`docs/benchmarks/sweep.md`](docs/benchmarks/sweep.md));
-  a fast value whose stated error bound reaches the rounding boundary is
-  recomputed in two words, and exact ties of `pow`, `compound` and `powu`
-  are computed exactly. The edge rounds toward the protocol: `mulDown`,
-  `mulUp`, `divDown`, `divUp`, `toUintDown`, `toUintUp`, `toIntDown`,
-  `toIntUp`, `toFixed18Down`, `toFixed18Up`, `floor`, `ceil`,
-  `fromUintDown`, `fromUintUp`. FP256 has every op FP127 has, `pi` as the
-  constant `FP256Lib.PI`. It deploys as four objects by idea: FP256, the
-  number (43 ops); FP256E, the elementary functions on one exp/log kernel
-  (12); FP256H, the hyperbolic functions (4), on their own copy of that
-  kernel because FP256E with them measured 27,308 bytes, over the 24,576
-  limit; FP256S, the special functions (6). Release four (Blockulator 2.1:
-  FP256, FP256X, FP256X2, FP256X3) and release three (28 ops, within 1 to 4
-  ULP on five of them) stay deployed at their own addresses.
+| | what it is | precision | range |
+|---|---|---|---|
+| **FP127** | signed 127.128 fixed point | 38 digits at 1 | money-sized numbers |
+| **FP256** | 256-bit binary float | 71 digits, everywhere | 10^±78,913 |
 
-Both are one Yul source each that generates two forms, fuzzed to agree bit
-for bit across the full `int256` domain: a **deployed object** at a CREATE2
-address with a published salt, and an **inline library** with the same
-bodies in `memory-safe` assembly blocks.
+- **Round once.** Every FP256 op is correctly rounded: 0 misrounded in 360,590 random inputs, with a stated error bound behind each result. Every FP127 transcendental returns the nearest word (one known exception: `pow` with an exponent near 2^90).
+- **Twice the digits, at the same gas.** FP256 carries twice binary128's digits and is cheaper than ABDKMathQuad on add, mul, div, exp and pow. FP127 carries twice PRBMath's digits and is cheaper on mul, ln and pow.
+- **More than arithmetic.** exp, ln, pow, compound, the hyperbolics, erf and normCdf, Lambert W, cbrt, hypot, and directed rounding at the token edge: 53 ops in FP127, 65 in FP256.
+- **Checked on chain.** Thirteen real calculations, 87 inputs, N up to 10,000 steps, plus 139 edge probes. They are re-run through the deployed contracts wherever a public RPC can execute them, with 0 mismatches.
 
-Blockulator 2.2 ([`RELEASE.md`](contracts/deployments/RELEASE.md)) is live on Sepolia:
+## Gas
 
-| | FP127 v6 | FP256 v5 |
-|---|---|---|
-| Sepolia | `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4` | FP256 `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52`<br>FP256E `0x017F68A57dD53a6dF2043c24B712b287F9549AE2`<br>FP256H `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5`<br>FP256S `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
-| record | [`contracts/deployments/FP127.md`](contracts/deployments/FP127.md) | [`contracts/deployments/FP256.md`](contracts/deployments/FP256.md) |
-| source | [`contracts/src/fp127/`](contracts/src/fp127/README.md) | [`contracts/src/fp256/`](contracts/src/fp256/README.md) |
-| precision | [`docs/fp127/precision.md`](docs/fp127/precision.md) | [`docs/fp256/precision.md`](docs/fp256/precision.md) |
-| gas | [`docs/benchmarks/gas.md`](docs/benchmarks/gas.md) | [`docs/benchmarks/gas256.md`](docs/benchmarks/gas256.md) |
+Inline library, median gas per call. The digits column is precision at 1.
 
-**CLZ required.** The 2.2 objects and the inline libraries are evmVersion
-osaka builds and use the CLZ opcode (EIP-7939). Supported: Ethereum,
-Sepolia, Arbitrum One, OP Mainnet, Base, Unichain, Polygon PoS, BNB Chain,
-Gnosis and the other chains with CLZ; unsupported: zkSync Era, Avalanche
-C-Chain and Polygon zkEVM, where every call that counts leading bits fails.
-`make probe-clz RPC=<url>` checks a chain; the table is in
-[`contracts/deployments/README.md`](contracts/deployments/README.md#chains-clz-osaka-required).
-Blockulator 2.1 (FP127 v5, FP256 release four, ladder v9) and 2.0, shanghai
-builds without CLZ, stay live on Sepolia.
+| | digits | add | mul | div | exp | ln | pow |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **FP256** | **71** | 662 | 530 | 800 | 3,295 | 3,006 | 5,541 |
+| ABDKMathQuad | 34 | 765 | 688 | 818 | 5,850 | 1,586 | 23,290 |
+| **FP127** | **38** | 124 | 263 | 645 | 6,006 | 600 | 3,537 |
+| PRBMath SD59x18 | 18 | 111 | 485 | 509 | 2,788 | 828 | 9,911 |
+| Solady | 18 | 111 | 126 | 93 | 430 | 556 | 1,275 |
 
-## The measurements
-
-The ladder, the edges, gas, pi and the per-op precision tables are
-committed datasets regenerated by make targets. CI checks the ladder, the
-edges and the precision tables against the code. The datasets describe FP127
-v6 and FP256 v5, and so do the runners on Sepolia (ladder v10), one
-`eth_call` per cell; `scripts/ladder/livecap.py` and `liveedges.py` re-run
-every cell a public RPC can execute, and `RELEASE.json` records the latest
-check.
-
-- **The ladder** ([`docs/benchmarks/ladder.md`](docs/benchmarks/ladder.md)):
-  terminal precision. Thirteen calculations written as N identical steps
-  (daily and per-second compounding, continuous accrual, a bonding curve,
-  exp/ln round trips, an amortising loan, a geometric mean, Black-Scholes
-  along a path, an option walking out of the money, a cumulative product,
-  decay), 87 inputs, N from 1 to 10,000, through FP127, ABDKMath64x64,
-  Solady, PRBMath, ABDKMathQuad (binary128), Balancer LogExpMath, the
-  accrual maths of Aave, Morpho and Maker, and FP256, against the same loop
-  in exact arithmetic, twice: from the exact inputs and from the inputs as
-  each format rounds them. `LadderRunner` on Sepolia re-runs any cell of
-  the deployed release ([record](contracts/deployments/Ladder.md)).
-- **The edges** ([`docs/benchmarks/edges.md`](docs/benchmarks/edges.md)):
-  139 one-shot probes at the ends of each domain, where a result goes to
-  zero, reverts, falls outside the word, or cannot be computed. ln within a
-  per-second rate of one, exp at −42, ±89 and 136, tiny roots and products,
-  Uniswap's tick range, both Lambert branches, the error function and the
-  normal tail. `EdgeRunner` re-runs any cell of the deployed release.
-- **Pi, the same recipe on every ruler** ([`docs/benchmarks/pi.md`](docs/benchmarks/pi.md)):
-  Ramanujan's series through each library's own sqrt, mul and div.
-- **Gas and per-op precision** ([`docs/benchmarks/`](docs/benchmarks/README.md)).
-
-What they say, in one line each: a fixed point maximises precision inside a
-band and has walls; a float maximises the band and rounds at every op; the
-protocols' accrual formulas are right for the interval they were built for
-and not beyond it. The talk that walks through it, "Dust is Over", is outlined in
-[`docs/talks/outline.md`](docs/talks/outline.md); the
-[write-up](https://blockulator.com/writeup/) is the story with sources.
+The full tables cover every op and library: [`gas.md`](docs/benchmarks/gas.md) and [`gas256.md`](docs/benchmarks/gas256.md). Compile with `via_ir = true`; it takes another 10–33% off the inline libraries.
 
 ## Use it
 
@@ -108,168 +38,43 @@ echo "fp256/=lib/blockulator/contracts/src/fp256/" >> remappings.txt
 
 ```solidity
 import {FP127Lib} from "fp127/FP127Lib.sol";
-int256 b = FP127Lib.mul(FP127Lib.fromFixed18(1.5e18), FP127Lib.exp(FP127Lib.ONE));
-
 import {FP256Lib} from "fp256/FP256Lib.sol";
-int256 g = FP256Lib.pow(FP256Lib.add(FP256Lib.ONE, r), FP256Lib.fromUint(31536000));
+
+int256 grown = FP256Lib.pow(FP256Lib.add(FP256Lib.ONE, rate), FP256Lib.fromUint(31536000));
+uint256 paid = FP256Lib.toUintDown(grown);          // to the user: floor
+int256  ltv  = FP127Lib.divUp(debt, collateral);    // a limit check: never below the truth
 ```
 
-Compile the inline libraries with `via_ir = true` (in `foundry.toml`). Without
-it, solc's legacy pipeline leaves their heavy ops 5–14% (FP127) and 6–19%
-(FP256) dearer than the same Yul in the deployed object, net of its call;
-through the IR they come within about −7% to +3% of it, and the build takes
-about 5.5× as long ([`docs/benchmarks/profile.md`](docs/benchmarks/profile.md)).
+Or call the deployed contracts, where every op is a free `eth_call`: `IFP127(0xb349…CBe4).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
 
-Through the deployed objects: `IFP127(0xb349…CBe4).ln(x)` and
-`IFP256E(0x017F…9AE2).exp(x)`; the FP127 examples are compiled and tested in
-[`test/examples/`](test/examples/). Every op is a view, so from a script or
-an agent it is a free `eth_call`: [`/llms.txt`](https://blockulator.com/llms.txt),
-[`/.well-known/agent.json`](https://blockulator.com/.well-known/agent.json).
+**Requires the CLZ opcode** (EIP-7939, the Osaka EVM). Supported: Ethereum, Arbitrum, OP Mainnet, Base, Unichain, Polygon PoS, BNB Chain, Gnosis, Scroll, Linea. Not supported: zkSync Era, Avalanche C-Chain. Check any chain with `make probe-clz RPC=<url>`.
 
-## Integrating
+## Two rules that end dust
 
-A better ruler only helps if you follow two rules. Each comes from a replay
-of a real exploit, bit for bit from the attack transaction, then the same
-step in FP127, FP256 and exact arithmetic
-([`docs/benchmarks/replay-*.md`](docs/benchmarks/README.md), data in
-[`scripts/replays/`](scripts/replays/)).
+Each rule comes from replaying a real exploit bit for bit, then running the same step in FP127, FP256 and exact arithmetic ([replays](docs/benchmarks/README.md)).
 
-**1. Store the state in the format.** Keep the running quantity as an FP127
-or FP256 word. Do not round it to token units before you store it. In Bunni
-v2, 44 withdrawals each took their share of an idle USDC balance kept in
-whole wei, and the active balance fell from 28 wei to 4. The fix
-(`mulDivUp`) ends at 48. With the idle balance stored as an FP127 word the
-active balance ends at 35.6278… wei, within 10^−37 of exact, and floors
-once to 35. Rounded to wei
-before each store, the FP127 word gives 4 or 48 again
-([`replay-bunni.md`](docs/benchmarks/replay-bunni.md)).
+1. **Store the state in the format.** Keep running balances as FP127 or FP256 words, and round to token units only on the way out. In Bunni v2's replay this alone turns a balance drained from 28 wei to 4 into 35.6 wei, within 10^−37 of exact.
+2. **Round toward the protocol at the token edge.** Floor what you pay out and ceil what you take in, never to nearest. Under this rule Resupply's borrow against 1 wei of collateral reverts, and Balancer V2's charge matches the exact one on every call.
 
-**2. Round toward the protocol at the token edge.** Floor what the protocol
-pays out, ceil what it takes in. Not to nearest.
+The [integration guide](https://blockulator.com/library/#integrating) has the worked examples and the edge-op table.
 
-- Resupply: `1e36 / price` floored a rate of one half to 0, and 10,000,000
-  reUSD were borrowed against 1 wei of collateral. In FP127 or FP256 the LTV
-  is 499,999,999,999.99… (×10^−5) against a cap of 95,000, and the borrow
-  reverts. On the integer grid the LTV rounds up (500,000,000,000) and the
-  borrow limit rounds down (1.9 reUSD)
-  ([`replay-resupply.md`](docs/benchmarks/replay-resupply.md)). This fixes
-  one division, not a market opened against an empty vault.
-- Balancer V2: `_upscale` read 17 × 1.058132408689971699 as 17, and the pool
-  charged 625,492 WETH-wei where the exact charge is 957,169. Kept in the
-  format and rounded up to wei once, the charge equals the exact one on all
-  90 + 75 calls. The same exact maths rounded to nearest at the wei boundary
-  still lets 14 + 5 calls lower the invariant
-  ([`replay-balancer.md`](docs/benchmarks/replay-balancer.md)).
-- Balancer V1, the counter-example: the ratio had 18 correct digits and the
-  loss was one rounding to nearest. With the exact formula, rounded to
-  nearest once, a re-tuned join/exit cycle still nets 6.987% of the BPT
-  supply (deployed: 7.035%); rounded toward the pool, −0.05482%
-  ([`replay-balancer-v1.md`](docs/benchmarks/replay-balancer-v1.md)).
-  Radiant's empty-market exploit used the same half unit at its share burn;
-  neither library would have stopped that exploit, but the direction rule
-  applies.
+## Blockulator 2.2 on Sepolia
 
-The edge ops:
+| contract | address |
+|---|---|
+| FP127 v6 | `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4` |
+| FP256 (the number) | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` |
+| FP256E (exp, log, pow) | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` |
+| FP256H (hyperbolic) | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` |
+| FP256S (erf, Lambert W) | `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
 
-| | paid out: round down | taken in: round up |
-|---|---|---|
-| FP127, 18-decimal | `toFixed18Down` | `toFixed18Up` |
-| FP127, raw units | `FP127Lib.floor(x) >> 128` | `FP127Lib.ceil(x) >> 128` |
-| FP127, last product or quotient | `mulDown`, `divDown` | `mulUp`, `divUp` |
-| FP256, raw units | `toUintDown`, `toIntDown` | `toUintUp`, `toIntUp` |
-| FP256, 18-decimal | `toFixed18Down` | `toFixed18Up` |
-| FP256, in the format | `floor`, `mulDown`, `divDown` | `ceil`, `mulUp`, `divUp` |
+Every contract is verified on Sourcify and Blockscout. Each library is one Yul source that generates both the deployed object and the inline library, fuzzed to agree bit for bit. More detail: [records](contracts/deployments/RELEASE.md), [FP127](contracts/src/fp127/README.md), [FP256](contracts/src/fp256/README.md), [precision](docs/fp256/precision.md), [the ladder](docs/benchmarks/ladder.md), [the edges](docs/benchmarks/edges.md), [changelog](CHANGELOG.md).
 
-```solidity
-uint256 paid    = FP256Lib.toUintDown(owed);   // to the user: floor
-uint256 charged = FP256Lib.toUintUp(cost);     // from the user: ceil
-int256  ltv     = FP127Lib.divUp(FP127Lib.mulUp(debt, rate), collateral); // a limit check: never below the truth
-```
+## Learn more
 
-FP127's plain `mul` and `div` round down (`div` toward zero); FP256's plain
-ops, `toFixed18` included, round to nearest. Neither is a direction you
-chose. The directed ops are in FP127 v5 and v6 and FP256 release four and
-v5, deployed and in the source (`forge install`); the older FP127 v4 and FP256
-release three objects do not have them. The worked examples, with every number above, are on the
-[FP127](https://blockulator.com/library/#integrating) and
-[FP256](https://blockulator.com/library/fp256/#integrating) pages, and the
-snippets run on the replays' integers in
-[`test/examples/Integrating.t.sol`](test/examples/Integrating.t.sol).
+- [The write-up](https://blockulator.com/writeup/): the story, with sources.
+- ["Dust is Over"](docs/talks/outline.md): the talk.
+- [Developing](docs/DEVELOPING.md): layout, build, `make gates`.
+- [History](docs/fp127/HISTORY.md), and the [EthCC[9] talk](https://www.youtube.com/watch?v=a_tL99NY-yc) from the Huff era.
 
-Two moves take roundings out altogether:
-
-- **Divide last.** Multiply everything, then divide once, with a 512-bit
-  `fullMulDiv` rounded in the protocol's direction. Resupply's LTV as
-  `debt × 10^23 / (price × collateral)`, rounded up, is 500,000,000,000 and
-  the borrow reverts; no new library is needed
-  ([`replay-resupply.md`](docs/benchmarks/replay-resupply.md)). The same
-  move works on FP127 words: for a, b ≥ 0 the word a·b/c is `fullMulDiv`
-  of the raw integers, one rounding, where `div(mul(a, b), c)` rounds twice.
-- **Keep an index as its logarithm.** Store L = ln(index) as an FP127 word.
-  With a continuous rate, each accrual adds rate × dt, and `add` never
-  rounds. `exp(L)` runs once, on the read. In the example test, after 1,000
-  accruals the multiplied index is 511 to 546 units of 2^−128 off; the log
-  read is within half a unit. The costs: an `exp` on every read, FP127's
-  `exp` stops at 88 (read through FP256 for more), and it only fits a
-  continuous rate. With a per-period rate, `compound` is better.
-
-## Layout
-
-```
-blockulator/
-├── contracts/src/fp127/        FP127.yul.src and its five generated files (make gen)
-├── contracts/src/fp256/        FP256.yul.src and its fourteen generated files, four objects (make gen-fp256)
-├── contracts/src/ladder/       LadderRunner, EdgeRunner, one adapter per library, vendor/ (Balancer; the rest transcribed)
-├── contracts/src/{identity,games,market,tools,content}/  Vyper: badges, and the archived apps
-├── contracts/archive/huff/     the Huff implementation and its Sepolia bytecode (FP127's equivalence baseline)
-├── contracts/deployments/      CREATE2 records: FP127, FP256, Ladder
-├── scripts/fp127/              generator (both libraries), FP127 oracle, verification, gas report
-├── scripts/fp256/              FP256 oracle, vector spec, kernel models and bounds.py
-├── scripts/ladder/             scenarios, edges, inputs, datasets, deploy and live-check tooling
-├── test/fp127/, test/fp256/    equivalence, behaviour, precision, gas ladder, fork smoke tests
-├── test/ladder/                the ladder and edges harnesses
-├── test/examples/              the snippets on the library page, compiled and tested
-├── docs/fp127/, docs/fp256/    precision tables; docs/fp127/HISTORY.md
-├── docs/benchmarks/            gas, ladder, edges and pi datasets and reports
-├── docs/talks/                 the talk
-├── config.toml, build.sh       the Zola site
-├── content/, templates/        pages and templates; tables and charts are Tera components
-├── static/css/site.css         synced from securedataresearch.net (scripts/sync-sdr.sh)
-├── static/js/islands/          scenario tabs; the badges and archive islands
-└── static/data/                symlinks into docs/ and contracts/, served as /data
-```
-
-## Build and test
-
-Needs `forge` (solc 0.8.38 is installed on first build; everything targets
-evm osaka, since the libraries use the CLZ opcode), `uv`, `deno`, and
-`zola` 0.23 for the site (`build.sh` downloads it when absent).
-
-```bash
-git submodule update --init --recursive   # solady, prb-math, abdk, forge-std
-uv sync                                   # mpmath, keccak
-
-make gen gen-fp256       # regenerate each library's generated files from its .yul.src
-make build               # forge build; FP256.yul is compiled by solc standard-json (make build-fp256)
-make test                # gen-check, vectors-check, every suite under test/fp127, test/fp256, test/ladder, test/replays, test/examples
-make bench bench-fp256   # gas ladders -> docs/benchmarks/gas.{json,md}, gas256.{json,md}
-make ladder              # terminal-precision ladder -> docs/benchmarks/ladder.{json,md}
-make edges               # the edges -> docs/benchmarks/edges.{json,md}
-make pi-compare          # docs/benchmarks/pi.md
-make precision-report precision-report-fp256
-make size size-fp256     # runtime bytes against the 24,576 limit (FP127; FP256, FP256E, FP256H, FP256S)
-make sweep               # random inputs through every op, both stages -> docs/benchmarks/sweep.{json,md}
-make site site-check     # zola build -> public/; zola check, the symlink test, deno task test
-```
-
-`make *-check` targets fail when a committed dataset no longer matches the
-code; CI runs them all. Deploying follows the records: `make predict`,
-`deploy-sepolia`, `verify-sepolia`, `smoke-sepolia` for FP127, the `-fp256`,
-`-fp256e`, `-fp256h` and `-fp256s` variants for FP256's four objects (one
-pattern rule each over the objects table in `scripts/fp127/gen.py`), and `predict-ladder` / `deploy-ladder-sepolia` /
-`verify-ladder-sepolia` then `scripts/ladder/livecap.py` and `liveedges.py`
-for the runners. The deployer key is read from `DEPLOYER_KEY` and never
-stored.
-
-**History:** [`docs/fp127/HISTORY.md`](docs/fp127/HISTORY.md).
-**EthCC[9] talk (the Huff era):** https://www.youtube.com/watch?v=a_tL99NY-yc
+MIT licensed. [Security](SECURITY.md).
