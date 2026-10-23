@@ -30,6 +30,7 @@
 <section class="scenario" id="{{ op.id }}" data-index="{{ op.index }}"{% if not loop.first %} hidden{% endif %}>
 <h2>{{ op.label }}</h2>
 <p>{{ op.why }}</p>
+{{ <plot chart="edgeop" arg={op.id} label="Correct digits on each probe of this op, per library; the probes that go to zero, revert or do not fit sit at 0 in red. The numbers are in the table below." /> }}
 <div class="tablewrap">
 <table class="datatable heat edges">
 <thead>

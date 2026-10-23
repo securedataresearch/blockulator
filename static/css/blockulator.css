@@ -136,12 +136,6 @@ canvas.cloth.on { opacity: 1; }
 .digitchart .lbl { fill: var(--c); font-size: 13px; font-weight: 600; }
 .digitchart .s-solady .lbl { fill: color-mix(in oklab, var(--c) 70%, var(--text-strong)); }
 .digitchart .narrow .tick { font-size: 11px; } .digitchart .narrow .lbl { font-size: 11.5px; }
-/* the ladder page's band chart, drawn wide and narrow like the home chart */
-.bandchart svg { display: block; max-width: 640px; }
-.bandchart .narrow { display: none; }
-@media (max-width: 560px) { .bandchart .wide { display: none; } .bandchart .narrow { display: block; } }
-.bandchart .wadband { opacity: .22; stroke: none; }
-.bandchart .narrow .tick { font-size: 11px; } .bandchart .narrow .lbl { font-size: 11.5px; }
 /* an exact result is a ring, not a number */
 .chart circle.exact { fill: var(--surface-solid); stroke: var(--c, var(--text-strong)); stroke-width: 2; }
 .digitchart circle.exact { stroke: var(--c); stroke-width: 2; }
@@ -349,6 +343,7 @@ html.nvt.leaving .page { animation: page-out 90ms cubic-bezier(.4, 0, 1, 1) both
 /* each chart's space is held before it draws, so the table under it never moves */
 .plot[data-chart="gas"] { min-height: 520px; } .plot[data-chart="accrual"] { min-height: 440px; } .plot[data-chart="wad"] { min-height: 600px; }
 .plot[data-chart="ladder"] { min-height: 440px; } .plot[data-chart="edges"] { min-height: 440px; }
+.plot[data-chart="steps"] { min-height: 400px; } .plot[data-chart="edgeop"] { min-height: 300px; } .plot[data-chart="gasops"] { min-height: 1200px; } .plot[data-chart="libops"] { min-height: 460px; }
 @media (max-width: 760px) { .plot[data-chart] { min-height: 320px; } }
 .datatable tr.unitrow th, .datatable tr.unitrow td { color: var(--muted); font-style: italic; border-bottom: 1px solid var(--line-2); }
 /* dots burst: a halo in the dot's own colour blooms and settles when its chart first draws, and grows again on

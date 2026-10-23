@@ -52,13 +52,8 @@
   <label><input type="radio" name="truth-{{ id }}" value="interest"> of the interest alone (b − principal)</label>
   {%- endif %}
 </div>
-{%- for key in ["digits", "digitsFormat", "interest"] %}{% if key != "interest" or hasint %}
-<figure class="figure chart bandchart" data-key="{{ key }}"{% if key != "digits" %} hidden{% endif %} role="img" aria-label="Median correct digits against N per library over the inputs every library completed, with the range as a band, {% if key == 'digits' %}against the exact truth{% elif key == 'digitsFormat' %}against the format-rounded truth{% else %}of the interest, against the exact truth{% endif %}.">
-<div class="wide">{{ <ladderband summary={sc.summary} key={key} ladder={d.ladder} log10={d.ladderLog10} W={640} H={300} /> }}</div>
-<div class="narrow">{{ <ladderband summary={sc.summary} key={key} ladder={d.ladder} log10={d.ladderLog10} W={360} H={280} /> }}</div>
-</figure>
-{%- endif %}{% endfor %}
-<figcaption class="note">Line: median correct digits over the inputs every library with a result at that N completed; band: their range. Each value is capped at what its format holds at that magnitude (FP19 71.3, binary128 34.0, the fixed grids by their last place), so no line passes its format's precision; a ring marks a median whose every input is exact. The three WAD libraries (Solady, PRBMath, Balancer) are one gold band from the lowest to the highest median. FP127Lib coincides with FP127 and is not drawn; Aave, Morpho and Maker appear only on the accrual scenarios their models describe. Hover a point for the numbers and the completed counts.</figcaption>
+{{ <plot chart="steps" arg={id} label="Median correct digits against N per library over the inputs every library completed, for the truth chosen above; the numbers are in the table below." /> }}
+<p class="note">Median correct digits over the inputs every library with a result at that N completed, each capped at what its format holds at that magnitude (FP19 71.3, binary128 34.0, the fixed grids by their last place), so no line passes its format's precision. The WAD libraries are the gold lines, labelled once. FP127Lib coincides with FP127 and is not drawn; Aave, Morpho and Maker appear only on the accrual scenarios their models describe. Hover a point for the library, the range over the inputs and N.</p>
 </div>
 
 <div class="tablewrap">
