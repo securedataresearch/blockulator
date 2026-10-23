@@ -5,8 +5,8 @@ ends: [blockulator.com](https://blockulator.com).
 
 - **FP127** is a signed 127.128 fixed point: one `int256` holding
   `value × 2^128`, a grid of 2^−128: 38 digits at 1, 32 at 10^−6, 8 at
-  10^−30. v5 (55 ops, live on Sepolia since 2026-10-21; the source now has
-  53, with `pi` the constant `FP127Lib.PI` and `gcd` removed): `add` and
+  10^−30. v6 (53 ops, live on Sepolia since 2026-10-22; `pi` is the
+  constant `FP127Lib.PI`): `add` and
   `sub` exact; every transcendental the nearest word, within half an ULP on
   every one of 1,500 to 4,000 random inputs per op (`exp`, `pow`, `cbrt`,
   `ln`, `log2`, `powu`, `compound`, Lambert W and the rest; v4 had `exp` and
@@ -18,47 +18,54 @@ ends: [blockulator.com](https://blockulator.com).
   other fixed point or binary128 we measured: 38 at 1 against 34.
 - **FP256** is a 256-bit binary float: one `int256` holding a sign, a 19-bit
   exponent and a 236-bit fraction, about 71 digits at any magnitude from
-  10^−78,913 to 10^78,913, no NaN, no infinity. Release four (live on
-  Sepolia since 2026-10-21): 67 ops, every one correctly rounded or exact, 0 misrounded of
-  364,658 random inputs ([`docs/benchmarks/sweep.md`](docs/benchmarks/sweep.md));
+  10^−78,913 to 10^78,913, no NaN, no infinity. v5 (live on
+  Sepolia since 2026-10-22): 65 ops, every one correctly rounded or exact, 0 misrounded of
+  360,590 random inputs ([`docs/benchmarks/sweep.md`](docs/benchmarks/sweep.md));
   a fast value whose stated error bound reaches the rounding boundary is
   recomputed in two words, and exact ties of `pow`, `compound` and `powu`
   are computed exactly. The edge rounds toward the protocol: `mulDown`,
   `mulUp`, `divDown`, `divUp`, `toUintDown`, `toUintUp`, `toIntDown`,
   `toIntUp`, `toFixed18Down`, `toFixed18Up`, `floor`, `ceil`,
-  `fromUintDown`, `fromUintUp`. With #79 FP256 has every op FP127 has:
-  `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `hypot`, `gavg`, `inv`,
-  the hyperbolics, `min`, `max`, `clamp`, `avg`, `lerp`, `dist`,
-  `zeroFloorSub`, `frac`, `round`, `factorial`. Release four deployed four
-  objects, FP256, FP256X, FP256X2 and FP256X3. The source (65 ops, `pi` now
-  the constant `FP256Lib.PI`, `gcd` removed) deploys as four objects by
-  idea: FP256, the number (43 ops); FP256E, the elementary functions on one
-  exp/log kernel (12); FP256H, the hyperbolic functions (4), on their own
-  copy of that kernel because FP256E with them measured 27,308 bytes, over
-  the 24,576 limit; FP256S, the special functions (6). Release three (28
-  ops, within 1 to 4 ULP on five of them) stays deployed at its own address.
+  `fromUintDown`, `fromUintUp`. FP256 has every op FP127 has, `pi` as the
+  constant `FP256Lib.PI`. It deploys as four objects by idea: FP256, the
+  number (43 ops); FP256E, the elementary functions on one exp/log kernel
+  (12); FP256H, the hyperbolic functions (4), on their own copy of that
+  kernel because FP256E with them measured 27,308 bytes, over the 24,576
+  limit; FP256S, the special functions (6). Release four (Blockulator 2.1:
+  FP256, FP256X, FP256X2, FP256X3) and release three (28 ops, within 1 to 4
+  ULP on five of them) stay deployed at their own addresses.
 
 Both are one Yul source each that generates two forms, fuzzed to agree bit
 for bit across the full `int256` domain: a **deployed object** at a CREATE2
 address with a published salt, and an **inline library** with the same
 bodies in `memory-safe` assembly blocks.
 
-Blockulator 2.1 ([`RELEASE.md`](contracts/deployments/RELEASE.md)) is live on Sepolia:
+Blockulator 2.2 ([`RELEASE.md`](contracts/deployments/RELEASE.md)) is live on Sepolia:
 
-| | FP127 v5 | FP256 release four |
+| | FP127 v6 | FP256 v5 |
 |---|---|---|
-| Sepolia | `0x619176d72D7a12390F8970802943D344c0fd3fE2` | FP256 `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9`<br>FP256X `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0`<br>FP256X2 `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697`<br>FP256X3 `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
+| Sepolia | `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4` | FP256 `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52`<br>FP256E `0x017F68A57dD53a6dF2043c24B712b287F9549AE2`<br>FP256H `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5`<br>FP256S `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
 | record | [`contracts/deployments/FP127.md`](contracts/deployments/FP127.md) | [`contracts/deployments/FP256.md`](contracts/deployments/FP256.md) |
 | source | [`contracts/src/fp127/`](contracts/src/fp127/README.md) | [`contracts/src/fp256/`](contracts/src/fp256/README.md) |
 | precision | [`docs/fp127/precision.md`](docs/fp127/precision.md) | [`docs/fp256/precision.md`](docs/fp256/precision.md) |
 | gas | [`docs/benchmarks/gas.md`](docs/benchmarks/gas.md) | [`docs/benchmarks/gas256.md`](docs/benchmarks/gas256.md) |
+
+**CLZ required.** The 2.2 objects and the inline libraries are evmVersion
+osaka builds and use the CLZ opcode (EIP-7939). Supported: Ethereum,
+Sepolia, Arbitrum One, OP Mainnet, Base, Unichain, Polygon PoS, BNB Chain,
+Gnosis and the other chains with CLZ; unsupported: zkSync Era, Avalanche
+C-Chain and Polygon zkEVM, where every call that counts leading bits fails.
+`make probe-clz RPC=<url>` checks a chain; the table is in
+[`contracts/deployments/README.md`](contracts/deployments/README.md#chains-clz-osaka-required).
+Blockulator 2.1 (FP127 v5, FP256 release four, ladder v9) and 2.0, shanghai
+builds without CLZ, stay live on Sepolia.
 
 ## The measurements
 
 The ladder, the edges, gas, pi and the per-op precision tables are
 committed datasets regenerated by make targets. CI checks the ladder, the
 edges and the precision tables against the code. The datasets describe FP127
-v5 and FP256 release four, and so do the runners on Sepolia (ladder v9), one
+v6 and FP256 v5, and so do the runners on Sepolia (ladder v10), one
 `eth_call` per cell; `scripts/ladder/livecap.py` and `liveedges.py` re-run
 every cell a public RPC can execute, and `RELEASE.json` records the latest
 check.
@@ -108,12 +115,13 @@ int256 g = FP256Lib.pow(FP256Lib.add(FP256Lib.ONE, r), FP256Lib.fromUint(3153600
 ```
 
 Compile the inline libraries with `via_ir = true` (in `foundry.toml`). Without
-it, solc's legacy pipeline leaves their heavy ops 2–27% dearer than the same
-Yul in the deployed object; through the IR they match it
-([`docs/benchmarks/profile.md`](docs/benchmarks/profile.md)).
+it, solc's legacy pipeline leaves their heavy ops 5–14% (FP127) and 6–19%
+(FP256) dearer than the same Yul in the deployed object, net of its call;
+through the IR they come within about −7% to +3% of it, and the build takes
+about 5.5× as long ([`docs/benchmarks/profile.md`](docs/benchmarks/profile.md)).
 
-Through the deployed objects: `IFP127(0x6cFb…c1d1).ln(x)` and
-`IFP256(0x67eF…61be).exp(x)`; the FP127 examples are compiled and tested in
+Through the deployed objects: `IFP127(0xb349…CBe4).ln(x)` and
+`IFP256E(0x017F…9AE2).exp(x)`; the FP127 examples are compiled and tested in
 [`test/examples/`](test/examples/). Every op is a view, so from a script or
 an agent it is a free `eth_call`: [`/llms.txt`](https://blockulator.com/llms.txt),
 [`/.well-known/agent.json`](https://blockulator.com/.well-known/agent.json).
@@ -180,8 +188,8 @@ int256  ltv     = FP127Lib.divUp(FP127Lib.mulUp(debt, rate), collateral); // a l
 
 FP127's plain `mul` and `div` round down (`div` toward zero); FP256's plain
 ops, `toFixed18` included, round to nearest. Neither is a direction you
-chose. The directed ops are in FP127 v5 and FP256 release four, both
-deployed and in the source (`forge install`); the older FP127 v4 and FP256
+chose. The directed ops are in FP127 v5 and v6 and FP256 release four and
+v5, deployed and in the source (`forge install`); the older FP127 v4 and FP256
 release three objects do not have them. The worked examples, with every number above, are on the
 [FP127](https://blockulator.com/library/#integrating) and
 [FP256](https://blockulator.com/library/fp256/#integrating) pages, and the
