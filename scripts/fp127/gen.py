@@ -56,7 +56,7 @@ LIBS = {
         "iface_notice": "Interface of the deployed FP127 object. Values are signed 127.128\n///         fixed-point: one int256 whose value is raw / 2^128.",
         "lib_notice": "Inlinable FP127: signed 127.128 fixed-point, one int256 per value,\n///         value = raw / 2^128. Every function body is the same Yul that the\n///         deployed FP127 object runs, so the two agree by construction.\n///         It uses the CLZ opcode: compile with evmVersion osaka (solc >= 0.8.31)\n///         and run only on a chain that has CLZ (EIP-7939).",
         "objects": {
-            "FP127": {"iface": "IFP127", "abi": "abi.json", "salt": "FP127 v5"},
+            "FP127": {"iface": "IFP127", "abi": "abi.json", "salt": "FP127 v6"},
         },
     },
     "fp256": {
