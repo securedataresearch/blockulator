@@ -1,0 +1,458 @@
+{
+  "errors": {
+    "ExpOverflow()": "0xa37bfec9",
+    "MulWadFailed()": "0xbac65e5b",
+    "SMulWadFailed()": "0xedcd4dd4",
+    "DivWadFailed()": "0x7c5f487d",
+    "SDivWadFailed()": "0x5c43740d",
+    "LnWadUndefined()": "0x1615e638",
+    "OutOfDomain()": "0xf2b402bb"
+  },
+  "ops": [
+    {
+      "name": "mulWad",
+      "signature": "mulWad(uint256,uint256)",
+      "selector": "0xfb4e5e87",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x y / 10^18 rounded down, exactly: in one word while x y fits (as Solady's mulWad, which reverts past it), else from the exact 512-bit product P, floor(P / 10^18) = ((P - P mod 10^18) / 2^18) times the inverse of 5^18 modulo 2^256. Reverts only when the result does not fit.",
+      "domain": "any x, y whose result fits uint256",
+      "reverts": "MulWadFailed() when x y / 10^18 does not fit uint256"
+    },
+    {
+      "name": "mulWadUp",
+      "signature": "mulWadUp(uint256,uint256)",
+      "selector": "0xae9768a8",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x y / 10^18 rounded up, exactly, as mulWad.",
+      "domain": "any x, y whose result fits uint256",
+      "reverts": "MulWadFailed() when x y / 10^18 rounded up does not fit uint256"
+    },
+    {
+      "name": "mulWadDown",
+      "signature": "mulWadDown(uint256,uint256)",
+      "selector": "0xe524f849",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "mulWad: x y / 10^18 rounded down.",
+      "domain": "any x, y whose result fits uint256",
+      "reverts": "MulWadFailed() when x y / 10^18 does not fit uint256"
+    },
+    {
+      "name": "divWad",
+      "signature": "divWad(uint256,uint256)",
+      "selector": "0x82d8725a",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x 10^18 / y rounded down, exactly: in one word while x 10^18 fits (Solady reverts past it), else Remco Bloemen's mulDiv on the exact 512-bit numerator. Reverts only for y = 0 or a result that does not fit.",
+      "domain": "y != 0 and a result that fits uint256",
+      "reverts": "DivWadFailed() for y = 0 or a result past uint256"
+    },
+    {
+      "name": "divWadUp",
+      "signature": "divWadUp(uint256,uint256)",
+      "selector": "0xbd252d06",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x 10^18 / y rounded up, exactly, as divWad.",
+      "domain": "y != 0 and a result that fits uint256",
+      "reverts": "DivWadFailed() for y = 0 or a result past uint256"
+    },
+    {
+      "name": "divWadDown",
+      "signature": "divWadDown(uint256,uint256)",
+      "selector": "0x37c6a44a",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "divWad: x 10^18 / y rounded down.",
+      "domain": "y != 0 and a result that fits uint256",
+      "reverts": "DivWadFailed() for y = 0 or a result past uint256"
+    },
+    {
+      "name": "sMulWad",
+      "signature": "sMulWad(int256,int256)",
+      "selector": "0xe254940f",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x y / 10^18 rounded toward zero, as Solady's sdiv rounds it (its comment says down; its code truncates), exactly: in one word while x y fits, else from the magnitudes' 512-bit product as mulWad. Reverts only when the result does not fit.",
+      "domain": "any x, y whose result fits int256",
+      "reverts": "SMulWadFailed() when the result does not fit int256"
+    },
+    {
+      "name": "sMulWadDown",
+      "signature": "sMulWadDown(int256,int256)",
+      "selector": "0x5a6dd22d",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x y / 10^18 rounded toward minus infinity, exactly, as sMulWad: the truncated quotient less one when the remainder is negative.",
+      "domain": "any x, y whose result fits int256",
+      "reverts": "SMulWadFailed() when the result does not fit int256"
+    },
+    {
+      "name": "sMulWadUp",
+      "signature": "sMulWadUp(int256,int256)",
+      "selector": "0x4878708b",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x y / 10^18 rounded toward plus infinity, exactly, as sMulWad: the truncated quotient plus one when the remainder is positive.",
+      "domain": "any x, y whose result fits int256",
+      "reverts": "SMulWadFailed() when the result does not fit int256"
+    },
+    {
+      "name": "sDivWad",
+      "signature": "sDivWad(int256,int256)",
+      "selector": "0xfc4683ce",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x 10^18 / y rounded toward zero, as Solady's sdiv rounds it, exactly: in one word while x 10^18 fits (it is never -2^255, so sdiv cannot overflow), else mulDiv on the magnitudes' exact numerator (wadsdiv). Reverts only for y = 0 or a result that does not fit.",
+      "domain": "y != 0 and a result that fits int256",
+      "reverts": "SDivWadFailed() for y = 0 or a result past int256"
+    },
+    {
+      "name": "sDivWadDown",
+      "signature": "sDivWadDown(int256,int256)",
+      "selector": "0xb993f04f",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x 10^18 / y rounded toward minus infinity, exactly, as sDivWad.",
+      "domain": "y != 0 and a result that fits int256",
+      "reverts": "SDivWadFailed() for y = 0 or a result past int256"
+    },
+    {
+      "name": "sDivWadUp",
+      "signature": "sDivWadUp(int256,int256)",
+      "selector": "0x91414cb1",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "x 10^18 / y rounded toward plus infinity, exactly, as sDivWad.",
+      "domain": "y != 0 and a result that fits int256",
+      "reverts": "SDivWadFailed() for y = 0 or a result past int256"
+    },
+    {
+      "name": "sqrtWad",
+      "signature": "sqrtWad(uint256)",
+      "selector": "0xe65ba9fe",
+      "inputs": [
+        "x"
+      ],
+      "notice": "sqrt(x 10^-18) in WAD rounded down, exactly: the integer root of x 10^18, below 2^254 by FP256's word root (isqrt) on the product shifted by an even 2j to put its top bit at 252 or 253, shifted back by j (the floor of the floor of sqrt(4^j n) over 2^j is the floor of sqrt(n)); above, wadsqrtw.",
+      "domain": "any x",
+      "reverts": "never"
+    },
+    {
+      "name": "sqrtWadUp",
+      "signature": "sqrtWadUp(uint256)",
+      "selector": "0xa703a2d5",
+      "inputs": [
+        "x"
+      ],
+      "notice": "sqrt(x 10^-18) in WAD rounded up, exactly.",
+      "domain": "any x",
+      "reverts": "never"
+    },
+    {
+      "name": "sqrtWadDown",
+      "signature": "sqrtWadDown(uint256)",
+      "selector": "0xb1891654",
+      "inputs": [
+        "x"
+      ],
+      "notice": "sqrtWad: sqrt(x 10^-18) in WAD rounded down.",
+      "domain": "any x",
+      "reverts": "never"
+    },
+    {
+      "name": "cbrtWad",
+      "signature": "cbrtWad(uint256)",
+      "selector": "0x8d1e382e",
+      "inputs": [
+        "x"
+      ],
+      "notice": "cbrt(x 10^-18) in WAD rounded down: the integer cube root of the exact x 10^36, from FP256's root and one exact cube either way.",
+      "domain": "any x",
+      "reverts": "never"
+    },
+    {
+      "name": "cbrtWadUp",
+      "signature": "cbrtWadUp(uint256)",
+      "selector": "0xb429f674",
+      "inputs": [
+        "x"
+      ],
+      "notice": "cbrt(x 10^-18) in WAD rounded up.",
+      "domain": "any x",
+      "reverts": "never"
+    },
+    {
+      "name": "cbrtWadDown",
+      "signature": "cbrtWadDown(uint256)",
+      "selector": "0xd59af8c4",
+      "inputs": [
+        "x"
+      ],
+      "notice": "cbrtWad: cbrt(x 10^-18) in WAD rounded down.",
+      "domain": "any x",
+      "reverts": "never"
+    },
+    {
+      "name": "expWad",
+      "signature": "expWad(int256)",
+      "selector": "0x40816fae",
+      "inputs": [
+        "x"
+      ],
+      "notice": "e^(x 10^-18) in WAD rounded down: zero at and below -41446531673892822313, where the value is under one wei.",
+      "domain": "x <= 135305999368893231589",
+      "reverts": "ExpOverflow() from x = 135305999368893231590 (Solady: from ...589, one wei earlier, whose value still fits)"
+    },
+    {
+      "name": "expWadUp",
+      "signature": "expWadUp(int256)",
+      "selector": "0x8f5d44c5",
+      "inputs": [
+        "x"
+      ],
+      "notice": "e^(x 10^-18) in WAD rounded up: one wei, never zero, below -41446531673892822312.",
+      "domain": "x <= 135305999368893231589",
+      "reverts": "ExpOverflow() from x = 135305999368893231590"
+    },
+    {
+      "name": "expWadDown",
+      "signature": "expWadDown(int256)",
+      "selector": "0x821874e2",
+      "inputs": [
+        "x"
+      ],
+      "notice": "expWad: e^(x 10^-18) in WAD rounded down.",
+      "domain": "x <= 135305999368893231589",
+      "reverts": "ExpOverflow() from x = 135305999368893231590"
+    },
+    {
+      "name": "lnWad",
+      "signature": "lnWad(int256)",
+      "selector": "0x620ef2b4",
+      "inputs": [
+        "x"
+      ],
+      "notice": "ln(x 10^-18) in WAD rounded down (toward minus infinity, as Solady's sar rounds it).",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "lnWadUp",
+      "signature": "lnWadUp(int256)",
+      "selector": "0xe40cb0c8",
+      "inputs": [
+        "x"
+      ],
+      "notice": "ln(x 10^-18) in WAD rounded up.",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "lnWadDown",
+      "signature": "lnWadDown(int256)",
+      "selector": "0x5c9c1ff3",
+      "inputs": [
+        "x"
+      ],
+      "notice": "lnWad: ln(x 10^-18) in WAD rounded down.",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "log2Wad",
+      "signature": "log2Wad(int256)",
+      "selector": "0x78146b99",
+      "inputs": [
+        "x"
+      ],
+      "notice": "log2(x 10^-18) in WAD rounded down, as lnWad. Solady has no WAD log2 (its log2 is the integer one).",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "log2WadUp",
+      "signature": "log2WadUp(int256)",
+      "selector": "0x077c2ff7",
+      "inputs": [
+        "x"
+      ],
+      "notice": "log2(x 10^-18) in WAD rounded up.",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "log2WadDown",
+      "signature": "log2WadDown(int256)",
+      "selector": "0xdfb17418",
+      "inputs": [
+        "x"
+      ],
+      "notice": "log2Wad: log2(x 10^-18) in WAD rounded down.",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "log10Wad",
+      "signature": "log10Wad(int256)",
+      "selector": "0xcc2ff313",
+      "inputs": [
+        "x"
+      ],
+      "notice": "log10(x 10^-18) in WAD rounded down, as lnWad; exact at powers of ten.",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "log10WadUp",
+      "signature": "log10WadUp(int256)",
+      "selector": "0x1a497af6",
+      "inputs": [
+        "x"
+      ],
+      "notice": "log10(x 10^-18) in WAD rounded up.",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "log10WadDown",
+      "signature": "log10WadDown(int256)",
+      "selector": "0x2bafe283",
+      "inputs": [
+        "x"
+      ],
+      "notice": "log10Wad: log10(x 10^-18) in WAD rounded down.",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "powWad",
+      "signature": "powWad(int256,int256)",
+      "selector": "0x4e99c830",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "(x 10^-18)^(y 10^-18) in WAD rounded down, the exact power: Solady composes expWad(lnWad(x) y / 10^18) and reverts at x = 0; here 0^0 = 10^18 and 0^y = 0 for y > 0, as PRBMath's pow.",
+      "domain": "x >= 0 (0^y for y >= 0); a result below 2^255",
+      "reverts": "LnWadUndefined() for x < 0 and for x = 0 with y < 0; ExpOverflow() when the result reaches 2^255"
+    },
+    {
+      "name": "powWadUp",
+      "signature": "powWadUp(int256,int256)",
+      "selector": "0xdec7aa14",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "(x 10^-18)^(y 10^-18) in WAD rounded up.",
+      "domain": "x >= 0 (0^y for y >= 0); a result below 2^255",
+      "reverts": "LnWadUndefined() for x < 0 and for x = 0 with y < 0; ExpOverflow() when the result reaches 2^255"
+    },
+    {
+      "name": "powWadDown",
+      "signature": "powWadDown(int256,int256)",
+      "selector": "0xd7239866",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "powWad: (x 10^-18)^(y 10^-18) in WAD rounded down.",
+      "domain": "x >= 0 (0^y for y >= 0); a result below 2^255",
+      "reverts": "LnWadUndefined() for x < 0 and for x = 0 with y < 0; ExpOverflow() when the result reaches 2^255"
+    },
+    {
+      "name": "lambertW0Wad",
+      "signature": "lambertW0Wad(int256)",
+      "selector": "0x28480663",
+      "inputs": [
+        "x"
+      ],
+      "notice": "W0(x 10^-18) in WAD rounded toward zero, as Solady's sdiv rounds it: the principal branch, w e^w = x 10^-18, w >= -1.",
+      "domain": "x >= -367879441171442321 (-1/e = -0.36787944117144232159...)",
+      "reverts": "OutOfDomain() for x <= -367879441171442322"
+    },
+    {
+      "name": "lambertW0WadDown",
+      "signature": "lambertW0WadDown(int256)",
+      "selector": "0x25230088",
+      "inputs": [
+        "x"
+      ],
+      "notice": "W0(x 10^-18) in WAD rounded toward minus infinity.",
+      "domain": "x >= -367879441171442321",
+      "reverts": "OutOfDomain() for x <= -367879441171442322"
+    },
+    {
+      "name": "lambertW0WadUp",
+      "signature": "lambertW0WadUp(int256)",
+      "selector": "0xdf676181",
+      "inputs": [
+        "x"
+      ],
+      "notice": "W0(x 10^-18) in WAD rounded toward plus infinity.",
+      "domain": "x >= -367879441171442321",
+      "reverts": "OutOfDomain() for x <= -367879441171442322"
+    },
+    {
+      "name": "exp",
+      "signature": "exp(int256)",
+      "selector": "0xe46751e3",
+      "inputs": [
+        "x"
+      ],
+      "notice": "PRBMath's name for expWad (SD59x18 exp): e^(x 10^-18) rounded down.",
+      "domain": "x <= 135305999368893231589",
+      "reverts": "ExpOverflow() from x = 135305999368893231590"
+    },
+    {
+      "name": "ln",
+      "signature": "ln(int256)",
+      "selector": "0x8e6f2353",
+      "inputs": [
+        "x"
+      ],
+      "notice": "PRBMath's name for lnWad (SD59x18 ln): ln(x 10^-18) rounded down.",
+      "domain": "x > 0",
+      "reverts": "LnWadUndefined() for x <= 0"
+    },
+    {
+      "name": "pow",
+      "signature": "pow(int256,int256)",
+      "selector": "0x92b0c5b2",
+      "inputs": [
+        "x",
+        "y"
+      ],
+      "notice": "PRBMath's name for powWad (SD59x18 pow): rounded down.",
+      "domain": "x >= 0 (0^y for y >= 0); a result below 2^255",
+      "reverts": "LnWadUndefined() for x < 0 and for x = 0 with y < 0; ExpOverflow() when the result reaches 2^255"
+    }
+  ]
+}

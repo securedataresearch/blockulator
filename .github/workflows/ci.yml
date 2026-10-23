@@ -63,6 +63,9 @@ jobs:
       - name: Every object equals its inline library (every export, msb-shaped inputs)
         run: forge test --match-path "test/objects/*"
 
+      - name: BlockulatorWad to the last wei (known values, Solady's reverts, fuzzing against exact roots and fullMulDiv)
+        run: FOUNDRY_FUZZ_RUNS=5000 forge test --match-path "test/wad/*"
+
       - name: Gas ladder
         run: make bench && cat docs/benchmarks/gas.md
 
