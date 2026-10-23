@@ -3,23 +3,24 @@
 Everything in this directory is served at blockulator.com/contracts/deployments/.
 
 - `FP127.md`, `FP127.json`: the FP127 object on Sepolia, CREATE2 through the
-  deterministic proxy with salt "FP127 v5" (v1 to v4 recorded below it), the
+  deterministic proxy with salt "FP127 v6" (v1 to v5 recorded below it), the
   verification recipe and the smoke test. Deploy a new version with
   `make deploy-sepolia`, `make verify-sepolia`, `make smoke-sepolia`.
-- `FP256.md`, `FP256.json`, `FP256X.json`, `FP256X2.json`, `FP256X3.json`:
-  FP256 release four, four objects from one source (salts "FP256 v4",
-  "FP256X v4", "FP256X2 v4", "FP256X3 v4"; releases one to three recorded
-  below them), the same way with the `-fp256`, `-fp256x`, `-fp256x2` and
-  `-fp256x3` targets of that release. One record covers the four objects, as
-  `Ladder.md` covers its thirteen contracts. The source now deploys as
-  FP256, FP256E, FP256H and FP256S (salts "FP256 v5", "FP256E v5",
-  "FP256H v5", "FP256S v5"; the number, the elementary, hyperbolic and
-  special functions), with the `-fp256`, `-fp256e`, `-fp256h` and `-fp256s`
-  targets; their records come with that deployment.
+- `FP256.md`, `FP256.json`, `FP256E.json`, `FP256H.json`, `FP256S.json`:
+  FP256 v5, four objects from one source, one idea each (salts "FP256 v5",
+  "FP256E v5", "FP256H v5", "FP256S v5": the number, the elementary,
+  hyperbolic and special functions), with the `-fp256`, `-fp256e`,
+  `-fp256h` and `-fp256s` targets. One record covers the four objects, as
+  `Ladder.md` covers its thirteen contracts. Releases one to four are
+  recorded below them; release four (Blockulator 2.1) was FP256, FP256X,
+  FP256X2 and FP256X3 (salts "… v4"), whose `FP256X.json`, `FP256X2.json`
+  and `FP256X3.json` stay here marked `"release": "Blockulator 2.1"`,
+  `"current": false`: those addresses are still live, and not part of 2.2.
 - `Ladder.md`, `Ladder.json`: the eleven ladder adapters, `LadderRunner` and
-  `EdgeRunner`, salt "FP127 ladder v9". `make deploy-ladder-sepolia`,
-  `make verify-ladder-sepolia`.
-- `RELEASE.md`, `RELEASE.json`: every address in Blockulator 2.1.
+  `EdgeRunner`, salt "FP127 ladder v10" (v1 to v9 recorded below).
+  `make deploy-ladder-sepolia`, `make verify-ladder-sepolia`.
+- `RELEASE.md`, `RELEASE.json`: every address in Blockulator 2.2, and those
+  of 2.1 and 2.0, which stay live.
 - `*.sepolia.receipt.json`: the raw receipt of each object's deployment.
 
 The badge, game, calculator and market contracts were deployed by hand in
@@ -34,8 +35,8 @@ with the CLZ opcode (EIP-7939, Fusaka/Osaka). They are built by solc 0.8.38
 for evmVersion osaka, with solc 0.8.24's Yul optimizer sequence pinned
 (`scripts/fp127/stdjson.py`; 0.8.38's own sequence builds the FP256 core
 over 24,576 bytes), and the explorers receive that same standard-JSON input.
-Releases up to 2.1, recorded above, were shanghai builds without CLZ and stay
-deployed; the next release deploys the CLZ build.
+Blockulator 2.2 is the first CLZ build. Releases up to 2.1, recorded above,
+were shanghai builds without CLZ and stay deployed on Sepolia.
 
 Supported chains are those with CLZ, as of 2026-10-22 (each probed live;
 dates and names are the networks' announced activations):

@@ -5,11 +5,11 @@ pragma solidity ^0.8.24;
 //         Tests etch the artifact's runtime here, so the same adapter code runs
 //         in the harness and on Sepolia. Version 4; the adapters that call it
 //         are deployed after it.
-address constant FP127_ADDRESS = 0x619176d72D7a12390F8970802943D344c0fd3fE2;
+address constant FP127_ADDRESS = 0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4;
 // @notice The FP256 Yul object's CREATE2 address (contracts/deployments/FP256.md);
 //         the FP256 adapter is inline (FP256Lib) and does not call it, so the
 //         ladder does not depend on its deployment.
-address constant FP256_ADDRESS = 0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9;
+address constant FP256_ADDRESS = 0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52;
 
 /// @notice Scenario ids. Mirrors "index" in scripts/ladder/scenarios.json.
 library Scenario {

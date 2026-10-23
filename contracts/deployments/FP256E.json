@@ -1,0 +1,34 @@
+{
+ "contract": "FP256E",
+ "chainId": 11155111,
+ "network": "sepolia",
+ "address": "0x017F68A57dD53a6dF2043c24B712b287F9549AE2",
+ "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+ "salt": "0x4650323536452076350000000000000000000000000000000000000000000000",
+ "saltAscii": "FP256E v5",
+ "initCodeHash": "0x09d5a094a44639afe8f04dd465a9c4314e19c7dc8e7ff33cc3e627ac5aab24bf",
+ "runtimeKeccak": "0x7a0573d94148024d9baf53aeed4040824fe4c113e4b8969100d0b30cb5b28059",
+ "runtimeBytes": 21598,
+ "source": "contracts/src/fp256/FP256E.yul",
+ "sourceCommit": "d37c8b1",
+ "compiler": {
+  "language": "Yul",
+  "solc": "0.8.38+commit.1835d247",
+  "optimizer": true,
+  "runs": 200,
+  "evmVersion": "osaka",
+  "optimizerSequence": "0.8.24 default (pinned in scripts/fp127/stdjson.py)"
+ },
+ "txHash": "0x45cb792403660f9a9e6e585ba4e8e20165c8075b27e5c63f5ad87716bc532e63",
+ "block": 11974970,
+ "verification": {
+  "sourcify": "https://sourcify.dev/server/v2/contract/11155111/0x017F68A57dD53a6dF2043c24B712b287F9549AE2",
+  "sourcifyRepo": "https://repo.sourcify.dev/11155111/0x017F68A57dD53a6dF2043c24B712b287F9549AE2",
+  "blockscout": "https://eth-sepolia.blockscout.com/address/0x017F68A57dD53a6dF2043c24B712b287F9549AE2?tab=contract",
+  "etherscan": "unverified: the Etherscan API has no Yul path"
+ },
+ "abi": "contracts/src/fp256/abiE.json",
+ "deployedBy": "0xe6306669b2f188d616bfb518e7b9255d001d731d",
+ "gasUsed": 33619670,
+ "explorerTx": "https://sepolia.etherscan.io/tx/0x45cb792403660f9a9e6e585ba4e8e20165c8075b27e5c63f5ad87716bc532e63"
+}

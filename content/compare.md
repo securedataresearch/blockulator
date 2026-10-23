@@ -12,7 +12,7 @@ group = "results"
 
 {{ <gastable repo={config.extra.repo} /> }}
 
-`mul` costs 531 gas against WAD's 321 to 641, `div` 981 against 329 to 705. The transcendentals cost more because they compute twice the bits. Quad and FP256 ([its table](/library/fp256/#the-ops)) pay for the moving point on every op. Only FP127 and FP256 have `erf`, `erfc`, `normCdf` and W₋₁ (Solady has W₀), and they are the expensive ones.
+Inline, `mul` costs 263 gas against the WAD libraries' 126 to 485, `div` 645 against 93 to 509. The transcendentals cost more because they compute twice the bits. Quad and FP256 ([its table](/library/fp256/#the-ops)) pay for the moving point on every op. Only FP127 and FP256 have `erf`, `erfc`, `normCdf` and W₋₁ (Solady has W₀), and they are the expensive ones.
 
 ## Precision per op
 

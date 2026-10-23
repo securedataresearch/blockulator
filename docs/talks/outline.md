@@ -7,7 +7,7 @@ section by section). Every number has a source in this repo, listed under each p
 
 Thesis: the failures that cost real money happen where a protocol's numbers meet the
 bottom of its ruler. Converging algorithms reach any ruler. FP256 is a ruler that a
-one-word format cannot beat by more than three digits, and every op of FP256 release four
+one-word format cannot beat by more than three digits, and every op of FP256 v5
 returns the nearest word. A new library can be cheaper than these, but it cannot be
 more accurate.
 
@@ -157,7 +157,7 @@ Source: `docs/benchmarks/replay-balancer.md` (the Newton convergence section).
 
 - Release two refitted them past the end of the word: Chebyshev fits with error below
   2^-262, checked against a 300-digit converging oracle. Exp is now the correctly rounded
-  word on 20,000 of 20,000 random inputs.
+  word on 21,913 of 21,913 random inputs.
 
 Say first:
 - **FP256's exp and ln are fits, too.** The difference is where the fit stops: past the
@@ -191,15 +191,15 @@ Say first:
 
 ### 3.2 The accuracy ceiling (1.5 min)
 
-- **FP256 release four: every one of its 67 ops returns the correctly rounded word, or
+- **FP256 v5: every one of its 65 ops returns the correctly rounded word, or
   is exact.**
-  - **The sweep:** 364,658 seeded random inputs over 55 ops, 0 misrounded. That includes pow,
+  - **The sweep:** 360,590 seeded random inputs over 53 ops, 0 misrounded. That includes pow,
     compound, ln, normCdf and Lambert W, which release three missed by 1 to 4 marks.
   - **The slow path checked alone:** 0 misrounded with every input forced through the
     second stage.
   - **How it works:** each fast value carries a stated error bound. When the bound reaches
     a rounding boundary, a second stage recomputes the value at 2^-510 and rounds that.
-- **FP127 v5:**
+- **FP127 v6:**
   - **Nearest word on every random input tested:** exp, exp2, exp10, expm1, sinh, cosh,
     tanh, ln, log2, log10, pow, cbrt, powu, compound and both Lambert W branches.
   - **Before v5:** exp and pow were off by up to 10^32 and 10^34 marks at large results,
@@ -225,7 +225,7 @@ Say first:
   - FP127's pow is nearest only while |y|·x^y < 2^140, and faithful to 2^170.
   - FP256's powu is not correctly rounded for |n| ≥ 2^237. compound handles any n.
 
-Source: `docs/benchmarks/sweep.md` (FP256 release four and FP127 v5, deployed in Blockulator 2.1).
+Source: `docs/benchmarks/sweep.md` (FP256 v5 and FP127 v6, deployed in Blockulator 2.2).
 `scripts/fp256/generators/bounds.py` checks each stated bound against the Python models
 of the Yul. The worst measured error is 0.67 of its bound.
 
@@ -241,47 +241,47 @@ of the Yul. The worst measured error is 0.67 of its bound.
 
 ### 3.4 What it costs (1 min)
 
-- **Solady is 1.6 to 15 times cheaper per op than FP127, and should be.** Integer-exact
+- **Solady is 1.1 to 14 times cheaper per op than FP127, and should be.** Integer-exact
   work (`mulDivUp`, `fullMulDiv`) stays in Solady and OZ; these libraries complement them.
-- Median gas per op, inline (FP127 v5 and FP256 release four, as deployed in Blockulator 2.1):
+- Median gas per op, inline (FP127 v6 and FP256 v5, as deployed in Blockulator 2.2):
 
   | op | Solady | PRBMath | FP127 | FP256 |
   |---|---|---|---|---|
-  | mul | 126 | 486 | 263 | 1,133 |
-  | div | 93 | 510 | 645 | 1,863 |
-  | exp | 430 | 2,788 | 6,455 | 7,759 |
-  | ln | 556 | 828 | 865 | 7,308 |
-  | pow | 1,275 | 9,912 | 5,175 | 11,848 |
+  | mul | 126 | 485 | 263 | 530 |
+  | div | 93 | 509 | 645 | 800 |
+  | exp | 430 | 2,788 | 6,006 | 3,295 |
+  | ln | 556 | 828 | 600 | 3,006 |
+  | pow | 1,275 | 9,911 | 3,537 | 5,541 |
 
 - FP127 costs less than PRBMath on mul and pow. Since v5 rounds ln to the nearest word,
-  it costs 37 gas more than PRBMath's.
+  it costs 228 gas less than PRBMath's.
 - What the premium buys: Resupply's rejected borrow, Bunni's 35.63 wei, and Balancer's
   0 of 165 calls. Set against nine-figure losses, a few thousand gas is the cheapest line
   in the audit.
 
 Say first:
-- **Correct rounding costs gas when it is hard.** In FP256 release four:
+- **Correct rounding costs gas when it is hard.** In FP256 v5:
   - The fast path is a few hundred gas dearer than release three's (exp's median is
-    7,715 on the sweep).
-  - The second stage, run alone, costs 14,829 (sinh, median) to 430,138 (erfc, worst)
+    3,299 on the sweep).
+  - The second stage, run alone, costs 7,950 (atanh, median) to 411,737 (normCdf, worst)
     gas, and on some ops it runs often enough to show at the 99th percentile:
 
     | op | median | p99 |
     |---|---|---|
-    | pow | 14,834 | 68,280 |
-    | compound | 17,028 | 116,406 |
+    | pow | 5,902 | 54,522 |
+    | compound | 6,304 | 106,018 |
 
   - Lambert W steps at word precision and takes the wide step only when the rounding
-    test fires (2% of inputs for W0, 5.8% for W−1): 34,049 and 29,743 median, 78,064
-    and 85,755 at worst.
+    test fires (0.07% of inputs for W0, 0.20% for W−1): 10,623 and 13,150 median, 41,638
+    and 41,433 at worst.
 - Budget gas for the p99 if an attacker can choose your inputs.
 - **Store ln(index) and each accrual is an exact FP127 `add` (124 gas), with one `exp`
-  (6,455) on each read.** After 1,000 accruals the read is within half a unit of 2^-128,
+  (6,006) on each read.** After 1,000 accruals the read is within half a unit of 2^-128,
   and the multiplied index is 511 to 546 off. It fits a continuous rate only.
 
-Source: `docs/benchmarks/gas.md` and `gas256.md` (FP127 v5 and FP256 release four; read the
+Source: `docs/benchmarks/gas.md` and `gas256.md` (FP127 v6 and FP256 v5; read the
 same way as `scripts/talk/deck.py`'s `gas_medians()`); the gas columns of
-`docs/benchmarks/sweep.md` (release four); the log-domain run in `test/examples/Integrating.t.sol`
+`docs/benchmarks/sweep.md` (v5); the log-domain run in `test/examples/Integrating.t.sol`
 (`forge test --match-test logIndex -vv`).
 
 ### 3.5 Why nothing else needs writing (0.5 min)
@@ -292,7 +292,7 @@ same way as `scripts/talk/deck.py`'s `gas_medians()`); the gas columns of
 3. **The edge:** directed rounding is one call (3.3).
 4. **What is left is not a new library.** It is:
    - gas work inside these two;
-   - new ops added to them (the FP256X split leaves room);
+   - new ops added to them (the FP256E, FP256H and FP256S split leaves room);
    - deployment, an audit and mainnet.
 
 ### 3.6 The ask (0.5 min)
@@ -300,10 +300,10 @@ same way as `scripts/talk/deck.py`'s `gas_medians()`); the gas columns of
 Use FP127 and FP256. They are free, MIT-licensed, and one `forge install` away. Keep the
 state in the format, and round toward the protocol at the edge.
 
-**Before the talk:** 3.2 and 3.3 describe FP127 v5 and FP256 release four, deployed on
-Sepolia on 2026-10-21 as Blockulator 2.1 and the same code inline through `forge install`,
+**Before the talk:** 3.2 and 3.3 describe FP127 v6 and FP256 v5, deployed on
+Sepolia on 2026-10-22 as Blockulator 2.2 and the same code inline through `forge install`,
 so "the deployed contract" and "the library" are both true. Slide 17 shows the live
-re-check through the ladder v9 runners (2026-10-22: 9,383 + 1,511 cells, 0 mismatches).
+re-check through the ladder v10 runners (2026-10-23: 9,408 + 1,511 cells, 0 mismatches).
 
 ---
 
@@ -350,14 +350,14 @@ Done (`make talk`, 18 slides, in the outline's order; titles are placeholders):
 13. 3.1 The format ceiling: digits against exponent bits, computed (19 → 71.3, 13 → 73.2,
     11 → 73.8, 9 → 74.4).
 14. 3.2 The accuracy ceiling: FP256's correctly rounded share per op (sweep.json). It reads
-    master's sweep, release four (deployed in Blockulator 2.1); slide 15's gas reads
-    release four's `gas.md` and `gas256.md`.
+    master's sweep, FP256 v5 (deployed in Blockulator 2.2); slide 15's gas reads
+    v5's `gas.md` and `gas256.md`.
 15. 3.3 What it costs: median gas, Solady / PRBMath / FP127 / FP256 for mul, div, exp, ln,
     pow (gas.md, gas256.md).
 16. Both goals met, with the walls stated.
 17. Checked on chain (RELEASE.json).
 18. 3.5 Use FP127 and FP256: the release name and the FP127 and FP256 addresses from
-    RELEASE.json, with FP256X, X2 and X3 beneath.
+    RELEASE.json, with FP256E, H and S beneath.
 
 Removed: the Morpho idle-market slides ("Ten million dollars…", "The same calculation…",
 "It happens in live markets", "The same market, rounded once"), and the slides the

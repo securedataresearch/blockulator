@@ -4,7 +4,93 @@ A release is the public name for a set of deployed contracts. Each contract
 keeps its own version in its CREATE2 salt, because the salt names the address;
 `contracts/deployments/RELEASE.json` maps the release to every address.
 
-## Unreleased (Blockulator 2.2)
+## Blockulator 2.2 (2026-10-22)
+
+The second gas pass: every result the same word (FP256 correctly rounded,
+FP127's transcendentals nearest), about half the gas, FP256 drawn into four
+objects by idea, and the first CLZ build. Deployed 2026-10-22, Sepolia
+blocks 11,974,968 to 11,974,985.
+
+| component | version | Sepolia |
+|---|---|---|
+| FP127 | FP127 v6, 53 ops, 21,858 bytes | `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4` |
+| FP256 | FP256 v5, 43 ops, 10,333 bytes | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` |
+| FP256E | FP256E v5, 12 ops, 21,598 bytes | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` |
+| FP256H | FP256H v5, 4 ops, 13,021 bytes | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` |
+| FP256S | FP256S v5, 6 ops, 24,263 bytes | `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
+| LadderRunner | FP127 ladder v10 | `0xF14Ac5DDA9C0c10C50aa4Be9D219509fAa936A9b` |
+| EdgeRunner | FP127 ladder v10 | `0x5123DaA96A96e550665401Bd56AD0770DDB9004e` |
+
+Records: `contracts/deployments/{RELEASE,FP127,FP256,Ladder}.md`. The five
+objects are verified on Sourcify and Blockscout and pass their smoke tests
+against the live contracts; the thirteen ladder contracts are
+`exact_match` on Sourcify. Checked live on 2026-10-23: 9,408 ladder cells
+through LadderRunner v10 (block 11,975,057) and 1,511 edge cells through
+EdgeRunner v10 (block 11,975,211), 0 mismatches. Blockulator 2.1 (FP127 v5,
+FP256 release four's FP256, FP256X, FP256X2 and FP256X3, ladder v9) and 2.0
+stay live and verified at their addresses.
+
+Gas, sweep medians of the inline libraries (`docs/benchmarks/sweep.md`),
+2.1 → 2.2:
+
+| op | FP127 | FP256 |
+|---|---:|---:|
+| add | 124 → 124 | 1,278 → 677 |
+| mul | 263 → 263 | 1,145 → 530 |
+| div | 657 → 657 | 1,869 → 808 |
+| sqrt | 710 → 683 | 2,692 → 1,201 |
+| cbrt | 6,019 → 1,948 | 13,593 → 2,747 |
+| exp | 6,090 → 5,651 | 7,715 → 3,299 |
+| ln | 3,410 → 1,934 | 8,492 → 3,623 |
+| pow | 6,121 → 3,375 | 14,834 → 5,902 |
+| compound | 9,469 → 9,215 | 17,028 → 6,304 |
+| cosh | 10,651 → 5,207 | 8,498 → 3,609 |
+| sinh | 2,284 → 5,262 | 8,686 → 3,613 |
+| tanh | 4,680 → 4,679 | 16,356 → 3,628 |
+| erf | 4,881 → 3,623 | 17,603 → 12,990 |
+| erfc | — | 34,236 → 13,943 |
+| normCdf | 4,952 → 3,694 | 30,839 → 13,562 |
+| lambertW0 | 18,607 → 11,308 | 34,049 → 10,623 |
+| lambertWm1 | 23,977 → 11,101 | 29,743 → 13,150 |
+
+(FP127 `add` is not in the sweep; 124 is the gas ladder's median, unchanged.)
+FP127 `sinh` is the one op dearer: its series below 1 went, and it now runs
+on the exp kernel like `cosh`. Through the deployed objects FP127's basic
+ops are 140 to 215 gas cheaper (`add` 899 → 694, `mul` 1,103 → 889 on the
+gas ladder, `docs/benchmarks/gas.md`) and FP256's roughly half (`add`
+2,423 → 1,124, `mul` 2,462 → 1,069, `exp` 7,637 → 3,369,
+`docs/benchmarks/gas256.md`).
+
+Where it came from, in order (PRs #120 to #132):
+
+- **Hyperbolics on the exp/log kernels** (#120, #121): FP127 `cosh`, `sinh`
+  and `atanh`, FP256 `sinh`, `tanh` and `atanh` from expm1/log1p in place of
+  their series.
+- **Precision-doubling Newton** from a bit-hack seed for `sqrt`, `div`,
+  `inv` and `cbrt` in both libraries (#122): FP256 `cbrt` 13.6k → 3.1k,
+  FP127 `cbrt` 6.0k → 2.2k with no fallback.
+- **Lambert W without series** (#123, #126): an adaptive-precision safe
+  step with a residual bound from a log-free seed; the fallback rate falls
+  from 2% / 5.8% to 0.07% / 0.2% (W0 / W−1).
+- **FP256 `erfc` asymptotic tail** from y ≥ 18 (#125).
+- **FP256's basic ops** (#128): a known-position normalise, a one-compare
+  pack, a lean unpack and a branchless msb, bit-identical; add 1,262 →
+  705, mul 1,145 → 572, div 1,433 → 842 inline.
+- **CLZ** (#130): one osaka build, msb = 255 − clz(x) (23 gas against 243
+  to 374), solc 0.8.38 with solc 0.8.24's Yul optimizer sequence pinned.
+- **Four objects by idea** (#131) and **the exp/log kernels** (#132),
+  below.
+
+The compile settings were measured and left alone: optimizer runs from 200
+to 2^32 − 1 build byte-identical objects, and 0.8.38's default optimizer
+sequence costs more gas as well as more bytes. Compiling the inline
+libraries with `via_ir = true` takes about 5.5× as long and makes them
+10–33% cheaper (FP127 `add` 124 → 83, `ln` 600 → 409; FP256 `add` 662 →
+506, `exp` 3,295 → 2,893): without it their heavy ops cost 5–14% (FP127)
+and 6–19% (FP256) more than the object net of its call, with it within
+about −7% to +3% (`docs/benchmarks/profile.md`).
+
+### FP256 v5 and FP127 v6
 
 FP256 deploys as four objects by idea, replacing FP256, FP256X, FP256X2 and
 FP256X3: **FP256**, the number (arithmetic, roots, comparison, rounding,
@@ -33,8 +119,7 @@ exp 7,077 → 3,299, ln 7,640 → 3,623, log1p 8,727 → 2,558, expm1 6,523 →
 atanh 12,606 → 5,073, erf 16,962 → 12,990, lambertW0 14,524 → 10,623.
 FP256E is 21,598 bytes and FP256H 13,021.
 
-FP127's one-word kernels get the same treatment (salt `FP127 v6` at the
-deploy): 2^f by one 16-entry table and a degree-15 minimax polynomial
+FP127's one-word kernels get the same treatment (salt `FP127 v6`): 2^f by one 16-entry table and a degree-15 minimax polynomial
 (2^-146.7 relative, from 2^-145.9), log2 by two additive 16-entry levels and
 a degree-14 minimax polynomial (2^-160.5 absolute, from about 2^-150). Its
 double-word exp kernel multiplies each table factor in line instead of
@@ -43,12 +128,24 @@ medians: ln 3,215 → 1,934, log2 2,999 → 1,718, pow 5,861 → 3,375, exp 6,08
 → 5,651, erf 4,879 → 3,623, atanh 3,715 → 2,750, lambertW0 11,765 → 11,308.
 FP127 is 21,858 bytes (from 22,272).
 
-Migration: `pi(terms)` → `FP127Lib.PI` / `FP256Lib.PI` (the format's word
+Migration: the 2.2 objects need a chain with CLZ (EIP-7939, Osaka): Ethereum,
+Sepolia, Arbitrum, OP, Base, Unichain, Polygon PoS, BNB Chain, Gnosis and
+the others listed in `contracts/deployments/README.md`, not zkSync Era,
+Avalanche C-Chain or Polygon zkEVM (there every call that counts leading
+bits fails; `make probe-clz RPC=<url>` checks a chain). `pi(terms)` →
+`FP127Lib.PI` / `FP256Lib.PI` (the format's word
 nearest π; an object caller copies the literal); `gcd` has no replacement;
 an FP256 caller of FP256X, FP256X2 or FP256X3 calls the object that now
 holds the op (`contracts/src/fp256/ops.json` names it), through `IFP256`,
 `IFP256E`, `IFP256H` or `IFP256S`. The inline libraries keep every other
 signature.
+
+### Ladder v10
+
+Salt `FP127 ladder v10`, deployed 2026-10-22: the eleven adapters, with
+`LadderFP127` calling FP127 v6, `LadderFP127Lib` inlining it and
+`LadderFP256` inlining FP256 v5, and both runners. The datasets and the
+live runners compute the same code.
 
 ## Blockulator 2.1 (2026-10-21)
 

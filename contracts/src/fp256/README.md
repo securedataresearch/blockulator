@@ -4,10 +4,12 @@
 rounded or exact, and the constant `PI`, from one source. Blockulator 2.2
 deploys them as four objects by idea: FP256, the number; FP256E, the
 elementary functions; FP256H, the hyperbolic functions; FP256S, the special
-functions ([below](#four-objects)). Release four (Blockulator 2.1, 67 ops in
-FP256, FP256X, FP256X2 and FP256X3) is the one live on Sepolia, at the
-addresses in [`contracts/deployments/FP256.md`](../../deployments/FP256.md);
-releases one to three stay deployed.
+functions ([below](#four-objects)), live on Sepolia since 2026-10-22 as
+FP256 v5, at the addresses in
+[`contracts/deployments/FP256.md`](../../deployments/FP256.md). They are
+evm osaka builds and need a chain with CLZ. Release four (Blockulator 2.1,
+67 ops in FP256, FP256X, FP256X2 and FP256X3) and releases one to three
+stay deployed.
 
 One `int256` per value, the bit pattern of a float:
 
@@ -136,10 +138,13 @@ FP256, so a caller who needs it runs Euclid on `toUintDown` of each.
 
 `make build-fp256` compiles the four, `make size-fp256` prints their sizes,
 and `predict-fp256e`, `-fp256h`, `-fp256s` with their `deploy-...-sepolia`
-and `verify-...-sepolia` mirror FP256's targets. They are not yet deployed;
-release 2.2's records will carry the addresses.
+and `verify-...-sepolia` mirror FP256's targets. Deployed 2026-10-22 on
+Sepolia: FP256 `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52`, FP256E
+`0x017F68A57dD53a6dF2043c24B712b287F9549AE2`, FP256H
+`0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5`, FP256S
+`0x73E8809F163d4358773cc5F25c134997B4b842F4`.
 
-Release four (live) split the same ops as FP256 (the arithmetic, exp, ln,
+Release four (Blockulator 2.1, still live) split the same ops as FP256 (the arithmetic, exp, ln,
 pow and the conversions), FP256X (erf, erfc, normCdf, Lambert W), FP256X2
 (exp2, exp10, the logs, cbrt, the hyperbolics) and FP256X3 (the algebraic
 ops, gcd, factorial, pi): where the bytes fit, not by idea, with the exp/log

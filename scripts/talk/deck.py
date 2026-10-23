@@ -686,8 +686,8 @@ def plot_close() -> str:
     ax.text(0, 0.62, c["FP127"]["address"], fontsize=17, family="DejaVu Sans Mono", transform=ax.transAxes)
     ax.text(0, 0.40, "FP256", fontsize=30, fontweight="bold", color=SERIES["FP256"], transform=ax.transAxes)
     ax.text(0, 0.24, c["FP256"]["address"], fontsize=17, family="DejaVu Sans Mono", transform=ax.transAxes)
-    # release four's other objects, smaller: the special functions, the exponential family, the algebraic ops
-    extra = [k for k in ("FP256X", "FP256X2", "FP256X3") if k in c]
+    # FP256's other objects, smaller: the elementary, hyperbolic and special functions
+    extra = [k for k in ("FP256E", "FP256H", "FP256S") if k in c]
     if extra:
         ax.text(0, 0.135, "  ·  ".join(f'{k} {c[k]["address"][:10]}…{c[k]["address"][-4:]}' for k in extra),
                 fontsize=11.5, family="DejaVu Sans Mono", color=MUTED, transform=ax.transAxes)
@@ -745,7 +745,7 @@ SLIDES = [
      "docs/benchmarks/gas256.md (FP256Lib)"),
     ("Both goals, met", lambda: plot_rulers(lit=("FP127", "FP256")), FORMATS),
     ("Checked on chain", plot_live, "contracts/deployments/RELEASE.json"),
-    ("Use FP127 and FP256", plot_close, f"{RELEASE['release']}. Sepolia; MIT licence. contracts/deployments/RELEASE.json"),
+    ("Use FP127 and FP256", plot_close, f"{RELEASE['release']}. Sepolia; CLZ (Osaka) required; MIT licence. contracts/deployments/RELEASE.json"),
 ]
 
 CSS = f"""

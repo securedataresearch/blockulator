@@ -86,22 +86,23 @@ gas256.json, lib]:
 
 | op | FP127 | FP256 | Quad | Solady | PRBMath | ABDK | Balancer |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| mul | 263 | 1,133 | 688 | 126 | 486 | 171 | 239 |
-| div | 645 | 1,863 | 818 | 93 | 510 | 221 | 239 |
-| exp | 6,455 | 7,759 | 5,850 | 430 | 2,788 | 3,373 | 1,054 |
-| ln | 865 | 7,308 | 1,587 | 556 | 828 | 7,080 | 1,157 |
-| sqrt | 1,584 | 2,698 | 760 | 393 | 993 | 789 | 2,259 |
-| pow | 5,175 | 11,848 | 23,290 | 1,275 | 9,912 | 1,350 | 2,203 |
-| normCdf | 12,871 | 36,240 | — | — | — | — | — |
+| mul | 263 | 530 | 688 | 126 | 485 | 171 | 239 |
+| div | 645 | 800 | 818 | 93 | 509 | 221 | 239 |
+| exp | 6,006 | 3,295 | 5,850 | 430 | 2,788 | 3,373 | 1,054 |
+| ln | 600 | 3,006 | 1,586 | 556 | 828 | 7,078 | 1,156 |
+| sqrt | 1,025 | 1,205 | 760 | 393 | 993 | 788 | 2,259 |
+| pow | 3,537 | 5,541 | 23,290 | 1,275 | 9,911 | 1,348 | 2,203 |
+| normCdf | 11,512 | 23,108 | — | — | — | — | — |
 
 Multiplication costs about twice Solady's and about half PRBMath's;
 division 1.3 to 7 times theirs. The
 transcendentals cost more because they compute twice as many bits and
 round to the nearest word, and the error function family is the honest
 expensive one. The floats, FP256 and Quad, pay for their moving point on
-every add and several times over on pow; FP127's root, seeded from
-Solady's integer root, is cheaper than FP256's. Through the deployed
-objects the `staticcall` adds 800 to 1,300 gas to `add` and `mul`.
+every add and mul, and Quad several times over on pow (FP256's `exp`,
+on its table-and-polynomial kernel, is now cheaper than FP127's); FP127's root, seeded from
+its exact bit length, is cheaper than FP256's. Through the deployed
+objects the `staticcall` adds 460 to 630 gas to `add` and `mul`.
 
 ## What it does not fix
 

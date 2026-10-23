@@ -30,18 +30,16 @@ Rounding: once per op (Lambert W iterates), ties away from zero. Overflow revert
 
 {{ <deployment lib="fp256" /> }}
 
-Release four (Blockulator 2.1) is live as four objects from one source; the record above is FP256's, and [`FP256.md`](/contracts/deployments/FP256.md) has the other three (FP256X, FP256X2, FP256X3).
+FP256 v5 (Blockulator 2.2) is live as four objects from one source, one idea each, with ops that share a kernel in one object. The record above is FP256's; [`FP256.md`](/contracts/deployments/FP256.md) has all four.
 
-The source now deploys as four objects by idea, one idea each, with ops that share a kernel in one object:
+| object | the idea | address | ops |
+|---|---|---|---|
+| FP256 | the number | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` | `add` `sub` `mul` `div` `inv` `sqrt` `cbrt` `hypot` `gavg`; `neg` `abs` `sign`; `cmp` `lt` `eq` `min` `max` `clamp`; `floor` `ceil` `round` `frac`; `avg` `dist` `zeroFloorSub` `lerp`; `mulDown` `mulUp` `divDown` `divUp`; every conversion |
+| FP256E | the elementary functions, on one exp/log kernel | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` | `exp` `exp2` `exp10` `expm1` `ln` `log2` `log10` `log2Up` `log1p` `pow` `powu` `compound` |
+| FP256H | the hyperbolic functions | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` | `sinh` `cosh` `tanh` `atanh` |
+| FP256S | the special functions | `0x73E8809F163d4358773cc5F25c134997B4b842F4` | `erf` `erfc` `normCdf` `lambertW0` `lambertWm1` `factorial` |
 
-| object | the idea | ops |
-|---|---|---|
-| FP256 | the number | `add` `sub` `mul` `div` `inv` `sqrt` `cbrt` `hypot` `gavg`; `neg` `abs` `sign`; `cmp` `lt` `eq` `min` `max` `clamp`; `floor` `ceil` `round` `frac`; `avg` `dist` `zeroFloorSub` `lerp`; `mulDown` `mulUp` `divDown` `divUp`; every conversion |
-| FP256E | the elementary functions, on one exp/log kernel | `exp` `exp2` `exp10` `expm1` `ln` `log2` `log10` `log2Up` `log1p` `pow` `powu` `compound` |
-| FP256H | the hyperbolic functions | `sinh` `cosh` `tanh` `atanh` |
-| FP256S | the special functions | `erf` `erfc` `normCdf` `lambertW0` `lambertWm1` `factorial` |
-
-The hyperbolics are elementary functions too, but FP256E with them measured 27,308 bytes, over the 24,576 limit, so FP256H carries its own copy of the exp/log kernel at its own address: bytes at deployment, no gas per call. A smaller kernel may fold it back into FP256E. `pi` is the constant `FP256Lib.PI`, the word nearest π; `gcd` is gone. The inline library holds all 65 ops. Their addresses come with the deployment.
+The hyperbolics are elementary functions too, but FP256E with them measured 27,308 bytes, over the 24,576 limit, so FP256H carries its own copy of the exp/log kernel at its own address: bytes at deployment, no gas per call. A smaller kernel may fold it back into FP256E. `pi` is the constant `FP256Lib.PI`, the word nearest π; `gcd` is gone. The inline library holds all 65 ops. The objects are evmVersion osaka builds and need the CLZ opcode (EIP-7939): they run on Ethereum, Sepolia and the other chains with CLZ, not on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list]({{ config.extra.repo }}/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)). Release four (Blockulator 2.1: FP256, FP256X, FP256X2 and FP256X3) stays live at the addresses in the record.
 
 ## Inline form
 
@@ -50,7 +48,7 @@ forge install securedataresearch/blockulator
 echo "fp256/=lib/blockulator/contracts/src/fp256/" >> remappings.txt
 ```
 
-Compile `FP256Lib.sol` with `via_ir = true` (in `foundry.toml`): solc's legacy pipeline leaves the heavy ops 9–27% dearer than the same Yul in the deployed objects, and through the IR they match them ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
+Compile `FP256Lib.sol` with `via_ir = true` (in `foundry.toml`): solc's legacy pipeline leaves the heavy ops 6–19% dearer than the same Yul in the deployed objects (net of the call), and through the IR they come within about −7% to +3% of them, `add` 662 → 506 and `exp` 3,295 → 2,893 gas; the build takes about 5.5× as long ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
 
 ```solidity
 import {FP256Lib} from "fp256/FP256Lib.sol";
@@ -70,7 +68,7 @@ A better ruler only helps if you follow two rules. Each one comes from a replay 
 1. **Store the state in the format.** Keep the running quantity (a balance, an index, an accumulator) as an FP256 word. Do not round it to token units before you store it.
 2. **Round toward the protocol at the token edge.** When a value becomes token units, floor what the protocol pays out and ceil what it takes in. Never round to nearest there.
 
-Every FP256 op without a direction in its name rounds to nearest, once. That is right for the state: in release four every such op is correctly rounded, off by at most half a unit in the last of 237 bits. It is wrong at the edge. In particular `toFixed18` and `toFP127` round to nearest; at the edge use the `Down` and `Up` forms.
+Every FP256 op without a direction in its name rounds to nearest, once. That is right for the state: since release four every such op is correctly rounded, off by at most half a unit in the last of 237 bits. It is wrong at the edge. In particular `toFixed18` and `toFP127` round to nearest; at the edge use the `Down` and `Up` forms.
 
 ### Rule 1: Bunni v2
 
@@ -150,7 +148,7 @@ Radiant's empty-market exploit used the same half unit: its share burn rounded t
 
 Each rounds once from the exact value. A positive `Up` result never underflows to zero: `toUintUp` and `toFixed18Up` charge one unit for any positive dust. `toUintDown` and `toUintUp` revert with `OutOfRange` below zero.
 
-All fourteen are new in release four: the deployed FP256 object has them, and so does the inline library you get with `forge install`. The release three object does not. `round` and `frac` (#79, also release four) are not edge ops: `round` rounds to nearest, halves away from zero.
+All fourteen are new in release four: the deployed FP256 objects of release four and v5 have them, and so does the inline library you get with `forge install`. The release three object does not. `round` and `frac` (#79, also release four) are not edge ops: `round` rounds to nearest, halves away from zero.
 
 ### Divide last
 
@@ -183,7 +181,7 @@ function index() external view returns (int256) {
 }
 ```
 
-In FP256 the gain is gas more than digits. In the example test, an FP256 index multiplied 1,000 times ends 9.2 to 13.8 parts in 2^236 from the log read. Each `exp` and `mul` rounds to nearest at 237 bits, so the errors stay tiny and partly cancel. What you save is the `exp` and `mul` on every accrual (7,759 + 1,133 gas, median, in [`gas256.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas256.md)). You pay an `exp` on every read instead. This fits a continuous rate only. With a rate per period r, L gains n × log1p(r), and that rounding is added n times; use `compound(r, n)` there. The [FP127 page](/library/#keep-an-index-as-its-logarithm) has the measured numbers.
+In FP256 the gain is gas more than digits. In the example test, an FP256 index multiplied 1,000 times ends 9.2 to 13.8 parts in 2^236 from the log read. Each `exp` and `mul` rounds to nearest at 237 bits, so the errors stay tiny and partly cancel. What you save is the `exp` and `mul` on every accrual (3,295 + 530 gas, median, in [`gas256.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas256.md)). You pay an `exp` on every read instead. This fits a continuous rate only. With a rate per period r, L gains n × log1p(r), and that rounding is added n times; use `compound(r, n)` there. The [FP127 page](/library/#keep-an-index-as-its-logarithm) has the measured numbers.
 
 The snippets are compiled and run on the replays' own integers in [`test/examples/Integrating.t.sol`]({{ config.extra.repo }}/blob/master/test/examples/Integrating.t.sol).
 
