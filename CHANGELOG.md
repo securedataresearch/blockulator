@@ -15,7 +15,11 @@ functions (sinh, cosh, tanh, atanh; `FP256H v5`), their own object because
 FP256E with them measured 27,308 bytes, over the 24,576 limit, so FP256H
 carries its own copy of the kernel; **FP256S**, the special functions (erf,
 erfc, normCdf, lambertW0, lambertWm1, factorial; `FP256S v5`). In both
-libraries `pi` is now a constant and `gcd` is removed.
+libraries `pi` is now a constant and `gcd` is removed. Without the kernels
+the FP256 core is 10,333 bytes, and the room goes to the basic ops' fast
+path, bit-identical: through the object `mulDown`/`mulUp` 201 to 267 gas
+less, `divDown`/`divUp` 250 to 256, the in-place conversions up to 67, and
+add, sub, mul, div 10 to 70 (`docs/benchmarks/gas256.md`).
 
 Migration: `pi(terms)` → `FP127Lib.PI` / `FP256Lib.PI` (the format's word
 nearest π; an object caller copies the literal); `gcd` has no replacement;
