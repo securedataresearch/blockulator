@@ -80,12 +80,12 @@ The same Yul function bodies are emitted twice.
 finds the 4-byte selector by binary search. It is deployed with CREATE2
 through the deterministic proxy at
 `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the version.
-v5 as deployed (salt `"FP127 v5"`, 55 ops, 19,863 bytes of runtime) is
-live on Sepolia at `0x619176d72D7a12390F8970802943D344c0fd3fE2` since
-2026-10-21 (Blockulator 2.1). This source is Blockulator 2.2's, 53 ops: `pi`
-became the constant `FP127Lib.PI` and `gcd` was removed, so its bytes and
-therefore its CREATE2 address differ (`make predict`) until it is
-redeployed. v1 to v4 stay deployed. Record and verification recipe in
+v6 (salt `"FP127 v6"`, 53 ops, 21,858 bytes of runtime, an evm osaka
+build that needs CLZ) is live on Sepolia at
+`0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4` since 2026-10-22 (Blockulator
+2.2): `pi` became the constant `FP127Lib.PI` and `gcd` was removed. v5
+(salt `"FP127 v5"`, 55 ops, Blockulator 2.1) stays live at
+`0x619176d72D7a12390F8970802943D344c0fd3fE2`, and v1 to v4 stay deployed. Record and verification recipe in
 [`contracts/deployments/FP127.md`](../../deployments/FP127.md).
 Every contract that `staticcall`s it runs identical bytecode.
 `FP127Caller.sol` is the minimal Solidity wrapper for that path; it bubbles

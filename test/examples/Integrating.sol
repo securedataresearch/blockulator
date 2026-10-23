@@ -16,8 +16,8 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 //
 // The directed ops (FP127 mulUp, mulDown, divUp, divDown, toFixed18Up, toFixed18Down;
 // FP256 mulUp, mulDown, divUp, divDown, toUintUp, toUintDown, toIntUp, toIntDown,
-// toFixed18Up, toFixed18Down, floor, ceil) are in FP127 v5 and FP256 release four, deployed
-// (Blockulator 2.1) and inline; the older FP127 v4 and FP256 release three objects do not
+// toFixed18Up, toFixed18Down, floor, ceil) are in FP127 v6 and FP256 v5, deployed
+// (Blockulator 2.2; also FP127 v5 and FP256 release four, Blockulator 2.1) and inline; the older FP127 v4 and FP256 release three objects do not
 // have them, except FP127's floor and ceil.
 
 /// FP127 has no fromUint: an integer below 2^127 is `int256(x) << 128`.
@@ -220,7 +220,7 @@ contract LogIndex127 {
         logIndex = FP127Lib.add(logIndex, ratePerSecond * int256(dt));
     }
 
-    /// The one rounding, at the read: e^L to the nearest word (v5). Reverts above L = 88.
+    /// The one rounding, at the read: e^L to the nearest word (since v5). Reverts above L = 88.
     function index() external view returns (int256) {
         return FP127Lib.exp(logIndex);
     }
