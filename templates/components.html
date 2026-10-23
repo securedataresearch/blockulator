@@ -267,7 +267,7 @@
   {%- for g in t.groups %}
   <tbody><tr class="group"><th colspan="{{ t.cols | length + 1 }}" scope="rowgroup">{{ g.name }}</th></tr>
   {%- for r in g.rows %}
-  <tr class="f-{{ r.family }}{% if r.ours %} ours{% endif %}"><th scope="row" title="{{ r.long }}"><i class="key"></i>{{ r.label }}</th>{% for c in r.cells %}<td class="num">{% if c %}{{ c }}{% else %}<span class="na">—</span>{% endif %}</td>{% endfor %}</tr>
+  <tr class="f-{{ r.family }}{% if r.ours %} ours{% endif %}"><th scope="row" title="{{ r.long }}"><i class="key"></i>{% if r.code %}<code>{{ r.label }}</code>{% else %}{{ r.label }}{% endif %}</th>{% for c in r.cells %}<td class="num">{% if c %}{{ c }}{% else %}<span class="na">—</span>{% endif %}</td>{% endfor %}</tr>
   {%- endfor %}</tbody>
   {%- endfor %}
 </table></div>
