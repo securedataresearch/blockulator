@@ -19,18 +19,19 @@
 ## Correct to the last wei
 
 <!-- wad:begin -->
-Results off by at least one wei, against the exact value rounded in each library's own direction, on the same seeded inputs. BlockulatorWad keeps Solady's names and is wrong on **0 of 108,000** results across 27 functions and rounding directions.
+Share of results off by at least one wei, against the exact value rounded in each library's own direction, on the same seeded inputs. BlockulatorWad keeps Solady's names and is wrong on **0 of 108,000** results across 27 functions and rounding directions.
 
-| function | **BlockulatorWad** | Solady | PRBMath |
-|---|---:|---:|---:|
-| `expWad` | **0 of 3,995** | 1,918 of 3,994 (48%) | 2,863 of 3,976 (72%) |
-| `lnWad` | **0 of 3,998** | 957 of 3,998 (24%) | 3,907 of 3,998 (98%) |
-| `log2Wad` | **0 of 3,998** | — | 3,704 of 3,998 (93%) |
-| `log10Wad` | **0 of 3,998** | — | 3,532 of 3,998 (88%) |
-| `powWad` | **0 of 3,461** | 2,243 of 3,380 (66%) | 2,439 of 3,415 (71%) |
-| `lambertW0Wad` | **0 of 3,999** | 1,129 of 3,999 (28%) | — |
+| function | **BlockulatorWad** | Solady | PRBMath SD59x18 | PRBMath UD60x18 | Solmate | snekmate |
+|---|---:|---:|---:|---:|---:|---:|
+| `cbrtWad` | **0 of 4,000** | 0 | — | — | — | 23% |
+| `expWad` | **0 of 3,995** | 48% | 72% | 93% | 48% | 48% |
+| `lnWad` | **0 of 3,998** | 24% | 98% | 98% | 24% | 24% |
+| `log2Wad` | **0 of 3,998** | — | 93% | 90% | — | — |
+| `log10Wad` | **0 of 3,998** | — | 88% | 90% | — | — |
+| `powWad` | **0 of 3,461** | 66% | 71% | 85% | 66% | — |
+| `lambertW0Wad` | **0 of 3,999** | 28% | — | — | — | — |
 
-Where they offer them, Solady and PRBMath are exact too on `cbrtWad`, `divWad`, `divWadUp`, `mulWad`, `mulWadUp`, `sDivWad`, `sMulWad`, `sqrtWad`. Versions: BlockulatorWad 9070a12, Solady FixedPointMathLib v0.1.26, PRBMath (UD60x18 / SD59x18) v4.2.0; full table in [`wad.md`](docs/benchmarks/wad.md).
+Where they offer them, Solady, PRBMath, Solmate, OpenZeppelin Math, Uniswap FullMath and snekmate are exact on `divWad`, `divWadUp`, `mulWad`, `mulWadUp`, `sDivWad`, `sMulWad`, `sqrtWad`, `sqrtWadUp`. Versions: BlockulatorWad fc19340, Solady v0.1.26, PRBMath SD59x18 v4.2.0, PRBMath UD60x18 v4.2.0, Solmate main@89365b8, OpenZeppelin Math v5.7.0 (vendored), Uniswap FullMath v4-core v4.0.0 (vendored), snekmate v0.1.2 (vyper 0.4.3); counts in [`wad.md`](docs/benchmarks/wad.md).
 <!-- wad:end -->
 
 ## Twice the digits, at the same gas
@@ -38,13 +39,21 @@ Where they offer them, Solady and PRBMath are exact too on `cbrtWad`, `divWad`, 
 <!-- gas:begin -->
 | | digits | add | mul | div | exp<sup>t</sup> | ln<sup>t</sup> | pow<sup>t</sup> | sqrt<sup>t</sup> |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
+| *floating point* | | | | | | | | |
 | **FP256** | **71** | **662** | **530** | **800** | **3,278** | **3,043** | **5,901** | **1,205** |
-| **FP127** | **38** | **128** | **267** | **412** | **2,716** | **1,944** | **3,317** | **683** |
 | ABDKMathQuad | 34 | 734 | 709 | 818 | 5,668 | 16,356 | 23,467 | 760 |
+| *fixed point* | | | | | | | | |
+| **FP127** | **38** | **128** | **267** | **412** | **2,716** | **1,944** | **3,317** | **469** |
+| ABDKMath64x64 | 19 | 162 | 171 | 221 | 3,380 | 7,080 |  | 828 |
 | PRBMath SD59x18 | 18 | 189 | 485 | 509 | 2,816 | 7,083 | 10,065 | 978 |
+| PRBMath UD60x18 | 18 | 150 | 237 | 261 | 2,720 | 6,474 | 9,544 | 824 |
 | Solady | 18 | 3 | 126 | 93 | 430 | 556 | 1,279 | 393 |
+| Solmate | 18 |  | 131 | 97 | 430 | 632 | 1,355 | 456 |
+| Balancer LogExpMath | 18 |  |  |  | 1,040 | 1,091 | 2,223 | 2,349 |
+| snekmate | 18 |  |  |  | 604 | 1,226 |  |  |
+| OpenZeppelin Math | 18 |  |  |  |  |  |  | 766 |
 
-Median gas per inline call, over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder; digits are precision at 1. FP256 is cheaper than ABDKMathQuad on `add`, `mul`, `div`, `exp`, `ln` and `pow`, not `sqrt`; FP127 is cheaper than PRBMath on every op here. Over these 7 ops FP256 carries 2.1× Quad's digits at 32% of its mean gas, FP127 2.1× PRBMath's at 43%. Solady is the cheapest, at 18 digits; its `add` is the unchecked `rawAdd`.
+Median gas per inline call, over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder; digits are precision at 1. FP256 is cheaper than ABDKMathQuad on `add`, `mul`, `div`, `exp`, `ln` and `pow`, not `sqrt`, and over these 7 ops carries 2.1× its digits at 32% of its mean gas. FP127 carries twice the digits of every fixed-point library here; it is cheaper than PRBMath SD59x18 and OpenZeppelin Math on every op they share, and than ABDKMath64x64 on `add`, `exp`, `ln` and `sqrt`, and than PRBMath UD60x18 on `add`, `exp`, `ln`, `pow` and `sqrt`. Solady, Solmate, Balancer LogExpMath and snekmate are cheaper on most ops, at 18 digits; Solady's `add` is the unchecked `rawAdd`.
 <!-- gas:end -->
 
 Every op and library: [`gas.md`](docs/benchmarks/gas.md), [`gas256.md`](docs/benchmarks/gas256.md). Compile with `via_ir = true`; it takes another 10–33% off the inline libraries.

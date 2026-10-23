@@ -23,8 +23,13 @@ IMG = ROOT / "docs" / "img"
 REPO = "securedataresearch/blockulator"
 
 # precision at 1, as the site's pitch table (templates/components.html pitch)
-DIGITS = {"fp256": 71, "fp127": 38, "quad": 34, "prb": 18, "solady": 18}
-NAMES = {"fp256": "FP256", "fp127": "FP127", "quad": "ABDKMathQuad", "prb": "PRBMath SD59x18", "solady": "Solady"}
+# precision at 1, in decimal digits; floating point first, then fixed point
+DIGITS = {"fp256": 71, "quad": 34, "fp127": 38, "abdk": 19, "prb": 18, "prbud": 18, "solady": 18, "solmate": 18,
+          "balancer": 18, "snekmate": 18, "oz": 18}
+NAMES = {"fp256": "FP256", "fp127": "FP127", "quad": "ABDKMathQuad", "abdk": "ABDKMath64x64", "prb": "PRBMath SD59x18",
+         "prbud": "PRBMath UD60x18", "solady": "Solady", "solmate": "Solmate", "balancer": "Balancer LogExpMath",
+         "snekmate": "snekmate", "oz": "OpenZeppelin Math"}
+FLOAT, FIXED = ("fp256", "quad"), ("fp127", "abdk", "prb", "prbud", "solady", "solmate", "balancer", "snekmate", "oz")
 OPS = ["add", "mul", "div", "exp", "ln", "pow", "sqrt"]
 
 # the site's family colours (static/css/site.css), light and dark
@@ -123,30 +128,42 @@ def median(g, op, form):
 
 def gas_block():
     g127, g256 = load(B / "gas.json"), load(B / "gas256.json")
-    src = {"fp256": (g256, "lib"), "fp127": (g127, "lib"), "quad": (g256, "quad"), "prb": (g127, "prb"), "solady": (g127, "solady")}
+    src = {"fp256": (g256, "lib"), "quad": (g256, "quad")} | {l: (g127, "lib" if l == "fp127" else l) for l in FIXED}
     m = {lib: {op: median(g, op, f) for op in OPS} for lib, (g, f) in src.items()}
+    m = {lib: v for lib, v in m.items() if any(v.values())}
     typ = {op for op in OPS if "typical" in g127["ops"][op]}
     head = "| | digits | " + " | ".join(op + ("<sup>t</sup>" if op in typ else "") for op in OPS) + " |"
     rows = [head, "|---|---:|" + "---:|" * len(OPS)]
-    for lib in ("fp256", "fp127", "quad", "prb", "solady"):
-        ours = lib in ("fp256", "fp127")
-        b = (lambda s: f"**{s}**") if ours else (lambda s: s)
-        cells = [b(f"{m[lib][op]:,}") if m[lib][op] is not None else "" for op in OPS]
-        rows.append(f"| {b(NAMES[lib])} | {b(str(DIGITS[lib]))} | " + " | ".join(cells) + " |")
+    for group, libs in (("floating point", FLOAT), ("fixed point", FIXED)):
+        rows.append(f"| *{group}* |" + " |" * (len(OPS) + 1))
+        for lib in (l for l in libs if l in m):
+            ours = lib in ("fp256", "fp127")
+            b = (lambda s: f"**{s}**") if ours else (lambda s: s)
+            cells = [b(f"{m[lib][op]:,}") if m[lib][op] is not None else "" for op in OPS]
+            rows.append(f"| {b(NAMES[lib])} | {b(str(DIGITS[lib]))} | " + " | ".join(cells) + " |")
+
+    shared = lambda a, b: [op for op in OPS if m[a][op] and m[b][op]]
+    won = lambda a, b: [op for op in shared(a, b) if m[a][op] < m[b][op]]
+    say = lambda xs: ", ".join(xs[:-1]) + (" and " if len(xs) > 1 else "") + (xs[-1] if xs else "")
+    code = lambda ops: say([f"`{x}`" for x in ops])
 
     def wins(a, b):
-        w = [op for op in OPS if m[a][op] and m[b][op] and m[a][op] < m[b][op]]
-        lose = [op for op in OPS if m[a][op] and m[b][op] and m[a][op] >= m[b][op]]
-        say = lambda xs: ", ".join(f"`{x}`" for x in xs[:-1]) + (" and " if len(xs) > 1 else "") + (f"`{xs[-1]}`" if xs else "")
-        return ("every op here" if not lose else say(w) + ", not " + " or ".join(f"`{x}`" for x in lose))
+        w, s = won(a, b), shared(a, b)
+        return "every op here" if w == s else code(w) + ", not " + " or ".join(f"`{x}`" for x in s if x not in w)
 
-    common = [op for op in OPS if all(m[l][op] for l in m)]
-    mean = {l: sum(m[l][op] for op in common) / len(common) for l in m}
+    others = [l for l in FIXED[1:] if l in m]
+    always = [NAMES[l] for l in others if won("fp127", l) == shared("fp127", l)]
+    mostly = [f"{NAMES[l]} on {code(won('fp127', l))}" for l in others
+              if won("fp127", l) != shared("fp127", l) and 2 * len(won("fp127", l)) > len(shared("fp127", l))]
+    cheaper = [NAMES[l] for l in others if 2 * len(won("fp127", l)) <= len(shared("fp127", l))]
+    common = shared("fp256", "quad")
+    mean = {l: sum(m[l][op] for op in common) / len(common) for l in ("fp256", "quad")}
     text = (f"Median gas per inline call, over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder; digits are precision at 1. "
-            f"FP256 is cheaper than ABDKMathQuad on {wins('fp256', 'quad')}; FP127 is cheaper than PRBMath on {wins('fp127', 'prb')}. "
-            f"Over these {len(common)} ops FP256 carries {DIGITS['fp256'] / DIGITS['quad']:.1f}× Quad's digits at {round(100 * mean['fp256'] / mean['quad'])}% of its mean gas, "
-            f"FP127 {DIGITS['fp127'] / DIGITS['prb']:.1f}× PRBMath's at {round(100 * mean['fp127'] / mean['prb'])}%. "
-            f"Solady is the cheapest, at 18 digits; its `add` is the unchecked `rawAdd`.")
+            f"FP256 is cheaper than ABDKMathQuad on {wins('fp256', 'quad')}, and over these {len(common)} ops carries "
+            f"{DIGITS['fp256'] / DIGITS['quad']:.1f}× its digits at {round(100 * mean['fp256'] / mean['quad'])}% of its mean gas. "
+            f"FP127 carries twice the digits of every fixed-point library here; it is cheaper than {say(always)} on every op they share"
+            + (f", and than {', and than '.join(mostly)}" if mostly else "") + ". "
+            + (f"{say(cheaper)} {'are' if len(cheaper) > 1 else 'is'} cheaper on most ops, at 18 digits; Solady's `add` is the unchecked `rawAdd`." if cheaper else ""))
     return "\n".join(rows) + "\n\n" + text
 
 
@@ -156,11 +173,12 @@ def wad_block():
     by = {(r["lib"], r["function"]): r for r in rows}
     ours = [r for r in rows if r["lib"] == "blockulator"]
     n, wrong = sum(r["n"] for r in ours), sum(r["wrong"] for r in ours)
-    fns = []
-    for r in ours:
-        f = r["function"]
-        if any(by.get((l, f), {}).get("wrongWei", 0) > 0 for l in ("solady", "prb")) and f not in fns:
-            fns.append(f)
+    # every function where some other library is off by a wei, and every library that is
+    fns = [r["function"] for r in ours if any(by.get((l, r["function"]), {}).get("wrongWei", 0) > 0 for l in d["libraries"] if l != "blockulator")]
+    fns = list(dict.fromkeys(fns))
+    libs = [l for l in d["libraries"] if l != "blockulator" and any(by.get((l, f), {}).get("wrongWei", 0) > 0 for f in fns)]
+    name = {"prb": "PRBMath SD59x18", "prbud": "PRBMath UD60x18"}
+    label = lambda l: name.get(l, d["libraries"][l].split(" (")[0].replace(" FixedPointMathLib", ""))
 
     def cell(l, f):
         r = by.get((l, f))
@@ -168,17 +186,21 @@ def wad_block():
             return "—"
         if l == "blockulator":
             return f"**0 of {r['valued']:,}**" if r["wrongWei"] == 0 else f"{r['wrongWei']:,} of {r['valued']:,}"
-        return f"{r['wrongWei']:,} of {r['valued']:,} ({r['wrongWeiPct']:.0f}%)"
+        return f"{r['wrongWeiPct']:.0f}%" if r["wrongWei"] else "0"
 
-    t = ["| function | **BlockulatorWad** | Solady | PRBMath |", "|---|---:|---:|---:|"]
-    t += [f"| `{f}` | {cell('blockulator', f)} | {cell('solady', f)} | {cell('prb', f)} |" for f in fns]
-    exact = sorted({r["function"] for r in rows if r["lib"] != "blockulator" and r["wrongWei"] == 0})
-    head = (f"Results off by at least one wei, against the exact value rounded in each library's own direction, on the same seeded inputs. "
+    t = ["| function | **BlockulatorWad** | " + " | ".join(label(l) for l in libs) + " |", "|---|" + "---:|" * (len(libs) + 1)]
+    t += [f"| `{f}` | {cell('blockulator', f)} | " + " | ".join(cell(l, f) for l in libs) + " |" for f in fns]
+    others = [r for r in rows if r["lib"] != "blockulator"]
+    exact = sorted({r["function"] for r in others} - {r["function"] for r in others if r["wrongWei"]})
+    exact_libs = list(dict.fromkeys("PRBMath" if r["lib"] == "prb" else label(r["lib"]) for r in others if r["function"] in exact))
+    say = lambda xs: ", ".join(xs[:-1]) + (" and " if len(xs) > 1 else "") + xs[-1]
+    head = (f"Share of results off by at least one wei, against the exact value rounded in each library's own direction, on the same seeded inputs. "
             f"BlockulatorWad keeps Solady's names and is wrong on **{wrong} of {n:,}** results across {len(ours)} functions and rounding directions.")
-    ver = lambda k: d["versions"].get(k) or d["versions"].get(k + "-math", "")
-    tail = (f"Where they offer them, Solady and PRBMath are exact too on {', '.join(f'`{f}`' for f in exact)}. "
-            f"Versions: {', '.join(f'{name} {ver(k)}' for k, name in d['libraries'].items())}; "
-            f"full table in [`wad.md`](docs/benchmarks/wad.md).")
+    vkey = {"prb": "prb-math", "prbud": "prb-math", "oz": "openzeppelin"}
+    ver = lambda k: d["versions"].get(k) or d["versions"].get(vkey.get(k, ""), "")
+    tail = (f"Where they offer them, {say(exact_libs)} are exact on {', '.join(f'`{f}`' for f in exact)}. "
+            f"Versions: {', '.join(f'{label(k)} {ver(k)}' for k in d['libraries'])}; "
+            f"counts in [`wad.md`](docs/benchmarks/wad.md).")
     return head + "\n\n" + "\n".join(t) + "\n\n" + tail
 
 
