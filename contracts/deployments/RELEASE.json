@@ -46,31 +46,31 @@
    "record": "contracts/deployments/FP256.md"
   },
   "LadderRunner": {
-   "version": "FP127 ladder v10",
-   "address": "0xF14Ac5DDA9C0c10C50aa4Be9D219509fAa936A9b",
+   "version": "FP127 ladder v11",
+   "address": "0x08b06D93620e7B33cD2d600118a75B45EF779Cec",
    "block": 11974984,
    "record": "contracts/deployments/Ladder.md"
   },
   "EdgeRunner": {
-   "version": "FP127 ladder v10",
-   "address": "0x5123DaA96A96e550665401Bd56AD0770DDB9004e",
+   "version": "FP127 ladder v11",
+   "address": "0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83",
    "block": 11974985,
    "record": "contracts/deployments/Ladder.md"
   }
  },
  "live": {
   "ladder": {
-   "liveRunner": "0xF14Ac5DDA9C0c10C50aa4Be9D219509fAa936A9b",
-   "liveChecked": 9408,
+   "liveRunner": "0x08b06D93620e7B33cD2d600118a75B45EF779Cec",
+   "liveChecked": 9411,
    "liveMismatches": 0,
-   "liveBlock": 11975057,
+   "liveBlock": 11977397,
    "liveDate": "2026-10-23"
   },
   "edges": {
-   "liveRunner": "0x5123DaA96A96e550665401Bd56AD0770DDB9004e",
+   "liveRunner": "0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83",
    "liveChecked": 1511,
    "liveMismatches": 0,
-   "liveBlock": 11975211,
+   "liveBlock": 11977550,
    "liveDate": "2026-10-23"
   }
  },
