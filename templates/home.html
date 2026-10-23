@@ -27,7 +27,7 @@
   <h2>{{ x.gas_title }}</h2>
   <p class="note">{{ x.gas_note | safe }}</p>
   <div class="plot" data-chart="gas" role="img" aria-label="Median gas per call for each library and op, floating point and fixed point apart; the numbers are in the table below."></div>
-  {{ <grouptable t={g.table} /> }}
+  {{ <libtable t={g.table} first="op · gas per call" /> }}
   <p class="small">{{ x.gas_source | safe }}</p>
 </section>
 
@@ -37,7 +37,7 @@
   <h2>{{ x.accrual_title }}</h2>
   <p class="note">{{ x.accrual_note | safe }}</p>
   <div class="plot" data-chart="accrual" role="img" aria-label="Correct digits of one accrual after 1 to 10,000 days without an update, every library; the numbers are in the table below."></div>
-  {{ <grouptable t={a.table} /> }}
+  {{ <grouptable t={a.table} first="library · correct digits after" /> }}
   <p class="small">{{ x.accrual_source | safe }}</p>
 </section>
 
@@ -47,14 +47,7 @@
   <h2>{{ x.wad_title }}</h2>
   <p class="note">{{ x.wad_note | replace(from="{n}", to=w.results | num_format) | replace(from="{fns}", to=w.functionsTotal ~ "") | safe }}</p>
   <div class="plot" data-chart="wad" role="img" aria-label="Share of results off by at least one wei, per function and library; BlockulatorWad is at 0 on every function. The numbers are in the table below."></div>
-  <div class="tablewrap"><table class="datatable">
-    <thead><tr><th scope="col">function</th>{% for c in w.table.cols %}<th scope="col" class="num f-{{ c.family }}{% if c.ours %} ours{% endif %}" title="{{ c.long }}">{{ c.label }}</th>{% endfor %}</tr></thead>
-    <tbody>
-    {%- for r in w.table.rows %}
-    <tr><th scope="row"><code>{{ r.fn }}</code></th>{% for c in r.cells %}<td class="num{% if w.table.cols[loop.index0].ours %} ours{% endif %}">{% if c %}{{ c }}{% else %}<span class="na">—</span>{% endif %}</td>{% endfor %}</tr>
-    {%- endfor %}
-    </tbody>
-  </table></div>
+  {{ <libtable t={w.table} first="function · share wrong" /> }}
   <p class="small">{{ x.wad_source | safe }} Every library that offers them is exact on {% for f in w.exact %}<code>{{ f }}</code>{% if not loop.last %}, {% endif %}{% endfor %}. Counts: <a href="{{ config.extra.repo }}/blob/master/docs/benchmarks/wad.md">wad.md</a>.</p>
 </section>
 
@@ -64,17 +57,7 @@
   <h2>{{ x.ladder_title }}</h2>
   <p class="note">{{ x.ladder_note | replace(from="{scenarios}", to=ld.scenarios | length ~ "") | safe }}</p>
   <div class="plot" data-chart="ladder" role="img" aria-label="Median correct digits after the last step of each scenario, every library; the numbers are in the table below."></div>
-  <div class="tablewrap"><table class="datatable heat">
-    <thead>
-      <tr><th></th>{% for cg in ld.table.colgroups %}<th scope="colgroup" colspan="{{ cg.span }}" class="group">{{ cg.name }}</th>{% endfor %}</tr>
-      <tr><th scope="col">scenario</th>{% for c in ld.table.cols %}<th scope="col" class="num f-{{ c.family }}{% if c.ours %} ours{% endif %}" title="{{ c.long }}">{{ c.label }}</th>{% endfor %}</tr>
-    </thead>
-    <tbody>
-    {%- for r in ld.table.rows %}
-    <tr><th scope="row"><a href="/results/ladder/#{{ r.id }}">{{ r.title }}</a></th>{% for c in r.cells %}{% if c.v %}<td class="num{% if c.ours %} ours{% endif %}" style="--h:{{ c.h }}">{{ c.v }}</td>{% else %}<td class="num"><span class="na" title="{{ c.why }}">—</span></td>{% endif %}{% endfor %}</tr>
-    {%- endfor %}
-    </tbody>
-  </table></div>
+  {{ <libtable t={ld.table} first="scenario · median digits" heat={true} /> }}
   <p class="small">{{ x.ladder_source | safe }}</p>
 </section>
 
@@ -84,7 +67,7 @@
   <h2>{{ x.edges_title }}</h2>
   <p class="note">{{ x.edges_note | replace(from="{probes}", to=e.probes ~ "") | replace(from="{ops}", to=e.ops ~ "") | safe }}</p>
   <div class="plot" data-chart="edges" role="img" aria-label="Correct digits on each edge probe, per library, with the probes each library sends to zero, reverts on or cannot hold; the numbers are in the table below."></div>
-  {{ <grouptable t={e.table} /> }}
+  {{ <grouptable t={e.table} first="library · over the probes" /> }}
   <p class="small">{{ x.edges_source | safe }}</p>
 </section>
 

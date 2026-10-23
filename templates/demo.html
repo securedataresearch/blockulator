@@ -3,7 +3,8 @@
 {% block description %}{{ page.description }}{% endblock description %}
 {% block content %}
 {%- set d = load_data(path="static/data/ladder.json") -%}
-{#- columns as on the Results page: the floats and FP127 first; FP127Lib only in the reference table (it equals FP127) -#}
+{#- columns in the registry's order (static/data/libraries.json): floating point, then fixed point. FP127Lib equals FP127 and is left out. -#}
+{%- set reg = load_data(path="static/data/libraries.json") -%}
 {%- set forms = ["fp19", "fp127", "fp127lib", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
 {%- set sforms = ["fp19", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
 {%- set labels = {"fp127": "FP127 (deployed, staticcall)", "fp127lib": "FP127Lib (inline)", "abdk": "ABDKMath64x64", "solady": "Solady FixedPointMathLib", "prb": "PRBMath SD59x18", "quad": "ABDKMathQuad (binary128)", "balancer": "Balancer LogExpMath", "aave": "Aave v3 MathUtils (RAY)", "morpho": "Morpho Blue MathLib", "maker": "Maker rpow (RAY)", "fp19": "FP19 (float, inline)", "solmate": "Solmate SignedWadMath / FixedPointMathLib", "prbud": "PRBMath UD60x18", "snekmate": "snekmate math (Vyper)", "oz": "OpenZeppelin Math (mulDiv, sqrt)", "uniswap": "Uniswap v4 FullMath (mulDiv)"} -%}
@@ -60,17 +61,20 @@
 <figcaption class="note">Line: median correct digits over the inputs every library with a result at that N completed; band: their range. Each value is capped at what its format holds at that magnitude (FP19 71.3, binary128 34.0, the fixed grids by their last place), so no line passes its format's precision; a ring marks a median whose every input is exact. The three WAD libraries (Solady, PRBMath, Balancer) are one gold band from the lowest to the highest median. FP127Lib coincides with FP127 and is not drawn; Aave, Morpho and Maker appear only on the accrual scenarios their models describe. Hover a point for the numbers and the completed counts.</figcaption>
 </div>
 
-<div class="scroll">
-<table class="summary">
-<thead><tr><th class="num">N</th>{% for f in sforms %}<th class="num">{{ short[f] }}</th>{% endfor %}</tr></thead>
+<div class="tablewrap">
+<table class="datatable summary">
+<thead>
+<tr><th></th>{% for k in [["float", "Floating point"], ["fixed", "Fixed point"]] %}{% set_global nk = 0 %}{% for l in reg.libraries %}{% if l.kind == k[0] and l.id in sforms %}{% set_global nk = nk + 1 %}{% endif %}{% endfor %}<th scope="colgroup" colspan="{{ nk }}" class="group">{{ k[1] }}</th>{% endfor %}</tr>
+<tr><th scope="col" class="num">steps N</th>{% for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in sforms %}<th scope="col" class="num f-{{ l.family }}{% if l.ours %} ours{% endif %}" title="{{ labels[l.id] }}">{{ l.short }}</th>{% endif %}{% endfor %}{% endfor %}</tr>
+</thead>
 <tbody>
 {%- for n in d.ladder %}{% set ns = n | str %}
-<tr><td class="num">{{ n | num_format }}</td>
-{%- for f in sforms %}{% set row = sc.summary[f][ns] %}{% set rc = ref.cells[f][ns] %}{% set unsup = rc.reasonName is defined and "Unsupported" in rc.reasonName %}
+<tr><th scope="row" class="num">{{ n | num_format }}</th>
+{%- for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in sforms %}{% set f = l.id %}{% set row = sc.summary[f][ns] %}{% set rc = ref.cells[f][ns] %}{% set unsup = rc.reasonName is defined and "Unsupported" in rc.reasonName %}
 {%- for key in ["digits", "digitsFormat", "interest"] %}{% if key != "interest" or hasint %}
-<td class="num"{% if key != "digits" %} hidden{% endif %} data-key="{{ key }}">{% if unsup %}{% elif row[key] is defined %}{% if key != "interest" and row.exact == row.count %}<span class="exact" title="exact on all {{ row.count }} inputs">exact</span>{% else %}<span title="range {{ row[key].min }}–{{ row[key].max }} over {{ row.count }} inputs{% if row.exact %}, {{ row.exact }} exact{% endif %}">{{ row[key].median }}</span>{% endif %}{% if row.completed < row.inputs %} <span class="rev meta" title="completed {{ row.completed }} of {{ row.inputs }} inputs; the rest reverted">{{ row.completed }}/{{ row.inputs }}</span>{% endif %}{% elif row.completed == 0 %}<span class="rev meta">rev</span>{% endif %}</td>
+<td class="num{% if l.ours %} ours{% endif %}"{% if key != "digits" %} hidden{% endif %} data-key="{{ key }}"{% if not unsup and row[key] is defined %} style="--h:{{ row[key].median | float / 72 | round(precision=3) }}"{% endif %}>{% if unsup %}<span class="na" title="no model for this scenario">—</span>{% elif row[key] is defined %}{% if key != "interest" and row.exact == row.count %}<span class="exact" title="exact on all {{ row.count }} inputs">exact</span>{% else %}<span title="range {{ row[key].min }}–{{ row[key].max }} over {{ row.count }} inputs{% if row.exact %}, {{ row.exact }} exact{% endif %}">{{ row[key].median }}</span>{% endif %}{% if row.completed < row.inputs %} <span class="rev meta" title="completed {{ row.completed }} of {{ row.inputs }} inputs; the rest reverted">{{ row.completed }}/{{ row.inputs }}</span>{% endif %}{% elif row.completed == 0 %}<span class="rev meta">rev</span>{% endif %}</td>
 {%- endif %}{% endfor %}
-{%- endfor %}
+{%- endif %}{% endfor %}{% endfor %}
 </tr>
 {%- endfor %}
 </tbody>
@@ -91,22 +95,21 @@
 <p>Library calls per step: {% for f in forms %}<strong>{{ short[f] }}</strong> {{ sc.ops[f] | join(sep=", ") }}{% if not loop.last %}; {% endif %}{% endfor %}. Parameters reach each adapter floored into its representation on the grids and rounded to nearest on the floats (<a href="/data/ladder-inputs.json">ladder-inputs.json</a>).</p>
 </details>
 
-<h3>The reference input in full: {% for k, v in ref.params %}{{ k }} = {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</h3>
-<p>Each cell: the value with the digits that agree with the truth in ink and the rest in red; below it, correct digits against the exact truth (capped at the format's precision; "exact" when equal), against the format-rounded truth, {% if hasint %}of the interest, {% endif %}{% if ref.truthWei is defined %}the error in wei of the strike, {% endif %}the signed error in units of the last place, and gas per step.</p>
-<div class="scroll">
-<table class="ladder">
-<thead><tr><th class="num">N</th><th>truth</th>{% for f in forms %}<th>{{ labels[f] }}</th>{% endfor %}</tr></thead>
+<h3>The reference input, step by step: {% for k, v in ref.params %}{{ k }} = {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</h3>
+<p>Correct digits against the exact truth at each N, capped at what the format holds. Hover a cell for the value itself, the digits against the format-rounded truth{% if hasint %}, of the interest{% endif %}{% if ref.truthWei is defined %}, the error in wei{% endif %}, the error in units of the last place and the gas per step.</p>
+<div class="tablewrap">
+<table class="datatable heat">
+<thead>
+<tr><th></th>{% for k in [["float", "Floating point"], ["fixed", "Fixed point"]] %}{% set_global nk = 0 %}{% for l in reg.libraries %}{% if l.kind == k[0] and l.id in sforms %}{% set_global nk = nk + 1 %}{% endif %}{% endfor %}<th scope="colgroup" colspan="{{ nk }}" class="group">{{ k[1] }}</th>{% endfor %}</tr>
+<tr><th scope="col" class="num">steps N</th>{% for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in sforms %}<th scope="col" class="num f-{{ l.family }}{% if l.ours %} ours{% endif %}" title="{{ labels[l.id] }}">{{ l.short }}</th>{% endif %}{% endfor %}{% endfor %}</tr>
+</thead>
 <tbody>
 {%- for n in d.ladder %}{% set ns = n | str %}
-<tr>
-<td class="num">{{ n | num_format }}</td>
-<td class="val truth">{{ ref.truth[ns] }}{% if ref.truthWei is defined %}<br><span class="meta">{{ ref.truthWei[ns] }} wei</span>{% endif %}</td>
-{%- for f in forms %}{% set c = ref.cells[f][ns] %}
-<td class="val">
-{%- if c.reverted %}{% if "Unsupported" in c.reasonName %}<span class="meta">no model</span>{% else %}<span class="rev">reverts</span> <span class="meta">{{ c.reasonName }} {{ c.reason }}</span>{% endif %}
-{%- else %}{{ <cell value={c.value} digits={c.agree} /> }}<br><span class="meta">{% if c.exact %}exact{% else %}{{ c.digitsCapped }} digits{% endif %} · {% if c.digitsFormat1 is defined %}{{ c.digitsFormatCapped }}{% else %}exact{% endif %} vs format{% if c.interestCapped is defined %} · {{ c.interestCapped }} of interest{% endif %}{% if c.absErrWei is defined %} · {{ c.absErrWei }} wei off{% endif %}{% if c.ulps is defined %} · {{ c.ulps }} ULP{% endif %} · {{ c.gasPerStep | num_format }} gas/step</span>{% endif %}
-</td>
-{%- endfor %}
+<tr><th scope="row" class="num" title="truth {{ ref.truth[ns] }}">{{ n | num_format }}</th>
+{%- for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in sforms %}{% set c = ref.cells[l.id][ns] %}
+{%- if c.reverted %}<td class="num">{% if "Unsupported" in c.reasonName %}<span class="na" title="no model for this scenario">—</span>{% else %}<span class="rev" title="{{ c.reasonName }} {{ c.reason }}">reverts</span>{% endif %}</td>
+{%- else %}<td class="num{% if l.ours %} ours{% endif %}" style="--h:{{ c.digitsCapped | float / 72 | round(precision=3) }}" title="{{ c.value }}&#10;{{ c.digitsCapped }} digits · {% if c.digitsFormat1 is defined %}{{ c.digitsFormatCapped }}{% else %}exact{% endif %} vs format{% if c.interestCapped is defined %} · {{ c.interestCapped }} of interest{% endif %}{% if c.absErrWei is defined %} · {{ c.absErrWei }} wei off{% endif %}{% if c.ulps is defined %} · {{ c.ulps }} ULP{% endif %} · {{ c.gasPerStep | num_format }} gas/step">{% if c.exact %}exact{% else %}{{ c.digitsCapped }}{% endif %}</td>{% endif %}
+{%- endif %}{% endfor %}{% endfor %}
 </tr>
 {%- endfor %}
 </tbody>
