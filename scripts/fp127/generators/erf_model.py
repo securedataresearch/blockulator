@@ -19,7 +19,6 @@ the exp2 polynomial from FP127.yul.src so it models the deployed constants.
 """
 from __future__ import annotations
 
-import re
 import sys
 from pathlib import Path
 
@@ -28,6 +27,8 @@ from mpmath import mp, mpf, erf, erfc, ncdf, exp, log, sqrt, pi, nint
 mp.dps = 120
 ROOT = Path(__file__).resolve().parents[3]
 SRC = ROOT / "contracts/src/fp127/FP127.yul.src"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import kernel192  # noqa: E402
 MASK = (1 << 256) - 1
 G = 192
 GS = 1 << G
@@ -57,26 +58,12 @@ def divg(a: int, b: int) -> int:
 
 
 # ---------------------------------------------------------------------------
-# the exp2 kernel, constants read from the source
+# the exp2 kernel: kernel192.py's model of the Yul (kernel192.py --check
+# holds the source to it)
 # ---------------------------------------------------------------------------
 
-def exp2_coeffs() -> list[int]:
-    text = SRC.read_text()
-    body = text[text.index("function exp2frac"):]
-    body = body[: body.index("\n}\n")]
-    hexes = re.findall(r"0x[0-9a-f]+", body)
-    # first literal is the leading coefficient; Horner adds the rest in descending order
-    return [int(h, 16) for h in hexes]
-
-
-EXP_C = exp2_coeffs()
-
-
 def exp2frac(f: int) -> int:
-    r = EXP_C[0]
-    for c in EXP_C[1:]:
-        r = (mulg(r, f) + c) & MASK
-    return r
+    return kernel192.exp2frac(f)
 
 
 def exp2g(t: int) -> int:

@@ -4,6 +4,7 @@ the Yul runs them, with the fits, the bounds and the Yul text they need.
 
     uv run scripts/fp256/generators/kernel254.py            # fit, certify, measure the kernels and the ops
     uv run scripts/fp256/generators/kernel254.py --yul      # print the Yul kernel functions
+    uv run scripts/fp256/generators/kernel254.py --check    # does FP256.yul.src hold that Yul verbatim?
 
 Scale: 2^-254 (values below 4 fit a word) at the kernels' edges. Inside
 them every product is hi(a, b) = floor(a b / 2^256), the 512-bit product's
@@ -72,6 +73,7 @@ from mpmath import mp, mpf, log, power, exp as mexp, nint, frexp, atanh, sqrt, c
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from minimax import remez, certify  # noqa: E402
+from horner import Horner, hiline, hiset, tree  # noqa: E402
 
 mp.dps = 110
 MASK = (1 << 256) - 1
@@ -89,8 +91,6 @@ LNW_DEG = 21               # P(s) for |y| below 2^-4/(2 - 2^-4)
 EM1_DEG = 21               # (e^d - 1)/d for |d| below 2^-8
 SY = 259                   # y = d/(2 + d) at 2^-259 in log2m and the near-one ln
 SS = 2 * SY - 256          # y^2 at 2^-262
-CHEAP_STEP = mpf(2) ** -9  # one-word step admitted when its error times u^j is below this
-CHEAP_ALL = mpf(2) ** -6   # and the one-word steps together below this
 
 
 # ---- the word-level primitives, as the Yul does them -------------------------
@@ -174,146 +174,6 @@ def hx(v: int) -> str:
     return f"0x{v:x}"
 
 
-# ---- Horner with full and one-word steps ----------------------------------------
-
-class Horner:
-    """P(v) = sum c_j v^j for v in [0, vmax], all c_j > 0, as the Yul runs it:
-    T = v 2^sigma an integer, p at 2^-rho, p_d = C_d and then
-    p_j = C_j + hi(p_{j+1}, T) or, in one word, C_j + ((p_{j+1} >> a_j)
-    (T >> b)) >> (256 - a_j - b). hi(p, T) = p_val v 2^(rho + sigma - 256), so
-    the Yul's Horner runs in u = v 2^(sigma - 256) with C_j = c_j 2^(-(sigma -
-    256) j) 2^rho rounded to nearest. Error bound (units of 2^-rho):
-    sum_j (1/2 + theta_j) umax^j, theta_j the step's floor (1) plus the
-    one-word truncation; plus the fit's."""
-
-    def __init__(self, coeffs, sigma, rho, vmax, fit_rel, fmax, name, var, signed=False):
-        self.name, self.var, self.signed = name, var, signed
-        self.sigma, self.rho = sigma, rho
-        k = sigma - 256
-        self.C = [int(nint(c * power(2, -k * j) * power(2, rho))) for j, c in enumerate(coeffs)]
-        assert all(c > 0 for c in self.C), "a coefficient is not positive"
-        self.Tmax = int(ceil(vmax * power(2, sigma)))
-        assert self.Tmax < 1 << 256
-        self.umax = mpf(self.Tmax) / power(2, 256)
-        d = len(self.C) - 1
-        # Pmax[j]: a bound on the computed p_j
-        self.Pmax = [0] * (d + 1)
-        for j in range(d, -1, -1):
-            self.Pmax[j] = int(sum(mpf(self.C[i]) * self.umax ** (i - j) for i in range(j, d + 1))) + 8
-        best = None
-        for b in range(0, 257):
-            steps, extra = self._plan(b)
-            ncheap = sum(1 for s in steps if s)
-            if best is None or ncheap > best[0]:
-                best = (ncheap, b, steps, extra)
-        self.ncheap, self.b, self.steps, self.extra = best
-        self.fit_units = fit_rel * fmax * power(2, rho)
-        theta = [1 + (st[2] if st else 0) for st in self.steps]    # for j = d-1 .. 0
-        self.err = mpf(1) / 2 * self.umax ** d                     # C_d's rounding
-        for idx, j in enumerate(range(d - 1, -1, -1)):
-            self.err += (mpf(1) / 2 + theta[idx]) * self.umax ** j
-        self.err += self.fit_units
-
-    def _plan(self, b):
-        """One-word steps from the top for a given b, while admitted."""
-        d = len(self.C) - 1
-        Ts = self.Tmax >> b
-        steps = []
-        extra = mpf(0)
-        cheap = True
-        for j in range(d - 1, -1, -1):
-            st = None
-            if cheap and Ts:
-                P = self.Pmax[j + 1]
-                a = max(0, P.bit_length() + Ts.bit_length() - (255 if self.signed else 256))
-                s = 256 - a - b
-                if s >= 0:
-                    t = (mpf(2) ** a * self.Tmax + mpf(2) ** b * P) / power(2, 256)
-                    if t * self.umax ** j <= CHEAP_STEP and extra + t * self.umax ** j <= CHEAP_ALL:
-                        st = (a, s, t)
-                        extra += t * self.umax ** j
-            if st is None:
-                cheap = False
-            steps.append(st)
-        return steps, extra
-
-    def eval(self, T: int) -> int:
-        """T a Python int (negative allowed when signed): floors toward minus
-        infinity, as sar and the corrected high word do."""
-        assert abs(T) <= self.Tmax and (self.signed or T >= 0)
-        p = self.C[-1]
-        Ts = T >> self.b
-        for st, c in zip(self.steps, reversed(self.C[:-1])):
-            assert p >= 0
-            if st:
-                a, s, _ = st
-                pr = (p >> a) * Ts
-                assert abs(pr) < 1 << 255
-                p = (pr >> s) + c
-            else:
-                p = ((p * T) >> 256) + c
-        return p
-
-    def yul(self, acc: str) -> list[str]:
-        """The Horner lines on the variable self.var into acc. Signed: the
-        one-word product of p >= 0 and a signed T >> b is a plain mul (it
-        fits), floored by sar; the high word of p T is the unsigned one less
-        p when T < 0 (ng)."""
-        out = []
-        sh = "sar" if self.signed else "shr"
-        if self.ncheap:
-            out.append(f"let {self.var}s := {sh}({self.b}, {self.var})")
-        out.append(f"{acc} := {hx(self.C[-1])}")
-        for st, c in zip(self.steps, reversed(self.C[:-1])):
-            if st:
-                a, s, _ = st
-                pa = f"shr({a}, {acc})" if a else acc
-                out.append(f"{acc} := add({sh}({s}, mul({pa}, {self.var}s)), {hx(c)})")
-            elif self.signed:
-                out.append(f"{{ let pl := mul({acc}, {self.var}) let ph := mulmod({acc}, {self.var}, not(0)) "
-                           f"{acc} := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(ng, {acc})), {hx(c)}) }}")
-            else:
-                out.append(hiline(acc, acc, self.var, hx(c)))
-        return out
-
-
-def hiline(dst: str, a: str, b: str, plus: str) -> str:
-    """dst := hi(a, b) + plus, in line."""
-    return (f"{{ let pl := mul({a}, {b}) let ph := mulmod({a}, {b}, not(0)) "
-            f"{dst} := add(sub(sub(ph, pl), lt(ph, pl)), {plus}) }}")
-
-
-def hiset(dst: str, a: str, b: str) -> str:
-    """dst := hi(a, b), in line."""
-    return (f"{{ let pl := mul({a}, {b}) let ph := mulmod({a}, {b}, not(0)) "
-            f"{dst} := sub(sub(ph, pl), lt(ph, pl)) }}")
-
-
-def tree(var: str, leaf, nbits: int = 4, ind: str = "    ") -> list[str]:
-    """Binary dispatch on the low nbits of var: four tests reach any of 16
-    entries (the linear switch averages eight; K1 measured 156 against 252
-    gas). leaf(j) is the code for entry j, '' for none."""
-    out = []
-
-    def rec(bit, prefix, depth):
-        pad = ind * depth
-        if bit < 0:
-            code = leaf(prefix)
-            if code:
-                out.append(pad + code)
-            return
-        out.append(f"{pad}switch and({var}, {1 << bit})")
-        out.append(f"{pad}case 0 {{")
-        rec(bit - 1, prefix, depth + 1)
-        out.append(f"{pad}}}")
-        out.append(f"{pad}default {{")
-        rec(bit - 1, prefix | (1 << bit), depth + 1)
-        out.append(f"{pad}}}")
-
-    rec(nbits - 1, 0, 1)
-    return out
-
-
 # ---- the fits --------------------------------------------------------------------
 
 def em1fun(d):
@@ -335,6 +195,9 @@ class Fit:
         self.name, self.deg, self.a, self.b = name, deg, mpf(a), mpf(b)
         self.coeffs, self.E = remez(f, deg, a, b)
         self.sup = certify(self.coeffs, f, a, b)
+        # the bounds take the grid's maximum with 2^-10 of it to spare for the
+        # gaps between the points
+        self.bound = self.sup * (1 + mpf(2) ** -10)
 
     def line(self):
         return (f"{self.name}: degree {self.deg} minimax, levelled error 2^{float(log(self.E, 2)):.1f}, "
@@ -343,7 +206,18 @@ class Fit:
 
 # ---- kernels -------------------------------------------------------------------
 
+def at110(fn):
+    """Run fn at 110 digits whatever the caller's mp.dps (bounds.py runs at
+    120): the fits' last bits depend on the working precision, and the
+    constants must be the ones in the source."""
+    def wrapped(*args, **kw):
+        with mp.workdps(110):
+            return fn(*args, **kw)
+    return wrapped
+
+
 class Kernels:
+    @at110
     def __init__(self):
         rb = mpf(2) ** (-4 * EXP_LEVELS)
         self.fit_exp = Fit("2^r", lambda r: power(2, r), EXP_DEG, 0, rb)
@@ -353,10 +227,10 @@ class Kernels:
         self.fit_lnw = Fit("P(s), wide", pfun, LNW_DEG, 0, ymax_w ** 2)
         h8 = mpf(2) ** -8
         self.fit_em1 = Fit("(e^d - 1)/d", em1fun, EM1_DEG, -h8, h8)
-        self.hexp = Horner(self.fit_exp.coeffs, 256, 255, rb, self.fit_exp.sup, power(2, rb), "exp2frac", "x")
-        self.hln = Horner(self.fit_ln.coeffs, SS, 254, ymax_n ** 2, self.fit_ln.sup, pfun(ymax_n ** 2), "lnp", "t")
-        self.hlnw = Horner(self.fit_lnw.coeffs, SS, 254, ymax_w ** 2, self.fit_lnw.sup, pfun(ymax_w ** 2), "lnpw", "t")
-        self.hem1 = Horner(self.fit_em1.coeffs, 256, 254, h8, self.fit_em1.sup, em1fun(h8), "expm1series", "x", signed=True)
+        self.hexp = Horner(self.fit_exp.coeffs, 256, 255, rb, self.fit_exp.bound, power(2, rb), "exp2frac", "x")
+        self.hln = Horner(self.fit_ln.coeffs, SS, 254, ymax_n ** 2, self.fit_ln.bound, pfun(ymax_n ** 2), "lnp", "t")
+        self.hlnw = Horner(self.fit_lnw.coeffs, SS, 254, ymax_w ** 2, self.fit_lnw.bound, pfun(ymax_w ** 2), "lnpw", "t")
+        self.hem1 = Horner(self.fit_em1.coeffs, 256, 254, h8, self.fit_em1.bound, em1fun(h8), "expm1series", "x", signed=True)
         # exp tables: (2^(j/16^(l+1)) - 1) 2^256, rounded
         self.etab = [[int(nint((power(2, mpf(j) / 16 ** (lv + 1)) - 1) * power(2, 256))) for j in range(16)]
                      for lv in range(EXP_LEVELS)]
@@ -780,6 +654,15 @@ def emit_yul(K: Kernels) -> str:
     return "\n".join(out)
 
 
+def check_source(K: Kernels) -> bool:
+    """True when FP256.yul.src holds the emitted kernels verbatim, so the
+    models here are the Yul that runs."""
+    src = (Path(__file__).resolve().parents[3] / "contracts/src/fp256/FP256.yul.src").read_text()
+    ok = all(b.strip("\n") in src for b in emit_yul(K).split("\n\n") if b.strip())
+    print(f"FP256.yul.src holds kernel254.py's Yul verbatim: {'yes' if ok else 'NO'}")
+    return ok
+
+
 # ---- measurement -----------------------------------------------------------------
 
 def rand_float(rng, lo, hi_, s=None):
@@ -894,6 +777,8 @@ def main(argv):
     if "--yul" in argv:
         print(emit_yul(K))
         return 0
+    if "--check" in argv:
+        return 0 if check_source(K) else 1
     for ft in (K.fit_exp, K.fit_ln, K.fit_lnw, K.fit_em1):
         print(ft.line())
     for h in (K.hexp, K.hln, K.hlnw, K.hem1):

@@ -85,8 +85,8 @@
    "hist": {
     "0": 21913
    },
-   "gasMedian": 3241,
-   "gasP99": 3310,
+   "gasMedian": 3299,
+   "gasP99": 3368,
    "gasMax": 25236,
    "fallback": 1,
    "fallbackRuns": 1,
@@ -148,8 +148,8 @@
     "0": 21957
    },
    "gasMedian": 2390,
-   "gasP99": 3361,
-   "gasMax": 25910,
+   "gasP99": 3419,
+   "gasMax": 25968,
    "fallback": 13,
    "fallbackRuns": 13,
    "fallbackPct": 0.059
@@ -168,9 +168,9 @@
    "hist": {
     "0": 21985
    },
-   "gasMedian": 5844,
-   "gasP99": 54473,
-   "gasMax": 57020,
+   "gasMedian": 5902,
+   "gasP99": 54522,
+   "gasMax": 57078,
    "fallback": 271,
    "fallbackRuns": 271,
    "fallbackPct": 1.232
@@ -188,9 +188,9 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 12932,
-   "gasP99": 66531,
-   "gasMax": 89904,
+   "gasMedian": 12990,
+   "gasP99": 66589,
+   "gasMax": 89962,
    "fallback": 4,
    "fallbackRuns": 4,
    "fallbackPct": 0.1
@@ -208,9 +208,9 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 13885,
-   "gasP99": 65481,
-   "gasMax": 399281,
+   "gasMedian": 13943,
+   "gasP99": 65539,
+   "gasMax": 399339,
    "fallback": 16,
    "fallbackRuns": 16,
    "fallbackPct": 0.267
@@ -228,9 +228,9 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 13515,
-   "gasP99": 62963,
-   "gasMax": 405142,
+   "gasMedian": 13562,
+   "gasP99": 63021,
+   "gasMax": 405200,
    "fallback": 20,
    "fallbackRuns": 20,
    "fallbackPct": 0.333
@@ -249,9 +249,9 @@
    "hist": {
     "0": 5644
    },
-   "gasMedian": 6246,
-   "gasP99": 105960,
-   "gasMax": 142129,
+   "gasMedian": 6304,
+   "gasP99": 106018,
+   "gasMax": 142187,
    "fallback": 808,
    "fallbackRuns": 808,
    "fallbackPct": 13.467
@@ -571,9 +571,9 @@
    "hist": {
     "0": 7937
    },
-   "gasMedian": 3044,
-   "gasP99": 3130,
-   "gasMax": 3130,
+   "gasMedian": 3102,
+   "gasP99": 3188,
+   "gasMax": 3188,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -592,9 +592,9 @@
    "hist": {
     "0": 7938
    },
-   "gasMedian": 3142,
-   "gasP99": 3229,
-   "gasMax": 3229,
+   "gasMedian": 3200,
+   "gasP99": 3287,
+   "gasMax": 3287,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -687,8 +687,8 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 3565,
-   "gasP99": 3660,
+   "gasMedian": 3613,
+   "gasP99": 3718,
    "gasMax": 31590,
    "fallback": 1,
    "fallbackRuns": 1,
@@ -707,9 +707,9 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 3551,
-   "gasP99": 3655,
-   "gasMax": 27778,
+   "gasMedian": 3609,
+   "gasP99": 3713,
+   "gasMax": 27836,
    "fallback": 1,
    "fallbackRuns": 1,
    "fallbackPct": 0.013
@@ -727,8 +727,8 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 3581,
-   "gasP99": 3685,
+   "gasMedian": 3628,
+   "gasP99": 3743,
    "gasMax": 54953,
    "fallback": 1,
    "fallbackRuns": 1,
@@ -1436,9 +1436,9 @@
    "minBits": 129.3,
    "below": 1987,
    "above": 2013,
-   "gasMedian": 3215,
-   "gasP99": 3425,
-   "gasMax": 3520,
+   "gasMedian": 1934,
+   "gasP99": 1974,
+   "gasMax": 1984,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -1458,9 +1458,9 @@
    "minBits": 129.2,
    "below": 2020,
    "above": 1970,
-   "gasMedian": 2999,
-   "gasP99": 3284,
-   "gasMax": 3304,
+   "gasMedian": 1718,
+   "gasP99": 1758,
+   "gasMax": 1768,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -1481,9 +1481,9 @@
    "minBits": 129.0,
    "below": 1992,
    "above": 1955,
-   "gasMedian": 5861,
-   "gasP99": 15837,
-   "gasMax": 18644,
+   "gasMedian": 3375,
+   "gasP99": 14630,
+   "gasMax": 16077,
    "fallback": 270,
    "fallbackRuns": 270,
    "fallbackPct": 6.75
@@ -1542,9 +1542,9 @@
    "minBits": null,
    "below": 1037,
    "above": 963,
-   "gasMedian": 4879,
-   "gasP99": 25101,
-   "gasMax": 36438
+   "gasMedian": 3623,
+   "gasP99": 23680,
+   "gasMax": 35152
   },
   {
    "lib": "fp127",
@@ -1561,9 +1561,9 @@
    "minBits": 129.0,
    "below": 1014,
    "above": 937,
-   "gasMedian": 4753,
-   "gasP99": 21816,
-   "gasMax": 36431
+   "gasMedian": 3497,
+   "gasP99": 20539,
+   "gasMax": 35155
   },
   {
    "lib": "fp127",
@@ -1580,9 +1580,9 @@
    "minBits": null,
    "below": 1001,
    "above": 989,
-   "gasMedian": 4950,
-   "gasP99": 26648,
-   "gasMax": 36628
+   "gasMedian": 3694,
+   "gasP99": 25361,
+   "gasMax": 35352
   },
   {
    "lib": "fp127",
@@ -1661,9 +1661,9 @@
    "minBits": 129.2,
    "below": 2007,
    "above": 1993,
-   "gasMedian": 3215,
-   "gasP99": 3425,
-   "gasMax": 3520,
+   "gasMedian": 1934,
+   "gasP99": 1974,
+   "gasMax": 1984,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -1742,9 +1742,9 @@
    "minBits": 129.3,
    "below": 1614,
    "above": 1682,
-   "gasMedian": 3715,
-   "gasP99": 6394,
-   "gasMax": 6584
+   "gasMedian": 2750,
+   "gasP99": 3472,
+   "gasMax": 3492
   },
   {
    "lib": "fp127",

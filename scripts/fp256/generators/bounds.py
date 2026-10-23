@@ -934,7 +934,8 @@ def kernels(n):
     ker, _, _ = K.build()
     for ft in (ker.fit_exp, ker.fit_ln, ker.fit_lnw, ker.fit_em1):
         print(ft.line())
-    return K.measure_kernels(ker, random.Random(254), n)
+    bad = not K.check_source(ker)
+    return K.measure_kernels(ker, random.Random(254), n) or bad
 
 
 if __name__ == "__main__":

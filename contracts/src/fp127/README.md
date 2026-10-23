@@ -242,10 +242,27 @@ result bits, so in v2 to v4 `ln`, `log2` and `log10` were within two ULP
 the exponentials within one ULP below 2^16 and 2^-146 relative above; v5
 replaced the exponentials' kernel and added the logs' fallback (above). The ladder's `exp(ln(x))` round trip,
 which drifted 8 ULPs per step under floor, now returns the same word on
-every step. The polynomials (degree 24 for 2^f, degree 14 for
-log2(1+f)/f) are Chebyshev fits with error below 2^-145, from
-`scripts/fp127/generators/guard_model.py`, which also models the kernels
-in exact integer arithmetic and measures them.
+every step.
+
+**The one-word kernels (Blockulator 2.2).** 2^f and log2 of a mantissa at
+2^-192, behind the erf family, Lambert W's iterations, pow's first try
+(`pow2t`) and the logs' rounding test, were rewritten after measuring what
+the EVM charges (FP256's kernel pass did the same): `exp2frac` is one
+16-entry table level and the degree-15 minimax polynomial of 2^r on
+[0, 1/16) (2^-147.7 relative; v5's was a degree-24 fit on [0, 1),
+2^-145.9), Horner on the products' high words with the top 10 steps in one
+word, within 2^-146.7 relative: 2,216 → 1,380 gas a call. `log2m` is two
+additive 16-entry levels by word-only reductions (a shift and a div by
+16 + i or 256 + i; the table's logarithm added, never multiplied) and the
+degree-14 minimax polynomial of log2(1 + w)/w on [0, 2^-8] (2^-153.0),
+within 2^-160.5 absolute where v5's seven stages were about 2^-150: 2,594 →
+1,333. `scripts/fp127/generators/kernel192.py` fits them (Remez,
+`scripts/fp256/generators/minimax.py`), models them in exact integers,
+checks that the source holds its Yul verbatim and measures them against
+their bounds; `precise_model.py` and `erf_model.py` take them from there.
+A table-driven `expk` (four 16-entry double-word levels in place of the
+eight 2-bit groups) measured 4,140 gas against 4,485 but needs about
+2.5 KB more than FP127 has, so the double-word kernel stays.
 
 Version 4 (2026-10-15) adds eleven ops and moves `pow`'s exponent product
 to 2^-192 as well: `log2(x)` is taken unrounded and multiplied by `y` at
