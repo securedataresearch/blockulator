@@ -296,14 +296,7 @@ object "FP127" {
             }
 
             function msb(x) -> r {
-                if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
-                if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
-                if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
-                if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
-                if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
-                if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
-                if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
-                if iszero(lt(x, 0x2)) { r := add(r, 1) }
+                if x { r := sub(255, clz(x)) }
             }
 
             function mulraw(a, b) -> r {
@@ -908,15 +901,8 @@ object "FP127" {
             }
 
             function isqrtw(z) -> y {
-                y := 181
-                let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
-                b := or(b, shl(6, lt(0xffffffffffffffffff, shr(b, z))))
-                b := or(b, shl(5, lt(0xffffffffff, shr(b, z))))
-                b := or(b, shl(4, lt(0xffffff, shr(b, z))))
-                y := shl(shr(1, b), y)
-                y := shr(18, mul(y, add(shr(b, z), 65536)))
-                y := shr(1, add(y, div(z, y)))
-                y := shr(1, add(y, div(z, y)))
+                let e := shr(1, sub(msb(z), 16))
+                y := shl(e, shr(32, mul(add(shr(shl(1, e), z), 0x20000), 0x57d1c0)))
                 y := shr(1, add(y, div(z, y)))
                 y := shr(1, add(y, div(z, y)))
                 y := shr(1, add(y, div(z, y)))

@@ -28,6 +28,50 @@ make bench            # gas ladder for every op and form -> docs/benchmarks/
 make size             # deployed runtime size against the 24,576-byte limit
 ```
 
+## Chains: CLZ (Osaka) required
+
+Every leading-bit count goes through one helper, `msb(x) = 255 - clz(x)`,
+on the CLZ opcode (EIP-7939, Fusaka/Osaka, 5 gas), guarded so msb(0) = 0.
+Both forms (the object and `FP127Lib.sol`) need it: compile the library
+with solc >= 0.8.31 and `evm_version = "osaka"` (this repo pins 0.8.38),
+and use either only on a chain that has CLZ. `isqrtw`'s seed comes from the
+same exact bit length (a linear fit on the normalised mantissa, five Newton
+steps where Solady's seed needed seven; `scripts/fp127/generators/isqrt_seed.py`
+proves the bound). Results are the same words and reverts as v5, which
+ran a binary search for msb: about 140 to 1,900 gas less per op through the
+object, and 200 to 1,400 less inline where an op counts leading bits
+([`docs/benchmarks/gas.md`](../../../docs/benchmarks/gas.md)).
+
+Supported chains are those with CLZ, as of 2026-10-22 (each probed live;
+dates and names are the networks' announced activations):
+
+| chain | CLZ since | upgrade |
+|---|---|---|
+| Ethereum mainnet | 2025-12-03 | Fusaka |
+| Sepolia | 2025-10-14 | Fusaka |
+| Hoodi | (probe) | Fusaka |
+| Arbitrum One | 2026-01-08 | ArbOS 51 |
+| OP Mainnet | 2026-07-08 | Upgrade 19 "Karst" |
+| Unichain | 2026-07-08 | Upgrade 19 "Karst" |
+| Base | 2026-05-28 | "Azul" |
+| Polygon PoS | 2026-03-04 | Lisovo |
+| BNB Chain | 2026-04-28 | Osaka / Mendel |
+| Gnosis | 2026-04-14 | Fusaka |
+| Scroll | (probe) | Galileo |
+| Linea | (probe) | |
+
+**Unsupported** (no CLZ, probed 2026-10-22): zkSync Era, Avalanche C-Chain,
+Polygon zkEVM.
+
+The objects deploy fine on a chain without CLZ (the init code only copies
+the runtime), but there the opcode is invalid and every call that counts
+leading bits fails and burns all the gas it was given. Probe a chain before
+deploying to it or calling it: an `eth_call` with no `to` and the creation
+code `0x60011e60005260206000f3` (PUSH1 1, CLZ, PUSH1 0, MSTORE, PUSH1 32,
+PUSH1 0, RETURN) returns the word `0xff` where CLZ exists. `make probe-clz
+RPC=<url>` runs it, and every `deploy-*` target runs it first and refuses
+to send unless the answer is 255.
+
 ## Two forms, one source
 
 The same Yul function bodies are emitted twice.

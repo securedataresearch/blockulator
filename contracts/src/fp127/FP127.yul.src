@@ -67,17 +67,13 @@ function absw(x) -> r {
     r := sub(xor(x, m), m)
 }
 
-/// Index of the most significant set bit of x > 0, 0..255. Verbatim port of
-/// the Huff binary search.
+/// Index of the most significant set bit of x > 0, 0..255; msb(0) = 0. On
+/// the CLZ opcode (EIP-7939, Osaka): 255 - clz(x), guarded because
+/// 255 - clz(0) wraps. Every leading-bit count in this file goes through it;
+/// none of its 20 call sites passes zero. v1 to v5 ran the Huff's binary
+/// search here, 250 to 300 gas more.
 function msb(x) -> r {
-    if iszero(lt(x, 0x100000000000000000000000000000000)) { r := 128 x := shr(128, x) }
-    if iszero(lt(x, 0x10000000000000000)) { r := add(r, 64) x := shr(64, x) }
-    if iszero(lt(x, 0x100000000)) { r := add(r, 32) x := shr(32, x) }
-    if iszero(lt(x, 0x10000)) { r := add(r, 16) x := shr(16, x) }
-    if iszero(lt(x, 0x100)) { r := add(r, 8) x := shr(8, x) }
-    if iszero(lt(x, 0x10)) { r := add(r, 4) x := shr(4, x) }
-    if iszero(lt(x, 0x4)) { r := add(r, 2) x := shr(2, x) }
-    if iszero(lt(x, 0x2)) { r := add(r, 1) }
+    if x { r := sub(255, clz(x)) }
 }
 
 /// Unchecked floor(a * b / 2^128). Same arithmetic as fp127_mul without the
@@ -933,19 +929,18 @@ function fp127_log2Up(x) -> r {
 // Roots and powers
 // ---------------------------------------------------------------------------
 
-/// floor(sqrt(z)) for any unsigned z: Solady's FixedPointMathLib.sqrt (MIT),
-/// a seed within a factor 2.84 from the bit length, seven Newton steps with
-/// div, and the step back from ceil to floor.
+/// floor(sqrt(z)) for z >= 2^16 (both callers pass z >= 2^128). The exact
+/// bit length t = msb(z) normalises z = m 4^e, m = z >> 2e in [2^16, 2^18),
+/// e = (t - 16) / 2; a linear fit of sqrt on m, ((m + 2^17) C) >> 32, shifted
+/// by e, seeds within a factor 0.9675..1.0287 of the root, so five Newton
+/// steps leave it less than 2^-60 above the root (s E_5 < 2^-60.4 for every
+/// z < 2^256, scripts/fp127/generators/isqrt_seed.py, which also checks the
+/// model against math.isqrt), and the last line steps back from ceil to
+/// floor. v5 ran Solady's sqrt here: a seed within a factor 2.84 from four
+/// comparisons, and seven steps.
 function isqrtw(z) -> y {
-    y := 181
-    let b := shl(7, lt(0xffffffffffffffffffffffffffffffffff, z))
-    b := or(b, shl(6, lt(0xffffffffffffffffff, shr(b, z))))
-    b := or(b, shl(5, lt(0xffffffffff, shr(b, z))))
-    b := or(b, shl(4, lt(0xffffff, shr(b, z))))
-    y := shl(shr(1, b), y)
-    y := shr(18, mul(y, add(shr(b, z), 65536)))
-    y := shr(1, add(y, div(z, y)))
-    y := shr(1, add(y, div(z, y)))
+    let e := shr(1, sub(msb(z), 16))
+    y := shl(e, shr(32, mul(add(shr(shl(1, e), z), 0x20000), 0x57d1c0)))
     y := shr(1, add(y, div(z, y)))
     y := shr(1, add(y, div(z, y)))
     y := shr(1, add(y, div(z, y)))
