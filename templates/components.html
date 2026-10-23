@@ -14,27 +14,32 @@
 </dl>
 {%- endcomponent %}
 
+{#- One gas basis, site-wide: an op's typical inputs (random inputs that take no shortcut) where gas.json has them,
+    else its input ladder. The home page, the pitch table, the op tables and the per-op table all read it this way. -#}
 {% component optable(lib: string = "fp127") -%}
 {%- set pre = lib == "fp256" and "static/data/fp256/" or "static/data/" -%}
 {%- set ops = load_data(path=pre ~ "ops.json") -%}
 {%- set prec = load_data(path=pre ~ "precision.json") -%}
 {%- set gas = load_data(path=pre ~ "gas.json") -%}
+{#- FP256 ops whose result is always the exact value; every other FP256 op is correctly rounded (CR) -#}
+{%- set exact256 = ["neg", "abs", "sign", "cmp", "lt", "eq", "min", "max", "clamp", "floor", "ceil", "round", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "log2Up"] -%}
 <div class="scroll">
 <table class="optable">
-<thead><tr><th>op</th><th>what</th><th>domain</th><th>reverts</th><th class="num">bits<br>min / mean</th><th class="num">gas<br>object</th><th class="num">gas<br>inline</th></tr></thead>
+<thead><tr><th>op</th><th>what</th><th>domain</th><th>reverts</th><th class="num">bits (min/mean)</th><th class="num">gas, object</th><th class="num">gas, inline</th></tr></thead>
 <tbody>
 {%- for o in ops.ops %}
 {%- set p = prec[o.name] %}
+{%- set what = o.notice | split(pat=". ") | first %}{% if what | length > 80 %}{% set what = what | split(pat=": ") | first %}{% endif %}{% if what | length > 90 %}{% set what = what | truncate(length=80) %}{% endif %}
 <tr>
 <td class="mono"><a href="#{{ o.name }}" id="{{ o.name }}">{{ o.signature }}</a><br><span class="sel">{{ o.selector }}</span></td>
-<td>{{ o.notice }}</td>
+<td>{% if what == o.notice or o.notice | length <= 110 %}{{ o.notice }}{% else %}<details class="what"><summary>{{ what }}</summary>{{ o.notice }}</details>{% endif %}</td>
 <td>{{ o.domain }}</td>
-<td>{{ o.reverts }}</td>
-<td class="num">{% if p.minBits >= 256 %}exact{% else %}{{ p.minBits }} / {{ p.meanBits }}{% endif %}</td>
+<td{% if o.reverts != "never" %} title="{{ o.reverts }}"{% endif %}>{% for r in o.reverts | split(pat="; ") %}{{ r | split(pat=" ") | first | replace(from="()", to="") }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+<td class="num">{% if lib == "fp256" %}{% if o.name in exact256 %}exact{% elif p.minBits >= 256 %}CR{% else %}{{ p.minBits }}/{{ p.meanBits }}{% endif %}{% elif p.minBits >= 256 %}exact{% else %}{{ p.minBits }}/{{ p.meanBits }}{% endif %}</td>
 {%- if o.name in gas.ops %}
-{%- set s = gas.ops[o.name].summary %}
-<td class="num">{% if s.yul %}{{ s.yul.median }}{% endif %}</td>
-<td class="num">{% if s.lib %}{{ s.lib.median }}{% endif %}</td>
+{%- set g = gas.ops[o.name] %}{% if g.typical is defined %}{% set s = g.typical.summary %}{% else %}{% set s = g.summary %}{% endif %}
+<td class="num">{% if s.yul %}{{ s.yul.median | num_format }}{% endif %}</td>
+<td class="num">{% if s.lib %}{{ s.lib.median | num_format }}{% endif %}</td>
 {%- else %}
 <td class="num"></td><td class="num"></td>
 {%- endif %}
@@ -43,15 +48,17 @@
 </tbody>
 </table>
 </div>
+{%- set_global nt = 0 %}{% for name, g in gas.ops %}{% if g.typical is defined %}{% set_global nt = nt + 1 %}{% endif %}{% endfor %}
 {%- if lib == "fp256" %}
-<p class="note">Bits are relative correct bits on the decoded values against exact rationals and mpmath at 300 decimal places over the committed vectors; "exact" is bit-identical. Gas is the median over each op's input ladder: "object" includes the <code>staticcall</code> to the deployed object that holds the op (FP256, FP256E, FP256H or FP256S), "inline" is <code>FP256Lib</code>. Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>.</p>
+<p class="note">Bits against exact rationals and mpmath at 300 decimal places over the committed vectors. <strong>CR</strong>: the correctly rounded word at every vector, to nearest or in the direction the name gives; <strong>exact</strong>: the result is always the exact value. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed object that holds the op (FP256, FP256E, FP256H or FP256S); "inline" is <code>FP256Lib</code>. Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>.</p>
 {%- else %}
-<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. Gas is the median over each op's input ladder: "object" includes the <code>staticcall</code> to the deployed FP127, "inline" is <code>FP127Lib</code>. Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>.</p>
+<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed FP127; "inline" is <code>FP127Lib</code>. Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>.</p>
 {%- endif %}
 {%- endcomponent %}
 
-{#- Median gas per op and form. Empty: the library does not offer the op; rev: it does, and reverted (or the input
-    was outside its domain or format) on every ladder input. Each cell's title is the call it measures (gas.calls). -#}
+{#- Median gas per op and form, on the site's one basis (typical inputs where the op has them, marked t, else the
+    ladder). Empty: the library does not offer the op; rev: it does, and reverted (or the input was outside its domain
+    or format) on every input. Each cell's title is the call it measures (gas.calls). -#}
 {% component gastable(repo: string, lib: string = "fp127") -%}
 {%- if lib == "fp256" %}{% set gas = load_data(path="static/data/fp256/gas.json") %}{% set forms = ["yul", "lib", "fp127lib", "quad"] %}{% set src = "/data/fp256/gas.json" %}{% set md = "gas256.md" -%}
 {%- else %}{% set gas = load_data(path="static/data/gas.json") %}{% set forms = ["yul", "lib", "abdk", "solady", "prb", "quad", "balancer"] %}{% set src = "/data/gas.json" %}{% set md = "gas.md" %}{% endif -%}
@@ -60,19 +67,80 @@
 <thead><tr><th>op</th>{% for f in forms %}<th class="num">{{ gas.formLabels[f] }}</th>{% endfor %}</tr></thead>
 <tbody>
 {%- for name, o in gas.ops %}
-<tr><td class="mono">{{ name }}</td>
-{%- for f in forms %}{% set s = o.summary[f] %}{% set call = "" %}{% if gas.calls[f] is defined %}{% if gas.calls[f][name] is defined %}{% set call = gas.calls[f][name] %}{% endif %}{% endif -%}
-<td class="num"{% if call %} title="{{ call }}"{% endif %}>{% if s %}{{ s.median }}{% elif o.reverts is defined %}{% if o.reverts[f] is defined %}<span class="rev">rev</span>{% endif %}{% endif %}</td>{% endfor %}
+{%- if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif %}
+<tr><td class="mono">{{ name }}{% if o.typical is defined %} <sup class="t" title="typical inputs">t</sup>{% endif %}</td>
+{%- for f in forms %}{% set s = sm[f] %}{% set call = "" %}{% if gas.calls[f] is defined %}{% if gas.calls[f][name] is defined %}{% set call = gas.calls[f][name] %}{% endif %}{% endif -%}
+<td class="num"{% if call %} title="{{ call }}"{% endif %}>{% if s %}{{ s.median | num_format }}{% elif o.typical is defined %}{% if o.typical.reverts is defined %}{% if o.typical.reverts[f] is defined %}<span class="rev">rev</span>{% endif %}{% endif %}{% elif o.reverts is defined %}{% if o.reverts[f] is defined %}<span class="rev">rev</span>{% endif %}{% endif %}</td>{% endfor %}
 </tr>
 {%- endfor %}
 </tbody>
 </table>
 </div>
 {%- if lib == "fp256" %}
-<p class="note">Median gas per op over its input ladder, {{ gas.generated }}. The object column includes the <code>staticcall</code>; the other three are internal library calls: <code>FP256Lib</code>, the same op in <code>FP127Lib</code> on the same value where 127.128 holds it, and ABDKMathQuad, the other float. An empty cell is an op the library does not offer; <span class="rev">rev</span> would be one it offers that reverted, or whose inputs were outside its domain or format, on every ladder input. Hover a Quad cell for the call it measures: <code>lt</code>, <code>inv</code> and <code>pow</code> are composed from Quad's own functions, and its conversions truncate where FP256's round. The WAD libraries and 64.64 are compared on <a href="/results/ops/">FP127's table</a>. Min and max per cell are in <a href="{{ src }}">gas.json</a> and <a href="{{ repo }}/blob/master/docs/benchmarks/{{ md }}">{{ md }}</a>; every function of every comparison library is mapped in <a href="{{ repo }}/blob/master/docs/benchmarks/coverage.md">coverage.md</a>.</p>
+<p class="note">Median gas per call, {{ gas.generated }}: over random inputs that take no shortcut for the ops marked <sup class="t">t</sup>, else over the op's input ladder. The object column includes the <code>staticcall</code>; the other three are internal library calls: <code>FP256Lib</code>, the same op in <code>FP127Lib</code> on the same value where 127.128 holds it, and ABDKMathQuad, the other float. An empty cell is an op the library does not offer; <span class="rev">rev</span> would be one it offers that reverted, or whose inputs were outside its domain or format, on every input. Hover a Quad cell for the call it measures: <code>lt</code>, <code>inv</code> and <code>pow</code> are composed from Quad's own functions, and its conversions truncate where FP256's round. The WAD libraries and 64.64 are compared on <a href="/results/ops/">FP127's table</a>. Min and max per cell, and the ladder medians, are in <a href="{{ src }}">gas.json</a> and <a href="{{ repo }}/blob/master/docs/benchmarks/{{ md }}">{{ md }}</a>; every function of every comparison library is mapped in <a href="{{ repo }}/blob/master/docs/benchmarks/coverage.md">coverage.md</a>.</p>
 {%- else %}
-<p class="note">Median gas per op over its input ladder, {{ gas.generated }}. The Yul object column includes the <code>staticcall</code>; the other six are internal library calls. An empty cell is an op the library does not offer; <span class="rev">rev</span> would be one it offers that reverted, or whose inputs were outside its domain or format, on every ladder input. Hover a cell for the function it measures. A few are composed from the library's own functions (Solady and Quad <code>inv</code>, Quad <code>pow</code>, Balancer <code>sqrt</code> and <code>cbrt</code>); some keep to part of the ladder (Solady's unsigned functions to non-negative inputs, its integer <code>log2Up</code> and <code>factorial</code> to integers, its <code>lerp</code> to t in [0, 1]). Solady's <code>add</code> and <code>sub</code> are its unchecked <code>rawAdd</code> and <code>rawSub</code>. Every function of every comparison library is mapped, or listed as not compared with the reason, in <a href="{{ repo }}/blob/master/docs/benchmarks/coverage.md">coverage.md</a>. Min and max per cell are in <a href="{{ src }}">gas.json</a>; the Huff and FP127Caller columns are in <a href="{{ repo }}/blob/master/docs/benchmarks/{{ md }}">{{ md }}</a>. Versions: {% for k, v in gas.versions %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+<p class="note">Median gas per call, {{ gas.generated }}: over random inputs that take no shortcut for the ops marked <sup class="t">t</sup>, else over the op's input ladder. The Yul object column includes the <code>staticcall</code>; the other six are internal library calls. An empty cell is an op the library does not offer; <span class="rev">rev</span> would be one it offers that reverted, or whose inputs were outside its domain or format, on every input. Hover a cell for the function it measures. A few are composed from the library's own functions (Solady and Quad <code>inv</code>, Quad <code>pow</code>, Balancer <code>sqrt</code> and <code>cbrt</code>); some keep to part of the inputs (Solady's unsigned functions to non-negative inputs, its integer <code>log2Up</code> and <code>factorial</code> to integers, its <code>lerp</code> to t in [0, 1]). Solady's <code>add</code> and <code>sub</code> are its unchecked <code>rawAdd</code> and <code>rawSub</code>. Every function of every comparison library is mapped, or listed as not compared with the reason, in <a href="{{ repo }}/blob/master/docs/benchmarks/coverage.md">coverage.md</a>. Min and max per cell, and the ladder medians, are in <a href="{{ src }}">gas.json</a>; the Huff and FP127Caller columns are in <a href="{{ repo }}/blob/master/docs/benchmarks/{{ md }}">{{ md }}</a>. Versions: {% for k, v in gas.versions %}{{ k }} {{ v | replace(from="forge Version: ", to="") }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
 {%- endif %}
+{%- endcomponent %}
+
+{#- The pitch: format, digits and inline gas for FP256, Quad, FP127, PRBMath and Solady, on the site's one gas basis,
+    with every "cheaper than" worked out from the data. FP256 and Quad come from fp256/gas.json (the same inputs),
+    FP127, PRBMath and Solady from gas.json. layout "libs": a row per library (the README's shape); "ops": a row per
+    op under a digits row. Digits are each format's precision at 1. -#}
+{% component pitch(layout: string = "libs") -%}
+{%- set g127 = load_data(path="static/data/gas.json") -%}
+{%- set g256 = load_data(path="static/data/fp256/gas.json") -%}
+{%- set oplist = ["add", "mul", "div", "exp", "ln", "pow", "sqrt"] -%}
+{%- if layout == "ops" %}{% set libs = ["fp127", "fp256", "quad", "solady", "prb"] %}{% else %}{% set libs = ["fp256", "quad", "fp127", "prb", "solady"] %}{% endif -%}
+{%- set names = {"fp256": "FP256", "quad": "ABDKMathQuad", "fp127": "FP127", "prb": "PRBMath SD59x18", "solady": "Solady"} -%}
+{%- set what = {"fp256": "256-bit float", "quad": "binary128 float", "fp127": "127.128 fixed point", "prb": "18-decimal fixed point", "solady": "18-decimal fixed point"} -%}
+{%- set digits = {"fp256": 71, "quad": 34, "fp127": 38, "prb": 18, "solady": 18} -%}
+{%- set form = {"fp256": "lib", "quad": "quad", "fp127": "lib", "prb": "prb", "solady": "solady"} -%}
+{%- set file = {"fp256": "g256", "quad": "g256", "fp127": "g127", "prb": "g127", "solady": "g127"} -%}
+{#- one string "lib|op|gas;" per cell, read back by the loops below -#}
+{%- set_global cells = ";" %}{% set_global typ = "," -%}
+{%- for op in oplist %}
+{%- for l in libs %}{% if file[l] == "g256" %}{% set o = g256.ops[op] %}{% else %}{% set o = g127.ops[op] %}{% endif -%}
+{%- if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif -%}
+{%- if sm[form[l]] %}{% set_global cells = cells ~ l ~ "|" ~ op ~ "|" ~ sm[form[l]].median ~ ";" %}{% endif -%}
+{%- endfor %}{% if g127.ops[op].typical is defined %}{% set_global typ = typ ~ op ~ "," %}{% endif -%}
+{%- endfor -%}
+{%- set_global w256 = "" %}{% set_global l256 = "" %}{% set_global w127 = "" %}{% set_global l127 = "" %}{% set_global sall = true -%}
+{%- for op in oplist %}{% set_global a = 0 %}{% set_global b = 0 %}{% set_global c = 0 %}{% set_global d = 0 %}{% set_global sv = 0 -%}
+{%- for e in cells | split(pat=";") %}{% set q = e | split(pat="|") %}{% if e != "" and q[1] == op %}{% if q[0] == "fp256" %}{% set_global a = q[2] | int %}{% elif q[0] == "quad" %}{% set_global b = q[2] | int %}{% elif q[0] == "fp127" %}{% set_global c = q[2] | int %}{% elif q[0] == "prb" %}{% set_global d = q[2] | int %}{% elif q[0] == "solady" %}{% set_global sv = q[2] | int %}{% endif %}{% endif %}{% endfor -%}
+{%- if a > 0 and b > 0 %}{% if a < b %}{% set_global w256 = w256 ~ "," ~ op %}{% else %}{% set_global l256 = l256 ~ "," ~ op %}{% endif %}{% endif -%}
+{%- if sv == 0 or sv >= a or sv >= c %}{% set_global sall = false %}{% endif -%}
+{%- if c > 0 and d > 0 %}{% if c < d %}{% set_global w127 = w127 ~ "," ~ op %}{% else %}{% set_global l127 = l127 ~ "," ~ op %}{% endif %}{% endif -%}
+{%- endfor %}
+<div class="scroll">
+<table class="pitch">
+{%- if layout == "ops" %}
+<thead><tr><th></th>{% for l in libs %}<th class="num{% if l == 'fp127' or l == 'fp256' %} ours{% endif %}">{{ names[l] }}</th>{% endfor %}</tr></thead>
+<tbody>
+<tr class="digits"><td>digits</td>{% for l in libs %}<td class="num{% if l == 'fp127' or l == 'fp256' %} ours{% endif %}">{{ digits[l] }}</td>{% endfor %}</tr>
+{%- for op in oplist %}
+<tr><td class="mono">{{ op }}{% if "," ~ op ~ "," in typ %} <sup class="t" title="typical inputs">t</sup>{% endif %}</td>{% for l in libs %}{% set_global v = "" %}{% for e in cells | split(pat=";") %}{% set q = e | split(pat="|") %}{% if e != "" and q[0] == l and q[1] == op %}{% set_global v = q[2] %}{% endif %}{% endfor %}<td class="num{% if l == 'fp127' or l == 'fp256' %} ours{% endif %}">{% if v %}{{ v | int | num_format }}{% endif %}</td>{% endfor %}</tr>
+{%- endfor %}
+</tbody>
+{%- else %}
+<thead><tr><th></th><th class="what">what it is</th><th class="num">digits</th>{% for op in oplist %}<th class="num">{{ op }}{% if "," ~ op ~ "," in typ %} <sup class="t" title="typical inputs">t</sup>{% endif %}</th>{% endfor %}</tr></thead>
+<tbody>
+{%- for l in libs %}
+<tr{% if l == 'fp127' or l == 'fp256' %} class="ours"{% endif %}><td>{{ names[l] }}</td><td class="what">{{ what[l] }}</td><td class="num">{{ digits[l] }}</td>{% for op in oplist %}{% set_global v = "" %}{% for e in cells | split(pat=";") %}{% set q = e | split(pat="|") %}{% if e != "" and q[0] == l and q[1] == op %}{% set_global v = q[2] %}{% endif %}{% endfor %}<td class="num">{% if v %}{{ v | int | num_format }}{% endif %}</td>{% endfor %}</tr>
+{%- endfor %}
+</tbody>
+{%- endif %}
+</table>
+</div>
+<p class="note">Inline library, median gas per call, over random inputs that take no shortcut for the ops marked <sup class="t">t</sup> and over the input ladder for the rest; digits are precision at 1. FP256 is cheaper than Quad on {% for x in w256[1:] | split(pat=",") %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}<code>{{ x }}</code>{% endfor %}{% if l256 != "" %}, not on {% for x in l256[1:] | split(pat=",") %}{% if not loop.first %}{% if loop.last %} or {% else %}, {% endif %}{% endif %}<code>{{ x }}</code>{% endfor %}{% endif %}. FP127 is cheaper than PRBMath on {% for x in w127[1:] | split(pat=",") %}{% if not loop.first %}{% if loop.last %} and {% else %}, {% endif %}{% endif %}<code>{{ x }}</code>{% endfor %}{% if l127 != "" %}, not on {% for x in l127[1:] | split(pat=",") %}{% if not loop.first %}{% if loop.last %} or {% else %}, {% endif %}{% endif %}<code>{{ x }}</code>{% endfor %}{% endif %}. {% if sall %}Solady is cheaper than both on every op here, at 18 digits; its <code>add</code> is the unchecked <code>rawAdd</code>. {% endif %}Sources: <a href="/data/fp256/gas.json">fp256/gas.json</a> (FP256, Quad), <a href="/data/gas.json">gas.json</a> (the rest).</p>
+{%- endcomponent %}
+
+{#- One median, inline in prose, on the site's one gas basis: {{ <gas op="exp" /> }}, {{ <gas op="ln" lib="fp256" /> }},
+    {{ <gas op="mul" form="solady" /> }}. form is a gas.json form (lib, yul, solady, prb, quad, ...). -#}
+{% component gas(op: string, lib: string = "fp127", form: string = "lib") -%}
+{%- if lib == "fp256" %}{% set g = load_data(path="static/data/fp256/gas.json") %}{% else %}{% set g = load_data(path="static/data/gas.json") %}{% endif -%}
+{%- set o = g.ops[op] %}{% if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif -%}
+{%- if sm[form] %}{{ sm[form].median | num_format }}{% endif %}
 {%- endcomponent %}
 
 {% component precisiontable() -%}
@@ -82,14 +150,14 @@
 <thead><tr><th>op</th><th class="num">vectors</th><th class="num">reverts</th><th class="num">min bits</th><th class="num">mean bits</th><th>worst input</th></tr></thead>
 <tbody>
 {%- for name, p in prec %}
-<tr><td class="mono">{{ name }}</td><td class="num">{{ p.n }}</td><td class="num">{{ p.reverts }}</td>
+<tr><td class="mono">{{ name }}</td><td class="num">{{ p.n | num_format }}</td><td class="num">{{ p.reverts | num_format }}</td>
 {%- if p.minBits >= 256 %}<td class="num">exact</td><td class="num">exact</td>{% else %}<td class="num">{{ p.minBits }}</td><td class="num">{{ p.meanBits }}</td>{% endif %}
-<td class="mono small">{{ p.worstInput }}</td></tr>
+<td class="mono small"{% if p.worstInput | length > 20 %} title="{{ p.worstInput }}"{% endif %}>{% if p.worstInput | length > 20 %}{{ p.worstInput | truncate(length=14, end="…") }}{% else %}{{ p.worstInput }}{% endif %}</td></tr>
 {%- endfor %}
 </tbody>
 </table>
 </div>
-<p class="note">Relative correct bits of the 127.128 result, msb(|truth|) − msb(|truth − got|), against the real truth (mpmath at 200 decimal places) over the committed vectors in <code>test/fp127/vectors/</code>, for results of magnitude 1 or more. "exact" is bit-identical with the truth. Every op is also held to its rounding contract: nearest within half an ULP, floor, ceil and trunc within one; <code>maxErrUlp</code> in the data. Reverts counts vectors where the oracle and the Yul both reject the input with the same error. Source: <a href="/data/precision.json">precision.json</a>.</p>
+<p class="note">Relative correct bits of the 127.128 result, msb(|truth|) − msb(|truth − got|), against the real truth (mpmath at 200 decimal places) over the committed vectors in <code>test/fp127/vectors/</code>, for results of magnitude 1 or more. "exact" is bit-identical with the truth. Every op is also held to its rounding contract: nearest within half an ULP, floor, ceil and trunc within one; <code>maxErrUlp</code> in the data. Reverts counts vectors where the oracle and the Yul both reject the input with the same error. Hover a worst input for the whole word. Source: <a href="/data/precision.json">precision.json</a>.</p>
 {%- endcomponent %}
 
 {#- One ladder cell: the digits that agree with the truth, then the rest in the error colour.

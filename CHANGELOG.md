@@ -289,6 +289,20 @@ Two rulers in one word: FP127 for the money range, FP256 for everything.
   Release three adds log1p, expm1, erf, erfc, normCdf, both Lambert branches,
   powu and compound; exp, ln, log1p, expm1 and the erf family return the
   correctly rounded word at every committed vector.
+  In detail (moved here from the site's FP256 page): `exp`, `ln`, `log1p`,
+  `expm1`, `erf`, `erfc`, `normCdf` and every non-transcendental op return
+  the correctly rounded word at every committed vector. `pow`, `powu` and
+  `compound` are within one unit in the last place while |y log2 x| stays
+  below about 2^13; the Lambert branches are within two units away from
+  −1/e. On random inputs (4,000 to 20,000 per op) `add`, `mul`, `div`,
+  `sqrt`, `exp`, `log1p`, `expm1`, `erf` and `erfc` were correctly rounded
+  every time; `ln`, `normCdf` and `pow` were one unit off on 1 in 20,000,
+  4,000 and 2,500. The kernels run at 2^−254 with 512-bit products: 2^f from
+  a 16-entry table and a degree-26 polynomial, log2 from twelve reduction
+  stages and a degree-17 polynomial, `erfc` as e^(−y²) times a scaled series
+  or continued fraction (never 1 − erf). FP256 v1 borrowed FP127's kernels
+  (146, 149 and 123 bits on exp, ln and pow); v2 refit them for the wide
+  word; v3 added nine ops.
 - FP127 v4: 49 ops, adding powu, compound, log1p, expm1, the hyperbolics,
   erf, erfc and normCdf.
 - The ladder (13 scenarios × 10 libraries, N to 10,000) and the edges (139

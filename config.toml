@@ -1,6 +1,6 @@
 base_url = "https://blockulator.com"
 title = "blockulator"
-description = "Blockulator 2.2 by Secure Data Research: FP127 and FP256, two rulers for EVM arithmetic, measured against ABDK, Quad, Solady, PRBMath, Balancer, Aave, Morpho and Maker."
+description = "Precision maths for the EVM, rounded once and checked on chain. FP127 keeps 38 digits at 1, FP256 71 at any magnitude, measured against ABDK, Quad, Solady, PRBMath, Balancer, Aave, Morpho and Maker."
 compile_sass = false
 build_search_index = false
 generate_feeds = false
@@ -12,3 +12,7 @@ external_links_target_blank = false
 [extra]
 # The repository.
 repo = "https://github.com/securedataresearch/blockulator"
+
+[link_checker]
+# GitHub renders heading anchors with JavaScript, so a link checker never finds them.
+skip_anchor_prefixes = ["https://github.com/"]

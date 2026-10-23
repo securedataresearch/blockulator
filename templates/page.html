@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ page.title }} · {{ config.title }}{% endblock title %}
 {% block description %}{{ page.description | default(value=config.description) }}{% endblock description %}
+{% block head %}{% if page.extra.moved is defined %}<script>(function(){var m=[{% for a in page.extra.moved %}"{{ a }}"{% if not loop.last %},{% endif %}{% endfor %}],h=location.hash.slice(1);if(m.indexOf(h)>=0)location.replace("{{ page.extra.moved_to }}#"+h);})();</script>{% endif %}{% endblock head %}
 {% block content %}
 <article class="prose doc">
 {% include "pagehead.html" %}
