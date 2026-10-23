@@ -20,7 +20,6 @@ ask_primary_text = "Email us"
 ask_primary_href = "mailto:sam@securedataresearch.net?subject=Blockulator%20integration"
 ask_secondary_text = "Read the write-up"
 ask_secondary_href = "/writeup/"
-limits_title = "Limits"
 pitch_title = "Twice the digits, at the same gas"
 pitch_note = "One <code>int256</code> per number, every op tested against exact arithmetic. FP256 carries twice binary128's digits, FP127 twice PRBMath's, and the gas sits next to them."
 
@@ -46,30 +45,4 @@ label = "trust"
 title = "No owner"
 text = "No contract has storage, a proxy or an upgrade. A change is a new salt and a new address."
 
-# Limits: terse facts, each from committed data. {gas} is filled by templates/home.html from
-# static/data/gas.json: FP127Lib over Solady median gas for mul, div, exp, ln and pow.
-[[extra.limits]]
-label = "gas"
-title = "Solady is {gas}× cheaper"
-text = "Per op than FP127 inline: median gas for mul, div, exp, ln and pow."
-
-[[extra.limits]]
-label = "FP256 range"
-title = "10<sup>±78,913</sup>"
-text = "Past it a result reverts, or rounds to zero below."
-
-[[extra.limits]]
-label = "FP127 range"
-title = "±1.7 × 10<sup>38</sup>"
-text = "A fixed grid: 38 digits at 1, 32 at 10<sup>−6</sup>, 8 at 10<sup>−30</sup>."
-
-[[extra.limits]]
-label = "status"
-title = "Sepolia only"
-text = "No mainnet deployment. Not audited. Needs the CLZ opcode (Osaka)."
-
-[[extra.limits]]
-label = "proof"
-title = "Fuzzed equal, not proven"
-text = "Object and inline library agree on every fuzzed input. No formal proof."
 +++

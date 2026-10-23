@@ -198,14 +198,6 @@ h1, .hero .sub, .block h2, .askcard h2, .doc h2, .step h3 { font-variant-numeric
 .step h3 a { color: inherit; text-decoration-color: var(--g-300); text-underline-offset: 3px; }
 .step h3 a:hover { text-decoration-color: var(--ink); }
 
-/* home: limits, the same cards as the steps, smaller, five across */
-.limitgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
-.limitgrid .card { padding: 20px 18px 18px; }
-.limitgrid h3 { font-size: 17px; }
-.limitgrid p { font-size: 14.5px; }
-@media (max-width: 1000px) { .limitgrid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 640px) { .limitgrid { grid-template-columns: 1fr 1fr; gap: 10px; } .limitgrid .card { padding: 16px 14px; } .limitgrid .card:last-child:nth-child(odd) { grid-column: 1 / -1; } }
-
 /* phone: a Markdown table wider than the column scrolls inside itself, and long inline code or a long number wraps, so no page scrolls sideways */
 @media (max-width: 640px) { .doc > table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; } .doc :not(pre) > code { overflow-wrap: anywhere; } .doc p, .doc li { overflow-wrap: break-word; } }
 
