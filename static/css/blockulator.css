@@ -316,6 +316,8 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .datatable .na { color: var(--rule); }
 .datatable tbody tr:last-child th, .datatable tbody tr:last-child td { border-bottom: 0; }
 .datatable.heat td[style] { background: color-mix(in oklab, var(--emerald) calc(min(var(--h), 1) * 42%), transparent); }
+/* a table of losses (share wrong): the shade is red, darker for worse */
+.datatable.heat.loss td[style] { background: color-mix(in oklab, var(--red) calc(min(var(--h), 1) * 32%), transparent); }
 .datatable.heat th.group { text-align: center; border-bottom: 1px solid var(--line-2); }
 .datatable.heat th a { color: inherit; text-decoration: none; } .datatable.heat th a:hover { text-decoration: underline; }
 @media (max-width: 760px) {
@@ -339,7 +341,7 @@ html.nvt.leaving .page { animation: page-out var(--t-out) var(--ease-in) both; }
 /* each chart's space is held before it draws, so the table under it never moves */
 .plot[data-chart="gas"] { min-height: 520px; } .plot[data-chart="accrual"] { min-height: 440px; } .plot[data-chart="wad"] { min-height: 600px; }
 .plot[data-chart="ladder"] { min-height: 440px; } .plot[data-chart="edges"] { min-height: 440px; }
-.plot[data-chart="steps"] { min-height: 400px; } .plot[data-chart="edgeop"] { min-height: 300px; } .plot[data-chart="gasops"] { min-height: 1200px; } .plot[data-chart="libops"] { min-height: 460px; }
+.plot[data-chart="steps"] { min-height: 400px; } .plot[data-chart="edgeop"] { min-height: 300px; } .plot[data-chart="gasops"] { min-height: 1200px; } .plot[data-chart="libops"] { min-height: 460px; } .plot[data-chart="deployed"] { min-height: 520px; } .plot[data-chart="live"] { min-height: 340px; }
 @media (max-width: 760px) { .plot[data-chart] { min-height: 320px; } }
 .datatable tr.unitrow th, .datatable tr.unitrow td { color: var(--muted); font-style: italic; border-bottom: 1px solid var(--line-2); }
 /* a chart fades in once, as it comes near the viewport (plots.js); a redraw (resize, theme, truth toggle) does not fade.

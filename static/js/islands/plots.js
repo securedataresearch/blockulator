@@ -266,6 +266,46 @@ const charts = {
     p.innerHTML = `<span><i style="background:${c}"></i>inline (${lib[id].label}Lib)</span><span><i style="background:transparent;box-shadow:inset 0 0 0 1.5px ${c}"></i>a staticcall to the deployed object</span>`;
     el.append(p);
   },
+
+  // /results/deployed/: each stylised case's correct digits of the interest, as deployed and in FP127 and FP19
+  deployed(el, t, width) {
+    const cs = pages.deployed.cases;
+    const pts = cs.flatMap((c) => [[c.protocol, c.deployed, "as deployed"], ["fp127", c.fp127, "in FP127"], ["fp19", c.fp19, "in FP19"]]
+      .map(([l, v, how]) => ({ lib: l, digits: v, how, label: c.label })));
+    el.append(Plot.plot(base(t, width, {
+      height: 18 * cs.length + 60, marginLeft: 250, marginRight: 20, marginBottom: 42,
+      x: { domain: [0, 76], label: "correct decimal digits of the interest →", grid: true },
+      y: { domain: cs.map((c) => c.label), label: null, tickSize: 0 },
+      marks: [
+        Plot.link(cs, { x1: "deployed", x2: "fp19", y1: "label", y2: "label", stroke: t.line, strokeOpacity: 0.6 }),
+        Plot.tickX(cs.filter((c) => c.grid != null), { x: "grid", y: "label", stroke: t.faint, strokeWidth: 2, strokeDasharray: "2 2" }),
+        Plot.dot(pts, { x: "digits", y: "label", fill: colour(t), r: (d) => (ours(d) ? 4.5 : 5), symbol }),
+        Plot.tip(pts, Plot.pointer({ x: "digits", y: "label", title: (d) => `${d.label}\n${d.how}: ${d.digits.toFixed(2)} digits of the interest` })),
+      ],
+    })));
+    key(el, t, ["aave", "fp127", "fp19"]);
+    el.lastChild.insertAdjacentHTML("beforeend", `<span class="sym">┆ the most digits any answer in whole token units could show</span>`);
+  },
+
+  // /results/deployed/: every live Aave reserve side and Morpho market at the survey block, as deployed and the most
+  // digits any answer in whole token units could show (the pending interest is small, so the grid is the limit)
+  live(el, t, width) {
+    const rows = pages.deployed.live.flatMap((c) => [
+      { lib: c.protocol, digits: c.deployed, row: `${lib[c.protocol].label}, as deployed`, label: c.label },
+      { lib: c.protocol, digits: c.grid, row: `${lib[c.protocol].label}, token grid allows`, label: c.label, grid: true },
+    ]);
+    const order = [...new Set(rows.map((r) => r.row))];
+    el.append(Plot.plot(base(t, width, {
+      height: 380, marginLeft: 170, marginRight: 20, marginBottom: 42,
+      x: { domain: [0, 26], label: "correct decimal digits of the pending interest →", grid: true },
+      fy: { domain: order, label: null, axis: "left", padding: 0.1 }, y: { axis: null },
+      marks: [
+        Plot.dot(rows, Plot.dodgeY("middle", { x: "digits", fy: "row", r: 2, fill: (d) => (d.grid ? t.faint : t.family(lib[d.lib].family)), fillOpacity: 0.85 })),
+        Plot.tip(rows, Plot.pointer({ x: "digits", fy: "row", title: (d) => `${d.label}: ${d.digits.toFixed(2)} digits${d.grid ? " at most on the token grid" : " as deployed"}` })),
+      ],
+    })));
+  },
+
 };
 
 // on hover the nearest dot within 24px (as the tip finds it) takes a halo in its own colour (blockulator.css .plot .dotm)
