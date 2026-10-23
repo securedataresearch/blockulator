@@ -13,52 +13,79 @@
       <a class="btn ghost" href="{{ x.cta_secondary_href }}">{{ x.cta_secondary_text }}</a>
     </p>
   </div>
-  
 </section>
 {% endblock hero %}
 {% block content %}{% set x = section.extra %}
-{%- set d = load_data(path="static/data/ladder.json") -%}
-{%- for s in d.scenarios %}{% if s.id == x.chart_scenario %}{% set_global sc = s %}{% endif %}{% endfor -%}
-{%- set ref = sc.inputs[0] -%}
-{%- set_global n_inputs = 0 %}{% for s in d.scenarios %}{% set_global n_inputs = n_inputs + s.inputs | length %}{% endfor -%}
-{%- set_global n_others = 0 %}{% for f in d.forms %}{% if f.id not in ["fp127", "fp127lib", "fp19"] %}{% set_global n_others = n_others + 1 %}{% endif %}{% endfor -%}
-{%- set yr = ref.cells -%}
-{%- set short = (ref.truth["10000"] | float) - (yr.aave["10000"].value | float) -%}
-<section class="block pitchblock">
-  <h2>{{ x.pitch_title }}</h2>
-  <p class="note">{{ x.pitch_note | safe }}</p>
-  <figure class="figure chart duo gd" role="img" aria-label="Correct digits against mean gas per inline call for FP19, FP127, ABDKMathQuad, PRBMath and Solady; the figures are in the table below.">
-    <div class="wide">{{ <gasdigits W={760} H={330} /> }}</div>
-    <div class="narrow">{{ <gasdigits W={360} H={320} /> }}</div>
-  </figure>
-  <div class="doc wide">{{ <pitch /> }}</div>
+{#- Every section is one unit: a chart (static/js/islands/plots.js) over a table, both from the same rows of
+    static/data/home.json (scripts/site/home.py). Libraries come in static/data/libraries.json's order,
+    floating point first, then fixed point; a library is listed where the data has a number for it. -#}
+{%- set h = load_data(path="static/data/home.json") -%}
+
+{#- ---- digits and gas ---- -#}
+{%- set g = h.gas -%}
+<section class="unit" id="gas">
+  <h2>{{ x.gas_title }}</h2>
+  <p class="note">{{ x.gas_note | safe }}</p>
+  <div class="plot" data-chart="gas" role="img" aria-label="Median gas per call for each library and op, floating point and fixed point apart; the numbers are in the table below."></div>
+  {{ <grouptable t={g.table} /> }}
+  <p class="small">{{ x.gas_source | safe }}</p>
 </section>
 
-<section class="block">
-  <h2>{{ x.chart_title }}</h2>
-{#- whole digits, each capped at what its format holds (digitsCapped), so FP19 reads 71, never a lucky 72 -#}
-{%- set dg = {"aave365": yr.aave["365"].digitsCapped | float | round(method="floor") | int, "aave10000": yr.aave["10000"].digitsCapped | float | round(method="floor") | int, "fp12710000": yr.fp127["10000"].digitsCapped | float | round(method="floor") | int, "fp1910000": yr.fp19["10000"].digitsCapped | float | round(method="floor") | int, "quad10000": yr.quad["10000"].digitsCapped | float | round(method="floor") | int, "solady10000": yr.solady["10000"].digitsCapped | float | round(method="floor") | int} -%}
-{%- set p365i = yr.aave["365"].interestCapped | float | round(method="floor") | int -%}
-  <p class="note">{{ x.chart_note | replace(from="{proto365}", to=dg.aave365 ~ "") | replace(from="{proto365i}", to=p365i ~ "") | replace(from="{proto10k}", to=dg.aave10000 ~ "") | replace(from="{short}", to=short | round | num_format) | replace(from="{fp127}", to=dg.fp12710000 ~ "") | replace(from="{fp19}", to=dg.fp1910000 ~ "") | safe }}</p>
-  <figure class="figure chart digitchart" role="img" aria-label="Correct digits of one accrual after 1 to 10,000 days without an update. After 10,000 days: FP19 {{ dg.fp1910000 }}, FP127 {{ dg.fp12710000 }}, binary128 {{ dg.quad10000 }}, the WAD libraries and 64.64 {{ dg.solady10000 }}, Aave and Morpho {{ dg.aave10000 }}.">
-    <div class="wide">{{ <ladderchart cells={yr} ladder={d.ladder} log10={d.ladderLog10} W={720} H={340} /> }}</div>
-    <div class="narrow">{{ <ladderchart cells={yr} ladder={d.ladder} log10={d.ladderLog10} W={360} H={300} /> }}</div>
-  </figure>
-  <p class="small">Reference input of the <a href="/results/ladder/#accrual-continuous">continuous-accrual scenario</a>, digits against exact arithmetic. Aave and Morpho: their deployed three-term expansion of e<sup>x</sup>. WAD libraries: Solady, PRBMath, Balancer. Full data: <a href="/data/ladder.json">ladder.json</a>.</p>
+{#- ---- interest over time ---- -#}
+{%- set a = h.accrual -%}
+<section class="unit" id="accrual">
+  <h2>{{ x.accrual_title }}</h2>
+  <p class="note">{{ x.accrual_note | safe }}</p>
+  <div class="plot" data-chart="accrual" role="img" aria-label="Correct digits of one accrual after 1 to 10,000 days without an update, every library; the numbers are in the table below."></div>
+  {{ <grouptable t={a.table} /> }}
+  <p class="small">{{ x.accrual_source | safe }}</p>
 </section>
 
-{%- set w = load_data(path="static/data/wad.json") -%}
-{%- set_global wn = 0 %}{% set_global wf = 0 %}{% set_global wlo = 100 %}{% set_global whi = 0 %}{% set_global wlbl = "" -%}
-{%- for r in w.rows %}{% if r.lib == "blockulator" %}{% set_global wn = wn + r.n %}{% set_global wf = wf + 1 %}{% endif -%}
-{%- if r.lib != "blockulator" and r.function in x.wad_functions %}{% if r.wrongWeiPct < wlo %}{% set_global wlo = r.wrongWeiPct %}{% endif %}{% if r.wrongWeiPct > whi %}{% set_global whi = r.wrongWeiPct %}{% endif %}{% set_global wlbl = wlbl ~ w.libraries[r.lib] ~ " " ~ r.function ~ " " ~ (r.wrongWeiPct | round | int) ~ "% wrong; " %}{% endif %}{% endfor -%}
-<section class="block">
+{#- ---- WAD to the last wei ---- -#}
+{%- set w = h.wad -%}
+<section class="unit" id="wad">
   <h2>{{ x.wad_title }}</h2>
-  <p class="note">{{ x.wad_note | replace(from="{lo}", to=wlo | round | int ~ "") | replace(from="{hi}", to=whi | round | int ~ "") | replace(from="{n}", to=wn | num_format) | replace(from="{fns}", to=wf ~ "") | safe }}</p>
-  <figure class="figure chart duo wb" role="img" aria-label="Share of results off by at least one wei. BlockulatorWad: 0 on every function. {{ wlbl }}">
-    <div class="wide">{{ <wadbars W={680} fns={x.wad_functions | join(sep=",")} /> }}</div>
-    <div class="narrow">{{ <wadbars W={360} fns={x.wad_functions | join(sep=",")} /> }}</div>
-  </figure>
-  <p class="small">{{ x.wad_source | safe }} Full table: <a href="{{ config.extra.repo }}/blob/master/docs/benchmarks/wad.md">wad.md</a>, data: <a href="/data/wad.json">wad.json</a>.</p>
+  <p class="note">{{ x.wad_note | replace(from="{n}", to=w.results | num_format) | replace(from="{fns}", to=w.functionsTotal ~ "") | safe }}</p>
+  <div class="plot" data-chart="wad" role="img" aria-label="Share of results off by at least one wei, per function and library; BlockulatorWad is at 0 on every function. The numbers are in the table below."></div>
+  <div class="tablewrap"><table class="datatable">
+    <thead><tr><th scope="col">function</th>{% for c in w.table.cols %}<th scope="col" class="num f-{{ c.family }}{% if c.ours %} ours{% endif %}" title="{{ c.long }}">{{ c.label }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {%- for r in w.table.rows %}
+    <tr><th scope="row"><code>{{ r.fn }}</code></th>{% for c in r.cells %}<td class="num{% if w.table.cols[loop.index0].ours %} ours{% endif %}">{% if c %}{{ c }}{% else %}<span class="na">—</span>{% endif %}</td>{% endfor %}</tr>
+    {%- endfor %}
+    </tbody>
+  </table></div>
+  <p class="small">{{ x.wad_source | safe }} Every library that offers them is exact on {% for f in w.exact %}<code>{{ f }}</code>{% if not loop.last %}, {% endif %}{% endfor %}. Counts: <a href="{{ config.extra.repo }}/blob/master/docs/benchmarks/wad.md">wad.md</a>.</p>
+</section>
+
+{#- ---- thirteen scenarios ---- -#}
+{%- set ld = h.ladder -%}
+<section class="unit" id="ladder">
+  <h2>{{ x.ladder_title }}</h2>
+  <p class="note">{{ x.ladder_note | replace(from="{scenarios}", to=ld.scenarios | length ~ "") | safe }}</p>
+  <div class="plot" data-chart="ladder" role="img" aria-label="Median correct digits after the last step of each scenario, every library; the numbers are in the table below."></div>
+  <div class="tablewrap"><table class="datatable heat">
+    <thead>
+      <tr><th></th>{% for cg in ld.table.colgroups %}<th scope="colgroup" colspan="{{ cg.span }}" class="group">{{ cg.name }}</th>{% endfor %}</tr>
+      <tr><th scope="col">scenario</th>{% for c in ld.table.cols %}<th scope="col" class="num f-{{ c.family }}{% if c.ours %} ours{% endif %}" title="{{ c.long }}">{{ c.label }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+    {%- for r in ld.table.rows %}
+    <tr><th scope="row"><a href="/results/ladder/#{{ r.id }}">{{ r.title }}</a></th>{% for c in r.cells %}{% if c.v %}<td class="num{% if c.ours %} ours{% endif %}" style="--h:{{ c.h }}">{{ c.v }}</td>{% else %}<td class="num"><span class="na" title="{{ c.why }}">—</span></td>{% endif %}{% endfor %}</tr>
+    {%- endfor %}
+    </tbody>
+  </table></div>
+  <p class="small">{{ x.ladder_source | safe }}</p>
+</section>
+
+{#- ---- the edges ---- -#}
+{%- set e = h.edges -%}
+<section class="unit" id="edges">
+  <h2>{{ x.edges_title }}</h2>
+  <p class="note">{{ x.edges_note | replace(from="{probes}", to=e.probes ~ "") | replace(from="{ops}", to=e.ops ~ "") | safe }}</p>
+  <div class="plot" data-chart="edges" role="img" aria-label="Correct digits on each edge probe, per library, with the probes each library sends to zero, reverts on or cannot hold; the numbers are in the table below."></div>
+  {{ <grouptable t={e.table} /> }}
+  <p class="small">{{ x.edges_source | safe }}</p>
 </section>
 
 <section class="block">
@@ -67,7 +94,7 @@
     <div class="card step">
       <span class="label">{{ s.label }}</span>
       <h3>{% if s.href %}<a href="{{ s.href }}">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}</h3>
-      <p>{{ s.text | replace(from="{scenarios}", to=d.scenarios | length ~ "") | replace(from="{inputs}", to=n_inputs ~ "") | replace(from="{others}", to=n_others ~ "") | safe }}</p>
+      <p>{{ s.text | replace(from="{scenarios}", to=ld.scenarios | length ~ "") | replace(from="{others}", to=((h.libraries | length) - 3) ~ "") | safe }}</p>
     </div>
     {% endfor %}
   </div>
@@ -83,4 +110,5 @@
   </div>
 </section>
 {% endblock content %}
-{% block scripts %}<script src="/js/hero.js" defer></script>{% endblock scripts %}
+{% block scripts %}<script src="/js/hero.js" defer></script>
+<script type="module" src="/js/islands/plots.js"></script>{% endblock scripts %}

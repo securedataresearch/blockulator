@@ -1,0 +1,21 @@
+{
+ "_doc": "Every library the site compares, in display order: floating point first, then fixed point. kind = float | fixed; family picks the colour (static/css/blockulator.css, --c-<family>); digits = decimal digits at 1; ours marks Blockulator's own. Read by scripts/site/home.py; every table and chart takes its rows, order and groups from here.",
+ "libraries": [
+  {"id": "fp19", "label": "FP19", "long": "FP19, 256-bit float", "kind": "float", "family": "fp19", "digits": 71, "ours": true},
+  {"id": "quad", "label": "ABDKMathQuad", "long": "ABDKMathQuad, IEEE binary128", "kind": "float", "family": "quad", "digits": 34},
+  {"id": "fp127", "label": "FP127", "long": "FP127, 127.128 fixed point", "kind": "fixed", "family": "fp127", "digits": 38, "ours": true},
+  {"id": "blockulator", "label": "BlockulatorWad", "long": "BlockulatorWad, WAD computed in FP19", "kind": "fixed", "family": "fp127", "digits": 18, "ours": true},
+  {"id": "abdk", "label": "ABDK 64.64", "long": "ABDKMath64x64, 64.64 fixed point", "kind": "fixed", "family": "6464", "digits": 19},
+  {"id": "solady", "label": "Solady", "long": "Solady FixedPointMathLib, WAD", "kind": "fixed", "family": "wad", "digits": 18},
+  {"id": "solmate", "label": "Solmate", "long": "Solmate SignedWadMath and FixedPointMathLib, WAD", "kind": "fixed", "family": "wad", "digits": 18},
+  {"id": "prb", "label": "PRBMath SD", "long": "PRBMath SD59x18, WAD", "kind": "fixed", "family": "wad", "digits": 18},
+  {"id": "prbud", "label": "PRBMath UD", "long": "PRBMath UD60x18, WAD", "kind": "fixed", "family": "wad", "digits": 18},
+  {"id": "snekmate", "label": "snekmate", "long": "snekmate math (Vyper), WAD", "kind": "fixed", "family": "wad", "digits": 18},
+  {"id": "balancer", "label": "Balancer", "long": "Balancer LogExpMath, WAD", "kind": "fixed", "family": "wad", "digits": 18},
+  {"id": "oz", "label": "OpenZeppelin", "long": "OpenZeppelin Math (mulDiv, sqrt), WAD", "kind": "fixed", "family": "wad", "digits": 18},
+  {"id": "uniswap", "label": "Uniswap", "long": "Uniswap v4 FullMath (mulDiv), WAD", "kind": "fixed", "family": "wad", "digits": 18},
+  {"id": "maker", "label": "Maker", "long": "Maker rpow, RAY", "kind": "fixed", "family": "protocol", "digits": 27},
+  {"id": "aave", "label": "Aave", "long": "Aave v3 MathUtils, RAY", "kind": "fixed", "family": "protocol", "digits": 27},
+  {"id": "morpho", "label": "Morpho", "long": "Morpho Blue MathLib, WAD", "kind": "fixed", "family": "protocol", "digits": 18}
+ ]
+}

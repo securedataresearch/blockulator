@@ -202,63 +202,6 @@
 {%- if digits <= intlen %}{% set k = pre + digits %}{% else %}{% set k = pre + digits + 1 %}{% endif -%}
 {%- if k >= value | length %}<span class="ok">{{ value }}</span>{% else %}<span class="ok">{{ value[:k] }}</span><span class="wrong">{{ value[k:] }}</span>{% endif -%}
 {%- endcomponent %}
-
-{#- Correct digits against N for one input, one line per family, log N axis to 10,000, digits to 72.
-    The WAD libraries and Maker's RAY rpow are one band (lowest to highest of the four at each N);
-    every point carries its number in a <title>. Inline SVG, site tokens only. W and H set the viewBox:
-    the home page draws it twice, wide and narrow, and CSS shows one, so the text stays legible on a phone. -#}
-{#- The home chart: correct digits against N for one ladder input. Two bands, each a min–max over its forms and
-    labelled once at its end: the WAD libraries with 64.64, and the protocols' own accrual (Aave, Morpho). Three lines:
-    FP19, FP127, binary128. Labels at the right end are pushed apart by at least `gap` so equal ends never stack. -#}
-{% component ladderchart(cells: map, ladder: array, log10: map, W: integer = 720, H: integer = 340) -%}
-{%- set lines = ["fp19", "fp127", "quad"] -%}
-{%- set names = {"fp19": "FP19", "fp127": "FP127", "quad": "binary128"} -%}
-{%- set bcls = ["s-solady", "s-aave"] %}{% if W > 500 %}{% set blbl = ["WAD libraries, 64.64", "Aave, Morpho"] %}{% else %}{% set blbl = ["WAD, 64.64", "Aave, Morpho"] %}{% endif %}{% set bforms = [["solady", "prb", "balancer", "abdk", "solmate", "prbud", "snekmate", "oz", "uniswap"], ["aave", "morpho"]] -%}
-{%- set cap = 72 %}{% if W > 500 %}{% set L = 30 %}{% set R = 168 %}{% set gap = 15 %}{% else %}{% set L = 26 %}{% set R = 116 %}{% set gap = 13 %}{% endif %}{% set T = 12 %}{% set B = 40 -%}
-{%- set pw = W - L - R %}{% set ph = H - T - B -%}
-<svg viewBox="0 0 {{ W }} {{ H }}" width="100%" aria-hidden="true">
-<defs>{% for f in ["fp19", "fp127", "aave"] %}<linearGradient id="lc-{{ f }}-{{ W }}" x1="0" y1="0" x2="0" y2="1"><stop class="s-{{ f }} a0" offset="0"/><stop class="s-{{ f }} a1" offset="1"/></linearGradient>{% endfor %}</defs>
-{%- for g in [0, 18, 36, 54, 72] %}{% set y = T + ph - ph * g / cap %}
-<line class="grid" x1="{{ L }}" x2="{{ L + pw }}" y1="{{ y }}" y2="{{ y }}"/><text class="tick" x="{{ L - 7 }}" y="{{ y + 4 }}" text-anchor="end">{{ g }}</text>
-{%- endfor %}
-{%- for n in [1, 10, 100, 1000, 10000] %}{% set x = L + pw * (log10[n | str] | float) / 4 %}
-<text class="tick" x="{{ x }}" y="{{ H - 22 }}" text-anchor="middle">{{ n | num_format }}</text>
-{%- endfor %}
-<text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 4 }}" text-anchor="middle">days since the last update, log scale</text>
-{%- set yx = L + pw * (log10["365"] | float) / 4 %}
-<line class="guide" x1="{{ yx }}" x2="{{ yx }}" y1="{{ T }}" y2="{{ T + ph }}"/><text class="tick" x="{{ yx + 5 }}" y="{{ T + ph * 0.36 }}">1 year</text>
-{#- label ends, collected as "yyyyyy|text|class" (hundredths offset by 100000 so string order is numeric) -#}
-{%- set_global ends = "" %}{% set_global endx = L + pw -%}
-{%- for bi in [0, 1] %}{% set_global top = "" %}{% set_global bot = "" %}{% set_global lowl = "" %}{% set_global highl = "" %}{% set_global hi = 0 %}{% set_global lo = 0 %}{% set_global tip = "" %}{% set_global yrx = 0 %}{% set_global yry = 0 -%}
-{%- for n in ladder %}{% set_global mx = -1 %}{% set_global mn = 999 -%}
-{%- for f in bforms[bi] %}{% if cells[f] is defined %}{% set c = cells[f][n | str] %}{% if c.digitsCapped is defined %}{% set cd = c.digitsCapped | float %}{% if cd > mx %}{% set_global mx = cd %}{% endif %}{% if cd < mn %}{% set_global mn = cd %}{% endif %}{% endif %}{% endif %}{% endfor -%}
-{%- if mx >= 0 %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global top = top ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global bot = x ~ "," ~ (T + ph - ph * mn / cap) ~ " " ~ bot %}{% set_global lowl = lowl ~ x ~ "," ~ (T + ph - ph * mn / cap) ~ " " %}{% set_global highl = highl ~ x ~ "," ~ (T + ph - ph * mx / cap) ~ " " %}{% set_global hi = mx %}{% set_global lo = mn %}{% if n == 365 %}{% set_global yrx = x %}{% set_global yry = T + ph - ph * mn / cap %}{% set_global yrd = mn %}{% if mn == mx %}{% set_global tip = mn ~ "" %}{% else %}{% set_global tip = mn ~ "–" ~ mx %}{% endif %}{% endif %}{% endif -%}
-{%- endfor %}
-<g class="{{ bcls[bi] }} band">{% if bi == 1 %}<polygon class="area" points="{{ lowl }}{{ L + pw }},{{ T + ph }} {{ L }},{{ T + ph }}" style="fill:url(#lc-aave-{{ W }})"/>{% endif %}<polygon class="wband" points="{{ top }}{{ bot }}"><title>{{ blbl[bi] }} after a year: {{ tip }} digits</title></polygon>
-<polyline class="hi" points="{{ highl }}"/><polyline class="lo" points="{{ lowl }}"/>
-{%- if bi == 1 and yrx > 0 %}<circle class="yr" cx="{{ yrx }}" cy="{{ yry }}" r="4.5"/><text class="note-a" x="{{ yrx - 8 }}" y="{{ yry + 18 }}" text-anchor="end">{{ yrd | round(method="floor") | int }} digits after a year</text>{% endif %}</g>
-{%- set loi = lo | round(method="floor") | int %}{% set hii = hi | round(method="floor") | int %}{% if loi == hii %}{% set v = loi ~ "" %}{% else %}{% set v = loi ~ "–" ~ hii %}{% endif -%}
-{%- set_global ends = ends ~ ";" ~ (((T + ph - ph * (lo + hi) / 2 / cap + 4) * 100) | round | int + 100000) ~ "|" ~ blbl[bi] ~ " " ~ v ~ "|" ~ bcls[bi] %}
-{%- endfor %}
-{%- for f in lines %}{% set_global pts = "" %}{% set_global lastd = 0 %}
-{%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digitsCapped is defined %}{% set d = c.digitsCapped | float %}{% if d > cap %}{% set d = cap %}{% endif %}{% set x = L + pw * (log10[n | str] | float) / 4 %}{% set_global pts = pts ~ x ~ "," ~ (T + ph - ph * d / cap) ~ " " %}{% set_global lastd = d %}{% endif %}{% endfor %}
-<g class="s-{{ f }}{% if f == 'fp127' or f == 'fp19' %} ours{% endif %}">{% if f == 'fp127' or f == 'fp19' %}<polygon class="area" points="{{ pts }}{{ L + pw }},{{ T + ph }} {{ L }},{{ T + ph }}" style="fill:url(#lc-{{ f }}-{{ W }})"/>{% endif %}<polyline points="{{ pts }}"/>
-{%- for n in ladder %}{% set c = cells[f][n | str] %}{% if c.digitsCapped is defined %}{% set d = c.digitsCapped | float %}{% if d > cap %}{% set d = cap %}{% endif %}<circle cx="{{ L + pw * (log10[n | str] | float) / 4 }}" cy="{{ T + ph - ph * d / cap }}" {% if c.exact %} class="exact" r="4"{% elif n == 365 %} class="yr" r="4"{% else %} r="2"{% endif %}><title>{{ names[f] }} after {{ n }} days: {% if c.exact %}exact{% else %}{{ c.digitsCapped }} digits{% if c.interestCapped is defined %}, {{ c.interestCapped }} of the interest{% endif %}{% endif %}</title></circle>{% endif %}{% endfor %}</g>
-{%- set dd = lastd %}{% if dd > cap %}{% set dd = cap %}{% endif -%}
-{%- set_global ends = ends ~ ";" ~ (((T + ph - ph * dd / cap + 4) * 100) | round | int + 100000) ~ "|" ~ names[f] ~ " " ~ (lastd | round(method="floor") | int) ~ "|s-" ~ f %}
-{%- endfor %}
-{#- place the end labels top-down, each at least gap below the one above it, then bottom-up inside the plot -#}
-{%- set_global ys = "" %}{% set_global prev = -1000 -%}
-{%- for e in ends | split(pat=";") | sort %}{% if e != "" %}{% set p = e | split(pat="|") %}{% set want = ((p[0] | int) - 100000) / 100 %}
-{%- if want < prev + gap %}{% set_global ya = prev + gap %}{% else %}{% set_global ya = want %}{% endif %}{% set_global prev = ya -%}
-{%- set_global ys = ys ~ ";" ~ ya ~ "|" ~ p[1] ~ "|" ~ p[2] %}{% endif %}{% endfor -%}
-{%- set_global over = prev - (T + ph + 4) %}{% if over < 0 %}{% set_global over = 0 %}{% endif -%}
-{%- for e in ys | split(pat=";") %}{% if e != "" %}{% set p = e | split(pat="|") %}
-<g class="{{ p[2] }}"><text class="lbl" x="{{ endx + 8 }}" y="{{ (p[0] | float) - over }}">{{ p[1] }}</text></g>
-{%- endif %}{% endfor %}
-</svg>
-{%- endcomponent %}
-
 {#- Median correct digits per library against N, over the inputs every shown library completed at that N
     (summaryBasis in ladder.json), with each library's min–max over those inputs as a band. key = "digits",
     "digitsFormat" or "interest"; every value is already capped at what its format holds (prec), so the axis
@@ -376,89 +319,16 @@
 </div>
 {%- endcomponent %}
 
-{#- Digits against gas, one point per library: y the digits at 1, x the mean of the inline medians over the pitch table's ops
-    that every library offers (the site's one gas basis). An arrow from each competitor to the one of ours with the same idea
-    (binary128 to FP19, PRBMath to FP127) carries the ratio. Drawn twice, wide and narrow; one shows. -#}
-{% component gasdigits(W: integer = 720, H: integer = 320) -%}
-{%- set g127 = load_data(path="static/data/gas.json") -%}
-{%- set g19 = load_data(path="static/data/fp19/gas.json") -%}
-{%- set oplist = ["add", "mul", "div", "exp", "ln", "pow", "sqrt"] -%}
-{%- set libs = ["fp19", "fp127", "quad", "prb", "solady"] -%}
-{%- set names = {"fp19": "FP19", "quad": "ABDKMathQuad", "fp127": "FP127", "prb": "PRBMath", "solady": "Solady"} -%}
-{%- set digits = {"fp19": 71, "quad": 34, "fp127": 38, "prb": 18, "solady": 18} -%}
-{%- set form = {"fp19": "lib", "quad": "quad", "fp127": "lib", "prb": "prb", "solady": "solady"} -%}
-{%- set file = {"fp19": "g19", "quad": "g19", "fp127": "g127", "prb": "g127", "solady": "g127"} -%}
-{%- set_global ok = "," %}{% set_global nok = 0 -%}
-{%- for op in oplist %}{% set_global all = true %}{% for l in libs %}{% if file[l] == "g19" %}{% set o = g19.ops[op] %}{% else %}{% set o = g127.ops[op] %}{% endif %}{% if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif %}{% if not sm[form[l]] %}{% set_global all = false %}{% endif %}{% endfor %}{% if all %}{% set_global ok = ok ~ op ~ "," %}{% set_global nok = nok + 1 %}{% endif %}{% endfor -%}
-{%- set_global mx = 0 %}{% set_global m19 = 0 %}{% set_global m127 = 0 %}{% set_global mquad = 0 %}{% set_global mprb = 0 %}{% set_global msol = 0 -%}
-{%- for l in libs %}{% set_global sum = 0 -%}
-{%- for op in oplist %}{% if ("," ~ op ~ ",") in ok %}{% if file[l] == "g19" %}{% set o = g19.ops[op] %}{% else %}{% set o = g127.ops[op] %}{% endif %}{% if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif %}{% set_global sum = sum + sm[form[l]].median %}{% endif %}{% endfor -%}
-{%- set m = sum / nok %}{% if m > mx %}{% set_global mx = m %}{% endif -%}
-{%- if l == "fp19" %}{% set_global m19 = m %}{% elif l == "fp127" %}{% set_global m127 = m %}{% elif l == "quad" %}{% set_global mquad = m %}{% elif l == "prb" %}{% set_global mprb = m %}{% else %}{% set_global msol = m %}{% endif -%}
-{%- endfor -%}
-{%- set means = {"fp19": m19, "fp127": m127, "quad": mquad, "prb": mprb, "solady": msol} -%}
-{%- if W > 500 %}{% set L = 40 %}{% set R = 24 %}{% set step = 1000 %}{% else %}{% set L = 32 %}{% set R = 14 %}{% set step = 2000 %}{% endif %}{% set T = 26 %}{% set B = 44 -%}
-{%- set xmax = (mx / step) | round(method="ceil") * step -%}
-{%- set pw = W - L - R %}{% set ph = H - T - B %}{% set cap = 80 -%}
-<svg viewBox="0 0 {{ W }} {{ H }}" width="100%" aria-hidden="true">
-<defs><marker id="gd-ah-{{ W }}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahead" d="M0,1 L10,5 L0,9 z"/></marker>
-<radialGradient id="gd-glow-{{ W }}" cx="0" cy="0" r="1"><stop class="glow0" offset="0"/><stop class="glow1" offset="1"/></radialGradient></defs>
-{#- the better corner: more digits, less gas -#}
-<rect class="better" x="{{ L }}" y="{{ T }}" width="{{ pw * 0.55 }}" height="{{ ph * 0.6 }}" fill="url(#gd-glow-{{ W }})"/>
-<text class="corner" x="{{ L + pw * 0.55 - 8 }}" y="{{ T + 16 }}" text-anchor="end">↖ more digits, less gas</text>
-{%- for g in [0, 20, 40, 60, 80] %}{% set y = T + ph - ph * g / cap %}
-<line class="grid" x1="{{ L }}" x2="{{ L + pw }}" y1="{{ y }}" y2="{{ y }}"/><text class="tick" x="{{ L - 7 }}" y="{{ y + 4 }}" text-anchor="end">{{ g }}</text>
-{%- endfor %}
-{%- for k in range(end=(xmax / step) | int + 1) %}{% set gx = k * step %}{% set x = L + pw * gx / xmax %}
-<text class="tick" x="{{ x }}" y="{{ H - 24 }}" text-anchor="middle">{{ gx | num_format }}</text>
-{%- endfor %}
-<text class="tick" x="{{ L + pw / 2 }}" y="{{ H - 5 }}" text-anchor="middle">mean gas per call over {{ nok }} ops, inline</text>
-<text class="tick" x="{{ L - 7 }}" y="{{ T - 12 }}" text-anchor="end">digits</text>
-{#- arrows: competitor to ours, with the ratio -#}
-{%- for pr in [["quad", "fp19"], ["prb", "fp127"]] %}{% set a = pr[0] %}{% set b = pr[1] -%}
-{%- set x1 = L + pw * means[a] / xmax %}{% set y1 = T + ph - ph * digits[a] / cap %}{% set x2 = L + pw * means[b] / xmax %}{% set y2 = T + ph - ph * digits[b] / cap -%}
-{%- set dx = x2 - x1 %}{% set dy = y2 - y1 -%}
-<line class="arrow" x1="{{ x1 + dx * 0.1 }}" y1="{{ y1 + dy * 0.1 }}" x2="{{ x1 + dx * 0.86 }}" y2="{{ y1 + dy * 0.86 }}" marker-end="url(#gd-ah-{{ W }})"/>
-{%- if W > 500 %}{% set tx = x1 + dx * 0.5 - 12 %}{% set ta = "end" %}{% set ty = y1 + dy * 0.5 + 17 %}
-<text class="ratio" x="{{ tx }}" y="{{ ty }}" text-anchor="{{ ta }}">{{ (digits[b] / digits[a]) | round(precision=1) }}× the digits</text>
-<text class="ratio" x="{{ tx }}" y="{{ ty + 15 }}" text-anchor="{{ ta }}">{{ (means[b] / means[a] * 100) | round | int }}% of the gas</text>{% endif %}
-{%- endfor %}
-{%- for l in libs %}{% set x = L + pw * means[l] / xmax %}{% set y = T + ph - ph * digits[l] / cap %}{% set ours = l == "fp19" or l == "fp127" -%}
-<g class="s-{{ l }}{% if ours %} ours{% endif %}"><circle class="pt" cx="{{ x }}" cy="{{ y }}" r="{% if ours %}7{% else %}5{% endif %}"><title>{{ names[l] }}: {{ digits[l] }} digits, mean {{ means[l] | round | int | num_format }} gas</title></circle>
-{%- if x > L + pw * 0.7 %}<text class="lbl" x="{{ x - 12 }}" y="{{ y - 10 }}" text-anchor="end">{{ names[l] }}</text>
-{%- elif ours %}<text class="lbl" x="{{ x - 12 }}" y="{{ y + 5 }}" text-anchor="end">{{ names[l] }}</text>
-{%- else %}<text class="lbl" x="{{ x + 11 }}" y="{{ y + 4 }}">{{ names[l] }}</text>{% endif %}</g>
-{%- endfor %}
-</svg>
-<p class="cap"><strong>FP19</strong>: {{ (digits.fp19 / digits.quad) | round(precision=1) }}× ABDKMathQuad's digits at {{ (m19 / mquad * 100) | round | int }}% of its gas. <strong>FP127</strong>: {{ (digits.fp127 / digits.prb) | round(precision=1) }}× PRBMath's digits at {{ (m127 / mprb * 100) | round | int }}% of its gas. Gas is the mean of the inline medians over {% for op in oplist %}{% if ("," ~ op ~ ",") in ok %}<code>{{ op }}</code>{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}; Solady is cheapest, at 18 digits.</p>
-{%- endcomponent %}
-
-{#- Correct to the last wei: the share of results off by at least one wei, per function, BlockulatorWad first, from wad.json
-    (scripts/sweep/wad.py; each library scored in its own rounding direction). Drawn twice, wide and narrow; one shows. -#}
-{% component wadbars(W: integer = 640, fns: string = "expWad,lnWad,powWad") -%}
-{%- set d = load_data(path="static/data/wad.json") -%}
-{%- set libs = ["blockulator", "solady", "prb"] -%}
-{%- if W > 500 %}{% set names = {"blockulator": "BlockulatorWad", "solady": "Solady", "prb": "PRBMath"} %}{% set L = 124 %}{% set R = 44 %}{% else %}{% set names = {"blockulator": "Blockulator", "solady": "Solady", "prb": "PRBMath"} %}{% set L = 80 %}{% set R = 34 %}{% endif -%}
-{%- set bh = 16 %}{% set bg = 7 %}{% set gh = 26 %}{% set T = 4 %}{% set gs = gh + 3 * (bh + bg) + 8 -%}
-{%- set fl = fns | split(pat=",") -%}
-{%- set H = T + (fl | length) * gs + 24 -%}
-{%- set pw = W - L - R -%}
-<svg viewBox="0 0 {{ W }} {{ H }}" width="100%" aria-hidden="true">
-{%- for p in [0, 25, 50, 75, 100] %}{% set x = L + pw * p / 100 %}
-<line class="grid" x1="{{ x }}" x2="{{ x }}" y1="{{ T + gh - 4 }}" y2="{{ H - 26 }}"/><text class="tick" x="{{ x }}" y="{{ H - 8 }}" text-anchor="middle">{{ p }}%</text>
-{%- endfor %}
-{%- for fn in fl %}{% set gy = T + loop.index0 * gs -%}
-<text class="fn" x="{{ L - 8 }}" y="{{ gy + 17 }}" text-anchor="end">{{ fn }}</text>
-{%- for l in libs %}{% set y = gy + gh + loop.index0 * (bh + bg) -%}
-{%- set_global row = "" %}{% for r in d.rows %}{% if r.lib == l and r.function == fn %}{% set_global row = r %}{% endif %}{% endfor -%}
-<g class="s-{{ l }}{% if l == 'blockulator' %} ours{% endif %}">
-<text class="name" x="{{ L - 8 }}" y="{{ y + bh - 4 }}" text-anchor="end">{{ names[l] }}</text>
-<rect class="track" x="{{ L }}" y="{{ y }}" width="{{ pw }}" height="{{ bh }}" rx="{{ bh / 2 }}"/>
-{%- if not row %}<text class="val none" x="{{ L + 10 }}" y="{{ y + bh - 4 }}">not offered</text>
-{%- elif row.wrongWei == 0 %}<circle class="zero" cx="{{ L + bh / 2 }}" cy="{{ y + bh / 2 }}" r="{{ bh / 2 - 2 }}"><title>{{ d.libraries[l] }} {{ fn }}: 0 of {{ row.valued | num_format }} results off by a wei</title></circle><text class="val" x="{{ L + bh + 6 }}" y="{{ y + bh - 4 }}">0 wrong of {{ row.valued | num_format }}</text>
-{%- else %}{% set w = pw * row.wrongWeiPct / 100 %}<rect class="bar" x="{{ L }}" y="{{ y }}" width="{{ w }}" height="{{ bh }}" rx="{{ bh / 2 }}"><title>{{ d.libraries[l] }} {{ fn }}: {{ row.wrongWei | num_format }} of {{ row.valued | num_format }} results off by at least one wei</title></rect><text class="val" x="{{ L + w + 6 }}" y="{{ y + bh - 4 }}">{{ row.wrongWeiPct | round | int }}%</text>{% endif %}
-</g>
-{%- endfor %}
-{%- endfor %}
-</svg>
+{#- A table whose rows are libraries in kind groups (floating point, then fixed point), as scripts/site/home.py
+    lays them out: t.cols are the column heads after the first, t.groups[].rows[] carry the library and its cells. -#}
+{% component grouptable(t: map, first: string = "library") -%}
+<div class="tablewrap"><table class="datatable">
+  <thead><tr><th scope="col">{{ first }}</th>{% for c in t.cols %}<th scope="col" class="num">{{ c }}</th>{% endfor %}</tr></thead>
+  {%- for g in t.groups %}
+  <tbody><tr class="group"><th colspan="{{ t.cols | length + 1 }}" scope="rowgroup">{{ g.name }}</th></tr>
+  {%- for r in g.rows %}
+  <tr class="f-{{ r.family }}{% if r.ours %} ours{% endif %}"><th scope="row" title="{{ r.long }}"><i class="key"></i>{{ r.label }}</th>{% for c in r.cells %}<td class="num">{% if c %}{{ c }}{% else %}<span class="na">—</span>{% endif %}</td>{% endfor %}</tr>
+  {%- endfor %}</tbody>
+  {%- endfor %}
+</table></div>
 {%- endcomponent %}

@@ -304,3 +304,39 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .wb .narrow .fn, .wb .narrow .name, .wb .narrow .val { font-size: 11.5px; }
 
 @media (prefers-reduced-motion: reduce) { .doc tbody tr, .card { transition: none; } }
+
+/* home units: a chart over its table, from the same rows (static/data/home.json); wider than the text column,
+   up to 1320px, so every library's column fits without scrolling on a desktop */
+.unit { --uw: min(1320px, 100vw - 2 * clamp(16px, 4vw, 32px)); width: var(--uw); margin: 72px calc((100% - var(--uw)) / 2) 0; }
+.unit > h2 { margin-bottom: .3em; } .unit > .note { max-width: 62em; }
+.f-fp127 { --c: var(--c-fp127); } .f-fp19 { --c: var(--c-fp19); } .f-quad { --c: var(--c-quad); } .f-6464 { --c: var(--c-6464); } .f-wad { --c: var(--c-wad); } .f-protocol { --c: var(--c-protocol); }
+.plot { margin: 18px 0 10px; min-height: 120px; }
+.plot svg { display: block; max-width: 100%; height: auto; }
+.plot .panelhead, .datatable tr.group th, .datatable th.group { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.plot .panelhead { margin: 10px 0 2px 128px; }
+.plotlegend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+.plotlegend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.plotlegend .sym { color: var(--faint); }
+.tablewrap { overflow-x: auto; border-radius: var(--radius-s); background: var(--surface); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+.datatable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.datatable th, .datatable td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.datatable thead th { font: 500 11px/1.2 var(--mono); letter-spacing: .04em; color: var(--faint); vertical-align: bottom; }
+.datatable .num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; }
+.datatable tbody th { font-weight: 500; }
+.datatable tr.group th { padding-top: 14px; border-bottom: 1px solid var(--line-2); }
+.datatable tr.ours th, .datatable tr.ours td, .datatable td.ours, .datatable th.ours { font-weight: 700; color: var(--text-strong); }
+.datatable .key { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 8px; vertical-align: 0; }
+.datatable thead th[class*="f-"] { border-top: 3px solid var(--c); }
+.datatable .na { color: var(--rule); }
+.datatable tbody tr:last-child th, .datatable tbody tr:last-child td { border-bottom: 0; }
+.datatable.heat td[style] { background: color-mix(in oklab, var(--emerald) calc(var(--h) * 42%), transparent); }
+.datatable.heat th.group { text-align: center; border-bottom: 1px solid var(--line-2); }
+.datatable.heat th a { color: inherit; text-decoration: none; } .datatable.heat th a:hover { text-decoration: underline; }
+@media (max-width: 760px) {
+  .unit { margin-top: 52px; }
+  .datatable th:first-child { position: sticky; left: 0; background: var(--surface-solid); z-index: 1; }
+}
+.datatable.heat { font-size: 12.5px; }
+.datatable.heat th, .datatable.heat td { padding: 6px 7px; }
+.datatable.heat thead th { white-space: normal; min-width: 4em; line-height: 1.25; }
+.datatable.heat tbody th { white-space: normal; min-width: 11em; max-width: 15em; }
