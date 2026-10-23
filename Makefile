@@ -1,4 +1,4 @@
-.PHONY: build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: gates build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 
@@ -12,6 +12,7 @@ BASELINE_ADDR := 0xfae694D0c2c44181791F838c54Ed64C3151FfE30
 SEPOLIA_RPC ?= https://ethereum-sepolia-rpc.publicnode.com
 
 help:
+	@echo "  make gates            - Run every merge gate and print one line each (OPS=a,b sweeps only those ops; QUICK=1 skips the sweep); logs in cache/gates/"
 	@echo "Blockulator / FP127"
 	@echo ""
 	@echo "  make gen              - generate FP127.yul, FP127Lib.sol, IFP127.sol, abi.json, ops.json from FP127.yul.src"
@@ -182,6 +183,9 @@ replay-balancer-v1:
 	@$(PY) scripts/replays/balancer_v1.py score
 replay-balancer-v1-fetch:
 	@$(PY) scripts/replays/balancer_v1.py fetch
+
+gates:
+	@$(PY) scripts/gates.py $(if $(OPS),--ops $(OPS)) $(if $(QUICK),--quick) $(if $(ONLY),--only $(ONLY))
 
 sweep: build
 	@$(PY) scripts/sweep/sweep.py $(if $(OPS),--ops $(OPS))
