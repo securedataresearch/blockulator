@@ -1,16 +1,15 @@
-{#- Title, one line under it, and the sub-nav of the page's group. No canvas: inner pages are static. -#}
+{#- Title, one line under it, then the sub-nav of the page's group: the title is first on every page, so it never moves between pages. No canvas: inner pages are static. -#}
 {%- set groups = {
   "results": [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/ops/", "Per op"]],
   "library": [["/library/", "FP127"], ["/library/fp19/", "FP19"], ["/library/integrating/", "Integrating"]]
 } -%}
 <header class="pagehead">
   {%- set g = page.extra.group | default(value="") %}
+  <h1>{{ page.title }}</h1>
+  {%- if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
   {%- if g and groups[g] is defined %}
   <nav class="tabs subnav" aria-label="{{ g }}">
     {%- for item in groups[g] %}<a href="{{ item[0] }}"{% if current_path == item[0] %} class="on" aria-current="page"{% endif %}>{{ item[1] }}</a>{% endfor %}
   </nav>
   {%- endif %}
-  {%- if g == "library" %}<p class="eyebrow">Blockulator 2.2 · Secure Data Research</p>{% endif %}
-  <h1>{{ page.title }}</h1>
-  {%- if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
 </header>

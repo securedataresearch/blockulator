@@ -7,6 +7,7 @@
 {#- display caps: FP19 to its 71 digits (72, 73 are where the truth sits near the grid); the rest as measured -#}
 {%- set caps = {"fp127": 999, "fp19": 71, "abdk": 999, "solady": 999, "prb": 999, "quad": 999, "balancer": 999, "aave": 999, "morpho": 999, "maker": 999, "solmate": 999, "prbud": 999, "snekmate": 999, "oz": 999, "uniswap": 999} -%}
 {%- set short = {"fp127": "FP127", "fp19": "FP19", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
+{%- set reg = load_data(path="static/data/libraries.json") -%}
 <article class="prose doc wide">
 {% include "pagehead.html" %}
 {{ page.content | safe }}
@@ -29,32 +30,34 @@
 <section class="scenario" id="{{ op.id }}" data-index="{{ op.index }}"{% if not loop.first %} hidden{% endif %}>
 <h2>{{ op.label }}</h2>
 <p>{{ op.why }}</p>
-<div class="scroll">
-<table class="edges">
-<thead><tr><th>probe</th><th>truth</th>{% for f in forms %}<th class="num">{{ short[f] }}</th>{% endfor %}</tr></thead>
+<div class="tablewrap">
+<table class="datatable heat edges">
+<thead>
+<tr><th></th><th></th>{% for k in [["float", "Floating point"], ["fixed", "Fixed point"]] %}{% set_global nk = 0 %}{% for l in reg.libraries %}{% if l.kind == k[0] and l.id in forms %}{% set_global nk = nk + 1 %}{% endif %}{% endfor %}<th scope="colgroup" colspan="{{ nk }}" class="group">{{ k[1] }}</th>{% endfor %}</tr>
+<tr><th scope="col">probe</th><th scope="col">truth</th>{% for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in forms %}<th scope="col" class="num f-{{ l.family }}{% if l.ours %} ours{% endif %}" title="{{ l.long }}">{{ l.short }}</th>{% endif %}{% endfor %}{% endfor %}</tr>
+</thead>
 <tbody>
 {%- for p in op.probes %}
 <tr>
-<td class="mono">{{ op.id }}({{ p.args | join(sep=", ") }}){% if p.why %}<br><span class="meta">{{ p.why }}</span>{% endif %}</td>
-<td class="val truth"{% if p.truth %} title="{{ p.truth }}"{% endif %}>{% if p.truth %}{{ p.truth | truncate(length=16) }}{% else %}undefined{% endif %}</td>
-{%- for f in forms %}{% set c = p.cells[f] %}
-<td class="num val">
-{%- if c is undefined %}
-{%- elif c.range %}<span class="rev" title="the argument does not fit the word">range</span>
-{%- elif c.reverted %}{% if not c.unsupported %}{% set rn = c.reasonName | split(pat="(") | first | trim | split(pat=" ") | last %}{% if rn in ["revert", "selector", "exponent"] %}{% set rn = "revert" %}{% endif %}<span class="rev" title="reverts: {{ c.reasonName }}">{{ rn }}</span>{% endif %}
-{%- elif c.undefined %}<span class="meta">value</span>
-{%- elif c.zero %}<span class="rev" title="below the format's floor: returns 0">zero</span>
-{%- else %}{% set dg = c.digits %}{% if dg > caps[f] %}{% set dg = caps[f] %}{% endif %}<span class="ok" title="{{ c.value }}{% if c.errUlps %}, {{ c.errUlps }} ULP{% endif %}">{% if c.exact %}exact{% else %}{{ dg }}{% endif %}</span>
-{%- endif %}</td>
-{%- endfor %}
+<th scope="row" class="probe"><code>{{ op.id }}({{ p.args | join(sep=", ") }})</code>{% if p.why %}<br><span class="meta">{{ p.why }}</span>{% endif %}</th>
+<td class="truth"{% if p.truth %} title="{{ p.truth }}"{% endif %}>{% if p.truth %}{{ p.truth | truncate(length=12) }}{% else %}undefined{% endif %}</td>
+{%- for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in forms %}{% set f = l.id %}{% set c = p.cells[f] %}
+{%- if c is undefined or (c.reverted and c.unsupported) %}<td class="num"><span class="na" title="no such op">—</span></td>
+{%- elif c.range %}<td class="num"><span class="rev" title="the argument does not fit the word">range</span></td>
+{%- elif c.reverted %}<td class="num"><span class="rev" title="reverts: {{ c.reasonName }}">revert</span></td>
+{%- elif c.undefined %}<td class="num"><span class="meta">value</span></td>
+{%- elif c.zero %}<td class="num"><span class="rev" title="below the format's floor: returns 0">zero</span></td>
+{%- else %}{% set dg = c.digits %}{% if dg > caps[f] %}{% set dg = caps[f] %}{% endif %}<td class="num{% if l.ours %} ours{% endif %}" style="--h:{{ dg / 72 | round(precision=3) }}" title="{{ c.value }}{% if c.errUlps %}&#10;{{ c.errUlps }} ULP{% endif %}">{% if c.exact %}exact{% else %}{{ dg }}{% endif %}</td>
+{%- endif %}
+{%- endif %}{% endfor %}{% endfor %}
 </tr>
 {%- endfor %}
 </tbody>
-<tfoot><tr><td>fewest digits</td><td></td>
-{%- for f in forms %}{% set_global lo = 999 %}{% set_global any = false %}
+<tfoot><tr><th scope="row">fewest digits</th><td></td>
+{%- for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in forms %}{% set f = l.id %}{% set_global lo = 999 %}{% set_global any = false %}
 {%- for p in op.probes %}{% set c = p.cells[f] %}{% if c is defined %}{% if c.range %}{% set_global lo = 0 %}{% set_global any = true %}{% elif c.reverted %}{% if not c.unsupported %}{% set_global lo = 0 %}{% set_global any = true %}{% endif %}{% elif c.digits is defined %}{% set_global any = true %}{% if not c.exact %}{% set dg = c.digits %}{% if dg > caps[f] %}{% set dg = caps[f] %}{% endif %}{% if dg < lo %}{% set_global lo = dg %}{% endif %}{% endif %}{% endif %}{% endif %}{% endfor %}
-<td class="num">{% if any %}{% if lo == 999 %}exact{% else %}{{ lo }}{% endif %}{% endif %}</td>
-{%- endfor %}</tr></tfoot>
+<td class="num{% if l.ours %} ours{% endif %}">{% if any %}{% if lo == 999 %}exact{% else %}{{ lo }}{% endif %}{% endif %}</td>
+{%- endif %}{% endfor %}{% endfor %}</tr></tfoot>
 </table>
 </div>
 </section>

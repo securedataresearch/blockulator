@@ -30,7 +30,7 @@
 
   --sans: "Instrument Sans", "Instrument Sans Fallback", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: "JetBrains Mono", "JetBrains Mono Fallback", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --wrap: 1120px; --radius: 20px; --radius-s: 12px;
+  --wrap: 1680px; --measure: 46em; --radius: 20px; --radius-s: 12px;
 }
 @media (prefers-color-scheme: dark) {
   :root {
