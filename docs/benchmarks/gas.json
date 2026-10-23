@@ -2,7 +2,7 @@
  "generated": "2026-10-23",
  "description": "Gas per op across an input ladder. First four forms are FP127; the first two and the third include the external call. FP127Lib and the competitors are the internal library call alone, timed inside the harness's entry point net of its dispatch. null = no measurement on that input; reverts counts, per form, the inputs where the form offers the op but reverted or the input is outside its domain or format; a form with neither gas nor reverts does not offer the op (the Huff and FP127Caller columns record any failure as not offered). calls says what each competitor cell calls. summary holds min/median/max per form, null where there is no measurement. typical (where present) is the same over random inputs that take no shortcut.",
  "versions": {
-  "fp127": "7d1c4e8",
+  "fp127": "fc19340",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -1111,7 +1111,7 @@
     "huff": [
      9725,
      9817,
-     1914,
+     1915,
      10390,
      10756,
      9755,
@@ -1120,11 +1120,11 @@
     "yul": [
      2271,
      2275,
-     2296,
+     2277,
      2281,
-     2307,
-     2311,
-     2303
+     2285,
+     2288,
+     2304
     ],
     "caller": [
      null,
@@ -1237,14 +1237,14 @@
    },
    "summary": {
     "huff": {
-     "min": 1914,
+     "min": 1915,
      "median": 9817,
      "max": 10756
     },
     "yul": {
      "min": 2271,
-     "median": 2296,
-     "max": 2311
+     "median": 2281,
+     "max": 2304
     },
     "caller": null,
     "lib": {
@@ -1294,23 +1294,23 @@
     "gas": {
      "huff": [
       10371,
-      10879,
+      10878,
       10548,
       10013,
-      10361,
+      10362,
       10573,
       10384,
       10422
      ],
      "yul": [
       2454,
-      2566,
+      2458,
       2474,
       2478,
       2482,
       2486,
       2479,
-      2494
+      2614
      ],
      "caller": [
       null,
@@ -1437,12 +1437,12 @@
      "huff": {
       "min": 10013,
       "median": 10403,
-      "max": 10879
+      "max": 10878
      },
      "yul": {
       "min": 2454,
-      "median": 2480,
-      "max": 2566
+      "median": 2478,
+      "max": 2614
      },
      "caller": null,
      "lib": {
@@ -2346,7 +2346,7 @@
       4244,
       4214,
       4207,
-      4218,
+      4348,
       4246
      ],
      "caller": [
@@ -2474,8 +2474,8 @@
      "huff": null,
      "yul": {
       "min": 4199,
-      "median": 4223,
-      "max": 4246
+      "median": 4234,
+      "max": 4348
      },
      "caller": null,
      "lib": {
@@ -3370,11 +3370,11 @@
       null
      ],
      "yul": [
-      14823,
+      14684,
       7224,
-      7355,
+      7495,
       11901,
-      11612,
+      11471,
       21585,
       7513,
       5808
@@ -3504,7 +3504,7 @@
      "huff": null,
      "yul": {
       "min": 5808,
-      "median": 9562,
+      "median": 9492,
       "max": 21585
      },
      "caller": null,
@@ -3714,7 +3714,7 @@
       6386,
       8092,
       6956,
-      7268,
+      7124,
       7551,
       8543,
       5824,
@@ -3845,7 +3845,7 @@
      "huff": null,
      "yul": {
       "min": 5824,
-      "median": 7409,
+      "median": 7337,
       "max": 15215
      },
      "caller": null,
@@ -6083,12 +6083,12 @@
      4942
     ],
     "yul": [
-     1763,
-     1769,
-     1775,
-     1819,
-     1788,
-     1498
+     1589,
+     1596,
+     1602,
+     1609,
+     1615,
+     1329
     ],
     "caller": [
      null,
@@ -6099,12 +6099,12 @@
      null
     ],
     "lib": [
-     1289,
-     1289,
-     1289,
-     1289,
-     1289,
-     947
+     1079,
+     1079,
+     1079,
+     1079,
+     1079,
+     733
     ],
     "abdk": [
      819,
@@ -6194,15 +6194,15 @@
      "max": 5094
     },
     "yul": {
-     "min": 1498,
-     "median": 1772,
-     "max": 1819
+     "min": 1329,
+     "median": 1599,
+     "max": 1615
     },
     "caller": null,
     "lib": {
-     "min": 947,
-     "median": 1289,
-     "max": 1289
+     "min": 733,
+     "median": 1079,
+     "max": 1079
     },
     "abdk": {
      "min": 805,
@@ -6247,16 +6247,16 @@
      5469,
      5469,
      5666,
-     5524,
+     5525,
      5471
     ],
     "yul": [
-     2008,
-     2010,
-     2011,
-     2014,
-     2015,
-     1720
+     1835,
+     1865,
+     1838,
+     1841,
+     1871,
+     1551
     ],
     "caller": [
      null,
@@ -6267,12 +6267,12 @@
      null
     ],
     "lib": [
-     1576,
-     1576,
-     1576,
-     1576,
-     1576,
-     1234
+     1366,
+     1366,
+     1366,
+     1366,
+     1366,
+     1020
     ],
     "abdk": [
      null,
@@ -6358,19 +6358,19 @@
    "summary": {
     "huff": {
      "min": 5469,
-     "median": 5497,
+     "median": 5498,
      "max": 5666
     },
     "yul": {
-     "min": 1720,
-     "median": 2010,
-     "max": 2015
+     "min": 1551,
+     "median": 1839,
+     "max": 1871
     },
     "caller": null,
     "lib": {
-     "min": 1234,
-     "median": 1576,
-     "max": 1576
+     "min": 1020,
+     "median": 1366,
+     "max": 1366
     },
     "abdk": null,
     "solady": null,
@@ -6761,7 +6761,7 @@
      "huff": [
       20773,
       20776,
-      2047586768,
+      2047586767,
       null,
       60686,
       21302,
@@ -6769,9 +6769,9 @@
       null
      ],
      "yul": [
-      6913,
+      6761,
       6586,
-      7952,
+      8107,
       7948,
       7872,
       7894,
@@ -6903,12 +6903,12 @@
      "huff": {
       "min": 20773,
       "median": 21226,
-      "max": 2047586768
+      "max": 2047586767
      },
      "yul": {
       "min": 6586,
       "median": 7921,
-      "max": 8096
+      "max": 8107
      },
      "caller": null,
      "lib": {
@@ -7118,13 +7118,13 @@
       null
      ],
      "yul": [
-      8061,
-      7991,
-      8071,
+      7893,
+      7822,
+      7900,
       7904,
       7898,
       8079,
-      8095,
+      7916,
       7938
      ],
      "caller": [
@@ -7251,9 +7251,9 @@
     "summary": {
      "huff": null,
      "yul": {
-      "min": 7898,
-      "median": 8026,
-      "max": 8095
+      "min": 7822,
+      "median": 7902,
+      "max": 8079
      },
      "caller": null,
      "lib": {
@@ -9855,12 +9855,12 @@
      null
     ],
     "yul": [
-     927,
-     980,
-     987,
+     921,
+     974,
+     981,
+     941,
      947,
-     953,
-     986
+     980
     ],
     "caller": [
      null,
@@ -9871,12 +9871,12 @@
      null
     ],
     "lib": [
-     360,
-     400,
-     400,
-     360,
-     360,
-     360
+     337,
+     377,
+     377,
+     337,
+     337,
+     337
     ],
     "abdk": [
      null,
@@ -9962,15 +9962,15 @@
    "summary": {
     "huff": null,
     "yul": {
-     "min": 927,
-     "median": 966,
-     "max": 987
+     "min": 921,
+     "median": 960,
+     "max": 981
     },
     "caller": null,
     "lib": {
-     "min": 360,
-     "median": 360,
-     "max": 400
+     "min": 337,
+     "median": 337,
+     "max": 377
     },
     "abdk": null,
     "solady": {
@@ -10381,7 +10381,7 @@
       6101,
       6955,
       6825,
-      6408,
+      6257,
       5690
      ],
      "caller": [
@@ -10509,7 +10509,7 @@
      "huff": null,
      "yul": {
       "min": 1063,
-      "median": 6254,
+      "median": 6179,
       "max": 14917
      },
      "caller": null,
@@ -10734,13 +10734,13 @@
      ],
      "yul": [
       4256,
-      4465,
-      4290,
+      4276,
+      4484,
       4311,
       4285,
-      4521,
+      4310,
       4361,
-      4599
+      4377
      ],
      "caller": [
       null,
@@ -10871,8 +10871,8 @@
      },
      "yul": {
       "min": 4256,
-      "median": 4336,
-      "max": 4599
+      "median": 4310,
+      "max": 4484
      },
      "caller": null,
      "lib": {
@@ -11121,11 +11121,11 @@
       3253,
       4023,
       2386,
-      7209,
+      7007,
       7378,
       5240,
       7256,
-      7125
+      7349
      ],
      "caller": [
       null,
@@ -11252,7 +11252,7 @@
      "huff": null,
      "yul": {
       "min": 2386,
-      "median": 6182,
+      "median": 6123,
       "max": 7378
      },
      "caller": null,
@@ -12002,13 +12002,13 @@
      4145
     ],
     "yul": [
-     1153,
-     1157,
-     1457,
-     1461,
-     1464,
-     1479,
-     1470
+     984,
+     988,
+     1284,
+     1288,
+     1291,
+     1294,
+     1297
     ],
     "caller": [
      null,
@@ -12020,13 +12020,13 @@
      null
     ],
     "lib": [
-     683,
-     683,
-     1025,
-     1025,
-     1025,
-     1025,
-     1025
+     469,
+     469,
+     815,
+     815,
+     815,
+     815,
+     815
     ],
     "abdk": [
      798,
@@ -12126,15 +12126,15 @@
      "max": 4334
     },
     "yul": {
-     "min": 1153,
-     "median": 1461,
-     "max": 1479
+     "min": 984,
+     "median": 1288,
+     "max": 1297
     },
     "caller": null,
     "lib": {
-     "min": 683,
-     "median": 1025,
-     "max": 1025
+     "min": 469,
+     "median": 815,
+     "max": 815
     },
     "abdk": {
      "min": 754,
@@ -12205,14 +12205,14 @@
       4182
      ],
      "yul": [
-      1627,
-      1334,
-      1337,
-      1639,
-      1345,
-      1349,
-      1353,
-      1653
+      1454,
+      1165,
+      1264,
+      1466,
+      1176,
+      1180,
+      1184,
+      1480
      ],
      "caller": [
       null,
@@ -12225,14 +12225,14 @@
       null
      ],
      "lib": [
-      1025,
-      683,
-      683,
-      1025,
-      683,
-      683,
-      683,
-      1025
+      815,
+      469,
+      469,
+      815,
+      469,
+      469,
+      469,
+      815
      ],
      "abdk": [
       846,
@@ -12342,15 +12342,15 @@
       "max": 4406
      },
      "yul": {
-      "min": 1334,
-      "median": 1351,
-      "max": 1653
+      "min": 1165,
+      "median": 1224,
+      "max": 1480
      },
      "caller": null,
      "lib": {
-      "min": 683,
-      "median": 683,
-      "max": 1025
+      "min": 469,
+      "median": 469,
+      "max": 815
      },
      "abdk": {
       "min": 760,
@@ -12764,12 +12764,12 @@
       null
      ],
      "yul": [
-      4225,
+      4356,
       4201,
-      4214,
-      4364,
+      4346,
+      4231,
       6426,
-      4341,
+      4207,
       6440,
       4235
      ],
@@ -12898,7 +12898,7 @@
      "huff": null,
      "yul": {
       "min": 4201,
-      "median": 4288,
+      "median": 4290,
       "max": 6440
      },
      "caller": null,
