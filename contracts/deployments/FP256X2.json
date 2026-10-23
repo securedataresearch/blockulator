@@ -1,5 +1,8 @@
 {
  "contract": "FP256X2",
+ "release": "Blockulator 2.1",
+ "current": false,
+ "status": "Blockulator 2.1 (FP256 release four, 2026-10-21); still live and verified, and not part of Blockulator 2.2, where its ops moved to FP256E (exp2, exp10, log2, log10, log2Up), FP256H (sinh, cosh, tanh, atanh) and FP256 (cbrt). See RELEASE.md.",
  "chainId": 11155111,
  "network": "sepolia",
  "address": "0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697",

@@ -1,5 +1,8 @@
 {
  "contract": "FP256X3",
+ "release": "Blockulator 2.1",
+ "current": false,
+ "status": "Blockulator 2.1 (FP256 release four, 2026-10-21); still live and verified, and not part of Blockulator 2.2, where its ops moved to FP256 (min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gavg, hypot) and FP256S (factorial); gcd was removed and pi became the constant FP256Lib.PI. See RELEASE.md.",
  "chainId": 11155111,
  "network": "sepolia",
  "address": "0x59D51481cb2EA924EC17FE263cd05b90CEF22383",
