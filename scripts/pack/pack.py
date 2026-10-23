@@ -21,6 +21,7 @@ published; dist/contracts/ is what the user publishes from.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -112,8 +113,10 @@ def check_contents(staged: list[str]) -> list[str]:
             bad.append(f"secret-shaped text in {f}")
         if f.endswith(".sol"):
             for imp in IMPORT.findall(text):
-                if not imp.startswith("./"):
+                if not imp.startswith(("./", "../")):
                     bad.append(f"{f} imports {imp!r}: package sources must import each other by relative path")
+                elif os.path.normpath(os.path.join(os.path.dirname(f), imp)) not in staged:
+                    bad.append(f"{f} imports {imp!r}, which is not in the package")
                 elif not (OUT / Path(f).parent / imp).resolve().is_file():
                     bad.append(f"{f} imports {imp!r}, which is not in the package")
     return bad
