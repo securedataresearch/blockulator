@@ -51,6 +51,8 @@ _spec = importlib.util.spec_from_file_location("fpgen", ROOT / "scripts" / "fp12
 G = importlib.util.module_from_spec(_spec)
 sys.modules["fpgen"] = G
 _spec.loader.exec_module(G)
+sys.path.insert(0, str(ROOT / "scripts" / "sweep"))
+import wad as WD  # noqa: E402  BlockulatorWad's inputs, truth and rows
 
 D = ROOT / "cache" / "sweep"
 OUT = ROOT / "docs" / "benchmarks"
@@ -83,7 +85,7 @@ def match_tests() -> list[str]:
     if SEL is None:
         return []
     # forge 1.7 matches the signature, test_x(), so the end allows the parentheses
-    return ["--match-test", "^test_(noop|(fp256|fp127)_(" + "|".join(sorted(SEL)) + ")x?)(\\(\\))?$"]
+    return ["--match-test", "^test_(noop|(fp256|fp127|wad)_(" + "|".join(sorted(SEL)) + ")x?)(\\(\\))?$"]
 
 
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "erfc", "normCdf", "compound",
@@ -187,6 +189,7 @@ def gen():
     write("fp127_lambertW0", w0)
     write("fp127_lambertWm1", [x for x in wm1 if x < 0])
     gen4()
+    WD.gen()
 
 
 def near_branch(rng, n):
@@ -459,6 +462,7 @@ def score():
             res = pool.map(job127, [(op, a, b, o) for a, b, c, o, g in data], chunksize=64)
             rows.append(dict(summarize127(op, res), **gasstats([g for *_, g in data]), **fallback("fp127", op, data)))
             print(json.dumps(rows[-1]), flush=True)
+        rows += WD.sweep_rows(pool, selected, fallback)
     if SEL is not None:
         # a partial run: the selected ops' rows replace their old ones, every other row stays
         key = lambda r: (r["lib"], r["op"], r.get("stage"))  # noqa: E731
@@ -527,6 +531,7 @@ def score():
             md.append(f"| {r['op']} | {r['n']:,} | {r['nearest']:,} | {r['faithful']:,} | {r['maxUlp']:.3g} | "
                       f"{r['medianUlp']:.3g} | {mb} | {r['below']:,} / {r['above']:,} | "
                       f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} | {pct(r)} |")
+    md += WD.sweep_md(rows, pct)
     (OUT / "sweep.md").write_text("\n".join(md) + "\n")
     print("wrote docs/benchmarks/sweep.{json,md}")
 
@@ -585,11 +590,11 @@ contract SweepWide is Test {
 def run_wide():
     """Generate FP256LibWide and its runner, run them, remove them."""
     wd = ROOT / "test" / "sweep" / "wide"
-    subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", "fp256", "--wide-lib",
-                    str(wd / "FP256LibWide.sol")], cwd=ROOT, check=True)
     names = [op for op in WIDE256 if selected(op)] + [f"{op}x" for op in EXTRA if selected(op)]
     if not names:
         return
+    subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", "fp256", "--wide-lib",
+                    str(wd / "FP256LibWide.sol")], cwd=ROOT, check=True)
     fn = {f"{op}x": op for op in EXTRA}
     disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = FP256LibWide.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
                       for n in names)
@@ -687,6 +692,8 @@ def base_op(name: str) -> str:
 
 def nargs(name: str) -> int:
     op = base_op(name)
+    if name.startswith("wad_"):
+        return WD.FUNCS[op][1]
     return 3 if op in THREE else 2 if op in TWO else 1
 
 
@@ -704,6 +711,8 @@ def run_instrumented(kind: str, forced: bool = False):
     Tag = tag.capitalize()
     wd = ROOT / "test" / "sweep" / tag
     libs = ("fp256",) if forced else ("fp256", "fp127")
+    if kind == "count" and not forced:
+        libs += ("wad",)   # BlockulatorWad's fallback share; make profile's probes stay FP256's and FP127's
     for lib in libs:
         subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", lib, f"--{kind}-lib",
                         str(wd / f"{lib.upper()}Lib{Tag}.sol")] + (["--forced"] if forced else []), cwd=ROOT, check=True)
@@ -714,7 +723,10 @@ def run_instrumented(kind: str, forced: bool = False):
             continue
         if name != "noop" and not selected(base_op(name)):
             continue
-        expr = expr.replace("FP256Lib.", f"FP256Lib{Tag}.").replace("FP127Lib.", f"FP127Lib{Tag}.")
+        if name.startswith("wad_") and "wad" not in libs:
+            continue
+        expr = (expr.replace("FP256Lib.", f"FP256Lib{Tag}.").replace("FP127Lib.", f"FP127Lib{Tag}.")
+                .replace("BlockulatorWad.", f"WADLib{Tag}."))
         disp.append(f'        if (op == "{name}") {{ g0 = gasleft(); r = {expr}; g = gasleft(); }}')
         if name != "noop":
             runs.append(f'    function test_{name}() public {{ this.runOne("{name}", {nargs(name)}); }}')
@@ -784,13 +796,14 @@ def main():
     if args[:1] == ["--ops"]:
         SEL = set(args[1].split(","))
         args = args[2:]
-        unknown = SEL - set(OPS256) - set(OPS127) - {"lambertW0", "lambertWm1"}
+        unknown = SEL - set(OPS256) - set(OPS127) - {"lambertW0", "lambertWm1"} - set(WD.FUNCS)
         if unknown:
             sys.exit(f"--ops: not swept: {', '.join(sorted(unknown))}")
     if args != ["score"]:
         gen()
         subprocess.run(["forge", "test", "--match-path", "test/sweep/Sweep.t.sol", "-q"] + match_tests(), cwd=ROOT, check=True)
         run_wide()
+        WD.run_wide(SEL)
         run_instrumented("count")
     score()
 

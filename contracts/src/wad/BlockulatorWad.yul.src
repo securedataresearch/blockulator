@@ -1,0 +1,1479 @@
+// BlockulatorWad: 18-decimal (WAD) maths with Solady's names, every result
+// correct to the last wei.
+//
+// This file is the single source of truth. scripts/fp127/gen.py --lib wad
+// reads it together with contracts/src/fp256/FP256.yul.src, whose functions
+// it calls, and emits BlockulatorWad.sol (the inline library: each export
+// with the closure of the functions it runs; an export without a leave is
+// written into its block instead of called) and ops.json. FP256.yul.src's
+// rules apply: top-level functions only, scratch memory only, no identifier
+// starting with an underscore, no recursion. Reverts go through rev(sel),
+// except in the one-word mul and div exports, which write it out so their
+// blocks define no function (a block that defines one costs about 25 gas).
+// There is no deployed object.
+//
+// Values are plain WAD integers: x means x 10^-18. Every function returns
+// the exact real value of its maths on that exact input, rounded once in
+// the direction its name or its notice states: Down toward minus infinity,
+// Up toward plus infinity, and the defaults as Solady's functions round
+// (floor; sMulWad, sDivWad and lambertW0Wad toward zero, as their sdiv
+// does).
+//
+// The algebraic ops (mul, div, sqrt, cbrt) are exact integer arithmetic on
+// 512 bits. The transcendental ones run in two stages:
+//
+//   1. A fast value with a stated bound err on its distance from the exact
+//      one: exp, ln, log2, log10 and pow on FP256's kernels (exp2frac,
+//      log2m, within 4.7 and 2.32 units of 2^-254) fed the exact input, as
+//      a 512-bit product of the integer with a constant, never a rounded
+//      x 10^-18; lambertW0 through FP256's correctly rounded lambertW0 on
+//      fromFixed18(x). The value times 10^18 is cut into its integer I and
+//      the next 256 bits F; when F lies more than err (at 2^-256 wei) from 0
+//      and from 1, the exact value is strictly between I and I + 1 wei and
+//      the direction picks one (wadbad says when it does not).
+//   2. Otherwise a second stage computes the value from the exact input in
+//      two words at 2^-510, FP256's own second-stage arithmetic (wexpm1,
+//      wexpr, wlnw, the wide products), to within a stated bound, and cuts
+//      that (wadtie). There a fraction within the bound of 0 or 1 is taken
+//      as the integer itself: such a value is an exact one (exp(0), ln(1),
+//      a power of two's log2, a perfect power's pow), since a value that is
+//      not exactly an integer would have to lie closer to one than the
+//      bound, 2^-170 wei at the loosest (pow), to be mistaken for it. log2
+//      and log10 test their exact cases (x = 10^18 2^k, 10^(18 + k)) first.
+//
+// The fast bounds:
+//   exp     t log2 e = |x| C, C = log2(e) / 10^18 in two words, split at
+//           2^-254 (floored): 2^f within 8 units of 2^-254 (the kernel's 4.7,
+//           f's floor 1.4, as FP256's exp).
+//   ln      (u + log2m(m)) ln 2 - 18 ln 10 at 2^-247 for x = m 2^u exactly:
+//           within 4 units of 2^-247, absolute. log2, log10: 3 units.
+//   pow     T = |ln x_t| |y| / 10^18 at 2^-247 from ln's value (4 |y_t| + 1
+//           units), T log2 e split at 2^-254: 2^f within 1300 + 1030 (|y| >> 59)
+//           units of 2^-254.
+//   W0      |W(X) - W(t)| <= 2^-237 |W| / (1 + W) for X = fromFixed18(x)
+//           (W' = W / (x (1 + W))): c = 2 + 2^(1 + k) ulps of v for 1 + v >=
+//           2^-k below v = -1/2, 4 above (wadfast).
+//
+// The second stages:
+//   exp     2^(|x| C), the exact three-word product split at 2^-510, 2^f by
+//           wexpm1: within 2^-500 relative.
+//   ln, log2, log10   u A + ln(m) B - C for x = m 2^u, m in [1, 2): wlnw on
+//           the exact mantissa (2^-497), A, B, C in two or three words:
+//           within 2^-495 absolute.
+//   pow     t = ln(x_t) y / 10^18 from the wide ln (relative 2^-436, as
+//           |ln x_t| >= 10^-18 for x != 10^18) and the exact four-word
+//           product, e^t by wexpr: within 2^-428 relative.
+//   W0      one log-form Newton step w - (w + ln|w| - ln|t|) w / (1 + w)
+//           from the fast value with both logarithms wide on exact
+//           mantissas: within 2^-380 absolute (the step squares the fast
+//           value's error, at most 2^-207 by the branch point, over 2(1 + W)).
+
+/// @error ExpOverflow() 0xa37bfec9
+/// @error MulWadFailed() 0xbac65e5b
+/// @error SMulWadFailed() 0xedcd4dd4
+/// @error DivWadFailed() 0x7c5f487d
+/// @error SDivWadFailed() 0x5c43740d
+/// @error LnWadUndefined() 0x1615e638
+/// @error OutOfDomain() 0xf2b402bb
+
+// ---------------------------------------------------------------------------
+// The cut: a value times 10^18 split into its integer and the next 256 bits
+// ---------------------------------------------------------------------------
+
+/// 1 when a fraction F (at 2^-256, floored) within errF of the exact one
+/// may be 0 or 1 wei away: the exact value may be an integer or on the other
+/// side of one. errF counts F's own floor.
+function wadbad(F, errF) -> b {
+    b := or(iszero(gt(F, errF)), iszero(lt(F, not(errF))))
+}
+
+/// 1 when rounding a value strictly between two integers in direction dir
+/// (0 toward minus infinity, 1 toward plus infinity, 2 toward zero) moves its
+/// magnitude up: away from zero.
+function wadaway(s, dir) -> a {
+    a := or(and(iszero(dir), s), and(eq(dir, 1), iszero(s)))
+}
+
+/// The magnitude I + wadaway, signed: the fast path's result.
+function wadround(s, I, dir) -> r {
+    r := add(I, wadaway(s, dir))
+    if s { r := sub(0, r) }
+}
+
+/// The second stage's magnitude: I, I + 1 or the direction's choice. A
+/// fraction within errF of 0 (of 1) is the exact integer I (I + 1).
+function wadtie(s, I, F, errF, dir) -> mag {
+    mag := add(I, wadaway(s, dir))
+    if iszero(gt(F, errF)) { mag := I }
+    if iszero(lt(F, not(errF))) { mag := add(I, 1) }
+}
+
+/// The fast path on an FP256 word v != 0 within c ulps of v plus d 2^-240 of
+/// the exact value (c < 2^190): s, I = floor(|v| 10^18), and bad = 1 unless
+/// that exact value surely lies strictly between I and I + 1 wei in
+/// magnitude. |v| 10^18 = P 2^-sh for the exact product P = M 10^18 of the
+/// significand; an ulp of v is 10^18 2^-sh wei, at 2^-256 10^18 2^(256 - sh).
+/// From sh < 64 (a value above 2^172) bad is 1: the bound reaches a wei.
+function wadfast(v, c, d) -> s, I, bad {
+    bad := 1
+    let e := and(shr(236, v), 0x7ffff)
+    if iszero(e) { leave }
+    s := shr(255, v)
+    let sh := sub(0x400eb, e)
+    if slt(sh, 64) { leave }
+    let p1, p0 := mul512(or(and(v, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000), 1000000000000000000)
+    I := shr512(p1, p0, sh)
+    let ce := mul(c, 1000000000000000000)
+    let F := 0
+    // d 10^18 2^16 and two units for F's floor and the strict comparisons
+    let errF := add(mul(d, 0xde0b6b3a76400000000), 2)
+    switch lt(sh, 257)
+    case 1 {
+        // c ulps reach half a wei: leave it to the second stage
+        if shr(sub(sh, 1), ce) { leave }
+        F := shl(sub(256, sh), p0)
+        errF := add(errF, shl(sub(256, sh), ce))
+    }
+    default {
+        F := shr512(and(p1, sub(shl(sub(sh, 256), 1), 1)), p0, sub(sh, 256))
+        errF := add(errF, shr(sub(sh, 256), ce))
+    }
+    bad := wadbad(F, errF)
+}
+
+/// 10^18 times 2^k (1 + E) for a wide E in [0, 1) at 2^-510, k <= 195: the
+/// exact three-word product of the mantissa (1 + E) 2^510 with 10^18, cut at
+/// 2^(510 - k). errF is 2^-236 of I plus 2^16 (2^-240 wei): above the
+/// second stages' relative 2^-500 and their absolute floor.
+function wad2k(k, eh, el) -> I, F, errF {
+    let n2, n1, n0 := mul3(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, 1000000000000000000)
+    I, F := shr3(n2, n1, n0, sub(254, k))
+    errF := add(shr(236, I), 0x10000)
+}
+
+/// 10^18 A for a three-word A at 2^-510 below 2^518 (a magnitude under 256),
+/// cut at 2^510: the integer I and the next 256 bits F, floored.
+function wad510(a2, a1, a0) -> I, F {
+    let h0, l0 := mul512(a0, 1000000000000000000)
+    let h1, l1 := mul512(a1, 1000000000000000000)
+    let n1 := add(h0, l1)
+    let n2 := add(add(mul(a2, 1000000000000000000), h1), lt(n1, h0))
+    I, F := shr3(n2, n1, l0, 254)
+}
+
+// ---------------------------------------------------------------------------
+// Exact arithmetic: products and quotients on 512 bits, roots by integers
+// ---------------------------------------------------------------------------
+
+/// floor(P / 10^18) for a 512-bit P = (p1, p0) with p1 < 10^18 (so the
+/// quotient fits a word) and rem = P mod 10^18: P - rem is a multiple of
+/// 10^18 = 2^18 5^18, so the quotient is ((P - rem) / 2^18) times the
+/// inverse of 5^18 modulo 2^256.
+function wadq18(p1, p0, rem) -> q {
+    p1 := sub(p1, lt(p0, rem))
+    p0 := sub(p0, rem)
+    q := mul(or(shr(18, p0), shl(238, p1)), 0xaccb18165bd6fe31ae1cf318dc5b51eee0e1ba569b88cd74c1773b91fac10669)
+}
+
+/// floor(P / d) for a 512-bit P = (p1, p0) with p1 < d and rem = P mod d:
+/// Remco Bloemen's mulDiv, as divu and divh with the product given.
+function wadmd(p1, p0, rem, d) -> q {
+    p1 := sub(p1, gt(rem, p0))
+    p0 := sub(p0, rem)
+    let twos := and(sub(0, d), d)
+    d := div(d, twos)
+    p0 := div(p0, twos)
+    p0 := or(p0, mul(p1, add(div(sub(0, twos), twos), 1)))
+    let iv := xor(mul(3, d), 2)
+    iv := mul(iv, sub(2, mul(d, iv)))
+    iv := mul(iv, sub(2, mul(d, iv)))
+    iv := mul(iv, sub(2, mul(d, iv)))
+    iv := mul(iv, sub(2, mul(d, iv)))
+    iv := mul(iv, sub(2, mul(d, iv)))
+    iv := mul(iv, sub(2, mul(d, iv)))
+    q := mul(p0, iv)
+}
+
+/// a b / 10^18 for words a, b, rounded up when up = 1 (else down). In one
+/// word while a b does (as Solady's mulWad, which reverts past it); else
+/// wadmulw. Reverts with sel when the result does not fit.
+function wadmulu(a, b, up, sel) -> r {
+    r := mul(a, b)
+    switch or(iszero(a), eq(div(r, a), b))
+    case 0 { r := wadmulw(a, b, up, sel) }
+    default { r := add(div(r, 1000000000000000000), and(up, iszero(iszero(mod(r, 1000000000000000000))))) }
+}
+
+/// a b / 10^18 from the exact 512-bit product, one division, rounded up
+/// when up = 1. Reverts with sel when it does not fit.
+function wadmulw(a, b, up, sel) -> r {
+    let p1, p0 := mul512(a, b)
+    let rem := mulmod(a, b, 1000000000000000000)
+    switch p1
+    case 0 { r := div(p0, 1000000000000000000) }
+    default {
+        if iszero(lt(p1, 1000000000000000000)) { rev(sel) }
+        r := wadq18(p1, p0, rem)
+    }
+    if and(up, iszero(iszero(rem))) {
+        r := add(r, 1)
+        if iszero(r) { rev(sel) }
+    }
+}
+
+/// a 10^18 / b for words a, b != 0, rounded up when up = 1 (else down). In
+/// one word while a 10^18 does (as Solady's divWad); else waddivw. Reverts
+/// with sel when b = 0 or the result does not fit.
+function waddivu(a, b, up, sel) -> r {
+    if iszero(b) { rev(sel) }
+    switch lt(a, 0x12725dd1d243aba0e75fe645cc4873f9e65afe688c928e1f22)
+    case 0 { r := waddivw(a, b, up, sel) }
+    default {
+        r := mul(a, 1000000000000000000)
+        r := add(div(r, b), and(up, iszero(iszero(mod(r, b)))))
+    }
+}
+
+/// a 10^18 / b from the exact 512-bit numerator, rounded up when up = 1.
+function waddivw(a, b, up, sel) -> r {
+    let p1, p0 := mul512(a, 1000000000000000000)
+    let rem := mulmod(a, 1000000000000000000, b)
+    switch p1
+    case 0 { r := div(p0, b) }
+    default {
+        if iszero(lt(p1, b)) { rev(sel) }
+        r := wadmd(p1, p0, rem, b)
+    }
+    if and(up, iszero(iszero(rem))) {
+        r := add(r, 1)
+        if iszero(r) { rev(sel) }
+    }
+}
+
+/// The signed result of magnitude q (rounded toward zero, rem != 0 when
+/// inexact) and sign s, rounded in direction dir; reverts with sel outside
+/// int256.
+function wadsgn(s, q, inexact, dir, sel) -> r {
+    let mag := add(q, and(inexact, wadaway(s, dir)))
+    if lt(mag, q) { rev(sel) }
+    if gt(mag, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, s)) { rev(sel) }
+    r := mag
+    if s { r := sub(0, mag) }
+}
+
+/// x 10^18 / y for signed x, y != 0, rounded in direction dir: in one word
+/// while x 10^18 does (it is never -2^255, so sdiv cannot overflow), else
+/// wadsdivw.
+function wadsdiv(x, y, dir) -> r {
+    if iszero(y) { rev(0x5c43740d) }
+    let z := mul(x, 1000000000000000000)
+    switch eq(sdiv(z, 1000000000000000000), x)
+    case 0 { r := wadsdivw(x, y, dir) }
+    default {
+        let m := smod(z, y)
+        r := sdiv(z, y)
+        if m {
+            let ng := xor(slt(z, 0), slt(y, 0))
+            switch dir
+            case 0 { r := sub(r, ng) }
+            case 1 { r := add(r, iszero(ng)) }
+        }
+    }
+}
+
+/// x 10^18 / y from the exact 512-bit numerator of the magnitudes.
+function wadsdivw(x, y, dir) -> r {
+    let a := absw(x)
+    let b := absw(y)
+    let p1, p0 := mul512(a, 1000000000000000000)
+    let rem := mulmod(a, 1000000000000000000, b)
+    let q := 0
+    switch p1
+    case 0 { q := div(p0, b) }
+    default {
+        if iszero(lt(p1, b)) { rev(0x5c43740d) }
+        q := wadmd(p1, p0, rem, b)
+    }
+    r := wadsgn(xor(slt(x, 0), slt(y, 0)), q, iszero(iszero(rem)), dir, 0x5c43740d)
+}
+
+/// floor(sqrt(x 10^18)), or the ceiling when up = 1: the integer root of the
+/// exact 512-bit product n, shifted left by an even 2j to put its top bit
+/// at 252 or 253 (below 2^254: FP256's word root, isqrt, which converges
+/// from 2^127 only there) or at 508 or 509 (its two-word root, isqrtw),
+/// then shifted back by j: the floor of the floor of sqrt(4^j n) over 2^j
+/// is the floor of sqrt(n).
+function wadsqrt(x, up) -> r {
+    // 0 < x < 2^194: n below 2^254 in one word, its top bit moved by clz
+    switch lt(sub(x, 1), 0x3ffffffffffffffffffffffffffffffffffffffffffffffff)
+    case 1 {
+        let n := mul(x, 1000000000000000000)
+        let j := shr(1, sub(clz(n), 2))
+        r := shr(j, isqrt(shl(shl(1, j), n)))
+        if up { r := add(r, lt(mul(r, r), n)) }
+    }
+    default { r := wadsqrtw(x, up) }
+}
+
+/// wadsqrt on the two-word n, and for x = 0.
+function wadsqrtw(x, up) -> r {
+    let n1, n0 := mul512(x, 1000000000000000000)
+    switch or(n1, shr(254, n0))
+    case 0 {
+        if n0 {
+            let j := shr(1, sub(253, msb(n0)))
+            r := shr(j, isqrt(shl(shl(1, j), n0)))
+        }
+    }
+    default {
+        let b := msb(n0)
+        if n1 { b := add(msb(n1), 256) }
+        let j := shr(1, sub(509, b))
+        let h, l := wshl(n1, n0, shl(1, j))
+        r := shr(j, isqrtw(h, l))
+    }
+    if up {
+        let p1, p0 := mul512(r, r)
+        r := add(r, or(lt(p1, n1), and(eq(p1, n1), lt(p0, n0))))
+    }
+}
+
+/// floor(cbrt(n)) for n in [2^253, 2^256): FP256's seed (cbrtseed, within
+/// 2^-7, on n as a 237-bit significand m shifted by 18 + rr, 17 for rr = 2)
+/// and its four one-word Newton steps (cbrtw).
+function wadicbrt(n) -> y {
+    switch clz(n)
+    case 2 { y := cbrtw(n, cbrtseed(shr(17, n), 2)) }
+    case 1 { y := cbrtw(n, cbrtseed(shr(18, n), 0)) }
+    default { y := cbrtw(n, cbrtseed(shr(19, n), 1)) }
+}
+
+/// floor(cbrt(x 10^36)), or the ceiling when up = 1, x > 0, exactly on the
+/// integer n = x 10^36. Below 2^256, n shifted left by 3a into [2^253,
+/// 2^256), whose root shifted back by a is the floor (as sqrt's). Above,
+/// y = the root of n >> 3a shifted up by a, under the root R by less than
+/// 2^-83 of it, then one Newton step (2y + floor(n / y^2)) / 3, at or above
+/// floor(R) (AM-GM, with the floors) and under R + 1 (the step's error is
+/// R 2^-166 for R < 2^126): one exact three-word cube decides.
+function wadcbrt(x, up) -> r {
+    let n1, n0 := mul512(x, 1000000000000000000000000000000000000)
+    switch n1
+    case 0 {
+        // a root below 2^86, so its cube fits a word
+        let a := div(clz(n0), 3)
+        r := shr(a, wadicbrt(shl(mul(3, a), n0)))
+        if up { r := add(r, lt(mul(mul(r, r), r), n0)) }
+    }
+    default {
+        let a := div(sub(add(msb(n1), 258), 255), 3)
+        r := shl(a, wadicbrt(shr512(n1, n0, mul(3, a))))
+        let d := mul(r, r)
+        r := div(add(shl(1, r), wadmd(n1, n0, mulmod(x, 1000000000000000000000000000000000000, d), d)), 3)
+        r := sub(r, cubegt(r, 0, n1, n0))
+        if up {
+            let q1, q0 := mul512(r, r)
+            let c2, c1, c0 := mul3(q1, q0, r)
+            r := add(r, gt3(0, n1, n0, c2, c1, c0))
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// exp
+// ---------------------------------------------------------------------------
+
+/// The second stage of exp: 2^(+-|x| C), C = log2(e) / 10^18 as a two-word
+/// mantissa (the floor of C 2^1082, its top bit at 511, so within 2^-511
+/// relative), times |x| exactly; split at 2^-510 into k and f (tsplit), f
+/// moved into [0, 1) for a negative x, then 2^f - 1 = e^(f ln 2) - 1 by
+/// wexpm1. |x| C is at most 196.
+function wadexp2(s, ax) -> k, eh, el {
+    let z2, z1, z0 := mul3(0xd4e77a4730979b2792f46bd35d5b2a8e5c26124660eec15df338d2209f0dfb18, 0xf18756d8d6c554de36197da4ac78f691b9db34ea5b7de892a4d8745d24614ef1, ax)
+    let fh := 0
+    let fl := 0
+    k, fh, fl := tsplit(z2, z1, z0, 61)
+    if s {
+        k := sub(0, k)
+        if or(fh, fl) {
+            k := sub(k, 1)
+            fh, fl := wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl)
+        }
+    }
+    fh, fl := wmul(fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+    eh, el := wexpm1(fh, fl)
+}
+
+/// e^(x 10^-18) in WAD, rounded in direction dir. Zero (or one wei up) at
+/// and below -41446531673892822313, where the value is under one wei;
+/// ExpOverflow from 135305999368893231590, where it reaches 2^255. The fast
+/// path is FP256's 2^f kernel on the exact input: t log2 e = |x| C from the
+/// exact three-word product with wadexp2's C, split into k and f at 2^-254
+/// (floored), 2^f by exp2frac (exp2kv): within 8 units of 2^-254, the
+/// kernel's 4.7 and f's floor 1.4 (FP256's exp bound).
+function wadexp(x, dir) -> r {
+    if iszero(x) {
+        r := 1000000000000000000
+        leave
+    }
+    if sgt(x, 135305999368893231589) { rev(0xa37bfec9) }
+    if slt(x, sub(0, 41446531673892822312)) {
+        r := eq(dir, 1)
+        leave
+    }
+    // written out (wadcutk's cut, exp2kv, mul3's top two words): each call
+    // in an assembly block costs about 50 gas
+    let s := slt(x, 0)
+    let ax := x
+    if s { ax := sub(0, x) }
+    let lo := mul(ax, 0xf18756d8d6c554de36197da4ac78f691b9db34ea5b7de892a4d8745d24614ef1)
+    let mm := mulmod(ax, 0xf18756d8d6c554de36197da4ac78f691b9db34ea5b7de892a4d8745d24614ef1, not(0))
+    let z1 := sub(sub(mm, lo), lt(mm, lo))
+    lo := mul(ax, 0xd4e77a4730979b2792f46bd35d5b2a8e5c26124660eec15df338d2209f0dfb18)
+    mm := mulmod(ax, 0xd4e77a4730979b2792f46bd35d5b2a8e5c26124660eec15df338d2209f0dfb18, not(0))
+    let z2 := sub(sub(mm, lo), lt(mm, lo))
+    z1 := add(z1, lo)
+    z2 := add(z2, lt(z1, lo))
+    let kk := shr(59, z2)
+    let f := and(or(shl(195, z2), shr(61, z1)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+    if s {
+        kk := sub(0, kk)
+        if f {
+            kk := sub(kk, 1)
+            f := sub(0x4000000000000000000000000000000000000000000000000000000000000000, f)
+        }
+    }
+    let v := 0x4000000000000000000000000000000000000000000000000000000000000000
+    if f { v := exp2frac(f) }
+    // 10^18 2^kk v = P 2^-(254 - kk), P = v 10^18; the error 8 10^18 2^(kk + 2) at 2^-256
+    lo := mul(v, 1000000000000000000)
+    mm := mulmod(v, 1000000000000000000, not(0))
+    let p1 := sub(sub(mm, lo), lt(mm, lo))
+    let I := 0
+    let F := 0
+    let errF := 0
+    switch slt(kk, sub(0, 1))
+    case 0 {
+        let sh := sub(254, kk)
+        I := or(shl(sub(256, sh), p1), shr(sh, lo))
+        F := shl(sub(256, sh), lo)
+        errF := add(shl(add(kk, 2), 0x6f05b59d3b200000), 2)
+    }
+    default {
+        let sh := sub(sub(0, kk), 2)
+        I := shr(sh, p1)
+        F := or(shl(sub(256, sh), p1), shr(sh, lo))
+        errF := add(shr(sh, 0x6f05b59d3b200000), 3)
+    }
+    // from kk = 190 the bound reaches half a wei
+    if or(sgt(kk, 189), wadbad(F, errF)) {
+        r := wadexpw(x, dir)
+        leave
+    }
+    r := add(I, eq(dir, 1))
+}
+
+/// The second stage of exp, cut and rounded.
+function wadexpw(x, dir) -> r {
+    let k, eh, el := wadexp2(slt(x, 0), absw(x))
+    let I, F, errF := wad2k(k, eh, el)
+    r := wadtie(0, I, F, errF, dir)
+}
+
+// ---------------------------------------------------------------------------
+// The logarithms
+// ---------------------------------------------------------------------------
+
+/// u A + ln(m) B for x = m 2^u > 0, m in [1, 2), three words at 2^-510:
+/// ln(m) by wlnw on the exact mantissa (within 2^-497), times B = (bh, bl)
+/// by wmul unless bh = 0 (B = 1), u A by the exact product with the
+/// two-word A (within u units). With C in three words taken off (wadlogc),
+/// ln(x 10^-18) is (A, B, C) = (ln 2, 1, 18 ln 10), log2 (1, log2 e,
+/// 18 log2 10), log10 (log10 2, log10 e, 18): within 2^-495.
+function wadlogp(x, ah, al, bh, bl) -> p2, p1, p0 {
+    let u := msb(x)
+    let lh, ll := wlnw(shl(sub(254, u), x), 0, 0)
+    if bh { lh, ll := wmul(lh, ll, bh, bl) }
+    p2, p1, p0 := mul3(ah, al, u)
+    p2, p1, p0 := add3(p2, p1, p0, 0, lh, ll)
+}
+
+/// P - C as a sign and a three-word magnitude.
+function wadlogc(p2, p1, p0, c2, c1, c0) -> ng, a2, a1, a0 {
+    ng := gt3(c2, c1, c0, p2, p1, p0)
+    switch ng
+    case 0 { a2, a1, a0 := sub3(p2, p1, p0, c2, c1, c0) }
+    default { a2, a1, a0 := sub3(c2, c1, c0, p2, p1, p0) }
+}
+
+/// ln(x 10^-18) wide, as wadlogp and wadlogc take it.
+function wadlnw(x) -> ng, a2, a1, a0 {
+    let p2, p1, p0 := wadlogp(x, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09, 0, 0)
+    ng, a2, a1, a0 := wadlogc(p2, p1, p0, 0xa, 0x5c93f995ffdc199c7a1b0f0f32d6b6dfee1ea9915a9b830543ee252422e3320e, 0x8f4e332a7dd126865fee53831eaef1531ee689b492d5f365b0167948341b9b14)
+}
+
+/// The second stage of a logarithm: the wide value's cut, rounded.
+function wadlogr(ng, a2, a1, a0, dir) -> r {
+    let I, F := wad510(a2, a1, a0)
+    r := wadtie(ng, I, F, 0x10000, dir)
+    if ng { r := sub(0, r) }
+}
+
+/// ln(x 10^-18) at 2^-247 as a sign and a magnitude, for x > 0 on FP256's
+/// log2 kernel: x = m 2^u exactly (m = x 2^(254 - u) at 2^-254), log2m(m)
+/// within 2.32 units of 2^-254, then (u + log2 m) ln 2 - 18 ln 10, u ln 2
+/// from the 512-bit product with ln 2 at 2^-256 (within 1.5 units), log2 m
+/// ln 2 by one high word (1.02), 18 ln 10 floored (1): within 4 units.
+/// The fast paths of ln and pow; ln writes it out.
+function wadlnk(x) -> ng, A {
+    let u := sub(255, clz(x))
+    let g := log2m(shl(sub(254, u), x))
+    let lo := mul(u, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+    let mm := mulmod(u, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
+    A := or(shl(247, sub(sub(mm, lo), lt(mm, lo))), shr(9, lo))
+    lo := mul(g, 0x162e42fefa39ef35793c7673007e5ed5e81e6864ce5316c5b141a2eb71755f4)
+    mm := mulmod(g, 0x162e42fefa39ef35793c7673007e5ed5e81e6864ce5316c5b141a2eb71755f4, not(0))
+    A := add(A, sub(sub(mm, lo), lt(mm, lo)))
+    ng := lt(A, 0x14b927f32bffb83338f4361e1e65ad6dbfdc3d5322b537060a87dc4a4845c664)
+    switch ng
+    case 0 { A := sub(A, 0x14b927f32bffb83338f4361e1e65ad6dbfdc3d5322b537060a87dc4a4845c664) }
+    default { A := sub(0x14b927f32bffb83338f4361e1e65ad6dbfdc3d5322b537060a87dc4a4845c664, A) }
+}
+
+/// ln(x 10^-18) in WAD, rounded in direction dir; zero at 10^18. The fast
+/// path is wadlnk's value on the exact input, within 4 units of 2^-247,
+/// written out with its cut (wadcut247) as exp's is.
+function wadln(x, dir) -> r {
+    if iszero(sgt(x, 0)) { rev(0x1615e638) }
+    if eq(x, 1000000000000000000) { leave }
+    let u := sub(255, clz(x))
+    let g := log2m(shl(sub(254, u), x))
+    let lo := mul(u, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+    let mm := mulmod(u, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
+    let A := or(shl(247, sub(sub(mm, lo), lt(mm, lo))), shr(9, lo))
+    lo := mul(g, 0x162e42fefa39ef35793c7673007e5ed5e81e6864ce5316c5b141a2eb71755f4)
+    mm := mulmod(g, 0x162e42fefa39ef35793c7673007e5ed5e81e6864ce5316c5b141a2eb71755f4, not(0))
+    A := add(A, sub(sub(mm, lo), lt(mm, lo)))
+    let s := lt(A, 0x14b927f32bffb83338f4361e1e65ad6dbfdc3d5322b537060a87dc4a4845c664)
+    switch s
+    case 0 { A := sub(A, 0x14b927f32bffb83338f4361e1e65ad6dbfdc3d5322b537060a87dc4a4845c664) }
+    default { A := sub(0x14b927f32bffb83338f4361e1e65ad6dbfdc3d5322b537060a87dc4a4845c664, A) }
+    lo := mul(A, 1000000000000000000)
+    mm := mulmod(A, 1000000000000000000, not(0))
+    if wadbad(shl(9, lo), 0x6f05b59d3b20000002) {
+        let ng, a2, a1, a0 := wadlnw(x)
+        r := wadlogr(ng, a2, a1, a0, dir)
+        leave
+    }
+    r := add(or(shl(9, sub(sub(mm, lo), lt(mm, lo))), shr(247, lo)), or(and(iszero(dir), s), and(eq(dir, 1), iszero(s))))
+    if s { r := sub(0, r) }
+}
+
+/// log2(x 10^-18) in WAD, rounded in direction dir; zero at 10^18. The fast
+/// path is u + log2m(m) - 18 log2 10 at 2^-247 on the exact input: the
+/// kernel's 2.32 units of 2^-254 and its shift's floor, the constant's:
+/// within 3 units.
+function wadlog2(x, dir) -> r {
+    if iszero(sgt(x, 0)) { rev(0x1615e638) }
+    if eq(x, 1000000000000000000) { leave }
+    let u := sub(255, clz(x))
+    let A := add(shl(247, u), shr(7, log2m(shl(sub(254, u), x))))
+    let s := lt(A, 0x1de5b8eaa8d7df8bc24a2ebbe6ecbad6ce933c17bfd5445f0c7db04212688eca)
+    switch s
+    case 0 { A := sub(A, 0x1de5b8eaa8d7df8bc24a2ebbe6ecbad6ce933c17bfd5445f0c7db04212688eca) }
+    default { A := sub(0x1de5b8eaa8d7df8bc24a2ebbe6ecbad6ce933c17bfd5445f0c7db04212688eca, A) }
+    let lo := mul(A, 1000000000000000000)
+    let mm := mulmod(A, 1000000000000000000, not(0))
+    if wadbad(shl(9, lo), 0x53444835ec58000002) {
+        r := wadlog2w(x, s, A, dir)
+        leave
+    }
+    r := add(or(shl(9, sub(sub(mm, lo), lt(mm, lo))), shr(247, lo)), or(and(iszero(dir), s), and(eq(dir, 1), iszero(s))))
+    if s { r := sub(0, r) }
+}
+
+/// log2's second stage: the exact values first (log2 is a whole k only at
+/// x = 10^18 2^k), then the wide value.
+function wadlog2w(x, s, A, dir) -> r {
+    let k := shr(247, add(A, shl(246, 1)))
+    let ex := 0
+    switch s
+    case 0 { ex := eq(x, shl(k, 1000000000000000000)) }
+    default { ex := and(lt(k, 19), eq(shl(k, x), 1000000000000000000)) }
+    if ex {
+        r := mul(k, 1000000000000000000)
+        if s { r := sub(0, r) }
+        leave
+    }
+    let p2, p1, p0 := wadlogp(x, 0x4000000000000000000000000000000000000000000000000000000000000000, 0, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+    let ng, a2, a1, a0 := wadlogc(p2, p1, p0, 0xe, 0xf2dc75546befc5e125175df3765d6b67499e0bdfeaa22f863ed821093447650a, 0x731b1da718fc32185e95680d022ad50d6bcac110612839f69ef8f26f94c39f23)
+    r := wadlogr(ng, a2, a1, a0, dir)
+}
+
+/// log10(x 10^-18) in WAD, rounded in direction dir; zero at 10^18. The
+/// fast path is (u + log2m(m)) log10 2 - 18 at 2^-247 on the exact input,
+/// as ln's (18 exact): within 3 units.
+function wadlog10(x, dir) -> r {
+    if iszero(sgt(x, 0)) { rev(0x1615e638) }
+    if eq(x, 1000000000000000000) { leave }
+    let u := sub(255, clz(x))
+    let g := log2m(shl(sub(254, u), x))
+    let lo := mul(u, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e5)
+    let mm := mulmod(u, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e5, not(0))
+    let A := or(shl(247, sub(sub(mm, lo), lt(mm, lo))), shr(9, lo))
+    lo := mul(g, 0x9a209a84fbcff7988f8959ac0b7c917826ad30c543d1f3498a5e6f26b7cc63)
+    mm := mulmod(g, 0x9a209a84fbcff7988f8959ac0b7c917826ad30c543d1f3498a5e6f26b7cc63, not(0))
+    A := add(A, sub(sub(mm, lo), lt(mm, lo)))
+    let s := lt(A, 0x900000000000000000000000000000000000000000000000000000000000000)
+    switch s
+    case 0 { A := sub(A, 0x900000000000000000000000000000000000000000000000000000000000000) }
+    default { A := sub(0x900000000000000000000000000000000000000000000000000000000000000, A) }
+    lo := mul(A, 1000000000000000000)
+    mm := mulmod(A, 1000000000000000000, not(0))
+    if wadbad(shl(9, lo), 0x53444835ec58000002) {
+        r := wadlog10w(x, s, A, dir)
+        leave
+    }
+    r := add(or(shl(9, sub(sub(mm, lo), lt(mm, lo))), shr(247, lo)), or(and(iszero(dir), s), and(eq(dir, 1), iszero(s))))
+    if s { r := sub(0, r) }
+}
+
+/// log10's second stage: the exact values first (log10 is a whole k only
+/// at x = 10^(18 + k)), then the wide value.
+function wadlog10w(x, s, A, dir) -> r {
+    let k := shr(247, add(A, shl(246, 1)))
+    let ex := 0
+    switch s
+    case 0 { ex := and(lt(k, 59), eq(x, exp(10, add(18, k)))) }
+    default { ex := and(lt(k, 19), eq(x, exp(10, sub(18, k)))) }
+    if ex {
+        r := mul(k, 1000000000000000000)
+        if s { r := sub(0, r) }
+        leave
+    }
+    let p2, p1, p0 := wadlogp(x, 0x134413509f79fef311f12b35816f922f04d5a618a87a3e69314bcde4d6f98c79, 0x650d45b03233f57a13cb978e668e37a25228e692b6317243cb16a4fea4aa5a59, 0x1bcb7b1526e50e32a6ab7555f5a67b8647dc68c048b934404747e5a89ef1d4a7, 0x8ea849df42805e7e52446ab258c8c942a319c77b3fa71b978df4571a5919b4f6)
+    let ng, a2, a1, a0 := wadlogc(p2, p1, p0, 4, 0x8000000000000000000000000000000000000000000000000000000000000000, 0)
+    r := wadlogr(ng, a2, a1, a0, dir)
+}
+
+// ---------------------------------------------------------------------------
+// pow
+// ---------------------------------------------------------------------------
+
+/// floor(Q / k) for a four-word Q and 0 < k < 2^64, by 128-bit long division.
+function wadquo4(q3, q2, q1, q0, k) -> r3, r2, r1, r0 {
+    r3 := div(q3, k)
+    let x := or(shl(128, mod(q3, k)), shr(128, q2))
+    let h := div(x, k)
+    x := or(shl(128, mod(x, k)), and(q2, 0xffffffffffffffffffffffffffffffff))
+    r2 := or(shl(128, h), div(x, k))
+    x := or(shl(128, mod(x, k)), shr(128, q1))
+    h := div(x, k)
+    x := or(shl(128, mod(x, k)), and(q1, 0xffffffffffffffffffffffffffffffff))
+    r1 := or(shl(128, h), div(x, k))
+    x := or(shl(128, mod(x, k)), shr(128, q0))
+    h := div(x, k)
+    x := or(shl(128, mod(x, k)), and(q0, 0xffffffffffffffffffffffffffffffff))
+    r0 := or(shl(128, h), div(x, k))
+}
+
+/// The four-word product of a three-word A and a word b.
+function wadmul4(a2, a1, a0, b) -> q3, q2, q1, q0 {
+    let h0 := 0
+    h0, q0 := mul512(a0, b)
+    let h1, l1 := mul512(a1, b)
+    let h2, l2 := mul512(a2, b)
+    q1 := add(h0, l1)
+    let c := lt(q1, h0)
+    q2 := add(h1, l2)
+    q3 := add(h2, lt(q2, h1))
+    q2 := add(q2, c)
+    q3 := add(q3, lt(q2, c))
+}
+
+/// |t| 2^510 in four words and the sign s of t = ln(x 10^-18) y 10^-18:
+/// the wide ln times |y| exactly, divided by 10^18 once (floored).
+function wadpowt(x, y) -> s, t3, t2, t1, t0 {
+    let ng, a2, a1, a0 := wadlnw(x)
+    s := xor(ng, slt(y, 0))
+    let q3, q2, q1, q0 := wadmul4(a2, a1, a0, absw(y))
+    t3, t2, t1, t0 := wadquo4(q3, q2, q1, q0, 1000000000000000000)
+}
+
+/// The second stage of pow for x > 0, x != 10^18: t = ln(x 10^-18) y 10^-18
+/// at 2^-510 from the wide ln and the exact four-word product with |y|
+/// (floored once), then e^t = 2^k2 (1 + E) by wexpr. Returns o = 1 when the
+/// value surely reaches 2^255 wei (t >= 256, or k2 >= 196), o = 2 when it is
+/// surely below one wei (t <= -256, or k2 <= -61), else the cut.
+function wadpoww(x, y) -> o, I, F, errF {
+    let s, t3, t2, t1, t0 := wadpowt(x, y)
+    if or(t3, shr(6, t2)) {
+        o := add(1, s)
+        leave
+    }
+    // m = floor(|t| log2 e) or one under it, from |t| at 2^-126 and log2 e at
+    // 2^-120 (both floored); kk = m, or -(m + 1) for t < 0, is within one of
+    // floor(t log2 e) as wexpr needs, at a t log2 e within a hair of an
+    // integer too (an exact power of two: -(m) could be two above)
+    let kk := shr(246, mul(or(shl(128, t2), shr(128, t1)), 0x171547652b82fe1777d0ffda0d23a7d))
+    if s { kk := not(kk) }
+    let k2, eh, el := wexpr(s, kk, t1, t0)
+    if sgt(k2, 195) {
+        o := 1
+        leave
+    }
+    if slt(k2, sub(0, 60)) {
+        o := 2
+        leave
+    }
+    I, F, errF := wad2k(k2, eh, el)
+    errF := add(errF, shr(170, I))
+}
+
+/// (x 10^-18)^(y 10^-18) in WAD, rounded in direction dir. y = 1, 2, 1/2 and
+/// -1 are exact integer arithmetic (x, mulWad(x, x), sqrtWad(x), divWad(1,
+/// x)). The fast path is the kernels on the exact inputs: S = ln(x 10^-18)
+/// from wadlnk (4 units of 2^-247), T = |S| |y| / 10^18 floored (within
+/// 4 |y 10^-18| + 1 units), from 256 surely past either end; T log2 e split
+/// at 2^-254 and 2^f by exp2frac. 2^f is within 4.69 + 1.39 (185 (4 Y + 1)
+/// + 1) units of 2^-254, Y = |y 10^-18| <= (|y| >> 59) + 1, so c = 1300 +
+/// 1030 (|y| >> 59). From |y| = 2^180, the second stage alone.
+function wadpow(x, y, dir) -> r {
+    if slt(x, 0) { rev(0x1615e638) }
+    if iszero(x) {
+        if slt(y, 0) { rev(0x1615e638) }
+        r := mul(iszero(y), 1000000000000000000)
+        leave
+    }
+    if or(iszero(y), eq(x, 1000000000000000000)) {
+        r := 1000000000000000000
+        leave
+    }
+    if eq(y, 1000000000000000000) {
+        r := x
+        leave
+    }
+    if eq(y, 2000000000000000000) {
+        r := wadmulu(x, x, eq(dir, 1), 0xa37bfec9)
+        if slt(r, 0) { rev(0xa37bfec9) }
+        leave
+    }
+    if eq(y, 500000000000000000) {
+        r := wadsqrt(x, eq(dir, 1))
+        leave
+    }
+    if eq(y, sub(0, 1000000000000000000)) {
+        r := waddivu(1000000000000000000, x, eq(dir, 1), 0xa37bfec9)
+        leave
+    }
+    let ay := y
+    if slt(y, 0) { ay := sub(0, y) }
+    if iszero(shr(180, ay)) {
+        let ng, A := wadlnk(x)
+        let s := xor(ng, slt(y, 0))
+        // |t| = A |y| / 10^18 at 2^-247, floored as wadq18 floors
+        let lo := mul(A, ay)
+        let mm := mulmod(A, ay, not(0))
+        let p1 := sub(sub(mm, lo), lt(mm, lo))
+        if iszero(lt(p1, 500000000000000000)) {
+            if s {
+                r := eq(dir, 1)
+                leave
+            }
+            rev(0xa37bfec9)
+        }
+        let rem := mulmod(A, ay, 1000000000000000000)
+        let T := mul(or(shr(18, sub(lo, rem)), shl(238, sub(p1, lt(lo, rem)))), 0xaccb18165bd6fe31ae1cf318dc5b51eee0e1ba569b88cd74c1773b91fac10669)
+        // T log2 e at 2^-501: its integer part and f at 2^-254, as exp2kv takes them
+        lo := mul(T, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923)
+        mm := mulmod(T, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, not(0))
+        p1 := sub(sub(mm, lo), lt(mm, lo))
+        let kk := shr(245, p1)
+        let f := and(or(shl(9, p1), shr(247, lo)), 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+        if s {
+            kk := sub(0, kk)
+            if f {
+                kk := sub(kk, 1)
+                f := sub(0x4000000000000000000000000000000000000000000000000000000000000000, f)
+            }
+        }
+        if sgt(kk, 195) { rev(0xa37bfec9) }
+        let v := 0x4000000000000000000000000000000000000000000000000000000000000000
+        if f { v := exp2frac(f) }
+        // the cut of 10^18 2^kk v, as exp's, with c 10^18 2^(kk + 2) at 2^-256
+        let ce := mul(add(1300, mul(1030, shr(59, ay))), 1000000000000000000)
+        lo := mul(v, 1000000000000000000)
+        mm := mulmod(v, 1000000000000000000, not(0))
+        p1 := sub(sub(mm, lo), lt(mm, lo))
+        let I := 0
+        let F := 0
+        let errF := 0
+        let ok := 1
+        switch slt(kk, sub(0, 1))
+        case 0 {
+            let sh := sub(254, kk)
+            I := or(shl(sub(256, sh), p1), shr(sh, lo))
+            F := shl(sub(256, sh), lo)
+            ok := iszero(shr(sub(253, kk), ce))
+            errF := add(shl(add(kk, 2), ce), 2)
+        }
+        default {
+            let sh := sub(sub(0, kk), 2)
+            switch lt(sh, 256)
+            case 1 {
+                I := shr(sh, p1)
+                F := or(shl(sub(256, sh), p1), shr(sh, lo))
+            }
+            default { F := shr(sub(sh, 256), p1) }
+            errF := add(shr(sh, ce), 3)
+        }
+        if and(ok, iszero(wadbad(F, errF))) {
+            r := add(I, eq(dir, 1))
+            if slt(r, 0) { rev(0xa37bfec9) }
+            leave
+        }
+    }
+    let o, I, F, errF := wadpoww(x, y)
+    if eq(o, 1) { rev(0xa37bfec9) }
+    if eq(o, 2) {
+        r := eq(dir, 1)
+        leave
+    }
+    r := wadtie(0, I, F, errF, dir)
+    if slt(r, 0) { rev(0xa37bfec9) }
+}
+
+// ---------------------------------------------------------------------------
+// Lambert W, the principal branch
+// ---------------------------------------------------------------------------
+
+/// The second stage of W0 for x != 0 from the fast value v: f = w + ln|w| -
+/// ln|t| in three words at 2^-510 (two's complement), with ln|w| = u ln 2 +
+/// wlnw(m) on v's exact significand and ln|t| from wadlnw on |x|; q = w / (1
+/// + w) in FP256; the step w - f q, cut. The step's error is (w - W)^2 / (2
+/// |w| (1 + w)) plus f's 2^-494 times |q| and q's two roundings times |f q|.
+function wadw0w(x, v) -> s, I, F {
+    let f2, f1, f0 := wadw0f(x, v)
+    let ng, e1, e0 := wadfq(f2, f1, f0, v)
+    let w2, w1, w0 := wadv510(v)
+    switch ng
+    case 0 { w2, w1, w0 := sub3(w2, w1, w0, 0, e1, e0) }
+    default { w2, w1, w0 := add3(w2, w1, w0, 0, e1, e0) }
+    w2, w1, w0, s := abs3(w2, w1, w0)
+    I, F := wad510(w2, w1, w0)
+}
+
+/// ln|w| at 2^-510, three words in two's complement, for an FP256 word
+/// w != 0: u ln 2 (u signed, kln2x within a unit) plus wlnw of the exact
+/// mantissa.
+function wadlnv(v) -> d2, d1, d0 {
+    let uw := sub(and(shr(236, v), 0x7ffff), 0x3ffff)
+    d2, d1, d0 := kln2x(absw(uw))
+    if slt(uw, 0) { d2, d1, d0 := sub3(0, 0, 0, d2, d1, d0) }
+    let lh, ll := wlnw(shl(18, or(and(v, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)), 0, 0)
+    d2, d1, d0 := add3(d2, d1, d0, 0, lh, ll)
+}
+
+/// w 2^510 exactly, three words in two's complement, for an FP256 word w
+/// with 2^-274 <= |w| < 2^256: m 2^(u + 274).
+function wadv510(v) -> w2, w1, w0 {
+    w2, w1, w0 := shl3(or(and(v, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000), sub(and(shr(236, v), 0x7ffff), 0x3feed))
+    if shr(255, v) { w2, w1, w0 := sub3(0, 0, 0, w2, w1, w0) }
+}
+
+/// f = w + ln|w| - ln|t| at 2^-510 (two's complement) for the fast value w
+/// = v of W0(t), t = x 10^-18: |w| >= 2^-61 for |x| >= 1 wei.
+function wadw0f(x, v) -> f2, f1, f0 {
+    f2, f1, f0 := wadlnv(v)
+    let ng, a2, a1, a0 := wadlnw(absw(x))
+    switch ng
+    case 0 { f2, f1, f0 := sub3(f2, f1, f0, a2, a1, a0) }
+    default { f2, f1, f0 := add3(f2, f1, f0, a2, a1, a0) }
+    let w2, w1, w0 := wadv510(v)
+    f2, f1, f0 := add3(f2, f1, f0, w2, w1, w0)
+}
+
+/// f q 2^510 as a sign and two words, q = w / (1 + w) in FP256 (two
+/// roundings): |f| is tiny (the fast value's error times (1 + w) / w), so
+/// its low two words; |q| = m 2^(uq - 236) with uq <= 30 near the branch
+/// point, so the product shifts right.
+function wadfq(f2, f1, f0, v) -> ng, e1, e0 {
+    let a2, a1, a0, nf := abs3(f2, f1, f0)
+    let q := fp256_div(v, fp256_add(v, 0x3ffff0000000000000000000000000000000000000000000000000000000000))
+    let z2, z1, z0 := mul3(a1, a0, or(and(q, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000))
+    e1, e0 := shr3(z2, z1, z0, sub(0x400eb, and(shr(236, q), 0x7ffff)))
+    ng := xor(nf, shr(255, q))
+}
+
+/// W0(x 10^-18) in WAD, rounded in direction dir: FP256's lambertW0 on
+/// fromFixed18(x), cut with c = 4 from w = -1/2 up and 2 + 2^(1 + k) below
+/// it for 1 + w >= 2^-k (1 + w is exact there); the second stage on a miss.
+function wadw0(x, dir) -> r {
+    if slt(x, sub(0, 367879441171442321)) { rev(0xf2b402bb) }
+    if iszero(x) { leave }
+    let v := fp256_lambertW0(fp256_fromFixed18(x))
+    let c := 4
+    // v below -1/2: sign set and the exponent at or above -1's
+    if and(shr(255, v), iszero(lt(and(shr(236, v), 0x7ffff), 0x3fffe))) {
+        let o := fp256_add(v, 0x3ffff0000000000000000000000000000000000000000000000000000000000)
+        c := add(2, shl(add(sub(0x3ffff, and(shr(236, o), 0x7ffff)), 1), 1))
+    }
+    let s, I, bad := wadfast(v, c, 0)
+    if bad {
+        let F := 0
+        s, I, F := wadw0w(x, v)
+        r := wadtie(s, I, F, add(shr(200, I), 0x10000), dir)
+        if s { r := sub(0, r) }
+        leave
+    }
+    r := wadround(s, I, dir)
+}
+
+// ---------------------------------------------------------------------------
+// Exports: Solady's names and signatures first, then the directed variants
+// and PRBMath's names for the same functions
+// ---------------------------------------------------------------------------
+
+/// @export mulWad(uint256 x, uint256 y) returns (uint256 z)
+/// @domain any x, y whose result fits uint256
+/// @reverts MulWadFailed() when x y / 10^18 does not fit uint256
+/// @notice x y / 10^18 rounded down, exactly: in one word while x y fits
+///         (as Solady's mulWad, which reverts past it), else from the exact
+///         512-bit product P, floor(P / 10^18) = ((P - P mod 10^18) / 2^18)
+///         times the inverse of 5^18 modulo 2^256. Reverts only when the
+///         result does not fit.
+function wad_mulWad(x, y) -> z {
+    let p := mul(x, y)
+    z := div(p, 1000000000000000000)
+    if iszero(or(iszero(x), eq(div(p, x), y))) {
+        let mm := mulmod(x, y, not(0))
+        let p1 := sub(sub(mm, p), lt(mm, p))
+        if iszero(lt(p1, 1000000000000000000)) {
+            mstore(0x00, shl(224, 0xbac65e5b))
+            revert(0x00, 0x04)
+        }
+        let rem := mulmod(x, y, 1000000000000000000)
+        z := mul(or(shr(18, sub(p, rem)), shl(238, sub(p1, lt(p, rem)))), 0xaccb18165bd6fe31ae1cf318dc5b51eee0e1ba569b88cd74c1773b91fac10669)
+    }
+}
+
+/// @export mulWadUp(uint256 x, uint256 y) returns (uint256 z)
+/// @domain any x, y whose result fits uint256
+/// @reverts MulWadFailed() when x y / 10^18 rounded up does not fit uint256
+/// @notice x y / 10^18 rounded up, exactly, as mulWad.
+function wad_mulWadUp(x, y) -> z {
+    let p := mul(x, y)
+    z := add(div(p, 1000000000000000000), iszero(iszero(mod(p, 1000000000000000000))))
+    if iszero(or(iszero(x), eq(div(p, x), y))) {
+        let mm := mulmod(x, y, not(0))
+        let p1 := sub(sub(mm, p), lt(mm, p))
+        let rem := mulmod(x, y, 1000000000000000000)
+        let q := mul(or(shr(18, sub(p, rem)), shl(238, sub(p1, lt(p, rem)))), 0xaccb18165bd6fe31ae1cf318dc5b51eee0e1ba569b88cd74c1773b91fac10669)
+        z := add(q, iszero(iszero(rem)))
+        if or(iszero(lt(p1, 1000000000000000000)), lt(z, q)) {
+            mstore(0x00, shl(224, 0xbac65e5b))
+            revert(0x00, 0x04)
+        }
+    }
+}
+
+/// @export mulWadDown(uint256 x, uint256 y) returns (uint256 z)
+/// @domain any x, y whose result fits uint256
+/// @reverts MulWadFailed() when x y / 10^18 does not fit uint256
+/// @notice mulWad: x y / 10^18 rounded down.
+function wad_mulWadDown(x, y) -> z {
+    let p := mul(x, y)
+    z := div(p, 1000000000000000000)
+    if iszero(or(iszero(x), eq(div(p, x), y))) {
+        let mm := mulmod(x, y, not(0))
+        let p1 := sub(sub(mm, p), lt(mm, p))
+        if iszero(lt(p1, 1000000000000000000)) {
+            mstore(0x00, shl(224, 0xbac65e5b))
+            revert(0x00, 0x04)
+        }
+        let rem := mulmod(x, y, 1000000000000000000)
+        z := mul(or(shr(18, sub(p, rem)), shl(238, sub(p1, lt(p, rem)))), 0xaccb18165bd6fe31ae1cf318dc5b51eee0e1ba569b88cd74c1773b91fac10669)
+    }
+}
+
+/// @export divWad(uint256 x, uint256 y) returns (uint256 z)
+/// @domain y != 0 and a result that fits uint256
+/// @reverts DivWadFailed() for y = 0 or a result past uint256
+/// @notice x 10^18 / y rounded down, exactly: in one word while x 10^18
+///         fits (Solady reverts past it), else Remco Bloemen's mulDiv on the
+///         exact 512-bit numerator. Reverts only for y = 0 or a result that
+///         does not fit.
+function wad_divWad(x, y) -> z {
+    if iszero(y) {
+        mstore(0x00, shl(224, 0x7c5f487d))
+        revert(0x00, 0x04)
+    }
+    z := div(mul(x, 1000000000000000000), y)
+    if iszero(lt(x, 0x12725dd1d243aba0e75fe645cc4873f9e65afe688c928e1f22)) {
+        let p0 := mul(x, 1000000000000000000)
+        let mm := mulmod(x, 1000000000000000000, not(0))
+        let p1 := sub(sub(mm, p0), lt(mm, p0))
+        if iszero(lt(p1, y)) {
+            mstore(0x00, shl(224, 0x7c5f487d))
+            revert(0x00, 0x04)
+        }
+        let rem := mulmod(x, 1000000000000000000, y)
+        p1 := sub(p1, gt(rem, p0))
+        p0 := sub(p0, rem)
+        let twos := and(sub(0, y), y)
+        let d := div(y, twos)
+        p0 := or(div(p0, twos), mul(p1, add(div(sub(0, twos), twos), 1)))
+        let iv := xor(mul(3, d), 2)
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        z := mul(p0, iv)
+    }
+}
+
+/// @export divWadUp(uint256 x, uint256 y) returns (uint256 z)
+/// @domain y != 0 and a result that fits uint256
+/// @reverts DivWadFailed() for y = 0 or a result past uint256
+/// @notice x 10^18 / y rounded up, exactly, as divWad.
+function wad_divWadUp(x, y) -> z {
+    if iszero(y) {
+        mstore(0x00, shl(224, 0x7c5f487d))
+        revert(0x00, 0x04)
+    }
+    let p0 := mul(x, 1000000000000000000)
+    z := add(div(p0, y), iszero(iszero(mod(p0, y))))
+    if iszero(lt(x, 0x12725dd1d243aba0e75fe645cc4873f9e65afe688c928e1f22)) {
+        let mm := mulmod(x, 1000000000000000000, not(0))
+        let p1 := sub(sub(mm, p0), lt(mm, p0))
+        if iszero(lt(p1, y)) {
+            mstore(0x00, shl(224, 0x7c5f487d))
+            revert(0x00, 0x04)
+        }
+        let rem := mulmod(x, 1000000000000000000, y)
+        p1 := sub(p1, gt(rem, p0))
+        p0 := sub(p0, rem)
+        let twos := and(sub(0, y), y)
+        let d := div(y, twos)
+        p0 := or(div(p0, twos), mul(p1, add(div(sub(0, twos), twos), 1)))
+        let iv := xor(mul(3, d), 2)
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        p0 := mul(p0, iv)
+        z := add(p0, iszero(iszero(rem)))
+        if lt(z, p0) {
+            mstore(0x00, shl(224, 0x7c5f487d))
+            revert(0x00, 0x04)
+        }
+    }
+}
+
+/// @export divWadDown(uint256 x, uint256 y) returns (uint256 z)
+/// @domain y != 0 and a result that fits uint256
+/// @reverts DivWadFailed() for y = 0 or a result past uint256
+/// @notice divWad: x 10^18 / y rounded down.
+function wad_divWadDown(x, y) -> z {
+    if iszero(y) {
+        mstore(0x00, shl(224, 0x7c5f487d))
+        revert(0x00, 0x04)
+    }
+    z := div(mul(x, 1000000000000000000), y)
+    if iszero(lt(x, 0x12725dd1d243aba0e75fe645cc4873f9e65afe688c928e1f22)) {
+        let p0 := mul(x, 1000000000000000000)
+        let mm := mulmod(x, 1000000000000000000, not(0))
+        let p1 := sub(sub(mm, p0), lt(mm, p0))
+        if iszero(lt(p1, y)) {
+            mstore(0x00, shl(224, 0x7c5f487d))
+            revert(0x00, 0x04)
+        }
+        let rem := mulmod(x, 1000000000000000000, y)
+        p1 := sub(p1, gt(rem, p0))
+        p0 := sub(p0, rem)
+        let twos := and(sub(0, y), y)
+        let d := div(y, twos)
+        p0 := or(div(p0, twos), mul(p1, add(div(sub(0, twos), twos), 1)))
+        let iv := xor(mul(3, d), 2)
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        iv := mul(iv, sub(2, mul(d, iv)))
+        z := mul(p0, iv)
+    }
+}
+
+/// @export sMulWad(int256 x, int256 y) returns (int256 z)
+/// @domain any x, y whose result fits int256
+/// @reverts SMulWadFailed() when the result does not fit int256
+/// @notice x y / 10^18 rounded toward zero, as Solady's sdiv rounds it (its
+///         comment says down; its code truncates), exactly: in one word
+///         while x y fits, else from the magnitudes' 512-bit product as
+///         mulWad. Reverts only when the result does not fit.
+function wad_sMulWad(x, y) -> z {
+    let p := mul(x, y)
+    z := sdiv(p, 1000000000000000000)
+    if iszero(and(or(iszero(x), eq(sdiv(p, x), y)), iszero(and(eq(x, not(0)), eq(y, shl(255, 1)))))) {
+        let ng := xor(slt(x, 0), slt(y, 0))
+        let a := x
+        if slt(x, 0) { a := sub(0, x) }
+        let b := y
+        if slt(y, 0) { b := sub(0, y) }
+        let p0 := mul(a, b)
+        let mm := mulmod(a, b, not(0))
+        let p1 := sub(sub(mm, p0), lt(mm, p0))
+        let rem := mulmod(a, b, 1000000000000000000)
+        let q := mul(or(shr(18, sub(p0, rem)), shl(238, sub(p1, lt(p0, rem)))), 0xaccb18165bd6fe31ae1cf318dc5b51eee0e1ba569b88cd74c1773b91fac10669)
+        if or(iszero(lt(p1, 1000000000000000000)), gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng))) {
+            mstore(0x00, shl(224, 0xedcd4dd4))
+            revert(0x00, 0x04)
+        }
+        z := q
+        if ng { z := sub(0, q) }
+    }
+}
+
+/// @export sMulWadDown(int256 x, int256 y) returns (int256 z)
+/// @domain any x, y whose result fits int256
+/// @reverts SMulWadFailed() when the result does not fit int256
+/// @notice x y / 10^18 rounded toward minus infinity, exactly, as sMulWad:
+///         the truncated quotient less one when the remainder is negative.
+function wad_sMulWadDown(x, y) -> z {
+    let p := mul(x, y)
+    z := sub(sdiv(p, 1000000000000000000), slt(smod(p, 1000000000000000000), 0))
+    if iszero(and(or(iszero(x), eq(sdiv(p, x), y)), iszero(and(eq(x, not(0)), eq(y, shl(255, 1)))))) {
+        let ng := xor(slt(x, 0), slt(y, 0))
+        let a := x
+        if slt(x, 0) { a := sub(0, x) }
+        let b := y
+        if slt(y, 0) { b := sub(0, y) }
+        let p0 := mul(a, b)
+        let mm := mulmod(a, b, not(0))
+        let p1 := sub(sub(mm, p0), lt(mm, p0))
+        let rem := mulmod(a, b, 1000000000000000000)
+        let q := mul(or(shr(18, sub(p0, rem)), shl(238, sub(p1, lt(p0, rem)))), 0xaccb18165bd6fe31ae1cf318dc5b51eee0e1ba569b88cd74c1773b91fac10669)
+        q := add(q, and(ng, iszero(iszero(rem))))
+        if or(iszero(lt(p1, 1000000000000000000)), gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng))) {
+            mstore(0x00, shl(224, 0xedcd4dd4))
+            revert(0x00, 0x04)
+        }
+        z := q
+        if ng { z := sub(0, q) }
+    }
+}
+
+/// @export sMulWadUp(int256 x, int256 y) returns (int256 z)
+/// @domain any x, y whose result fits int256
+/// @reverts SMulWadFailed() when the result does not fit int256
+/// @notice x y / 10^18 rounded toward plus infinity, exactly, as sMulWad:
+///         the truncated quotient plus one when the remainder is positive.
+function wad_sMulWadUp(x, y) -> z {
+    let p := mul(x, y)
+    z := add(sdiv(p, 1000000000000000000), sgt(smod(p, 1000000000000000000), 0))
+    if iszero(and(or(iszero(x), eq(sdiv(p, x), y)), iszero(and(eq(x, not(0)), eq(y, shl(255, 1)))))) {
+        let ng := xor(slt(x, 0), slt(y, 0))
+        let a := x
+        if slt(x, 0) { a := sub(0, x) }
+        let b := y
+        if slt(y, 0) { b := sub(0, y) }
+        let p0 := mul(a, b)
+        let mm := mulmod(a, b, not(0))
+        let p1 := sub(sub(mm, p0), lt(mm, p0))
+        let rem := mulmod(a, b, 1000000000000000000)
+        let q := mul(or(shr(18, sub(p0, rem)), shl(238, sub(p1, lt(p0, rem)))), 0xaccb18165bd6fe31ae1cf318dc5b51eee0e1ba569b88cd74c1773b91fac10669)
+        q := add(q, and(iszero(ng), iszero(iszero(rem))))
+        if or(iszero(lt(p1, 1000000000000000000)), gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng))) {
+            mstore(0x00, shl(224, 0xedcd4dd4))
+            revert(0x00, 0x04)
+        }
+        z := q
+        if ng { z := sub(0, q) }
+    }
+}
+
+/// @export sDivWad(int256 x, int256 y) returns (int256 z)
+/// @domain y != 0 and a result that fits int256
+/// @reverts SDivWadFailed() for y = 0 or a result past int256
+/// @notice x 10^18 / y rounded toward zero, as Solady's sdiv rounds it,
+///         exactly: in one word while x 10^18 fits (it is never -2^255, so
+///         sdiv cannot overflow), else mulDiv on the magnitudes' exact
+///         numerator (wadsdiv). Reverts only for y = 0 or a result that does
+///         not fit.
+function wad_sDivWad(x, y) -> z {
+    let p := mul(x, 1000000000000000000)
+    z := sdiv(p, y)
+    if iszero(and(iszero(iszero(y)), eq(sdiv(p, 1000000000000000000), x))) { z := wadsdiv(x, y, 2) }
+}
+
+/// @export sDivWadDown(int256 x, int256 y) returns (int256 z)
+/// @domain y != 0 and a result that fits int256
+/// @reverts SDivWadFailed() for y = 0 or a result past int256
+/// @notice x 10^18 / y rounded toward minus infinity, exactly, as sDivWad.
+function wad_sDivWadDown(x, y) -> z {
+    let p := mul(x, 1000000000000000000)
+    z := sub(sdiv(p, y), and(iszero(iszero(smod(p, y))), xor(slt(p, 0), slt(y, 0))))
+    if iszero(and(iszero(iszero(y)), eq(sdiv(p, 1000000000000000000), x))) { z := wadsdiv(x, y, 0) }
+}
+
+/// @export sDivWadUp(int256 x, int256 y) returns (int256 z)
+/// @domain y != 0 and a result that fits int256
+/// @reverts SDivWadFailed() for y = 0 or a result past int256
+/// @notice x 10^18 / y rounded toward plus infinity, exactly, as sDivWad.
+function wad_sDivWadUp(x, y) -> z {
+    let p := mul(x, 1000000000000000000)
+    z := add(sdiv(p, y), and(iszero(iszero(smod(p, y))), iszero(xor(slt(p, 0), slt(y, 0)))))
+    if iszero(and(iszero(iszero(y)), eq(sdiv(p, 1000000000000000000), x))) { z := wadsdiv(x, y, 1) }
+}
+
+/// @export sqrtWad(uint256 x) returns (uint256 z)
+/// @domain any x
+/// @reverts never
+/// @notice sqrt(x 10^-18) in WAD rounded down, exactly: the integer root of
+///         x 10^18, below 2^254 by FP256's word root (isqrt) on the product
+///         shifted by an even 2j to put its top bit at 252 or 253, shifted
+///         back by j (the floor of the floor of sqrt(4^j n) over 2^j is the
+///         floor of sqrt(n)); above, wadsqrtw.
+function wad_sqrtWad(x) -> z {
+    switch lt(sub(x, 1), 0x3ffffffffffffffffffffffffffffffffffffffffffffffff)
+    case 1 {
+        let n := mul(x, 1000000000000000000)
+        let j := shr(1, sub(clz(n), 2))
+        z := shr(j, isqrt(shl(shl(1, j), n)))
+    }
+    default { z := wadsqrtw(x, 0) }
+}
+
+/// @export sqrtWadUp(uint256 x) returns (uint256 z)
+/// @domain any x
+/// @reverts never
+/// @notice sqrt(x 10^-18) in WAD rounded up, exactly.
+function wad_sqrtWadUp(x) -> z {
+    switch lt(sub(x, 1), 0x3ffffffffffffffffffffffffffffffffffffffffffffffff)
+    case 1 {
+        let n := mul(x, 1000000000000000000)
+        let j := shr(1, sub(clz(n), 2))
+        z := shr(j, isqrt(shl(shl(1, j), n)))
+        z := add(z, lt(mul(z, z), n))
+    }
+    default { z := wadsqrtw(x, 1) }
+}
+
+/// @export sqrtWadDown(uint256 x) returns (uint256 z)
+/// @domain any x
+/// @reverts never
+/// @notice sqrtWad: sqrt(x 10^-18) in WAD rounded down.
+function wad_sqrtWadDown(x) -> z {
+    switch lt(sub(x, 1), 0x3ffffffffffffffffffffffffffffffffffffffffffffffff)
+    case 1 {
+        let n := mul(x, 1000000000000000000)
+        let j := shr(1, sub(clz(n), 2))
+        z := shr(j, isqrt(shl(shl(1, j), n)))
+    }
+    default { z := wadsqrtw(x, 0) }
+}
+
+/// @export cbrtWad(uint256 x) returns (uint256 z)
+/// @domain any x
+/// @reverts never
+/// @notice cbrt(x 10^-18) in WAD rounded down: the integer cube root of the
+///         exact x 10^36, from FP256's root and one exact cube either way.
+function wad_cbrtWad(x) -> z {
+    if x { z := wadcbrt(x, 0) }
+}
+
+/// @export cbrtWadUp(uint256 x) returns (uint256 z)
+/// @domain any x
+/// @reverts never
+/// @notice cbrt(x 10^-18) in WAD rounded up.
+function wad_cbrtWadUp(x) -> z {
+    if x { z := wadcbrt(x, 1) }
+}
+
+/// @export cbrtWadDown(uint256 x) returns (uint256 z)
+/// @domain any x
+/// @reverts never
+/// @notice cbrtWad: cbrt(x 10^-18) in WAD rounded down.
+function wad_cbrtWadDown(x) -> z {
+    if x { z := wadcbrt(x, 0) }
+}
+
+/// @export expWad(int256 x) returns (int256 r)
+/// @domain x <= 135305999368893231589
+/// @reverts ExpOverflow() from x = 135305999368893231590 (Solady: from ...589, one wei earlier, whose value still fits)
+/// @notice e^(x 10^-18) in WAD rounded down: zero at and below
+///         -41446531673892822313, where the value is under one wei.
+function wad_expWad(x) -> r {
+    r := wadexp(x, 0)
+}
+
+/// @export expWadUp(int256 x) returns (int256 r)
+/// @domain x <= 135305999368893231589
+/// @reverts ExpOverflow() from x = 135305999368893231590
+/// @notice e^(x 10^-18) in WAD rounded up: one wei, never zero, below
+///         -41446531673892822312.
+function wad_expWadUp(x) -> r {
+    r := wadexp(x, 1)
+}
+
+/// @export expWadDown(int256 x) returns (int256 r)
+/// @domain x <= 135305999368893231589
+/// @reverts ExpOverflow() from x = 135305999368893231590
+/// @notice expWad: e^(x 10^-18) in WAD rounded down.
+function wad_expWadDown(x) -> r {
+    r := wadexp(x, 0)
+}
+
+/// @export lnWad(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice ln(x 10^-18) in WAD rounded down (toward minus infinity, as
+///         Solady's sar rounds it).
+function wad_lnWad(x) -> r {
+    r := wadln(x, 0)
+}
+
+/// @export lnWadUp(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice ln(x 10^-18) in WAD rounded up.
+function wad_lnWadUp(x) -> r {
+    r := wadln(x, 1)
+}
+
+/// @export lnWadDown(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice lnWad: ln(x 10^-18) in WAD rounded down.
+function wad_lnWadDown(x) -> r {
+    r := wadln(x, 0)
+}
+
+/// @export log2Wad(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice log2(x 10^-18) in WAD rounded down, as lnWad. Solady has no
+///         WAD log2 (its log2 is the integer one).
+function wad_log2Wad(x) -> r {
+    r := wadlog2(x, 0)
+}
+
+/// @export log2WadUp(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice log2(x 10^-18) in WAD rounded up.
+function wad_log2WadUp(x) -> r {
+    r := wadlog2(x, 1)
+}
+
+/// @export log2WadDown(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice log2Wad: log2(x 10^-18) in WAD rounded down.
+function wad_log2WadDown(x) -> r {
+    r := wadlog2(x, 0)
+}
+
+/// @export log10Wad(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice log10(x 10^-18) in WAD rounded down, as lnWad; exact at powers
+///         of ten.
+function wad_log10Wad(x) -> r {
+    r := wadlog10(x, 0)
+}
+
+/// @export log10WadUp(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice log10(x 10^-18) in WAD rounded up.
+function wad_log10WadUp(x) -> r {
+    r := wadlog10(x, 1)
+}
+
+/// @export log10WadDown(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice log10Wad: log10(x 10^-18) in WAD rounded down.
+function wad_log10WadDown(x) -> r {
+    r := wadlog10(x, 0)
+}
+
+/// @export powWad(int256 x, int256 y) returns (int256 r)
+/// @domain x >= 0 (0^y for y >= 0); a result below 2^255
+/// @reverts LnWadUndefined() for x < 0 and for x = 0 with y < 0; ExpOverflow() when the result reaches 2^255
+/// @notice (x 10^-18)^(y 10^-18) in WAD rounded down, the exact power:
+///         Solady composes expWad(lnWad(x) y / 10^18) and reverts at x = 0;
+///         here 0^0 = 10^18 and 0^y = 0 for y > 0, as PRBMath's pow.
+function wad_powWad(x, y) -> r {
+    r := wadpow(x, y, 0)
+}
+
+/// @export powWadUp(int256 x, int256 y) returns (int256 r)
+/// @domain x >= 0 (0^y for y >= 0); a result below 2^255
+/// @reverts LnWadUndefined() for x < 0 and for x = 0 with y < 0; ExpOverflow() when the result reaches 2^255
+/// @notice (x 10^-18)^(y 10^-18) in WAD rounded up.
+function wad_powWadUp(x, y) -> r {
+    r := wadpow(x, y, 1)
+}
+
+/// @export powWadDown(int256 x, int256 y) returns (int256 r)
+/// @domain x >= 0 (0^y for y >= 0); a result below 2^255
+/// @reverts LnWadUndefined() for x < 0 and for x = 0 with y < 0; ExpOverflow() when the result reaches 2^255
+/// @notice powWad: (x 10^-18)^(y 10^-18) in WAD rounded down.
+function wad_powWadDown(x, y) -> r {
+    r := wadpow(x, y, 0)
+}
+
+/// @export lambertW0Wad(int256 x) returns (int256 w)
+/// @domain x >= -367879441171442321 (-1/e = -0.36787944117144232159...)
+/// @reverts OutOfDomain() for x <= -367879441171442322
+/// @notice W0(x 10^-18) in WAD rounded toward zero, as Solady's sdiv rounds
+///         it: the principal branch, w e^w = x 10^-18, w >= -1.
+function wad_lambertW0Wad(x) -> w {
+    w := wadw0(x, 2)
+}
+
+/// @export lambertW0WadDown(int256 x) returns (int256 w)
+/// @domain x >= -367879441171442321
+/// @reverts OutOfDomain() for x <= -367879441171442322
+/// @notice W0(x 10^-18) in WAD rounded toward minus infinity.
+function wad_lambertW0WadDown(x) -> w {
+    w := wadw0(x, 0)
+}
+
+/// @export lambertW0WadUp(int256 x) returns (int256 w)
+/// @domain x >= -367879441171442321
+/// @reverts OutOfDomain() for x <= -367879441171442322
+/// @notice W0(x 10^-18) in WAD rounded toward plus infinity.
+function wad_lambertW0WadUp(x) -> w {
+    w := wadw0(x, 1)
+}
+
+/// @export exp(int256 x) returns (int256 r)
+/// @domain x <= 135305999368893231589
+/// @reverts ExpOverflow() from x = 135305999368893231590
+/// @notice PRBMath's name for expWad (SD59x18 exp): e^(x 10^-18) rounded down.
+function wad_exp(x) -> r {
+    r := wadexp(x, 0)
+}
+
+/// @export ln(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts LnWadUndefined() for x <= 0
+/// @notice PRBMath's name for lnWad (SD59x18 ln): ln(x 10^-18) rounded down.
+function wad_ln(x) -> r {
+    r := wadln(x, 0)
+}
+
+/// @export pow(int256 x, int256 y) returns (int256 r)
+/// @domain x >= 0 (0^y for y >= 0); a result below 2^255
+/// @reverts LnWadUndefined() for x < 0 and for x = 0 with y < 0; ExpOverflow() when the result reaches 2^255
+/// @notice PRBMath's name for powWad (SD59x18 pow): rounded down.
+function wad_pow(x, y) -> r {
+    r := wadpow(x, y, 0)
+}
