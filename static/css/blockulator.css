@@ -30,7 +30,7 @@
 
 /* demo: tabs, chart, ladder table */
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 1.2em 0 1.6em; }
-.tabs a { font-size: 14px; text-decoration: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); transition: border-color .18s ease, background .18s ease, color .18s ease; }
+.tabs a { font-size: 14px; text-decoration: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out); }
 .tabs a:hover { border-color: var(--text-strong); }
 .tabs a.on { border-color: var(--text-strong); background: var(--text-strong); color: var(--bg); }
 .doc .scenario h2 { font-family: var(--sans); font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; text-transform: none; color: var(--text-strong); margin: 1.2em 0 .4em; }
@@ -89,12 +89,11 @@
 
 /* page changes: the old page eases out, then the new one eases in, one after the other so no frame shows both;
    between them the transition layer shows the same backdrop, and the bar stays put */
-@view-transition { navigation: auto; }
 ::view-transition { background: var(--mesh), var(--bg); }
 ::view-transition-group(root), ::view-transition-group(topbar) { animation: none; }
 ::view-transition-image-pair(root) { isolation: auto; }
-::view-transition-old(root) { mix-blend-mode: normal; animation: page-out 90ms cubic-bezier(.4, 0, 1, 1) both; }
-::view-transition-new(root) { mix-blend-mode: normal; animation: page-in 240ms cubic-bezier(.2, .8, .2, 1) 60ms both; }
+::view-transition-old(root) { mix-blend-mode: normal; animation: page-out var(--t-out) var(--ease-in) both; }
+::view-transition-new(root) { mix-blend-mode: normal; animation: page-in var(--t-in) var(--ease-out) 60ms both; }
 ::view-transition-old(topbar) { display: none; }
 ::view-transition-new(topbar) { animation: none; }
 @keyframes page-out { to { opacity: 0; } }
@@ -105,9 +104,8 @@
 @media (max-width: 640px) { .links { gap: 2px; font-size: 14px; } .links a { padding: 6px 9px; } .links .cta { margin-left: 2px; } .brand span { display: none; } }
 
 /* the shader stays hidden until hero.js has drawn its first frame (it adds .on), then fades in over the page background */
-canvas.cloth { opacity: 0; transition: opacity .45s cubic-bezier(.2, .8, .2, 1); }
+canvas.cloth { opacity: 0; transition: opacity var(--t-slow) var(--ease-out); }
 canvas.cloth.on { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { canvas.cloth { transition: none; } ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
 
 /* inner page header */
 .pagehead { margin: 0 0 1.6em; }
@@ -238,7 +236,7 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 
 /* inner pages sit on the backdrop: one layer of glass, on the data itself (tables, charts), never a sheet under it */
 .doc th { background: var(--tint); }
-.doc tbody tr { transition: background .15s ease; }
+.doc tbody tr { transition: background var(--t-fast) var(--ease-out); }
 .doc tbody tr:hover td { background: var(--tint); }
 .card.story:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 var(--edge), var(--shadow-lift); }
 
@@ -292,7 +290,6 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .wb .val.none { fill: var(--faint); font-weight: 400; }
 .wb .narrow .fn, .wb .narrow .name, .wb .narrow .val { font-size: 11.5px; }
 
-@media (prefers-reduced-motion: reduce) { .doc tbody tr, .card { transition: none; } }
 
 /* home units: a chart over its table, from the same rows (static/data/home.json); wider than the text column,
    up to 1320px, so every library's column fits without scrolling on a desktop */
@@ -332,12 +329,11 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 
 /* the same page change where cross-document view transitions are missing (html.nvt, set in base.html):
    the page eases in on arrival and out before leaving; the bar is outside .page and stays put */
-html.nvt .page { animation: page-in 240ms cubic-bezier(.2, .8, .2, 1) both; }
-html.nvt.leaving .page { animation: page-out 90ms cubic-bezier(.4, 0, 1, 1) both; }
-@media (prefers-reduced-motion: reduce) { html.nvt .page, html.nvt.leaving .page { animation: none; } }
-.datatable.edges th.probe { white-space: normal; min-width: 12em; max-width: 20em; font-weight: 400; }
-.datatable.edges th.probe code { font-size: 12px; overflow-wrap: anywhere; }
-.datatable.edges .truth { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+html.nvt .page { animation: page-in var(--t-in) var(--ease-out) both; }
+html.nvt.leaving .page { animation: page-out var(--t-out) var(--ease-in) both; }
+.datatable.edges tbody th { white-space: normal; min-width: 12em; max-width: 20em; font-weight: 400; }
+.datatable.edges tbody th code { font-size: 12px; overflow-wrap: anywhere; }
+.datatable td.aside { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .datatable tfoot th, .datatable tfoot td { border-top: 1px solid var(--line-2); font-weight: 600; }
 .doc > pre { max-width: min(100%, 76em); }
 /* each chart's space is held before it draws, so the table under it never moves */
@@ -346,13 +342,10 @@ html.nvt.leaving .page { animation: page-out 90ms cubic-bezier(.4, 0, 1, 1) both
 .plot[data-chart="steps"] { min-height: 400px; } .plot[data-chart="edgeop"] { min-height: 300px; } .plot[data-chart="gasops"] { min-height: 1200px; } .plot[data-chart="libops"] { min-height: 460px; }
 @media (max-width: 760px) { .plot[data-chart] { min-height: 320px; } }
 .datatable tr.unitrow th, .datatable tr.unitrow td { color: var(--muted); font-style: italic; border-bottom: 1px solid var(--line-2); }
-/* dots burst: a halo in the dot's own colour blooms and settles when its chart first draws, and grows again on
-   hover (plots.js burst). Stroke only: a CSS transform would replace the SVG translate that places the dot. */
-.plot .dotm { transition: stroke-width .2s ease-out, stroke-opacity .2s ease-out; animation: dot-burst .65s cubic-bezier(.2, .8, .2, 1) var(--delay, 0ms) both; }
-.plot .dotm.hot { stroke: var(--dc); stroke-width: 12px; stroke-opacity: .3; animation: none; }
-@keyframes dot-burst {
-  0% { opacity: 0; stroke: var(--dc); stroke-width: 0; stroke-opacity: .5; }
-  45% { opacity: 1; stroke: var(--dc); stroke-width: 18px; stroke-opacity: .28; }
-  100% { stroke: var(--surface-solid); stroke-width: 1.5px; stroke-opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) { .plot .dotm { animation: none; transition: none; } }
+/* a chart fades in once, as it comes near the viewport (plots.js); a redraw (resize, theme, truth toggle) does not fade.
+   On hover the nearest dot takes a halo in its own colour. Stroke only: a CSS transform would replace the SVG
+   translate that places the dot. */
+.plot > * { opacity: 0; transition: opacity var(--t-in) var(--ease-out); }
+.plot.in > * { opacity: 1; }
+.plot .dotm { transition: stroke-width var(--t-fast) var(--ease-out), stroke-opacity var(--t-fast) var(--ease-out); }
+.plot .dotm.hot { stroke: var(--dc); stroke-width: 12px; stroke-opacity: .3; }

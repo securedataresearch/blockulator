@@ -276,17 +276,27 @@
 {#- A table whose columns are libraries, grouped floating point | fixed point (scripts/site/home.py libcols):
     t.colgroups[].name/span, t.cols[] the libraries, t.rows[] {label, href?, code?, cells[] {v, h?, why?, ours}}.
     heat shades each cell by h (digits over 72). -#}
-{% component libtable(t: map, first: string, heat: bool = false) -%}
-<div class="tablewrap"><table class="datatable{% if heat %} heat{% endif %}">
+{% component libtable(t: map, first: string, heat: bool = false, cls: string = "") -%}
+{#- scripts/site/home.py libcols: columns are libraries grouped floating | fixed point. A row: label, href or code,
+    note (a line under it), aside (an extra column headed t.aside), why (hover), unit, foot (into tfoot). A cell: v,
+    cls (exact, rev, meta), h (heat shade), why (hover), sub (a k/n or rev after it, subwhy its hover); no v and no
+    sub is "—". -#}
+{%- set ncols = t.cols | length -%}
+<div class="tablewrap"><table class="datatable{% if heat %} heat{% endif %}{% if cls %} {{ cls }}{% endif %}">
   <thead>
-    <tr><th></th>{% for g in t.colgroups %}<th scope="colgroup" colspan="{{ g.span }}" class="group">{{ g.name }}</th>{% endfor %}</tr>
-    <tr><th scope="col">{{ first }}</th>{% for c in t.cols %}<th scope="col" class="num f-{{ c.family }}{% if c.ours %} ours{% endif %}" title="{{ c.long }}">{{ c.short }}</th>{% endfor %}</tr>
+    <tr><th></th>{% if t.aside %}<th></th>{% endif %}{% for g in t.colgroups %}<th scope="colgroup" colspan="{{ g.span }}" class="group">{{ g.name }}</th>{% endfor %}</tr>
+    <tr><th scope="col">{{ first }}</th>{% if t.aside %}<th scope="col">{{ t.aside }}</th>{% endif %}{% for c in t.cols %}<th scope="col" class="num f-{{ c.family }}{% if c.ours %} ours{% endif %}" title="{{ c.long }}">{{ c.short }}</th>{% endfor %}</tr>
   </thead>
-  <tbody>
-  {%- for r in t.rows %}
-  <tr{% if r.unit %} class="unitrow"{% endif %}><th scope="row">{% if r.href %}<a href="{{ r.href }}">{{ r.label }}</a>{% elif r.code %}<code>{{ r.label }}</code>{% else %}{{ r.label }}{% endif %}</th>
-    {%- for c in r.cells %}<td class="num{% if c.ours %} ours{% endif %}"{% if heat and c.h %} style="--h:{{ c.h }}"{% endif %}{% if c.why %} title="{{ c.why }}"{% endif %}>{% if c.v %}{{ c.v }}{% else %}<span class="na">—</span>{% endif %}</td>{% endfor %}</tr>
+  {%- for part in ["tbody", "tfoot"] %}
+  <{{ part }}>
+  {%- for r in t.rows %}{% if (part == "tfoot") == (r.foot | default(value=false)) %}
+  <tr{% if r.unit %} class="unitrow"{% endif %}><th scope="row"{% if r.why %} title="{{ r.why }}"{% endif %}>{% if r.href %}<a href="{{ r.href }}">{{ r.label }}</a>{% elif r.code %}<code>{{ r.label }}</code>{% else %}{{ r.label }}{% endif %}{% if r.note %}<br><span class="meta">{{ r.note }}</span>{% endif %}</th>
+    {%- if t.aside %}<td class="aside"{% if r.asidewhy %} title="{{ r.asidewhy }}"{% endif %}>{{ r.aside | default(value="") }}</td>{% endif %}
+    {%- for c in r.cells %}<td class="num{% if c.ours %} ours{% endif %}"{% if heat and c.h %} style="--h:{{ c.h }}"{% endif %}{% if c.why %} title="{{ c.why }}"{% endif %}>
+      {%- if c.v %}{% if c.cls %}<span class="{{ c.cls }}">{{ c.v }}</span>{% else %}{{ c.v }}{% endif %}{% if c.sub %} <span class="rev meta"{% if c.subwhy %} title="{{ c.subwhy }}"{% endif %}>{{ c.sub }}</span>{% endif %}
+      {%- elif c.sub %}<span class="rev meta">{{ c.sub }}</span>{% else %}<span class="na">—</span>{% endif %}</td>{% endfor %}</tr>
+  {%- endif %}{% endfor %}
+  </{{ part }}>
   {%- endfor %}
-  </tbody>
 </table></div>
 {%- endcomponent %}

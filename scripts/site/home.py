@@ -269,9 +269,100 @@ def pages(libs: list[dict]) -> dict:
             "libraries": libs, "steps": steps, "edges": edges, "gas": gas, "libops": libops}
 
 
+# ---- the inner pages' tables (build only: Zola reads data/tables.json, the browser never fetches it) ----
+TABLES = ROOT / "data" / "tables.json"
+TRUTHS = [("digits", "exact inputs"), ("digitsFormat", "inputs as each format rounds them"), ("interest", "the interest alone")]
+
+
+def inner_tables(libs: list[dict]) -> dict:
+    """Every ladder and edges table, in libtable's shape (libcols), so the templates only lay them out.
+    FP127Lib equals FP127 and is left out; the columns are every library the dataset measures, the same on every tab."""
+    shown = [l for l in libs if l["id"] != "fp127lib"]
+    d = load("ladder.json")
+    have = {lib for sc in d["scenarios"] for lib in sc["summary"]}
+    ladder = {}
+    for sc in d["scenarios"]:
+        ref = sc["inputs"][0]
+        unsup = {lib for lib in have if "Unsupported" in (ref["cells"].get(lib, {}).get(str(d["ladder"][0]), {}).get("reasonName") or "")}
+        rows = [{"key": n, "label": f"{n:,}"} for n in d["ladder"]]
+
+        def summary(key):
+            def cell(c, r):
+                if c["id"] in unsup:
+                    return {"v": None, "why": "no model for this scenario"}
+                x = sc["summary"].get(c["id"], {}).get(str(r["key"]), {})
+                part = {"sub": f"{x['completed']}/{x['inputs']}", "subwhy": f"completed {x['completed']} of {x['inputs']} inputs; the rest reverted"} \
+                    if x and x["completed"] < x["inputs"] else {}
+                if key not in x:
+                    return {"v": None, "sub": "rev"} if x and x["completed"] == 0 else {"v": None}
+                m = x[key]
+                if key != "interest" and x["exact"] == x["count"]:
+                    return {"v": "exact", "cls": "exact", "why": f"exact on all {x['count']} inputs"} | part
+                why = f"range {m['min']}–{m['max']} over {x['count']} inputs" + (f", {x['exact']} exact" if x["exact"] else "")
+                return {"v": m["median"], "h": round(float(m["median"]) / 72, 3), "why": why} | part
+            return libcols(shown, have, rows, cell)
+
+        def step(c, r):
+            x = ref["cells"].get(c["id"], {}).get(str(r["key"]))
+            if not x:
+                return {"v": None}
+            if x.get("reverted"):
+                return {"v": None, "why": "no model for this scenario"} if "Unsupported" in x["reasonName"] \
+                    else {"v": "reverts", "cls": "rev", "why": f"{x['reasonName']} {x.get('reason', '')}".strip()}
+            why = f"{x['value']}\n{x['digitsCapped']} digits · " + (f"{x['digitsFormatCapped']}" if "digitsFormat1" in x else "exact") + " vs format" \
+                + (f" · {x['interestCapped']} of interest" if "interestCapped" in x else "") + (f" · {x['absErrWei']} wei off" if "absErrWei" in x else "") \
+                + (f" · {x['ulps']} ULP" if "ulps" in x else "") + f" · {x['gasPerStep']:,} gas/step"
+            return {"v": "exact" if x["exact"] else x["digitsCapped"], "h": round(float(x["digitsCapped"]) / 72, 3), "why": why}
+        ladder[sc["id"]] = {"summary": {k: summary(k) for k, _ in TRUTHS if k != "interest" or "interest" in sc["summary"]["fp127"]["1"]},
+                            "step": libcols(shown, have, [r | {"why": f"truth {ref['truth'][str(r['key'])]}"} for r in rows], step)}
+
+    e = load("edges.json")
+    have = {lib for op in e["ops"] for p in op["probes"] for lib in p["cells"]} - {"fp127lib"}
+    caps = {"fp19": 71}  # FP19 to its 71 digits: a 72 or 73 is where the truth sits near the grid
+
+    def ecell(c):
+        if c is None or (c.get("reverted") and c.get("unsupported")):
+            return {"v": None, "why": "no such op"}, None
+        if c.get("range"):
+            return {"v": "range", "cls": "rev", "why": "the argument does not fit the word"}, 0
+        if c.get("reverted"):
+            return {"v": "revert", "cls": "rev", "why": f"reverts: {c.get('reasonName', '')}"}, 0
+        if c.get("undefined"):
+            return {"v": "value", "cls": "meta"}, None
+        if c.get("zero"):
+            return {"v": "zero", "cls": "rev", "why": "below the format's floor: returns 0"}, 0
+        return None, c["digits"]
+
+    edges = {}
+    for op in e["ops"]:
+        rows = [{"key": i, "label": f"{op['id']}({', '.join(map(str, p['args']))})", "code": True, "note": p.get("why"),
+                 "aside": (p["truth"][:12] + "…" if len(p["truth"]) > 12 else p["truth"]) if p.get("truth") else "undefined", "asidewhy": p.get("truth")}
+                for i, p in enumerate(op["probes"])]
+
+        def cell(c, r):
+            x = op["probes"][r["key"]]["cells"].get(c["id"])
+            out, dg = ecell(x)
+            if out:
+                return out
+            dg = min(dg, caps.get(c["id"], 999))
+            return {"v": "exact" if x.get("exact") else str(dg), "h": round(dg / 72, 3), "why": x["value"] + (f"\n{x['errUlps']} ULP" if x.get("errUlps") else "")}
+
+        def fewest(c, r):
+            # each library's fewest digits on the op, a zero, revert or range counting as 0; "exact" if every one was
+            got = [(x.get("exact"), dg) for x in (p["cells"].get(c["id"]) for p in op["probes"]) for _, dg in [ecell(x)] if dg is not None]
+            lo = [min(dg, caps.get(c["id"], 999)) for exact, dg in got if not exact]
+            return {"v": str(min(lo)) if lo else "exact" if got else None}
+        t = libcols(shown, have, rows, cell)
+        t["rows"].append(libcols(shown, have, [{"key": "fewest", "label": "fewest digits", "foot": True}], fewest)["rows"][0])
+        t["aside"] = "truth"
+        edges[op["id"]] = t
+    return {"_doc": "Generated by scripts/site/home.py; read by the templates at build time.", "ladder": ladder, "edges": edges}
+
+
 def main(argv: list[str]) -> int:
     home = build()
-    outs = {OUT: home, PAGES: pages(load("libraries.json")["libraries"])}
+    libs = load("libraries.json")["libraries"]
+    outs = {OUT: home, PAGES: pages(libs), TABLES: inner_tables(libs)}
     stale = []
     for path, doc in outs.items():
         text = json.dumps(doc, separators=(",", ":")) + "\n"

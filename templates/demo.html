@@ -3,12 +3,8 @@
 {% block description %}{{ page.description }}{% endblock description %}
 {% block content %}
 {%- set d = load_data(path="static/data/ladder.json") -%}
-{#- columns in the registry's order (static/data/libraries.json): floating point, then fixed point. FP127Lib equals FP127 and is left out. -#}
+{%- set tb = load_data(path="data/tables.json") -%}
 {%- set reg = load_data(path="static/data/libraries.json") -%}
-{%- set forms = ["fp19", "fp127", "fp127lib", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
-{%- set sforms = ["fp19", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
-{%- set labels = {"fp127": "FP127 (deployed, staticcall)", "fp127lib": "FP127Lib (inline)", "abdk": "ABDKMath64x64", "solady": "Solady FixedPointMathLib", "prb": "PRBMath SD59x18", "quad": "ABDKMathQuad (binary128)", "balancer": "Balancer LogExpMath", "aave": "Aave v3 MathUtils (RAY)", "morpho": "Morpho Blue MathLib", "maker": "Maker rpow (RAY)", "fp19": "FP19 (float, inline)", "solmate": "Solmate SignedWadMath / FixedPointMathLib", "prbud": "PRBMath UD60x18", "snekmate": "snekmate math (Vyper)", "oz": "OpenZeppelin Math (mulDiv, sqrt)", "uniswap": "Uniswap v4 FullMath (mulDiv)"} -%}
-{%- set short = {"fp127": "FP127", "fp127lib": "FP127Lib", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "fp19": "FP19", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
 <article class="prose doc wide">
 {% include "pagehead.html" %}
 {{ page.content | safe }}
@@ -56,26 +52,10 @@
 <p class="note">Median correct digits over the inputs every library with a result at that N completed, each capped at what its format holds at that magnitude (FP19 71.3, binary128 34.0, the fixed grids by their last place), so no line passes its format's precision. The WAD libraries are the gold lines, labelled once. FP127Lib coincides with FP127 and is not drawn; Aave, Morpho and Maker appear only on the accrual scenarios their models describe. Hover a point for the library, the range over the inputs and N.</p>
 </div>
 
-<div class="tablewrap">
-<table class="datatable summary">
-<thead>
-<tr><th></th>{% for k in [["float", "Floating point"], ["fixed", "Fixed point"]] %}{% set_global nk = 0 %}{% for l in reg.libraries %}{% if l.kind == k[0] and l.id in sforms %}{% set_global nk = nk + 1 %}{% endif %}{% endfor %}<th scope="colgroup" colspan="{{ nk }}" class="group">{{ k[1] }}</th>{% endfor %}</tr>
-<tr><th scope="col" class="num">steps N</th>{% for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in sforms %}<th scope="col" class="num f-{{ l.family }}{% if l.ours %} ours{% endif %}" title="{{ labels[l.id] }}">{{ l.short }}</th>{% endif %}{% endfor %}{% endfor %}</tr>
-</thead>
-<tbody>
-{%- for n in d.ladder %}{% set ns = n | str %}
-<tr><th scope="row" class="num">{{ n | num_format }}</th>
-{%- for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in sforms %}{% set f = l.id %}{% set row = sc.summary[f][ns] %}{% set rc = ref.cells[f][ns] %}{% set unsup = rc.reasonName is defined and "Unsupported" in rc.reasonName %}
-{%- for key in ["digits", "digitsFormat", "interest"] %}{% if key != "interest" or hasint %}
-<td class="num{% if l.ours %} ours{% endif %}"{% if key != "digits" %} hidden{% endif %} data-key="{{ key }}"{% if not unsup and row[key] is defined %} style="--h:{{ row[key].median | float / 72 | round(precision=3) }}"{% endif %}>{% if unsup %}<span class="na" title="no model for this scenario">—</span>{% elif row[key] is defined %}{% if key != "interest" and row.exact == row.count %}<span class="exact" title="exact on all {{ row.count }} inputs">exact</span>{% else %}<span title="range {{ row[key].min }}–{{ row[key].max }} over {{ row.count }} inputs{% if row.exact %}, {{ row.exact }} exact{% endif %}">{{ row[key].median }}</span>{% endif %}{% if row.completed < row.inputs %} <span class="rev meta" title="completed {{ row.completed }} of {{ row.inputs }} inputs; the rest reverted">{{ row.completed }}/{{ row.inputs }}</span>{% endif %}{% elif row.completed == 0 %}<span class="rev meta">rev</span>{% endif %}</td>
-{%- endif %}{% endfor %}
-{%- endif %}{% endfor %}{% endfor %}
-</tr>
+{%- for key, t in tb.ladder[id].summary %}
+<div data-key="{{ key }}"{% if key != "digits" %} hidden{% endif %}>{{ <libtable t={t} first="steps N" heat={true} cls="summary" /> }}</div>
 {%- endfor %}
-</tbody>
-</table>
-</div>
-<p class="note">Median correct digits over the inputs every library completed at that N (hover a cell for the range), each capped at what its format holds; "exact" when every one of them is exact. <span class="rev">k/n</span>: the library completed k of n inputs and the rest reverted; <span class="rev">rev</span>: every input reverted. Empty: the library has no model for this scenario. FP127Lib equals FP127 and is left out.</p>
+<p class="note">Median correct digits over the inputs every library completed at that N (hover a cell for the range), each capped at what its format holds; "exact" when every one of them is exact. <span class="rev">k/n</span>: the library completed k of n inputs and the rest reverted; <span class="rev">rev</span>: every input reverted. —: no model for this scenario. FP127Lib equals FP127 and is left out.</p>
 
 <details class="inputs">
 <summary>The inputs and the ops</summary>
@@ -87,32 +67,15 @@
 {%- endfor %}
 </tbody>
 </table>
-<p>Library calls per step: {% for f in forms %}<strong>{{ short[f] }}</strong> {{ sc.ops[f] | join(sep=", ") }}{% if not loop.last %}; {% endif %}{% endfor %}. Parameters reach each adapter floored into its representation on the grids and rounded to nearest on the floats (<a href="/data/ladder-inputs.json">ladder-inputs.json</a>).</p>
+<p>Library calls per step: {% for l in reg.libraries %}{% if sc.ops[l.id] is defined %}<strong>{{ l.short }}</strong> {{ sc.ops[l.id] | join(sep=", ") }}; {% endif %}{% endfor %}<strong>FP127Lib</strong> {{ sc.ops.fp127lib | join(sep=", ") }}. Parameters reach each adapter floored into its representation on the grids and rounded to nearest on the floats (<a href="/data/ladder-inputs.json">ladder-inputs.json</a>).</p>
 </details>
 
 <h3>The reference input, step by step: {% for k, v in ref.params %}{{ k }} = {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</h3>
 <p>Correct digits against the exact truth at each N, capped at what the format holds. Hover a cell for the value itself, the digits against the format-rounded truth{% if hasint %}, of the interest{% endif %}{% if ref.truthWei is defined %}, the error in wei{% endif %}, the error in units of the last place and the gas per step.</p>
-<div class="tablewrap">
-<table class="datatable heat">
-<thead>
-<tr><th></th>{% for k in [["float", "Floating point"], ["fixed", "Fixed point"]] %}{% set_global nk = 0 %}{% for l in reg.libraries %}{% if l.kind == k[0] and l.id in sforms %}{% set_global nk = nk + 1 %}{% endif %}{% endfor %}<th scope="colgroup" colspan="{{ nk }}" class="group">{{ k[1] }}</th>{% endfor %}</tr>
-<tr><th scope="col" class="num">steps N</th>{% for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in sforms %}<th scope="col" class="num f-{{ l.family }}{% if l.ours %} ours{% endif %}" title="{{ labels[l.id] }}">{{ l.short }}</th>{% endif %}{% endfor %}{% endfor %}</tr>
-</thead>
-<tbody>
-{%- for n in d.ladder %}{% set ns = n | str %}
-<tr><th scope="row" class="num" title="truth {{ ref.truth[ns] }}">{{ n | num_format }}</th>
-{%- for k in ["float", "fixed"] %}{% for l in reg.libraries %}{% if l.kind == k and l.id in sforms %}{% set c = ref.cells[l.id][ns] %}
-{%- if c.reverted %}<td class="num">{% if "Unsupported" in c.reasonName %}<span class="na" title="no model for this scenario">—</span>{% else %}<span class="rev" title="{{ c.reasonName }} {{ c.reason }}">reverts</span>{% endif %}</td>
-{%- else %}<td class="num{% if l.ours %} ours{% endif %}" style="--h:{{ c.digitsCapped | float / 72 | round(precision=3) }}" title="{{ c.value }}&#10;{{ c.digitsCapped }} digits · {% if c.digitsFormat1 is defined %}{{ c.digitsFormatCapped }}{% else %}exact{% endif %} vs format{% if c.interestCapped is defined %} · {{ c.interestCapped }} of interest{% endif %}{% if c.absErrWei is defined %} · {{ c.absErrWei }} wei off{% endif %}{% if c.ulps is defined %} · {{ c.ulps }} ULP{% endif %} · {{ c.gasPerStep | num_format }} gas/step">{% if c.exact %}exact{% else %}{{ c.digitsCapped }}{% endif %}</td>{% endif %}
-{%- endif %}{% endfor %}{% endfor %}
-</tr>
-{%- endfor %}
-</tbody>
-</table>
-</div>
+{{ <libtable t={tb.ladder[id].step} first="steps N" heat={true} /> }}
 </section>
 {%- endfor %}
 <p class="note">Full dataset: <a href="/data/ladder.json">ladder.json</a>. Regenerate with <code>make ladder</code>.</p>
 </article>
-<script type="module" src="/js/islands/tabs.js"></script>
+<script src="/js/islands/tabs.js"></script>
 {% endblock content %}

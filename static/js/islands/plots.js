@@ -268,18 +268,13 @@ const charts = {
   },
 };
 
-// every dot bursts: it pops in once when its chart first draws (staggered left to right), and on hover it
-// swells with a halo in its own colour when the pointer is nearest it (blockulator.css .plot .dotm)
-function burst(el, first) {
+// on hover the nearest dot within 24px (as the tip finds it) takes a halo in its own colour (blockulator.css .plot .dotm)
+function halo(el) {
   const dots = [...el.querySelectorAll('g[aria-label="dot"] > *')];
-  const xs = dots.map((d) => d.getBBox().x), x0 = Math.min(...xs), x1 = Math.max(...xs) || 1;
-  dots.forEach((d, i) => {
+  for (const d of dots) {
     d.classList.add("dotm");
     d.style.setProperty("--dc", d.getAttribute("fill") || d.parentNode.getAttribute("fill"));
-    if (first) d.style.setProperty("--delay", `${Math.round(((xs[i] - x0) / (x1 - x0 || 1)) * 420)}ms`);
-    else d.style.animation = "none";
-  });
-  // the halo follows the pointer to the nearest dot within 24px, as the tip does
+  }
   let hot;
   el.onpointermove = (e) => {
     let best, bd = 24 * 24;
@@ -292,33 +287,40 @@ function burst(el, first) {
   el.onpointerleave = () => { hot?.classList.remove("hot"); hot = undefined; };
 }
 
-function draw() {
-  const t = theme();
-  for (const el of document.querySelectorAll(".plot[data-chart]")) {
-    const width = Math.round(el.clientWidth);
-    if (!width || el.dataset.drawn === `${width}${t.text}`) continue;
-    el.replaceChildren();
-    charts[el.dataset.chart]?.(el, t, width);
-    burst(el, !el.dataset.drawn);
-    el.dataset.drawn = `${width}${t.text}`;
-  }
+// each data file is fetched once, when the first chart that reads it comes near the viewport
+const files = {};
+const load = (src) => (files[src] ??= fetch(`/data/${src}.json`).then((r) => r.json()));
+
+// draws one chart if it is laid out and its width or theme changed. A width change under 24px (a scrollbar
+// appearing) is left to the SVG's own scaling, so nothing redraws while the page settles. The swap is synchronous,
+// so no frame shows an empty box; the chart fades in on its first draw only.
+async function draw(el, force = false) {
+  const width = Math.round(el.clientWidth);
+  if (!width) return;
+  const src = el.dataset.src || "home";
+  const d = await load(src);
+  if (src === "home") data = d; else pages = d;
+  lib ??= Object.fromEntries(d.libraries.map((l) => [l.id, l]));
+  const t = theme(), [w0, text0] = (el.dataset.drawn || "0|").split("|");
+  if (!force && text0 === t.text && Math.abs(width - +w0) < 24) return;
+  el.replaceChildren();
+  charts[el.dataset.chart]?.(el, t, width);
+  halo(el);
+  el.dataset.drawn = `${width}|${t.text}`;
+  requestAnimationFrame(() => el.classList.add("in"));
 }
 
-async function main() {
+function main() {
   const els = [...document.querySelectorAll(".plot[data-chart]")];
-  const want = (src) => els.some((el) => (el.dataset.src || "home") === src);
-  [data, pages] = await Promise.all([
-    want("home") ? fetch("/data/home.json").then((r) => r.json()) : null,
-    want("pages") ? fetch("/data/pages.json").then((r) => r.json()) : null,
-  ]);
-  lib = Object.fromEntries((data || pages).libraries.map((l) => [l.id, l]));
-  draw();
-  let raf;
-  new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(draw); }).observe(document.querySelector("main"));
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
-  // a chart follows its section's truth toggle, and a tab revealing a hidden section draws its charts
-  document.addEventListener("change", (e) => { if (e.target.matches('input[type="radio"]')) e.target.closest("section")?.querySelectorAll(".plot[data-chart]").forEach((el) => { el.dataset.drawn = ""; }); draw(); });
-  new MutationObserver(draw).observe(document.querySelector("main"), { attributes: true, subtree: true, attributeFilter: ["hidden"] });
+  // drawn once they are within a screen of the viewport; a hidden tab's charts draw when it is shown and scrolled to
+  const near = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && draw(e.target)), { rootMargin: "100% 0px" });
+  const resized = new ResizeObserver((es) => es.forEach((e) => e.target.dataset.drawn && draw(e.target)));
+  els.forEach((el) => { near.observe(el); resized.observe(el); });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => els.forEach((el) => el.dataset.drawn && draw(el, true)));
+  // a chart follows its section's truth toggle
+  document.addEventListener("change", (e) => {
+    if (e.target.matches('input[type="radio"]')) e.target.closest("section")?.querySelectorAll(".plot[data-chart]").forEach((el) => draw(el, true));
+  });
 }
 
 main();
