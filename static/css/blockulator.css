@@ -310,7 +310,7 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .plot .panelhead, .datatable tr.group th, .datatable th.group { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 .plot .panelhead { margin: 10px 0 2px 128px; }
 .plotlegend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
-.plotlegend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.plotlegend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .plotlegend .sym { color: var(--faint); }
 .tablewrap { overflow-x: auto; border-radius: var(--radius-s); background: var(--surface); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
 .datatable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
@@ -347,7 +347,17 @@ html.nvt.leaving .page { animation: page-out 90ms cubic-bezier(.4, 0, 1, 1) both
 .datatable tfoot th, .datatable tfoot td { border-top: 1px solid var(--line-2); font-weight: 600; }
 .doc > pre { max-width: min(100%, 76em); }
 /* each chart's space is held before it draws, so the table under it never moves */
-.plot[data-chart="gas"] { min-height: 720px; } .plot[data-chart="accrual"] { min-height: 440px; } .plot[data-chart="wad"] { min-height: 600px; }
+.plot[data-chart="gas"] { min-height: 520px; } .plot[data-chart="accrual"] { min-height: 440px; } .plot[data-chart="wad"] { min-height: 600px; }
 .plot[data-chart="ladder"] { min-height: 440px; } .plot[data-chart="edges"] { min-height: 440px; }
 @media (max-width: 760px) { .plot[data-chart] { min-height: 320px; } }
 .datatable tr.unitrow th, .datatable tr.unitrow td { color: var(--muted); font-style: italic; border-bottom: 1px solid var(--line-2); }
+/* dots burst: a halo in the dot's own colour blooms and settles when its chart first draws, and grows again on
+   hover (plots.js burst). Stroke only: a CSS transform would replace the SVG translate that places the dot. */
+.plot .dotm { transition: stroke-width .2s ease-out, stroke-opacity .2s ease-out; animation: dot-burst .65s cubic-bezier(.2, .8, .2, 1) var(--delay, 0ms) both; }
+.plot .dotm.hot { stroke: var(--dc); stroke-width: 12px; stroke-opacity: .3; animation: none; }
+@keyframes dot-burst {
+  0% { opacity: 0; stroke: var(--dc); stroke-width: 0; stroke-opacity: .5; }
+  45% { opacity: 1; stroke: var(--dc); stroke-width: 18px; stroke-opacity: .28; }
+  100% { stroke: var(--surface-solid); stroke-width: 1.5px; stroke-opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .plot .dotm { animation: none; transition: none; } }
