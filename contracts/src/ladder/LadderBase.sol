@@ -38,8 +38,8 @@ abstract contract LadderBase is ILadderAdapter {
 
     /// pi, by Ramanujan's series through the library's own mul, div and
     /// sqrt (nine terms, eight digits each, so a 71-digit form is not bounded
-    /// by it; the recipe of docs/benchmarks/pi.md). FP127 has it
-    /// as an op.
+    /// by it; the recipe of docs/benchmarks/pi.md). FP127 overrides it with
+    /// its constant, FP127Lib.PI.
     function _pi() internal view virtual returns (int256) {
         int256 one = _one();
         int256 c = one;

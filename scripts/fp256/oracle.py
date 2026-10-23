@@ -532,9 +532,9 @@ def op_fromUintDown(x): return encode_dir(Fraction(x % TWO256), False)
 def op_fromUintUp(x): return encode_dir(Fraction(x % TWO256), True)
 
 
-# ---- release four, #79: the ops FP127 has (FP256X2) ----------------------------
+# ---- release four, #79: the ops FP127 has -------------------------------------
 # Exact rationals and integer roots where the value is algebraic (cbrt, hypot,
-# gavg, avg, dist, lerp, frac, round, gcd, factorial, inv), exact powers and
+# gavg, avg, dist, lerp, frac, round, factorial, inv), exact powers and
 # logarithms at the points where they are rational, mpmath at 300 digits
 # elsewhere.
 
@@ -690,10 +690,6 @@ def op_lerp(a, b, t):
     return encode(qa + qt * (qb - qa))
 
 
-def op_gcd(a, b):
-    return encode(Fraction(math.gcd(abs(_floorq(decode(a))), abs(_floorq(decode(b))))))
-
-
 def op_factorial(x):
     q = decode(x)
     if q < 0:
@@ -702,26 +698,6 @@ def op_factorial(x):
     if n > 30000:
         raise Revert("Overflow")
     return encode(Fraction(math.factorial(n)))
-
-
-PI_TERMS = 40          # Ramanujan's partial sums are pi's word from far fewer terms (_pi_word)
-_PI_CACHE: dict[int, int] = {}
-
-
-def _pi_word(n: int) -> int:
-    """The word nearest Ramanujan's partial sum with n terms: 9801 / (2 sqrt 2
-    S_n), S_n = sum_{k<n} (4k)! (1103 + 26390 k) / ((k!)^4 396^(4k)), exact."""
-    if n not in _PI_CACHE:
-        S = sum(Fraction(math.factorial(4 * k) * (1103 + 26390 * k), math.factorial(k) ** 4 * 396 ** (4 * k)) for k in range(n))
-        _PI_CACHE[n] = encode_mpf(mpf(9801) / (2 * mp.sqrt(2) * (mpf(S.numerator) / S.denominator)))
-    return _PI_CACHE[n]
-
-
-def op_pi(t):
-    q = decode(t)
-    if q < 1:
-        raise Revert("OutOfRange")
-    return _pi_word(min(_floorq(q), PI_TERMS))
 
 
 def op_sinh(x):

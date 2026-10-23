@@ -14,11 +14,11 @@ Usage:
                                                                # the profiled helpers
     (add --forced to either for the forced second stage, as --wide-lib)
     uv run scripts/fp127/gen.py --objects [fp127|fp256]        # the deployed objects' make stems
-                                                               # (fp127 fp256 fp256x ...); the
+                                                               # (fp127 fp256 fp256e ...); the
                                                                # Makefile loops over this list
 
-An export may carry `/// @object <Name>` to go into a second deployed object
-(FP256's release four splits FP256 and FP256X). Each object then holds only
+An export may carry `/// @object <Name>` to go into another deployed object
+(FP256 deploys as FP256, FP256E, FP256H and FP256S). Each object then holds only
 its exports and their callees and gets its own interface and ABI; the
 inline library holds every export.
 
@@ -52,6 +52,7 @@ LIBS = {
         "src": ROOT / "contracts" / "src" / "fp127" / "FP127.yul.src",
         "object": "FP127", "lib": "FP127Lib", "iface": "IFP127",
         "one": "int256 internal constant ONE = int256(1) << 128;",
+        "consts": "/// @notice pi as the 127.128 word nearest it, pi * 2^128 rounded to the\n    ///         nearest integer: 38 digits, the format's best. A constant, not\n    ///         an op: an object caller can copy the literal.\n    int256 internal constant PI = 0x3243f6a8885a308d313198a2e03707345;",
         "iface_notice": "Interface of the deployed FP127 object. Values are signed 127.128\n///         fixed-point: one int256 whose value is raw / 2^128.",
         "lib_notice": "Inlinable FP127: signed 127.128 fixed-point, one int256 per value,\n///         value = raw / 2^128. Every function body is the same Yul that the\n///         deployed FP127 object runs, so the two agree by construction.\n///         It uses the CLZ opcode: compile with evmVersion osaka (solc >= 0.8.31)\n///         and run only on a chain that has CLZ (EIP-7939).",
         "objects": {
@@ -62,18 +63,22 @@ LIBS = {
         "src": ROOT / "contracts" / "src" / "fp256" / "FP256.yul.src",
         "object": "FP256", "lib": "FP256Lib", "iface": "IFP256",
         "one": "int256 internal constant ONE = int256(0x3ffff) << 236;",
-        "iface_notice": "Interface of the deployed FP256 object. Values are 256-bit binary\n///         floating point: one int256 holding sign (bit 255), a 19-bit biased\n///         exponent (bits 254..236, bias 262143) and a 236-bit fraction with an\n///         implicit leading one; zero is the all-zero word.",
+        "consts": "/// @notice pi as the FP256 word nearest it: 237 bits, about 71 digits.\n    ///         A constant, not an op: an object caller can copy the literal.\n    int256 internal constant PI = 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c762;",
+        "iface_notice": "Interface of the deployed FP256 object, the number: arithmetic, roots,\n///         comparison, rounding and conversions. Values are 256-bit binary\n///         floating point: one int256 holding sign (bit 255), a 19-bit biased\n///         exponent (bits 254..236, bias 262143) and a 236-bit fraction with an\n///         implicit leading one; zero is the all-zero word.",
         "lib_notice": "Inlinable FP256: 256-bit binary floating point, one int256 per value\n///         (sign, 19-bit exponent, 236-bit fraction). Every function body is the\n///         same Yul that the deployed FP256 objects run, so they agree by\n///         construction. It uses the CLZ opcode: compile with evmVersion osaka\n///         (solc >= 0.8.31) and run only on a chain that has CLZ (EIP-7939).",
-        # release four: two deployed objects from the one source
+        # Blockulator 2.2: four deployed objects by idea from the one source.
+        # FP256 is the number; FP256E the elementary functions on the one
+        # exp/log kernel; FP256H the hyperbolic functions, on their own copy of
+        # that kernel (with them FP256E measured 27,308 bytes, over the
+        # 24,576 limit); FP256S the special functions.
         "objects": {
-            "FP256": {"iface": "IFP256", "abi": "abi.json", "salt": "FP256 v4"},
-            "FP256X": {"iface": "IFP256X", "abi": "abiX.json", "salt": "FP256X v4",
-                       "iface_notice": "Interface of the deployed FP256X object, FP256's extension: the\n///         error function family and Lambert W on the same 256-bit binary\n///         floating point words as IFP256 (sign bit 255, a 19-bit biased\n///         exponent, bias 262143, a 236-bit fraction; zero is the all-zero word)."},
-            # #79: the ops FP127 has, two more objects
-            "FP256X2": {"iface": "IFP256X2", "abi": "abiX2.json", "salt": "FP256X2 v4",
-                        "iface_notice": "Interface of the deployed FP256X2 object, FP256's second extension:\n///         exp2, exp10, log2, log10, log2Up, cbrt and the hyperbolic\n///         functions on the same 256-bit binary floating point words as IFP256."},
-            "FP256X3": {"iface": "IFP256X3", "abi": "abiX3.json", "salt": "FP256X3 v4",
-                        "iface_notice": "Interface of the deployed FP256X3 object, FP256's third extension:\n///         the algebraic ops FP127 has (min, max, clamp, avg, dist,\n///         zeroFloorSub, inv, lerp, frac, round, gcd, factorial, pi, gavg,\n///         hypot) on the same 256-bit binary floating point words as IFP256."},
+            "FP256": {"iface": "IFP256", "abi": "abi.json", "salt": "FP256 v5"},
+            "FP256E": {"iface": "IFP256E", "abi": "abiE.json", "salt": "FP256E v5",
+                       "iface_notice": "Interface of the deployed FP256E object, FP256's elementary\n///         functions on its one exp/log kernel: exp, exp2, exp10, expm1, ln,\n///         log2, log10, log2Up, log1p, pow, powu and compound, on the same\n///         256-bit binary floating point words as IFP256 (sign bit 255, a\n///         19-bit biased exponent, bias 262143, a 236-bit fraction; zero is\n///         the all-zero word)."},
+            "FP256H": {"iface": "IFP256H", "abi": "abiH.json", "salt": "FP256H v5",
+                       "iface_notice": "Interface of the deployed FP256H object, FP256's hyperbolic\n///         functions: sinh, cosh, tanh and atanh, on the same 256-bit binary\n///         floating point words as IFP256. They run on the exp/log kernel of\n///         FP256E, carried here as their own copy: beside FP256E's ops they\n///         would not fit one object."},
+            "FP256S": {"iface": "IFP256S", "abi": "abiS.json", "salt": "FP256S v5",
+                       "iface_notice": "Interface of the deployed FP256S object, FP256's special functions:\n///         erf, erfc, normCdf, lambertW0, lambertWm1 and factorial, on the\n///         same 256-bit binary floating point words as IFP256."},
         },
         "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
     },
@@ -327,7 +332,7 @@ def validate(src: Source, raw: str) -> None:
         problems.append("duplicate export names")
     # Inside a library assembly block every Yul identifier shares scope with
     # the library's own members, so none may reuse an export's Solidity name.
-    reserved = set(names) | {"ONE"}
+    reserved = set(names) | {"ONE", "PI"}
     for f in src.funcs.values():
         body = strip_comments(f.text)
         idents = set(f.params) | set(f.rets) | set(re.findall(r"\blet\s+([A-Za-z_][A-Za-z0-9_]*)", body)) | {f.name}
@@ -400,15 +405,13 @@ def _indent(text: str, n: int) -> str:
 # A flat switch is a linear chain of comparisons, about 22 gas per selector
 # ranked before the one called; the binary search below costs one comparison
 # per level instead, and pays from a dozen or so exports (measured: FP127's
-# 55 save 465 gas a call on average, FP256X3's 15 save 72, FP256X2's 10 31
-# with some ops dearer, FP256X's 5 would lose). Objects with fewer than
-# DISPATCH_MIN exports keep the flat switch. So does FP256X (five exports).
-# FP256X2 and FP256X3 take the search from release 2.2; the FP256 core from
-# fp256-basic-fast, once the fast paths for its basic ops freed the 180 bytes
-# the search costs (measured on the gas ladder: 278 gas a call saved on
-# average over its 37 benched exports, up to 656, a few of the first-ranked
-# ones up to 85 dearer).
-FLAT_DISPATCH = {"FP256X"}
+# 55 save 465 gas a call on average, release four's FP256X3 with 15 saved 72,
+# FP256X2 with 10 saved 31 with some ops dearer, FP256X with 5 would have
+# lost). Objects with fewer than DISPATCH_MIN exports keep the flat switch:
+# FP256H (4) and FP256S (6). FP256 and FP256E (12) take the search; the FP256
+# core took it in fp256-basic-fast (measured on the gas ladder: 278 gas a call
+# saved on average over its 37 benched exports then, up to 656, a few of the
+# first-ranked ones up to 85 dearer).
 DISPATCH_MIN = 10
 # A leaf of the selector search is a plain switch of at most this many cases.
 DISPATCH_LEAF = 4
@@ -436,7 +439,7 @@ def dispatch_steps(selectors: list[str], flat: bool) -> dict[str, int]:
 
 
 def flat_dispatch(name: str, n: int) -> bool:
-    return name in FLAT_DISPATCH or n < DISPATCH_MIN
+    return n < DISPATCH_MIN
 
 
 def emit_dispatch(exports: list[Export], flat: bool = False) -> str:
@@ -690,6 +693,8 @@ library {lib_name} {{
 {errs}
 
     {LIB["one"]}
+
+    {LIB["consts"]}
 
 {chr(10).join(fns)}
 }}

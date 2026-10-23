@@ -1250,64 +1250,6 @@
         "raw": "MIN"
       }
     ],
-    "gcd_a": [
-      {
-        "mult": 0
-      },
-      {
-        "mult": 1
-      },
-      {
-        "mult": 12
-      },
-      {
-        "mult": -12
-      },
-      {
-        "mult": 18
-      },
-      {
-        "val": "18.9"
-      },
-      {
-        "mult": 1000003
-      },
-      {
-        "raw": "1<<200"
-      },
-      {
-        "raw": "MIN"
-      }
-    ],
-    "gcd_b": [
-      {
-        "mult": 0
-      },
-      {
-        "mult": 1
-      },
-      {
-        "mult": 18
-      },
-      {
-        "mult": -4
-      },
-      {
-        "mult": 6
-      },
-      {
-        "val": "6.1"
-      },
-      {
-        "mult": 999983
-      },
-      {
-        "raw": "1<<190"
-      },
-      {
-        "raw": "MAX"
-      }
-    ],
     "wad": [
       "0",
       "1",
@@ -1394,50 +1336,6 @@
       },
       {
         "raw": "1<<200"
-      }
-    ],
-    "pi_steps": [
-      "0",
-      "1",
-      "-1",
-      {
-        "mult": 0
-      },
-      {
-        "mult": 1
-      },
-      {
-        "mult": 2
-      },
-      {
-        "mult": 3
-      },
-      {
-        "mult": 4
-      },
-      {
-        "mult": 5
-      },
-      {
-        "mult": 6
-      },
-      {
-        "mult": 7
-      },
-      {
-        "mult": 8
-      },
-      {
-        "mult": -1
-      },
-      {
-        "val": "2.5"
-      },
-      {
-        "raw": "MIN"
-      },
-      {
-        "raw": "MAX"
       }
     ],
     "powu_base": [
@@ -2412,14 +2310,6 @@
         "signed"
       ]
     },
-    "gcd": {
-      "args": [
-        "gcd_a",
-        "gcd_b"
-      ],
-      "pairing": "cartesian",
-      "cap": 100
-    },
     "factorial": {
       "args": [
         "factorial_dom"
@@ -2449,11 +2339,6 @@
     "lambertWm1": {
       "args": [
         "lambertm1_dom"
-      ]
-    },
-    "pi": {
-      "args": [
-        "pi_steps"
       ]
     },
     "powu": {

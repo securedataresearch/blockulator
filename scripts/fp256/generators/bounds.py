@@ -316,7 +316,7 @@ def run(n):
     return M.report() or bad
 
 
-# ---- #79: FP256X2's fast values, as the Yul forms them ---------------------------
+# ---- #79: the fast values of the exp2..atanh family, as the Yul forms them -------
 
 L10_HI = 0xd49a784bcd1b8afe492bf6ff4dafdb4cd96c55fe37b3ad4e91b6ac8082e7859d
 L10_LO = 0x19943f7a77547ce8f892faad8eb42f5850d7b920159729533fc58b353d80ce0

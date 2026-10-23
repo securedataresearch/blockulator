@@ -17,6 +17,11 @@ library FP127Lib {
 
     int256 internal constant ONE = int256(1) << 128;
 
+    /// @notice pi as the 127.128 word nearest it, pi * 2^128 rounded to the
+    ///         nearest integer: 38 digits, the format's best. A constant, not
+    ///         an op: an object caller can copy the literal.
+    int256 internal constant PI = 0x3243f6a8885a308d313198a2e03707345;
+
     /// @notice Convert an 18-decimal fixed-point value to 127.128.
     /// @dev r = sdiv(x << 128, 1e18), rounding toward zero (matches Huff).
     ///      Reverts with OutOfRange if |x| >= 2^127, where the shift would
@@ -3256,32 +3261,6 @@ library FP127Lib {
             _r := fp127_round(_x)
         }
     }
-    /// @notice gcd of the integer parts |floor(a)|, |floor(b)|, as a 127.128 integer.
-    /// @dev The Huff extracted integer parts with a logical shift and then
-    ///      tested the sign bit of the shifted word, so it mishandled negative
-    ///      inputs. The Yul uses an arithmetic shift and absolute values.
-    ///      Results agree for non-negative inputs.
-    function gcd(int256 _a, int256 _b) internal pure returns (int256 _r) {
-        assembly ("memory-safe") {
-            function absw(x) -> r {
-                let m := sar(255, x)
-                r := sub(xor(x, m), m)
-            }
-
-            function fp127_gcd(a, b) -> r {
-                let x := absw(sar(128, a))
-                let y := absw(sar(128, b))
-                for {} y {} {
-                    let t := mod(x, y)
-                    x := y
-                    y := t
-                }
-                r := shl(128, x)
-            }
-
-            _r := fp127_gcd(_a, _b)
-        }
-    }
     /// @notice floor(n)! for 0 <= n < 34. 33! is the largest that fits.
     /// @dev Reverts with OutOfRange outside that domain (the Huff returned
     ///      MAX_UINT256). Computed by exact integer multiplication rather than
@@ -3303,163 +3282,6 @@ library FP127Lib {
             }
 
             _r := fp127_factorial(_n)
-        }
-    }
-    /// @notice pi by Ramanujan's 1914 series, floor(terms) terms:
-    ///         1/pi = (2 sqrt2 / 9801) sum_k (4k)! (1103 + 26390 k) / ((k!)^4 396^(4k)).
-    ///         Each term adds about eight digits: 7, 15, 23, 31, then 36 at five
-    ///         terms, the format's floor; more terms change nothing.
-    /// @dev Term to term the series is a ratio of integers, so the running
-    ///      term is updated with one exact integer multiply and divide,
-    ///      (4k+1)(4k+2)(4k+3)(4k+4) over (k+1)^4 396^4, and the sum is formed
-    ///      with the integer coefficient 1103 + 26390 k applied to a 127.128
-    ///      word. The only transcendental op is one sqrt(2); the constant
-    ///      2 sqrt2 / 9801 is applied as a multiply and then an integer
-    ///      division last, so it is never floored as a small number on its own.
-    ///      The last two digits are the sqrt and the final reciprocal flooring.
-    function pi(int256 _terms) internal pure returns (int256 _r) {
-        assembly ("memory-safe") {
-            function absw(x) -> r {
-                let m := sar(255, x)
-                r := sub(xor(x, m), m)
-            }
-
-            function rev(sel) {
-                mstore(0x00, shl(224, sel))
-                revert(0x00, 0x04)
-            }
-
-            function fp127_div(a, b) -> r {
-                if iszero(b) { rev(0x23d359a3) }
-                let ng := xor(slt(a, 0), slt(b, 0))
-                let ua := absw(a)
-                let ub := absw(b)
-                let q := shr(128, ua)
-                switch q
-                case 0 { q := div(shl(128, ua), ub) }
-                default {
-                    if iszero(lt(q, ub)) { rev(0x35278d12) }
-                    let prod0 := shl(128, ua)
-                    let rem := mulmod(ua, 0x100000000000000000000000000000000, ub)
-                    q := sub(q, gt(rem, prod0))
-                    prod0 := sub(prod0, rem)
-                    let twos := and(sub(0, ub), ub)
-                    let d := div(ub, twos)
-                    prod0 := or(div(prod0, twos), mul(q, add(div(sub(0, twos), twos), 1)))
-                    let iv := xor(mul(3, d), 2)
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    q := mul(prod0, iv)
-                }
-                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
-                r := sub(xor(q, sub(0, ng)), sub(0, ng))
-            }
-
-            function msb(x) -> r {
-                if x { r := sub(255, clz(x)) }
-            }
-
-            function isqrtw(z) -> y {
-                let e := shr(1, sub(msb(z), 16))
-                y := shl(e, shr(32, mul(add(shr(shl(1, e), z), 0x20000), 0x57d1c0)))
-                y := shr(1, add(y, div(z, y)))
-                y := shr(1, add(y, div(z, y)))
-                y := shr(1, add(y, div(z, y)))
-                y := shr(1, add(y, div(z, y)))
-                y := shr(1, add(y, div(z, y)))
-                y := sub(y, lt(div(z, y), y))
-            }
-
-            function mul512(a, b) -> h, l {
-                l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(mm, l), lt(mm, l))
-            }
-
-            function divu(a, b) -> q {
-                let prod0 := shl(128, a)
-                let prod1 := shr(128, a)
-                let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
-                prod1 := sub(prod1, gt(remainder, prod0))
-                prod0 := sub(prod0, remainder)
-                let twos := and(sub(0, b), b)
-                b := div(b, twos)
-                prod0 := div(prod0, twos)
-                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
-                let iv := xor(mul(3, b), 2)
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                iv := mul(iv, sub(2, mul(b, iv)))
-                q := mul(prod0, iv)
-            }
-
-            function mulraw(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := or(shl(128, p1), shr(128, p0))
-            }
-
-            function sqrtv4(x) -> r {
-                let e := add(128, msb(x))
-                let y := shl(shr(1, e), 1)
-                if and(e, 1) { y := mulraw(y, 0x16a09e667f3bcc908b2fb1366ea957d3e) }
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                y := shr(1, add(y, divu(x, y)))
-                r := shr(1, add(y, divu(x, y)))
-            }
-
-            function fp127_sqrt(x) -> r {
-                if slt(x, 0) { rev(0x7db3aba7) }
-                if iszero(x) { leave }
-                switch shr(128, x)
-                case 0 { r := isqrtw(shl(128, x)) }
-                default {
-                    let sh := and(sub(255, msb(x)), not(1))
-                    let z := shl(sh, x)
-                    let y := isqrtw(z)
-                    let k := sub(64, shr(1, sh))
-                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
-                    let h, l := mul512(r, r)
-                    if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
-                }
-                // D = (r + 1)^2 - N, 512 bits, below x 2^-192 + 2: where v4 may have stopped on r + 1
-                let h, l := mul512(add(r, 1), add(r, 1))
-                h := sub(sub(h, shr(128, x)), lt(l, shl(128, x)))
-                if and(iszero(h), lt(sub(l, shl(128, x)), add(shr(192, x), 2))) { r := sqrtv4(x) }
-            }
-
-            function fp127_pi(terms) -> r {
-                if slt(terms, 0) { rev(0x7db3aba7) }
-                let n := sar(128, terms)
-                if gt(n, 7) { rev(0x7db3aba7) }
-                let one := 0x100000000000000000000000000000000
-                let c := one
-                let s := 0
-                for { let k := 0 } lt(k, n) { k := add(k, 1) } {
-                    s := add(s, mul(c, add(1103, mul(26390, k))))
-                    let k4 := mul(4, k)
-                    c := div(mul(c, mul(mul(add(k4, 1), add(k4, 2)), mul(add(k4, 3), add(k4, 4)))), mul(exp(add(k, 1), 4), 24591257856))
-                }
-                if iszero(s) { rev(0x7db3aba7) }
-                let invpi := div(mulraw(shl(1, fp127_sqrt(0x200000000000000000000000000000000)), s), 9801)
-                r := fp127_div(one, invpi)
-            }
-
-            _r := fp127_pi(_terms)
         }
     }
     /// @notice Principal branch of the Lambert W function, W(x) e^W(x) = x, for

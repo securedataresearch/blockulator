@@ -10,8 +10,12 @@ Everything in this directory is served at blockulator.com/contracts/deployments/
   FP256 release four, four objects from one source (salts "FP256 v4",
   "FP256X v4", "FP256X2 v4", "FP256X3 v4"; releases one to three recorded
   below them), the same way with the `-fp256`, `-fp256x`, `-fp256x2` and
-  `-fp256x3` targets. One record covers the four objects, as `Ladder.md`
-  covers its thirteen contracts.
+  `-fp256x3` targets of that release. One record covers the four objects, as
+  `Ladder.md` covers its thirteen contracts. The source now deploys as
+  FP256, FP256E, FP256H and FP256S (salts "FP256 v5", "FP256E v5",
+  "FP256H v5", "FP256S v5"; the number, the elementary, hyperbolic and
+  special functions), with the `-fp256`, `-fp256e`, `-fp256h` and `-fp256s`
+  targets; their records come with that deployment.
 - `Ladder.md`, `Ladder.json`: the eleven ladder adapters, `LadderRunner` and
   `EdgeRunner`, salt "FP127 ladder v9". `make deploy-ladder-sepolia`,
   `make verify-ladder-sepolia`.
@@ -65,7 +69,7 @@ to send unless the answer is 255.
 
 The deploy targets are pattern rules over the objects table in
 `scripts/fp127/gen.py` (name, library, salt): for each stem `<o>` in `fp127
-fp256 fp256x fp256x2 fp256x3` (`gen.py --objects`), `make predict-<o>`,
+fp256 fp256e fp256h fp256s` (`gen.py --objects`), `make predict-<o>`,
 `deploy-<o>-sepolia` and `verify-<o>-sepolia` (`scripts/fp127/deploy.py`,
 `stdjson.py`, `verify.py`); `predict`, `deploy-sepolia` and `verify-sepolia`
 are FP127's. A new object or salt edits only the table.

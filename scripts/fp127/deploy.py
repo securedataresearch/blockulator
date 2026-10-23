@@ -8,7 +8,7 @@
     uv run scripts/fp127/deploy.py address <key>          # the recorded address
     uv run scripts/fp127/deploy.py size <key>...          # runtime sizes of the artifacts
 
-<key> is an object's make stem (fp127, fp256, fp256x, ...: gen.py --objects).
+<key> is an object's make stem (fp127, fp256, fp256e, ...: gen.py --objects).
 Every object goes through Arachnid's CREATE2 proxy with its salt, so it lands
 at the same address on every chain that has the proxy and CLZ.
 

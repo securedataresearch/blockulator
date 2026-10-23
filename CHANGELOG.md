@@ -4,6 +4,30 @@ A release is the public name for a set of deployed contracts. Each contract
 keeps its own version in its CREATE2 salt, because the salt names the address;
 `contracts/deployments/RELEASE.json` maps the release to every address.
 
+## Unreleased (Blockulator 2.2)
+
+FP256 deploys as four objects by idea, replacing FP256, FP256X, FP256X2 and
+FP256X3: **FP256**, the number (arithmetic, roots, comparison, rounding,
+conversions: 43 ops, salt `FP256 v5`); **FP256E**, the elementary functions
+on one exp/log kernel (exp, exp2, exp10, expm1, ln, log2, log10, log2Up,
+log1p, pow, powu, compound; `FP256E v5`); **FP256H**, the hyperbolic
+functions (sinh, cosh, tanh, atanh; `FP256H v5`), their own object because
+FP256E with them measured 27,308 bytes, over the 24,576 limit, so FP256H
+carries its own copy of the kernel; **FP256S**, the special functions (erf,
+erfc, normCdf, lambertW0, lambertWm1, factorial; `FP256S v5`). In both
+libraries `pi` is now a constant and `gcd` is removed. Without the kernels
+the FP256 core is 10,333 bytes, and the room goes to the basic ops' fast
+path, bit-identical: through the object `mulDown`/`mulUp` 201 to 267 gas
+less, `divDown`/`divUp` 250 to 256, the in-place conversions up to 67, and
+add, sub, mul, div 10 to 70 (`docs/benchmarks/gas256.md`).
+
+Migration: `pi(terms)` → `FP127Lib.PI` / `FP256Lib.PI` (the format's word
+nearest π; an object caller copies the literal); `gcd` has no replacement;
+an FP256 caller of FP256X, FP256X2 or FP256X3 calls the object that now
+holds the op (`contracts/src/fp256/ops.json` names it), through `IFP256`,
+`IFP256E`, `IFP256H` or `IFP256S`. The inline libraries keep every other
+signature.
+
 ## Blockulator 2.1 (2026-10-21)
 
 Both rulers round once: every FP127 transcendental to the nearest word,

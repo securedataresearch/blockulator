@@ -62,10 +62,10 @@ OPS256 = ["add", "mul", "div", "sqrt", "exp", "ln", "log1p", "expm1", "pow", "er
           "compound", "lambertW0", "lambertWm1", "powu",
           "mulDown", "mulUp", "divDown", "divUp", "toUintDown", "toUintUp", "toIntDown", "toIntUp",
           "floor", "ceil", "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up",
-          # #79: FP256X2 and FP256X3
+          # #79
           "exp2", "exp10", "log2", "log10", "log2Up", "cbrt", "sinh", "cosh", "tanh", "atanh",
           "min", "max", "clamp", "avg", "dist", "zeroFloorSub", "inv", "lerp", "frac", "round",
-          "gcd", "factorial", "pi", "gavg", "hypot"]
+          "factorial", "gavg", "hypot"]
 # the ops with a wide second stage, swept again through FP256LibWide
 WIDE256 = ["exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf", "compound", "lambertW0",
            "lambertWm1", "powu", "exp2", "exp10", "log2", "log10", "sinh", "cosh", "tanh", "atanh"]
@@ -89,7 +89,7 @@ def match_tests() -> list[str]:
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "erfc", "normCdf", "compound",
           "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "atanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up"]
 TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
-       "min", "max", "avg", "dist", "zeroFloorSub", "gcd", "gavg", "hypot"}
+       "min", "max", "avg", "dist", "zeroFloorSub", "gavg", "hypot"}
 THREE = {"clamp", "lerp"}
 
 
@@ -245,7 +245,7 @@ def near_one(rng, n):
 
 
 def gen79():
-    """#79's inputs (FP256X2 and FP256X3), from their own seed."""
+    """#79's inputs, from their own seed."""
     rng = random.Random(SEED + 79)
     S, N = 4000, 8000
     write("fp256_exp2", [f256(rng, -40, 18) for _ in range(N)])
@@ -264,7 +264,8 @@ def gen79():
     write("fp256_inv", [f256(rng, -400, 400) for _ in range(S)])
     for op in ("frac", "round"):
         write(f"fp256_{op}", [f256(rng, -4, 240) for _ in range(S)])
-    write("fp256_gcd", [f256(rng, -2, 300) for _ in range(S)], [f256(rng, -2, 300) for _ in range(S)])
+    # the draws of the removed gcd's inputs, so every later op keeps its inputs
+    [f256(rng, -2, 300) for _ in range(2 * S)]
     # hypot near its own exponents (where the sum of squares is exact) and far apart
     ha = [f256(rng, -400, 400) for _ in range(S)]
     hb = [(((x >> 236) & 0x7FFFF) + rng.randint(-130, 130)) << 236 | rng.getrandbits(236) | (rng.getrandbits(1) << 255) for x in ha]
@@ -293,9 +294,8 @@ def gen79():
             a = f256(rng, -3000, -300)
         la.append(a), lb.append(b), lt.append(t)
     write("fp256_lerp", la, lb, lt)
-    # factorial over its whole domain, and past it; pi for every number of terms to 40
+    # factorial over its whole domain, and past it
     write("fp256_factorial", [O.encode(Fraction(n)) for n in range(0, 20370)])
-    write("fp256_pi", [O.encode(Fraction(n)) for n in range(1, 41)] + [O.encode(Fraction(n, 2)) for n in range(2, 30)])
 
 
 

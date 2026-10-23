@@ -77,9 +77,7 @@ contract Sweep is Test {
         if (op == "fp256_inv") { g0 = gasleft(); r = FP256Lib.inv(a); g = gasleft(); }
         if (op == "fp256_frac") { g0 = gasleft(); r = FP256Lib.frac(a); g = gasleft(); }
         if (op == "fp256_round") { g0 = gasleft(); r = FP256Lib.round(a); g = gasleft(); }
-        if (op == "fp256_gcd") { g0 = gasleft(); r = FP256Lib.gcd(a, b); g = gasleft(); }
         if (op == "fp256_factorial") { g0 = gasleft(); r = FP256Lib.factorial(a); g = gasleft(); }
-        if (op == "fp256_pi") { g0 = gasleft(); r = FP256Lib.pi(a); g = gasleft(); }
         if (op == "fp256_gavg") { g0 = gasleft(); r = FP256Lib.gavg(a, b); g = gasleft(); }
         if (op == "fp256_hypot") { g0 = gasleft(); r = FP256Lib.hypot(a, b); g = gasleft(); }
         if (op == "fp127_mul") { g0 = gasleft(); r = FP127Lib.mul(a, b); g = gasleft(); }
@@ -209,9 +207,7 @@ contract Sweep is Test {
     function test_fp256_inv() public { this.runOne("fp256_inv", false); }
     function test_fp256_frac() public { this.runOne("fp256_frac", false); }
     function test_fp256_round() public { this.runOne("fp256_round", false); }
-    function test_fp256_gcd() public { this.runOne("fp256_gcd", true); }
     function test_fp256_factorial() public { this.runOne("fp256_factorial", false); }
-    function test_fp256_pi() public { this.runOne("fp256_pi", false); }
     function test_fp256_gavg() public { this.runOne("fp256_gavg", true); }
     function test_fp256_hypot() public { this.runOne("fp256_hypot", true); }
     function test_fp256_clamp() public { this.runOne3("fp256_clamp"); }

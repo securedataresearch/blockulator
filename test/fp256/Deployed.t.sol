@@ -3,15 +3,16 @@ pragma solidity ^0.8.24;
 
 import {Precision256} from "./Precision.t.sol";
 import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
-import {IFP256X} from "../../contracts/src/fp256/IFP256X.sol";
-import {IFP256X2} from "../../contracts/src/fp256/IFP256X2.sol";
-import {IFP256X3} from "../../contracts/src/fp256/IFP256X3.sol";
+import {IFP256E} from "../../contracts/src/fp256/IFP256E.sol";
+import {IFP256H} from "../../contracts/src/fp256/IFP256H.sol";
+import {IFP256S} from "../../contracts/src/fp256/IFP256S.sol";
 
 /// @title Deployed256
 /// @notice Post-deploy smoke test: every committed vector against the live
-///         FP256 object recorded in contracts/deployments/FP256.json and, from
-///         release four, the FP256X, FP256X2 and FP256X3 objects in
-///         contracts/deployments/FP256X.json, FP256X2.json and FP256X3.json.
+///         objects recorded in contracts/deployments/FP256.json, FP256E.json,
+///         FP256H.json and FP256S.json (the number, the elementary, hyperbolic
+///         and special functions); an object without a record keeps the
+///         local artifact.
 ///
 ///   make smoke-fp256-sepolia      (forge test --match-contract Deployed256 --fork-url <sepolia rpc>)
 ///
@@ -29,24 +30,21 @@ contract Deployed256 is Precision256 {
             address live = vm.parseJsonAddress(json, ".address");
             require(live.code.length > 0, "no code at the recorded FP256 address");
             obj = IFP256(live);
-            // release four's second object, once its record exists
-            if (vm.exists("contracts/deployments/FP256X.json")) {
-                address liveX = vm.parseJsonAddress(vm.readFile("contracts/deployments/FP256X.json"), ".address");
-                require(liveX.code.length > 0, "no code at the recorded FP256X address");
-                objX = IFP256X(liveX);
-            }
-            // #79's objects, once their records exist
-            if (vm.exists("contracts/deployments/FP256X2.json")) {
-                address liveX2 = vm.parseJsonAddress(vm.readFile("contracts/deployments/FP256X2.json"), ".address");
-                require(liveX2.code.length > 0, "no code at the recorded FP256X2 address");
-                objX2 = IFP256X2(liveX2);
-            }
-            if (vm.exists("contracts/deployments/FP256X3.json")) {
-                address liveX3 = vm.parseJsonAddress(vm.readFile("contracts/deployments/FP256X3.json"), ".address");
-                require(liveX3.code.length > 0, "no code at the recorded FP256X3 address");
-                objX3 = IFP256X3(liveX3);
-            }
+            address a = _live("FP256E");
+            if (a != address(0)) objE = IFP256E(a);
+            a = _live("FP256H");
+            if (a != address(0)) objH = IFP256H(a);
+            a = _live("FP256S");
+            if (a != address(0)) objS = IFP256S(a);
         }
+    }
+
+    /// The recorded address of object name, or zero when it has no record.
+    function _live(string memory name) internal view returns (address a) {
+        string memory path = string.concat("contracts/deployments/", name, ".json");
+        if (!vm.exists(path)) return address(0);
+        a = vm.parseJsonAddress(vm.readFile(path), ".address");
+        require(a.code.length > 0, string.concat("no code at the recorded ", name, " address"));
     }
 
     function test_precision_all() public override {

@@ -92,11 +92,10 @@ contract PiCompare is Test {
             g0 = gasleft(); r = _seriesQuad(t); _log("quad", t, r, "binary128", g0 - gasleft());
             g0 = gasleft(); r = _seriesFP256(t); _log("fp256", t, r, "fp256", g0 - gasleft());
         }
-        // the library op itself, for reference
-        for (uint256 t = 1; t <= 6; t++) {
-            uint256 g0 = gasleft(); int256 r = FP127Lib.pi(int256(t) << 128); _log("fp127-pi", t, r, "2**128", g0 - gasleft());
-        }
-        // PRBMath ships pi as a constant: 18 decimals
+        // the libraries' constants, for reference: PRBMath's 18 decimals, and
+        // FP127Lib.PI and FP256Lib.PI, each its format's word nearest pi
         _log("prb-constant", 0, 3_141592653589793238, "10**18", 0);
+        _log("fp127-constant", 0, FP127Lib.PI, "2**128", 0);
+        _log("fp256-constant", 0, FP256Lib.PI, "fp256", 0);
     }
 }

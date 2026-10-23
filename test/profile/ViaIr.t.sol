@@ -22,17 +22,17 @@ import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
 contract ViaIrBench is Test {
     address internal fp127;
     address internal fp256;
-    address internal fp256x;
-    address internal fp256x2;
-    address internal fp256x3;
+    address internal fp256e;
+    address internal fp256h;
+    address internal fp256s;
     uint256 constant N = 8;
 
     function setUp() public {
         fp127 = _deploy("out/FP127.yul/FP127.json");
         fp256 = _deploy("out/FP256.yul/FP256.json");
-        fp256x = _deploy("out/FP256X.yul/FP256X.json");
-        fp256x2 = _deploy("out/FP256X2.yul/FP256X2.json");
-        fp256x3 = _deploy("out/FP256X3.yul/FP256X3.json");
+        fp256e = _deploy("out/FP256E.yul/FP256E.json");
+        fp256h = _deploy("out/FP256H.yul/FP256H.json");
+        fp256s = _deploy("out/FP256S.yul/FP256S.json");
     }
 
     function _deploy(string memory artifact) internal returns (address d) {
@@ -143,10 +143,11 @@ contract ViaIrBench is Test {
     function _obj256(string memory op) internal view returns (address) {
         bytes32 h = keccak256(bytes(op));
         if (h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
-            || h == keccak256("lambertW0") || h == keccak256("lambertWm1")) return fp256x;
-        if (h == keccak256("exp2") || h == keccak256("log2") || h == keccak256("cbrt")
-            || h == keccak256("cosh") || h == keccak256("tanh")) return fp256x2;
-        if (h == keccak256("min") || h == keccak256("max") || h == keccak256("hypot")) return fp256x3;
+            || h == keccak256("lambertW0") || h == keccak256("lambertWm1") || h == keccak256("factorial")) return fp256s;
+        if (h == keccak256("sinh") || h == keccak256("cosh") || h == keccak256("tanh") || h == keccak256("atanh")) return fp256h;
+        if (h == keccak256("exp") || h == keccak256("exp2") || h == keccak256("exp10") || h == keccak256("expm1")
+            || h == keccak256("ln") || h == keccak256("log2") || h == keccak256("log10") || h == keccak256("log2Up")
+            || h == keccak256("log1p") || h == keccak256("pow") || h == keccak256("powu") || h == keccak256("compound")) return fp256e;
         return fp256;
     }
 
@@ -219,9 +220,9 @@ contract ViaIrBench is Test {
 
     function test_viair_fp256() public view {
         _object(fp256, abi.encodeWithSignature("abs(int256)", int256(1)));
-        _object(fp256x, abi.encodeWithSignature("erf(int256)", int256(1)));
-        _object(fp256x2, abi.encodeWithSignature("exp2(int256)", int256(1)));
-        _object(fp256x3, abi.encodeWithSignature("inv(int256)", int256(1)));
+        _object(fp256e, abi.encodeWithSignature("exp(int256)", int256(1)));
+        _object(fp256h, abi.encodeWithSignature("sinh(int256)", int256(1)));
+        _object(fp256s, abi.encodeWithSignature("erf(int256)", int256(1)));
         _u256("abs", -8, 8, 0);
         _u256("neg", -8, 8, 0);
         _u256("sign", -8, 8, 0);

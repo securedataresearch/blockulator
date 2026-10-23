@@ -80,10 +80,12 @@ The same Yul function bodies are emitted twice.
 finds the 4-byte selector by binary search. It is deployed with CREATE2
 through the deterministic proxy at
 `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the version.
-This source is v5 (salt `"FP127 v5"`, 55 ops, 19,863 bytes of runtime),
+v5 as deployed (salt `"FP127 v5"`, 55 ops, 19,863 bytes of runtime) is
 live on Sepolia at `0x619176d72D7a12390F8970802943D344c0fd3fE2` since
-2026-10-21 (Blockulator 2.1); `make predict` recomputes that address from
-the artifact. v1 to v4 stay deployed. Record and verification recipe in
+2026-10-21 (Blockulator 2.1). This source is Blockulator 2.2's, 53 ops: `pi`
+became the constant `FP127Lib.PI` and `gcd` was removed, so its bytes and
+therefore its CREATE2 address differ (`make predict`) until it is
+redeployed. v1 to v4 stay deployed. Record and verification recipe in
 [`contracts/deployments/FP127.md`](../../deployments/FP127.md).
 Every contract that `staticcall`s it runs identical bytecode.
 `FP127Caller.sol` is the minimal Solidity wrapper for that path; it bubbles
@@ -160,11 +162,9 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `sign`, `min`, `max`, `clamp`, `avg`, `floor`, `frac` | exact, never revert | |
 | `ceil`, `round` | exact | `Overflow` at the top of the range |
 | `zeroFloorSub`, `dist`, `lerp`, `hypot`, `gavg` | checked compositions | `Overflow`, `OutOfRange` |
-| `gcd(a, b)` | gcd of \|floor a\|, \|floor b\| | never |
 | `factorial(n)` | floor(n)! for 0 ≤ n < 34 | `OutOfRange` |
 | `lambertW0(x)` | W(x) for x ≥ −1/e | `OutOfRange` |
 | `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0 | `OutOfRange` |
-| `pi(terms)` | Ramanujan's 1914 series, floor(terms) terms, 1 ≤ terms ≤ 7; five terms give 36 digits, 230 ULP from π, and more add nothing | `OutOfRange` |
 | `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
 | `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −90 | `Overflow` above 88 |
 | `sinh`, `cosh` | \|x\| ≤ 88; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192, within 3 units of 2^-192; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
@@ -172,6 +172,14 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `atanh(x)` | \|x\| < 1; log1p(2\|x\|/(1 − \|x\|))/2, one division and one unrounded log at 2^-192 | `OutOfRange` |
 | `erf(x)`, `erfc(x)` | all x; series to 4, continued fraction beyond, at 2^-192; erfc(9.3) is one ULP, zero beyond | never |
 | `normCdf(x)` | Φ(x) = erfc(−x/√2)/2, the N(d) of Black-Scholes; Φ(−13) is two ULPs, Φ(−14) is zero, Φ(14) is one | never |
+
+**Constants.** `FP127Lib.ONE` is 2^128 and `FP127Lib.PI` is π · 2^128 to
+the nearest integer, `0x3243f6a8885a308d313198a2e03707345` (38 digits). Pi
+was an op, Ramanujan's series in the format, through Blockulator 2.1; as a
+constant it is exact to the grid and costs nothing, and an object caller can
+copy the literal. e, ln 2 and ln 10 are not constants: `exp(ONE)`, `ln(2 ONE)`
+and `ln(10 ONE)` return the same nearest words, and `exp2`, `log2` and
+`log10` absorb most uses of them.
 
 **Rounding (v5).** Every transcendental returns the nearest word, ties up:
 `exp`, `exp2`, `exp10`, `expm1`, `sinh`, `cosh`, `tanh`, `pow`, `cbrt`,
@@ -269,8 +277,7 @@ contract against it, measured to 2^-64 ULP: exact ops 0, directed ops under
 one ULP, nearest ops at most half; v4's test allowed 2 ULP from a floored
 reference. It writes [`docs/fp127/precision.json`](../../../docs/fp127/precision.json);
 `make precision-report` renders [`docs/fp127/precision.md`](../../../docs/fp127/precision.md).
-On 15,124 vectors every nearest op is the nearest word; `pi` is within 230
-ULP of its own partial sum (the floored terms are scaled by 1103 + 26390 k).
+Every nearest op is the nearest word on every vector.
 `make sweep` measures 4,000 seeded random inputs per op
 ([`docs/benchmarks/sweep.md`](../../../docs/benchmarks/sweep.md)): every
 v5 transcendental within half an ULP, where v4 had `exp` at 4e32, `pow` at
@@ -318,10 +325,6 @@ taken. Cheaper, and the overflow check falls out of it.
 **`div`.** Was already a full-precision Bloemen `mulDiv` with a 2^128
 multiplier. The old README's "~62-bit two-step chunking" described an
 earlier version. Ported verbatim plus the two missing guards.
-
-**`gcd`.** The Huff extracted integer parts with a logical shift and then
-tested the sign bit of the shifted word, so negatives were mishandled. The
-Yul uses an arithmetic shift and absolute values.
 
 **`factorial`.** Computed by exact integer multiplication instead of a
 34-entry jump table. Identical values.

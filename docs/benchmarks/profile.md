@@ -12,9 +12,9 @@ Probed: FP256 `log2m`, `exp2frac`, `wexpm1`, `wlnw`, `cfrun`, `erfw`, `lwfix`, `
 
 | op | inputs | gas median / p99 / max | fallback | largest helpers (exclusive share) |
 |---|---:|---:|---:|---|
-| add | 4,000 | 719 / 857 / 876 | — | — |
-| mul | 4,000 | 572 / 572 / 572 | — | — |
-| div | 4,000 | 850 / 850 / 850 | — | — |
+| add | 4,000 | 677 / 857 / 876 | — | — |
+| mul | 4,000 | 530 / 530 / 530 | — | — |
+| div | 4,000 | 808 / 808 / 808 | — | — |
 | sqrt | 4,000 | 1,201 / 1,217 / 1,217 | — | — |
 | exp | 22,000 | 7,077 / 7,247 / 29,211 | 0.005% | `exp2frac` 75% |
 | ln | 20,000 | 7,640 / 8,919 / 32,237 | 0.29% | `log2m` 74% |
@@ -25,23 +25,23 @@ Probed: FP256 `log2m`, `exp2frac`, `wexpm1`, `wlnw`, `cfrun`, `erfw`, `lwfix`, `
 | erfc | 6,000 | 17,694 / 69,455 / 403,133 | 0.27% | `exp2frac` 23%, `erfcxa` 20%, `erfasym` 18% |
 | normCdf | 6,000 | 17,342 / 66,677 / 409,089 | 0.33% | `erfcxa` 24%, `exp2frac` 22%, `erfcxcf` 15% |
 | compound | 6,000 | 16,113 / 114,972 / 159,252 | 16.07% | `wln1ps` 26%, `exp2frac` 18%, `wexpm1` 17% |
-| lambertW0 | 6,000 | 14,524 / 32,279 / 50,070 | 0.07% | `log2m` 28%, `wexpm1` 21%, `lwlog` 17% |
-| lambertWm1 | 4,000 | 17,373 / 33,141 / 50,389 | 0.20% | `wexpm1` 45%, `log2m` 12%, `lwq510` 12% |
+| lambertW0 | 6,000 | 14,524 / 32,279 / 49,986 | 0.07% | `log2m` 28%, `wexpm1` 21%, `lwlog` 17% |
+| lambertWm1 | 4,000 | 17,373 / 33,141 / 50,305 | 0.20% | `wexpm1` 45%, `log2m` 12%, `lwq510` 12% |
 | powu | 6,000 | 5,065 / 69,912 / 71,382 | 9.78% | `wexpm1` 38%, `log2m` 9%, `powslow` 4% |
-| mulDown | 4,000 | 1,046 / 1,046 / 1,046 | — | — |
-| mulUp | 4,000 | 1,047 / 1,047 / 1,047 | — | — |
-| divDown | 4,000 | 1,244 / 1,290 / 1,290 | — | — |
-| divUp | 4,000 | 1,245 / 1,291 / 1,291 | — | — |
+| mulDown | 4,000 | 765 / 765 / 765 | — | — |
+| mulUp | 4,000 | 766 / 766 / 766 | — | — |
+| divDown | 4,000 | 979 / 1,025 / 1,025 | — | — |
+| divUp | 4,000 | 980 / 1,026 / 1,026 | — | — |
 | toUintDown | 4,000 | 405 / 405 / 405 | — | — |
 | toUintUp | 4,000 | 420 / 420 / 420 | — | — |
-| toIntDown | 4,000 | 533 / 551 / 551 | — | — |
-| toIntUp | 4,000 | 538 / 548 / 548 | — | — |
+| toIntDown | 4,000 | 466 / 484 / 484 | — | — |
+| toIntUp | 4,000 | 471 / 481 / 481 | — | — |
 | floor | 4,000 | 522 / 542 / 570 | — | — |
 | ceil | 4,000 | 523 / 543 / 571 | — | — |
 | fromUintDown | 4,000 | 487 / 487 / 487 | — | — |
 | fromUintUp | 4,000 | 488 / 534 / 534 | — | — |
-| toFixed18Down | 4,000 | 793 / 811 / 811 | — | — |
-| toFixed18Up | 4,000 | 798 / 808 / 808 | — | — |
+| toFixed18Down | 4,000 | 723 / 741 / 741 | — | — |
+| toFixed18Up | 4,000 | 728 / 738 / 738 | — | — |
 | exp2 | 8,000 | 6,891 / 7,067 / 7,067 | 0 | `exp2frac` 77% |
 | exp10 | 8,000 | 6,985 / 7,166 / 7,166 | 0 | `exp2frac` 76% |
 | log2 | 8,000 | 7,419 / 10,039 / 33,526 | 0.14% | `log2m` 54% |
@@ -55,16 +55,14 @@ Probed: FP256 `log2m`, `exp2frac`, `wexpm1`, `wlnw`, `cfrun`, `erfw`, `lwfix`, `
 | min | 4,000 | 246 / 247 / 247 | — | — |
 | max | 4,000 | 247 / 247 / 247 | — | — |
 | clamp | 4,000 | 491 / 492 / 492 | — | — |
-| avg | 4,000 | 720 / 814 / 877 | — | — |
-| dist | 4,000 | 857 / 876 / 939 | — | — |
-| zeroFloorSub | 4,000 | 795 / 889 / 952 | — | — |
-| inv | 4,000 | 789 / 789 / 789 | — | — |
+| avg | 4,000 | 678 / 772 / 877 | — | — |
+| dist | 4,000 | 815 / 834 / 939 | — | — |
+| zeroFloorSub | 4,000 | 753 / 847 / 952 | — | — |
+| inv | 4,000 | 747 / 747 / 747 | — | — |
 | lerp | 8,000 | 5,910 / 6,548 / 6,877 | — | `lerp3` 91% |
 | frac | 4,000 | 766 / 1,387 / 1,415 | — | — |
 | round | 4,000 | 474 / 494 / 522 | — | — |
-| gcd | 4,000 | 4,591 / 9,039 / 9,583 | — | — |
 | factorial | 20,370 | 1,070,317 / 2,118,307 / 2,139,259 | — | — |
-| pi | 68 | 521 / 541 / 541 | — | — |
 | gavg | 4,000 | 2,095 / 2,346 / 2,352 | — | `isqrtw` 50% |
 | hypot | 4,000 | 3,538 / 3,858 / 3,866 | — | `isqrtw` 28% |
 
@@ -132,7 +130,7 @@ Per op and probed helper it runs: calls per input, gas per call (inclusive), and
 | lambertW0 | `lwsp` | 0.166 | 3,760 | 3.7% | 3.7% |
 | lambertW0 | `lwy` | 0.167 | 800 | 0.8% | 0.8% |
 | lambertW0 | `wlnw` | 0.001 | 28,049 | 0.0% | 0.1% |
-| lambertW0 | `lwfix` | 0.001 | 34,781 | 0.0% | 0.1% |
+| lambertW0 | `lwfix` | 0.001 | 34,697 | 0.0% | 0.1% |
 | lambertWm1 | `lwq510` | 0.496 | 26,926 | 11.6% | 56.8% |
 | lambertWm1 | `wexpm1` | 0.498 | 21,418 | 45.3% | 45.3% |
 | lambertWm1 | `lwlog` | 0.504 | 9,282 | 7.7% | 19.9% |
@@ -141,7 +139,7 @@ Per op and probed helper it runs: calls per input, gas per call (inclusive), and
 | lambertWm1 | `lwf128` | 0.815 | 1,570 | 3.3% | 5.4% |
 | lambertWm1 | `lnc` | 0.815 | 604 | 2.1% | 2.1% |
 | lambertWm1 | `lwy` | 0.5 | 800 | 1.7% | 1.7% |
-| lambertWm1 | `lwfix` | 0.002 | 34,883 | 0.1% | 0.3% |
+| lambertWm1 | `lwfix` | 0.002 | 34,799 | 0.1% | 0.3% |
 | lambertWm1 | `wlnw` | 0.002 | 28,073 | 0.0% | 0.2% |
 | powu | `powslow` | 0.1 | 53,748 | 3.7% | 47.7% |
 | powu | `wexpm1` | 0.201 | 21,418 | 38.0% | 38.0% |
@@ -266,8 +264,8 @@ The first 4,000 inputs of each op with a second stage (and of its wider rows), t
 | erfc | 6,000 | 104,155 / 398,789 / 414,849 | 16% (1) | `erfw` 38%, `cfrun` 30%, `wexpm1` 16%, `exp2frac` 4% |
 | normCdf | 6,000 | 96,439 / 377,338 / 415,591 | 16% (0.902) | `erfw` 42%, `cfrun` 26%, `wexpm1` 16%, `erfcxa` 4% |
 | compound | 6,000 | 66,232 / 113,359 / 157,345 | 42% (1.276) | `wexpm1` 42%, `wln1ps` 28%, `exp2frac` 7%, `compslow` 6% |
-| lambertW0 | 6,000 | 48,838 / 66,735 / 67,359 | 49% (1.165) | `wexpm1` 49%, `log2m` 20%, `lwfix` 13%, `lwlog` 6% |
-| lambertWm1 | 4,000 | 51,258 / 67,926 / 68,250 | 55% (1.496) | `wexpm1` 55%, `log2m` 15%, `lwfix` 12%, `lwq510` 5% |
+| lambertW0 | 6,000 | 48,754 / 66,693 / 67,317 | 49% (1.165) | `wexpm1` 49%, `log2m` 20%, `lwfix` 13%, `lwlog` 6% |
+| lambertWm1 | 4,000 | 51,175 / 67,884 / 68,208 | 55% (1.496) | `wexpm1` 55%, `log2m` 15%, `lwfix` 12%, `lwq510` 5% |
 | powu | 6,000 | 58,307 / 69,778 / 97,074 | 71% (1.943) | `wexpm1` 71%, `log2m` 10%, `powslow` 7%, `wlnw` 2% |
 | exp2 | 4,000 | 29,604 / 29,882 / 29,884 | 72% (1) | `wexpm1` 72%, `exp2frac` 18% |
 | exp10 | 4,000 | 29,676 / 29,976 / 29,976 | 72% (1) | `wexpm1` 72%, `exp2frac` 18% |
@@ -335,8 +333,8 @@ The first 4,000 inputs of each op with a second stage (and of its wider rows), t
 | compound | `wln` | 0.304 | 28,015 | 0.0% | 13.1% |
 | compound | `exp2frac` | 0.905 | 5,333 | 7.4% | 7.4% |
 | compound | `log2m` | 0.621 | 5,716 | 5.5% | 5.5% |
-| lambertW0 | `lwfix` | 1 | 34,601 | 13.3% | 68.0% |
-| lambertW0 | `wlnw` | 1 | 27,819 | 1.8% | 54.6% |
+| lambertW0 | `lwfix` | 1 | 34,524 | 13.2% | 67.9% |
+| lambertW0 | `wlnw` | 1 | 27,819 | 1.8% | 54.7% |
 | lambertW0 | `wexpm1` | 1.165 | 21,298 | 48.8% | 48.8% |
 | lambertW0 | `log2m` | 1.835 | 5,576 | 20.1% | 20.1% |
 | lambertW0 | `lwlog` | 0.835 | 9,035 | 5.7% | 14.8% |
@@ -345,15 +343,15 @@ The first 4,000 inputs of each op with a second stage (and of its wider rows), t
 | lambertW0 | `lnc` | 1.185 | 611 | 1.4% | 1.4% |
 | lambertW0 | `lwsp` | 0.166 | 3,760 | 1.2% | 1.2% |
 | lambertW0 | `lwy` | 0.167 | 800 | 0.3% | 0.3% |
-| lambertWm1 | `lwfix` | 1 | 34,803 | 11.9% | 60.1% |
-| lambertWm1 | `wexpm1` | 1.496 | 21,298 | 55.0% | 55.0% |
-| lambertWm1 | `wlnw` | 1 | 27,930 | 1.6% | 48.2% |
-| lambertWm1 | `lwq510` | 0.496 | 26,794 | 4.7% | 22.9% |
+| lambertWm1 | `lwfix` | 1 | 34,741 | 11.8% | 60.0% |
+| lambertWm1 | `wexpm1` | 1.496 | 21,298 | 55.1% | 55.1% |
+| lambertWm1 | `wlnw` | 1 | 27,930 | 1.6% | 48.3% |
+| lambertWm1 | `lwq510` | 0.496 | 26,794 | 4.7% | 23.0% |
 | lambertWm1 | `log2m` | 1.504 | 5,695 | 14.8% | 14.8% |
 | lambertWm1 | `lwlog` | 0.504 | 9,282 | 3.1% | 8.1% |
 | lambertWm1 | `lwsp` | 0.496 | 3,760 | 3.2% | 3.2% |
 | lambertWm1 | `lwf128` | 0.815 | 1,569 | 1.4% | 2.2% |
-| lambertWm1 | `lnc` | 0.815 | 604 | 0.8% | 0.8% |
+| lambertWm1 | `lnc` | 0.815 | 604 | 0.9% | 0.9% |
 | lambertWm1 | `lwy` | 0.5 | 800 | 0.7% | 0.7% |
 | powu | `powslow` | 0.972 | 53,404 | 6.8% | 89.5% |
 | powu | `wexpm1` | 1.943 | 21,298 | 71.3% | 71.3% |
@@ -397,37 +395,37 @@ Probe calibration: after the probes' recorded own cost (with a fixed 92 gas per 
 
 ## Build setting: `via_ir`
 
-`test/profile/ViaIr.t.sol` on eight typical inputs per op (medians), compiled with the default profile (`via_ir = false`, as `make bench`) and with `[profile.viair]`. *Object* is the whole `staticcall`; *object net* takes out its call and selector-dispatch cost, fitted on the trivial ops as FP127 551 + 9.7 per dispatch comparison; FP256 585 + 0.7 per dispatch comparison. *Gap* is inline over object net.
+`test/profile/ViaIr.t.sol` on eight typical inputs per op (medians), compiled with the default profile (`via_ir = false`, as `make bench`) and with `[profile.viair]`. *Object* is the whole `staticcall`; *object net* takes out its call and selector-dispatch cost, fitted on the trivial ops as FP127 551 + 9.7 per dispatch comparison; FP256 401 + 42 per dispatch comparison. *Gap* is inline over object net.
 
 | lib | op | inline, via_ir false | inline, via_ir true | object (staticcall) | object net | gap, false → true |
 |---|---|---:|---:|---:|---:|---:|
 | FP127 | mul | 263 | 181 | 894 | 284 | -7% → -36% |
 | FP127 | div | 486 | 404 | 1,085 | 495 | -2% → -18% |
-| FP127 | sqrt | 683 | 547 | 1,239 | 639 | +7% → -14% |
+| FP127 | sqrt | 683 | 547 | 1,217 | 627 | +9% → -13% |
 | FP127 | exp | 5,819 | 5,005 | 5,421 | 4,821 | +21% → +4% |
 | FP127 | ln | 3,072 | 2,834 | 3,553 | 2,943 | +4% → -4% |
-| FP127 | pow | 5,849 | 5,389 | 6,016 | 5,426 | +8% → -1% |
+| FP127 | pow | 5,849 | 5,389 | 6,081 | 5,462 | +7% → -1% |
 | FP127 | cbrt | 1,936 | 1,587 | 2,325 | 1,715 | +13% → -7% |
 | FP127 | sinh | 7,078 | 5,999 | 6,478 | 5,888 | +20% → +2% |
 | FP127 | cosh | 7,251 | 6,136 | 6,673 | 6,063 | +20% → +1% |
-| FP127 | erf | 10,614 | 9,660 | 10,295 | 9,676 | +10% → -0% |
+| FP127 | erf | 10,614 | 9,660 | 10,273 | 9,663 | +10% → -0% |
 | FP127 | normCdf | 7,215 | 6,363 | 6,971 | 6,371 | +13% → -0% |
-| FP127 | lambertW0 | 11,714 | 9,998 | 10,550 | 9,940 | +18% → +1% |
+| FP127 | lambertW0 | 11,714 | 9,998 | 10,528 | 9,928 | +18% → +1% |
 | FP127 | lambertWm1 | 11,331 | 9,720 | 10,314 | 9,695 | +17% → +0% |
-| FP256 | add | 718 | 575 | 1,215 | 628 | +14% → -8% |
-| FP256 | mul | 567 | 434 | 1,131 | 544 | +4% → -20% |
-| FP256 | div | 849 | 691 | 1,407 | 819 | +4% → -16% |
-| FP256 | sqrt | 1,204 | 1,055 | 1,690 | 1,102 | +9% → -4% |
-| FP256 | exp | 7,090 | 5,410 | 6,027 | 5,439 | +30% → -1% |
-| FP256 | ln | 7,073 | 5,517 | 6,265 | 5,678 | +25% → -3% |
-| FP256 | pow | 14,047 | 10,956 | 11,749 | 11,162 | +26% → -2% |
-| FP256 | erf | 34,827 | 28,276 | 29,089 | 28,504 | +22% → -1% |
-| FP256 | normCdf | 18,014 | 15,095 | 15,725 | 15,139 | +19% → -0% |
-| FP256 | lambertW0 | 14,549 | 11,751 | 12,505 | 11,920 | +22% → -1% |
-| FP256 | lambertWm1 | 14,804 | 11,992 | 12,881 | 12,294 | +20% → -2% |
-| FP256 | exp2 | 6,928 | 5,309 | 5,986 | 5,399 | +28% → -2% |
-| FP256 | log2 | 6,842 | 5,398 | 6,195 | 5,608 | +22% → -4% |
-| FP256 | cbrt | 2,721 | 2,366 | 3,055 | 2,469 | +10% → -4% |
-| FP256 | cosh | 7,440 | 5,561 | 6,198 | 5,610 | +33% → -1% |
-| FP256 | tanh | 7,439 | 5,579 | 6,221 | 5,635 | +32% → -1% |
-| FP256 | hypot | 3,401 | 2,670 | 3,531 | 2,944 | +16% → -9% |
+| FP256 | add | 677 | 545 | 1,206 | 595 | +14% → -8% |
+| FP256 | mul | 526 | 440 | 1,100 | 531 | -1% → -17% |
+| FP256 | div | 808 | 686 | 1,354 | 785 | +3% → -13% |
+| FP256 | sqrt | 1,204 | 1,055 | 1,731 | 1,078 | +12% → -2% |
+| FP256 | exp | 7,090 | 5,410 | 5,994 | 5,425 | +31% → -0% |
+| FP256 | ln | 7,073 | 5,517 | 6,280 | 5,711 | +24% → -3% |
+| FP256 | pow | 14,047 | 10,956 | 11,702 | 11,217 | +25% → -2% |
+| FP256 | erf | 34,827 | 28,276 | 29,123 | 28,638 | +22% → -1% |
+| FP256 | normCdf | 18,014 | 15,095 | 15,759 | 15,232 | +18% → -1% |
+| FP256 | lambertW0 | 14,549 | 11,751 | 12,527 | 12,084 | +20% → -3% |
+| FP256 | lambertWm1 | 14,804 | 11,992 | 12,915 | 12,304 | +20% → -3% |
+| FP256 | exp2 | 6,928 | 5,309 | 5,952 | 5,467 | +27% → -3% |
+| FP256 | log2 | 6,842 | 5,398 | 6,176 | 5,649 | +21% → -4% |
+| FP256 | cbrt | 2,721 | 2,366 | 3,140 | 2,529 | +8% → -6% |
+| FP256 | cosh | 7,440 | 5,561 | 6,109 | 5,624 | +32% → -1% |
+| FP256 | tanh | 7,439 | 5,579 | 6,151 | 5,708 | +30% → -2% |
+| FP256 | hypot | 3,401 | 2,670 | 3,490 | 2,879 | +18% → -7% |

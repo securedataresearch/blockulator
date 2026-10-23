@@ -68,8 +68,6 @@ Bits are relative correct bits of the result on the decoded values: the signific
 | lerp | 1144 | 71 | exact | exact |  |
 | frac | 154 | 0 | exact | exact |  |
 | round | 154 | 0 | exact | exact |  |
-| gcd | 380 | 23 | exact | exact |  |
 | factorial | 39 | 39 | exact | exact |  |
-| pi | 19 | 7 | exact | exact |  |
 | gavg | 258 | 242 | exact | exact |  |
 | hypot | 475 | 32 | exact | exact |  |

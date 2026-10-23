@@ -6,7 +6,7 @@ make stem of gen.py's objects table), and the bytecode proofs built on it.
     uv run scripts/fp127/stdjson.py check             # compile it with solc, compare to the Foundry artifact
     uv run scripts/fp127/stdjson.py onchain <rpc> <address>   # compare the live runtime to the artifact
     FP_LIB=fp256 uv run scripts/fp127/stdjson.py artifact     # compile FP256.yul with solc and write out/FP256.yul/FP256.json
-    FP_LIB=fp256x uv run scripts/fp127/stdjson.py artifact    # the same for FP256X.yul (release four's second object)
+    FP_LIB=fp256e uv run scripts/fp127/stdjson.py artifact    # the same for FP256E.yul (any make stem of the objects table)
 
 The input uses language "Yul", solc 0.8.38, optimizer on, 200 runs,
 evmVersion osaka (the objects use CLZ), and solc 0.8.24's default Yul

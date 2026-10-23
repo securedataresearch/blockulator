@@ -28,14 +28,14 @@ contract Precision is FP127Harness {
     uint256 constant HALF = 1 << 63;
     uint256 constant COMPOSITE = type(uint256).max;   // bound marker: got must equal out
 
-    function _ops() internal pure returns (string[55] memory o) {
+    function _ops() internal pure returns (string[53] memory o) {
         o = [
             "add", "sub", "mul", "mulDown", "mulUp", "div", "divDown", "divUp",
             "fromFixed18", "toFixed18", "toFixed18Down", "toFixed18Up",
             "exp", "exp2", "exp10", "ln", "log2", "log10", "log2Up",
             "sqrt", "cbrt", "pow", "inv", "abs", "neg", "sign", "min", "max", "clamp", "avg",
-            "zeroFloorSub", "dist", "lerp", "floor", "ceil", "frac", "round", "gcd", "factorial",
-            "hypot", "gavg", "lambertW0", "lambertWm1", "pi",
+            "zeroFloorSub", "dist", "lerp", "floor", "ceil", "frac", "round", "factorial",
+            "hypot", "gavg", "lambertW0", "lambertWm1",
             "powu", "compound", "log1p", "expm1", "sinh", "cosh", "tanh", "atanh", "erf", "erfc", "normCdf"
         ];
     }
@@ -56,10 +56,6 @@ contract Precision is FP127Harness {
         // recorded, not bounded, since the floored product's 2^-128 is
         // amplified by 1 / (2 sqrt(a b)) when the product is small.
         if (_is(h, "hypot") || _is(h, "gavg")) return ("sqrt of floors", COMPOSITE);
-        // Ramanujan's partial sums in integers (truth: the exact partial sum);
-        // each term is floored and then scaled by 1103 + 26390 k, which with the
-        // floored sqrt(2) and the truncated reciprocal costs up to a few hundred ULPs
-        if (_is(h, "pi")) return ("series", 256 * ULP);
         if (_is(h, "exp") || _is(h, "exp2") || _is(h, "exp10") || _is(h, "ln") || _is(h, "log2") || _is(h, "log10")
             || _is(h, "cbrt") || _is(h, "pow") || _is(h, "lambertW0") || _is(h, "lambertWm1") || _is(h, "powu")
             || _is(h, "compound") || _is(h, "log1p") || _is(h, "expm1") || _is(h, "sinh") || _is(h, "cosh")
@@ -208,7 +204,7 @@ contract Precision is FP127Harness {
     }
 
     function test_precision_all() public virtual {
-        string[55] memory ops = _ops();
+        string[53] memory ops = _ops();
         string memory doc;
         for (uint256 i; i < ops.length; i++) {
             doc = _record(ops[i], _runOp(ops[i]));
