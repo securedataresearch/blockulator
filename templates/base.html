@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" href="/blockulator_favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-{%- if page %}{% set og_title = page.title %}{% set og_desc = page.description | default(value=config.description) %}{% elif section and section.path != "/" %}{% set og_title = section.title %}{% set og_desc = section.description | default(value=config.description) %}{% else %}{% set og_title = config.title %}{% set og_desc = config.description %}{% endif %}
+{%- if page %}{% set og_title = page.title %}{% set og_desc = page.description | default(value=config.description) %}{% elif section %}{% set og_title = section.title %}{% set og_desc = section.description | default(value=config.description) %}{% else %}{% set og_title = config.title %}{% set og_desc = config.description %}{% endif %}
 <link rel="canonical" href="{{ current_url | default(value=config.base_url) }}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Blockulator by Secure Data Research">

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}{{ section.title }}{% endblock title %}
 {% block bodyclass %}home{% endblock bodyclass %}
 {% block hero %}{% set x = section.extra %}
 <section class="hero">
@@ -23,12 +24,18 @@
 {%- set_global n_others = 0 %}{% for f in d.forms %}{% if f.id not in ["fp127", "fp127lib", "fp256"] %}{% set_global n_others = n_others + 1 %}{% endif %}{% endfor -%}
 {%- set yr = ref.cells -%}
 {%- set short = (ref.truth["10000"] | float) - (yr.aave["10000"].value | float) -%}
+<section class="block pitchblock">
+  <h2>{{ x.pitch_title }}</h2>
+  <p class="note">{{ x.pitch_note | safe }}</p>
+  <div class="doc wide">{{ <pitch /> }}</div>
+</section>
+
 <section class="block">
   <h2>{{ x.chart_title }}</h2>
 {#- whole digits, each capped at what its format holds (digitsCapped), so FP256 reads 71, never a lucky 72 -#}
 {%- set dg = {"aave365": yr.aave["365"].digitsCapped | float | round(method="floor") | int, "aave10000": yr.aave["10000"].digitsCapped | float | round(method="floor") | int, "fp12710000": yr.fp127["10000"].digitsCapped | float | round(method="floor") | int, "fp25610000": yr.fp256["10000"].digitsCapped | float | round(method="floor") | int, "quad10000": yr.quad["10000"].digitsCapped | float | round(method="floor") | int, "solady10000": yr.solady["10000"].digitsCapped | float | round(method="floor") | int} -%}
 {%- set p365i = yr.aave["365"].interestCapped | float | round(method="floor") | int -%}
-  <p class="note">{{ x.chart_note | replace(from="{proto365}", to=dg.aave365 ~ "") | replace(from="{proto365i}", to=p365i ~ "") | replace(from="{proto10k}", to=dg.aave10000 ~ "") | replace(from="{short}", to=short | round | num_format) | replace(from="{fp127}", to=dg.fp12710000 ~ "") | replace(from="{fp256}", to=dg.fp25610000 ~ "") }}</p>
+  <p class="note">{{ x.chart_note | replace(from="{proto365}", to=dg.aave365 ~ "") | replace(from="{proto365i}", to=p365i ~ "") | replace(from="{proto10k}", to=dg.aave10000 ~ "") | replace(from="{short}", to=short | round | num_format) | replace(from="{fp127}", to=dg.fp12710000 ~ "") | replace(from="{fp256}", to=dg.fp25610000 ~ "") | safe }}</p>
   <figure class="figure chart digitchart" role="img" aria-label="Correct digits of one accrual after 1 to 10,000 days without an update. After 10,000 days: FP256 {{ dg.fp25610000 }}, FP127 {{ dg.fp12710000 }}, binary128 {{ dg.quad10000 }}, the WAD libraries and 64.64 {{ dg.solady10000 }}, Aave and Morpho {{ dg.aave10000 }}.">
     <div class="wide">{{ <ladderchart cells={yr} ladder={d.ladder} log10={d.ladderLog10} W={720} H={340} /> }}</div>
     <div class="narrow">{{ <ladderchart cells={yr} ladder={d.ladder} log10={d.ladderLog10} W={360} H={300} /> }}</div>
@@ -42,7 +49,7 @@
     <div class="card step">
       <span class="label">{{ s.label }}</span>
       <h3>{% if s.href %}<a href="{{ s.href }}">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}</h3>
-      <p>{{ s.text | replace(from="{scenarios}", to=d.scenarios | length ~ "") | replace(from="{inputs}", to=n_inputs ~ "") | replace(from="{others}", to=n_others ~ "") }}</p>
+      <p>{{ s.text | replace(from="{scenarios}", to=d.scenarios | length ~ "") | replace(from="{inputs}", to=n_inputs ~ "") | replace(from="{others}", to=n_others ~ "") | safe }}</p>
     </div>
     {% endfor %}
   </div>
@@ -60,8 +67,8 @@
     {%- for s in x.limits %}
     <div class="card step">
       <span class="label">{{ s.label }}</span>
-      <h3>{{ s.title | replace(from="{gas}", to=gasr) }}</h3>
-      <p>{{ s.text }}</p>
+      <h3>{{ s.title | replace(from="{gas}", to=gasr) | safe }}</h3>
+      <p>{{ s.text | safe }}</p>
     </div>
     {%- endfor %}
   </div>

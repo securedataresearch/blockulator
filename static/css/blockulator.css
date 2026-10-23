@@ -22,7 +22,8 @@
 .btn.solid:hover { background: var(--ink-3); transform: translateY(-1px); }
 @media (max-width: 640px) { .kv { grid-template-columns: 1fr; gap: 2px 0; } .kv dd { margin-bottom: 10px; } }
 .optable td { font-size: 14px; }
-.optable .sel, .small { font-size: 11.5px; color: var(--g-500); }
+.optable th { white-space: nowrap; }
+.optable .sel, .small { font-size: 11.5px; color: var(--g-700); }
 .optable a { text-decoration: none; }
 .optable a:hover { text-decoration: underline; }
 .optable tr:target td { background: var(--g-50); }
@@ -51,7 +52,7 @@
 .ladder td.val { font-family: var(--mono); font-size: 12.5px; line-height: 1.5; white-space: nowrap; }
 .ladder .ok { color: var(--emerald); } .ladder .wrong { color: var(--red); } .ladder .truth { color: var(--ink); }
 .ladder .rev { color: var(--red); font-weight: 600; }
-.ladder .meta { font-family: var(--sans); font-size: 11.5px; color: var(--g-500); }
+.ladder .meta { font-family: var(--sans); font-size: 11.5px; color: var(--g-700); }
 .verify { margin-top: 4px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--g-200); background: var(--white); border-radius: 999px; padding: 3px 9px; cursor: pointer; }
 .verify:hover:not(:disabled) { border-color: var(--ink); }
 .verify:disabled { color: var(--g-300); cursor: default; }
@@ -76,7 +77,7 @@
 .toggle label { cursor: pointer; }
 .chart .band { opacity: .14; stroke: none; }
 .ladder { min-width: 2800px; }
-.summary { font-size: 14px; } .summary .meta { color: var(--g-500); font-size: 12px; }
+.summary { font-size: 14px; } .summary .meta { color: var(--g-700); font-size: 12px; }
 .inputs { margin: 1em 0 1.4em; } .inputs summary { cursor: pointer; font-weight: 600; }
 .inputlist td { font-size: 13.5px; }
 
@@ -119,6 +120,12 @@ canvas.cloth.on { opacity: 1; }
 .digitchart .wband { opacity: .3; }
 .digitchart .hi { stroke-width: 1; } .digitchart .lo { stroke-width: 2.5; }
 .digitchart .s-abdk polyline { stroke-dasharray: 5 3; }
+/* the punchline: the protocols' own accrual drawn at full strength in a warning hue; the WAD band stays muted */
+:root { --c-warn: color-mix(in oklab, var(--red) 70%, var(--gold)); }
+.digitchart .s-aave { --c: var(--c-warn); }
+.digitchart .s-aave.band { opacity: 1; }
+.digitchart .s-aave .wband { opacity: .12; }
+.digitchart .s-aave .hi, .digitchart .s-aave .lo { stroke-width: 2.5; }
 .digitchart circle { stroke: none; } .digitchart circle.yr { stroke: var(--white); stroke-width: 1.5; }
 .digitchart .lbl { fill: var(--c); font-size: 13px; font-weight: 600; }
 .digitchart .s-solady .lbl { fill: color-mix(in oklab, var(--c) 70%, var(--ink)); }
@@ -144,7 +151,7 @@ canvas.cloth.on { opacity: 1; }
 .matrix a { text-decoration: none; }
 .matrix a:hover { text-decoration: underline; }
 .matrix .rev { color: var(--red); font-size: 12px; }
-.matrix .meta { color: var(--g-300); }
+.matrix .meta { color: var(--g-700); }
 .stamp { font-size: 14px; background: var(--white); border-left: 3px solid var(--emerald); border-radius: 8px; box-shadow: var(--shadow); padding: 10px 14px; margin: 1em 0 1.4em; }
 .stamp.pending { border-left-color: var(--gold); }
 .stamp.bad { border-left-color: var(--red); }
@@ -164,6 +171,8 @@ html { scrollbar-gutter: stable; }
 
 /* tabular numerals: every figure on the site takes the same width, so columns of digits line up; headlines keep proportional figures */
 body, table, .mono, code, pre, kbd, .chart svg text, .kv dd, .stamp { font-variant-numeric: tabular-nums; }
+/* no programming ligatures: fp127/= must read as typed, not as ≠ */
+code, pre, kbd, .mono { font-variant-ligatures: none; }
 h1, .hero .sub, .block h2, .askcard h2, .doc h2, .step h3 { font-variant-numeric: proportional-nums; }
 
 /* vernier dividers: a 1px rule with a fine tick every 8px and a long one every 80px. Static, so nothing to reduce under prefers-reduced-motion; the ticks repeat, so any width works */
@@ -184,7 +193,7 @@ h1, .hero .sub, .block h2, .askcard h2, .doc h2, .step h3 { font-variant-numeric
 .ws-bar .radix { stroke: var(--red); stroke-width: 3; }
 .ws-bar .n { position: absolute; top: 0; height: 100%; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11.5px; color: var(--ink); pointer-events: none; white-space: nowrap; }
 .ws-bar .n.pr { color: var(--white); } .s-wad .ws-bar .n.pr { color: var(--ink); } .ws-bar .n.un { color: var(--g-500); }
-.ws-key { grid-column: 2; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--g-500); }
+.ws-key { grid-column: 2; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--g-700); }
 @media (max-width: 560px) { .ws-row { grid-template-columns: 1fr; } .ws-key { grid-column: 1; } }
 .step h3 a { color: inherit; text-decoration-color: var(--g-300); text-underline-offset: 3px; }
 .step h3 a:hover { text-decoration-color: var(--ink); }
@@ -199,3 +208,24 @@ h1, .hero .sub, .block h2, .askcard h2, .doc h2, .step h3 { font-variant-numeric
 
 /* phone: a Markdown table wider than the column scrolls inside itself, and long inline code or a long number wraps, so no page scrolls sideways */
 @media (max-width: 640px) { .doc > table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; } .doc :not(pre) > code { overflow-wrap: anywhere; } .doc p, .doc li { overflow-wrap: break-word; } }
+
+/* the pitch table (components.html pitch): ours in weight, the typical-input mark small */
+.pitch tr.ours td, .pitch td.ours, .pitch th.ours { font-weight: 600; color: var(--ink); }
+.pitch tr.ours td, .pitch td.ours { background: var(--g-50); }
+.pitch td { white-space: nowrap; }
+@media (max-width: 640px) { .pitch .what { display: none; } .pitch th, .pitch td { padding-inline: 8px; } }
+sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: var(--g-700); }
+.pitchblock .doc { padding-block: 0; }
+.pitchblock .doc table { margin-top: 0; }
+.pitchblock .doc .note { margin: 12px 0 0; font-size: 14.5px; max-width: none; }
+/* op tables: the method folds away under a one-line summary */
+.optable details.what summary { cursor: pointer; }
+.optable details.what[open] summary { margin-bottom: 4px; }
+/* edges: digits only, the detail in each cell's title; the last row is the fewest digits per library */
+.edges td.val { font-size: 14px; white-space: nowrap; }
+.edges td.truth { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.edges .ok { color: var(--emerald); }
+.edges .rev { color: var(--red); font-weight: 600; font-size: 12.5px; }
+.edges .meta { font-family: var(--sans); font-size: 12px; color: var(--g-700); }
+.edges tfoot td { font-weight: 600; color: var(--ink); background: var(--g-50); border-top: 2px solid var(--g-200); white-space: nowrap; }
+.edges th, .edges td { padding-inline: 8px; }

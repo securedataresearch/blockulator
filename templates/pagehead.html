@@ -1,7 +1,7 @@
 {#- Title, one line under it, and the sub-nav of the page's group. No canvas: inner pages are static. -#}
 {%- set groups = {
   "results": [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/ops/", "Per op"]],
-  "library": [["/library/", "FP127"], ["/library/fp256/", "FP256"]]
+  "library": [["/library/", "FP127"], ["/library/fp256/", "FP256"], ["/library/integrating/", "Integrating"]]
 } -%}
 <header class="pagehead">
   {%- set g = page.extra.group | default(value="") %}
