@@ -88,6 +88,27 @@ jobs:
             docs/benchmarks/ladder.json
             docs/benchmarks/ladder.md
 
+  proofs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Halmos 0.3.3
+        run: |
+          uv tool install halmos==0.3.3
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Formal proofs, the CI subset (docs/proofs.md; PROOFS_FULL=1 locally for all)
+        run: JOBS=2 SOLVER_THREADS=2 make proofs
+
   site:
     runs-on: ubuntu-latest
     steps:

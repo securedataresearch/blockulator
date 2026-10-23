@@ -77,3 +77,13 @@ out = "out-viair"
 cache_path = "cache-viair"
 via_ir = true
 skip = ["test/profile/gen/**"]
+
+# make proofs: the Halmos symbolic proofs in test/proofs, alone, in their own
+# out/cache (halmos builds with forge and reads the artifacts)
+[profile.proofs]
+src = "test/proofs"
+test = "test/proofs"
+script = "test/proofs"
+out = "out-proofs"
+cache_path = "cache-proofs"
+skip = []

@@ -34,3 +34,7 @@ test/sweep/probe/
 test/profile/gen/
 out-viair/
 cache-viair/
+out-proofs/
+cache-proofs/
+out-proofs-fuzz/
+cache-proofs-fuzz/

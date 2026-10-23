@@ -1,4 +1,4 @@
-.PHONY: gates build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 
@@ -13,6 +13,7 @@ SEPOLIA_RPC ?= https://ethereum-sepolia-rpc.publicnode.com
 
 help:
 	@echo "  make gates            - Run every merge gate and print one line each (OPS=a,b sweeps only those ops; QUICK=1 skips the sweep); logs in cache/gates/"
+	@echo "  make proofs           - Halmos proofs of the core arithmetic and directed rounding, lemmas, fuzz (CI subset; PROOFS_FULL=1 runs all and rewrites docs/benchmarks/proofs.json); docs/proofs.md"
 	@echo "Blockulator / FP127"
 	@echo ""
 	@echo "  make gen              - generate FP127.yul, FP127Lib.sol, IFP127.sol, abi.json, ops.json from FP127.yul.src"
@@ -186,6 +187,12 @@ replay-balancer-v1-fetch:
 
 gates:
 	@$(PY) scripts/gates.py $(if $(OPS),--ops $(OPS)) $(if $(QUICK),--quick) $(if $(ONLY),--only $(ONLY))
+
+# The formal proofs (docs/proofs.md): needs halmos 0.3.3 (uv tool install
+# halmos==0.3.3), which downloads bitwuzla on first use. PROOFS_FULL=1 runs
+# every check and records the result; ONLY=<regex> runs the matching checks.
+proofs:
+	@HALMOS_ALLOW_DOWNLOAD=1 python3 test/proofs/run.py $(if $(ONLY),--only $(ONLY))
 
 sweep: build
 	@$(PY) scripts/sweep/sweep.py $(if $(OPS),--ops $(OPS))
