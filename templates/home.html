@@ -13,7 +13,7 @@
       <a class="btn ghost" href="{{ x.cta_secondary_href }}">{{ x.cta_secondary_text }}</a>
     </p>
   </div>
-  <svg class="curve" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0,60 C360,100 1080,0 1440,50 L1440,90 L0,90 Z" fill="currentColor"/></svg>
+  
 </section>
 {% endblock hero %}
 {% block content %}{% set x = section.extra %}
@@ -27,6 +27,10 @@
 <section class="block pitchblock">
   <h2>{{ x.pitch_title }}</h2>
   <p class="note">{{ x.pitch_note | safe }}</p>
+  <figure class="figure chart duo gd" role="img" aria-label="Correct digits against mean gas per inline call for FP256, FP127, ABDKMathQuad, PRBMath and Solady; the figures are in the table below.">
+    <div class="wide">{{ <gasdigits W={760} H={330} /> }}</div>
+    <div class="narrow">{{ <gasdigits W={360} H={320} /> }}</div>
+  </figure>
   <div class="doc wide">{{ <pitch /> }}</div>
 </section>
 
@@ -41,6 +45,20 @@
     <div class="narrow">{{ <ladderchart cells={yr} ladder={d.ladder} log10={d.ladderLog10} W={360} H={300} /> }}</div>
   </figure>
   <p class="small">Reference input of the <a href="/results/ladder/#accrual-continuous">continuous-accrual scenario</a>, digits against exact arithmetic. Aave and Morpho: their deployed three-term expansion of e<sup>x</sup>. WAD libraries: Solady, PRBMath, Balancer. Full data: <a href="/data/ladder.json">ladder.json</a>.</p>
+</section>
+
+{%- set w = load_data(path="static/data/wad.json") -%}
+{%- set_global wn = 0 %}{% set_global wf = 0 %}{% set_global wlo = 100 %}{% set_global whi = 0 %}{% set_global wlbl = "" -%}
+{%- for r in w.rows %}{% if r.lib == "blockulator" %}{% set_global wn = wn + r.n %}{% set_global wf = wf + 1 %}{% endif -%}
+{%- if r.lib != "blockulator" and r.function in x.wad_functions %}{% if r.wrongWeiPct < wlo %}{% set_global wlo = r.wrongWeiPct %}{% endif %}{% if r.wrongWeiPct > whi %}{% set_global whi = r.wrongWeiPct %}{% endif %}{% set_global wlbl = wlbl ~ w.libraries[r.lib] ~ " " ~ r.function ~ " " ~ (r.wrongWeiPct | round | int) ~ "% wrong; " %}{% endif %}{% endfor -%}
+<section class="block">
+  <h2>{{ x.wad_title }}</h2>
+  <p class="note">{{ x.wad_note | replace(from="{lo}", to=wlo | round | int ~ "") | replace(from="{hi}", to=whi | round | int ~ "") | replace(from="{n}", to=wn | num_format) | replace(from="{fns}", to=wf ~ "") | safe }}</p>
+  <figure class="figure chart duo wb" role="img" aria-label="Share of results off by at least one wei. BlockulatorWad: 0 on every function. {{ wlbl }}">
+    <div class="wide">{{ <wadbars W={680} fns={x.wad_functions | join(sep=",")} /> }}</div>
+    <div class="narrow">{{ <wadbars W={360} fns={x.wad_functions | join(sep=",")} /> }}</div>
+  </figure>
+  <p class="small">{{ x.wad_source | safe }} Full table: <a href="{{ config.extra.repo }}/blob/master/docs/benchmarks/wad.md">wad.md</a>, data: <a href="/data/wad.json">wad.json</a>.</p>
 </section>
 
 <section class="block">
@@ -65,5 +83,4 @@
   </div>
 </section>
 {% endblock content %}
-{% block scripts %}<script src="/js/hero.js" defer></script>
-<script>document.addEventListener('DOMContentLoaded',function(){requestAnimationFrame(function(){requestAnimationFrame(function(){document.querySelectorAll('canvas.cloth').forEach(function(c){c.classList.add('on');});});});});</script>{% endblock scripts %}
+{% block scripts %}<script src="/js/hero.js" defer></script>{% endblock scripts %}

@@ -22,6 +22,10 @@ ask_secondary_text = "Read the write-up"
 ask_secondary_href = "/writeup/"
 pitch_title = "Twice the digits, at the same gas"
 pitch_note = "One <code>int256</code> per number, every op tested against exact arithmetic. FP256 carries twice binary128's digits, FP127 twice PRBMath's, and the gas sits next to them."
+wad_title = "Correct to the last wei"
+wad_functions = ["expWad", "lnWad", "powWad"]
+wad_note = "The WAD libraries round exp, ln and pow wrong on {lo}–{hi}% of inputs, by at least one wei. BlockulatorWad keeps Solady's names and is wrong on none: 0 of {n} results across {fns} functions and rounding directions."
+wad_source = "Seeded inputs over each function's domain, including those whose exact value sits next to a wei boundary; each library scored against the exact value in its own rounding direction."
 
 [[extra.steps]]
 label = "the word"
