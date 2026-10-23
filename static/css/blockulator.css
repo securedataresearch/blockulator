@@ -123,6 +123,15 @@ canvas.cloth.on { opacity: 1; }
 .digitchart .lbl { fill: var(--c); font-size: 13px; font-weight: 600; }
 .digitchart .s-solady .lbl { fill: color-mix(in oklab, var(--c) 70%, var(--ink)); }
 .digitchart .narrow .tick { font-size: 11px; } .digitchart .narrow .lbl { font-size: 11.5px; }
+/* the ladder page's band chart, drawn wide and narrow like the home chart */
+.bandchart svg { display: block; max-width: 640px; }
+.bandchart .narrow { display: none; }
+@media (max-width: 560px) { .bandchart .wide { display: none; } .bandchart .narrow { display: block; } }
+.bandchart .wadband { opacity: .22; stroke: none; }
+.bandchart .narrow .tick { font-size: 11px; } .bandchart .narrow .lbl { font-size: 11.5px; }
+/* an exact result is a ring, not a number */
+.chart circle.exact { fill: var(--white); stroke: var(--c, var(--ink)); stroke-width: 2; }
+.digitchart circle.exact { stroke: var(--c); stroke-width: 2; }
 .block .note { margin: -16px 0 22px; }
 .block h2 { text-shadow: none; }
 .home .ask { padding-block: clamp(48px, 7vw, 80px); }

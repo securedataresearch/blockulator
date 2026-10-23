@@ -591,7 +591,7 @@
    "title": "Amortising loan",
    "step": "b = b * (1 + r) - payment",
    "result": "outstanding balance after N daily payments",
-   "why": "Subtracting nearly equal numbers. The payment retires the loan at step 366, so at N = 365 the balance is one payment and relative error is amplified several hundred times.",
+   "why": "Subtracting nearly equal numbers. Every loan's term is past the ladder's end, so the balance stays positive on every cell; the term-10,001 loans retire one step past N = 10,000, where the balance is one payment and relative error is amplified thousands of times.",
    "order": [
     "principal",
     "rate",
@@ -604,16 +604,16 @@
      "params": {
       "principal": "300000",
       "rate": "0.05/365",
-      "term": "366"
+      "term": "10001"
      },
-     "why": "a mortgage-sized loan retiring at step 366"
+     "why": "a mortgage-sized loan retiring one step past the ladder's end, so N = 10,000 is the one-payment cell"
     },
     {
      "name": "small",
      "params": {
       "principal": "10000",
       "rate": "0.05/365",
-      "term": "366"
+      "term": "10001"
      },
      "why": "a small loan"
     },
@@ -622,25 +622,25 @@
      "params": {
       "principal": "300000",
       "rate": "0.1/365",
-      "term": "366"
+      "term": "10001"
      },
      "why": "double the rate"
     },
     {
-     "name": "ten-year",
+     "name": "thirty-year",
      "params": {
       "principal": "300000",
       "rate": "0.05/365",
-      "term": "3650"
+      "term": "10950"
      },
-     "why": "a ten-year term: at N = 365 nine tenths remain"
+     "why": "a thirty-year mortgage paid daily: at N = 10,000, 950 payments remain"
     },
     {
      "name": "large-low",
      "params": {
       "principal": "1000000",
       "rate": "0.03/365",
-      "term": "366"
+      "term": "10001"
      },
      "why": "a large loan at a low rate"
     },
@@ -649,27 +649,27 @@
      "params": {
       "principal": "300000",
       "rate": "0.2/365",
-      "term": "366"
+      "term": "10001"
      },
-     "why": "20% APR"
+     "why": "20% APR: the payment is barely above the interest"
     },
     {
      "name": "micro",
      "params": {
       "principal": "500",
       "rate": "0.05/365",
-      "term": "366"
+      "term": "10001"
      },
-     "why": "a tiny loan: the payment is a few units"
+     "why": "a tiny loan: the payment is nine hundredths of a unit"
     },
     {
-     "name": "retires-at-10001",
+     "name": "century",
      "params": {
       "principal": "300000",
       "rate": "0.05/365",
-      "term": "10001"
+      "term": "36500"
      },
-     "why": "retires one step past the ladder's end, so N = 10,000 is the one-payment cell"
+     "why": "a hundred-year term: at N = 10,000 most of the balance remains"
     }
    ],
    "derived": {
@@ -1068,10 +1068,10 @@
    "id": "compound-annual",
    "index": 8,
    "demo": false,
-   "title": "Annual compounding at 10% (README claim check)",
+   "title": "Annual compounding at 10% for 10,000 years",
    "step": "b = b * 1.1",
    "result": "balance after N years",
-   "why": "The old README asserted $25,937.42 true against $25,932.38 for Solady at N = 10 with no source. This row regenerates that number.",
+   "why": "Ten thousand years of annual compounding grows $10,000 to about 10^418, past every fixed-point word: at 10% 64.64 overflows by N = 365, Solady, Balancer, Maker and FP127 by N = 1,000 and PRBMath by N = 10,000 (at 50%, 64.64 by N = 100 and the rest by N = 365); only binary128 and FP256 reach N = 10,000. Until about N = 20 the balances are short decimals that WAD and RAY hold exactly. The row began as a check of an old README claim ($25,937.42 true against $25,932.38 for Solady at N = 10); Solady returns $25,937.424601 exactly.",
    "order": [
     "principal",
     "rate"
@@ -1116,7 +1116,7 @@
       "principal": "10000",
       "rate": "0.5"
      },
-     "why": "50% a year: every library overflows before N = 100"
+     "why": "50% a year: 64.64 overflows by N = 100; the WAD libraries, Maker and FP127 by N = 365; binary128 and FP256 reach 10,000"
     }
    ],
    "ops": {
@@ -1163,7 +1163,7 @@
    "title": "Per-second accrual",
    "step": "b = b0 * (1 + r/31536000)^(N * 86400)",
    "result": "balance after N days of per-second compounding",
-   "why": "How Maker's jug and pot accrue: the rate per second, compounded every second, N days at a time. The rate is 1.6e-9 at 5% APR, which an 18-decimal grid holds to ten digits before any arithmetic; FP127 computes the power as one exact integer power (compound), the WAD and 64.64 libraries as exp(n ln(1 + r)), Maker as rpow.",
+   "why": "How Maker's jug and pot accrue: the rate per second, compounded every second, N days at a time. The rate is 1.6e-9 at 5% APR, which an 18-decimal grid holds to ten digits before any arithmetic; FP127 and FP256 compute the power with compound, which never forms a rounded 1 + r; the WAD and 64.64 libraries as exp(n ln(1 + r)), Maker as rpow.",
    "order": [
     "principal",
     "rateSec"
@@ -1210,7 +1210,7 @@
      "rmul"
     ],
     "fp256": [
-     "pow",
+     "compound",
      "mul"
     ]
    },
@@ -1394,7 +1394,7 @@
    "title": "An option walking out of the money",
    "step": "S = S (1 - tick); then C = S N(d1) - K e^(-rT) N(d2)",
    "result": "the Black-Scholes call price after N down-ticks of the spot",
-   "why": "Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. FP127 has normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives.",
+   "why": "Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. FP127 and FP256 have normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives. Relative digits there say little about money: at N = 10,000 the true price of five of the six inputs is below 10^-15 wei of a $100 strike at 18 decimals, so every library is off by less than a wei; the slow walk's is 3.2 million wei ($3 × 10^-12), where the WAD libraries are off by about 94 wei. Up to N = 1,000 they are off by tens to ten thousand wei, FP127 by under 10^-16 (absErrWei in the data).",
    "order": [
     "spot",
     "strike",
@@ -1485,7 +1485,7 @@
      "add",
      "exp",
      "sub",
-     "normCdf by the series/fraction through these"
+     "normCdf"
     ]
    },
    "inputs": [
@@ -1571,7 +1571,7 @@
    "title": "Decay, the share released",
    "step": "D = D e^(-eps); result 1 - D",
    "result": "the share released after N steps of decay",
-   "why": "Vesting, TWAP weights and exponential moving averages multiply by e^(-dt/tau) every step. The factor is a hair below one, and on an 18-decimal grid e^(-eps) rounds to a grid point whose distance from one is wrong by up to 1e-18 relative, every step: at eps = 1e-12 that is six digits of the released share, at 1e-15 three, at 1e-18 nothing is released at all.",
+   "why": "Vesting, TWAP weights and exponential moving averages multiply by e^(-dt/tau) every step. The factor is a hair below one, and on an 18-decimal grid eps and e^(-eps) both sit on a grid of spacing 1e-18, so the factor's distance from one keeps about 18 + log10(eps) digits, and the released share with it: six digits at eps = 1.06e-12, three at 1.06e-15, one at 1.06e-17, and below 1e-18 nothing is released at all. Each eps is dt/tau for a time constant in seconds, which no grid holds exactly; a power of ten sits on the WAD grid and flatters it (at eps = 1e-17 exactly, Solady kept 17 digits).",
    "order": [
     "eps"
    ],
@@ -1628,37 +1628,37 @@
      "name": "reference",
      "reference": true,
      "params": {
-      "eps": "0.000001"
+      "eps": "1/1036800"
      },
-     "why": "one millionth a step: a one-second step against a twelve-day time constant"
+     "why": "a one-second step against a twelve-day time constant: eps = 9.6e-7"
     },
     {
      "name": "nano",
      "params": {
-      "eps": "0.000000001"
+      "eps": "1/946080000"
      },
-     "why": "1e-9 a step: a one-second step against a thirty-year time constant"
+     "why": "a one-second step against a thirty-year time constant: eps = 1.06e-9"
     },
     {
      "name": "pico",
      "params": {
-      "eps": "0.000000000001"
+      "eps": "1/946080000000"
      },
-     "why": "1e-12 a step: the factor is within WAD's last six digits of one"
+     "why": "the thirty-year constant stepped every millisecond: eps = 1.06e-12"
     },
     {
      "name": "femto",
      "params": {
-      "eps": "0.000000000000001"
+      "eps": "1/946080000000000"
      },
-     "why": "1e-15 a step: three digits of the factor's distance from one survive on WAD"
+     "why": "stepped every microsecond: eps = 1.06e-15"
     },
     {
      "name": "atto",
      "params": {
-      "eps": "0.00000000000000001"
+      "eps": "1/94608000000000000"
      },
-     "why": "1e-17 a step: below WAD's grid, e^(-eps) is one and nothing decays"
+     "why": "stepped every ten nanoseconds: eps = 1.06e-17, ten and a half wei"
     }
    ]
   }
