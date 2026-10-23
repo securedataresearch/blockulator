@@ -124,3 +124,57 @@ The first 4,000 inputs of each op again, through a test-only copy of FP256Lib wh
 | toFixed18Up | 4,000 | 1,988 | 4,000 | 1 | 0.504 | 128.5 | 0 / 3,706 | 190 / 190 / 190 | — |
 | lambertW0 | 1,500 | 1,500 | 1,500 | 0.5 | 0.224 | 129.1 | 662 / 741 | 11,308 / 13,676 / 13,968 | — |
 | lambertWm1 | 1,500 | 1,500 | 1,500 | 0.5 | 0.242 | 129.1 | 747 / 753 | 11,101 / 12,586 / 13,198 | — |
+
+## BlockulatorWad
+
+Every function and direction on `scripts/sweep/wad.py`'s inputs, against the exact value rounded in the stated direction (integers for mul, div, sqrt and cbrt; mpmath at 300 digits for the rest). *Wrong* is any result off by a wei, a revert where the value fits or a value where it does not. *Fallback* is the share of inputs whose fast path could not decide the last wei and ran the second stage. Competitors on the same inputs: `wad.md`.
+
+| function | direction | inputs | wrong | reverts (both) | gas median / p99 / max | fallback |
+|---|---|---:|---:|---:|---:|---:|
+| mulWad | floor | 4,000 | 0 | 280 | 107 / 274 / 274 | — |
+| mulWadUp | ceiling | 4,000 | 0 | 280 | 128 / 330 / 330 | — |
+| divWad | floor | 4,000 | 0 | 34 | 103 / 492 / 492 | — |
+| divWadUp | ceiling | 4,000 | 0 | 34 | 128 / 546 / 546 | — |
+| sMulWad | toward zero | 4,000 | 0 | 285 | 142 / 491 / 491 | — |
+| sMulWadDown | floor | 4,000 | 0 | 285 | 170 / 542 / 542 | — |
+| sMulWadUp | ceiling | 4,000 | 0 | 285 | 162 / 537 / 537 | — |
+| sDivWad | toward zero | 4,000 | 0 | 63 | 133 / 1,110 / 1,110 | — |
+| sDivWadDown | floor | 4,000 | 0 | 63 | 168 / 1,144 / 1,144 | — |
+| sDivWadUp | ceiling | 4,000 | 0 | 63 | 170 / 1,147 / 1,147 | — |
+| sqrtWad | floor | 4,000 | 0 | 0 | 388 / 1,899 / 1,915 | — |
+| sqrtWadUp | ceiling | 4,000 | 0 | 0 | 408 / 2,051 / 2,067 | — |
+| cbrtWad | floor | 4,000 | 0 | 0 | 761 / 1,924 / 1,924 | — |
+| cbrtWadUp | ceiling | 4,000 | 0 | 0 | 778 / 2,487 / 2,487 | — |
+| expWad | floor | 4,000 | 0 | 5 | 2,351 / 2,451 / 26,157 | 0.88% |
+| expWadUp | ceiling | 4,000 | 0 | 5 | 2,352 / 2,452 / 26,158 | 0.88% |
+| lnWad | floor | 4,000 | 0 | 2 | 2,438 / 2,462 / 28,008 | 0.05% |
+| lnWadUp | ceiling | 4,000 | 0 | 2 | 2,439 / 2,463 / 28,009 | 0.05% |
+| log2Wad | floor | 4,000 | 0 | 2 | 2,194 / 2,303 / 2,348 | 6.35% |
+| log2WadUp | ceiling | 4,000 | 0 | 2 | 2,195 / 2,304 / 2,340 | 6.35% |
+| log10Wad | floor | 4,000 | 0 | 2 | 2,402 / 2,576 / 2,610 | 6.60% |
+| log10WadUp | ceiling | 4,000 | 0 | 2 | 2,403 / 2,577 / 2,611 | 6.60% |
+| powWad | floor | 4,000 | 0 | 539 | 4,750 / 53,846 / 54,194 | 9.03% |
+| powWadUp | ceiling | 4,000 | 0 | 539 | 4,751 / 53,847 / 54,195 | 9.03% |
+| lambertW0Wad | toward zero | 4,000 | 0 | 1 | 12,120 / 34,386 / 43,034 | 0 |
+| lambertW0WadDown | floor | 4,000 | 0 | 1 | 12,119 / 34,385 / 43,033 | 0 |
+| lambertW0WadUp | ceiling | 4,000 | 0 | 1 | 12,120 / 34,386 / 43,034 | 0 |
+
+### The second stage alone
+
+The first 4,000 inputs of each function with a second stage again, through a test-only copy of BlockulatorWad whose fast-path test always fails, so every result comes from the second stage at 2^-510 on the exact input.
+
+| function | direction | inputs | wrong | gas median / p99 / max |
+|---|---|---:|---:|---:|
+| expWad | floor | 4,000 | 0 | 26,096 / 26,363 / 26,383 |
+| expWadUp | ceiling | 4,000 | 0 | 26,097 / 26,364 / 26,384 |
+| lnWad | floor | 4,000 | 0 | 27,958 / 28,031 / 28,051 |
+| lnWadUp | ceiling | 4,000 | 0 | 27,959 / 28,032 / 28,052 |
+| log2Wad | floor | 4,000 | 0 | 28,266 / 28,359 / 28,359 |
+| log2WadUp | ceiling | 4,000 | 0 | 28,267 / 28,360 / 28,360 |
+| log10Wad | floor | 4,000 | 0 | 28,527 / 28,601 / 28,621 |
+| log10WadUp | ceiling | 4,000 | 0 | 28,528 / 28,602 / 28,622 |
+| powWad | floor | 4,000 | 0 | 53,558 / 53,828 / 54,109 |
+| powWadUp | ceiling | 4,000 | 0 | 53,559 / 53,829 / 54,110 |
+| lambertW0Wad | toward zero | 4,000 | 0 | 65,659 / 88,495 / 96,656 |
+| lambertW0WadDown | floor | 4,000 | 0 | 65,658 / 88,494 / 96,655 |
+| lambertW0WadUp | ceiling | 4,000 | 0 | 65,659 / 88,495 / 96,656 |

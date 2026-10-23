@@ -496,7 +496,7 @@ def score():
         if r["lib"] == "fp256" and "stage" not in r:
             md.append(f"| {r['op']} | {r['n']:,} | {r['correctlyRounded']:,} | {r['misrounded']:,} | {r['maxUlp']} | "
                       f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} | {pct(r)} |")
-    if any(r.get("stage") for r in rows):
+    if any(r.get("stage") and r["lib"] == "fp256" for r in rows):
         md += ["",
                "### The second stage alone",
                "",
@@ -508,7 +508,7 @@ def score():
                "| op | inputs | correctly rounded | misrounded | max ULP | gas median / p99 / max |",
                "|---|---:|---:|---:|---:|---:|"]
         for r in rows:
-            if r.get("stage"):
+            if r.get("stage") and r["lib"] == "fp256":
                 md.append(f"| {r['op']} | {r['n']:,} | {r['correctlyRounded']:,} | {r['misrounded']:,} | {r['maxUlp']} | "
                           f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} |")
     md += ["",
@@ -672,9 +672,12 @@ contract Sweep%(Tag)s is Test {
 
 
 def sweep_dispatch() -> list[tuple[str, str]]:
-    """(name, expression) of every op in Sweep.t.sol's f, in order."""
-    src = (ROOT / "test" / "sweep" / "Sweep.t.sol").read_text()
-    return re.findall(r'if \(op == "(\w+)"\) \{ g0 = gasleft\(\); r = (.*?); g = gasleft\(\); \}', src)
+    """(name, expression) of every op in Sweep.t.sol's f, in order, then
+    SweepWad.t.sol's (BlockulatorWad's, in its own contract)."""
+    src = (ROOT / "test" / "sweep" / "Sweep.t.sol").read_text() + (ROOT / "test" / "sweep" / "SweepWad.t.sol").read_text()
+    found = re.findall(r'if \(op == "(\w+)"\) \{ g0 = gasleft\(\); r = (.*?); g = gasleft\(\); \}', src)
+    seen: set[str] = set()
+    return [(n, e) for n, e in found if not (n in seen or seen.add(n))]   # noop once
 
 
 def rec_words(kind: str) -> int:
@@ -801,7 +804,7 @@ def main():
             sys.exit(f"--ops: not swept: {', '.join(sorted(unknown))}")
     if args != ["score"]:
         gen()
-        subprocess.run(["forge", "test", "--match-path", "test/sweep/Sweep.t.sol", "-q"] + match_tests(), cwd=ROOT, check=True)
+        subprocess.run(["forge", "test", "--match-path", "test/sweep/Sweep*.t.sol", "-q"] + match_tests(), cwd=ROOT, check=True)
         run_wide()
         WD.run_wide(SEL)
         run_instrumented("count")
