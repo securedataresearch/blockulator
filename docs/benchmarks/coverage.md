@@ -2,11 +2,33 @@
 
 Every function of every comparison library, from the source in `lib/` and `contracts/src/ladder/vendor/`, mapped to the FP127 or FP256 op it computes, or listed as not compared with the reason. The gas harnesses are `test/fp127/GasLadder.t.sol` (`make bench` → [gas.md](gas.md), gas.json) and `test/fp256/GasLadder.t.sol` (`make bench-fp256` → [gas256.md](gas256.md), gas256.json). The exact call behind each cell is `CALLS` in `scripts/fp127/gas_to_json.py`, written to gas.json as `calls`. The bench fails if a measured cell has no `CALLS` entry, or an entry has no cell.
 
-Versions: Solady v0.1.26, PRBMath v4.2.0, ABDK v3.2, Balancer LogExpMath from balancer-v3-monorepo@2b9ce4b1b8ad (vendored).
+Versions: Solady v0.1.26, PRBMath v4.2.0 (SD59x18 and UD60x18), ABDK v3.2, Balancer LogExpMath from balancer-v3-monorepo@2b9ce4b1b8ad (vendored), Solmate main@89365b8, OpenZeppelin Contracts v5.7.0 (vendored), Uniswap v4-core v4.0.0 FullMath (vendored), snekmate v0.1.2 (Vyper 0.4.3).
+
+## Which libraries
+
+The bar is an established library: published, with tagged releases, maintained, used by deployed protocols, and under a licence that lets this repository build it. Each candidate was checked against its official repository on 2026-10-23.
+
+| library | language | verdict | version | why |
+|---|---|---|---|---|
+| Solady `FixedPointMathLib` | Solidity | in (already) | v0.1.26 | |
+| PRBMath SD59x18 | Solidity | in (already) | v4.2.0 | |
+| ABDKMath64x64, ABDKMathQuad | Solidity | in (already) | v3.2 | |
+| Balancer `LogExpMath` | Solidity | in (already) | v3 monorepo @2b9ce4b1b8ad | |
+| **PRBMath UD60x18** | Solidity | **added** | v4.2.0 (the submodule already pinned) | The unsigned half of PRBMath: same release, same users as SD59x18. Its exp, ln and log2 are different code from SD59x18's. |
+| **Solmate** `FixedPointMathLib` + `SignedWadMath` | Solidity | **added** | main@89365b8 (2025-07); submodule `lib/solmate` | 4,300 stars, audited major releases, the maths behind Solmate's ERC4626 and the VRGDAs. The only tag, v6 (2022), predates `SignedWadMath`, so the pin is the main commit that `forge install transmissions11/solmate` fetches. `FixedPointMathLib.sol` is AGPL-3.0-only, so it is a submodule and is not vendored, and the adapter that links it, `LadderSolmate.sol`, is AGPL-3.0-only. `SignedWadMath.sol` is MIT. |
+| **OpenZeppelin** `Math`, `SignedMath` | Solidity | **added** | v5.7.0 (2026-07); vendored, MIT | The most used Solidity library, audited every release. Its maths is integer maths: `mulDiv` with a rounding mode, `sqrt`, the integer logs, `average`. It enters wherever a WAD op is that integer function with 10^18 put in (mulDown = `mulDiv(a, b, 1e18)` and so on). |
+| **Uniswap v4-core** `FullMath` | Solidity | **added** | v4.0.0; vendored, MIT | The `mulDiv` and `mulDivRoundingUp` inside every Uniswap v3 and v4 pool. v3-core's copy needs solc < 0.8; v4-core's is the same algorithm for 0.8. |
+| Uniswap `TickMath` | Solidity | not compared | v4.0.0 | No op computes it: `getSqrtPriceAtTick(t)` is the fixed-base power sqrt(1.0001)^t in Q64.96, and `getTickAtSqrtPrice` its floor log, on the integer tick grid. |
+| DappHub `ds-math` | Solidity | rejected | none | No tagged release, no commit since 2022, GPL-3.0. Its `wmul`/`rmul` are half-up `x * y / WAD`, and its `rpow` is the one Maker deployed, which the ladder already runs as `LadderMaker`. |
+| Balancer `FixedPoint` | Solidity | rejected | | GPL-3.0-or-later, so it cannot be vendored here; Balancer's mulDown/divDown are reproduced in `LadderBalancer` as before. |
+| **snekmate** `math` | Vyper | **added** | v0.1.2 (2025-06), compiled with Vyper 0.4.3 as it requires; submodule `lib/snekmate` | The standard Vyper library, on PyPI and npm, and in production: Curve's twocrypto-ng imports its `math` module, and the modules Curve uses were reviewed in Curve's audits. AGPL-3.0-only, so it is a submodule, and the wrapper that exports it, `contracts/src/ladder/vyper/SnekmateMath.vy`, is AGPL-3.0-only. |
+| Curve tricrypto-ng / twocrypto-ng / stableswap-ng maths | Vyper | rejected | | Licence: "Copyright (c) Curve.Fi, 2020-2023 - all rights reserved", and "only contracts owned by Curve DAO or Swiss Stake GmbH are allowed to call this contract". The functions are compared anyway: `wad_exp` is snekmate's `_wad_exp` (a verbatim copy in tricrypto-ng and stableswap-ng, an import in twocrypto-ng), and snekmate's `_wad_cbrt` is Curve's `_cbrt`, the same constants and seven Newton steps. `geometric_mean` takes three coins; no op does. |
+| huffmate `FixedPointMath` | Huff | rejected | v1.1 (2023-02) | Its README: "unaudited and are not recommended for use in production". No production users found, no release since 2023. Its fixed-point maths is a port of Solmate's, which is compared. |
+| pure-Yul maths libraries | Yul | none exist | | No published, tagged, adopted Yul maths library exists beyond Solady's inline assembly, which is compared. |
 
 **What a cell means.** A number is the median gas over the op's input ladder. An empty cell means the library does not offer the op, and only that. `rev` means the library offers the op but reverted on every ladder input, or every input was outside the function's domain or format. In gas.json, `ops[op].reverts[form]` counts such inputs per form; the medians leave them out. After this audit no `rev` cell remains: every function benched computes on at least part of its op's ladder.
 
-**Which table.** FP127's table compares the WAD libraries (Solady, PRBMath, Balancer), 64.64 and binary128. FP256's table compares binary128, the other float, and FP127Lib on the same value. The WAD and 64.64 libraries are not repeated on FP256's table: every op they share with FP256 is also an FP127 op, so it is compared there.
+**Which table.** FP127's table compares the WAD libraries (Solady, PRBMath SD59x18 and UD60x18, Balancer, Solmate, OpenZeppelin, Uniswap FullMath, snekmate), 64.64 and binary128. The five added with issue #166 have their entry points in `test/fp127/GasLibs.sol`. FP256's table compares binary128, the other float, and FP127Lib on the same value. The WAD and 64.64 libraries are not repeated on FP256's table: every op they share with FP256 is also an FP127 op, so it is compared there.
 
 **Statuses.**
 - compared: benched before this audit, on the same function.
@@ -129,6 +151,77 @@ The `mul` and `div` cells are removed. They measured Solidity's `a * b / 1e18` a
 
 3 compared, 1 new, 2 cells removed; `pow` is domain-limited.
 
+## PRBMath UD60x18 (49 functions: Math 16, Helpers 19, Conversions 2, Casting 12)
+
+| function | op | benched | status |
+|---|---|---|---|
+| `avg`, `ceil`, `div`, `exp`, `exp2`, `floor`, `frac`, `inv`, `ln`, `log10`, `log2`, `mul`, `pow`, `sqrt` | the same names | yes | new, domain x ≥ 0 (and y ≥ 0 for pow) |
+| `gm` | gavg | yes | new, domain a, b ≥ 0 |
+| `powu(UD60x18, uint256)` | powu | yes | new, domain x ≥ 0, integer n ≥ 0 |
+| `add`, `sub` (Helpers) | add, sub | yes | new, domain a, b ≥ 0 (sub reverts below zero) |
+| `uncheckedAdd`, `uncheckedSub` | add, sub | no | variant |
+| `and`, `and2`, `or`, `xor`, `not`, `lshift`, `rshift`, `mod`, `eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `isZero` | | no | none (as SD59x18's) |
+| `convert` ×2, `intoSD1x18`, `intoSD21x18`, `intoUD2x18`, `intoUD21x18`, `intoSD59x18`, `intoUint256`, `intoUint128`, `intoUint40`, `ud`, `ud60x18`, `unwrap`, `wrap` | | no | none |
+
+18 new, 2 variants, 29 none; all 18 domain-limited. UD60x18 is also in the WAD table (`make wad`): its mul, div and sqrt were already PRBMath's rows there, and its exp, ln, log2, log10 and pow, separate code from SD59x18's, are new rows, scored on their domain (x ≥ 0; the logs x ≥ 1).
+
+## Solmate (FixedPointMathLib 11 functions, SignedWadMath 11)
+
+| function | op | benched | status |
+|---|---|---|---|
+| `wadMul(int256, int256)` | mul | yes | new (sdiv: toward zero) |
+| `wadDiv(int256, int256)` | div | yes | new (toward zero) |
+| `wadExp`, `wadLn` | exp, ln | yes | new |
+| `wadPow(int256, int256)` | pow | yes | new: `wadExp(wadLn(x) * y / 1e18)`, x > 0 |
+| `mulWadDown`, `mulWadUp` | mulDown, mulUp | yes | new, domain a, b ≥ 0 |
+| `divWadDown`, `divWadUp` | divDown, divUp | yes | new, domain a, b ≥ 0 |
+| `rpow(uint256 x, uint256 n, uint256 scalar)` | powu | yes | new, domain x ≥ 0, integer n ≥ 0: `rpow(x, n, 1e18)` |
+| `sqrt(uint256)` | sqrt | yes | new, composed, domain x ≥ 0: the integer root of x · 10^18 is the WAD root, the only root Solmate has |
+| `unsafeWadMul`, `unsafeWadDiv` | mul, div | no | variant: the unchecked twins |
+| `mulDivDown`, `mulDivUp` | | no | none: a free denominator (as Solady's `fullMulDiv`) |
+| `toWadUnsafe`, `toDaysWadUnsafe`, `fromDaysWadUnsafe`, `unsafeMod`, `unsafeDiv` ×2, `unsafeDivUp` | | no | none: conversions and raw integer division |
+
+11 new (1 composed), 2 variants, 9 none. Solmate's exp, ln and pow are Remco Bloemen's, as Solady's are: on the WAD table their wrong-wei counts are Solady's to the input.
+
+## OpenZeppelin Math (39 functions, counting overloads) and SignedMath (5)
+
+| function | op | benched | status |
+|---|---|---|---|
+| `mulDiv(x, y, d)`, `mulDiv(x, y, d, Rounding)` | mulDown, mulUp, divDown, divUp | yes | new, domain a, b ≥ 0: `mulDiv(a, b, 1e18[, Ceil])` and `mulDiv(a, 1e18, b[, Ceil])` |
+| `sqrt(uint256)`, `sqrt(uint256, Rounding)` | sqrt | yes | new, composed, domain x ≥ 0: `sqrt(x * 1e18)`; the Ceil overload is on the WAD table (sqrtWadUp) |
+| `log2(uint256, Rounding)` | log2Up | yes | new, domain integral x ≥ 1, `Rounding.Ceil` |
+| `saturatingSub(uint256, uint256)` | zeroFloorSub | yes | new, domain a, b ≥ 0 |
+| SignedMath `abs`, `min`, `max` | abs, min, max | yes | new |
+| SignedMath `average` | avg | yes | new (rounds toward zero; FP127's avg floors) |
+| `max`, `min`, `average` (uint256), SignedMath `ternary`, Math `ternary` | | no | variant / none |
+| `ceilDiv`, `tryAdd`, `trySub`, `tryMul`, `tryDiv`, `tryMod`, `saturatingAdd`, `saturatingMul`, `add512`, `mul512`, `mulShr` ×2, `invMod`, `invModPrime`, `modExp` ×2, `tryModExp` ×2, `log2(uint256)`, `log10` ×2, `log256` ×2, `unsignedRoundsUp`, `clz` | | no | none: integer arithmetic, number theory and floor logs (as Solady's) |
+
+11 new (1 composed), 2 variants, the rest none. OpenZeppelin has no exp, ln or real power, so on the ladder it answers the scenarios built from mul, div and the root, and is Unsupported on the rest.
+
+## Uniswap v4-core FullMath (2 functions)
+
+| function | op | benched | status |
+|---|---|---|---|
+| `mulDiv(a, b, d)` | mulDown, divDown | yes | new, domain a, b ≥ 0: `mulDiv(a, b, 1e18)`, `mulDiv(a, 1e18, b)` |
+| `mulDivRoundingUp(a, b, d)` | mulUp, divUp | yes | new, as above |
+
+4 new. On the ladder FullMath answers the scenarios built from mul and div alone. `TickMath` is not compared ("Which libraries").
+
+## snekmate math (12 functions)
+
+| function | op | benched | status |
+|---|---|---|---|
+| `_wad_exp`, `_wad_ln` | exp, ln | yes | new (`_wad_ln(0)` returns 0) |
+| `_wad_cbrt(uint256)` | cbrt | yes | new, domain x ≥ 0 |
+| `_mul_div(x, y, d, roundup)` | mulDown, mulUp, divDown, divUp | yes | new, domain a, b ≥ 0 |
+| `_int256_average` | avg | yes | new (floors, as FP127's) |
+| `_signum` | sign | yes | new |
+| `_log2(uint256, roundup)` | log2Up | yes | new, domain integral x ≥ 1, `roundup = True` |
+| `_uint256_average` | avg | no | variant |
+| `_ceil_div`, `_log10`, `_log256`, `_cbrt` (the integer root) | | no | none (as Solady's) |
+
+10 new, 1 variant, 4 none. snekmate is Vyper: `contracts/src/ladder/vyper/SnekmateMath.vy` exports the module, built by `scripts/ladder/vyper.py` with the compiler snekmate pins (0.4.3). Its gas cells are the module call as that contract times it with `msg.gas`, net of the same window around an assignment, so no external call is in them; on the ladder the adapter makes one staticcall per op, as FP127's deployed form does. snekmate has no square root and no real power: the ladder takes the root with Vyper's built-in `isqrt(x * 10**18)` and pow as `wad_exp(wad_ln(x) * y / 1e18)`, as Solmate composes it; neither is on the gas or WAD tables.
+
 ## Aave, Morpho, Maker
 
 Their accrual maths (Aave `MathUtils`, Morpho `MathLib`, Maker `rpow`) is transcribed for the ladder only. No op table claims to cover them, and they are not on the gas tables.
@@ -179,6 +272,7 @@ These are empty on every competitor column, and correctly so:
 - The precision table on the site (`precisiontable`, from `docs/fp127/precision.json`) is FP127's alone; no other library appears in it.
 - Competitor precision per op is in the edges dataset ([edges.md](edges.md), `make edges`): 15 ops, probed for every library. Its "n/a" cells were checked and are correct:
   - Aave, Morpho and Maker have no general functions.
+  - OpenZeppelin and Uniswap FullMath have mul and div (and OpenZeppelin a root) only; PRBMath UD60x18 takes no negative argument, so its negative probes are `ParamOutOfRange`.
   - Only Solady has `lambertW0`, and no library has `lambertWm1`.
   - Libraries without `powu`, `log1p` or the like get them composed from their own primitives in `contracts/src/ladder/Ladder*.sol`. ABDK's `pow` and Solady's `rpow` are already used there as powu.
 
@@ -188,5 +282,7 @@ These are empty on every competitor column, and correctly so:
 |---|---:|---:|---:|---:|
 | FP127 (site columns: Yul, FP127Lib and the five libraries) | 357 → 371 (`clamp`, `lerp` added) | 186 | 181 | 0 |
 | FP256 (object, FP256Lib, FP127Lib, Quad) | 260 | 76 | 55 | 0 |
+
+Issue #166 added five columns to FP127's table (53 ops each): Solmate 11 cells, OpenZeppelin 11, Uniswap FullMath 4, PRBMath UD60x18 18, snekmate 10. None is `rev`.
 
 Before, an empty cell meant either not offered or reverted on every input. Now every empty cell is an op the library does not offer, and the bench enforces it.

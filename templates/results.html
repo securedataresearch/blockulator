@@ -4,8 +4,8 @@
 {% block content %}
 {%- set d = load_data(path="static/data/ladder.json") -%}
 {%- set e = load_data(path="static/data/edges.json") -%}
-{%- set forms = ["fp256", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho"] -%}
-{%- set short = {"fp127": "FP127", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "fp256": "FP256"} -%}
+{%- set forms = ["fp256", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
+{%- set short = {"fp127": "FP127", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "fp256": "FP256", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
 {%- set ns = page.extra.n | str -%}
 <article class="prose doc wide">
 {% include "pagehead.html" %}

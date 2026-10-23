@@ -11,14 +11,17 @@ import * as PRB from "../../lib/prb-math/src/sd59x18/Math.sol";
 import {add as prbAdd, sub as prbSub, unary as prbNeg} from "../../lib/prb-math/src/sd59x18/Helpers.sol";
 import {ABDKMathQuad as Q} from "../../lib/abdk-libraries-solidity/ABDKMathQuad.sol";
 import {LogExpMath} from "../../contracts/src/ladder/vendor/balancer/LogExpMath.sol";
+import {GasLibs} from "./GasLibs.sol";
 
 /// @title GasLadder
 /// @notice Gas for every op across an input ladder, for every form:
 ///         huff (Sepolia bytecode, staticcall), yul (object, staticcall),
 ///         caller (FP127Caller, two hops), lib (FP127Lib, internal), and the
-///         competitor libraries abdk / solady / prb / quad / balancer as
-///         internal calls on the same inputs converted once to their
-///         representation.
+///         competitor libraries abdk / solady / prb / quad / balancer, and
+///         solmate / oz / uniswap / prbud / snekmate (entry points in
+///         GasLibs.sol), as internal calls on the same inputs converted once
+///         to their representation. snekmate is Vyper: its cells are the
+///         module call as its own contract times it (see GasLibs).
 ///
 /// Prints GAS|op|idx|input|form|gas, with a seventh field |typical on the
 /// typical-input rows. gas is NA when the form does not offer the op and REV
@@ -36,6 +39,17 @@ contract GasLadder is FP127Harness {
     int256 constant NA = type(int256).min;
     int256 constant REV = type(int256).min + 1;
     bytes32 constant NA_REASON = keccak256(abi.encodeWithSignature("Error(string)", "na"));
+
+    GasLibs libs;
+
+    function setUp() public override {
+        super.setUp();
+        bytes memory init = vm.parseJsonBytes(vm.readFile("out/vyper/SnekmateMath.json"), ".bytecode.object");
+        address snek;
+        assembly { snek := create(0, add(init, 32), mload(init)) }
+        require(snek != address(0), "SnekmateMath deploy");
+        libs = new GasLibs(snek);
+    }
 
     /// Each test runs as its own transaction, so the accounts setUp touched
     /// are cold again: touch every called object first, so no row pays the
@@ -95,9 +109,14 @@ contract GasLadder is FP127Harness {
     /// internal call as a caller's code pays it, the same for every op
     /// whatever its place in the entry point's list.
     function _timed(bytes memory call, bytes memory idCall) internal view returns (int256) {
-        (bool ok, bytes memory out) = address(this).staticcall(call);
+        return _timedAt(address(this), call, idCall);
+    }
+
+    /// _timed on another contract's entry points (GasLibs).
+    function _timedAt(address t, bytes memory call, bytes memory idCall) internal view returns (int256) {
+        (bool ok, bytes memory out) = t.staticcall(call);
         if (!ok) return keccak256(out) == NA_REASON ? NA : REV;
-        (bool okId, bytes memory outId) = address(this).staticcall(idCall);
+        (bool okId, bytes memory outId) = t.staticcall(idCall);
         require(okId, "id");
         return int256(abi.decode(out, (uint256))) - int256(abi.decode(outId, (uint256)));
     }
@@ -333,6 +352,15 @@ contract GasLadder is FP127Harness {
         _emit(op, idx, label, "prb", _timed(abi.encodeCall(this.cPrb1, (op, _wad(x))), abi.encodeCall(this.cPrb1, ("id", _wad(x)))), set);
         _emit(op, idx, label, "quad", _timed(abi.encodeCall(this.cQuad1, (op, _quad(x))), abi.encodeCall(this.cQuad1, ("id", _quad(x)))), set);
         _emit(op, idx, label, "balancer", _timed(abi.encodeCall(this.cBal1, (op, _wad(x))), abi.encodeCall(this.cBal1, ("id", _wad(x)))), set);
+        _compLibs1(op, idx, label, _wad(x), set);
+    }
+
+    /// The GasLibs libraries on one WAD.
+    function _compLibs1(string memory op, uint256 idx, string memory label, int256 w, string memory set) internal view {
+        _emit(op, idx, label, "solmate", _timedAt(address(libs), abi.encodeCall(libs.cSolmate1, (op, w)), abi.encodeCall(libs.cSolmate1, ("id", w))), set);
+        _emit(op, idx, label, "oz", _timedAt(address(libs), abi.encodeCall(libs.cOz1, (op, w)), abi.encodeCall(libs.cOz1, ("id", w))), set);
+        _emit(op, idx, label, "prbud", _timedAt(address(libs), abi.encodeCall(libs.cPrbud1, (op, w)), abi.encodeCall(libs.cPrbud1, ("id", w))), set);
+        _emit(op, idx, label, "snekmate", _timedAt(address(libs), abi.encodeCall(libs.cSnek1, (op, w)), abi.encodeCall(libs.cSnek1, ("id", w))), set);
     }
 
     function _abdkGas2(string memory op, int256 a, int256 b) internal view returns (int256) {
@@ -357,6 +385,16 @@ contract GasLadder is FP127Harness {
         _emit(op, idx, label, "prb", _timed(abi.encodeCall(this.cPrb2, (op, _wad(a), _wad(b))), abi.encodeCall(this.cPrb2, ("id", _wad(a), _wad(b)))), set);
         _emit(op, idx, label, "quad", _timed(abi.encodeCall(this.cQuad2, (op, _quad(a), _quad(b))), abi.encodeCall(this.cQuad2, ("id", _quad(a), _quad(b)))), set);
         _emit(op, idx, label, "balancer", _timed(abi.encodeCall(this.cBal2, (op, _wad(a), _wad(b))), abi.encodeCall(this.cBal2, ("id", _wad(a), _wad(b)))), set);
+        _compLibs2(op, idx, label, _wad(a), _wad(b), set);
+    }
+
+    /// The GasLibs libraries on two WADs.
+    function _compLibs2(string memory op, uint256 idx, string memory label, int256 wa, int256 wb, string memory set) internal view {
+        _emit(op, idx, label, "solmate", _timedAt(address(libs), abi.encodeCall(libs.cSolmate2, (op, wa, wb)), abi.encodeCall(libs.cSolmate2, ("id", wa, wb))), set);
+        _emit(op, idx, label, "oz", _timedAt(address(libs), abi.encodeCall(libs.cOz2, (op, wa, wb)), abi.encodeCall(libs.cOz2, ("id", wa, wb))), set);
+        _emit(op, idx, label, "uniswap", _timedAt(address(libs), abi.encodeCall(libs.cUni2, (op, wa, wb)), abi.encodeCall(libs.cUni2, ("id", wa, wb))), set);
+        _emit(op, idx, label, "prbud", _timedAt(address(libs), abi.encodeCall(libs.cPrbud2, (op, wa, wb)), abi.encodeCall(libs.cPrbud2, ("id", wa, wb))), set);
+        _emit(op, idx, label, "snekmate", _timedAt(address(libs), abi.encodeCall(libs.cSnek2, (op, wa, wb)), abi.encodeCall(libs.cSnek2, ("id", wa, wb))), set);
     }
 
     /// clamp(int256 x, lo, hi) is FP127's clamp on WADs; lerp(a, b, t, 0, 1e18)

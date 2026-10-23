@@ -1,12 +1,12 @@
 +++
-title = "Blockulator: FP127 and FP256, EVM maths that keeps its digits"
+title = "Blockulator: the definitive source for precision"
 # The description is config.toml's, the one the whole site falls back to.
 template = "home.html"
 
 [extra]
 eyebrow = "Blockulator 2.2 · Secure Data Research"
-headline = "Exact math for real money."
-sub = "When the amounts are large or the call is free, 18 digits are not enough. FP127 keeps 38 and FP256 keeps 71, every op correctly rounded and checked on chain. On gas, FP127 now beats PRBMath on most ops, and both beat binary128."
+headline = "The definitive source for precision."
+sub = "When the amounts are large or the call is free, 18 digits are not enough. FP127 keeps 38 and FP256 keeps 71, every op correctly rounded and checked on chain. On gas, FP127 costs less than PRBMath, ABDK and OpenZeppelin on most ops, and FP256 less than binary128."
 cta_primary_text = "See the results"
 cta_primary_href = "/results/"
 cta_secondary_text = "Use the library"

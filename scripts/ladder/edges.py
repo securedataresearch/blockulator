@@ -94,7 +94,8 @@ def parse_lines(stream) -> dict:
 def build(cells: dict) -> dict:
     spec = json.loads(SPEC.read_text())
     inputs = {c["id"]: c for c in json.loads(INPUTS.read_text())["cells"]}
-    forms = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256"]
+    # FP256 and FP127 first, then the rest in form-id order
+    forms = ["fp256", "fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "solmate", "oz", "uniswap", "prbud", "snekmate"]
     ops_out = []
     for op in spec["ops"]:
         probes_out = []

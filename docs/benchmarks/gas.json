@@ -2,7 +2,7 @@
  "generated": "2026-10-23",
  "description": "Gas per op across an input ladder. First four forms are FP127; the first two and the third include the external call. FP127Lib and the competitors are the internal library call alone, timed inside the harness's entry point net of its dispatch. null = no measurement on that input; reverts counts, per form, the inputs where the form offers the op but reverted or the input is outside its domain or format; a form with neither gas nor reverts does not offer the op (the Huff and FP127Caller columns record any failure as not offered). calls says what each competitor cell calls. summary holds min/median/max per form, null where there is no measurement. typical (where present) is the same over random inputs that take no shortcut.",
  "versions": {
-  "fp127": "e683e06",
+  "fp127": "fc19340",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -11,6 +11,10 @@
   "aave": "aave-v3-origin@8305565ae342 (MathUtils, transcribed)",
   "morpho": "morpho-blue@8e26ca6a8dbc (MathLib, transcribed)",
   "maker": "dss pot.sol rpow via solady v0.1.26",
+  "solmate": "solmate@89365b8 (no tag: v6 predates SignedWadMath)",
+  "openzeppelin": "openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored)",
+  "uniswap": "v4-core v4.0.0 (FullMath, vendored)",
+  "snekmate": "v0.1.2 (math module, vyper 0.4.3)",
   "forge": "forge Version: 1.7.1"
  },
  "forms": [
@@ -22,7 +26,12 @@
   "solady",
   "prb",
   "quad",
-  "balancer"
+  "balancer",
+  "solmate",
+  "oz",
+  "uniswap",
+  "prbud",
+  "snekmate"
  ],
  "formLabels": {
   "huff": "Huff (Sepolia, staticcall)",
@@ -34,6 +43,11 @@
   "prb": "PRBMath SD59x18",
   "quad": "ABDKMathQuad",
   "balancer": "Balancer LogExpMath",
+  "solmate": "Solmate",
+  "oz": "OpenZeppelin Math",
+  "uniswap": "Uniswap FullMath",
+  "prbud": "PRBMath UD60x18",
+  "snekmate": "snekmate (Vyper)",
   "fp127lib": "FP127Lib (inline), the same op"
  },
  "calls": {
@@ -130,6 +144,70 @@
    "sqrt": "pow(x, 0.5e18) (composed; x >= 0)",
    "cbrt": "pow(x, 333333333333333333) (composed; x >= 0)",
    "pow": "pow(x, y) (x, y >= 0)"
+  },
+  "solmate": {
+   "exp": "wadExp(x)",
+   "ln": "wadLn(x)",
+   "sqrt": "sqrt(x * 1e18) (composed: the integer root; x >= 0)",
+   "mul": "wadMul(a, b) (toward zero)",
+   "div": "wadDiv(a, b) (toward zero)",
+   "pow": "wadPow(x, y)",
+   "mulDown": "mulWadDown(a, b) (a, b >= 0)",
+   "mulUp": "mulWadUp(a, b) (a, b >= 0)",
+   "divDown": "divWadDown(a, b) (a, b >= 0)",
+   "divUp": "divWadUp(a, b) (a, b >= 0)",
+   "powu": "rpow(x, n, 1e18) (x >= 0, n >= 0)"
+  },
+  "oz": {
+   "abs": "SignedMath.abs(int256)",
+   "sqrt": "Math.sqrt(x * 1e18) (composed: the integer root; x >= 0)",
+   "log2Up": "Math.log2(uint256, Rounding.Ceil) on the integer x (integral x >= 1)",
+   "mulDown": "Math.mulDiv(a, b, 1e18) (a, b >= 0)",
+   "mulUp": "Math.mulDiv(a, b, 1e18, Rounding.Ceil) (a, b >= 0)",
+   "divDown": "Math.mulDiv(a, 1e18, b) (a, b >= 0)",
+   "divUp": "Math.mulDiv(a, 1e18, b, Rounding.Ceil) (a, b >= 0)",
+   "avg": "SignedMath.average(a, b) (toward zero; FP127's avg floors)",
+   "min": "SignedMath.min(a, b)",
+   "max": "SignedMath.max(a, b)",
+   "zeroFloorSub": "Math.saturatingSub(uint256, uint256) (a, b >= 0)"
+  },
+  "uniswap": {
+   "mulDown": "FullMath.mulDiv(a, b, 1e18) (a, b >= 0)",
+   "mulUp": "FullMath.mulDivRoundingUp(a, b, 1e18) (a, b >= 0)",
+   "divDown": "FullMath.mulDiv(a, 1e18, b) (a, b >= 0)",
+   "divUp": "FullMath.mulDivRoundingUp(a, 1e18, b) (a, b >= 0)"
+  },
+  "prbud": {
+   "exp": "exp(x) (x >= 0)",
+   "exp2": "exp2(x) (x >= 0)",
+   "ln": "ln(x) (x >= 0)",
+   "log2": "log2(x) (x >= 0)",
+   "log10": "log10(x) (x >= 0)",
+   "sqrt": "sqrt(x) (x >= 0)",
+   "inv": "inv(x) (x >= 0)",
+   "floor": "floor(x) (x >= 0)",
+   "ceil": "ceil(x) (x >= 0)",
+   "frac": "frac(x) (x >= 0)",
+   "add": "add(a, b) (a, b >= 0)",
+   "sub": "sub(a, b) (a, b >= 0)",
+   "mul": "mul(a, b) (a, b >= 0)",
+   "div": "div(a, b) (a, b >= 0)",
+   "pow": "pow(x, y) (x, y >= 0)",
+   "powu": "powu(x, n), n a uint256 (x >= 0, n >= 0)",
+   "avg": "avg(a, b) (a, b >= 0)",
+   "gavg": "gm(a, b) (a, b >= 0)"
+  },
+  "snekmate": {
+   "exp": "_wad_exp(x)",
+   "ln": "_wad_ln(x)",
+   "cbrt": "_wad_cbrt(x) (x >= 0)",
+   "sign": "_signum(x)",
+   "log2Up": "_log2(uint256, True) on the integer x (integral x >= 1)",
+   "mulDown": "_mul_div(a, b, 1e18, False) (a, b >= 0)",
+   "mulUp": "_mul_div(a, b, 1e18, True) (a, b >= 0)",
+   "divDown": "_mul_div(a, 1e18, b, False) (a, b >= 0)",
+   "divUp": "_mul_div(a, 1e18, b, True) (a, b >= 0)",
+   "avg": "_int256_average(a, b)"
   }
  },
  "ops": {
@@ -146,21 +224,21 @@
    "gas": {
     "huff": [
      1281,
-     1282,
      1283,
-     1284,
      1285,
-     1287,
-     1288
+     1286,
+     1288,
+     1290,
+     1292
     ],
     "yul": [
      715,
-     718,
-     720,
-     722,
-     725,
-     727,
-     729
+     719,
+     723,
+     726,
+     739,
+     732,
+     736
     ],
     "caller": [
      null,
@@ -224,18 +302,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     18,
+     18,
+     18,
+     18,
+     18,
+     18,
+     18
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
      "min": 1281,
-     "median": 1284,
-     "max": 1288
+     "median": 1286,
+     "max": 1292
     },
     "yul": {
      "min": 715,
-     "median": 722,
-     "max": 729
+     "median": 726,
+     "max": 739
     },
     "caller": null,
     "lib": {
@@ -263,7 +386,16 @@
      "median": 21,
      "max": 21
     },
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": {
+     "min": 18,
+     "median": 18,
+     "max": 18
+    },
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "add": {
@@ -278,27 +410,27 @@
    "gas": {
     "huff": [
      585,
-     586,
      588,
-     589,
      590,
-     592
+     591,
+     594,
+     596
     ],
     "yul": [
      688,
-     697,
-     697,
-     700,
-     704,
-     709
+     694,
+     701,
+     717,
+     714,
+     720
     ],
     "caller": [
      1787,
-     1792,
-     1802,
-     1800,
-     1812,
-     1808
+     1799,
+     1801,
+     1807,
+     1813,
+     1820
     ],
     "lib": [
      128,
@@ -347,23 +479,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     150,
+     150,
+     null,
+     150,
+     150,
+     150
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
      "min": 585,
-     "median": 588,
-     "max": 592
+     "median": 590,
+     "max": 596
     },
     "yul": {
      "min": 688,
-     "median": 698,
-     "max": 709
+     "median": 707,
+     "max": 720
     },
     "caller": {
      "min": 1787,
-     "median": 1801,
-     "max": 1812
+     "median": 1804,
+     "max": 1820
     },
     "lib": {
      "min": 128,
@@ -390,7 +562,19 @@
      "median": 765,
      "max": 1268
     },
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 150,
+     "median": 150,
+     "max": 150
+    },
+    "snekmate": null
+   },
+   "reverts": {
+    "prbud": 1
    }
   },
   "atanh": {
@@ -484,6 +668,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -503,7 +732,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -528,14 +762,14 @@
       null
      ],
      "yul": [
-      3216,
-      3184,
-      3184,
-      3174,
-      3191,
-      3179,
-      3193,
-      3184
+      3284,
+      3253,
+      3253,
+      3243,
+      3260,
+      3248,
+      3262,
+      3254
      ],
      "caller": [
       null,
@@ -606,14 +840,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 3174,
-      "median": 3184,
-      "max": 3216
+      "min": 3243,
+      "median": 3253,
+      "max": 3284
      },
      "caller": null,
      "lib": {
@@ -625,7 +909,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -640,20 +929,20 @@
    ],
    "gas": {
     "huff": [
-     1465,
-     1465,
-     1467,
-     1468,
-     1469,
-     1471
+     1484,
+     1486,
+     1488,
+     1490,
+     1492,
+     1494
     ],
     "yul": [
-     844,
-     813,
-     817,
-     821,
-     825,
-     829
+     867,
+     873,
+     879,
+     886,
+     892,
+     964
     ],
     "caller": [
      null,
@@ -710,18 +999,58 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     318,
+     318,
+     318,
+     318,
+     318,
+     318
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     105,
+     105,
+     null,
+     105,
+     105,
+     105
+    ],
+    "snekmate": [
+     113,
+     113,
+     113,
+     113,
+     113,
+     113
     ]
    },
    "summary": {
     "huff": {
-     "min": 1465,
-     "median": 1467,
-     "max": 1471
+     "min": 1484,
+     "median": 1489,
+     "max": 1494
     },
     "yul": {
-     "min": 813,
-     "median": 823,
-     "max": 844
+     "min": 867,
+     "median": 882,
+     "max": 964
     },
     "caller": null,
     "lib": {
@@ -745,7 +1074,27 @@
      "max": 156
     },
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": {
+     "min": 318,
+     "median": 318,
+     "max": 318
+    },
+    "uniswap": null,
+    "prbud": {
+     "min": 105,
+     "median": 105,
+     "max": 105
+    },
+    "snekmate": {
+     "min": 113,
+     "median": 113,
+     "max": 113
+    }
+   },
+   "reverts": {
+    "prbud": 1
    }
   },
   "cbrt": {
@@ -760,22 +1109,22 @@
    ],
    "gas": {
     "huff": [
-     9721,
-     9812,
-     1910,
-     10385,
-     10750,
-     9748,
-     10420
+     9725,
+     9817,
+     1915,
+     10390,
+     10756,
+     9755,
+     10427
     ],
     "yul": [
-     2263,
-     2265,
-     2268,
      2271,
-     2273,
      2275,
-     2289
+     2277,
+     2281,
+     2285,
+     2288,
+     2304
     ],
     "caller": [
      null,
@@ -839,18 +1188,63 @@
      2295,
      2419,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     110,
+     1443,
+     1461,
+     1461,
+     1397,
+     1533,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1910,
-     "median": 9812,
-     "max": 10750
+     "min": 1915,
+     "median": 9817,
+     "max": 10756
     },
     "yul": {
-     "min": 2263,
-     "median": 2271,
-     "max": 2289
+     "min": 2271,
+     "median": 2281,
+     "max": 2304
     },
     "caller": null,
     "lib": {
@@ -870,11 +1264,21 @@
      "min": 98,
      "median": 2189,
      "max": 2419
+    },
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": {
+     "min": 110,
+     "median": 1452,
+     "max": 1533
     }
    },
    "reverts": {
     "solady": 1,
-    "balancer": 1
+    "balancer": 1,
+    "snekmate": 1
    },
    "typical": {
     "inputs": [
@@ -889,24 +1293,24 @@
     ],
     "gas": {
      "huff": [
-      10342,
-      10849,
-      10518,
-      9982,
-      10329,
-      10540,
-      10351,
-      10388
+      10371,
+      10878,
+      10548,
+      10013,
+      10362,
+      10573,
+      10384,
+      10422
      ],
      "yul": [
-      2396,
-      2399,
-      2413,
-      2416,
-      2418,
-      2421,
-      2412,
-      2426
+      2454,
+      2458,
+      2474,
+      2478,
+      2482,
+      2486,
+      2479,
+      2614
      ],
      "caller": [
       null,
@@ -977,18 +1381,68 @@
       null,
       2301,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      1407,
+      1462,
+      null,
+      null,
+      null,
+      null,
+      1424,
+      null
      ]
     },
     "summary": {
      "huff": {
-      "min": 9982,
-      "median": 10369,
-      "max": 10849
+      "min": 10013,
+      "median": 10403,
+      "max": 10878
      },
      "yul": {
-      "min": 2396,
-      "median": 2414,
-      "max": 2426
+      "min": 2454,
+      "median": 2478,
+      "max": 2614
      },
      "caller": null,
      "lib": {
@@ -1008,11 +1462,21 @@
       "min": 2301,
       "median": 2311,
       "max": 2313
+     },
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": {
+      "min": 1407,
+      "median": 1424,
+      "max": 1462
      }
     },
     "reverts": {
      "solady": 5,
-     "balancer": 5
+     "balancer": 5,
+     "snekmate": 5
     }
    }
   },
@@ -1028,22 +1492,22 @@
    ],
    "gas": {
     "huff": [
-     1795,
-     1796,
-     1797,
-     1799,
-     1800,
-     1801,
-     1802
+     1811,
+     1812,
+     1814,
+     1816,
+     1818,
+     1820,
+     1821
     ],
     "yul": [
-     791,
-     793,
-     796,
-     798,
-     801,
-     803,
-     805
+     873,
+     826,
+     830,
+     833,
+     836,
+     840,
+     843
     ],
     "caller": [
      null,
@@ -1107,18 +1571,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     117,
+     117,
+     117,
+     117,
+     117,
+     117,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1795,
-     "median": 1799,
-     "max": 1802
+     "min": 1811,
+     "median": 1816,
+     "max": 1821
     },
     "yul": {
-     "min": 791,
-     "median": 798,
-     "max": 805
+     "min": 826,
+     "median": 836,
+     "max": 873
     },
     "caller": null,
     "lib": {
@@ -1134,7 +1643,19 @@
      "max": 244
     },
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 117,
+     "median": 117,
+     "max": 117
+    },
+    "snekmate": null
+   },
+   "reverts": {
+    "prbud": 1
    }
   },
   "clamp": {
@@ -1228,6 +1749,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -1251,7 +1817,12 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "compound": {
@@ -1273,11 +1844,11 @@
      null
     ],
     "yul": [
-     2599,
-     4680,
-     9494,
-     3469,
-     4424,
+     2613,
+     4695,
+     9509,
+     3483,
+     4439,
      null
     ],
     "caller": [
@@ -1335,14 +1906,54 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": null,
     "yul": {
-     "min": 2599,
-     "median": 4424,
-     "max": 9494
+     "min": 2613,
+     "median": 4439,
+     "max": 9509
     },
     "caller": null,
     "lib": {
@@ -1354,7 +1965,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "reverts": {
     "yul": 1,
@@ -1383,14 +1999,14 @@
       null
      ],
      "yul": [
-      4421,
-      3679,
-      7248,
-      3154,
-      8370,
-      8234,
-      3286,
-      3465
+      4560,
+      3824,
+      7397,
+      3156,
+      8529,
+      8399,
+      3457,
+      3473
      ],
      "caller": [
       null,
@@ -1461,14 +2077,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 3154,
-      "median": 4050,
-      "max": 8370
+      "min": 3156,
+      "median": 4192,
+      "max": 8529
      },
      "caller": null,
      "lib": {
@@ -1480,7 +2146,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -1575,6 +2246,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -1594,7 +2310,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -1619,14 +2340,14 @@
       null
      ],
      "yul": [
-      4130,
-      4172,
-      4158,
-      4175,
-      4146,
-      4139,
+      4199,
+      4241,
+      4228,
       4244,
-      4177
+      4214,
+      4207,
+      4348,
+      4246
      ],
      "caller": [
       null,
@@ -1697,14 +2418,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 4130,
-      "median": 4165,
-      "max": 4244
+      "min": 4199,
+      "median": 4234,
+      "max": 4348
      },
      "caller": null,
      "lib": {
@@ -1716,7 +2487,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -1731,20 +2507,20 @@
    ],
    "gas": {
     "huff": [
-     1545,
-     1547,
-     1548,
-     1549,
-     1551,
-     1552
+     1569,
+     1572,
+     1574,
+     1575,
+     1578,
+     1580
     ],
     "yul": [
-     883,
-     887,
-     891,
-     942,
-     900,
-     903
+     955,
+     961,
+     968,
+     1048,
+     981,
+     987
     ],
     "caller": [
      null,
@@ -1801,18 +2577,58 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1545,
-     "median": 1548,
-     "max": 1552
+     "min": 1569,
+     "median": 1574,
+     "max": 1580
     },
     "yul": {
-     "min": 883,
-     "median": 895,
-     "max": 942
+     "min": 955,
+     "median": 974,
+     "max": 1048
     },
     "caller": null,
     "lib": {
@@ -1828,7 +2644,12 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "div": {
@@ -1842,28 +2663,28 @@
    ],
    "gas": {
     "huff": [
-     1169,
-     1171,
-     1172,
-     1174,
-     1175,
-     1176
+     1183,
+     1186,
+     1188,
+     1190,
+     1192,
+     1194
     ],
     "yul": [
-     1008,
-     1013,
-     1017,
-     1020,
-     1025,
-     1063
+     1094,
+     1058,
+     1064,
+     1070,
+     1077,
+     1083
     ],
     "caller": [
-     2108,
-     2112,
-     2117,
      2152,
-     2157,
-     2129
+     2158,
+     2165,
+     2171,
+     2177,
+     2184
     ],
     "lib": [
      412,
@@ -1912,23 +2733,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     97,
+     97,
+     97,
+     97,
+     97,
+     97
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     261,
+     261,
+     null,
+     261,
+     261,
+     261
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1169,
-     "median": 1173,
-     "max": 1176
+     "min": 1183,
+     "median": 1189,
+     "max": 1194
     },
     "yul": {
-     "min": 1008,
-     "median": 1018,
-     "max": 1063
+     "min": 1058,
+     "median": 1073,
+     "max": 1094
     },
     "caller": {
-     "min": 2108,
-     "median": 2123,
-     "max": 2157
+     "min": 2152,
+     "median": 2168,
+     "max": 2184
     },
     "lib": {
      "min": 412,
@@ -1955,7 +2816,23 @@
      "median": 818,
      "max": 818
     },
-    "balancer": null
+    "balancer": null,
+    "solmate": {
+     "min": 97,
+     "median": 97,
+     "max": 97
+    },
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 261,
+     "median": 261,
+     "max": 261
+    },
+    "snekmate": null
+   },
+   "reverts": {
+    "prbud": 1
    }
   },
   "divDown": {
@@ -1977,12 +2854,12 @@
      null
     ],
     "yul": [
-     1045,
-     1070,
-     1053,
-     1057,
+     1073,
+     1080,
      1086,
-     1065
+     1093,
+     1099,
+     1106
     ],
     "caller": [
      null,
@@ -2039,14 +2916,54 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     150,
+     150,
+     null,
+     150,
+     150,
+     150
+    ],
+    "oz": [
+     239,
+     239,
+     null,
+     239,
+     239,
+     239
+    ],
+    "uniswap": [
+     179,
+     179,
+     null,
+     179,
+     179,
+     179
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     323,
+     323,
+     null,
+     323,
+     323,
+     323
     ]
    },
    "summary": {
     "huff": null,
     "yul": {
-     "min": 1045,
-     "median": 1061,
-     "max": 1086
+     "min": 1073,
+     "median": 1089,
+     "max": 1106
     },
     "caller": null,
     "lib": {
@@ -2062,10 +2979,35 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": {
+     "min": 150,
+     "median": 150,
+     "max": 150
+    },
+    "oz": {
+     "min": 239,
+     "median": 239,
+     "max": 239
+    },
+    "uniswap": {
+     "min": 179,
+     "median": 179,
+     "max": 179
+    },
+    "prbud": null,
+    "snekmate": {
+     "min": 323,
+     "median": 323,
+     "max": 323
+    }
    },
    "reverts": {
-    "solady": 1
+    "solady": 1,
+    "solmate": 1,
+    "oz": 1,
+    "uniswap": 1,
+    "snekmate": 1
    }
   },
   "divUp": {
@@ -2087,12 +3029,12 @@
      null
     ],
     "yul": [
-     1075,
-     1052,
-     1056,
-     1060,
-     1064,
-     1068
+     1090,
+     1097,
+     1103,
+     1109,
+     1116,
+     1122
     ],
     "caller": [
      null,
@@ -2149,14 +3091,54 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     176,
+     176,
+     null,
+     176,
+     176,
+     176
+    ],
+    "oz": [
+     621,
+     621,
+     null,
+     621,
+     621,
+     621
+    ],
+    "uniswap": [
+     282,
+     304,
+     null,
+     304,
+     282,
+     282
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     386,
+     391,
+     null,
+     391,
+     386,
+     386
     ]
    },
    "summary": {
     "huff": null,
     "yul": {
-     "min": 1052,
-     "median": 1062,
-     "max": 1075
+     "min": 1090,
+     "median": 1106,
+     "max": 1122
     },
     "caller": null,
     "lib": {
@@ -2172,10 +3154,35 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": {
+     "min": 176,
+     "median": 176,
+     "max": 176
+    },
+    "oz": {
+     "min": 621,
+     "median": 621,
+     "max": 621
+    },
+    "uniswap": {
+     "min": 282,
+     "median": 282,
+     "max": 304
+    },
+    "prbud": null,
+    "snekmate": {
+     "min": 386,
+     "median": 386,
+     "max": 391
+    }
    },
    "reverts": {
-    "solady": 1
+    "solady": 1,
+    "solmate": 1,
+    "oz": 1,
+    "uniswap": 1,
+    "snekmate": 1
    }
   },
   "erf": {
@@ -2269,6 +3276,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -2288,7 +3340,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -2313,14 +3370,14 @@
       null
      ],
      "yul": [
-      14616,
-      7156,
-      7391,
-      11833,
-      11403,
-      21517,
-      7445,
-      5740
+      14684,
+      7224,
+      7495,
+      11901,
+      11471,
+      21585,
+      7513,
+      5808
      ],
      "caller": [
       null,
@@ -2391,14 +3448,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 5740,
-      "median": 9424,
-      "max": 21517
+      "min": 5808,
+      "median": 9492,
+      "max": 21585
      },
      "caller": null,
      "lib": {
@@ -2410,7 +3517,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -2505,6 +3617,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -2524,7 +3681,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -2549,14 +3711,14 @@
       null
      ],
      "yul": [
-      6316,
-      8024,
-      6887,
-      7055,
-      7483,
-      8474,
-      5755,
-      15146
+      6386,
+      8092,
+      6956,
+      7124,
+      7551,
+      8543,
+      5824,
+      15215
      ],
      "caller": [
       null,
@@ -2627,14 +3789,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 5755,
-      "median": 7269,
-      "max": 15146
+      "min": 5824,
+      "median": 7337,
+      "max": 15215
      },
      "caller": null,
      "lib": {
@@ -2646,7 +3858,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -2663,21 +3880,21 @@
    "gas": {
     "huff": [
      5808,
-     5809,
-     5773,
+     5810,
      5774,
-     5776,
      5777,
-     5778
+     5778,
+     5779,
+     5781
     ],
     "yul": [
      2987,
-     2992,
-     2967,
      2998,
-     2997,
-     3017,
-     3003
+     2970,
+     3001,
+     3000,
+     3024,
+     3010
     ],
     "caller": [
      null,
@@ -2741,18 +3958,63 @@
      1062,
      1062,
      1048
+    ],
+    "solmate": [
+     63,
+     430,
+     430,
+     430,
+     430,
+     430,
+     430
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     2692,
+     2650,
+     2636,
+     2720,
+     2720
+    ],
+    "snekmate": [
+     110,
+     604,
+     604,
+     604,
+     604,
+     604,
+     604
     ]
    },
    "summary": {
     "huff": {
-     "min": 5773,
-     "median": 5777,
-     "max": 5809
+     "min": 5774,
+     "median": 5779,
+     "max": 5810
     },
     "yul": {
-     "min": 2967,
-     "median": 2997,
-     "max": 3017
+     "min": 2970,
+     "median": 3000,
+     "max": 3024
     },
     "caller": null,
     "lib": {
@@ -2784,11 +4046,29 @@
      "min": 1020,
      "median": 1054,
      "max": 1062
+    },
+    "solmate": {
+     "min": 63,
+     "median": 430,
+     "max": 430
+    },
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 2636,
+     "median": 2692,
+     "max": 2720
+    },
+    "snekmate": {
+     "min": 110,
+     "median": 604,
+     "max": 604
     }
    },
    "reverts": {
     "abdk": 1,
-    "balancer": 1
+    "balancer": 1,
+    "prbud": 2
    },
    "typical": {
     "inputs": [
@@ -2804,23 +4084,23 @@
     "gas": {
      "huff": [
       5771,
-      5772,
-      5811,
+      5773,
       5812,
-      5776,
-      5777,
+      5814,
       5779,
-      5781
+      5781,
+      5783,
+      5785
      ],
      "yul": [
       2991,
-      2990,
-      2997,
-      2998,
-      3019,
-      3004,
       2992,
-      3008
+      3002,
+      3002,
+      3035,
+      3009,
+      2999,
+      3016
      ],
      "caller": [
       null,
@@ -2891,18 +4171,68 @@
       1146,
       978,
       978
+     ],
+     "solmate": [
+      430,
+      430,
+      430,
+      430,
+      430,
+      430,
+      430,
+      430
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      2804,
+      2720,
+      null,
+      null,
+      2720,
+      2650,
+      2720,
+      2636
+     ],
+     "snekmate": [
+      604,
+      604,
+      604,
+      604,
+      604,
+      604,
+      604,
+      604
      ]
     },
     "summary": {
      "huff": {
       "min": 5771,
-      "median": 5778,
-      "max": 5812
+      "median": 5782,
+      "max": 5814
      },
      "yul": {
-      "min": 2990,
-      "median": 2997,
-      "max": 3019
+      "min": 2991,
+      "median": 3002,
+      "max": 3035
      },
      "caller": null,
      "lib": {
@@ -2934,7 +4264,27 @@
       "min": 978,
       "median": 1040,
       "max": 1146
+     },
+     "solmate": {
+      "min": 430,
+      "median": 430,
+      "max": 430
+     },
+     "oz": null,
+     "uniswap": null,
+     "prbud": {
+      "min": 2636,
+      "median": 2720,
+      "max": 2804
+     },
+     "snekmate": {
+      "min": 604,
+      "median": 604,
+      "max": 604
      }
+    },
+    "reverts": {
+     "prbud": 2
     }
    }
   },
@@ -2950,22 +4300,22 @@
    ],
    "gas": {
     "huff": [
-     6465,
-     6465,
-     6429,
-     6429,
-     6430,
-     6430,
-     6430
+     6473,
+     6473,
+     6437,
+     6437,
+     6438,
+     6438,
+     6438
     ],
     "yul": [
-     3151,
-     3153,
-     3174,
-     3151,
-     3155,
-     3156,
-     3174
+     3193,
+     3168,
+     3169,
+     3194,
+     3171,
+     3171,
+     3190
     ],
     "caller": [
      null,
@@ -3029,18 +4379,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 6429,
-     "median": 6430,
-     "max": 6465
+     "min": 6437,
+     "median": 6438,
+     "max": 6473
     },
     "yul": {
-     "min": 3151,
-     "median": 3155,
-     "max": 3174
+     "min": 3168,
+     "median": 3171,
+     "max": 3194
     },
     "caller": null,
     "lib": {
@@ -3052,7 +4447,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -3067,24 +4467,24 @@
     ],
     "gas": {
      "huff": [
-      6433,
-      6434,
-      6471,
-      6434,
-      6473,
-      6436,
-      6436,
-      6474
+      6443,
+      6444,
+      6481,
+      6444,
+      6482,
+      6445,
+      6446,
+      6484
      ],
      "yul": [
-      3162,
-      3164,
-      3151,
-      3166,
-      3152,
-      3167,
-      3181,
-      3171
+      3182,
+      3184,
+      3171,
+      3186,
+      3173,
+      3187,
+      3237,
+      3191
      ],
      "caller": [
       null,
@@ -3155,18 +4555,68 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": {
-      "min": 6433,
-      "median": 6436,
-      "max": 6474
+      "min": 6443,
+      "median": 6445,
+      "max": 6484
      },
      "yul": {
-      "min": 3151,
-      "median": 3165,
-      "max": 3181
+      "min": 3171,
+      "median": 3185,
+      "max": 3237
      },
      "caller": null,
      "lib": {
@@ -3178,7 +4628,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -3194,22 +4649,22 @@
    ],
    "gas": {
     "huff": [
-     1093,
-     1094,
-     5623,
-     5625,
-     5626,
-     5626,
-     5628
+     1097,
+     1098,
+     5628,
+     5630,
+     5632,
+     5634,
+     5635
     ],
     "yul": [
-     2838,
-     2841,
-     2871,
-     2845,
+     2846,
+     2849,
+     2882,
      2876,
-     2850,
-     2869
+     2889,
+     2862,
+     2866
     ],
     "caller": [
      null,
@@ -3273,18 +4728,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     674,
+     453,
+     2473,
+     453,
+     453
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1093,
-     "median": 5625,
-     "max": 5628
+     "min": 1097,
+     "median": 5630,
+     "max": 5635
     },
     "yul": {
-     "min": 2838,
-     "median": 2850,
-     "max": 2876
+     "min": 2846,
+     "median": 2866,
+     "max": 2889
     },
     "caller": null,
     "lib": {
@@ -3308,10 +4808,20 @@
      "median": 4268,
      "max": 4884
     },
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 453,
+     "median": 453,
+     "max": 2473
+    },
+    "snekmate": null
    },
    "reverts": {
-    "abdk": 1
+    "abdk": 1,
+    "prbud": 2
    },
    "typical": {
     "inputs": [
@@ -3326,24 +4836,24 @@
     ],
     "gas": {
      "huff": [
-      5623,
-      5625,
-      5664,
-      5627,
-      5666,
-      5630,
+      5628,
+      5631,
       5669,
-      5633
+      5635,
+      5673,
+      5638,
+      5677,
+      5642
      ],
      "yul": [
-      2872,
-      2874,
-      2878,
-      2879,
-      2871,
-      2882,
-      2904,
-      2932
+      2881,
+      2885,
+      2891,
+      2892,
+      2886,
+      2926,
+      2951,
+      2928
      ],
      "caller": [
       null,
@@ -3414,18 +4924,68 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      2557,
+      2599,
+      null,
+      2445,
+      null,
+      2515,
+      null,
+      2585
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": {
-      "min": 5623,
-      "median": 5631,
-      "max": 5669
+      "min": 5628,
+      "median": 5640,
+      "max": 5677
      },
      "yul": {
-      "min": 2871,
-      "median": 2878,
-      "max": 2932
+      "min": 2881,
+      "median": 2891,
+      "max": 2951
      },
      "caller": null,
      "lib": {
@@ -3449,7 +5009,19 @@
       "median": 5073,
       "max": 5303
      },
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": {
+      "min": 2445,
+      "median": 2557,
+      "max": 2599
+     },
+     "snekmate": null
+    },
+    "reverts": {
+     "prbud": 3
     }
    }
   },
@@ -3544,6 +5116,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -3563,7 +5180,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -3588,14 +5210,14 @@
       null
      ],
      "yul": [
-      3183,
-      4782,
-      3202,
-      3214,
-      3333,
-      5431,
-      3250,
-      5465
+      3203,
+      4801,
+      3221,
+      3234,
+      3352,
+      5451,
+      3239,
+      5453
      ],
      "caller": [
       null,
@@ -3666,14 +5288,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 3183,
-      "median": 3291,
-      "max": 5465
+      "min": 3203,
+      "median": 3295,
+      "max": 5453
      },
      "caller": null,
      "lib": {
@@ -3685,7 +5357,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -3701,22 +5378,22 @@
    ],
    "gas": {
     "huff": [
-     2084,
-     2108,
-     2197,
-     2308,
-     2529,
-     2750,
-     2818
+     2093,
+     2116,
+     2206,
+     2317,
+     2540,
+     2761,
+     2829
     ],
     "yul": [
-     786,
-     788,
-     1046,
-     1392,
-     2011,
-     2653,
-     2848
+     802,
+     806,
+     1065,
+     1388,
+     2032,
+     2676,
+     2871
     ],
     "caller": [
      null,
@@ -3780,18 +5457,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 2084,
-     "median": 2308,
-     "max": 2818
+     "min": 2093,
+     "median": 2317,
+     "max": 2829
     },
     "yul": {
-     "min": 786,
-     "median": 1392,
-     "max": 2848
+     "min": 802,
+     "median": 1388,
+     "max": 2871
     },
     "caller": null,
     "lib": {
@@ -3807,7 +5529,12 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "floor": {
@@ -3822,22 +5549,22 @@
    ],
    "gas": {
     "huff": [
-     1755,
-     1756,
-     1757,
-     1759,
-     1759,
-     1761,
-     1762
+     1767,
+     1769,
+     1770,
+     1772,
+     1774,
+     1775,
+     1777
     ],
     "yul": [
-     733,
-     735,
-     766,
-     740,
-     742,
-     745,
-     781
+     756,
+     801,
+     764,
+     767,
+     770,
+     773,
+     778
     ],
     "caller": [
      null,
@@ -3901,18 +5628,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     28,
+     28,
+     28,
+     28,
+     28,
+     28,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1755,
-     "median": 1759,
-     "max": 1762
+     "min": 1767,
+     "median": 1772,
+     "max": 1777
     },
     "yul": {
-     "min": 733,
-     "median": 742,
-     "max": 781
+     "min": 756,
+     "median": 770,
+     "max": 801
     },
     "caller": null,
     "lib": {
@@ -3928,7 +5700,19 @@
      "max": 237
     },
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 28,
+     "median": 28,
+     "max": 28
+    },
+    "snekmate": null
+   },
+   "reverts": {
+    "prbud": 1
    }
   },
   "frac": {
@@ -3943,22 +5727,22 @@
    ],
    "gas": {
     "huff": [
-     1785,
-     1786,
-     1787,
-     1788,
-     1789,
-     1791,
-     1792
+     1804,
+     1806,
+     1808,
+     1810,
+     1811,
+     1813,
+     1815
     ],
     "yul": [
-     721,
-     724,
-     725,
+     761,
+     764,
+     767,
+     771,
      774,
-     730,
-     732,
-     735
+     778,
+     781
     ],
     "caller": [
      null,
@@ -4022,18 +5806,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     8,
+     8,
+     8,
+     8,
+     8,
+     8,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1785,
-     "median": 1788,
-     "max": 1792
+     "min": 1804,
+     "median": 1810,
+     "max": 1815
     },
     "yul": {
-     "min": 721,
-     "median": 730,
-     "max": 774
+     "min": 761,
+     "median": 771,
+     "max": 781
     },
     "caller": null,
     "lib": {
@@ -4049,7 +5878,19 @@
      "max": 125
     },
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 8,
+     "median": 8,
+     "max": 8
+    },
+    "snekmate": null
+   },
+   "reverts": {
+    "prbud": 1
    }
   },
   "fromFixed18": {
@@ -4064,31 +5905,31 @@
    ],
    "gas": {
     "huff": [
-     770,
-     770,
-     771,
-     771,
-     772,
-     773,
-     773
+     798,
+     798,
+     799,
+     799,
+     800,
+     800,
+     800
     ],
     "yul": [
-     823,
-     825,
-     826,
-     827,
-     827,
-     828,
-     829
+     972,
+     880,
+     881,
+     881,
+     882,
+     979,
+     884
     ],
     "caller": [
-     1887,
-     1888,
-     1889,
-     1889,
-     1891,
-     1891,
-     1892
+     2035,
+     1943,
+     1944,
+     1945,
+     1946,
+     1946,
+     1948
     ],
     "lib": [
      140,
@@ -4143,23 +5984,68 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 770,
-     "median": 771,
-     "max": 773
+     "min": 798,
+     "median": 799,
+     "max": 800
     },
     "yul": {
-     "min": 823,
-     "median": 827,
-     "max": 829
+     "min": 880,
+     "median": 882,
+     "max": 979
     },
     "caller": {
-     "min": 1887,
-     "median": 1889,
-     "max": 1892
+     "min": 1943,
+     "median": 1946,
+     "max": 2035
     },
     "lib": {
      "min": 140,
@@ -4170,7 +6056,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "gavg": {
@@ -4184,20 +6075,20 @@
    ],
    "gas": {
     "huff": [
-     4887,
-     5086,
-     4908,
-     4910,
-     4947,
-     4930
+     4896,
+     5094,
+     4918,
+     4920,
+     4958,
+     4942
     ],
     "yul": [
-     1739,
-     1743,
-     1747,
-     1751,
-     1755,
-     1462
+     1589,
+     1596,
+     1602,
+     1609,
+     1615,
+     1329
     ],
     "caller": [
      null,
@@ -4208,12 +6099,12 @@
      null
     ],
     "lib": [
-     1289,
-     1289,
-     1289,
-     1289,
-     1289,
-     947
+     1079,
+     1079,
+     1079,
+     1079,
+     1079,
+     733
     ],
     "abdk": [
      819,
@@ -4254,24 +6145,64 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     949,
+     949,
+     949,
+     973,
+     949,
+     122
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 4887,
-     "median": 4920,
-     "max": 5086
+     "min": 4896,
+     "median": 4931,
+     "max": 5094
     },
     "yul": {
-     "min": 1462,
-     "median": 1745,
-     "max": 1755
+     "min": 1329,
+     "median": 1599,
+     "max": 1615
     },
     "caller": null,
     "lib": {
-     "min": 947,
-     "median": 1289,
-     "max": 1289
+     "min": 733,
+     "median": 1079,
+     "max": 1079
     },
     "abdk": {
      "min": 805,
@@ -4289,7 +6220,16 @@
      "max": 984
     },
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 122,
+     "median": 949,
+     "max": 973
+    },
+    "snekmate": null
    }
   },
   "hypot": {
@@ -4303,20 +6243,20 @@
    ],
    "gas": {
     "huff": [
-     5622,
-     5460,
-     5462,
-     5659,
-     5517,
-     5463
+     5629,
+     5469,
+     5469,
+     5666,
+     5525,
+     5471
     ],
     "yul": [
-     1985,
-     1986,
-     1988,
-     1990,
-     1991,
-     1697
+     1835,
+     1865,
+     1838,
+     1841,
+     1871,
+     1551
     ],
     "caller": [
      null,
@@ -4327,12 +6267,12 @@
      null
     ],
     "lib": [
-     1576,
-     1576,
-     1576,
-     1576,
-     1576,
-     1234
+     1366,
+     1366,
+     1366,
+     1366,
+     1366,
+     1020
     ],
     "abdk": [
      null,
@@ -4373,30 +6313,75 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 5460,
-     "median": 5490,
-     "max": 5659
+     "min": 5469,
+     "median": 5498,
+     "max": 5666
     },
     "yul": {
-     "min": 1697,
-     "median": 1987,
-     "max": 1991
+     "min": 1551,
+     "median": 1839,
+     "max": 1871
     },
     "caller": null,
     "lib": {
-     "min": 1234,
-     "median": 1576,
-     "max": 1576
+     "min": 1020,
+     "median": 1366,
+     "max": 1366
     },
     "abdk": null,
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "inv": {
@@ -4411,22 +6396,22 @@
    ],
    "gas": {
     "huff": [
-     1853,
-     1854,
-     1855,
-     1856,
-     1858,
-     1859,
-     1860
+     1877,
+     1878,
+     1880,
+     1882,
+     1883,
+     1886,
+     1887
     ],
     "yul": [
-     899,
-     901,
-     904,
-     906,
-     908,
-     910,
-     912
+     947,
+     951,
+     954,
+     956,
+     960,
+     963,
+     967
     ],
     "caller": [
      null,
@@ -4490,18 +6475,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     94,
+     94,
+     94,
+     94,
+     94,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1853,
-     "median": 1856,
-     "max": 1860
+     "min": 1877,
+     "median": 1882,
+     "max": 1887
     },
     "yul": {
-     "min": 899,
-     "median": 906,
-     "max": 912
+     "min": 947,
+     "median": 956,
+     "max": 967
     },
     "caller": null,
     "lib": {
@@ -4529,11 +6559,21 @@
      "median": 1259,
      "max": 1301
     },
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 94,
+     "median": 94,
+     "max": 94
+    },
+    "snekmate": null
    },
    "reverts": {
     "solady": 1,
-    "prb": 1
+    "prb": 1,
+    "prbud": 2
    }
   },
   "lambertW0": {
@@ -4550,20 +6590,20 @@
     "huff": [
      null,
      20800,
-     20800,
-     20992,
-     20993,
-     12823,
+     20801,
+     20994,
+     20996,
+     12826,
      null
     ],
     "yul": [
      8339,
-     7638,
-     7649,
-     7776,
-     7635,
-     7705,
-     7424
+     7639,
+     7651,
+     7779,
+     7641,
+     7711,
+     7431
     ],
     "caller": [
      null,
@@ -4627,17 +6667,62 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 12823,
-     "median": 20800,
-     "max": 20993
+     "min": 12826,
+     "median": 20801,
+     "max": 20996
     },
     "yul": {
-     "min": 7424,
-     "median": 7649,
+     "min": 7431,
+     "median": 7651,
      "max": 8339
     },
     "caller": null,
@@ -4654,7 +6739,12 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -4669,24 +6759,24 @@
     ],
     "gas": {
      "huff": [
-      20739,
-      20741,
-      2047586732,
+      20773,
+      20776,
+      2047586767,
       null,
-      60648,
-      21265,
-      21111,
+      60686,
+      21302,
+      21150,
       null
      ],
      "yul": [
-      6692,
-      6515,
-      8001,
-      7875,
-      7798,
-      7818,
-      8020,
-      7940
+      6761,
+      6586,
+      8107,
+      7948,
+      7872,
+      7894,
+      8096,
+      8017
      ],
      "caller": [
       null,
@@ -4757,18 +6847,68 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": {
-      "min": 20739,
-      "median": 21188,
-      "max": 2047586732
+      "min": 20773,
+      "median": 21226,
+      "max": 2047586767
      },
      "yul": {
-      "min": 6515,
-      "median": 7846,
-      "max": 8020
+      "min": 6586,
+      "median": 7921,
+      "max": 8107
      },
      "caller": null,
      "lib": {
@@ -4784,7 +6924,12 @@
      },
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -4809,13 +6954,13 @@
      null
     ],
     "yul": [
-     10111,
-     10051,
-     8648,
-     7568,
-     7415,
-     7654,
-     7415
+     10119,
+     10059,
+     8658,
+     7580,
+     7450,
+     7669,
+     7457
     ],
     "caller": [
      null,
@@ -4879,14 +7024,59 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": null,
     "yul": {
-     "min": 7415,
-     "median": 7654,
-     "max": 10111
+     "min": 7450,
+     "median": 7669,
+     "max": 10119
     },
     "caller": null,
     "lib": {
@@ -4898,7 +7088,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -4923,14 +7118,14 @@
       null
      ],
      "yul": [
-      7815,
-      7742,
-      7818,
-      7821,
-      7815,
-      7993,
-      7965,
-      7987
+      7893,
+      7822,
+      7900,
+      7904,
+      7898,
+      8079,
+      7916,
+      7938
      ],
      "caller": [
       null,
@@ -5001,14 +7196,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 7742,
-      "median": 7819,
-      "max": 7993
+      "min": 7822,
+      "median": 7902,
+      "max": 8079
      },
      "caller": null,
      "lib": {
@@ -5020,7 +7265,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -5105,6 +7355,46 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -5128,7 +7418,12 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "reverts": {
     "solady": 3
@@ -5147,21 +7442,21 @@
    "gas": {
     "huff": [
      3949,
-     4040,
-     1047,
-     4649,
-     5014,
-     4014,
-     4015
+     4041,
+     1048,
+     4651,
+     5017,
+     4016,
+     4018
     ],
     "yul": [
      1076,
-     1079,
-     734,
-     2283,
-     2273,
-     1096,
-     1090
+     1080,
+     736,
+     2286,
+     2277,
+     1093,
+     1097
     ],
     "caller": [
      null,
@@ -5225,18 +7520,63 @@
      1207,
      1205,
      1197
+    ],
+    "solmate": [
+     null,
+     632,
+     632,
+     632,
+     632,
+     632,
+     632
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     524,
+     6489,
+     6549,
+     524,
+     524
+    ],
+    "snekmate": [
+     144,
+     1289,
+     1307,
+     1307,
+     1235,
+     1343,
+     1298
     ]
    },
    "summary": {
     "huff": {
-     "min": 1047,
-     "median": 4015,
-     "max": 5014
+     "min": 1048,
+     "median": 4018,
+     "max": 5017
     },
     "yul": {
-     "min": 734,
-     "median": 1090,
-     "max": 2283
+     "min": 736,
+     "median": 1093,
+     "max": 2286
     },
     "caller": null,
     "lib": {
@@ -5268,13 +7608,32 @@
      "min": 834,
      "median": 1156,
      "max": 1207
+    },
+    "solmate": {
+     "min": 632,
+     "median": 632,
+     "max": 632
+    },
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 524,
+     "median": 524,
+     "max": 6549
+    },
+    "snekmate": {
+     "min": 144,
+     "median": 1298,
+     "max": 1343
     }
    },
    "reverts": {
     "abdk": 1,
     "solady": 1,
     "prb": 1,
-    "balancer": 1
+    "balancer": 1,
+    "solmate": 1,
+    "prbud": 2
    },
    "typical": {
     "inputs": [
@@ -5289,24 +7648,24 @@
     ],
     "gas": {
      "huff": [
-      5034,
-      4498,
-      4345,
-      4519,
-      4192,
-      4713,
-      4874,
-      4374
+      5044,
+      4509,
+      4356,
+      4531,
+      4204,
+      4725,
+      4887,
+      4388
      ],
      "yul": [
-      2333,
-      2336,
-      2334,
-      2340,
-      2338,
-      2348,
-      2346,
-      2344
+      2353,
+      2356,
+      2356,
+      2364,
+      2362,
+      2372,
+      2374,
+      2428
      ],
      "caller": [
       null,
@@ -5377,18 +7736,68 @@
       1061,
       1237,
       1177
+     ],
+     "solmate": [
+      632,
+      632,
+      632,
+      632,
+      632,
+      632,
+      632,
+      632
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      6669,
+      6279
+     ],
+     "snekmate": [
+      1289,
+      1145,
+      1181,
+      1235,
+      1253,
+      1235,
+      1217,
+      1217
      ]
     },
     "summary": {
      "huff": {
-      "min": 4192,
-      "median": 4508,
-      "max": 5034
+      "min": 4204,
+      "median": 4520,
+      "max": 5044
      },
      "yul": {
-      "min": 2333,
-      "median": 2339,
-      "max": 2348
+      "min": 2353,
+      "median": 2363,
+      "max": 2428
      },
      "caller": null,
      "lib": {
@@ -5420,7 +7829,27 @@
       "min": 1031,
       "median": 1091,
       "max": 1237
+     },
+     "solmate": {
+      "min": 632,
+      "median": 632,
+      "max": 632
+     },
+     "oz": null,
+     "uniswap": null,
+     "prbud": {
+      "min": 6279,
+      "median": 6474,
+      "max": 6669
+     },
+     "snekmate": {
+      "min": 1145,
+      "median": 1226,
+      "max": 1289
      }
+    },
+    "reverts": {
+     "prbud": 6
     }
    }
   },
@@ -5436,22 +7865,22 @@
    ],
    "gas": {
     "huff": [
-     4498,
-     4589,
-     1766,
-     5199,
-     5563,
-     4563,
-     4564
+     4506,
+     4598,
+     1775,
+     5208,
+     5574,
+     4574,
+     4575
     ],
     "yul": [
-     1064,
-     1065,
-     721,
-     2270,
-     2259,
-     1074,
-     1103
+     1079,
+     1082,
+     739,
+     2289,
+     2279,
+     1096,
+     1099
     ],
     "caller": [
      null,
@@ -5515,18 +7944,63 @@
      1882,
      1880,
      1872
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     548,
+     8293,
+     615,
+     2328,
+     2328
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1766,
-     "median": 4564,
-     "max": 5563
+     "min": 1775,
+     "median": 4575,
+     "max": 5574
     },
     "yul": {
-     "min": 721,
-     "median": 1074,
-     "max": 2270
+     "min": 739,
+     "median": 1096,
+     "max": 2289
     },
     "caller": null,
     "lib": {
@@ -5546,11 +8020,21 @@
      "min": 1487,
      "median": 1859,
      "max": 1882
-    }
+    },
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 548,
+     "median": 2328,
+     "max": 8293
+    },
+    "snekmate": null
    },
    "reverts": {
     "prb": 1,
-    "balancer": 1
+    "balancer": 1,
+    "prbud": 2
    },
    "typical": {
     "inputs": [
@@ -5565,24 +8049,24 @@
     ],
     "gas": {
      "huff": [
-      5451,
-      5110,
-      4939,
-      5263,
-      5461,
-      4943,
-      5094,
-      5149
+      5470,
+      5131,
+      4960,
+      5285,
+      5482,
+      4965,
+      5117,
+      5173
      ],
      "yul": [
-      2329,
-      2333,
-      2333,
-      2335,
-      2323,
-      2344,
-      2347,
-      2328
+      2368,
+      2373,
+      2375,
+      2378,
+      2366,
+      2389,
+      2393,
+      2376
      ],
      "caller": [
       null,
@@ -5653,18 +8137,68 @@
       1940,
       1935,
       1817
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      8173,
+      8293,
+      null,
+      8473,
+      8173,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": {
-      "min": 4939,
-      "median": 5129,
-      "max": 5461
+      "min": 4960,
+      "median": 5152,
+      "max": 5482
      },
      "yul": {
-      "min": 2323,
-      "median": 2333,
-      "max": 2347
+      "min": 2366,
+      "median": 2375,
+      "max": 2393
      },
      "caller": null,
      "lib": {
@@ -5684,7 +8218,19 @@
       "min": 1792,
       "median": 1891,
       "max": 1940
-     }
+     },
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": {
+      "min": 8173,
+      "median": 8233,
+      "max": 8473
+     },
+     "snekmate": null
+    },
+    "reverts": {
+     "prbud": 4
     }
    }
   },
@@ -5779,6 +8325,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -5798,7 +8389,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -5823,14 +8419,14 @@
       null
      ],
      "yul": [
-      2511,
-      2512,
-      2513,
-      2517,
-      2523,
-      2516,
-      2526,
-      2526
+      2560,
+      2561,
+      2562,
+      2566,
+      2572,
+      2565,
+      2575,
+      2575
      ],
      "caller": [
       null,
@@ -5901,14 +8497,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 2511,
-      "median": 2516,
-      "max": 2526
+      "min": 2560,
+      "median": 2565,
+      "max": 2575
      },
      "caller": null,
      "lib": {
@@ -5920,7 +8566,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -5936,22 +8587,22 @@
    ],
    "gas": {
     "huff": [
-     3757,
-     3848,
-     1025,
-     4458,
-     4823,
-     3822,
-     3822
+     3761,
+     3852,
+     1030,
+     4463,
+     4829,
+     3829,
+     3830
     ],
     "yul": [
-     941,
-     943,
-     945,
-     2145,
-     2134,
+     948,
      951,
-     953
+     955,
+     2156,
+     2146,
+     965,
+     968
     ],
     "caller": [
      null,
@@ -6015,18 +8666,63 @@
      1912,
      1910,
      1902
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     422,
+     6387,
+     6447,
+     422,
+     422
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1025,
-     "median": 3822,
-     "max": 4823
+     "min": 1030,
+     "median": 3830,
+     "max": 4829
     },
     "yul": {
-     "min": 941,
-     "median": 951,
-     "max": 2145
+     "min": 948,
+     "median": 965,
+     "max": 2156
     },
     "caller": null,
     "lib": {
@@ -6054,12 +8750,22 @@
      "min": 1517,
      "median": 1889,
      "max": 1912
-    }
+    },
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 422,
+     "median": 422,
+     "max": 6447
+    },
+    "snekmate": null
    },
    "reverts": {
     "abdk": 1,
     "prb": 1,
-    "balancer": 1
+    "balancer": 1,
+    "prbud": 2
    },
    "typical": {
     "inputs": [
@@ -6074,24 +8780,24 @@
     ],
     "gas": {
      "huff": [
-      4862,
-      4326,
-      4345,
-      4556,
-      4699,
-      4331,
-      4511,
-      4179
+      4877,
+      4342,
+      4361,
+      4572,
+      4716,
+      4349,
+      4529,
+      4198
      ],
      "yul": [
-      2200,
-      2245,
-      2198,
-      2209,
-      2211,
-      2209,
-      2215,
-      2217
+      2229,
+      2232,
+      2230,
+      2303,
+      2309,
+      2244,
+      2319,
+      2255
      ],
      "caller": [
       null,
@@ -6162,18 +8868,68 @@
       1935,
       1880,
       1937
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      6477,
+      null,
+      6327,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": {
-      "min": 4179,
-      "median": 4428,
-      "max": 4862
+      "min": 4198,
+      "median": 4445,
+      "max": 4877
      },
      "yul": {
-      "min": 2198,
-      "median": 2210,
-      "max": 2245
+      "min": 2229,
+      "median": 2249,
+      "max": 2319
      },
      "caller": null,
      "lib": {
@@ -6201,7 +8957,19 @@
       "min": 1880,
       "median": 1908,
       "max": 1937
-     }
+     },
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": {
+      "min": 6327,
+      "median": 6402,
+      "max": 6477
+     },
+     "snekmate": null
+    },
+    "reverts": {
+     "prbud": 6
     }
    }
   },
@@ -6217,22 +8985,22 @@
    ],
    "gas": {
     "huff": [
-     2322,
-     2413,
-     2306,
-     5609,
-     5974,
-     2382,
-     2383
+     2334,
+     2426,
+     2319,
+     5622,
+     5988,
+     2396,
+     2398
     ],
     "yul": [
-     791,
+     814,
+     818,
      821,
-     795,
-     797,
-     799,
-     802,
-     804
+     824,
+     827,
+     878,
+     835
     ],
     "caller": [
      null,
@@ -6296,18 +9064,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     513,
+     null,
+     513,
+     513,
+     513
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     397,
+     null,
+     469,
+     541,
+     541
     ]
    },
    "summary": {
     "huff": {
-     "min": 2306,
-     "median": 2383,
-     "max": 5974
+     "min": 2319,
+     "median": 2398,
+     "max": 5988
     },
     "yul": {
-     "min": 791,
-     "median": 799,
-     "max": 821
+     "min": 814,
+     "median": 824,
+     "max": 878
     },
     "caller": null,
     "lib": {
@@ -6323,10 +9136,25 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": {
+     "min": 513,
+     "median": 513,
+     "max": 513
+    },
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": {
+     "min": 397,
+     "median": 505,
+     "max": 541
+    }
    },
    "reverts": {
-    "solady": 3
+    "solady": 3,
+    "oz": 3,
+    "snekmate": 3
    }
   },
   "max": {
@@ -6340,20 +9168,20 @@
    ],
    "gas": {
     "huff": [
-     1453,
-     1454,
-     1448,
-     1456,
-     1458,
-     1453
+     1491,
+     1493,
+     1488,
+     1498,
+     1499,
+     1495
     ],
     "yul": [
-     904,
-     912,
-     912,
-     920,
-     997,
-     924
+     1019,
+     1029,
+     1032,
+     1155,
+     1049,
+     1052
     ],
     "caller": [
      null,
@@ -6410,18 +9238,58 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     86,
+     86,
+     86,
+     86,
+     86,
+     86
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1448,
-     "median": 1453,
-     "max": 1458
+     "min": 1488,
+     "median": 1494,
+     "max": 1499
     },
     "yul": {
-     "min": 904,
-     "median": 916,
-     "max": 997
+     "min": 1019,
+     "median": 1040,
+     "max": 1155
     },
     "caller": null,
     "lib": {
@@ -6437,7 +9305,16 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": {
+     "min": 86,
+     "median": 86,
+     "max": 86
+    },
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "min": {
@@ -6451,20 +9328,20 @@
    ],
    "gas": {
     "huff": [
-     1422,
-     1417,
-     1425,
-     1419,
-     1421,
-     1429
+     1456,
+     1452,
+     1460,
+     1455,
+     1458,
+     1467
     ],
     "yul": [
-     878,
-     883,
-     891,
-     891,
-     959,
-     902
+     980,
+     986,
+     997,
+     1099,
+     1005,
+     1016
     ],
     "caller": [
      null,
@@ -6521,18 +9398,58 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     86,
+     86,
+     86,
+     86,
+     86,
+     86
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1417,
-     "median": 1421,
-     "max": 1429
+     "min": 1452,
+     "median": 1457,
+     "max": 1467
     },
     "yul": {
-     "min": 878,
-     "median": 891,
-     "max": 959
+     "min": 980,
+     "median": 1001,
+     "max": 1099
     },
     "caller": null,
     "lib": {
@@ -6548,7 +9465,16 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": {
+     "min": 86,
+     "median": 86,
+     "max": 86
+    },
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "mul": {
@@ -6562,28 +9488,28 @@
    ],
    "gas": {
     "huff": [
-     800,
-     801,
-     803,
-     804,
-     805,
-     807
+     810,
+     812,
+     815,
+     816,
+     819,
+     821
     ],
     "yul": [
-     880,
-     884,
-     889,
-     892,
-     896,
-     901
+     909,
+     916,
+     922,
+     964,
+     935,
+     981
     ],
     "caller": [
-     2012,
-     2037,
-     2020,
+     2041,
      2048,
-     2053,
-     2033
+     2054,
+     2060,
+     2067,
+     2073
     ],
     "lib": [
      267,
@@ -6632,23 +9558,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     131,
+     131,
+     131,
+     131,
+     131,
+     131
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     237,
+     237,
+     null,
+     237,
+     237,
+     237
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 800,
-     "median": 803,
-     "max": 807
+     "min": 810,
+     "median": 815,
+     "max": 821
     },
     "yul": {
-     "min": 880,
-     "median": 890,
-     "max": 901
+     "min": 909,
+     "median": 928,
+     "max": 981
     },
     "caller": {
-     "min": 2012,
-     "median": 2035,
-     "max": 2053
+     "min": 2041,
+     "median": 2057,
+     "max": 2073
     },
     "lib": {
      "min": 267,
@@ -6675,10 +9641,24 @@
      "median": 688,
      "max": 709
     },
-    "balancer": null
+    "balancer": null,
+    "solmate": {
+     "min": 131,
+     "median": 131,
+     "max": 131
+    },
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 237,
+     "median": 237,
+     "max": 237
+    },
+    "snekmate": null
    },
    "reverts": {
-    "abdk": 1
+    "abdk": 1,
+    "prbud": 1
    }
   },
   "mulDown": {
@@ -6701,11 +9681,11 @@
     ],
     "yul": [
      813,
-     817,
-     821,
-     825,
-     829,
-     833
+     820,
+     826,
+     833,
+     839,
+     846
     ],
     "caller": [
      null,
@@ -6762,14 +9742,54 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     150,
+     150,
+     null,
+     150,
+     150,
+     150
+    ],
+    "oz": [
+     239,
+     239,
+     null,
+     239,
+     239,
+     239
+    ],
+    "uniswap": [
+     179,
+     179,
+     null,
+     179,
+     179,
+     179
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     323,
+     323,
+     null,
+     323,
+     323,
+     323
     ]
    },
    "summary": {
     "huff": null,
     "yul": {
      "min": 813,
-     "median": 823,
-     "max": 833
+     "median": 829,
+     "max": 846
     },
     "caller": null,
     "lib": {
@@ -6785,10 +9805,35 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": {
+     "min": 150,
+     "median": 150,
+     "max": 150
+    },
+    "oz": {
+     "min": 239,
+     "median": 239,
+     "max": 239
+    },
+    "uniswap": {
+     "min": 179,
+     "median": 179,
+     "max": 179
+    },
+    "prbud": null,
+    "snekmate": {
+     "min": 323,
+     "median": 323,
+     "max": 323
+    }
    },
    "reverts": {
-    "solady": 1
+    "solady": 1,
+    "solmate": 1,
+    "oz": 1,
+    "uniswap": 1,
+    "snekmate": 1
    }
   },
   "mulUp": {
@@ -6810,12 +9855,12 @@
      null
     ],
     "yul": [
-     913,
-     964,
-     968,
-     940,
-     929,
-     933
+     921,
+     974,
+     981,
+     941,
+     947,
+     980
     ],
     "caller": [
      null,
@@ -6826,12 +9871,12 @@
      null
     ],
     "lib": [
-     360,
-     400,
-     400,
-     360,
-     360,
-     360
+     337,
+     377,
+     377,
+     337,
+     337,
+     337
     ],
     "abdk": [
      null,
@@ -6872,20 +9917,60 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     176,
+     176,
+     null,
+     176,
+     176,
+     176
+    ],
+    "oz": [
+     621,
+     621,
+     null,
+     621,
+     621,
+     621
+    ],
+    "uniswap": [
+     282,
+     304,
+     null,
+     282,
+     282,
+     282
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     386,
+     391,
+     null,
+     386,
+     386,
+     386
     ]
    },
    "summary": {
     "huff": null,
     "yul": {
-     "min": 913,
-     "median": 936,
-     "max": 968
+     "min": 921,
+     "median": 960,
+     "max": 981
     },
     "caller": null,
     "lib": {
-     "min": 360,
-     "median": 360,
-     "max": 400
+     "min": 337,
+     "median": 337,
+     "max": 377
     },
     "abdk": null,
     "solady": {
@@ -6895,10 +9980,35 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": {
+     "min": 176,
+     "median": 176,
+     "max": 176
+    },
+    "oz": {
+     "min": 621,
+     "median": 621,
+     "max": 621
+    },
+    "uniswap": {
+     "min": 282,
+     "median": 282,
+     "max": 304
+    },
+    "prbud": null,
+    "snekmate": {
+     "min": 386,
+     "median": 386,
+     "max": 391
+    }
    },
    "reverts": {
-    "solady": 1
+    "solady": 1,
+    "solmate": 1,
+    "oz": 1,
+    "uniswap": 1,
+    "snekmate": 1
    }
   },
   "neg": {
@@ -6913,22 +10023,22 @@
    ],
    "gas": {
     "huff": [
-     1290,
-     1291,
-     1292,
-     1293,
-     1295,
+     1294,
      1296,
-     1297
+     1297,
+     1299,
+     1301,
+     1302,
+     1304
     ],
     "yul": [
-     739,
-     742,
-     744,
-     760,
-     748,
-     751,
-     770
+     747,
+     750,
+     754,
+     757,
+     761,
+     764,
+     767
     ],
     "caller": [
      null,
@@ -6992,18 +10102,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1290,
-     "median": 1293,
-     "max": 1297
+     "min": 1294,
+     "median": 1299,
+     "max": 1304
     },
     "yul": {
-     "min": 739,
-     "median": 748,
-     "max": 770
+     "min": 747,
+     "median": 757,
+     "max": 767
     },
     "caller": null,
     "lib": {
@@ -7027,7 +10182,12 @@
      "median": 9,
      "max": 9
     },
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "normCdf": {
@@ -7121,6 +10281,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -7140,7 +10345,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -7165,14 +10375,14 @@
       null
      ],
      "yul": [
-      994,
-      14848,
-      5321,
-      6032,
-      6887,
-      6756,
-      6188,
-      5738
+      1063,
+      14917,
+      5390,
+      6101,
+      6955,
+      6825,
+      6257,
+      5690
      ],
      "caller": [
       null,
@@ -7243,14 +10453,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 994,
-      "median": 6110,
-      "max": 14848
+      "min": 1063,
+      "median": 6179,
+      "max": 14917
      },
      "caller": null,
      "lib": {
@@ -7262,7 +10522,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -7278,19 +10543,19 @@
    "gas": {
     "huff": [
      8995,
-     9534,
-     8843,
-     9381,
-     8930,
-     9366
+     9535,
+     8844,
+     9384,
+     8933,
+     9370
     ],
     "yul": [
      8034,
-     3687,
-     3136,
-     3414,
-     2463,
-     1105
+     3689,
+     3141,
+     3421,
+     2473,
+     1117
     ],
     "caller": [
      null,
@@ -7347,17 +10612,57 @@
      2289,
      null,
      2161
+    ],
+    "solmate": [
+     1355,
+     1355,
+     1355,
+     1355,
+     1355,
+     1355
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     9392,
+     9406,
+     1267,
+     9292,
+     null,
+     9248
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 8843,
-     "median": 9180,
-     "max": 9534
+     "min": 8844,
+     "median": 9182,
+     "max": 9535
     },
     "yul": {
-     "min": 1105,
-     "median": 3275,
+     "min": 1117,
+     "median": 3281,
      "max": 8034
     },
     "caller": null,
@@ -7386,10 +10691,24 @@
      "min": 2000,
      "median": 2203,
      "max": 2319
-    }
+    },
+    "solmate": {
+     "min": 1355,
+     "median": 1355,
+     "max": 1355
+    },
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 1267,
+     "median": 9292,
+     "max": 9406
+    },
+    "snekmate": null
    },
    "reverts": {
-    "balancer": 1
+    "balancer": 1,
+    "prbud": 1
    },
    "typical": {
     "inputs": [
@@ -7404,24 +10723,24 @@
     ],
     "gas": {
      "huff": [
-      9878,
-      9584,
-      9624,
-      9716,
-      9749,
-      9754,
-      9621,
-      9798
+      9922,
+      9631,
+      9672,
+      9765,
+      9801,
+      9807,
+      9676,
+      9855
      ],
      "yul": [
-      4121,
-      4280,
-      4147,
-      4162,
-      4283,
-      4149,
-      4194,
-      4206
+      4256,
+      4276,
+      4484,
+      4311,
+      4285,
+      4310,
+      4361,
+      4377
      ],
      "caller": [
       null,
@@ -7492,18 +10811,68 @@
       null,
       2217,
       2185
+     ],
+     "solmate": [
+      1355,
+      1355,
+      1355,
+      1355,
+      1355,
+      1355,
+      1355,
+      1355
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      9640,
+      9448,
+      null,
+      null,
+      null,
+      9654,
+      9238
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": {
-      "min": 9584,
-      "median": 9732,
-      "max": 9878
+      "min": 9631,
+      "median": 9783,
+      "max": 9922
      },
      "yul": {
-      "min": 4121,
-      "median": 4178,
-      "max": 4283
+      "min": 4256,
+      "median": 4310,
+      "max": 4484
      },
      "caller": null,
      "lib": {
@@ -7531,10 +10900,24 @@
       "min": 2185,
       "median": 2223,
       "max": 2313
-     }
+     },
+     "solmate": {
+      "min": 1355,
+      "median": 1355,
+      "max": 1355
+     },
+     "oz": null,
+     "uniswap": null,
+     "prbud": {
+      "min": 9238,
+      "median": 9544,
+      "max": 9654
+     },
+     "snekmate": null
     },
     "reverts": {
-     "balancer": 4
+     "balancer": 4,
+     "prbud": 4
     }
    }
   },
@@ -7558,11 +10941,11 @@
     ],
     "yul": [
      2507,
-     4451,
-     9378,
-     3471,
-     2412,
-     2966
+     4448,
+     9383,
+     3487,
+     2423,
+     2979
     ],
     "caller": [
      null,
@@ -7619,14 +11002,54 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     839,
+     1939,
+     4980,
+     1436,
+     688,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     1207,
+     2903,
+     7604,
+     2097,
+     956,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": null,
     "yul": {
-     "min": 2412,
-     "median": 3218,
-     "max": 9378
+     "min": 2423,
+     "median": 3233,
+     "max": 9383
     },
     "caller": null,
     "lib": {
@@ -7650,12 +11073,27 @@
      "max": 7586
     },
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": {
+     "min": 688,
+     "median": 1436,
+     "max": 4980
+    },
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 956,
+     "median": 2097,
+     "max": 7604
+    },
+    "snekmate": null
    },
    "reverts": {
     "abdk": 1,
     "solady": 1,
-    "prb": 1
+    "prb": 1,
+    "solmate": 1,
+    "prbud": 1
    },
    "typical": {
     "inputs": [
@@ -7680,14 +11118,14 @@
       null
      ],
      "yul": [
-      3117,
-      3880,
-      2239,
-      6855,
-      7221,
-      5077,
-      7088,
-      6952
+      3253,
+      4023,
+      2386,
+      7007,
+      7378,
+      5240,
+      7256,
+      7349
      ],
      "caller": [
       null,
@@ -7758,14 +11196,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      849,
+      1332,
+      422,
+      3029,
+      3322,
+      2090,
+      3124,
+      3180
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      1197,
+      1920,
+      558,
+      4609,
+      4998,
+      3154,
+      4776,
+      4860
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 2239,
-      "median": 5966,
-      "max": 7221
+      "min": 2386,
+      "median": 6123,
+      "max": 7378
      },
      "caller": null,
      "lib": {
@@ -7789,7 +11277,20 @@
       "max": 5068
      },
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": {
+      "min": 422,
+      "median": 2559,
+      "max": 3322
+     },
+     "oz": null,
+     "uniswap": null,
+     "prbud": {
+      "min": 558,
+      "median": 3881,
+      "max": 4998
+     },
+     "snekmate": null
     }
    }
   },
@@ -7805,22 +11306,22 @@
    ],
    "gas": {
     "huff": [
-     2027,
-     2027,
-     2028,
-     2028,
-     2029,
-     2029,
-     2029
+     2051,
+     2051,
+     2052,
+     2052,
+     2053,
+     2053,
+     2054
     ],
     "yul": [
-     795,
-     796,
-     797,
-     797,
-     798,
-     800,
-     800
+     842,
+     843,
+     844,
+     845,
+     923,
+     847,
+     848
     ],
     "caller": [
      null,
@@ -7884,18 +11385,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 2027,
-     "median": 2028,
-     "max": 2029
+     "min": 2051,
+     "median": 2052,
+     "max": 2054
     },
     "yul": {
-     "min": 795,
-     "median": 797,
-     "max": 800
+     "min": 842,
+     "median": 845,
+     "max": 923
     },
     "caller": null,
     "lib": {
@@ -7907,7 +11453,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "sign": {
@@ -7922,22 +11473,22 @@
    ],
    "gas": {
     "huff": [
-     1714,
-     1715,
-     1716,
-     1717,
-     1719,
-     1719,
-     1721
+     1722,
+     1724,
+     1725,
+     1727,
+     1729,
+     1730,
+     1732
     ],
     "yul": [
-     718,
-     721,
-     722,
+     734,
+     737,
+     741,
+     744,
      747,
-     727,
-     729,
-     731
+     751,
+     755
     ],
     "caller": [
      null,
@@ -8001,18 +11552,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     78,
+     78,
+     78,
+     78,
+     78,
+     78,
+     78
     ]
    },
    "summary": {
     "huff": {
-     "min": 1714,
-     "median": 1717,
-     "max": 1721
+     "min": 1722,
+     "median": 1727,
+     "max": 1732
     },
     "yul": {
-     "min": 718,
-     "median": 727,
-     "max": 747
+     "min": 734,
+     "median": 744,
+     "max": 755
     },
     "caller": null,
     "lib": {
@@ -8032,7 +11628,16 @@
      "median": 181,
      "max": 182
     },
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": {
+     "min": 78,
+     "median": 78,
+     "max": 78
+    }
    }
   },
   "sinh": {
@@ -8126,6 +11731,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -8145,7 +11795,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -8170,14 +11825,14 @@
       null
      ],
      "yul": [
-      4133,
-      4147,
-      4136,
-      4142,
-      4151,
-      4131,
-      4155,
-      4140
+      4202,
+      4216,
+      4204,
+      4210,
+      4220,
+      4199,
+      4223,
+      4209
      ],
      "caller": [
       null,
@@ -8248,14 +11903,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 4131,
-      "median": 4141,
-      "max": 4155
+      "min": 4199,
+      "median": 4209,
+      "max": 4223
      },
      "caller": null,
      "lib": {
@@ -8267,7 +11972,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -8286,19 +11996,19 @@
      4081,
      4334,
      4066,
-     4245,
-     4265,
-     4140,
-     4142
+     4247,
+     4266,
+     4143,
+     4145
     ],
     "yul": [
-     1153,
-     1155,
-     1455,
-     1458,
-     1467,
-     1470,
-     1464
+     984,
+     988,
+     1284,
+     1288,
+     1291,
+     1294,
+     1297
     ],
     "caller": [
      null,
@@ -8310,13 +12020,13 @@
      null
     ],
     "lib": [
-     683,
-     683,
-     1025,
-     1025,
-     1025,
-     1025,
-     1025
+     469,
+     469,
+     815,
+     815,
+     815,
+     815,
+     815
     ],
     "abdk": [
      798,
@@ -8362,24 +12072,69 @@
      2337,
      2377,
      2369
+    ],
+    "solmate": [
+     408,
+     456,
+     456,
+     480,
+     480,
+     456,
+     480
+    ],
+    "oz": [
+     141,
+     793,
+     793,
+     787,
+     715,
+     769,
+     817
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     167,
+     864,
+     864,
+     847,
+     767,
+     840,
+     888
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
      "min": 4066,
-     "median": 4142,
+     "median": 4145,
      "max": 4334
     },
     "yul": {
-     "min": 1153,
-     "median": 1458,
-     "max": 1470
+     "min": 984,
+     "median": 1288,
+     "max": 1297
     },
     "caller": null,
     "lib": {
-     "min": 683,
-     "median": 1025,
-     "max": 1025
+     "min": 469,
+     "median": 815,
+     "max": 815
     },
     "abdk": {
      "min": 754,
@@ -8405,7 +12160,24 @@
      "min": 98,
      "median": 2259,
      "max": 2377
-    }
+    },
+    "solmate": {
+     "min": 408,
+     "median": 456,
+     "max": 480
+    },
+    "oz": {
+     "min": 141,
+     "median": 787,
+     "max": 817
+    },
+    "uniswap": null,
+    "prbud": {
+     "min": 167,
+     "median": 847,
+     "max": 888
+    },
+    "snekmate": null
    },
    "reverts": {
     "abdk": 1
@@ -8423,24 +12195,24 @@
     ],
     "gas": {
      "huff": [
-      4181,
-      4325,
-      4380,
-      4221,
-      4365,
-      4348,
-      4207,
-      4154
+      4206,
+      4350,
+      4406,
+      4247,
+      4392,
+      4376,
+      4235,
+      4182
      ],
      "yul": [
-      1646,
-      1284,
-      1287,
-      1586,
-      1291,
-      1294,
-      1296,
-      1596
+      1454,
+      1165,
+      1264,
+      1466,
+      1176,
+      1180,
+      1184,
+      1480
      ],
      "caller": [
       null,
@@ -8453,14 +12225,14 @@
       null
      ],
      "lib": [
-      1025,
-      683,
-      683,
-      1025,
-      683,
-      683,
-      683,
-      1025
+      815,
+      469,
+      469,
+      815,
+      469,
+      469,
+      469,
+      815
      ],
      "abdk": [
       846,
@@ -8511,24 +12283,74 @@
       2545,
       2371,
       2293
+     ],
+     "solmate": [
+      432,
+      432,
+      456,
+      456,
+      456,
+      456,
+      456,
+      480
+     ],
+     "oz": [
+      763,
+      739,
+      787,
+      793,
+      745,
+      739,
+      769,
+      793
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      815,
+      799,
+      839,
+      856,
+      816,
+      799,
+      832,
+      856
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": {
-      "min": 4154,
-      "median": 4273,
-      "max": 4380
+      "min": 4182,
+      "median": 4298,
+      "max": 4406
      },
      "yul": {
-      "min": 1284,
-      "median": 1295,
-      "max": 1646
+      "min": 1165,
+      "median": 1224,
+      "max": 1480
      },
      "caller": null,
      "lib": {
-      "min": 683,
-      "median": 683,
-      "max": 1025
+      "min": 469,
+      "median": 469,
+      "max": 815
      },
      "abdk": {
       "min": 760,
@@ -8554,7 +12376,24 @@
       "min": 2287,
       "median": 2349,
       "max": 2545
-     }
+     },
+     "solmate": {
+      "min": 432,
+      "median": 456,
+      "max": 480
+     },
+     "oz": {
+      "min": 739,
+      "median": 766,
+      "max": 793
+     },
+     "uniswap": null,
+     "prbud": {
+      "min": 799,
+      "median": 824,
+      "max": 856
+     },
+     "snekmate": null
     },
     "reverts": {
      "abdk": 1
@@ -8572,28 +12411,28 @@
    ],
    "gas": {
     "huff": [
-     619,
-     619,
-     621,
-     622,
      623,
-     625
+     625,
+     627,
+     629,
+     632,
+     634
     ],
     "yul": [
-     713,
-     717,
-     722,
-     725,
-     729,
-     733
+     744,
+     734,
+     741,
+     747,
+     753,
+     760
     ],
     "caller": [
-     1846,
-     1838,
-     1842,
-     1846,
-     1850,
-     1855
+     1849,
+     1855,
+     1862,
+     1868,
+     1875,
+     1881
     ],
     "lib": [
      140,
@@ -8642,23 +12481,63 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     150,
+     150,
+     null,
+     150,
+     150,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 619,
-     "median": 621,
-     "max": 625
+     "min": 623,
+     "median": 628,
+     "max": 634
     },
     "yul": {
-     "min": 713,
-     "median": 723,
-     "max": 733
+     "min": 734,
+     "median": 745,
+     "max": 760
     },
     "caller": {
-     "min": 1838,
-     "median": 1846,
-     "max": 1855
+     "min": 1849,
+     "median": 1865,
+     "max": 1881
     },
     "lib": {
      "min": 140,
@@ -8685,7 +12564,19 @@
      "median": 1236,
      "max": 1331
     },
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": {
+     "min": 150,
+     "median": 150,
+     "max": 150
+    },
+    "snekmate": null
+   },
+   "reverts": {
+    "prbud": 2
    }
   },
   "tanh": {
@@ -8779,6 +12670,51 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
@@ -8798,7 +12734,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "typical": {
     "inputs": [
@@ -8823,14 +12764,14 @@
       null
      ],
      "yul": [
-      4253,
-      4132,
-      4242,
-      4163,
-      6357,
-      4139,
-      6371,
-      4166
+      4356,
+      4201,
+      4346,
+      4231,
+      6426,
+      4207,
+      6440,
+      4235
      ],
      "caller": [
       null,
@@ -8901,14 +12842,64 @@
       null,
       null,
       null
+     ],
+     "solmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "oz": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "uniswap": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "prbud": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     "snekmate": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
      ]
     },
     "summary": {
      "huff": null,
      "yul": {
-      "min": 4132,
-      "median": 4204,
-      "max": 6371
+      "min": 4201,
+      "median": 4290,
+      "max": 6440
      },
      "caller": null,
      "lib": {
@@ -8920,7 +12911,12 @@
      "solady": null,
      "prb": null,
      "quad": null,
-     "balancer": null
+     "balancer": null,
+     "solmate": null,
+     "oz": null,
+     "uniswap": null,
+     "prbud": null,
+     "snekmate": null
     }
    }
   },
@@ -8936,31 +12932,31 @@
    ],
    "gas": {
     "huff": [
-     815,
-     815,
-     816,
-     817,
-     816,
-     818,
-     817
+     843,
+     843,
+     844,
+     844,
+     844,
+     845,
+     845
     ],
     "yul": [
-     804,
-     805,
-     806,
-     807,
-     808,
-     809,
-     810
+     860,
+     861,
+     862,
+     863,
+     863,
+     864,
+     865
     ],
     "caller": [
-     1822,
-     1823,
-     1887,
-     1825,
-     1826,
-     1892,
-     1828
+     1877,
+     1878,
+     1879,
+     1881,
+     1973,
+     1882,
+     1883
     ],
     "lib": [
      121,
@@ -9015,23 +13011,68 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 815,
-     "median": 816,
-     "max": 818
+     "min": 843,
+     "median": 844,
+     "max": 845
     },
     "yul": {
-     "min": 804,
-     "median": 807,
-     "max": 810
+     "min": 860,
+     "median": 863,
+     "max": 865
     },
     "caller": {
-     "min": 1822,
-     "median": 1826,
-     "max": 1892
+     "min": 1877,
+     "median": 1881,
+     "max": 1973
     },
     "lib": {
      "min": 121,
@@ -9042,7 +13083,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "toFixed18Down": {
@@ -9066,13 +13112,13 @@
      null
     ],
     "yul": [
-     728,
-     728,
-     729,
-     730,
-     731,
+     765,
+     767,
+     767,
+     768,
      769,
-     733
+     770,
+     770
     ],
     "caller": [
      null,
@@ -9136,14 +13182,59 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": null,
     "yul": {
-     "min": 728,
-     "median": 730,
-     "max": 769
+     "min": 765,
+     "median": 768,
+     "max": 770
     },
     "caller": null,
     "lib": {
@@ -9155,7 +13246,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "toFixed18Up": {
@@ -9179,13 +13275,13 @@
      null
     ],
     "yul": [
-     830,
-     818,
-     818,
-     833,
-     820,
-     821,
-     876
+     868,
+     855,
+     856,
+     870,
+     858,
+     859,
+     872
     ],
     "caller": [
      null,
@@ -9249,14 +13345,59 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": null,
     "yul": {
-     "min": 818,
-     "median": 821,
-     "max": 876
+     "min": 855,
+     "median": 859,
+     "max": 872
     },
     "caller": null,
     "lib": {
@@ -9268,7 +13409,12 @@
     "solady": null,
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": null,
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    }
   },
   "zeroFloorSub": {
@@ -9282,20 +13428,20 @@
    ],
    "gas": {
     "huff": [
-     1541,
-     1543,
-     1538,
-     1545,
-     1547,
-     1542
+     1570,
+     1572,
+     1568,
+     1577,
+     1579,
+     1575
     ],
     "yul": [
-     951,
-     955,
-     967,
-     963,
-     967,
-     1038
+     1038,
+     1044,
+     1059,
+     1057,
+     1064,
+     1078
     ],
     "caller": [
      null,
@@ -9352,18 +13498,58 @@
      null,
      null,
      null
+    ],
+    "solmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "oz": [
+     92,
+     92,
+     null,
+     92,
+     92,
+     92
+    ],
+    "uniswap": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "prbud": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "snekmate": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
     ]
    },
    "summary": {
     "huff": {
-     "min": 1538,
-     "median": 1542,
-     "max": 1547
+     "min": 1568,
+     "median": 1573,
+     "max": 1579
     },
     "yul": {
-     "min": 951,
-     "median": 965,
-     "max": 1038
+     "min": 1038,
+     "median": 1058,
+     "max": 1078
     },
     "caller": null,
     "lib": {
@@ -9379,10 +13565,20 @@
     },
     "prb": null,
     "quad": null,
-    "balancer": null
+    "balancer": null,
+    "solmate": null,
+    "oz": {
+     "min": 92,
+     "median": 92,
+     "max": 92
+    },
+    "uniswap": null,
+    "prbud": null,
+    "snekmate": null
    },
    "reverts": {
-    "solady": 1
+    "solady": 1,
+    "oz": 1
    }
   }
  }

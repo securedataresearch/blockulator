@@ -7,8 +7,18 @@ and license; nothing here is part of FP127.
 | path | upstream | pinned at | license |
 |---|---|---|---|
 | `balancer/LogExpMath.sol` | [balancer/balancer-v3-monorepo](https://github.com/balancer/balancer-v3-monorepo) `pkg/solidity-utils/contracts/math/LogExpMath.sol` | main @ `2b9ce4b1b8ad`, fetched 2026-10-15 | MIT |
+| `openzeppelin/utils/math/{Math,SignedMath,SafeCast}.sol`, `openzeppelin/utils/Panic.sol` | [OpenZeppelin/openzeppelin-contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) `contracts/utils/...` | tag v5.7.0, fetched 2026-10-23 | MIT |
+| `uniswap/FullMath.sol` | [Uniswap/v4-core](https://github.com/Uniswap/v4-core) `src/libraries/FullMath.sol` | tag v4.0.0, fetched 2026-10-23 | MIT |
 
-Two more libraries are in the ladder without being vendored, because their
+Two comparison libraries are AGPL-3.0-only and are submodules instead, never
+copied here: Solmate (`lib/solmate`, main @ `89365b8`; its only tag, v6,
+predates `SignedWadMath`) and snekmate (`lib/snekmate`, tag v0.1.2). The files
+that link them carry the same licence: `../LadderSolmate.sol`,
+`../vyper/SnekmateMath.vy` and `test/fp127/GasLibs.sol`. snekmate is Vyper;
+`scripts/ladder/vyper.py` compiles the wrapper with Vyper 0.4.3, the version
+snekmate v0.1.2 pins.
+
+Three more libraries are in the ladder without being vendored, because their
 licenses (Aave v3: BUSL-1.1; Morpho Blue: GPL-2.0-or-later; Maker's pot.sol:
 AGPL-3.0) do not sit inside an MIT repository. Their accrual formulas are a
 few lines each and are transcribed into the adapters, with the rounding of

@@ -5,9 +5,12 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Thirteen contracts, salt "FP127 ladder v10": the eleven adapters (no constructor
-arguments), LadderRunner and EdgeRunner (constructor = the ten adapter
-addresses as one array, so their init code depends on them). Each transaction is sent with the node's
+Nineteen contracts, salt "FP127 ladder v12": SnekmateMath (the Vyper build of
+snekmate's math module, out/vyper/SnekmateMath.json from scripts/ladder/vyper.py),
+the sixteen adapters (no constructor arguments, except LadderSnekmate, which
+takes SnekmateMath's address), LadderRunner and EdgeRunner (constructor = the
+sixteen adapter addresses as one array, in form-id order, so their init code
+depends on them). Each transaction is sent with the node's
 own gas estimate plus 25%, because Sepolia's code-deposit pricing is not
 what forge's local EVM models (see contracts/deployments/FP127.md).
 
@@ -27,11 +30,14 @@ from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
 PROXY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
-SALT_ASCII = "FP127 ladder v11"
+SALT_ASCII = "FP127 ladder v12"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
-            "LadderQuad", "LadderBalancer", "LadderAave", "LadderMorpho", "LadderMaker", "LadderFP256"]
+            "LadderQuad", "LadderBalancer", "LadderAave", "LadderMorpho", "LadderMaker", "LadderFP256",
+            "LadderSolmate", "LadderOZ", "LadderUniswap", "LadderPRBUD", "LadderSnekmate"]
+# Vyper contracts the adapters call, deployed first: name -> the adapter that takes its address
+VYPER = {"SnekmateMath": "LadderSnekmate"}
 RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"
 
 
@@ -47,7 +53,8 @@ def k256(data: bytes) -> bytes:
 
 
 def init_code(name: str, ctor_args: bytes = b"") -> bytes:
-    art = json.loads((ROOT / "out" / f"{name}.sol" / f"{name}.json").read_text())
+    path = ROOT / "out" / "vyper" / f"{name}.json" if name in VYPER else ROOT / "out" / f"{name}.sol" / f"{name}.json"
+    art = json.loads(path.read_text())
     return bytes.fromhex(art["bytecode"]["object"][2:]) + ctor_args
 
 
@@ -57,11 +64,18 @@ def create2(init: bytes) -> str:
 
 
 def plan() -> list[dict]:
-    out = []
-    for name in ADAPTERS:
+    out, takes = [], {}
+    for name, adapter in VYPER.items():
         init = init_code(name)
         out.append({"name": name, "init": init, "address": create2(init), "args": []})
-    addrs = [c["address"] for c in out]
+        takes[adapter] = out[-1]["address"]
+    adapters = []
+    for name in ADAPTERS:
+        arg = takes.get(name)
+        init = init_code(name, bytes.fromhex(cast("abi-encode", "f(address)", arg)[2:]) if arg else b"")
+        adapters.append({"name": name, "init": init, "address": create2(init), "args": [arg] if arg else []})
+    out += adapters
+    addrs = [c["address"] for c in adapters]
     args = bytes.fromhex(cast("abi-encode", f"f(address[{len(addrs)}])", "[" + ",".join(addrs) + "]")[2:])
     for runner in ("LadderRunner", "EdgeRunner"):
         init = init_code(runner, args)
