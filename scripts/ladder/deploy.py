@@ -27,7 +27,7 @@ from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
 PROXY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
-SALT_ASCII = "FP127 ladder v10"
+SALT_ASCII = "FP127 ladder v11"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
