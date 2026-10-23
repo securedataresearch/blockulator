@@ -15,8 +15,10 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.metadata import version as pkg_version
@@ -119,7 +121,17 @@ PASS_RE = re.compile(r"\[PASS\] (\w+)\([^)]*\) \(paths: (\d+), time: ([\d.]+)s, 
 
 
 def run_check(py, check, timeout, threads):
-    env = dict(os.environ, FOUNDRY_PROFILE="proofs", HALMOS_ALLOW_DOWNLOAD="1")
+    # each check gets its own temporary directory: Halmos names its query files by time, and two checks
+    # started in the same instant otherwise collide ("File already exists") and report a false error
+    work = tempfile.mkdtemp(prefix=f"halmos-{check}-")
+    try:
+        return _run_check(py, check, timeout, threads, work)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def _run_check(py, check, timeout, threads, work):
+    env = dict(os.environ, FOUNDRY_PROFILE="proofs", HALMOS_ALLOW_DOWNLOAD="1", TMPDIR=work)
     cmd = [
         py, str(HERE / "halmos_clz.py"),
         "--forge-build-out", "out-proofs",
@@ -128,6 +140,7 @@ def run_check(py, check, timeout, threads):
         "--solver", SOLVER,
         "--solver-threads", str(threads),
         "--solver-timeout-assertion", "0",
+        "--dump-smt-directory", work,
     ]
     t0 = time.time()
     try:
