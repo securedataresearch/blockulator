@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
 import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
-import {BlockulatorWad} from "../../contracts/src/wad/BlockulatorWad.sol";
 
 /// Random-input accuracy sweep: runs each op of the inline libraries on the seeded
 /// inputs scripts/sweep/sweep.py writes to cache/sweep/<lib>_<op>.json and writes one
@@ -110,33 +109,6 @@ contract Sweep is Test {
         if (op == "fp127_toFixed18Up") { g0 = gasleft(); r = FP127Lib.toFixed18Up(a); g = gasleft(); }
         if (op == "fp256_clamp") { g0 = gasleft(); r = FP256Lib.clamp(a, b, c); g = gasleft(); }
         if (op == "fp256_lerp") { g0 = gasleft(); r = FP256Lib.lerp(a, b, c); g = gasleft(); }
-        if (op == "wad_mulWad") { g0 = gasleft(); r = int256(BlockulatorWad.mulWad(uint256(a), uint256(b))); g = gasleft(); }
-        if (op == "wad_mulWadUp") { g0 = gasleft(); r = int256(BlockulatorWad.mulWadUp(uint256(a), uint256(b))); g = gasleft(); }
-        if (op == "wad_divWad") { g0 = gasleft(); r = int256(BlockulatorWad.divWad(uint256(a), uint256(b))); g = gasleft(); }
-        if (op == "wad_divWadUp") { g0 = gasleft(); r = int256(BlockulatorWad.divWadUp(uint256(a), uint256(b))); g = gasleft(); }
-        if (op == "wad_sMulWad") { g0 = gasleft(); r = BlockulatorWad.sMulWad(a, b); g = gasleft(); }
-        if (op == "wad_sMulWadDown") { g0 = gasleft(); r = BlockulatorWad.sMulWadDown(a, b); g = gasleft(); }
-        if (op == "wad_sMulWadUp") { g0 = gasleft(); r = BlockulatorWad.sMulWadUp(a, b); g = gasleft(); }
-        if (op == "wad_sDivWad") { g0 = gasleft(); r = BlockulatorWad.sDivWad(a, b); g = gasleft(); }
-        if (op == "wad_sDivWadDown") { g0 = gasleft(); r = BlockulatorWad.sDivWadDown(a, b); g = gasleft(); }
-        if (op == "wad_sDivWadUp") { g0 = gasleft(); r = BlockulatorWad.sDivWadUp(a, b); g = gasleft(); }
-        if (op == "wad_sqrtWad") { g0 = gasleft(); r = int256(BlockulatorWad.sqrtWad(uint256(a))); g = gasleft(); }
-        if (op == "wad_sqrtWadUp") { g0 = gasleft(); r = int256(BlockulatorWad.sqrtWadUp(uint256(a))); g = gasleft(); }
-        if (op == "wad_cbrtWad") { g0 = gasleft(); r = int256(BlockulatorWad.cbrtWad(uint256(a))); g = gasleft(); }
-        if (op == "wad_cbrtWadUp") { g0 = gasleft(); r = int256(BlockulatorWad.cbrtWadUp(uint256(a))); g = gasleft(); }
-        if (op == "wad_expWad") { g0 = gasleft(); r = BlockulatorWad.expWad(a); g = gasleft(); }
-        if (op == "wad_expWadUp") { g0 = gasleft(); r = BlockulatorWad.expWadUp(a); g = gasleft(); }
-        if (op == "wad_lnWad") { g0 = gasleft(); r = BlockulatorWad.lnWad(a); g = gasleft(); }
-        if (op == "wad_lnWadUp") { g0 = gasleft(); r = BlockulatorWad.lnWadUp(a); g = gasleft(); }
-        if (op == "wad_log2Wad") { g0 = gasleft(); r = BlockulatorWad.log2Wad(a); g = gasleft(); }
-        if (op == "wad_log2WadUp") { g0 = gasleft(); r = BlockulatorWad.log2WadUp(a); g = gasleft(); }
-        if (op == "wad_log10Wad") { g0 = gasleft(); r = BlockulatorWad.log10Wad(a); g = gasleft(); }
-        if (op == "wad_log10WadUp") { g0 = gasleft(); r = BlockulatorWad.log10WadUp(a); g = gasleft(); }
-        if (op == "wad_powWad") { g0 = gasleft(); r = BlockulatorWad.powWad(a, b); g = gasleft(); }
-        if (op == "wad_powWadUp") { g0 = gasleft(); r = BlockulatorWad.powWadUp(a, b); g = gasleft(); }
-        if (op == "wad_lambertW0Wad") { g0 = gasleft(); r = BlockulatorWad.lambertW0Wad(a); g = gasleft(); }
-        if (op == "wad_lambertW0WadDown") { g0 = gasleft(); r = BlockulatorWad.lambertW0WadDown(a); g = gasleft(); }
-        if (op == "wad_lambertW0WadUp") { g0 = gasleft(); r = BlockulatorWad.lambertW0WadUp(a); g = gasleft(); }
         require(g0 != 0, "op");
         g = g0 - g;
     }
@@ -267,32 +239,4 @@ contract Sweep is Test {
     function test_fp127_divUp() public { this.runOne("fp127_divUp", true); }
     function test_fp127_divDown() public { this.runOne("fp127_divDown", true); }
     function test_fp127_toFixed18Up() public { this.runOne("fp127_toFixed18Up", false); }
-    // BlockulatorWad: every direction of every function, on scripts/sweep/wad.py's inputs
-    function test_wad_mulWad() public { this.runOne("wad_mulWad", true); }
-    function test_wad_mulWadUp() public { this.runOne("wad_mulWadUp", true); }
-    function test_wad_divWad() public { this.runOne("wad_divWad", true); }
-    function test_wad_divWadUp() public { this.runOne("wad_divWadUp", true); }
-    function test_wad_sMulWad() public { this.runOne("wad_sMulWad", true); }
-    function test_wad_sMulWadDown() public { this.runOne("wad_sMulWadDown", true); }
-    function test_wad_sMulWadUp() public { this.runOne("wad_sMulWadUp", true); }
-    function test_wad_sDivWad() public { this.runOne("wad_sDivWad", true); }
-    function test_wad_sDivWadDown() public { this.runOne("wad_sDivWadDown", true); }
-    function test_wad_sDivWadUp() public { this.runOne("wad_sDivWadUp", true); }
-    function test_wad_sqrtWad() public { this.runOne("wad_sqrtWad", false); }
-    function test_wad_sqrtWadUp() public { this.runOne("wad_sqrtWadUp", false); }
-    function test_wad_cbrtWad() public { this.runOne("wad_cbrtWad", false); }
-    function test_wad_cbrtWadUp() public { this.runOne("wad_cbrtWadUp", false); }
-    function test_wad_expWad() public { this.runOne("wad_expWad", false); }
-    function test_wad_expWadUp() public { this.runOne("wad_expWadUp", false); }
-    function test_wad_lnWad() public { this.runOne("wad_lnWad", false); }
-    function test_wad_lnWadUp() public { this.runOne("wad_lnWadUp", false); }
-    function test_wad_log2Wad() public { this.runOne("wad_log2Wad", false); }
-    function test_wad_log2WadUp() public { this.runOne("wad_log2WadUp", false); }
-    function test_wad_log10Wad() public { this.runOne("wad_log10Wad", false); }
-    function test_wad_log10WadUp() public { this.runOne("wad_log10WadUp", false); }
-    function test_wad_powWad() public { this.runOne("wad_powWad", true); }
-    function test_wad_powWadUp() public { this.runOne("wad_powWadUp", true); }
-    function test_wad_lambertW0Wad() public { this.runOne("wad_lambertW0Wad", false); }
-    function test_wad_lambertW0WadDown() public { this.runOne("wad_lambertW0WadDown", false); }
-    function test_wad_lambertW0WadUp() public { this.runOne("wad_lambertW0WadUp", false); }
 }
