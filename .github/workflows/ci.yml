@@ -94,6 +94,8 @@ jobs:
 
       - name: Inline size table is current (one solc compile per op, legacy and via_ir)
         run: make size-inline-check
+      - name: npm and Soldeer packages (dry runs; nothing is published)
+        run: make pack
 
       - uses: actions/upload-artifact@v4
         with:

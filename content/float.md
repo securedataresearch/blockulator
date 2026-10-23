@@ -48,15 +48,26 @@ The hyperbolics are elementary functions too, but FP19E with them measured 27,30
 
 ## Inline form
 
+Install it one of three ways; the import path is the same in each:
+
 ```sh
+# Foundry, from git
 forge install securedataresearch/blockulator
-echo "fp19/=lib/blockulator/contracts/src/fp19/" >> remappings.txt
+echo "@blockulator/contracts/=lib/blockulator/contracts/src/" >> remappings.txt
+
+# npm, yarn or pnpm (Hardhat needs no remapping; Foundry reading node_modules needs this one)
+npm install @blockulator/contracts
+echo "@blockulator/contracts/=node_modules/@blockulator/contracts/" >> remappings.txt
+
+# Soldeer
+forge soldeer install blockulator~<version>
+echo "@blockulator/contracts/=dependencies/blockulator-<version>/" >> remappings.txt
 ```
 
 Compile `FP19Lib.sol` with `via_ir = true` (in `foundry.toml`): solc's legacy pipeline leaves the heavy ops 6–19% dearer than the same Yul in the deployed objects (net of the call), and through the IR they come within about −7% to +3% of them, `add` 677 → 545 and `exp` 3,277 → 2,848 gas on typical inputs; the build takes about 5.5× as long ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
 
 ```solidity
-import {FP19Lib} from "fp19/FP19Lib.sol";
+import {FP19Lib} from "@blockulator/contracts/fp19/FP19Lib.sol";
 
 // a per-second rate over a year, with the rate itself held to 71 digits
 int256 r = FP19Lib.div(FP19Lib.fromFixed18(0.05e18), FP19Lib.fromUint(31536000));

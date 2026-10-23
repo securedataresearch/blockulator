@@ -38,3 +38,6 @@ out-proofs/
 cache-proofs/
 out-proofs-fuzz/
 cache-proofs-fuzz/
+
+# make pack stages the npm and Soldeer package here
+dist/
