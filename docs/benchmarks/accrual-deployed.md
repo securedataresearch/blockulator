@@ -4,7 +4,7 @@ Generated 2026-10-16 by `make accrual-deployed` (`uv run scripts/accrual/accrual
 
 ## What is measured
 
-Each case is one accrual: a balance, a rate, and the seconds since the last update. The deployed integer maths (the pinned submodules, proven byte-identical to mainnet below) produces the new balance; mpmath at 200 digits produces the formula the protocol says it approximates. **Digits** = −log10(|error| / |true value|), reported for the accrued interest (the number a lender or borrower is owed) and for the whole balance. **err** is deployed − truth in token units (negative: the protocol accrues less than its stated formula). The error is split into the **approximation** (the truncated series, computed in exact arithmetic) and the **rounding** (ray/wad grids, the rate held as an integer per second, balances in token units). FP127 and FP256 compute the same stated formula from the same integers with their own exp/ln/pow and are not rounded to token units; *grid* is the most digits any answer rounded to token units could show.
+Each case is one accrual: a balance, a rate, and the seconds since the last update. The deployed integer maths (the pinned submodules, proven byte-identical to mainnet below) produces the new balance; mpmath at 200 digits produces the formula the protocol says it approximates. **Digits** = −log10(|error| / |true value|), reported for the accrued interest (the number a lender or borrower is owed) and for the whole balance. **err** is deployed − truth in token units (negative: the protocol accrues less than its stated formula). The error is split into the **approximation** (the truncated series, computed in exact arithmetic) and the **rounding** (ray/wad grids, the rate held as an integer per second, balances in token units). FP127 and FP19 compute the same stated formula from the same integers with their own exp/ln/pow and are not rounded to token units; *grid* is the most digits any answer rounded to token units could show.
 
 Truths: Aave borrow — e^(rate·years) (the body comment's "ideal formula"); the per-second binomial (1 + rate/SPY)^seconds named in the doc comment is reported alongside in the JSON and differs by less than rate²·t/(2·SPY²). Aave supply — per-second compounding of the liquidity rate (the APY Aave displays); the index itself is simple interest by design. Morpho — e^(∫ rate dt) with the AdaptiveCurveIrm's stated ideal rate path (rate at target r0·e^(50/yr·err·t), held in [0.1%, 200%]/yr, curve ×4 above target), at the utilisation of the last update (the IRM's own stated assumption).
 
@@ -12,12 +12,12 @@ Truths: Aave borrow — e^(rate·years) (the body comment's "ideal formula"); th
 
 Normal operation is accurate. Under realistic rates and idle times the Aave borrow index is within the token's own decimals or a few millionths of a token per million, and Morpho at its 90% target is the same. The digits go where the stated ideal and the shipped shortcut diverge:
 
-- **Morpho, fully utilised market untouched for a day** (`morpho-u100-10pct-1d`): 10000000.0 USDC, idle 1 d. True interest 11751.9; deployed off by 3.08123 USDC (2.622e-4 of the interest, 3.58 digits; balance 6.51). Series -7.93884e-7, grids -9.56256e-7, IRM rate path 3.08123 (trapezoid 4.59666). FP127 30.29 digits, FP256 68.54.
-- **Morpho, fully utilised market untouched for a week** (`morpho-u100-10pct-7d`): 10000000.0 USDC, idle 7 d. True interest 129539.0; deployed off by 2478.09 USDC (0.01913 of the interest, 1.72 digits; balance 3.61). Series -0.0123607, grids -6.45252e-8, IRM rate path 2478.1 (trapezoid 2488.26). FP127 30.29 digits, FP256 70.0.
-- **Morpho at the 800% cap for a week** (`morpho-u100-max-7d`): 10000000.0 USDC, idle 7 d. True interest 1658200.0; deployed off by -238.14 USDC (1.436e-4 of the interest, 3.84 digits; balance 4.69). Series -238.14, grids -3.0937e-7, IRM rate path -0.0000149245 (trapezoid -3.73113e-6). FP127 31.95 digits, FP256 71.44.
-- **Aave, slope2 300% asset at 100% utilisation for a week** (`aave-link-u100-borrow-7d`): 1000000.0 LINK, idle 7 d. True interest 60644.5; deployed off by -0.506637 LINK (8.354e-6 of the interest, 5.08 digits; balance 6.32). Series -0.506637, grids 4.79186e-19. FP127 37.67 digits, FP256 70.2.
-- **Aave supply index (simple interest) vs the displayed APY, USDC at 100% for a day** (`aave-usdc-u100-supply-1d`): 1000000.0 USDC, idle 1 d. True interest 357.598; deployed off by -0.0639223 USDC (1.788e-4 of the interest, 3.75 digits; balance 7.19). Series -0.0639222, grids -4.92879e-9. FP127 30.83 digits, FP256 63.28.
-- **Control: Aave USDC borrow at 100% utilisation for a day** (`aave-usdc-u100-borrow-1d`): 1000000.0 USDC, idle 1 d. True interest 397.339; deployed off by 1.228e-7 USDC (3.091e-10 of the interest, 9.51 digits; balance 12.91). Series -1.03782e-9, grids 1.23838e-7. FP127 35.42 digits, FP256 67.97.
+- **Morpho, fully utilised market untouched for a day** (`morpho-u100-10pct-1d`): 10000000.0 USDC, idle 1 d. True interest 11751.9; deployed off by 3.08123 USDC (2.622e-4 of the interest, 3.58 digits; balance 6.51). Series -7.93884e-7, grids -9.56256e-7, IRM rate path 3.08123 (trapezoid 4.59666). FP127 30.29 digits, FP19 68.54.
+- **Morpho, fully utilised market untouched for a week** (`morpho-u100-10pct-7d`): 10000000.0 USDC, idle 7 d. True interest 129539.0; deployed off by 2478.09 USDC (0.01913 of the interest, 1.72 digits; balance 3.61). Series -0.0123607, grids -6.45252e-8, IRM rate path 2478.1 (trapezoid 2488.26). FP127 30.29 digits, FP19 70.0.
+- **Morpho at the 800% cap for a week** (`morpho-u100-max-7d`): 10000000.0 USDC, idle 7 d. True interest 1658200.0; deployed off by -238.14 USDC (1.436e-4 of the interest, 3.84 digits; balance 4.69). Series -238.14, grids -3.0937e-7, IRM rate path -0.0000149245 (trapezoid -3.73113e-6). FP127 31.95 digits, FP19 71.44.
+- **Aave, slope2 300% asset at 100% utilisation for a week** (`aave-link-u100-borrow-7d`): 1000000.0 LINK, idle 7 d. True interest 60644.5; deployed off by -0.506637 LINK (8.354e-6 of the interest, 5.08 digits; balance 6.32). Series -0.506637, grids 4.79186e-19. FP127 37.67 digits, FP19 70.2.
+- **Aave supply index (simple interest) vs the displayed APY, USDC at 100% for a day** (`aave-usdc-u100-supply-1d`): 1000000.0 USDC, idle 1 d. True interest 357.598; deployed off by -0.0639223 USDC (1.788e-4 of the interest, 3.75 digits; balance 7.19). Series -0.0639222, grids -4.92879e-9. FP127 30.83 digits, FP19 63.28.
+- **Control: Aave USDC borrow at 100% utilisation for a day** (`aave-usdc-u100-borrow-1d`): 1000000.0 USDC, idle 1 d. True interest 397.339; deployed off by 1.228e-7 USDC (3.091e-10 of the interest, 9.51 digits; balance 12.91). Series -1.03782e-9, grids 1.23838e-7. FP127 35.42 digits, FP19 67.97.
 
 Signs: Aave and Morpho's series both undercharge (as Aave's comment says); the AdaptiveCurveIrm's two-panel trapezoid overcharges whenever the rate at target is moving, because e^(kt) is convex, and the stored rate at target drifts by the wExp error (-3.867e-4 relative after the one-day case).
 
@@ -49,7 +49,7 @@ Live equivalence at the survey block: the harness reproduced `getReserveNormaliz
 
 ## Stylised cases (live parameter sets, chosen idle times)
 
-| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP256 digits (interest) |
+| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP19 digits (interest) |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `aave-usdc-u100-borrow-1d` | 14.5% | 1 d | 1000000.0 USDC | 397.339 | 1.228e-7 | 9.51 | 12.91 | 8.9 | 35.42 | 67.97 |
 | `aave-usdc-u100-supply-1d` | 13.05% | 1 d | 1000000.0 USDC | 357.598 | -0.0639223 | 3.75 | 7.19 | 8.85 | 30.83 | 63.28 |
@@ -121,7 +121,7 @@ Every reserve or market's accrual as it would execute if touched at the survey b
 
 Truth: e^(rate·years).
 
-| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP256 digits (interest) |
+| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP19 digits (interest) |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `live-aave-FRAX-borrow` | 67.73% | 4.27 d | 28624.3 FRAX | 227.665 | -4.70515e-6 | 7.68 | 9.79 | 20.66 | 37.14 | 69.47 |
 | `live-aave-CRV-borrow` | 5.574% | 10.6 d | 937065.0 CRV | 1523.19 | -2.71783e-7 | 9.75 | 12.54 | 21.48 | 35.87 | 69.26 |
@@ -140,7 +140,7 @@ Interest digits across all 39: min 0.0, median 11.9, max 19.71; 3 of 39 have few
 
 Truth: per-second compounding of the liquidity rate (the APY Aave displays). The index is simple interest between updates by design; this is the size of that gap, not a bug.
 
-| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP256 digits (interest) |
+| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP19 digits (interest) |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `live-aave-CRV-supply` | 0.3228% | 10.6 d | 8090830.0 CRV | 761.012 | -0.0357875 | 4.33 | 8.35 | 21.18 | 28.95 | 63.27 |
 | `live-aave-BAL-supply` | 3.802% | 4.27 d | 146273.0 BAL | 65.0576 | -0.0144634 | 3.65 | 7.01 | 20.11 | 29.71 | 62.72 |
@@ -159,7 +159,7 @@ Interest digits across all 35: min 0.0, median 5.67, max 11.13; 5 of 35 have few
 
 Truth: e^(integral of the rate) on the IRM's stated rate path.
 
-| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP256 digits (interest) |
+| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP19 digits (interest) |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `live-morpho-0x7bb3c455-wARS` | r@t 16.45%, u 77.29% | 15.8 h | 64968300.0 wARS | 17175.2 | 0.0602877 | 5.45 | 9.03 | 22.54 | 31.11 | 67.78 |
 | `live-morpho-0x987b2c19-EURCV` | r@t 2.653%, u 80.03% | 1.16 d | 3680460.0 EURCV | 282.596 | 0.00191321 | 5.17 | 9.28 | 20.75 | 29.54 | 67.51 |
@@ -178,7 +178,7 @@ Interest digits across all 210: min 2.9, median 7.41, max 11.38; 7 of 210 have f
 
 Dormant markets: most sit at 100% utilisation (often the borrow side is bad debt that nobody repays and the supply side cannot withdraw), so the figures are what the contract would book at the next touch, not money anyone is likely to pay.
 
-| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP256 digits (interest) |
+| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | grid | FP127 digits (interest) | FP19 digits (interest) |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `live-morpho-0x1dca6989-USR` | r@t 200%, u 100% | 31.1 d | 34733200000.0 USR | 33980500000.0 | -361723000.0 | 1.97 | 2.28 | 28.83 | 31.84 | 71.13 |
 | `live-morpho-0x8ebcaf72-lvlUSD` | r@t 188.3%, u 100% | 340 d | 5271.06 lvlUSD | 9153210.0 | -8623020.0 | 0.03 | 0.03 | 25.26 | 31.11 | 71.55 |

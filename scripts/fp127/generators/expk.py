@@ -38,7 +38,7 @@ from pathlib import Path
 from mpmath import mp, mpf, log, power, expm1, floor as mfloor
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "scripts/fp256/generators"))
+sys.path.insert(0, str(ROOT / "scripts/fp19/generators"))
 from minimax import remez, certify  # noqa: E402
 from horner import Horner, tree, hx  # noqa: E402
 

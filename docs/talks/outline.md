@@ -6,8 +6,8 @@ section by section). Every number has a source in this repo, listed under each p
 "Say first" lists the objections the room will raise, answered before anyone has to ask.
 
 Thesis: the failures that cost real money happen where a protocol's numbers meet the
-bottom of its ruler. Converging algorithms reach any ruler. FP256 is a ruler that a
-one-word format cannot beat by more than three digits, and every op of FP256 v5
+bottom of its ruler. Converging algorithms reach any ruler. FP19 is a ruler that a
+one-word format cannot beat by more than three digits, and every op of FP19 v5
 returns the nearest word. A new library can be cheaper than these, but it cannot be
 more accurate.
 
@@ -35,7 +35,7 @@ Pendle, block 26,234,952) agrees, but it is not committed. Commit it before quot
 - `1e36 / price` with a price of 2.000000000000000000001998×10^36. The answer is 0.5 and
   the integer division floors it to **0**. The loan-to-value check then reads 0, so
   **1 wei** of collateral borrows **10,000,000 reUSD**.
-- FP127 and FP256 compute the rate as 0.4999999999999999999995 and the borrow is
+- FP127 and FP19 compute the rate as 0.4999999999999999999995 and the borrow is
   rejected. The honest limit on that collateral was 1.9 reUSD. The real loan-to-value was
   5.26 million times the cap.
 
@@ -43,7 +43,7 @@ Say first:
 - **Dividing by the price at the end also fixes it, with no new library.** `divUp`
   blocks it too, but it reads 0.5 as 1 and halves every honest borrower's limit.
 - **FP127's port holds this price only below about 170k crvUSD per share. Above that it
-  reverts.** FP256 has no such limit.
+  reverts.** FP19 has no such limit.
 - **The vault was empty, and a donation set its price.** The floor was the last check
   that failed, not the only one.
 
@@ -55,7 +55,7 @@ Source: `docs/benchmarks/replay-resupply.md` (tx 0xffbbd492…, block 22,785,461
   took the pool's active USDC from **28 wei to 4**, and liquidity fell **84.37%**. About
   $8.4M was taken.
 - Bunni's fix, `mulDivUp`, ends at **48 wei**, 35% too high. Exact arithmetic, FP127 and
-  FP256 all end at **35.6278… wei**, and liquidity is unchanged.
+  FP19 all end at **35.6278… wei**, and liquidity is unchanged.
 
 Say first:
 - **This only works if the balance is stored in the format.** Rounding it to whole wei
@@ -73,7 +73,7 @@ Source: `docs/benchmarks/replay-bunni.md` (tx 0x1c27c4d6…, block 23,273,098).
   transaction. The total loss across chains was over $100M.
 - The fix (`mulUp`) stops the attack as it was run, but **30 calls still lower the
   invariant**, through a second rounding: a 1-wei balance worth 1.058 is read as 1.
-- With FP127 or FP256 inside and one ceil to wei at the end, **0 of the 165 calls lower
+- With FP127 or FP19 inside and one ceil to wei at the end, **0 of the 165 calls lower
   the invariant**.
 
 Say first:
@@ -107,7 +107,7 @@ and others). A better ruler does not save them.
 1. **Round once:** how you compute.
 2. **Never run out of ruler:** what you compute on.
 
-FP127 covers the money range. FP256 covers everything up to its walls at 10^±78,913.
+FP127 covers the money range. FP19 covers everything up to its walls at 10^±78,913.
 
 ### 2.2 Ramanujan (2 min)
 
@@ -121,14 +121,14 @@ FP127 covers the money range. FP256 covers everything up to its walls at 10^±78
   | WAD libraries | 16 |
   | binary128 (Quad) | 33 |
   | FP127 | 36 |
-  | FP256 | 70 |
+  | FP19 | 70 |
 
 - **The series never stops. The ruler does.**
 
 Say first:
 - **FP127 reaches 36 digits, not the 39 its grid holds at π.** The constant 2√2/9801 ≈
   2.9×10^-4 sits on an absolute grid and keeps only 35 digits. That is the fixed-point
-  trade-off, and it is why FP256 exists.
+  trade-off, and it is why FP19 exists.
 
 Source: `docs/benchmarks/pi.md`. The exact-arithmetic column was recomputed at 200 digits.
 
@@ -136,7 +136,7 @@ Source: `docs/benchmarks/pi.md`. The exact-arithmetic column was recomputed at 2
 
 - Balancer's invariant is a Newton iteration, a converging algorithm. On the wei grid it
   stops at **3.6 to 8.9 digits**. Run it in FP127 and it reaches about **36 to 38**; in
-  FP256, **71**. It costs a few extra iterations.
+  FP19, **71**. It costs a few extra iterations.
 - The algorithm was never the problem. Where it stopped was.
 
 Source: `docs/benchmarks/replay-balancer.md` (the Newton convergence section).
@@ -146,7 +146,7 @@ Source: `docs/benchmarks/replay-balancer.md` (the Newton convergence section).
 - A converging method (Newton, a series run to its last term, a continued fraction)
   reaches any precision by running longer. A fitted polynomial is stuck at the precision
   it was fitted for.
-- FP256 release one is the proof: the converging ops (add, sub, mul, div, Newton sqrt)
+- FP19 release one is the proof: the converging ops (add, sub, mul, div, Newton sqrt)
   were exact on day one. The ops built on fitted kernels fell short:
 
   | op | bits | digits |
@@ -160,12 +160,12 @@ Source: `docs/benchmarks/replay-balancer.md` (the Newton convergence section).
   word on 21,913 of 21,913 random inputs.
 
 Say first:
-- **FP256's exp and ln are fits, too.** The difference is where the fit stops: past the
+- **FP19's exp and ln are fits, too.** The difference is where the fit stops: past the
   last ruler a single EVM word has. A fit has to be redone for every wider ruler, and
   there is no wider ruler than one word.
 
-Source: `contracts/deployments/FP256.md` and `git show a669484:docs/fp256/precision.md`
-for release one; `docs/fp256/precision.md` and `docs/benchmarks/sweep.md` for now.
+Source: `contracts/deployments/FP19.md` and `git show a669484:docs/fp19/precision.md`
+for release one; `docs/fp19/precision.md` and `docs/benchmarks/sweep.md` for now.
 
 ---
 
@@ -177,21 +177,21 @@ for release one; `docs/fp256/precision.md` and `docs/benchmarks/sweep.md` for no
 
   | exponent bits | digits |
   |---|---|
-  | 19 (FP256) | 71.3 |
+  | 19 (FP19) | 71.3 |
   | 13 | 73.2 |
   | 9 (just covers uint256) | 74.4 |
 
-- **No one-word format can hold more than about 3 digits more than FP256** over the range
+- **No one-word format can hold more than about 3 digits more than FP19** over the range
   DeFi uses.
-- FP256 spends those bits on range: 10^±78,913, with no walls in any realistic quantity.
+- FP19 spends those bits on range: 10^±78,913, with no walls in any realistic quantity.
 
 Say first:
-- **FP256 rounds integers above 2^237** (uint256 reaches 2^256). Token amounts are far
+- **FP19 rounds integers above 2^237** (uint256 reaches 2^256). Token amounts are far
   below that, around 10^27, or 2^90.
 
 ### 3.2 The accuracy ceiling (1.5 min)
 
-- **FP256 v5: every one of its 65 ops returns the correctly rounded word, or
+- **FP19 v5: every one of its 65 ops returns the correctly rounded word, or
   is exact.**
   - **The sweep:** 360,590 seeded random inputs over 53 ops, 0 misrounded. That includes pow,
     compound, ln, normCdf and Lambert W, which release three missed by 1 to 4 marks.
@@ -223,17 +223,17 @@ Say first:
   for compatibility, with directed versions beside them (3.3).
 - **Two narrow limits:**
   - FP127's pow is nearest only while |y|·x^y < 2^140, and faithful to 2^170.
-  - FP256's powu is not correctly rounded for |n| ≥ 2^237. compound handles any n.
+  - FP19's powu is not correctly rounded for |n| ≥ 2^237. compound handles any n.
 
-Source: `docs/benchmarks/sweep.md` (FP256 v5 and FP127 v6, deployed in Blockulator 2.2).
-`scripts/fp256/generators/bounds.py` checks each stated bound against the Python models
+Source: `docs/benchmarks/sweep.md` (FP19 v5 and FP127 v6, deployed in Blockulator 2.2).
+`scripts/fp19/generators/bounds.py` checks each stated bound against the Python models
 of the Yul. The worst measured error is 0.67 of its bound.
 
 ### 3.3 The edge is one call (0.5 min)
 
 - Rule two, round toward the protocol at the token edge, now takes a single call in both
   libraries:
-  - **FP256:** `toUintDown`/`Up`, `toIntDown`/`Up`, `toFixed18Down`/`Up`, `mulDown`/`Up`,
+  - **FP19:** `toUintDown`/`Up`, `toIntDown`/`Up`, `toFixed18Down`/`Up`, `mulDown`/`Up`,
     `divDown`/`Up`, `floor` and `ceil`. All exact, with 0 misrounded in the sweep. An
     `Up` result never rounds positive dust to zero.
   - **FP127:** `mulUp`/`Down`, `divUp`/`Down` and `toFixed18Up`/`Down`.
@@ -243,9 +243,9 @@ of the Yul. The worst measured error is 0.67 of its bound.
 
 - **Solady is 1.1 to 14 times cheaper per op than FP127, and should be.** Integer-exact
   work (`mulDivUp`, `fullMulDiv`) stays in Solady and OZ; these libraries complement them.
-- Median gas per op, inline (FP127 v6 and FP256 v5, as deployed in Blockulator 2.2):
+- Median gas per op, inline (FP127 v6 and FP19 v5, as deployed in Blockulator 2.2):
 
-  | op | Solady | PRBMath | FP127 | FP256 |
+  | op | Solady | PRBMath | FP127 | FP19 |
   |---|---|---|---|---|
   | mul | 126 | 485 | 263 | 530 |
   | div | 93 | 509 | 645 | 800 |
@@ -260,7 +260,7 @@ of the Yul. The worst measured error is 0.67 of its bound.
   in the audit.
 
 Say first:
-- **Correct rounding costs gas when it is hard.** In FP256 v5:
+- **Correct rounding costs gas when it is hard.** In FP19 v5:
   - The fast path is a few hundred gas dearer than release three's (exp's median is
     3,299 on the sweep).
   - The second stage, run alone, costs 7,950 (atanh, median) to 411,737 (normCdf, worst)
@@ -279,28 +279,28 @@ Say first:
   (6,006) on each read.** After 1,000 accruals the read is within half a unit of 2^-128,
   and the multiplied index is 511 to 546 off. It fits a continuous rate only.
 
-Source: `docs/benchmarks/gas.md` and `gas256.md` (FP127 v6 and FP256 v5; read the
+Source: `docs/benchmarks/gas.md` and `gas19.md` (FP127 v6 and FP19 v5; read the
 same way as `scripts/talk/deck.py`'s `gas_medians()`); the gas columns of
 `docs/benchmarks/sweep.md` (v5); the log-domain run in `test/examples/Integrating.t.sol`
 (`forge test --match-test logIndex -vv`).
 
 ### 3.5 Why nothing else needs writing (0.5 min)
 
-1. **The format:** no one-word format holds more than 3 digits more than FP256 (3.1).
+1. **The format:** no one-word format holds more than 3 digits more than FP19 (3.1).
 2. **The accuracy:** every op returns the nearest word, so a rewrite can only be cheaper
    (3.2).
 3. **The edge:** directed rounding is one call (3.3).
 4. **What is left is not a new library.** It is:
    - gas work inside these two;
-   - new ops added to them (the FP256E, FP256H and FP256S split leaves room);
+   - new ops added to them (the FP19E, FP19H and FP19S split leaves room);
    - deployment, an audit and mainnet.
 
 ### 3.6 The ask (0.5 min)
 
-Use FP127 and FP256. They are free, MIT-licensed, and one `forge install` away. Keep the
+Use FP127 and FP19. They are free, MIT-licensed, and one `forge install` away. Keep the
 state in the format, and round toward the protocol at the edge.
 
-**Before the talk:** 3.2 and 3.3 describe FP127 v6 and FP256 v5, deployed on
+**Before the talk:** 3.2 and 3.3 describe FP127 v6 and FP19 v5, deployed on
 Sepolia on 2026-10-22 as Blockulator 2.2 and the same code inline through `forge install`,
 so "the deployed contract" and "the library" are both true. Slide 17 shows the live
 re-check through the ladder v10 runners (2026-10-23: 9,408 + 1,511 cells, 0 mismatches).
@@ -329,35 +329,35 @@ re-check through the ladder v10 runners (2026-10-23: 9,408 + 1,511 cells, 0 mism
 Done (`make talk`, 18 slides, in the outline's order; titles are placeholders):
 
 1. Title: the WAD drift (ladder.json).
-2. 1.1: the Aave USDC control case's error, deployed / FP127 / FP256, against one unit of
+2. 1.1: the Aave USDC control case's error, deployed / FP127 / FP19, against one unit of
    USDC (accrual-deployed.json).
 3. 1.2 Resupply: the rate, 0 against 0.4999…, and the loan-to-value against the cap
    (resupply.json, replay-resupply.md).
 4. 1.3 Bunni: active USDC over the 44 withdrawals, deployed / mulDivUp / FP127 / exact,
    replayed by `bunni.py`'s `replay` from bunni.json (replay-bunni.md).
 5. 1.4 Balancer V2: the true invariant across the osETH phase, deployed / mulUp / FP127 =
-   FP256 = exact, with the count of calls that lower it (balancer.json `score`).
+   FP19 = exact, with the count of calls that lower it (balancer.json `score`).
 6. 1.5 Balancer V1: net per cycle by rounding rule in all five pools (replay-balancer-v1.md).
-7–8. 2.1 Two goals: round once (ladder.json); never run out of ruler, with FP256's walls
+7–8. 2.1 Two goals: round once (ladder.json); never run out of ruler, with FP19's walls
    at 10^±78,913 on the plot.
 9. 2.2 Ramanujan (pi.md).
 10. 2.3 Balancer's Newton solve: digits of D at the stop and median iterations, wei grid /
-    FP127 / FP256, both pools (balancer.json `score.*.convergence`).
+    FP127 / FP19, both pools (balancer.json `score.*.convergence`).
 11. 2.4 Converge or fit: caption now says a Taylor polynomial tuned for 60 bits, computed
     with mpmath at each width.
-12. 2.4 Release one (exp 146, ln 149, pow 123, read from FP256.md) against now
+12. 2.4 Release one (exp 146, ln 149, pow 123, read from FP19.md) against now
     (precision.json, sweep.json).
 13. 3.1 The format ceiling: digits against exponent bits, computed (19 → 71.3, 13 → 73.2,
     11 → 73.8, 9 → 74.4).
-14. 3.2 The accuracy ceiling: FP256's correctly rounded share per op (sweep.json). It reads
-    master's sweep, FP256 v5 (deployed in Blockulator 2.2); slide 15's gas reads
-    v5's `gas.md` and `gas256.md`.
-15. 3.3 What it costs: median gas, Solady / PRBMath / FP127 / FP256 for mul, div, exp, ln,
-    pow (gas.md, gas256.md).
+14. 3.2 The accuracy ceiling: FP19's correctly rounded share per op (sweep.json). It reads
+    master's sweep, FP19 v5 (deployed in Blockulator 2.2); slide 15's gas reads
+    v5's `gas.md` and `gas19.md`.
+15. 3.3 What it costs: median gas, Solady / PRBMath / FP127 / FP19 for mul, div, exp, ln,
+    pow (gas.md, gas19.md).
 16. Both goals met, with the walls stated.
 17. Checked on chain (RELEASE.json).
-18. 3.5 Use FP127 and FP256: the release name and the FP127 and FP256 addresses from
-    RELEASE.json, with FP256E, H and S beneath.
+18. 3.5 Use FP127 and FP19: the release name and the FP127 and FP19 addresses from
+    RELEASE.json, with FP19E, H and S beneath.
 
 Removed: the Morpho idle-market slides ("Ten million dollars…", "The same calculation…",
 "It happens in live markets", "The same market, rounded once"), and the slides the

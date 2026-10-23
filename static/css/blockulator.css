@@ -40,8 +40,8 @@
 .chart .lbl { font-size: 12.5px; font-weight: 600; }
 /* one colour per family, the same in the deck (scripts/talk/deck.py): ours emerald and ink, the WAD libraries one gold told apart by dash, the protocols one slate */
 :root { --violet: color-mix(in oklab, var(--sapphire) 55%, var(--red)); --slate: color-mix(in oklab, var(--sapphire) 50%, var(--faint)); }
-:root { --c-fp127: var(--emerald); --c-fp256: var(--text-strong); --c-wad: var(--gold); --c-quad: var(--violet); --c-6464: var(--sapphire); --c-protocol: var(--slate); }
-.s-fp127 { --c: var(--c-fp127); } .s-fp256 { --c: var(--c-fp256); } .s-quad { --c: var(--c-quad); } .s-abdk { --c: var(--c-6464); }
+:root { --c-fp127: var(--emerald); --c-fp19: var(--text-strong); --c-wad: var(--gold); --c-quad: var(--violet); --c-6464: var(--sapphire); --c-protocol: var(--slate); }
+.s-fp127 { --c: var(--c-fp127); } .s-fp19 { --c: var(--c-fp19); } .s-quad { --c: var(--c-quad); } .s-abdk { --c: var(--c-6464); }
 .s-solady, .s-prb, .s-balancer { --c: var(--c-wad); } .s-aave, .s-morpho, .s-maker { --c: var(--c-protocol); }
 .chart polyline, .chart circle[class*="s-"] { stroke: var(--c); } .chart circle, .chart text[class*="s-"], .chart polygon { fill: var(--c); }
 .chart polyline.s-quad { stroke-dasharray: 4 2; } .chart polyline.s-abdk { stroke-dasharray: 2 3; }
@@ -262,7 +262,7 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .chart stop { stop-color: var(--c); }
 .chart stop.a0 { stop-opacity: .2; } .chart stop.a1 { stop-opacity: 0; }
 .chart .area { stroke: none; }
-.digitchart .s-aave stop.a0 { stop-opacity: .16; } .digitchart .s-fp256 stop.a0 { stop-opacity: .09; }
+.digitchart .s-aave stop.a0 { stop-opacity: .16; } .digitchart .s-fp19 stop.a0 { stop-opacity: .09; }
 .digitchart .note-a { fill: var(--c-warn); font-size: 12.5px; font-weight: 600; }
 .digitchart .s-aave circle.yr { fill: var(--c-warn); stroke: var(--surface-solid); stroke-width: 2; }
 .digitchart .ours polyline { stroke-width: 3.25; stroke-linecap: round; }

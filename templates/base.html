@@ -63,10 +63,11 @@ html { background: #f3f4f0; color: #1b1c1c; }
     <a href="/archive/">Archive</a>
     <a href="/badges/">Badges</a>
     <a href="/llms.txt">llms.txt</a>
+    <a href="https://www.youtube.com/watch?v=a_tL99NY-yc">EthCC talk (video)</a>
     <a href="{{ config.extra.repo }}">GitHub</a>
     <a href="mailto:sam@securedataresearch.net?subject=Blockulator">Contact</a>
   </nav>
-  <p>Blockulator, FP127 and FP256 are made by Secure Data Research LLC and released under the <a href="{{ config.extra.repo }}/blob/master/LICENSE">MIT licence</a>.</p>
+  <p>Blockulator, FP127 and FP19 are made by Secure Data Research LLC and released under the <a href="{{ config.extra.repo }}/blob/master/LICENSE">MIT licence</a>.</p>
 </footer>
 {% block scripts %}{% endblock scripts %}
 <script>document.addEventListener('click',function(e){var b=e.target.closest('.copy');if(!b||!navigator.clipboard)return;navigator.clipboard.writeText(b.dataset.copy).then(function(){var t=b.textContent;b.textContent='copied';setTimeout(function(){b.textContent=t;},1200);});});</script>

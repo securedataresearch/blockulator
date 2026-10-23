@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
+import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 
 /// @notice The deployed arithmetic of the Resupply exploit, vendored line by line
 ///         from the Sourcify-verified sources (scripts/replays/resupply.py fetch
@@ -80,7 +80,7 @@ library ResupplyDeployed {
 ///         block 22785461, index 0. Replays the decisive step from the integers
 ///         pinned in scripts/replays/resupply.json (no network), asserts it equals
 ///         what happened on chain, then runs the same step with divUp, with the
-///         division by the price moved to the end, in FP127 and in FP256. Prints
+///         division by the price moved to the end, in FP127 and in FP19. Prints
 ///             RSP|<form>|k=v;k=v;...
 ///         for scripts/replays/resupply.py, which scores each against exact rationals.
 contract ResupplyReplay is Test {
@@ -211,23 +211,23 @@ contract ResupplyReplay is Test {
             _line("fp127", string.concat("rate=", vm.toString(rate), ";ltv=", vm.toString(ltv), ";solvent=", _b(ok),
                 ";ltvCeil=", vm.toString(ltvCeil), ";maxBorrow=", vm.toString(maxBorrow)));
         }
-        // FP256: same
+        // FP19: same
         {
-            int256 rate = FP256Lib.div(FP256Lib.fromUint(1e36), FP256Lib.fromUint(P));
-            int256 ltv = FP256Lib.div(
-                FP256Lib.div(FP256Lib.mul(FP256Lib.mul(FP256Lib.fromUint(B), rate), FP256Lib.fromUint(LP)), FP256Lib.fromUint(EP)),
-                FP256Lib.fromUint(COLLATERAL)
+            int256 rate = FP19Lib.div(FP19Lib.fromUint(1e36), FP19Lib.fromUint(P));
+            int256 ltv = FP19Lib.div(
+                FP19Lib.div(FP19Lib.mul(FP19Lib.mul(FP19Lib.fromUint(B), rate), FP19Lib.fromUint(LP)), FP19Lib.fromUint(EP)),
+                FP19Lib.fromUint(COLLATERAL)
             );
-            bool ok = FP256Lib.cmp(ltv, FP256Lib.fromUint(MAX_LTV)) <= 0;
-            assertGt(FP256Lib.cmp(rate, 0), 0);
+            bool ok = FP19Lib.cmp(ltv, FP19Lib.fromUint(MAX_LTV)) <= 0;
+            assertGt(FP19Lib.cmp(rate, 0), 0);
             assertFalse(ok);
-            int256 ltvCeil = FP127Lib.ceil(FP256Lib.toFP127(ltv)) >> 128;
-            int256 mb = FP256Lib.div(
-                FP256Lib.mul(FP256Lib.mul(FP256Lib.fromUint(COLLATERAL), FP256Lib.fromUint(MAX_LTV)), FP256Lib.fromUint(EP)),
-                FP256Lib.mul(rate, FP256Lib.fromUint(LP))
+            int256 ltvCeil = FP127Lib.ceil(FP19Lib.toFP127(ltv)) >> 128;
+            int256 mb = FP19Lib.div(
+                FP19Lib.mul(FP19Lib.mul(FP19Lib.fromUint(COLLATERAL), FP19Lib.fromUint(MAX_LTV)), FP19Lib.fromUint(EP)),
+                FP19Lib.mul(rate, FP19Lib.fromUint(LP))
             );
-            int256 maxBorrow = FP127Lib.floor(FP256Lib.toFP127(mb)) >> 128;
-            _line("fp256", string.concat("rate=", vm.toString(rate), ";ltv=", vm.toString(ltv), ";solvent=", _b(ok),
+            int256 maxBorrow = FP127Lib.floor(FP19Lib.toFP127(mb)) >> 128;
+            _line("fp19", string.concat("rate=", vm.toString(rate), ";ltv=", vm.toString(ltv), ";solvent=", _b(ok),
                 ";ltvCeil=", vm.toString(ltvCeil), ";maxBorrow=", vm.toString(maxBorrow)));
         }
     }

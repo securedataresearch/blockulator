@@ -3,10 +3,10 @@
 {% block description %}{{ page.description }}{% endblock description %}
 {% block content %}
 {%- set d = load_data(path="static/data/edges.json") -%}
-{%- set forms = ["fp127", "fp256", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
-{#- display caps: FP256 to its 71 digits (72, 73 are where the truth sits near the grid); the rest as measured -#}
-{%- set caps = {"fp127": 999, "fp256": 71, "abdk": 999, "solady": 999, "prb": 999, "quad": 999, "balancer": 999, "aave": 999, "morpho": 999, "maker": 999, "solmate": 999, "prbud": 999, "snekmate": 999, "oz": 999, "uniswap": 999} -%}
-{%- set short = {"fp127": "FP127", "fp256": "FP256", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
+{%- set forms = ["fp127", "fp19", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
+{#- display caps: FP19 to its 71 digits (72, 73 are where the truth sits near the grid); the rest as measured -#}
+{%- set caps = {"fp127": 999, "fp19": 71, "abdk": 999, "solady": 999, "prb": 999, "quad": 999, "balancer": 999, "aave": 999, "morpho": 999, "maker": 999, "solmate": 999, "prbud": 999, "snekmate": 999, "oz": 999, "uniswap": 999} -%}
+{%- set short = {"fp127": "FP127", "fp19": "FP19", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
 <article class="prose doc wide">
 {% include "pagehead.html" %}
 {{ page.content | safe }}
@@ -59,7 +59,7 @@
 </div>
 </section>
 {%- endfor %}
-<p class="note">A cell is the correct significant digits against the exact value; hover it for the value and its error in ULP. <span class="rev">zero</span>: below the format's floor; <span class="rev">range</span>: the argument does not fit the word; any other red word is a revert, named by its error (hover for the full reason). An empty cell is an op the library does not offer. FP256's digits are shown to 71, its precision: a 72 or 73 is where the truth happens to sit near the grid. The last row is each library's fewest digits on the op, with a zero, revert or range counted as 0. Full dataset: <a href="/data/edges.json">edges.json</a>. Regenerate with <code>make edges</code>.</p>
+<p class="note">A cell is the correct significant digits against the exact value; hover it for the value and its error in ULP. <span class="rev">zero</span>: below the format's floor; <span class="rev">range</span>: the argument does not fit the word; any other red word is a revert, named by its error (hover for the full reason). An empty cell is an op the library does not offer. FP19's digits are shown to 71, its precision: a 72 or 73 is where the truth happens to sit near the grid. The last row is each library's fewest digits on the op, with a zero, revert or range counted as 0. Full dataset: <a href="/data/edges.json">edges.json</a>. Regenerate with <code>make edges</code>.</p>
 </article>
 <script type="module" src="/js/islands/tabs.js"></script>
 {% endblock content %}

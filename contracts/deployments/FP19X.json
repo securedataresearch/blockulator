@@ -1,0 +1,36 @@
+{
+ "contract": "FP19X",
+ "release": "Blockulator 2.1",
+ "current": false,
+ "status": "Blockulator 2.1 (FP19 release four, 2026-10-21); still live and verified, and not part of Blockulator 2.2, where its ops moved to FP19S (erf, erfc, normCdf, lambertW0, lambertWm1). See RELEASE.md.",
+ "chainId": 11155111,
+ "network": "sepolia",
+ "address": "0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0",
+ "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+ "salt": "0x4650323536582076340000000000000000000000000000000000000000000000",
+ "saltAscii": "FP256X v4",
+ "initCodeHash": "0x3ede368fc0804e5edd17ca82d1063570d2ce3550f6838a906aa968806ef341a8",
+ "runtimeKeccak": "0x6e07827a3a01f077dc012c8d49ae6dde37ed37d9602151352e92429eba72cd2d",
+ "runtimeBytes": 22266,
+ "source": "contracts/src/fp19/FP19X.yul",
+ "sourceCommit": "8e65894",
+ "compiler": {
+  "language": "Yul",
+  "solc": "0.8.24+commit.e11b9ed9",
+  "optimizer": true,
+  "runs": 200,
+  "evmVersion": "shanghai"
+ },
+ "txHash": "0x884c81bb8676c772e6600cc0f44b9881845184259f885b226907e885c57cd8a4",
+ "block": 11966129,
+ "verification": {
+  "sourcify": "https://sourcify.dev/server/v2/contract/11155111/0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0",
+  "sourcifyRepo": "https://repo.sourcify.dev/11155111/0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0",
+  "blockscout": "https://eth-sepolia.blockscout.com/address/0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0?tab=contract",
+  "etherscan": "unverified: the Etherscan API has no Yul path"
+ },
+ "abi": "contracts/src/fp19/abiX.json",
+ "deployedBy": "0xe6306669b2f188d616bfb518e7b9255d001d731d",
+ "gasUsed": 34652817,
+ "explorerTx": "https://sepolia.etherscan.io/tx/0x884c81bb8676c772e6600cc0f44b9881845184259f885b226907e885c57cd8a4"
+}

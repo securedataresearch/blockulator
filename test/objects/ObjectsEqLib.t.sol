@@ -3,7 +3,7 @@ pragma solidity ^0.8.31;
 
 import "forge-std/Test.sol";
 import {LibUser} from "../base/FP127Harness.sol";
-import {LibUser256} from "../base/FP256Harness.sol";
+import {LibUser19} from "../base/FP19Harness.sol";
 
 /// @title ObjectsEqLib
 /// @notice Every deployed object returns exactly what its inline library
@@ -13,12 +13,12 @@ import {LibUser256} from "../base/FP256Harness.sol";
 ///         names an op or an object: a re-layout of the objects needs no edit.
 ///
 ///         For each export the object (out/<Object>.yul) and the library
-///         (behind LibUser / LibUser256) must give the same success flag and
+///         (behind LibUser / LibUser19) must give the same success flag and
 ///         the same return or revert bytes. Each fuzz run calls every export
 ///         once, so N runs are N inputs per op. The inputs: raw words, tiny
 ///         values, 2^k and its neighbours, all-ones masks, values across the
-///         scales near one, the ends of FP256's exponent range, small integers,
-///         exact powers of two in FP256, and a second argument a few units from
+///         scales near one, the ends of FP19's exponent range, small integers,
+///         exact powers of two in FP19, and a second argument a few units from
 ///         the first (or from its negation), so add and sub cancel. The sweeps
 ///         walk 2^k - 1, 2^k and 2^k + 1 for every k through every argument.
 ///
@@ -34,7 +34,7 @@ contract ObjectsEqLib is Test {
         address ref;   // zero unless FP_REF_DIR is set
     }
 
-    /// The two libraries: 0 is FP127, 1 is FP256.
+    /// The two libraries: 0 is FP127, 1 is FP19.
     Op[][2] internal ops;
     address[2] internal lib;
     mapping(bytes32 => address) internal deployed;
@@ -43,14 +43,14 @@ contract ObjectsEqLib is Test {
     uint256 internal constant FRAC = (uint256(1) << 236) - 1;
     uint256 internal constant SIGN = uint256(1) << 255;
     uint256 internal constant ONE127 = uint256(1) << 128;
-    uint256 internal constant ONE256 = BIAS << 236;
+    uint256 internal constant ONE19 = BIAS << 236;
 
     function setUp() public {
         lib[0] = address(new LibUser());
-        lib[1] = address(new LibUser256());
+        lib[1] = address(new LibUser19());
         string memory ref = vm.envOr("FP_REF_DIR", string(""));
         _load(0, "contracts/src/fp127/ops.json", "FP127", ref);
-        _load(1, "contracts/src/fp256/ops.json", "FP256", ref);
+        _load(1, "contracts/src/fp19/ops.json", "FP19", ref);
     }
 
     function _load(uint256 l, string memory path, string memory single, string memory ref) internal {
@@ -174,21 +174,21 @@ contract ObjectsEqLib is Test {
         _run(0, s0, s1, s2, m, 2);
     }
 
-    // FP256's exports in two halves, so the two run in parallel
+    // FP19's exports in two halves, so the two run in parallel
     /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_fp256_even(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
+    function testFuzz_fp19_even(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
         _run(1, s0, s1, s2, m, 0);
     }
 
     /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_fp256_odd(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
+    function testFuzz_fp19_odd(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
         _run(1, s0, s1, s2, m, 1);
     }
 
     /// 2^k - 1, 2^k and 2^k + 1 for every k in every argument position, the
     /// others one.
     function _sweep(uint256 l) internal view {
-        uint256 one = l == 0 ? ONE127 : ONE256;
+        uint256 one = l == 0 ? ONE127 : ONE19;
         Op[] storage list = ops[l];
         for (uint256 i; i < list.length; i++) {
             Op memory op = list[i];
@@ -209,7 +209,7 @@ contract ObjectsEqLib is Test {
         _sweep(0);
     }
 
-    function test_powersOfTwo_fp256() public view {
+    function test_powersOfTwo_fp19() public view {
         _sweep(1);
     }
 

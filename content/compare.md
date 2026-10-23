@@ -1,6 +1,6 @@
 +++
 title = "Per op"
-description = "Gas and digits per op: FP127 and FP256 against Quad, Solady, PRBMath, ABDK and Balancer."
+description = "Gas and digits per op: FP127 and FP19 against Quad, Solady, PRBMath, ABDK and Balancer."
 path = "results/ops"
 aliases = ["/compare/"]
 
@@ -10,11 +10,11 @@ group = "results"
 
 {{ <pitch layout="ops" /> }}
 
-Only FP256 and FP127 offer `erf`, `erfc`, `normCdf` and both Lambert W branches (Solady has W₀ alone), each correctly rounded or the nearest word. FP256's per-op detail, with the deployed objects, is [on its page](/library/fp256/#the-ops).
+Only FP19 and FP127 offer `erf`, `erfc`, `normCdf` and both Lambert W branches (Solady has W₀ alone), each correctly rounded or the nearest word. FP19's per-op detail, with the deployed objects, is [on its page](/library/fp19/#the-ops).
 
 ## Gas per op
 
-Every op of FP256 and FP127 against every library we compare, all called inline.
+Every op of FP19 and FP127 against every library we compare, all called inline.
 
 {{ <gasall /> }}
 

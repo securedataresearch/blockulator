@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """Generate a library's deployable object, Solidity library, interface and ABI
 from its single Yul source (contracts/src/fp127/FP127.yul.src or
-contracts/src/fp256/FP256.yul.src).
+contracts/src/fp19/FP19.yul.src).
 
 Usage:
-    uv run scripts/fp127/gen.py [--lib fp127|fp256]            # write outputs next to the source
-    uv run scripts/fp127/gen.py [--lib fp127|fp256] --check    # regenerate and diff
-    uv run scripts/fp127/gen.py --lib fp256 --wide-lib <path>  # the test-only library whose
+    uv run scripts/fp127/gen.py [--lib fp127|fp19]            # write outputs next to the source
+    uv run scripts/fp127/gen.py [--lib fp127|fp19] --check    # regenerate and diff
+    uv run scripts/fp127/gen.py --lib fp19 --wide-lib <path>  # the test-only library whose
                                                                # rounding test always fails
     uv run scripts/fp127/gen.py [--lib ...] --count-lib <path>  # test only: counts each
                                                                # rounding-test fallback
     uv run scripts/fp127/gen.py [--lib ...] --probe-lib <path>  # test only: gas probes on
                                                                # the profiled helpers
     (add --forced to either for the forced second stage, as --wide-lib)
-    uv run scripts/fp127/gen.py --objects [fp127|fp256]        # the deployed objects' make stems
-                                                               # (fp127 fp256 fp256e ...); the
+    uv run scripts/fp127/gen.py --objects [fp127|fp19]        # the deployed objects' make stems
+                                                               # (fp127 fp19 fp19e ...); the
                                                                # Makefile loops over this list
 
 An export may carry `/// @object <Name>` to go into another deployed object
-(FP256 deploys as FP256, FP256E, FP256H and FP256S). Each object then holds only
+(FP19 deploys as FP19, FP19E, FP19H and FP19S). Each object then holds only
 its exports and their callees and gets its own interface and ABI; the
 inline library holds every export.
 
@@ -60,42 +60,42 @@ LIBS = {
             "FP127": {"iface": "IFP127", "abi": "abi.json", "salt": "FP127 v6"},
         },
     },
-    "fp256": {
-        "src": ROOT / "contracts" / "src" / "fp256" / "FP256.yul.src",
-        "object": "FP256", "lib": "FP256Lib", "iface": "IFP256",
+    "fp19": {
+        "src": ROOT / "contracts" / "src" / "fp19" / "FP19.yul.src",
+        "object": "FP19", "lib": "FP19Lib", "iface": "IFP19",
         "one": "int256 internal constant ONE = int256(0x3ffff) << 236;",
-        "consts": "/// @notice pi as the FP256 word nearest it: 237 bits, about 71 digits.\n    ///         A constant, not an op: an object caller can copy the literal.\n    int256 internal constant PI = 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c762;",
-        "iface_notice": "Interface of the deployed FP256 object, the number: arithmetic, roots,\n///         comparison, rounding and conversions. Values are 256-bit binary\n///         floating point: one int256 holding sign (bit 255), a 19-bit biased\n///         exponent (bits 254..236, bias 262143) and a 236-bit fraction with an\n///         implicit leading one; zero is the all-zero word.",
-        "lib_notice": "Inlinable FP256: 256-bit binary floating point, one int256 per value\n///         (sign, 19-bit exponent, 236-bit fraction). Every function body is the\n///         same Yul that the deployed FP256 objects run, so they agree by\n///         construction. It uses the CLZ opcode: compile with evmVersion osaka\n///         (solc >= 0.8.31) and run only on a chain that has CLZ (EIP-7939).",
+        "consts": "/// @notice pi as the FP19 word nearest it: 237 bits, about 71 digits.\n    ///         A constant, not an op: an object caller can copy the literal.\n    int256 internal constant PI = 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c762;",
+        "iface_notice": "Interface of the deployed FP19 object, the number: arithmetic, roots,\n///         comparison, rounding and conversions. Values are 256-bit binary\n///         floating point: one int256 holding sign (bit 255), a 19-bit biased\n///         exponent (bits 254..236, bias 262143) and a 236-bit fraction with an\n///         implicit leading one; zero is the all-zero word.",
+        "lib_notice": "Inlinable FP19: 256-bit binary floating point, one int256 per value\n///         (sign, 19-bit exponent, 236-bit fraction). Every function body is the\n///         same Yul that the deployed FP19 objects run, so they agree by\n///         construction. It uses the CLZ opcode: compile with evmVersion osaka\n///         (solc >= 0.8.31) and run only on a chain that has CLZ (EIP-7939).",
         # Blockulator 2.2: four deployed objects by idea from the one source.
-        # FP256 is the number; FP256E the elementary functions on the one
-        # exp/log kernel; FP256H the hyperbolic functions, on their own copy of
-        # that kernel (with them FP256E measured 27,308 bytes, over the
-        # 24,576 limit); FP256S the special functions.
+        # FP19 is the number; FP19E the elementary functions on the one
+        # exp/log kernel; FP19H the hyperbolic functions, on their own copy of
+        # that kernel (with them FP19E measured 27,308 bytes, over the
+        # 24,576 limit); FP19S the special functions.
         "objects": {
-            "FP256": {"iface": "IFP256", "abi": "abi.json", "salt": "FP256 v5"},
-            "FP256E": {"iface": "IFP256E", "abi": "abiE.json", "salt": "FP256E v5",
-                       "iface_notice": "Interface of the deployed FP256E object, FP256's elementary\n///         functions on its one exp/log kernel: exp, exp2, exp10, expm1, ln,\n///         log2, log10, log2Up, log1p, pow, powu and compound, on the same\n///         256-bit binary floating point words as IFP256 (sign bit 255, a\n///         19-bit biased exponent, bias 262143, a 236-bit fraction; zero is\n///         the all-zero word)."},
-            "FP256H": {"iface": "IFP256H", "abi": "abiH.json", "salt": "FP256H v5",
-                       "iface_notice": "Interface of the deployed FP256H object, FP256's hyperbolic\n///         functions: sinh, cosh, tanh and atanh, on the same 256-bit binary\n///         floating point words as IFP256. They run on the exp/log kernel of\n///         FP256E, carried here as their own copy: beside FP256E's ops they\n///         would not fit one object."},
-            "FP256S": {"iface": "IFP256S", "abi": "abiS.json", "salt": "FP256S v5",
-                       "iface_notice": "Interface of the deployed FP256S object, FP256's special functions:\n///         erf, erfc, normCdf, lambertW0, lambertWm1 and factorial, on the\n///         same 256-bit binary floating point words as IFP256."},
+            "FP19": {"iface": "IFP19", "abi": "abi.json", "salt": "FP256 v5"},
+            "FP19E": {"iface": "IFP19E", "abi": "abiE.json", "salt": "FP256E v5",
+                       "iface_notice": "Interface of the deployed FP19E object, FP19's elementary\n///         functions on its one exp/log kernel: exp, exp2, exp10, expm1, ln,\n///         log2, log10, log2Up, log1p, pow, powu and compound, on the same\n///         256-bit binary floating point words as IFP19 (sign bit 255, a\n///         19-bit biased exponent, bias 262143, a 236-bit fraction; zero is\n///         the all-zero word)."},
+            "FP19H": {"iface": "IFP19H", "abi": "abiH.json", "salt": "FP256H v5",
+                       "iface_notice": "Interface of the deployed FP19H object, FP19's hyperbolic\n///         functions: sinh, cosh, tanh and atanh, on the same 256-bit binary\n///         floating point words as IFP19. They run on the exp/log kernel of\n///         FP19E, carried here as their own copy: beside FP19E's ops they\n///         would not fit one object."},
+            "FP19S": {"iface": "IFP19S", "abi": "abiS.json", "salt": "FP256S v5",
+                       "iface_notice": "Interface of the deployed FP19S object, FP19's special functions:\n///         erf, erfc, normCdf, lambertW0, lambertWm1 and factorial, on the\n///         same 256-bit binary floating point words as IFP19."},
         },
         "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
     },
-    # BlockulatorWad: Solady's WAD names on FP256's kernels. Its source calls
-    # FP256.yul.src's functions (the base), and only its own exports are
+    # BlockulatorWad: Solady's WAD names on FP19's kernels. Its source calls
+    # FP19.yul.src's functions (the base), and only its own exports are
     # emitted, each with its closure: an inline library, no deployed object.
     "wad": {
         "src": ROOT / "contracts" / "src" / "wad" / "BlockulatorWad.yul.src",
-        "base": ROOT / "contracts" / "src" / "fp256" / "FP256.yul.src",
+        "base": ROOT / "contracts" / "src" / "fp19" / "FP19.yul.src",
         "library_only": True,
         # an export without a leave is written into its block, not called
         "inline_exports": True,
         "object": "BlockulatorWad", "lib": "BlockulatorWad", "iface": "IBlockulatorWad",
         "one": "uint256 internal constant WAD = 1e18;",
         "consts": "/// @notice 10^18 as a signed word, for the int256 functions.\n    int256 internal constant SWAD = 1e18;",
-        "lib_notice": "WAD maths with Solady's names (FixedPointMathLib) and every result\n///         correct to the last wei: the exact real value rounded once in the\n///         stated direction. Computed on FP256's correctly rounded kernels;\n///         where FP256's error bound reaches a wei boundary, a second stage\n///         at 2^-510 on the exact input decides it. It uses the CLZ opcode:\n///         compile with evmVersion osaka (solc >= 0.8.31) and run only on a\n///         chain that has CLZ (EIP-7939).",
+        "lib_notice": "WAD maths with Solady's names (FixedPointMathLib) and every result\n///         correct to the last wei: the exact real value rounded once in the\n///         stated direction. Computed on FP19's correctly rounded kernels;\n///         where FP19's error bound reaches a wei boundary, a second stage\n///         at 2^-510 on the exact input decides it. It uses the CLZ opcode:\n///         compile with evmVersion osaka (solc >= 0.8.31) and run only on a\n///         chain that has CLZ (EIP-7939).",
         "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors.",
         "objects": {},
         # --wide-lib: the test-only library whose fast-path test always fails,
@@ -441,11 +441,11 @@ def _indent(text: str, n: int) -> str:
 # A flat switch is a linear chain of comparisons, about 22 gas per selector
 # ranked before the one called; the binary search below costs one comparison
 # per level instead, and pays from a dozen or so exports (measured: FP127's
-# 55 save 465 gas a call on average, release four's FP256X3 with 15 saved 72,
-# FP256X2 with 10 saved 31 with some ops dearer, FP256X with 5 would have
+# 55 save 465 gas a call on average, release four's FP19X3 with 15 saved 72,
+# FP19X2 with 10 saved 31 with some ops dearer, FP19X with 5 would have
 # lost). Objects with fewer than DISPATCH_MIN exports keep the flat switch:
-# FP256H (4) and FP256S (6). FP256 and FP256E (12) take the search; the FP256
-# core took it in fp256-basic-fast (measured on the gas ladder: 278 gas a call
+# FP19H (4) and FP19S (6). FP19 and FP19E (12) take the search; the FP19
+# core took it in fp19-basic-fast (measured on the gas ladder: 278 gas a call
 # saved on average over its 37 benched exports then, up to 656, a few of the
 # first-ranked ones up to 85 dearer).
 DISPATCH_MIN = 10
@@ -583,8 +583,8 @@ PROBE_RESIDUAL = 92
 # nonzero (the test said the fast value may round wrongly), "call" counts
 # every call (the helper is the fallback itself).
 COUNTS = {
-    "fp256": {"rbad": "ret"},
-    # BlockulatorWad: wadbad fires when FP256's bound reaches a wei boundary
+    "fp19": {"rbad": "ret"},
+    # BlockulatorWad: wadbad fires when FP19's bound reaches a wei boundary
     "wad": {"wadbad": "ret"},
     # FP127: the double-word log l2p runs exactly when the one-word log or pow
     # could not decide (nearmid, or pow2t not ok)
@@ -593,7 +593,7 @@ COUNTS = {
 
 # The helpers make profile measures, in slot order.
 PROBES = {
-    "fp256": ["log2m", "exp2frac", "wexpm1", "wlnw", "cfrun", "erfw", "lwfix",
+    "fp19": ["log2m", "exp2frac", "wexpm1", "wlnw", "cfrun", "erfw", "lwfix",
               "lwlog", "lwf128", "lnc", "lwq510", "lwsp", "lwy", "powslow", "compslow", "wln1ps",
               "erfser", "erfcxa", "erfcxcf", "erfasym", "expnegsq",
               # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp

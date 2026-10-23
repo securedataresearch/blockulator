@@ -2,7 +2,7 @@
 """Bunni v2 exploit replay (Ethereum, 2 Sep 2025): the 44 withdrawals that took
 the pool's active USDC balance from 28 wei to 4, replayed from integers pinned
 out of the attack transaction, and the same withdrawals with the idle balance
-held in mulDivUp (the protocol's fix), FP127, FP256 and exact rationals.
+held in mulDivUp (the protocol's fix), FP127, FP19 and exact rationals.
 
     uv run scripts/replays/bunni.py fetch     # network: trace + receipt + Sourcify -> scripts/replays/bunni.json
     uv run scripts/replays/bunni.py           # offline: replay + forge test -> docs/benchmarks/replay-bunni.md
@@ -24,7 +24,7 @@ the hook's own reads after the last one).
 The offline mode needs no network: it replays from bunni.json, runs
 test/replays/Bunni.t.sol (which asserts the same observations in Solidity
 and prints REPLAY| lines), checks the forge numbers equal the Python ones, and
-scores FP127 and FP256 against exact rational arithmetic.
+scores FP127 and FP19 against exact rational arithmetic.
 """
 from __future__ import annotations
 
@@ -658,7 +658,7 @@ def parse_forge(text: str) -> dict:
     return res
 
 
-def fp256_value(raw: int) -> Fraction:
+def fp19_value(raw: int) -> Fraction:
     w = raw & ((1 << 256) - 1)
     if w == 0:
         return Fraction(0)
@@ -709,12 +709,12 @@ def main() -> None:
     ex = r["seq"]["exact"]
     rows = []
     for form, label in (("deployed", "deployed (`mulDiv`, floor on the subtrahend)"), ("mulDivUp", "the fix (`mulDivUp`)"),
-                        ("fp127", "FP127 idle balance"), ("fp256", "FP256 idle balance"), ("exact", "exact rational")):
-        if form == "fp256":
+                        ("fp127", "FP127 idle balance"), ("fp19", "FP19 idle balance"), ("exact", "exact rational")):
+        if form == "fp19":
             if not forge:
                 continue
-            a = fp256_value(forge["fp256"]["active0"])
-            lq = forge["fp256"]["L"]
+            a = fp19_value(forge["fp19"]["active0"])
+            lq = forge["fp19"]["L"]
         else:
             a = Fraction(r["seq"][form][-1])
             lq = liq[form]["L"]
@@ -722,7 +722,7 @@ def main() -> None:
                          dL=Fraction(lq, liq["start"]["L"]) - 1))
     write_md(d, r, liq, rows, forge)
     for x in rows:
-        print(f"{x['form']:9s} active0 {fmt(x['active'], 40) if x['form'] in ('fp127', 'fp256') else fmt(x['active'])}"
+        print(f"{x['form']:9s} active0 {fmt(x['active'], 40) if x['form'] in ('fp127', 'fp19') else fmt(x['active'])}"
               f"  err {sci(x['err'])}  L {x['L']}  dL {float(x['dL']):+.6%}")
 
 
@@ -767,11 +767,11 @@ def write_md(d: dict, r: dict, liq: dict, rows: list, forge: dict | None) -> Non
     L.append("| idle balance | active USDC after 44 (wei) | error vs exact (wei) | total liquidity after | change |")
     L.append("|---|---|---|---|---|")
     for x in rows:
-        a = fmt(x["active"], 40 if x["form"] in ("fp127", "fp256") else 6)
+        a = fmt(x["active"], 40 if x["form"] in ("fp127", "fp19") else 6)
         if x["form"] == "exact":
             a = f"{fmt(x['active'], 12)}… (= {x['active'].numerator}/{x['active'].denominator})"
         L.append(f"| {x['label']} | {a} | {sci(x['err'])} | {x['L']} | {float(x['dL']):+.7%} |")
-    L.append(f"\nStart: active {seqd[0]} wei, liquidity {L0}. Liquidity takes integer balances, so for FP127, FP256 and "
+    L.append(f"\nStart: active {seqd[0]} wei, liquidity {L0}. Liquidity takes integer balances, so for FP127, FP19 and "
              f"exact the active balance is floored before `queryLDF` (the idle balance rounded up: the same direction "
              f"as the deployed code, applied once instead of {n} times).\n")
     L.append("Per step (active USDC, wei; deployed / mulDivUp / exact):\n")

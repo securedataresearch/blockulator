@@ -21,7 +21,7 @@ INK, WHITE, G300 = "#0a0a0a", "#ffffff", "#a3a3a3"
 
 EYEBROW = "SECURE DATA RESEARCH"
 TITLE = "blockulator"
-LINES = ["FP127 and FP256: math for the EVM", "that rounds once and never runs out"]
+LINES = ["FP127 and FP19: math for the EVM", "that rounds once and never runs out"]
 
 
 def font(pattern: str, size: int) -> ImageFont.FreeTypeFont:

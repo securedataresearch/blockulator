@@ -6,15 +6,15 @@ Everything in this directory is served at blockulator.com/contracts/deployments/
   deterministic proxy with salt "FP127 v6" (v1 to v5 recorded below it), the
   verification recipe and the smoke test. Deploy a new version with
   `make deploy-sepolia`, `make verify-sepolia`, `make smoke-sepolia`.
-- `FP256.md`, `FP256.json`, `FP256E.json`, `FP256H.json`, `FP256S.json`:
-  FP256 v5, four objects from one source, one idea each (salts "FP256 v5",
-  "FP256E v5", "FP256H v5", "FP256S v5": the number, the elementary,
-  hyperbolic and special functions), with the `-fp256`, `-fp256e`,
-  `-fp256h` and `-fp256s` targets. One record covers the four objects, as
+- `FP19.md`, `FP19.json`, `FP19E.json`, `FP19H.json`, `FP19S.json`:
+  FP19 v5, four objects from one source, one idea each (salts "FP256 v5",
+  "FP19E v5", "FP19H v5", "FP19S v5": the number, the elementary,
+  hyperbolic and special functions), with the `-fp19`, `-fp19e`,
+  `-fp19h` and `-fp19s` targets. One record covers the four objects, as
   `Ladder.md` covers its thirteen contracts. Releases one to four are
-  recorded below them; release four (Blockulator 2.1) was FP256, FP256X,
-  FP256X2 and FP256X3 (salts "… v4"), whose `FP256X.json`, `FP256X2.json`
-  and `FP256X3.json` stay here marked `"release": "Blockulator 2.1"`,
+  recorded below them; release four (Blockulator 2.1) was FP19, FP19X,
+  FP19X2 and FP19X3 (salts "… v4"), whose `FP19X.json`, `FP19X2.json`
+  and `FP19X3.json` stay here marked `"release": "Blockulator 2.1"`,
   `"current": false`: those addresses are still live, and not part of 2.2.
 - `Ladder.md`, `Ladder.json`: the eleven ladder adapters, `LadderRunner` and
   `EdgeRunner`, salt "FP127 ladder v10" (v1 to v9 recorded below).
@@ -30,10 +30,10 @@ modules, and `/.well-known/agent.json`.
 
 ## Chains: CLZ (Osaka) required
 
-The FP127 and FP256 objects (and their inline libraries) count leading bits
+The FP127 and FP19 objects (and their inline libraries) count leading bits
 with the CLZ opcode (EIP-7939, Fusaka/Osaka). They are built by solc 0.8.38
 for evmVersion osaka, with solc 0.8.24's Yul optimizer sequence pinned
-(`scripts/fp127/stdjson.py`; 0.8.38's own sequence builds the FP256 core
+(`scripts/fp127/stdjson.py`; 0.8.38's own sequence builds the FP19 core
 over 24,576 bytes), and the explorers receive that same standard-JSON input.
 Blockulator 2.2 is the first CLZ build. Releases up to 2.1, recorded above,
 were shanghai builds without CLZ and stay deployed on Sepolia.
@@ -70,7 +70,7 @@ to send unless the answer is 255.
 
 The deploy targets are pattern rules over the objects table in
 `scripts/fp127/gen.py` (name, library, salt): for each stem `<o>` in `fp127
-fp256 fp256e fp256h fp256s` (`gen.py --objects`), `make predict-<o>`,
+fp19 fp19e fp19h fp19s` (`gen.py --objects`), `make predict-<o>`,
 `deploy-<o>-sepolia` and `verify-<o>-sepolia` (`scripts/fp127/deploy.py`,
 `stdjson.py`, `verify.py`); `predict`, `deploy-sepolia` and `verify-sepolia`
 are FP127's. A new object or salt edits only the table.

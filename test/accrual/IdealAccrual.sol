@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
+import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 
 /// @title IdealAccrual
 /// @notice The formulas Aave v3 and Morpho Blue say they approximate,
@@ -106,17 +106,17 @@ contract IdealFP127 is IdealAccrual {
     function _compound(int256 r, uint256 n) internal pure override returns (int256) { return FP127Lib.compound(r, int256(n) << 128); }
 }
 
-contract IdealFP256 is IdealAccrual {
-    function _u(uint256 x) internal pure override returns (int256) { return FP256Lib.fromUint(x); }
-    function _add(int256 a, int256 b) internal pure override returns (int256) { return FP256Lib.add(a, b); }
-    function _sub(int256 a, int256 b) internal pure override returns (int256) { return FP256Lib.sub(a, b); }
-    function _mul(int256 a, int256 b) internal pure override returns (int256) { return FP256Lib.mul(a, b); }
-    function _div(int256 a, int256 b) internal pure override returns (int256) { return FP256Lib.div(a, b); }
-    function _exp(int256 x) internal pure override returns (int256) { return FP256Lib.exp(x); }
-    /// FP256 release two has no expm1; e^x - 1 by subtraction keeps about
+contract IdealFP19 is IdealAccrual {
+    function _u(uint256 x) internal pure override returns (int256) { return FP19Lib.fromUint(x); }
+    function _add(int256 a, int256 b) internal pure override returns (int256) { return FP19Lib.add(a, b); }
+    function _sub(int256 a, int256 b) internal pure override returns (int256) { return FP19Lib.sub(a, b); }
+    function _mul(int256 a, int256 b) internal pure override returns (int256) { return FP19Lib.mul(a, b); }
+    function _div(int256 a, int256 b) internal pure override returns (int256) { return FP19Lib.div(a, b); }
+    function _exp(int256 x) internal pure override returns (int256) { return FP19Lib.exp(x); }
+    /// FP19 release two has no expm1; e^x - 1 by subtraction keeps about
     /// 71 + log10(x) digits, which is still beyond anything measured here.
-    function _expm1(int256 x) internal pure override returns (int256) { return FP256Lib.sub(FP256Lib.exp(x), FP256Lib.ONE); }
-    function _ln(int256 x) internal pure override returns (int256) { return FP256Lib.ln(x); }
-    function _gt(int256 a, int256 b) internal pure override returns (bool) { return FP256Lib.cmp(a, b) > 0; }
-    function _compound(int256 r, uint256 n) internal pure override returns (int256) { return FP256Lib.pow(FP256Lib.add(FP256Lib.ONE, r), FP256Lib.fromUint(n)); }
+    function _expm1(int256 x) internal pure override returns (int256) { return FP19Lib.sub(FP19Lib.exp(x), FP19Lib.ONE); }
+    function _ln(int256 x) internal pure override returns (int256) { return FP19Lib.ln(x); }
+    function _gt(int256 a, int256 b) internal pure override returns (bool) { return FP19Lib.cmp(a, b) > 0; }
+    function _compound(int256 r, uint256 n) internal pure override returns (int256) { return FP19Lib.pow(FP19Lib.add(FP19Lib.ONE, r), FP19Lib.fromUint(n)); }
 }

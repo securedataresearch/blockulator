@@ -78,26 +78,26 @@ and the rest to the arithmetic.
 
 ## What it costs
 
-Per op, inline library, median gas per call: over random inputs that take no shortcut for `exp`, `ln`, `pow`, `sqrt` and `normCdf`, over the input ladder for `mul` and `div` (the [per-op tables](/results/ops/) have every op). FP256 and Quad are from FP256's benchmark, the rest from FP127's. An empty cell is an op the library does not offer.
+Per op, inline library, median gas per call: over random inputs that take no shortcut for `exp`, `ln`, `pow`, `sqrt` and `normCdf`, over the input ladder for `mul` and `div` (the [per-op tables](/results/ops/) have every op). FP19 and Quad are from FP19's benchmark, the rest from FP127's. An empty cell is an op the library does not offer.
 
-| op | FP127 | FP256 | Quad | Solady | PRBMath | ABDK | Balancer |
+| op | FP127 | FP19 | Quad | Solady | PRBMath | ABDK | Balancer |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| mul | {{ <gas op="mul" /> }} | {{ <gas op="mul" lib="fp256" /> }} | {{ <gas op="mul" lib="fp256" form="quad" /> }} | {{ <gas op="mul" form="solady" /> }} | {{ <gas op="mul" form="prb" /> }} | {{ <gas op="mul" form="abdk" /> }} | {{ <gas op="mul" form="balancer" /> }} |
-| div | {{ <gas op="div" /> }} | {{ <gas op="div" lib="fp256" /> }} | {{ <gas op="div" lib="fp256" form="quad" /> }} | {{ <gas op="div" form="solady" /> }} | {{ <gas op="div" form="prb" /> }} | {{ <gas op="div" form="abdk" /> }} | {{ <gas op="div" form="balancer" /> }} |
-| exp | {{ <gas op="exp" /> }} | {{ <gas op="exp" lib="fp256" /> }} | {{ <gas op="exp" lib="fp256" form="quad" /> }} | {{ <gas op="exp" form="solady" /> }} | {{ <gas op="exp" form="prb" /> }} | {{ <gas op="exp" form="abdk" /> }} | {{ <gas op="exp" form="balancer" /> }} |
-| ln | {{ <gas op="ln" /> }} | {{ <gas op="ln" lib="fp256" /> }} | {{ <gas op="ln" lib="fp256" form="quad" /> }} | {{ <gas op="ln" form="solady" /> }} | {{ <gas op="ln" form="prb" /> }} | {{ <gas op="ln" form="abdk" /> }} | {{ <gas op="ln" form="balancer" /> }} |
-| sqrt | {{ <gas op="sqrt" /> }} | {{ <gas op="sqrt" lib="fp256" /> }} | {{ <gas op="sqrt" lib="fp256" form="quad" /> }} | {{ <gas op="sqrt" form="solady" /> }} | {{ <gas op="sqrt" form="prb" /> }} | {{ <gas op="sqrt" form="abdk" /> }} | {{ <gas op="sqrt" form="balancer" /> }} |
-| pow | {{ <gas op="pow" /> }} | {{ <gas op="pow" lib="fp256" /> }} | {{ <gas op="pow" lib="fp256" form="quad" /> }} | {{ <gas op="pow" form="solady" /> }} | {{ <gas op="pow" form="prb" /> }} | {{ <gas op="pow" form="abdk" /> }} | {{ <gas op="pow" form="balancer" /> }} |
-| normCdf | {{ <gas op="normCdf" /> }} | {{ <gas op="normCdf" lib="fp256" /> }} | | | | | |
+| mul | {{ <gas op="mul" /> }} | {{ <gas op="mul" lib="fp19" /> }} | {{ <gas op="mul" lib="fp19" form="quad" /> }} | {{ <gas op="mul" form="solady" /> }} | {{ <gas op="mul" form="prb" /> }} | {{ <gas op="mul" form="abdk" /> }} | {{ <gas op="mul" form="balancer" /> }} |
+| div | {{ <gas op="div" /> }} | {{ <gas op="div" lib="fp19" /> }} | {{ <gas op="div" lib="fp19" form="quad" /> }} | {{ <gas op="div" form="solady" /> }} | {{ <gas op="div" form="prb" /> }} | {{ <gas op="div" form="abdk" /> }} | {{ <gas op="div" form="balancer" /> }} |
+| exp | {{ <gas op="exp" /> }} | {{ <gas op="exp" lib="fp19" /> }} | {{ <gas op="exp" lib="fp19" form="quad" /> }} | {{ <gas op="exp" form="solady" /> }} | {{ <gas op="exp" form="prb" /> }} | {{ <gas op="exp" form="abdk" /> }} | {{ <gas op="exp" form="balancer" /> }} |
+| ln | {{ <gas op="ln" /> }} | {{ <gas op="ln" lib="fp19" /> }} | {{ <gas op="ln" lib="fp19" form="quad" /> }} | {{ <gas op="ln" form="solady" /> }} | {{ <gas op="ln" form="prb" /> }} | {{ <gas op="ln" form="abdk" /> }} | {{ <gas op="ln" form="balancer" /> }} |
+| sqrt | {{ <gas op="sqrt" /> }} | {{ <gas op="sqrt" lib="fp19" /> }} | {{ <gas op="sqrt" lib="fp19" form="quad" /> }} | {{ <gas op="sqrt" form="solady" /> }} | {{ <gas op="sqrt" form="prb" /> }} | {{ <gas op="sqrt" form="abdk" /> }} | {{ <gas op="sqrt" form="balancer" /> }} |
+| pow | {{ <gas op="pow" /> }} | {{ <gas op="pow" lib="fp19" /> }} | {{ <gas op="pow" lib="fp19" form="quad" /> }} | {{ <gas op="pow" form="solady" /> }} | {{ <gas op="pow" form="prb" /> }} | {{ <gas op="pow" form="abdk" /> }} | {{ <gas op="pow" form="balancer" /> }} |
+| normCdf | {{ <gas op="normCdf" /> }} | {{ <gas op="normCdf" lib="fp19" /> }} | | | | | |
 
 Multiplication costs about twice Solady's and about half PRBMath's;
 division 1.3 to 7 times theirs. The
 transcendentals cost more because they compute twice as many bits and
 round to the nearest word, and the error function family is the honest
-expensive one. The floats, FP256 and Quad, pay for their moving point on
-every add and mul, and Quad several times over on `ln` and `pow`. FP256's `exp`,
+expensive one. The floats, FP19 and Quad, pay for their moving point on
+every add and mul, and Quad several times over on `ln` and `pow`. FP19's `exp`,
 on its table-and-polynomial kernel, is cheaper than FP127's; FP127's root, seeded from
-its exact bit length, is cheaper than FP256's. Through the deployed
+its exact bit length, is cheaper than FP19's. Through the deployed
 objects the `staticcall` adds 460 to 620 gas to `add` and `mul`.
 
 ## What it does not fix
@@ -110,8 +110,8 @@ eight digits on the grid, and so do its root and reciprocal ([edges: exp](/resul
 fixed point maximises precision inside a band; a float maximises the band.
 ABDKMathQuad, the first float in the tables, holds 4 to 34 digits at the
 edges (the low end where an argument is 1 + x) and 16 or more on the
-ladders, with half the word idle; FP256, the
-[second ruler](/library/fp256/), fills the word and holds 53 or more at the edges and 54
+ladders, with half the word idle; FP19, the
+[second ruler](/library/fp19/), fills the word and holds 53 or more at the edges and 54
 or more on the ladders. The [edges](/results/edges/) page shows all three sides. FP127 is for the maths in the
 middle, the price, the ratio, the growth factor 1 + r, values above
 3 × 10<sup>−5</sup>, where it holds 38 digits at 1 against binary128's 34, and the conversion back to wei is one

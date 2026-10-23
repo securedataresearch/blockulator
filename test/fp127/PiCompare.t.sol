@@ -9,7 +9,7 @@ import {SD59x18, sd} from "../../lib/prb-math/src/SD59x18.sol";
 import * as M from "../../lib/prb-math/src/sd59x18/Math.sol";
 import {ABDKMathQuad as Q} from "../../lib/abdk-libraries-solidity/ABDKMathQuad.sol";
 import {LogExpMath} from "../../contracts/src/ladder/vendor/balancer/LogExpMath.sol";
-import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
+import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 
 /// @title PiCompare
 /// @notice Ramanujan's 1914 series for 1/pi, the same recipe through each
@@ -51,17 +51,17 @@ contract PiCompare is Test {
     function balMul(int256 a, int256 b) internal pure returns (int256) { return a * b / 1e18; }
     function balDiv(int256 a, int256 b) internal pure returns (int256) { return a * 1e18 / b; }
 
-    /// FP256 has no grid either: the series through its own ops.
-    function _seriesFP256(uint256 terms) internal pure returns (int256) {
-        int256 c = FP256Lib.ONE;
+    /// FP19 has no grid either: the series through its own ops.
+    function _seriesFP19(uint256 terms) internal pure returns (int256) {
+        int256 c = FP19Lib.ONE;
         int256 s = 0;
         for (uint256 k; k < terms; k++) {
-            s = FP256Lib.add(s, FP256Lib.mul(c, FP256Lib.fromUint(1103 + 26390 * k)));
+            s = FP19Lib.add(s, FP19Lib.mul(c, FP19Lib.fromUint(1103 + 26390 * k)));
             uint256 k4 = 4 * k;
-            c = FP256Lib.div(FP256Lib.mul(c, FP256Lib.fromUint((k4 + 1) * (k4 + 2) * (k4 + 3) * (k4 + 4))), FP256Lib.fromUint((k + 1) ** 4 * 24591257856));
+            c = FP19Lib.div(FP19Lib.mul(c, FP19Lib.fromUint((k4 + 1) * (k4 + 2) * (k4 + 3) * (k4 + 4))), FP19Lib.fromUint((k + 1) ** 4 * 24591257856));
         }
-        int256 invpi = FP256Lib.div(FP256Lib.mul(FP256Lib.mul(FP256Lib.fromUint(2), FP256Lib.sqrt(FP256Lib.fromUint(2))), s), FP256Lib.fromUint(9801));
-        return FP256Lib.div(FP256Lib.ONE, invpi);
+        int256 invpi = FP19Lib.div(FP19Lib.mul(FP19Lib.mul(FP19Lib.fromUint(2), FP19Lib.sqrt(FP19Lib.fromUint(2))), s), FP19Lib.fromUint(9801));
+        return FP19Lib.div(FP19Lib.ONE, invpi);
     }
 
     /// Quad has no grid: the series is run on bytes16 directly, the integer
@@ -90,12 +90,12 @@ contract PiCompare is Test {
             g0 = gasleft(); r = _series(t, int256(1) << 64, abdkSqrt, abdkMul, abdkDiv); _log("abdk", t, r, "2**64", g0 - gasleft());
             g0 = gasleft(); r = _series(t, 1e18, balSqrt, balMul, balDiv); _log("balancer", t, r, "10**18", g0 - gasleft());
             g0 = gasleft(); r = _seriesQuad(t); _log("quad", t, r, "binary128", g0 - gasleft());
-            g0 = gasleft(); r = _seriesFP256(t); _log("fp256", t, r, "fp256", g0 - gasleft());
+            g0 = gasleft(); r = _seriesFP19(t); _log("fp19", t, r, "fp19", g0 - gasleft());
         }
         // the libraries' constants, for reference: PRBMath's 18 decimals, and
-        // FP127Lib.PI and FP256Lib.PI, each its format's word nearest pi
+        // FP127Lib.PI and FP19Lib.PI, each its format's word nearest pi
         _log("prb-constant", 0, 3_141592653589793238, "10**18", 0);
         _log("fp127-constant", 0, FP127Lib.PI, "2**128", 0);
-        _log("fp256-constant", 0, FP256Lib.PI, "fp256", 0);
+        _log("fp19-constant", 0, FP19Lib.PI, "fp19", 0);
     }
 }

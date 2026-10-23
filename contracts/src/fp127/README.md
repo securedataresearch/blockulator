@@ -143,7 +143,7 @@ reverts are `FP127Lib`'s. Conversions: `FP127.wrap` / `unwrap` (or `fp127(raw)`,
 as PRBMath's `sd()`), `fp127FromWad(uint256)` and `toWadDown` / `toWadUp` for
 unsigned WADs, `fp127FromFixed18` and `toFixed18*` for signed ones,
 `fp127FromInt` / `toIntDown` / `toIntUp`, and the constants `ONE` and `PI`.
-`FP256Type.sol` holds the typed FP127 ↔ FP256 conversions.
+`FP19Type.sol` holds the typed FP127 ↔ FP19 conversions.
 
 ```solidity
 import {FP127, ONE, PI, fp127FromWad} from "fp127/FP127Type.sol";
@@ -277,7 +277,7 @@ every step.
 **The one-word kernels (Blockulator 2.2).** 2^f and log2 of a mantissa at
 2^-192, behind the erf family, Lambert W's iterations, pow's first try
 (`pow2t`) and the logs' rounding test, were rewritten after measuring what
-the EVM charges (FP256's kernel pass did the same): `exp2frac` is one
+the EVM charges (FP19's kernel pass did the same): `exp2frac` is one
 16-entry table level and the degree-15 minimax polynomial of 2^r on
 [0, 1/16) (2^-147.7 relative; v5's was a degree-24 fit on [0, 1),
 2^-145.9), Horner on the products' high words with the top 10 steps in one
@@ -287,7 +287,7 @@ additive 16-entry levels by word-only reductions (a shift and a div by
 degree-14 minimax polynomial of log2(1 + w)/w on [0, 2^-8] (2^-153.0),
 within 2^-160.5 absolute where v5's seven stages were about 2^-150: 2,594 →
 1,333. `scripts/fp127/generators/kernel192.py` fits them (Remez,
-`scripts/fp256/generators/minimax.py`), models them in exact integers,
+`scripts/fp19/generators/minimax.py`), models them in exact integers,
 checks that the source holds its Yul verbatim and measures them against
 their bounds; `precise_model.py` and `erf_model.py` take them from there.
 Blockulator 2.2's `expk` kept v5's eight 2-bit groups (each factor

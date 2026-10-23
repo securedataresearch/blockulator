@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Where the gas goes: a profile of FP256Lib and FP127Lib on the sweep's seeded
+"""Where the gas goes: a profile of FP19Lib and FP127Lib on the sweep's seeded
 random inputs.
 
     uv run scripts/sweep/gasprofile.py          # inputs, the passes, the via_ir bench -> docs/benchmarks/profile.{md,json}
@@ -19,7 +19,7 @@ read inside the call's own window (test/sweep/Sweep.t.sol):
          calls) and exclusive (without them). The probes' own cost is taken
          out (PROBE_OVH, PROBE_RESIDUAL); the residual per probe call left
          after that is reported as the calibration error;
-  forced the probe pass again on FP256's first 4,000 inputs per op with a
+  forced the probe pass again on FP19's first 4,000 inputs per op with a
          second stage, the rounding test forced to fail (gen.py --forced),
          against make sweep's second-stage pass (run_wide): what a fallback
          costs and where, wexpm1's share first.
@@ -45,11 +45,11 @@ import sweep as S  # noqa: E402
 G = S.G
 D = S.D
 OUT = ROOT / "docs" / "benchmarks"
-OPS = [("fp256", op) for op in S.OPS256] + [("fp127", op) for op in S.OPS127 + ["lambertW0", "lambertWm1"]]
+OPS = [("fp19", op) for op in S.OPS19] + [("fp127", op) for op in S.OPS127 + ["lambertW0", "lambertWm1"]]
 TRIVIAL = {"fp127": ["abs", "neg", "sign", "floor", "ceil", "frac", "add", "sub", "min", "max"],
-           "fp256": ["abs", "neg", "sign", "cmp", "lt", "eq", "min", "max"]}
+           "fp19": ["abs", "neg", "sign", "cmp", "lt", "eq", "min", "max"]}
 HEAVY = {"fp127": ["mul", "div", "sqrt", "exp", "ln", "pow", "cbrt", "sinh", "cosh", "erf", "normCdf", "lambertW0", "lambertWm1"],
-         "fp256": ["add", "mul", "div", "sqrt", "exp", "ln", "pow", "erf", "normCdf", "lambertW0", "lambertWm1",
+         "fp19": ["add", "mul", "div", "sqrt", "exp", "ln", "pow", "erf", "normCdf", "lambertW0", "lambertWm1",
                    "exp2", "log2", "cbrt", "cosh", "tanh", "hypot"]}
 
 
@@ -141,7 +141,7 @@ def fit(xs, ys):
 def viair_rows():
     leg, ir = parse_via("default"), parse_via("viair")
     rows, fits = [], {}
-    for lib in ("fp127", "fp256"):
+    for lib in ("fp127", "fp19"):
         rk = ranks(lib)
         pts = [(rk[op], leg[(lib, op, "object")] - leg[(lib, op, "inline")]) for op in TRIVIAL[lib]
                if (lib, op, "object") in leg and (lib, op, "inline") in leg]
@@ -170,12 +170,12 @@ def report():
             row.update(pr)
         ops.append(row)
     forced = []
-    for op in S.WIDE256:
+    for op in S.WIDE19:
         if not (D / f"wide_{op}.out").exists():
             continue
         data = S.load(f"wide_{op}")
-        row = {"lib": "fp256", "op": op, "stage": "forced", "n": len(data), **stats([g for *_, g in data if g])}
-        pr = probe_rows("fp256", op, data, "probewide")
+        row = {"lib": "fp19", "op": op, "stage": "forced", "n": len(data), **stats([g for *_, g in data if g])}
+        pr = probe_rows("fp19", op, data, "probewide")
         if pr:
             row.update(pr)
         forced.append(row)
@@ -200,18 +200,18 @@ def report():
           "script's docstring; in short:",
           "",
           "- **gas**: the committed library, median / 99th percentile / largest over the op's inputs;",
-          "- **fallback**: the share of inputs whose rounding test fired (FP256 `rbad`; FP127 the double-word `l2p` "
+          "- **fallback**: the share of inputs whose rounding test fired (FP19 `rbad`; FP127 the double-word `l2p` "
           "behind ln, log2, log10 and pow, and powu / compound's 512-bit `powus`), counted by a test-only copy of the library whose results "
-          "match the committed one's word for word; a dash: the op has no such test (Lambert W in FP256 "
+          "match the committed one's word for word; a dash: the op has no such test (Lambert W in FP19 "
           "tests its one-word step and runs the wide step, `lwfix`, only on a miss);",
           "- **helpers**: test-only gas probes around the named helpers. *exclusive* is a helper's gas without "
           "the probed helpers it calls, as a share of the op's total; *inclusive* counts them; the probes' own "
           "cost is taken out. Shares are over all inputs, so a fallback that runs rarely shows small.",
           "",
-          "Probed: FP256 " + ", ".join(f"`{h}`" for h in G.PROBES["fp256"]) + "; FP127 "
+          "Probed: FP19 " + ", ".join(f"`{h}`" for h in G.PROBES["fp19"]) + "; FP127 "
           + ", ".join(f"`{h}`" for h in G.PROBES["fp127"]) + ".",
           ""]
-    for lib, title in (("fp256", "FP256"), ("fp127", "FP127")):
+    for lib, title in (("fp19", "FP19"), ("fp127", "FP127")):
         md += [f"## {title}", "",
                "| op | inputs | gas median / p99 / max | fallback | largest helpers (exclusive share) |",
                "|---|---:|---:|---:|---|"]
@@ -232,12 +232,12 @@ def report():
                     md.append(f"| {r['op']} | `{h}` | {v['callsPerInput']:g} | {v['gasPerCall']:,} | "
                               f"{v['exclusivePct']:.1f}% | {v['inclusivePct']:.1f}% |")
         md.append("")
-    md += ["## FP256, the second stage forced",
+    md += ["## FP19, the second stage forced",
            "",
            f"The first {S.WIDE_N:,} inputs of each op with a second stage (and of its wider rows), through the probed "
            "library with the rounding test forced to fail (`gen.py --probe-lib --forced`), as `make sweep`'s "
            "second-stage pass: what every fallback costs, and where. Gas is the plain forced pass's "
-           "(`FP256LibWide`); shares are of it.",
+           "(`FP19LibWide`); shares are of it.",
            "",
            "| op | inputs | forced gas median / p99 / max | `wexpm1` exclusive (calls / input) | largest helpers (exclusive share) |",
            "|---|---:|---:|---:|---|"]

@@ -1,6 +1,6 @@
 {
  "generated": "2026-10-23",
- "description": "Runtime bytecode, in bytes, that one op adds to a contract when it is inlined through FP127Lib or FP256Lib, helpers included: the deployed size of a contract with one external function f(int256,int256,int256) returning Lib.op(a[,b[,c]]), minus the same contract returning a. legacy is the default foundry profile (via_ir = false), viaIr the same settings through the IR. CBOR metadata is off. Each Lib function carries its own copy of its helpers and the optimizer merges identical code across them, so a second op that shares a kernel with the first adds less than its row: bundles chains several ops in one contract, against the sum of their singles. staticcallGas is the gas the external call to the deployed object adds to add (gas.json or gas256.json, yul median minus lib median).",
+ "description": "Runtime bytecode, in bytes, that one op adds to a contract when it is inlined through FP127Lib or FP19Lib, helpers included: the deployed size of a contract with one external function f(int256,int256,int256) returning Lib.op(a[,b[,c]]), minus the same contract returning a. legacy is the default foundry profile (via_ir = false), viaIr the same settings through the IR. CBOR metadata is off. Each Lib function carries its own copy of its helpers and the optimizer merges identical code across them, so a second op that shares a kernel with the first adds less than its row: bundles chains several ops in one contract, against the sum of their singles. staticcallGas is the gas the external call to the deployed object adds to add (gas.json or gas19.json, yul median minus lib median).",
  "generator": "scripts/size/inline.py (make size-inline)",
  "compiler": {
   "solc": "0.8.38",
@@ -259,7 +259,7 @@
     }
    }
   },
-  "fp256": {
+  "fp19": {
    "staticcallGas": 464,
    "summary": {
     "legacy": {
@@ -655,7 +655,7 @@
    }
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "ops": [
     "add",
     "sub",
@@ -670,7 +670,7 @@
    }
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "ops": [
     "exp",
     "ln"
@@ -683,7 +683,7 @@
    }
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "ops": [
     "exp",
     "ln",
@@ -697,7 +697,7 @@
    }
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "ops": [
     "erf",
     "erfc",
@@ -711,7 +711,7 @@
    }
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "ops": [
     "fromFixed18",
     "toFixed18Down",

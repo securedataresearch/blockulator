@@ -23,9 +23,9 @@ EDGES = ROOT / "docs" / "benchmarks" / "edges.json"
 RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"
 INPUTS = ROOT / "scripts" / "ladder" / "edge-inputs.json"
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
-FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256", "solmate", "oz", "uniswap", "prbud", "snekmate"]
+FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate"]
 SCALE_OF_FORM = {"fp127": "fp127", "fp127lib": "fp127", "abdk": "abdk", "solady": "wad", "prb": "wad",
-                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "fp256": "fp256",
+                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "fp19": "fp19",
                  "solmate": "wad", "oz": "wad", "uniswap": "wad", "prbud": "wad", "snekmate": "wad"}
 SIG = "run(uint8,uint8,int256[])(bool,int256,bytes4,uint256)"
 SELECTOR = "0xf833b7d5"

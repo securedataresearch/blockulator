@@ -29,8 +29,8 @@ value rounded once in the stated direction:
 - mul, div, sqrt and cbrt exactly on 512 bits, in one word where Solady's
   path applies (mulWad 107 gas, Solady 86); the domains only widen (a result
   that fits never reverts).
-- exp, ln, log2, log10 and pow on FP256's kernels fed the exact input,
-  lambertW0 on FP256's; a cut at the wei with a stated bound, and a second
+- exp, ln, log2, log10 and pow on FP19's kernels fed the exact input,
+  lambertW0 on FP19's; a cut at the wei with a stated bound, and a second
   stage at 2^-510 on the exact input where the bound reaches a wei boundary.
   expWad 2,357 gas, lnWad 2,415, powWad 4,762 (PRBMath 2,719, 6,980, 9,877).
 - `make sweep`: 27 WAD rows, 0 wrong of 108,000, and 0 of 52,000 through the
@@ -38,39 +38,39 @@ value rounded once in the stated direction:
   inputs Solady's expWad is off by a wei or more on 48%, lnWad 24%, powWad
   66%, lambertW0Wad 28%; PRBMath's exp, ln, log2, log10 and pow on 72 to 98%.
 - `gen.py --lib wad` builds it from `BlockulatorWad.yul.src` on
-  `FP256.yul.src` (a library on a base source, library only, exports without
+  `FP19.yul.src` (a library on a base source, library only, exports without
   a leave written into their blocks).
 
 ## Blockulator 2.2 (2026-10-22)
 
-The second gas pass: every result the same word (FP256 correctly rounded,
-FP127's transcendentals nearest), about half the gas, FP256 drawn into four
+The second gas pass: every result the same word (FP19 correctly rounded,
+FP127's transcendentals nearest), about half the gas, FP19 drawn into four
 objects by idea, and the first CLZ build. Deployed 2026-10-22, Sepolia
 blocks 11,974,968 to 11,974,985.
 
 | component | version | Sepolia |
 |---|---|---|
 | FP127 | FP127 v6, 53 ops, 21,858 bytes | `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4` |
-| FP256 | FP256 v5, 43 ops, 10,333 bytes | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` |
-| FP256E | FP256E v5, 12 ops, 21,598 bytes | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` |
-| FP256H | FP256H v5, 4 ops, 13,021 bytes | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` |
-| FP256S | FP256S v5, 6 ops, 24,263 bytes | `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
+| FP19 | FP19 v5, 43 ops, 10,333 bytes | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` |
+| FP19E | FP19E v5, 12 ops, 21,598 bytes | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` |
+| FP19H | FP19H v5, 4 ops, 13,021 bytes | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` |
+| FP19S | FP19S v5, 6 ops, 24,263 bytes | `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
 | LadderRunner | FP127 ladder v10 | `0xF14Ac5DDA9C0c10C50aa4Be9D219509fAa936A9b` |
 | EdgeRunner | FP127 ladder v10 | `0x5123DaA96A96e550665401Bd56AD0770DDB9004e` |
 
-Records: `contracts/deployments/{RELEASE,FP127,FP256,Ladder}.md`. The five
+Records: `contracts/deployments/{RELEASE,FP127,FP19,Ladder}.md`. The five
 objects are verified on Sourcify and Blockscout and pass their smoke tests
 against the live contracts; the thirteen ladder contracts are
 `exact_match` on Sourcify. Checked live on 2026-10-23: 9,408 ladder cells
 through LadderRunner v10 (block 11,975,057) and 1,511 edge cells through
 EdgeRunner v10 (block 11,975,211), 0 mismatches. Blockulator 2.1 (FP127 v5,
-FP256 release four's FP256, FP256X, FP256X2 and FP256X3, ladder v9) and 2.0
+FP19 release four's FP19, FP19X, FP19X2 and FP19X3, ladder v9) and 2.0
 stay live and verified at their addresses.
 
 Gas, sweep medians of the inline libraries (`docs/benchmarks/sweep.md`),
 2.1 → 2.2:
 
-| op | FP127 | FP256 |
+| op | FP127 | FP19 |
 |---|---:|---:|
 | add | 124 → 124 | 1,278 → 677 |
 | mul | 263 → 263 | 1,145 → 530 |
@@ -94,23 +94,23 @@ Gas, sweep medians of the inline libraries (`docs/benchmarks/sweep.md`),
 FP127 `sinh` is the one op dearer: its series below 1 went, and it now runs
 on the exp kernel like `cosh`. Through the deployed objects FP127's basic
 ops are 140 to 215 gas cheaper (`add` 899 → 694, `mul` 1,103 → 889 on the
-gas ladder, `docs/benchmarks/gas.md`) and FP256's roughly half (`add`
+gas ladder, `docs/benchmarks/gas.md`) and FP19's roughly half (`add`
 2,423 → 1,124, `mul` 2,462 → 1,069, `exp` 7,637 → 3,369,
-`docs/benchmarks/gas256.md`).
+`docs/benchmarks/gas19.md`).
 
 Where it came from, in order (PRs #120 to #132):
 
 - **Hyperbolics on the exp/log kernels** (#120, #121): FP127 `cosh`, `sinh`
-  and `atanh`, FP256 `sinh`, `tanh` and `atanh` from expm1/log1p in place of
+  and `atanh`, FP19 `sinh`, `tanh` and `atanh` from expm1/log1p in place of
   their series.
 - **Precision-doubling Newton** from a bit-hack seed for `sqrt`, `div`,
-  `inv` and `cbrt` in both libraries (#122): FP256 `cbrt` 13.6k → 3.1k,
+  `inv` and `cbrt` in both libraries (#122): FP19 `cbrt` 13.6k → 3.1k,
   FP127 `cbrt` 6.0k → 2.2k with no fallback.
 - **Lambert W without series** (#123, #126): an adaptive-precision safe
   step with a residual bound from a log-free seed; the fallback rate falls
   from 2% / 5.8% to 0.07% / 0.2% (W0 / W−1).
-- **FP256 `erfc` asymptotic tail** from y ≥ 18 (#125).
-- **FP256's basic ops** (#128): a known-position normalise, a one-compare
+- **FP19 `erfc` asymptotic tail** from y ≥ 18 (#125).
+- **FP19's basic ops** (#128): a known-position normalise, a one-compare
   pack, a lean unpack and a branchless msb, bit-identical; add 1,262 →
   705, mul 1,145 → 572, div 1,433 → 842 inline.
 - **CLZ** (#130): one osaka build, msb = 255 − clz(x) (23 gas against 243
@@ -122,29 +122,29 @@ The compile settings were measured and left alone: optimizer runs from 200
 to 2^32 − 1 build byte-identical objects, and 0.8.38's default optimizer
 sequence costs more gas as well as more bytes. Compiling the inline
 libraries with `via_ir = true` takes about 5.5× as long and makes them
-10–33% cheaper (FP127 `add` 124 → 83, `ln` 600 → 409; FP256 `add` 662 →
+10–33% cheaper (FP127 `add` 124 → 83, `ln` 600 → 409; FP19 `add` 662 →
 506, `exp` 3,295 → 2,893): without it their heavy ops cost 5–14% (FP127)
-and 6–19% (FP256) more than the object net of its call, with it within
+and 6–19% (FP19) more than the object net of its call, with it within
 about −7% to +3% (`docs/benchmarks/profile.md`).
 
-### FP256 v5 and FP127 v6
+### FP19 v5 and FP127 v6
 
-FP256 deploys as four objects by idea, replacing FP256, FP256X, FP256X2 and
-FP256X3: **FP256**, the number (arithmetic, roots, comparison, rounding,
-conversions: 43 ops, salt `FP256 v5`); **FP256E**, the elementary functions
+FP19 deploys as four objects by idea, replacing FP19, FP19X, FP19X2 and
+FP19X3: **FP19**, the number (arithmetic, roots, comparison, rounding,
+conversions: 43 ops, salt `FP256 v5`); **FP19E**, the elementary functions
 on one exp/log kernel (exp, exp2, exp10, expm1, ln, log2, log10, log2Up,
-log1p, pow, powu, compound; `FP256E v5`); **FP256H**, the hyperbolic
-functions (sinh, cosh, tanh, atanh; `FP256H v5`), their own object because
-FP256E with them measured 27,308 bytes, over the 24,576 limit, so FP256H
-carries its own copy of the kernel; **FP256S**, the special functions (erf,
-erfc, normCdf, lambertW0, lambertWm1, factorial; `FP256S v5`). In both
+log1p, pow, powu, compound; `FP19E v5`); **FP19H**, the hyperbolic
+functions (sinh, cosh, tanh, atanh; `FP19H v5`), their own object because
+FP19E with them measured 27,308 bytes, over the 24,576 limit, so FP19H
+carries its own copy of the kernel; **FP19S**, the special functions (erf,
+erfc, normCdf, lambertW0, lambertWm1, factorial; `FP19S v5`). In both
 libraries `pi` is now a constant and `gcd` is removed. Without the kernels
-the FP256 core is 10,333 bytes, and the room goes to the basic ops' fast
+the FP19 core is 10,333 bytes, and the room goes to the basic ops' fast
 path, bit-identical: through the object `mulDown`/`mulUp` 201 to 267 gas
 less, `divDown`/`divUp` 250 to 256, the in-place conversions up to 67, and
-add, sub, mul, div 10 to 70 (`docs/benchmarks/gas256.md`).
+add, sub, mul, div 10 to 70 (`docs/benchmarks/gas19.md`).
 
-FP256's exp/log kernels are rewritten, measured first and bit-identical in
+FP19's exp/log kernels are rewritten, measured first and bit-identical in
 every result (correct rounding fixes the word; only the gas and the
 fallback rates move): 2^f by two 16-entry table levels and a degree-19
 minimax polynomial, log2 by two additive 16-entry levels, one division and a
@@ -154,7 +154,7 @@ in line and the top polynomial steps in one word. Sweep medians, inline:
 exp 7,077 → 3,299, ln 7,640 → 3,623, log1p 8,727 → 2,558, expm1 6,523 →
 2,390, pow 14,011 → 5,902, compound 16,113 → 6,304, sinh 7,331 → 3,613,
 atanh 12,606 → 5,073, erf 16,962 → 12,990, lambertW0 14,524 → 10,623.
-FP256E is 21,598 bytes and FP256H 13,021.
+FP19E is 21,598 bytes and FP19H 13,021.
 
 FP127's one-word kernels get the same treatment (salt `FP127 v6`): 2^f by one 16-entry table and a degree-15 minimax polynomial
 (2^-146.7 relative, from 2^-145.9), log2 by two additive 16-entry levels and
@@ -170,43 +170,43 @@ Sepolia, Arbitrum, OP, Base, Unichain, Polygon PoS, BNB Chain, Gnosis and
 the others listed in `contracts/deployments/README.md`, not zkSync Era,
 Avalanche C-Chain or Polygon zkEVM (there every call that counts leading
 bits fails; `make probe-clz RPC=<url>` checks a chain). `pi(terms)` →
-`FP127Lib.PI` / `FP256Lib.PI` (the format's word
+`FP127Lib.PI` / `FP19Lib.PI` (the format's word
 nearest π; an object caller copies the literal); `gcd` has no replacement;
-an FP256 caller of FP256X, FP256X2 or FP256X3 calls the object that now
-holds the op (`contracts/src/fp256/ops.json` names it), through `IFP256`,
-`IFP256E`, `IFP256H` or `IFP256S`. The inline libraries keep every other
+an FP19 caller of FP19X, FP19X2 or FP19X3 calls the object that now
+holds the op (`contracts/src/fp19/ops.json` names it), through `IFP19`,
+`IFP19E`, `IFP19H` or `IFP19S`. The inline libraries keep every other
 signature.
 
 ### Ladder v10
 
 Salt `FP127 ladder v10`, deployed 2026-10-22: the eleven adapters, with
 `LadderFP127` calling FP127 v6, `LadderFP127Lib` inlining it and
-`LadderFP256` inlining FP256 v5, and both runners. The datasets and the
+`LadderFP19` inlining FP19 v5, and both runners. The datasets and the
 live runners compute the same code.
 
 ## Blockulator 2.1 (2026-10-21)
 
 Both rulers round once: every FP127 transcendental to the nearest word,
-every FP256 op correctly rounded or exact, and the directed ops for the
+every FP19 op correctly rounded or exact, and the directed ops for the
 token edge. Deployed 2026-10-21, Sepolia blocks 11,966,114 to 11,966,639.
 
 | component | version | Sepolia |
 |---|---|---|
 | FP127 | FP127 v5, 55 ops, 19,863 bytes | `0x619176d72D7a12390F8970802943D344c0fd3fE2` |
-| FP256 | FP256 v4, 37 ops, 24,512 bytes | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
-| FP256X | FP256X v4, 5 ops, 22,266 bytes | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
-| FP256X2 | FP256X2 v4, 10 ops, 19,889 bytes | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
-| FP256X3 | FP256X3 v4, 15 ops, 6,844 bytes | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
+| FP19 | FP19 v4, 37 ops, 24,512 bytes | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
+| FP19X | FP19X v4, 5 ops, 22,266 bytes | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
+| FP19X2 | FP19X2 v4, 10 ops, 19,889 bytes | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
+| FP19X3 | FP19X3 v4, 15 ops, 6,844 bytes | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
 | LadderRunner | FP127 ladder v9 | `0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5` |
 | EdgeRunner | FP127 ladder v9 | `0xcA89eeA1831c38B62d2d3332ECbb8A57BaF246fF` |
 
-Records: `contracts/deployments/{RELEASE,FP127,FP256,Ladder}.md`. FP127
-and the four FP256 objects are verified on Sourcify and Blockscout and pass
+Records: `contracts/deployments/{RELEASE,FP127,FP19,Ladder}.md`. FP127
+and the four FP19 objects are verified on Sourcify and Blockscout and pass
 their smoke tests against the live contracts; the thirteen ladder contracts
 are verified on Sourcify. FP127 v5's first send ran out of gas under the
 old 20M deploy limit and created nothing; `DEPLOY_GAS` is now 40M and every
 deploy target rejects a reverted receipt. The earlier objects (FP127 v1 to
-v4, FP256 releases one to three, ladder v1 to v8) stay deployed.
+v4, FP19 releases one to three, ladder v1 to v8) stay deployed.
 
 ### FP127 v5
 
@@ -256,12 +256,12 @@ Salt `FP127 v5`, 55 ops, 19,863 bytes of runtime, deployed 2026-10-21 at
     ~12,600 → ~9,760.
   - `exp2frac` runs inline throughout.
 
-### FP256 release four
+### FP19 release four
 
 Correctly rounded, and the edge. Four objects, deployed 2026-10-21 at the
 addresses in the table above.
 
-- Every FP256 op is correctly rounded or exact: 0 misrounded of 364,658
+- Every FP19 op is correctly rounded or exact: 0 misrounded of 364,658
   random inputs (281,821 before #79's ops), and 0 when every input is
   forced through the second stage (`docs/benchmarks/sweep.md`); release
   three had pow 8 in 20,000 off by one ULP, ln 1, normCdf 1 in 4,000,
@@ -269,64 +269,64 @@ addresses in the table above.
   bound; when it reaches the rounding boundary a second stage recomputes the
   value in two words at 2^−510. pow, compound and powu compute exact ties
   exactly. The bounds are measured against the models in
-  `scripts/fp256/generators/bounds.py`: none reaches 0.67 of its value.
+  `scripts/fp19/generators/bounds.py`: none reaches 0.67 of its value.
 - The edge, rounding toward minus or plus infinity once from the exact
   value: `mulDown`, `mulUp`, `divDown`, `divUp`, `toUintDown`, `toUintUp`,
   `toIntDown`, `toIntUp`, `toFixed18Down`, `toFixed18Up`, `floor`, `ceil`,
   `fromUintDown`, `fromUintUp`; a positive Up result never underflows to
   zero.
-- Two objects from one source: FP256 (arithmetic, the edge, exp, ln, log1p,
-  expm1, pow, powu, compound, conversions) and FP256X (erf, erfc, normCdf,
+- Two objects from one source: FP19 (arithmetic, the edge, exp, ln, log1p,
+  expm1, pow, powu, compound, conversions) and FP19X (erf, erfc, normCdf,
   lambertW0, lambertWm1), salts `FP256 v4` and `FP256X v4`; the inline
-  library holds all of them. `make predict-fp256x`, `deploy-fp256x-sepolia`,
-  `verify-fp256x-sepolia`.
+  library holds all of them. `make predict-fp19x`, `deploy-fp19x-sepolia`,
+  `verify-fp19x-sepolia`.
 - Gas: the fast paths cost a few hundred gas more; the second stage, when it
   runs, 29k (exp) to 430k (erfc's continued fraction). The optimisation
-  pass (fp256-faster, results unchanged word for word): Lambert W by
+  pass (fp19-faster, results unchanged word for word): Lambert W by
   fourth-order steps at word precision with a stated bound and the rounding
   test, the wide step only on a miss, 34k / 30k at the median (W0 / W−1;
   151k / 156k before, 109k in release three); `wexpm1` 27k → 21k, so every
   second stage is about 6k cheaper; pow, powu and compound fallbacks
   shorter (p99 80k → 68k, 92k → 73k, 167k → 116k), the pow bound tighter,
   `wln1ps`'s length set by |d|.
-- The ops FP127 has and FP256 lacked (#79), each correctly rounded or exact:
+- The ops FP127 has and FP19 lacked (#79), each correctly rounded or exact:
   `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `sinh`, `cosh`,
-  `tanh`, `atanh` in FP256X2 (on the same kernels, each with a stated bound
+  `tanh`, `atanh` in FP19X2 (on the same kernels, each with a stated bound
   and a two-word second stage) and `min`, `max`, `clamp`, `avg`, `dist`,
   `zeroFloorSub`, `inv`, `lerp`, `frac`, `round`, `gcd`, `factorial`, `pi`,
-  `gavg`, `hypot` in FP256X3 (exact values, or one rounding of an exact
+  `gavg`, `hypot` in FP19X3 (exact values, or one rounding of an exact
   sum, product or root). `lerp` rounds a + t (b - a) once from the exact
   value, summed in a 1,024-bit window just past the free memory pointer;
   `hypot` rounds Pythagorean ties away from zero; `factorial` runs to 20,366
   and is checked against the exact factorial at every n; `pi(terms)` is the
   correctly rounded Ramanujan partial sum; `round` takes halves away from
-  zero. Salts `FP256X2 v4` and `FP256X3 v4`; `make predict-fp256x2`,
-  `-fp256x3` and their deploy and verify targets. 67 ops in all.
+  zero. Salts `FP256X2 v4` and `FP256X3 v4`; `make predict-fp19x2`,
+  `-fp19x3` and their deploy and verify targets. 67 ops in all.
 
 ### Ladder v9
 
 Salt `FP127 ladder v9`, deployed 2026-10-21: the eleven adapters, with
 `LadderFP127` calling FP127 v5, `LadderFP127Lib` inlining it and
-`LadderFP256` inlining release four, and both runners. The datasets and the
+`LadderFP19` inlining release four, and both runners. The datasets and the
 live runners now compute the same code again.
 
 ## Blockulator 2.0 (2026-10-16)
 
-Two rulers in one word: FP127 for the money range, FP256 for everything.
+Two rulers in one word: FP127 for the money range, FP19 for everything.
 
 | component | version | Sepolia |
 |---|---|---|
 | FP127 | FP127 v4, 49 ops | `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` |
-| FP256 | FP256 v3, 28 ops | `0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be` |
+| FP19 | FP19 v3, 28 ops | `0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be` |
 | LadderRunner | FP127 ladder v8 | `0xEf689d3782490066fE911a6dD33357f59caE40fE` |
 | EdgeRunner | FP127 ladder v8 | `0x09b8fC41E872279A749a0221AE23D124079AcB44` |
 
-- FP256, a 256-bit binary float: sign, 19-bit exponent, 236-bit fraction,
+- FP19, a 256-bit binary float: sign, 19-bit exponent, 236-bit fraction,
   about 71 digits from 10^−78,913 to 10^78,913, no NaN or infinity.
   Release three adds log1p, expm1, erf, erfc, normCdf, both Lambert branches,
   powu and compound; exp, ln, log1p, expm1 and the erf family return the
   correctly rounded word at every committed vector.
-  In detail (moved here from the site's FP256 page): `exp`, `ln`, `log1p`,
+  In detail (moved here from the site's FP19 page): `exp`, `ln`, `log1p`,
   `expm1`, `erf`, `erfc`, `normCdf` and every non-transcendental op return
   the correctly rounded word at every committed vector. `pow`, `powu` and
   `compound` are within one unit in the last place while |y log2 x| stays
@@ -337,7 +337,7 @@ Two rulers in one word: FP127 for the money range, FP256 for everything.
   4,000 and 2,500. The kernels run at 2^−254 with 512-bit products: 2^f from
   a 16-entry table and a degree-26 polynomial, log2 from twelve reduction
   stages and a degree-17 polynomial, `erfc` as e^(−y²) times a scaled series
-  or continued fraction (never 1 − erf). FP256 v1 borrowed FP127's kernels
+  or continued fraction (never 1 − erf). FP19 v1 borrowed FP127's kernels
   (146, 149 and 123 bits on exp, ln and pow); v2 refit them for the wide
   word; v3 added nine ops.
 - FP127 v4: 49 ops, adding powu, compound, log1p, expm1, the hyperbolics,
@@ -349,7 +349,7 @@ Two rulers in one word: FP127 for the money range, FP256 for everything.
 - The site: four-item navigation, one results overview, one live-check
   stamp per page.
 
-Records: `contracts/deployments/{FP127,FP256,Ladder}.md`.
+Records: `contracts/deployments/{FP127,FP19,Ladder}.md`.
 
 ## Blockulator 1.0
 

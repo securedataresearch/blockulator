@@ -1,4 +1,4 @@
-.PHONY: gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
+.PHONY: gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp19 predict-fp19 deploy-fp19-sepolia verify-fp19-sepolia smoke-fp19-sepolia bench-fp19 precision-report-fp19 gen-fp19 vectors-fp19 size-fp19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
 
 PY := uv run
 
@@ -22,13 +22,13 @@ help:
 	@echo "  make vectors-check    - Fail if the vectors are stale"
 	@echo "  make build            - gen-check + forge build"
 	@echo "  make test             - gen-check + vectors-check + equivalence, behaviour and precision suites"
-	@echo "  make typed            - The typed API (FP127Type, FP256Type) against the raw libraries: same results and reverts, gas both ways, default profile and via_ir"
+	@echo "  make typed            - The typed API (FP127Type, FP19Type) against the raw libraries: same results and reverts, gas both ways, default profile and via_ir"
 	@echo "  make precision-report - Rewrite docs/fp127/precision.md from docs/fp127/precision.json"
 	@echo "  make bench            - Gas ladder for every op and form -> docs/benchmarks/gas.json + gas.md"
 	@echo "  make talk             - The talk deck, one plot per slide from the data -> docs/talks/dust-is-over.pdf"
 	@echo "  make pi-compare       - Ramanujan's series through each library's primitives -> docs/benchmarks/pi.md"
 	@echo "  make size             - Print the deployed FP127 runtime size in bytes"
-	@echo "  make size-inline      - Bytecode each op adds inlined through FP127Lib / FP256Lib, legacy and via_ir -> docs/benchmarks/size.{json,md}"
+	@echo "  make size-inline      - Bytecode each op adds inlined through FP127Lib / FP19Lib, legacy and via_ir -> docs/benchmarks/size.{json,md}"
 	@echo "  make size-inline-check - Fail if size.json / size.md are stale"
 	@echo "  make gen-inputs       - Generate scripts/ladder/inputs.json (every input floored into each representation) from scenarios.json"
 	@echo "  make gen-inputs-check - Fail if inputs.json is stale"
@@ -41,12 +41,12 @@ help:
 	@echo "  make accrual-deployed - Aave v3 / Morpho Blue accrual as deployed vs a 200-digit truth -> docs/benchmarks/accrual-deployed.{json,md}"
 	@echo "  make accrual-verify   - (network) recompile the pinned Aave/Morpho sources, compare runtime bytecode to mainnet"
 	@echo "  make accrual-survey   - (network) refresh scripts/accrual/survey.json from mainnet at the current block"
-	@echo "  make sweep            - random-input accuracy of every FP127/FP256 op vs correctly rounded truth -> docs/benchmarks/sweep.{json,md}"
+	@echo "  make sweep            - random-input accuracy of every FP127/FP19 op vs correctly rounded truth -> docs/benchmarks/sweep.{json,md}"
 	@echo "  make sweep OPS=a,b    - only those ops (both libraries, both passes); their rows replace the recorded ones"
 	@echo "  make wad              - BlockulatorWad beside Solady and PRBMath on the same inputs: wei error, gas, bytes -> docs/benchmarks/wad.{json,md}"
-	@echo "  make gen-wad          - generate contracts/src/wad/BlockulatorWad.sol and ops.json from BlockulatorWad.yul.src (on FP256.yul.src)"
+	@echo "  make gen-wad          - generate contracts/src/wad/BlockulatorWad.sol and ops.json from BlockulatorWad.yul.src (on FP19.yul.src)"
 	@echo "  make profile          - where the gas goes: per op gas, fallback rate and per-helper share on the sweep inputs, and the via_ir bench -> docs/benchmarks/profile.{json,md}"
-	@echo "  make replays          - four exploits replayed bit-exact from pinned chain data, then in FP127, FP256 and exact -> docs/benchmarks/replay-*.md"
+	@echo "  make replays          - four exploits replayed bit-exact from pinned chain data, then in FP127, FP19 and exact -> docs/benchmarks/replay-*.md"
 	@echo "  make replays-fetch    - (network, read-only) re-pin scripts/replays/*.json from the attack transactions"
 	@echo "  make predict-ladder   - CREATE2 addresses of the ladder adapters and runner"
 	@echo "  make site             - Build the Zola site into public/ (pinned Zola is downloaded if none is installed)"
@@ -57,11 +57,11 @@ help:
 	@echo "  make verify-ladder-sepolia - Verify them on Sourcify (and Etherscan if ETHERSCAN_API_KEY is set)"
 	@echo "  make fetch-baseline   - Re-fetch the legacy Huff runtime bytecode from Sepolia"
 	@echo "  make predict          - Print the CREATE2 address of the current FP127 object"
-	@echo "  make predict-fp256 / predict-fp256e / predict-fp256h / predict-fp256s - CREATE2 addresses of FP256's four objects (the number, elementary, hyperbolic, special)"
-	@echo "  make deploy-fp256-sepolia / deploy-fp256e-sepolia / -fp256h- / -fp256s- - Deploy them (reads DEPLOYER_KEY; DEPLOY_GAS, default 40M)"
-	@echo "  make verify-fp256-sepolia / verify-fp256e-sepolia / -fp256h- / -fp256s- - Prove runtime = artifact, verify on Sourcify + Blockscout"
-	@echo "  make smoke-fp256-sepolia - Every committed FP256 vector against the live objects"
-	@echo "  make size-fp256       - FP256, FP256E, FP256H and FP256S runtime sizes"
+	@echo "  make predict-fp19 / predict-fp19e / predict-fp19h / predict-fp19s - CREATE2 addresses of FP19's four objects (the number, elementary, hyperbolic, special)"
+	@echo "  make deploy-fp19-sepolia / deploy-fp19e-sepolia / -fp19h- / -fp19s- - Deploy them (reads DEPLOYER_KEY; DEPLOY_GAS, default 40M)"
+	@echo "  make verify-fp19-sepolia / verify-fp19e-sepolia / -fp19h- / -fp19s- - Prove runtime = artifact, verify on Sourcify + Blockscout"
+	@echo "  make smoke-fp19-sepolia - Every committed FP19 vector against the live objects"
+	@echo "  make size-fp19       - FP19, FP19E, FP19H and FP19S runtime sizes"
 	@echo "  make build-yul        - Compile every deployed Yul object with the pinned solc (stdjson.py) -> out/<Object>.yul/"
 	@echo "  make probe-clz [RPC=] - Does the chain have CLZ (EIP-7939)? Every deploy runs this first"
 	@echo "  make deploy-sepolia   - Deploy via the CREATE2 proxy (reads DEPLOYER_KEY)"
@@ -74,11 +74,11 @@ gen:
 
 gen-check:
 	@$(PY) scripts/fp127/gen.py --check
-	@test ! -f contracts/src/fp256/FP256.yul.src || $(PY) scripts/fp127/gen.py --lib fp256 --check
+	@test ! -f contracts/src/fp19/FP19.yul.src || $(PY) scripts/fp127/gen.py --lib fp19 --check
 	@test ! -f contracts/src/wad/BlockulatorWad.yul.src || $(PY) scripts/fp127/gen.py --lib wad --check
 
-gen-fp256:
-	@$(PY) scripts/fp127/gen.py --lib fp256
+gen-fp19:
+	@$(PY) scripts/fp127/gen.py --lib fp19
 
 gen-wad:
 	@$(PY) scripts/fp127/gen.py --lib wad
@@ -92,10 +92,10 @@ vectors:
 
 vectors-check:
 	@$(PY) scripts/fp127/oracle.py check
-	@test ! -f scripts/fp256/vector_spec.json || $(PY) scripts/fp256/oracle.py check
+	@test ! -f scripts/fp19/vector_spec.json || $(PY) scripts/fp19/oracle.py check
 
-vectors-fp256:
-	@$(PY) scripts/fp256/oracle.py vectors
+vectors-fp19:
+	@$(PY) scripts/fp19/oracle.py vectors
 
 build: gen-check gen-inputs-check
 	@forge build
@@ -112,8 +112,8 @@ build-yul:
 build-vyper:
 	@$(PY) scripts/ladder/vyper.py
 
-build-fp256:
-	@set -e; for o in $(FP256_OBJECTS); do FP_LIB=$$o $(PY) scripts/fp127/stdjson.py artifact; done
+build-fp19:
+	@set -e; for o in $(FP19_OBJECTS); do FP_LIB=$$o $(PY) scripts/fp127/stdjson.py artifact; done
 
 gen-inputs:
 	@$(PY) scripts/ladder/gen_inputs.py
@@ -138,7 +138,7 @@ edges-check: build gen-edges-check
 
 test: gen-check vectors-check
 	@forge test --match-path "test/fp127/*"
-	@forge test --match-path "test/fp256/*"
+	@forge test --match-path "test/fp19/*"
 	@forge test --match-path "test/ladder/*" -q
 	@forge test --match-path "test/replays/*" -q
 	@forge test --match-path "test/examples/*" -q
@@ -146,7 +146,7 @@ test: gen-check vectors-check
 	@forge test --match-path "test/wad/*"
 	@$(MAKE) -s typed
 
-# The typed API (FP127Type.sol, FP256Type.sol) against the raw libraries: the
+# The typed API (FP127Type.sol, FP19Type.sol) against the raw libraries: the
 # same words and reverts under fuzzing, and each op's gas both ways, under the
 # default profile and again through the IR, where no difference is allowed.
 # The IR pass sets src to test/typed, and forge >= 1.8 then auto-remaps
@@ -161,8 +161,8 @@ typed:
 		forge test --match-test test_gas -vv --remappings forge-std/=lib/forge-std/src/ > cache/typed-ir/via-ir.log || { cat cache/typed-ir/via-ir.log; exit 1; }
 	@grep -E "TYPED\|.*\|worst|Suite result" cache/typed-ir/via-ir.log
 
-size-fp256: build
-	@$(DEPLOY) size $(FP256_OBJECTS)
+size-fp19: build
+	@$(DEPLOY) size $(FP19_OBJECTS)
 
 
 ladder: build
@@ -174,13 +174,13 @@ ladder-check: build ladder-selftest
 precision-report:
 	@$(PY) scripts/fp127/precision_report.py
 
-precision-report-fp256:
-	@$(PY) scripts/fp127/precision_report.py --lib fp256
+precision-report-fp19:
+	@$(PY) scripts/fp127/precision_report.py --lib fp19
 
 size: build
 	@$(DEPLOY) size $(FP127_OBJECTS)
 
-# The bytecode each op adds when inlined through FP127Lib / FP256Lib, legacy and
+# The bytecode each op adds when inlined through FP127Lib / FP19Lib, legacy and
 # via_ir: one throwaway contract per op (in a temp dir) against a baseline, by
 # solc directly. Needs only solc 0.8.38 (forge build installs it).
 size-inline:
@@ -209,7 +209,7 @@ accrual-survey:
 
 # Replays. Each exploit's deployed arithmetic, bit-exact from integers pinned out of
 # the attack transaction (scripts/replays/*.json), then the same step under the
-# protocol's own fix, FP127, FP256 and exact rationals. Offline; *-fetch re-pins.
+# protocol's own fix, FP127, FP19 and exact rationals. Offline; *-fetch re-pins.
 replays: replay-resupply replay-bunni replay-balancer replay-balancer-v1
 replays-fetch: replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch
 
@@ -259,7 +259,7 @@ fetch-baseline:
 # Every deployed object from the one objects table in scripts/fp127/gen.py
 # (LIBS[...]["objects"]: name, library, salt). The targets are static pattern
 # rules over that list, so a re-layout or a new salt edits only the table. For
-# each object stem <o> (fp127 fp256 fp256e fp256h fp256s, `gen.py --objects`):
+# each object stem <o> (fp127 fp19 fp19e fp19h fp19s, `gen.py --objects`):
 # predict-<o>, deploy-<o>-sepolia, verify-<o>-sepolia; predict, deploy-sepolia
 # and verify-sepolia are FP127's, as before. deploy-* go through Arachnid's
 # CREATE2 proxy and read DEPLOYER_KEY. The objects use CLZ (EIP-7939): every
@@ -270,7 +270,7 @@ fetch-baseline:
 
 OBJECTS := $(shell $(PY) scripts/fp127/gen.py --objects)
 FP127_OBJECTS := $(shell $(PY) scripts/fp127/gen.py --objects fp127)
-FP256_OBJECTS := $(shell $(PY) scripts/fp127/gen.py --objects fp256)
+FP19_OBJECTS := $(shell $(PY) scripts/fp127/gen.py --objects fp19)
 DEPLOY := $(PY) scripts/fp127/deploy.py
 DEPLOY_GAS ?= 40000000
 export DEPLOY_GAS
@@ -299,13 +299,13 @@ probe-clz:
 smoke-sepolia: build
 	@forge test --match-contract Deployed --fork-url $(SEPOLIA_RPC) -vv
 
-# every object: every committed vector against FP256.json's address and, when
-# they exist, FP256E.json's, FP256H.json's and FP256S.json's
-smoke-fp256-sepolia: build
-	@forge test --match-contract Deployed256 --fork-url $(SEPOLIA_RPC) -vv
+# every object: every committed vector against FP19.json's address and, when
+# they exist, FP19E.json's, FP19H.json's and FP19S.json's
+smoke-fp19-sepolia: build
+	@forge test --match-contract Deployed19 --fork-url $(SEPOLIA_RPC) -vv
 
-bench-fp256: build
-	@forge test --match-contract "^GasLadder256$$" -vv | $(PY) scripts/fp127/gas_to_json.py --lib fp256
+bench-fp19: build
+	@forge test --match-contract "^GasLadder19$$" -vv | $(PY) scripts/fp127/gas_to_json.py --lib fp19
 
 predict-ladder: build
 	@$(PY) scripts/ladder/deploy.py predict $(SEPOLIA_RPC)
@@ -316,7 +316,7 @@ deploy-ladder-sepolia: build
 	@$(PY) scripts/ladder/deploy.py record $(SEPOLIA_RPC)
 
 verify-ladder-sepolia: build
-	@set -e; for c in LadderFP127 LadderFP127Lib LadderABDK LadderSolady LadderPRB LadderQuad LadderBalancer LadderAave LadderMorpho LadderMaker LadderFP256 LadderSolmate LadderOZ LadderUniswap LadderPRBUD; do \
+	@set -e; for c in LadderFP127 LadderFP127Lib LadderABDK LadderSolady LadderPRB LadderQuad LadderBalancer LadderAave LadderMorpho LadderMaker LadderFP19 LadderSolmate LadderOZ LadderUniswap LadderPRBUD; do \
 		A=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['$$c']['address'])"); \
 		echo "== $$c $$A"; \
 		forge verify-contract --chain sepolia --verifier sourcify --watch $$A contracts/src/ladder/$$c.sol:$$c || true; \

@@ -77,7 +77,7 @@ Slide:
     digits right in the interest      1 day    7 days
     deployed                           3.6      1.7
     FP127                             30       30
-    FP256                             69       70
+    FP19                             69       70
 
 That's what this talk is about.
 
@@ -127,7 +127,7 @@ Slide: after one year (N = 365), digits right in the balance
     64.64           17
     binary128       31
     FP127           36
-    FP256           68
+    FP19           68
 
 **Never run out of ruler.** A ruler has marks, and it has ends. An eighteen-
 decimal ruler has its finest mark at 10⁻¹⁸. Anything smaller is zero. Anything
@@ -139,10 +139,10 @@ Board, one 256-bit word, drawn three ways:
 
     WAD       [ ~196 integer bits                  | ~60 fraction bits ]
     FP127     [ s | 127 integer bits         | 128 fraction bits       ]
-    FP256     [ s | 19 exponent | 236 fraction bits                    ]
+    FP19     [ s | 19 exponent | 236 fraction bits                    ]
 
 FP127 puts its point in the middle of the word: 128 bits of fraction, so its
-finest mark is 3 × 10⁻³⁹. FP256 lets the point move. Nineteen bits say where the
+finest mark is 3 × 10⁻³⁹. FP19 lets the point move. Nineteen bits say where the
 point is and 236 say the digits. That's 71 digits at any size, from 10⁻⁷⁸⁹⁰⁰ to
 10⁷⁸⁹⁰⁰. That ruler has no ends.
 
@@ -179,7 +179,7 @@ integers, same recipe. Let's fill the table in a row at a time.
 
 Slide, built one row at a time:
 
-    terms   WAD    64.64   binary128   FP127   FP256
+    terms   WAD    64.64   binary128   FP127   FP19
       1       7      7        7          7       7
       2      15     15       15         15      15
       3      16     17       23         23      23
@@ -192,14 +192,14 @@ Slide, built one row at a time:
 
 Watch the columns drop out. At three terms the WAD rulers have run out: sixteen
 digits, and the series has more to give. At five, binary128 stops at thirty-three
-and FP127 stops at thirty-six. FP256 keeps going, eight digits a term, until it
+and FP127 stops at thirty-six. FP19 keeps going, eight digits a term, until it
 reaches seventy at nine terms.
 
 The algorithm never got stuck. Ramanujan's series could have given every
 column seventy digits. Only the ruler said no.
 
 And here's how I know converging is the right way to build, because I learned it
-the hard way. When I first built FP256, I reused FP127's code. Everything
+the hard way. When I first built FP19, I reused FP127's code. Everything
 that converges, the multiply, the divide, the Newton square root, was exact to
 the last bit on day one. Nothing to tune. The only functions that fell
 short were exp, ln and pow, because FP127's versions are fitted polynomials,
@@ -208,7 +208,7 @@ fitted for 128 bits.
 Slide:
 
     exp at the edges        release one    release two
-    FP256 digits                43             71
+    FP19 digits                43             71
 
 Forty-three digits, stuck, until I refitted them for the wide word. The
 converging code needed nothing.
@@ -229,7 +229,7 @@ Slide, the legend:
 
 Slide:
 
-    one call                   truth      WAD      64.64    binary128   FP127   FP256
+    one call                   truth      WAD      64.64    binary128   FP127   FP19
     ln(1 + 1e-9)               1e-9         9        10        25         30      62
     exp(-40)                   4.2e-18      1         2        32         21      71
     exp(-42)                   5.7e-19   zero         1        32         21      71
@@ -251,7 +251,7 @@ the discount on a very long bond, the weight of a very old sample. On the WAD
 ruler it's zero, and so is everything you build on it.
 
 **A fee on a fee.** 10⁻¹⁰ times 10⁻¹⁰ is zero on both fixed rulers and
-seventy-one digits on FP256.
+seventy-one digits on FP19.
 
 Look at the FP127 column too, because I want to be fair to my own work. FP127
 has more digits than anything in the middle of the number line. At the ends it
@@ -268,12 +268,12 @@ ticks.
 
 Slide:
 
-    the option, 10,000 ticks down    WAD    binary128   FP127   FP256
+    the option, 10,000 ticks down    WAD    binary128   FP127   FP19
     d₁ = −7                            4       28         25      66
     d₁ = −12                           0       27          3      66
 
 At minus twelve the WAD option is worth zero, and FP127 is down to three digits,
-because the answer is a few marks above its floor. FP256 has sixty-six.
+because the answer is a few marks above its floor. FP19 has sixty-six.
 
 ## 6. Back to the market
 
@@ -294,16 +294,16 @@ Slide, again:
     digits right in the interest      1 day    7 days
     deployed                           3.6      1.7
     FP127                             30       30
-    FP256                             69       70
+    FP19                             69       70
 
-Thirty digits on FP127. Seventy on FP256. Same formula, same inputs. Round once,
+Thirty digits on FP127. Seventy on FP19. Same formula, same inputs. Round once,
 on a ruler with no ends.
 
 ## 7. What it costs
 
 Slide, gas, inline:
 
-    op           WAD     FP127    FP256
+    op           WAD     FP127    FP19
     mul           126      263      530
     add           111      124      662
     sqrt          393    1,025    1,205
@@ -322,7 +322,7 @@ it's an eth_call and costs nothing.
 Board, the two goals:
 
     1. Round once.                  ✓  converging algorithms, extra bits, one rounding
-    2. Never run out of ruler.      ✓  FP127 for the money, FP256 for everything
+    2. Never run out of ruler.      ✓  FP127 for the money, FP19 for everything
 
 That's the whole job. Once every answer is the nearest mark on a ruler with no
 ends, there's nothing left to improve but gas. There won't be a better answer,
@@ -331,7 +331,7 @@ because there isn't a better answer.
 Both are on chain. Every cell of the step table and the edges table, nearly
 eleven thousand of them, was re-run against the live contracts on Sepolia today. It's called Blockulator 2.2.
 
-Use FP127 and FP256. Stop using the others.
+Use FP127 and FP19. Stop using the others.
 
 Thank you.
 
@@ -341,19 +341,19 @@ Thank you.
 
 | claim | value | source |
 |---|---|---|
-| the market, 1 day | 10M USDC, utilization 100%, target 10%: truth 11,751.9, deployed +3.08 USDC, 3.58 digits; FP127 30.29, FP256 68.54 | accrual-deployed: morpho-u100-10pct-1d |
-| the market, 7 days | truth 129,539.0, deployed +2,478.09 USDC (1.9%), 1.72 digits; FP127 30.29, FP256 70.0 | accrual-deployed: morpho-u100-10pct-7d |
+| the market, 1 day | 10M USDC, utilization 100%, target 10%: truth 11,751.9, deployed +3.08 USDC, 3.58 digits; FP127 30.29, FP19 68.54 | accrual-deployed: morpho-u100-10pct-1d |
+| the market, 7 days | truth 129,539.0, deployed +2,478.09 USDC (1.9%), 1.72 digits; FP127 30.29, FP19 70.0 | accrual-deployed: morpho-u100-10pct-7d |
 | why | the rate model's trapezoid over the idle gap (+4.60 at 1 day, +2,488 at 7 days); series and grids are millionths | accrual-deployed |
 | "exact when busy" | lending borrow index within the token's decimals at max rate for a day; rate model at its 90% target 9–10 digits | accrual-deployed: summary |
 | deployed code | pinned at the deployed tags, runtime equal to mainnet for 8 contracts | accrual-deployed: provenance; make accrual-verify |
 | rate on WAD | 0.000273972602739726, short 2.7e-20, 274 units a day | exact |
-| compound N = 365 | WAD 16, 64.64 17, binary128 31, FP127 36, FP256 68 | ladder: compound, reference |
-| Ramanujan | WAD 16 from term 3, 64.64 17, binary128 33 from term 5, FP127 36 from term 5, FP256 70 at term 9 | pi.md |
-| FP256 release one vs two | exp at the edges 43 → 71; release one held 146 / 149 / 123 bits on exp / ln / pow | FP256.md, edges |
+| compound N = 365 | WAD 16, 64.64 17, binary128 31, FP127 36, FP19 68 | ladder: compound, reference |
+| Ramanujan | WAD 16 from term 3, 64.64 17, binary128 33 from term 5, FP127 36 from term 5, FP19 70 at term 9 | pi.md |
+| FP19 release one vs two | exp at the edges 43 → 71; release one held 146 / 149 / 123 bits on exp / ln / pow | FP19.md, edges |
 | edges table | each row as shown; zero = below the finest mark; revert = the library refused | edges: ln, exp, mul, normCdf, pow, sqrt |
 | per-second rate | 5% / 31,536,000 = 1.59e-9 | exact |
-| option walk | d₁ = −7: WAD 4, binary128 28, FP127 25, FP256 66; d₁ = −12: WAD 0, binary128 27, FP127 3, FP256 66 | ladder: deep-tail-option, slow-walk / reference, N = 10,000 |
-| gas | WAD (Solady) mul 126, add 111, sqrt 393, ln 556, exp 430, pow 1,275; FP127Lib 263 / 124 / 1,025 / 600 / 6,006 / 3,537, normCdf 11,512; FP256Lib 530 / 662 / 1,205 / 3,006 / 3,295 / 5,541, normCdf 23,108 | gas.md, gas256.md (inline medians) |
-| FP256 format | 1 + 19 + 236 bits, 237-bit significand, ~71 digits, 10^±78,913 | contracts/src/fp256/README.md |
+| option walk | d₁ = −7: WAD 4, binary128 28, FP127 25, FP19 66; d₁ = −12: WAD 0, binary128 27, FP127 3, FP19 66 | ladder: deep-tail-option, slow-walk / reference, N = 10,000 |
+| gas | WAD (Solady) mul 126, add 111, sqrt 393, ln 556, exp 430, pow 1,275; FP127Lib 263 / 124 / 1,025 / 600 / 6,006 / 3,537, normCdf 11,512; FP19Lib 530 / 662 / 1,205 / 3,006 / 3,295 / 5,541, normCdf 23,108 | gas.md, gas19.md (inline medians) |
+| FP19 format | 1 + 19 + 236 bits, 237-bit significand, ~71 digits, 10^±78,913 | contracts/src/fp19/README.md |
 | live check | Blockulator 2.2 (2026-10-23, ladder v10 runners): 9,408 ladder cells + 1,511 edge cells, 0 mismatches | RELEASE.json |
-| addresses | Blockulator 2.2: FP127 v6 0xb349DB36…CBe4, FP256 0xAa1f71B7…eb52 (+ FP256E 0x017F68A5…9AE2, H 0xEfefa2B6…59A5, S 0x73E8809F…42F4) | RELEASE.md |
+| addresses | Blockulator 2.2: FP127 v6 0xb349DB36…CBe4, FP19 0xAa1f71B7…eb52 (+ FP19E 0x017F68A5…9AE2, H 0xEfefa2B6…59A5, S 0x73E8809F…42F4) | RELEASE.md |

@@ -17,7 +17,7 @@ kernel was a degree-24 Chebyshev fit on [0, 1) (2^-145.9): 24 products at
 92 gas against 15 here, most of them cheaper.
 
 log2m: the mantissa 1 + w in [1, 2) at 2^-192 is reduced by two additive
-16-entry levels by word-only operations, as FP256's (kernel254.py): i =
+16-entry levels by word-only operations, as FP19's (kernel254.py): i =
 floor(16 w), w1 = 16 (w - i/16)/(16 + i) by one shift and one div, floored at
 2^-256, log2(1 + i/16) (at 2^-256, rounded) added; then the same by 1 +
 i/256, leaving w2 in [0, 2^-8), and log2(1 + w2) = w2 P(w2) with P the
@@ -36,7 +36,7 @@ from pathlib import Path
 from mpmath import mp, mpf, log, power, nint
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "scripts/fp256/generators"))
+sys.path.insert(0, str(ROOT / "scripts/fp19/generators"))
 from minimax import remez, certify  # noqa: E402
 from horner import Horner, hiline, hiset, tree, hx, hi  # noqa: E402
 
@@ -157,7 +157,7 @@ def emit_yul(K: Kernels192) -> str:
     out.append("}\n")
     out.append(
         f"/// log2(m) at 2^-192 for m = mm 2^-192 in [1, 2), unrounded. Two additive\n"
-        f"/// levels by word-only operations (kernel192.py, as FP256's log2m): i =\n"
+        f"/// levels by word-only operations (kernel192.py, as FP19's log2m): i =\n"
         f"/// floor(16 w) for mm = 1 + w, 1 + w1 = (1 + w)/(1 + i/16) as w1 = 16 (w -\n"
         f"/// i/16)/(16 + i) by one shift and one div, floored at 2^-256, and\n"
         f"/// log2(1 + i/16) (at 2^-255, rounded) added from a table; then the same\n"

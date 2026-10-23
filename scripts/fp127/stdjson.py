@@ -5,8 +5,8 @@ make stem of gen.py's objects table), and the bytecode proofs built on it.
     uv run scripts/fp127/stdjson.py emit              # print the standard-json input
     uv run scripts/fp127/stdjson.py check             # compile it with solc, compare to the Foundry artifact
     uv run scripts/fp127/stdjson.py onchain <rpc> <address>   # compare the live runtime to the artifact
-    FP_LIB=fp256 uv run scripts/fp127/stdjson.py artifact     # compile FP256.yul with solc and write out/FP256.yul/FP256.json
-    FP_LIB=fp256e uv run scripts/fp127/stdjson.py artifact    # the same for FP256E.yul (any make stem of the objects table)
+    FP_LIB=fp19 uv run scripts/fp127/stdjson.py artifact     # compile FP19.yul with solc and write out/FP19.yul/FP19.json
+    FP_LIB=fp19e uv run scripts/fp127/stdjson.py artifact    # the same for FP19E.yul (any make stem of the objects table)
 
 The input uses language "Yul", solc 0.8.38, optimizer on, 200 runs,
 evmVersion osaka (the objects use CLZ), and solc 0.8.24's default Yul
@@ -44,7 +44,7 @@ EVM_VERSION = "osaka"
 RUNS = 200
 # Pinned: solc 0.8.24's default Yul optimizer sequence, read out of the 0.8.24
 # binary. Every solc from 0.8.26 defaults to a different sequence, which on
-# these objects inlines more and builds larger: the FP256 core of master
+# these objects inlines more and builds larger: the FP19 core of master
 # (24,451 bytes under 0.8.24) comes out at 25,074 under 0.8.26 to 0.8.38,
 # over the 24,576-byte limit, and with this sequence at 24,456. The objects
 # are size-bound, so the sequence is part of the build.

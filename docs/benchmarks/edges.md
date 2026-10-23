@@ -8,7 +8,7 @@ Each probe is one op evaluated once at the end of a domain, through every librar
 
 The logarithm near one is where a per-second rate lives: ln(1 + r) for r = 1e-9 has eight digits on an 18-decimal grid.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `ln(1+1e-6)` | `1.0e-6` | 65 | 34 | 13 | 12 | 11 | 28 | 12 | n/a | n/a | n/a | 12 | n/a | n/a | 11 | 12 |
 | `ln(1+1e-9)` a per-second rate | `1.0e-9` | 62 | 30 | 10 | 9 | 8 | 25 | 9 | n/a | n/a | n/a | 9 | n/a | n/a | 8 | 9 |
@@ -25,7 +25,7 @@ The logarithm near one is where a per-second rate lives: ln(1 + r) for r = 1e-9 
 
 exp below -42 is zero on an 18-decimal grid and has one digit at -40: every probability, discount or decay smaller than 1e-18 is gone.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `exp(-1e-12)` | `1.0` | 71 | 39 | 18 | 24 | 18 | 34 | 24 | n/a | n/a | n/a | 24 | n/a | n/a | REVERT ParamOutOfRange | 24 |
 | `exp(-20)` | `2.061e-9` | 72 | 31 | 10 | 9 | 9 | 32 | 9 | n/a | n/a | n/a | 9 | n/a | n/a | REVERT ParamOutOfRange | 9 |
@@ -53,7 +53,7 @@ exp below -42 is zero on an 18-decimal grid and has one digit at -40: every prob
 
 The root of a tiny number: sqrt(1e-20) is 1e-10, which the grid holds, but 1e-20 itself is zero on it.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `sqrt(1e-6)` | `0.001` | 71 | 33 | 13 | exact | exact | 34 | exact | n/a | n/a | n/a | exact | exact | n/a | exact | exact |
 | `sqrt(1e-12)` | `1.0e-6` | 71 | 27 | 8 | exact | exact | 34 | exact | n/a | n/a | n/a | exact | exact | n/a | exact | exact |
@@ -70,7 +70,7 @@ The root of a tiny number: sqrt(1e-20) is 1e-10, which the grid holds, but 1e-20
 
 A base near one to a large power: per-second rates over years, and Uniswap's tick range 1.0001^(+-887272).
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `pow(1+0.05/31536000,31536000)` 5% APR per second, one year | `1.0512711` | 63 | 31 | 11 | 10 | 9 | 27 | 11 | n/a | n/a | n/a | 10 | n/a | n/a | 9 | 10 |
 | `pow(1+0.001/31536000,31536000)` 0.1% APR per second, one year | `1.0010005` | 63 | 31 | 11 | 10 | 9 | 26 | 10 | n/a | n/a | n/a | 10 | n/a | n/a | 9 | 10 |
@@ -88,7 +88,7 @@ A base near one to a large power: per-second rates over years, and Uniswap's tic
 
 Tiny times tiny: a fee on a fee, a unit price times a unit size, below 1e-18 is zero.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `mul(1e-9,1e-9)` the last digit of an 18-decimal grid | `1.0e-18` | 71 | 20 | 1 | ZERO | ZERO | 33 | ZERO | n/a | n/a | n/a | ZERO | ZERO | ZERO | ZERO | ZERO |
 | `mul(1e-10,1e-10)` zero on it | `1.0e-20` | 71 | 18 | ZERO | ZERO | ZERO | 34 | ZERO | n/a | n/a | n/a | ZERO | ZERO | ZERO | ZERO | ZERO |
@@ -100,7 +100,7 @@ Tiny times tiny: a fee on a fee, a unit price times a unit size, below 1e-18 is 
 
 Small over large, and one over tiny.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `div(1,3)` | `0.33333333` | 71 | 38 | 19 | 17 | 17 | 34 | 17 | n/a | n/a | n/a | 17 | 17 | 17 | 17 | 17 |
 | `div(1e-12,1e9)` | `1.0e-21` | 71 | 17 | ZERO | ZERO | ZERO | 34 | ZERO | n/a | n/a | n/a | ZERO | ZERO | ZERO | ZERO | ZERO |
@@ -112,7 +112,7 @@ Small over large, and one over tiny.
 
 The principal Lambert branch near its branch point -1/e, where the slope is infinite; only Solady has it among the others.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `lambertW0(-1/e+1e-6)` | `-0.99767017` | 69 | 35 | n/a | 15 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | REVERT ParamOutOfRange | n/a |
 | `lambertW0(-1/e+1e-9)` | `-0.99992627` | 67 | 34 | n/a | 13 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | REVERT ParamOutOfRange | n/a |
@@ -128,7 +128,7 @@ The principal Lambert branch near its branch point -1/e, where the slope is infi
 
 The secondary branch, toward zero from below; FP127 only.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `lambertWm1(-1/e+1e-9)` | `-1.0000737` | 67 | 34 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | REVERT ParamOutOfRange | n/a |
 | `lambertWm1(-1e-10)` | `-26.295239` | 71 | 30 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | REVERT ParamOutOfRange | n/a |
@@ -138,7 +138,7 @@ The secondary branch, toward zero from below; FP127 only.
 
 ln(1 + x) as an op: the libraries without it compute ln(1 + x), and 1 + x is where x loses its digits.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `log1p(1e-6)` | `1.0e-6` | 71 | 34 | 13 | 12 | 11 | 28 | 12 | n/a | n/a | n/a | 12 | n/a | n/a | 11 | 12 |
 | `log1p(1e-9)` a per-second rate | `1.0e-9` | 71 | 30 | 10 | 8 | 8 | 25 | 8 | n/a | n/a | n/a | 8 | n/a | n/a | 8 | 8 |
@@ -154,7 +154,7 @@ ln(1 + x) as an op: the libraries without it compute ln(1 + x), and 1 + x is whe
 
 e^x - 1 as an op: the libraries without it compute exp(x) - 1 and the one cancels the digits.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `expm1(1e-6)` | `1.0e-6` | 71 | 33 | 13 | 12 | 11 | 27 | 12 | n/a | n/a | n/a | 12 | n/a | n/a | 11 | 12 |
 | `expm1(1e-9)` | `1.0e-9` | 71 | 29 | 9 | 8 | 8 | 24 | 8 | n/a | n/a | n/a | 8 | n/a | n/a | 8 | 8 |
@@ -171,7 +171,7 @@ e^x - 1 as an op: the libraries without it compute exp(x) - 1 and the one cancel
 
 (1 + r)^n for an integer n: per-second rates over years. FP127 and Maker take an exact integer power; the rest exp(n ln(1 + r)).
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `compound(0.05/31536000,31536000)` 5% APR per second, one year | `1.0512711` | 71 | 31 | 11 | 12 | 10 | 26 | 11 | n/a | n/a | 19 | 12 | n/a | n/a | 10 | 10 |
 | `compound(0.05/31536000,315360000)` ten years | `1.6487213` | 71 | 30 | 10 | 11 | 9 | 25 | 10 | n/a | n/a | 18 | 11 | n/a | n/a | 9 | 9 |
@@ -185,7 +185,7 @@ e^x - 1 as an op: the libraries without it compute exp(x) - 1 and the one cancel
 
 An integer power. Solady's rpow, PRBMath's powu, ABDK's pow and Maker's rpow square at the format's precision; FP127 on a 256-bit mantissa.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `powu(2,10)` | `1024.0` | exact | exact | exact | exact | exact | 32 | 17 | n/a | n/a | exact | exact | n/a | n/a | exact | 17 |
 | `powu(1.0001,887272)` Uniswap's top tick | `3.403e+38` | 65 | REVERT Overflow | REVERT bare revert | 13 | 12 | 29 | 17 | n/a | n/a | REVERT Solady RPowOverflow | 13 | n/a | n/a | 12 | 12 |
@@ -200,7 +200,7 @@ An integer power. Solady's rpow, PRBMath's powu, ABDK's pow and Maker's rpow squ
 
 The error function; the libraries without it run the same series and continued fraction through their own ops.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `erf(1e-10)` | `1.128e-10` | 71 | 28 | 9 | 8 | 8 | 33 | 8 | n/a | n/a | n/a | 8 | n/a | n/a | 8 | 8 |
 | `erf(0.5)` | `0.52049988` | 71 | 39 | 17 | 16 | 16 | 32 | 16 | n/a | n/a | n/a | 16 | n/a | n/a | REVERT Negative | 16 |
@@ -216,7 +216,7 @@ The error function; the libraries without it run the same series and continued f
 
 The tail of the normal distribution: erfc(6) is 2e-17, erfc(9.3) one ULP of FP127, zero on an 18-decimal grid from about 6.4.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `erfc(1)` | `0.15729921` | 71 | 38 | 17 | 16 | 16 | 31 | 15 | n/a | n/a | n/a | 16 | n/a | n/a | REVERT Negative | 16 |
 | `erfc(3)` | `2.209e-5` | 72 | 34 | 10 | 9 | 9 | 27 | 9 | n/a | n/a | n/a | 9 | n/a | n/a | REVERT Negative | 9 |
@@ -233,7 +233,7 @@ The tail of the normal distribution: erfc(6) is 2e-17, erfc(9.3) one ULP of FP12
 
 N(d) of Black-Scholes: zero on an 18-decimal grid from d = -8.3, two ULPs of FP127 at -13.
 
-| probe | truth | fp256 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
+| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `normCdf(1e-12)` | `0.5` | 72 | 38 | 19 | 18 | 18 | 34 | 18 | n/a | n/a | n/a | 18 | n/a | n/a | 18 | 18 |
 | `normCdf(-1)` | `0.15865525` | 72 | 38 | 17 | 16 | 16 | 32 | 16 | n/a | n/a | n/a | 16 | n/a | n/a | REVERT ParamOutOfRange | 16 |
@@ -256,9 +256,9 @@ N(d) of Black-Scholes: zero on an 18-decimal grid from d = -8.3, two ULPs of FP1
 
 **zero.** A cell is marked zero when the library returned 0 and the truth is not 0: the result fell below the representation's floor. On an 18-decimal grid that is anything below 1e-18; on FP127's, below 2^-128.
 
-**reverted.** A revert is recorded with its selector and name. Unsupported means the library has no way to compute the op (the accrual libraries have no general ops; only FP127 and FP256 have the secondary Lambert branch; the libraries without erf, erfc or normCdf run the same series and continued fraction through their own ops instead, so those cells are not Unsupported).
+**reverted.** A revert is recorded with its selector and name. Unsupported means the library has no way to compute the op (the accrual libraries have no general ops; only FP127 and FP19 have the secondary Lambert branch; the libraries without erf, erfc or normCdf run the same series and continued fraction through their own ops instead, so those cells are not Unsupported).
 
-**range.** RANGE means the argument does not fit the representation at all (above 2^127 for FP127, 2^63 for 64.64, 2^128 as a bit pattern for binary128; FP256 holds every probe) and nothing was called.
+**range.** RANGE means the argument does not fit the representation at all (above 2^127 for FP127, 2^63 for 64.64, 2^128 as a bit pattern for binary128; FP19 holds every probe) and nothing was called.
 
 **gas.** gas is measured inside the adapter around the op, after the adapter and the FP127 object are warm. The FP127 (deployed) form includes the staticcall; the others are internal calls.
 

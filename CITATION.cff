@@ -1,6 +1,6 @@
 cff-version: 1.2.0
-message: "If you use FP127 or FP256, please cite it as below."
-title: "Blockulator: FP127 and FP256, high-precision math for the EVM"
+message: "If you use FP127 or FP19, please cite it as below."
+title: "Blockulator: FP127 and FP19, high-precision math for the EVM"
 type: software
 authors:
   - name: "Secure Data Research, LLC"

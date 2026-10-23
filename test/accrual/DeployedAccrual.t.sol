@@ -21,7 +21,7 @@ import {IIrm} from "../../lib/morpho-blue/src/interfaces/IIrm.sol";
 import {LadderAave} from "../../contracts/src/ladder/LadderAave.sol";
 import {LadderMorpho} from "../../contracts/src/ladder/LadderMorpho.sol";
 import {Scenario} from "../../contracts/src/ladder/ILadder.sol";
-import {IdealFP127, IdealFP256} from "./IdealAccrual.sol";
+import {IdealFP127, IdealFP19} from "./IdealAccrual.sol";
 
 interface IAdaptiveCurveIrm is IIrm {
     function rateAtTarget(Id id) external view returns (int256);
@@ -29,7 +29,7 @@ interface IAdaptiveCurveIrm is IIrm {
 
 /// @title DeployedAccrual
 /// @notice Runs every case in scripts/accrual/cases.json through the deployed
-///         accrual code and through FP127 / FP256 computing the stated ideal,
+///         accrual code and through FP127 / FP19 computing the stated ideal,
 ///         and prints one line per result:
 ///             ACC|<case>|<form>|k=v;k=v;...
 ///         scripts/accrual/accrual.py scores them against mpmath at 200 digits.
@@ -45,7 +45,7 @@ contract DeployedAccrual is Test {
     string json;
     IAdaptiveCurveIrm irm;
     IdealFP127 fp127;
-    IdealFP256 fp256;
+    IdealFP19 fp19;
 
     function setUp() public {
         json = vm.readFile(CASES);
@@ -56,7 +56,7 @@ contract DeployedAccrual is Test {
         require(a != address(0), "irm deploy");
         irm = IAdaptiveCurveIrm(a);
         fp127 = new IdealFP127();
-        fp256 = new IdealFP256();
+        fp19 = new IdealFP19();
     }
 
     function _s(string memory key) internal view returns (string[] memory) { return vm.parseJsonStringArray(json, key); }
@@ -110,9 +110,9 @@ contract DeployedAccrual is Test {
             (int256 b, int256 it) = fp127.aaveContinuous(c.rate, c.t, c.index0, c.scaled);
             (int256 b2, int256 it2) = fp127.aavePerSecond(c.rate, c.t, c.index0, c.scaled);
             _emit(c.id, "fp127", string.concat(_kvi("cont_bal", b), _kvi("cont_int", it), _kvi("ps_bal", b2), _kvi("ps_int", it2)));
-            (b, it) = fp256.aaveContinuous(c.rate, c.t, c.index0, c.scaled);
-            (b2, it2) = fp256.aavePerSecond(c.rate, c.t, c.index0, c.scaled);
-            _emit(c.id, "fp256", string.concat(_kvi("cont_bal", b), _kvi("cont_int", it), _kvi("ps_bal", b2), _kvi("ps_int", it2)));
+            (b, it) = fp19.aaveContinuous(c.rate, c.t, c.index0, c.scaled);
+            (b2, it2) = fp19.aavePerSecond(c.rate, c.t, c.index0, c.scaled);
+            _emit(c.id, "fp19", string.concat(_kvi("cont_bal", b), _kvi("cont_int", it), _kvi("ps_bal", b2), _kvi("ps_int", it2)));
         }
     }
 
@@ -152,8 +152,8 @@ contract DeployedAccrual is Test {
             _emit(c.id, "deployed", string.concat(_kv("rate", rate), _kvi("endRateAtTarget", endRate), _kv("taylor", taylor), _kv("interest", interest)));
             (int256 b, int256 it) = fp127.morphoAdaptive(c.supply, c.borrow, c.r0, c.t);
             _emit(c.id, "fp127", string.concat(_kvi("bal", b), _kvi("int", it)));
-            (b, it) = fp256.morphoAdaptive(c.supply, c.borrow, c.r0, c.t);
-            _emit(c.id, "fp256", string.concat(_kvi("bal", b), _kvi("int", it)));
+            (b, it) = fp19.morphoAdaptive(c.supply, c.borrow, c.r0, c.t);
+            _emit(c.id, "fp19", string.concat(_kvi("bal", b), _kvi("int", it)));
         }
     }
 
@@ -170,8 +170,8 @@ contract DeployedAccrual is Test {
             _emit(id, "deployed", string.concat(_kv("rate", rate), _kv("taylor", taylor), _kv("interest", interest)));
             (int256 b, int256 it) = fp127.morphoFixed(rate, t, borrow);
             _emit(id, "fp127", string.concat(_kvi("bal", b), _kvi("int", it)));
-            (b, it) = fp256.morphoFixed(rate, t, borrow);
-            _emit(id, "fp256", string.concat(_kvi("bal", b), _kvi("int", it)));
+            (b, it) = fp19.morphoFixed(rate, t, borrow);
+            _emit(id, "fp19", string.concat(_kvi("bal", b), _kvi("int", it)));
         }
     }
 

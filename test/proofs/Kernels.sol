@@ -10,7 +10,7 @@ pragma solidity ^0.8.31;
 ///         copied verbatim from the library source. The specs use them as the
 ///         exact floor quotient, which is lemma
 ///           K127  divq(a, b)   = floor(a 2^128 / b)  for b > 0, a >> 128 < b
-///           K256  divh(a, b)   = floor(a 2^255 / b)  for b > 0, a < 2 b
+///           K19  divh(a, b)   = floor(a 2^255 / b)  for b > 0, a < 2 b
 ///         The Halmos proofs show every op equals its spec given these
 ///         quotients; test/proofs/kernel.py proves the lemmas, step by step
 ///         over the integers (the remainder's borrow, the division by the
@@ -41,7 +41,7 @@ library Kernels {
         }
     }
 
-    /// FP256's divh (contracts/src/fp256/FP256.yul.src).
+    /// FP19's divh (contracts/src/fp19/FP19.yul.src).
     function divh(uint256 a, uint256 b) internal pure returns (uint256 q) {
         assembly {
             let prod0 := shl(255, a)
@@ -64,7 +64,7 @@ library Kernels {
         }
     }
 
-    /// floor(m 2^60 / 5^18) for m < 2^237, as fp256_fromFixed18 writes it: two
+    /// floor(m 2^60 / 5^18) for m < 2^237, as fp19_fromFixed18 writes it: two
     /// word divisions by 5^18 < 2^42, m split at bit 100. Lemma K18, proved
     /// in test/proofs/lemmas.py (linear integer arithmetic).
     function q18(uint256 m) internal pure returns (uint256 q) {

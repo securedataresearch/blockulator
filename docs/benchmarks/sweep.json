@@ -1,10 +1,10 @@
 {
- "_doc": "Random-input accuracy sweep of the inline FP127 and FP256 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n    uv run scripts/sweep/sweep.py --ops cosh,sinh   # only those ops (both libraries, both passes);\n                                           # their rows replace the ones in sweep.json, the rest stay\n                                           # (the second-stage gas can differ by a unit: the generated\n                                           # runner is a smaller contract; the re-baseline runs everything)\n\nRelease four adds the directed ops, powu and lambertWm1, and a second pass: the\nsame inputs (the first 4,000 of each) through a test-only copy of FP256Lib whose\nrounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly\nrounded op returns its wide second stage. That pass is generated into\ntest/sweep/wide/ (not committed) and removed after the run.\n\nA third pass runs every op on all its inputs through test-only copies of FP256Lib\nand FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:\nFP256's rbad firing, FP127's double-word l2p and powu's 512-bit powus), generated into\ntest/sweep/count/ and removed after the run: the *fallback* column is the share of\ninputs that left the fast path. Its results must equal the plain pass's word for word.\n\nGas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of\nthe one call, after its dispatch, and subtracts the same window around an assignment.\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP256 results are compared with the word the oracle (scripts/fp256/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.",
+ "_doc": "Random-input accuracy sweep of the inline FP127 and FP19 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n    uv run scripts/sweep/sweep.py --ops cosh,sinh   # only those ops (both libraries, both passes);\n                                           # their rows replace the ones in sweep.json, the rest stay\n                                           # (the second-stage gas can differ by a unit: the generated\n                                           # runner is a smaller contract; the re-baseline runs everything)\n\nRelease four adds the directed ops, powu and lambertWm1, and a second pass: the\nsame inputs (the first 4,000 of each) through a test-only copy of FP19Lib whose\nrounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly\nrounded op returns its wide second stage. That pass is generated into\ntest/sweep/wide/ (not committed) and removed after the run.\n\nA third pass runs every op on all its inputs through test-only copies of FP19Lib\nand FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:\nFP19's rbad firing, FP127's double-word l2p and powu's 512-bit powus), generated into\ntest/sweep/count/ and removed after the run: the *fallback* column is the share of\ninputs that left the fast path. Its results must equal the plain pass's word for word.\n\nGas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of\nthe one call, after its dispatch, and subtracts the same window around an assignment.\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP19 results are compared with the word the oracle (scripts/fp19/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.",
  "seed": 20261020,
  "seedLambert": 7,
  "rows": [
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "add",
    "n": 4000,
    "status": {
@@ -21,7 +21,7 @@
    "gasMax": 876
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "mul",
    "n": 4000,
    "status": {
@@ -38,7 +38,7 @@
    "gasMax": 530
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "div",
    "n": 4000,
    "status": {
@@ -55,7 +55,7 @@
    "gasMax": 808
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "sqrt",
    "n": 4000,
    "status": {
@@ -72,7 +72,7 @@
    "gasMax": 1217
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "exp",
    "n": 21913,
    "status": {
@@ -93,7 +93,7 @@
    "fallbackPct": 0.005
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "ln",
    "n": 20000,
    "status": {
@@ -113,7 +113,7 @@
    "fallbackPct": 0.02
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "log1p",
    "n": 21573,
    "status": {
@@ -134,7 +134,7 @@
    "fallbackPct": 0.023
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "expm1",
    "n": 21957,
    "status": {
@@ -155,7 +155,7 @@
    "fallbackPct": 0.059
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "pow",
    "n": 21985,
    "status": {
@@ -176,7 +176,7 @@
    "fallbackPct": 1.232
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "erf",
    "n": 4000,
    "status": {
@@ -196,7 +196,7 @@
    "fallbackPct": 0.1
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "erfc",
    "n": 6000,
    "status": {
@@ -216,7 +216,7 @@
    "fallbackPct": 0.267
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "normCdf",
    "n": 6000,
    "status": {
@@ -236,7 +236,7 @@
    "fallbackPct": 0.333
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "compound",
    "n": 5644,
    "status": {
@@ -257,7 +257,7 @@
    "fallbackPct": 13.467
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "lambertW0",
    "n": 6000,
    "status": {
@@ -277,7 +277,7 @@
    "fallbackPct": 0.067
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "lambertWm1",
    "n": 4000,
    "status": {
@@ -297,7 +297,7 @@
    "fallbackPct": 0.2
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "powu",
    "n": 5853,
    "status": {
@@ -318,7 +318,7 @@
    "fallbackPct": 9.783
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "mulDown",
    "n": 4000,
    "status": {
@@ -335,7 +335,7 @@
    "gasMax": 765
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "mulUp",
    "n": 4000,
    "status": {
@@ -352,7 +352,7 @@
    "gasMax": 766
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "divDown",
    "n": 4000,
    "status": {
@@ -369,7 +369,7 @@
    "gasMax": 1025
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "divUp",
    "n": 4000,
    "status": {
@@ -386,7 +386,7 @@
    "gasMax": 1026
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "toUintDown",
    "n": 3805,
    "status": {
@@ -404,7 +404,7 @@
    "gasMax": 405
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "toUintUp",
    "n": 3818,
    "status": {
@@ -422,7 +422,7 @@
    "gasMax": 420
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "toIntDown",
    "n": 4000,
    "status": {
@@ -439,7 +439,7 @@
    "gasMax": 484
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "toIntUp",
    "n": 4000,
    "status": {
@@ -456,7 +456,7 @@
    "gasMax": 481
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "floor",
    "n": 4000,
    "status": {
@@ -473,7 +473,7 @@
    "gasMax": 570
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "ceil",
    "n": 4000,
    "status": {
@@ -490,7 +490,7 @@
    "gasMax": 571
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "fromUintDown",
    "n": 4000,
    "status": {
@@ -507,7 +507,7 @@
    "gasMax": 487
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "fromUintUp",
    "n": 4000,
    "status": {
@@ -524,7 +524,7 @@
    "gasMax": 534
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "toFixed18Down",
    "n": 4000,
    "status": {
@@ -541,7 +541,7 @@
    "gasMax": 741
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "toFixed18Up",
    "n": 4000,
    "status": {
@@ -558,7 +558,7 @@
    "gasMax": 738
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "exp2",
    "n": 7937,
    "status": {
@@ -579,7 +579,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "exp10",
    "n": 7938,
    "status": {
@@ -600,7 +600,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "log2",
    "n": 8000,
    "status": {
@@ -620,7 +620,7 @@
    "fallbackPct": 0.013
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "log10",
    "n": 8000,
    "status": {
@@ -640,7 +640,7 @@
    "fallbackPct": 0.062
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "log2Up",
    "n": 3800,
    "status": {
@@ -658,7 +658,7 @@
    "gasMax": 693
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "cbrt",
    "n": 4000,
    "status": {
@@ -675,7 +675,7 @@
    "gasMax": 2773
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "sinh",
    "n": 8000,
    "status": {
@@ -695,7 +695,7 @@
    "fallbackPct": 0.013
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "cosh",
    "n": 8000,
    "status": {
@@ -715,7 +715,7 @@
    "fallbackPct": 0.013
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "tanh",
    "n": 8000,
    "status": {
@@ -735,7 +735,7 @@
    "fallbackPct": 0.013
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "atanh",
    "n": 8000,
    "status": {
@@ -755,7 +755,7 @@
    "fallbackPct": 0.025
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "min",
    "n": 4000,
    "status": {
@@ -772,7 +772,7 @@
    "gasMax": 247
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "max",
    "n": 4000,
    "status": {
@@ -789,7 +789,7 @@
    "gasMax": 247
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "clamp",
    "n": 4000,
    "status": {
@@ -806,7 +806,7 @@
    "gasMax": 492
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "avg",
    "n": 4000,
    "status": {
@@ -823,7 +823,7 @@
    "gasMax": 877
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "dist",
    "n": 4000,
    "status": {
@@ -840,7 +840,7 @@
    "gasMax": 939
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "zeroFloorSub",
    "n": 4000,
    "status": {
@@ -857,7 +857,7 @@
    "gasMax": 952
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "inv",
    "n": 4000,
    "status": {
@@ -874,7 +874,7 @@
    "gasMax": 747
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "lerp",
    "n": 8000,
    "status": {
@@ -891,7 +891,7 @@
    "gasMax": 6877
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "frac",
    "n": 4000,
    "status": {
@@ -908,7 +908,7 @@
    "gasMax": 1415
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "round",
    "n": 4000,
    "status": {
@@ -925,7 +925,7 @@
    "gasMax": 522
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "factorial",
    "n": 20367,
    "status": {
@@ -943,7 +943,7 @@
    "gasMax": 2139255
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "gavg",
    "n": 4000,
    "status": {
@@ -960,7 +960,7 @@
    "gasMax": 2352
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "hypot",
    "n": 4000,
    "status": {
@@ -977,7 +977,7 @@
    "gasMax": 3866
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "exp",
    "n": 5913,
    "status": {
@@ -996,7 +996,7 @@
    "gasMax": 25132
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "ln",
    "n": 4000,
    "status": {
@@ -1014,7 +1014,7 @@
    "gasMax": 27132
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "log1p",
    "n": 5921,
    "status": {
@@ -1033,7 +1033,7 @@
    "gasMax": 112148
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "expm1",
    "n": 5957,
    "status": {
@@ -1052,7 +1052,7 @@
    "gasMax": 40784
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "pow",
    "n": 5985,
    "status": {
@@ -1071,7 +1071,7 @@
    "gasMax": 87284
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "erf",
    "n": 4000,
    "status": {
@@ -1089,7 +1089,7 @@
    "gasMax": 410673
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "erfc",
    "n": 6000,
    "status": {
@@ -1107,7 +1107,7 @@
    "gasMax": 410969
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "normCdf",
    "n": 6000,
    "status": {
@@ -1125,7 +1125,7 @@
    "gasMax": 411737
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "compound",
    "n": 5644,
    "status": {
@@ -1144,7 +1144,7 @@
    "gasMax": 140222
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "lambertW0",
    "n": 6000,
    "status": {
@@ -1162,7 +1162,7 @@
    "gasMax": 62680
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "lambertWm1",
    "n": 4000,
    "status": {
@@ -1180,7 +1180,7 @@
    "gasMax": 63573
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "powu",
    "n": 5853,
    "status": {
@@ -1199,7 +1199,7 @@
    "gasMax": 88329
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "exp2",
    "n": 3965,
    "status": {
@@ -1218,7 +1218,7 @@
    "gasMax": 25947
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "exp10",
    "n": 3968,
    "status": {
@@ -1237,7 +1237,7 @@
    "gasMax": 26039
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "log2",
    "n": 4000,
    "status": {
@@ -1255,7 +1255,7 @@
    "gasMax": 28421
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "log10",
    "n": 4000,
    "status": {
@@ -1273,7 +1273,7 @@
    "gasMax": 27607
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "sinh",
    "n": 4000,
    "status": {
@@ -1291,7 +1291,7 @@
    "gasMax": 38655
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "cosh",
    "n": 4000,
    "status": {
@@ -1309,7 +1309,7 @@
    "gasMax": 27497
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "tanh",
    "n": 4000,
    "status": {
@@ -1327,7 +1327,7 @@
    "gasMax": 75407
   },
   {
-   "lib": "fp256",
+   "lib": "fp19",
    "op": "atanh",
    "n": 4000,
    "status": {

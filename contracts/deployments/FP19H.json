@@ -1,0 +1,34 @@
+{
+ "contract": "FP19H",
+ "chainId": 11155111,
+ "network": "sepolia",
+ "address": "0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5",
+ "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+ "salt": "0x4650323536482076350000000000000000000000000000000000000000000000",
+ "saltAscii": "FP256H v5",
+ "initCodeHash": "0xde27fe5b9ea1ac6a8cb6505933f3207a3d5610230fde98dd4410b6aca65bce4c",
+ "runtimeKeccak": "0xb52c16b22ab43a20da93920f6e027381feb433707b9a69d37df64fda66e30861",
+ "runtimeBytes": 13021,
+ "source": "contracts/src/fp19/FP19H.yul",
+ "sourceCommit": "d37c8b1",
+ "compiler": {
+  "language": "Yul",
+  "solc": "0.8.38+commit.1835d247",
+  "optimizer": true,
+  "runs": 200,
+  "evmVersion": "osaka",
+  "optimizerSequence": "0.8.24 default (pinned in scripts/fp127/stdjson.py)"
+ },
+ "txHash": "0x25b3aef8bf7e9a21f72778413a459eccd23ae835f0906b1bd52d9a0e833fdfe1",
+ "block": 11974971,
+ "verification": {
+  "sourcify": "https://sourcify.dev/server/v2/contract/11155111/0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5",
+  "sourcifyRepo": "https://repo.sourcify.dev/11155111/0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5",
+  "blockscout": "https://eth-sepolia.blockscout.com/address/0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5?tab=contract",
+  "etherscan": "unverified: the Etherscan API has no Yul path"
+ },
+ "abi": "contracts/src/fp19/abiH.json",
+ "deployedBy": "0xe6306669b2f188d616bfb518e7b9255d001d731d",
+ "gasUsed": 20351815,
+ "explorerTx": "https://sepolia.etherscan.io/tx/0x25b3aef8bf7e9a21f72778413a459eccd23ae835f0906b1bd52d9a0e833fdfe1"
+}

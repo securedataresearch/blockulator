@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP256Lib} from "../../contracts/src/fp256/FP256Lib.sol";
+import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 
 /// @notice Balancer V2 ComposableStablePool v5 swap arithmetic, transcribed from the source verified on
 ///         Etherscan for both attacked pools (0xDACf5Fa19b1f720111609043ac67A9818262850c osETH/WETH and
@@ -119,7 +119,7 @@ library BalancerV2 {
 ///           the attacker's plan replayed from the first balances reproduces the whole on-chain sequence;
 ///         - mulUp: the same calls (each on its own on-chain balances) with the given-out amount upscaled by
 ///           mulUp (Balancer V3's direction); asserted equal to scripts/replays/balancer.py's port;
-///         - fp127 / fp256: the same calls with the upscaled amounts and the pool maths in FP127 / FP256, the
+///         - fp127 / fp19: the same calls with the upscaled amounts and the pool maths in FP127 / FP19, the
 ///           same Newton maps stopped on the format's own grid, and one ceil to token wei at the end (the pool's
 ///           favour); asserted equal to the exact-rational charge scripts/replays/balancer.py commits.
 ///         Every call prints  BAL|<pool>|<model>|<swap>|k=v;...  for balancer.py to score.
@@ -240,11 +240,11 @@ contract Balancer is Test {
     }
 
     // The stopping rule. StableMath stops when two iterates differ by <= 1 on its grid (1 wei of the 18-decimal
-    // upscaled amount). Here the grid is the format's: <= 1 unit (2^-128 wei in FP127, one ulp in FP256). That
+    // upscaled amount). Here the grid is the format's: <= 1 unit (2^-128 wei in FP127, one ulp in FP19). That
     // literal rule assumes the Newton map, evaluated in the format, is quiet to within one unit near the root;
     // in a format with 2^-128 resolution it is not (D times a ratio carries D * 2^-128 of noise), so the
     // iteration also stops when it has stalled: the step no longer shrinks, and is already below 2^-64 of the
-    // iterate in FP127 (2^-128 in FP256). `how` records which rule fired (0 grid, 1 stall); `literal` runs the
+    // iterate in FP127 (2^-128 in FP19). `how` records which rule fired (0 grid, 1 stall); `literal` runs the
     // literal rule alone and returns 0 iterations if it has not stopped after 255 (StableMath's cap).
 
     struct Solve {
@@ -354,34 +354,34 @@ contract Balancer is Test {
         return uint256(FP127Lib.ceil(gross) >> 128);
     }
 
-    // ------------------------------------------------------------------ FP256: the same, FP256's grid
+    // ------------------------------------------------------------------ FP19: the same, FP19's grid
 
-    /// One unit in the last place of a positive FP256 word.
-    function _ulp256(int256 x) internal pure returns (int256) {
+    /// One unit in the last place of a positive FP19 word.
+    function _ulp19(int256 x) internal pure returns (int256) {
         uint256 e = (uint256(x) >> 236) & 0x7ffff;
         return int256((e - 236) << 236);
     }
 
-    /// x * 2^-k for a positive FP256 word (exact: the exponent field only).
-    function _shr256(int256 x, uint256 k) internal pure returns (int256) {
+    /// x * 2^-k for a positive FP19 word (exact: the exponent field only).
+    function _shr19(int256 x, uint256 k) internal pure returns (int256) {
         return int256(uint256(x) - (k << 236));
     }
 
-    function _stop256(int256 x, int256 prev, int256 dPrev, uint256 it, bool literal)
+    function _stop19(int256 x, int256 prev, int256 dPrev, uint256 it, bool literal)
         internal
         pure
         returns (bool, uint256, int256)
     {
-        int256 d = FP256Lib.abs(FP256Lib.sub(x, prev));
-        if (FP256Lib.cmp(d, _ulp256(x)) <= 0) return (true, 0, d);
-        if (!literal && it >= 3 && FP256Lib.cmp(d, dPrev) >= 0 && FP256Lib.cmp(d, _shr256(x, 128)) <= 0) {
+        int256 d = FP19Lib.abs(FP19Lib.sub(x, prev));
+        if (FP19Lib.cmp(d, _ulp19(x)) <= 0) return (true, 0, d);
+        if (!literal && it >= 3 && FP19Lib.cmp(d, dPrev) >= 0 && FP19Lib.cmp(d, _shr19(x, 128)) <= 0) {
             return (true, 1, d);
         }
         return (false, 0, d);
     }
 
-    /// Smallest integer >= x for a positive FP256 word.
-    function _ceil256(int256 x) internal pure returns (uint256) {
+    /// Smallest integer >= x for a positive FP19 word.
+    function _ceil19(int256 x) internal pure returns (uint256) {
         uint256 w = uint256(x);
         uint256 e = (w >> 236) & 0x7ffff;
         uint256 m = (w & ((uint256(1) << 236) - 1)) | (uint256(1) << 236);
@@ -392,58 +392,58 @@ contract Balancer is Test {
         return (m & ((uint256(1) << r) - 1)) == 0 ? q : q + 1;
     }
 
-    /// The FP127 maps above, op for op, on FP256.
-    function _inv256(int256 annP, int256 b0, int256 b1, bool literal) internal pure returns (Solve memory r) {
-        int256 N = FP256Lib.fromUint(2);
-        int256 S = FP256Lib.add(b0, b1);
-        int256 aS = FP256Lib.mul(annP, S);
-        int256 aD = FP256Lib.sub(annP, FP256Lib.ONE);
+    /// The FP127 maps above, op for op, on FP19.
+    function _inv19(int256 annP, int256 b0, int256 b1, bool literal) internal pure returns (Solve memory r) {
+        int256 N = FP19Lib.fromUint(2);
+        int256 S = FP19Lib.add(b0, b1);
+        int256 aS = FP19Lib.mul(annP, S);
+        int256 aD = FP19Lib.sub(annP, FP19Lib.ONE);
         r.x = S;
         int256 dPrev = type(int256).max;
         for (r.it = 1; r.it <= 255; r.it++) {
-            int256 DP = FP256Lib.mul(
-                FP256Lib.mul(r.x, FP256Lib.div(r.x, FP256Lib.mul(b0, N))), FP256Lib.div(r.x, FP256Lib.mul(b1, N))
+            int256 DP = FP19Lib.mul(
+                FP19Lib.mul(r.x, FP19Lib.div(r.x, FP19Lib.mul(b0, N))), FP19Lib.div(r.x, FP19Lib.mul(b1, N))
             );
             int256 prev = r.x;
-            r.x = FP256Lib.mul(
+            r.x = FP19Lib.mul(
                 r.x,
-                FP256Lib.div(
-                    FP256Lib.add(aS, FP256Lib.mul(DP, N)),
-                    FP256Lib.add(FP256Lib.mul(aD, r.x), FP256Lib.mul(FP256Lib.fromUint(3), DP))
+                FP19Lib.div(
+                    FP19Lib.add(aS, FP19Lib.mul(DP, N)),
+                    FP19Lib.add(FP19Lib.mul(aD, r.x), FP19Lib.mul(FP19Lib.fromUint(3), DP))
                 )
             );
             bool stop;
-            (stop, r.how, dPrev) = _stop256(r.x, prev, dPrev, r.it, literal);
+            (stop, r.how, dPrev) = _stop19(r.x, prev, dPrev, r.it, literal);
             if (stop) return r;
         }
-        if (!literal) revert("FP256 invariant did not converge");
+        if (!literal) revert("FP19 invariant did not converge");
         r.it = 0;
     }
 
-    function _bal256(int256 annP, int256 bk, int256 other, int256 D, bool literal)
+    function _bal19(int256 annP, int256 bk, int256 other, int256 D, bool literal)
         internal
         pure
         returns (Solve memory r)
     {
-        int256 N = FP256Lib.fromUint(2);
-        int256 PD = FP256Lib.div(FP256Lib.mul(FP256Lib.mul(FP256Lib.mul(bk, N), other), N), D);
-        int256 inv2 = FP256Lib.mul(D, D);
-        int256 c = FP256Lib.mul(FP256Lib.div(inv2, FP256Lib.mul(annP, PD)), bk);
-        int256 b = FP256Lib.sub(FP256Lib.add(other, FP256Lib.div(D, annP)), D);
-        r.x = FP256Lib.div(FP256Lib.add(inv2, c), FP256Lib.add(FP256Lib.add(b, D), D));
+        int256 N = FP19Lib.fromUint(2);
+        int256 PD = FP19Lib.div(FP19Lib.mul(FP19Lib.mul(FP19Lib.mul(bk, N), other), N), D);
+        int256 inv2 = FP19Lib.mul(D, D);
+        int256 c = FP19Lib.mul(FP19Lib.div(inv2, FP19Lib.mul(annP, PD)), bk);
+        int256 b = FP19Lib.sub(FP19Lib.add(other, FP19Lib.div(D, annP)), D);
+        r.x = FP19Lib.div(FP19Lib.add(inv2, c), FP19Lib.add(FP19Lib.add(b, D), D));
         int256 dPrev = type(int256).max;
         for (r.it = 1; r.it <= 255; r.it++) {
             int256 prev = r.x;
-            r.x = FP256Lib.div(FP256Lib.add(FP256Lib.mul(r.x, r.x), c), FP256Lib.add(FP256Lib.mul(r.x, N), b));
+            r.x = FP19Lib.div(FP19Lib.add(FP19Lib.mul(r.x, r.x), c), FP19Lib.add(FP19Lib.mul(r.x, N), b));
             bool stop;
-            (stop, r.how, dPrev) = _stop256(r.x, prev, dPrev, r.it, literal);
+            (stop, r.how, dPrev) = _stop19(r.x, prev, dPrev, r.it, literal);
             if (stop) return r;
         }
-        if (!literal) revert("FP256 balance did not converge");
+        if (!literal) revert("FP19 balance did not converge");
         r.it = 0;
     }
 
-    function _swap256(Pool memory p, uint256[3] memory raw, uint256 i, uint256 j, uint256 amount)
+    function _swap19(Pool memory p, uint256[3] memory raw, uint256 i, uint256 j, uint256 amount)
         internal
         pure
         returns (Step memory s)
@@ -452,27 +452,27 @@ contract Balancer is Test {
         int256[2] memory b;
         uint256 n = 0;
         for (uint256 k = 0; k < 3; k++) {
-            q[k] = FP256Lib.fromFixed18(int256(p.sf[k]));
+            q[k] = FP19Lib.fromFixed18(int256(p.sf[k]));
             if (k == p.bpt) continue;
-            b[n++] = FP256Lib.mul(FP256Lib.fromUint(raw[k]), q[k]);
+            b[n++] = FP19Lib.mul(FP19Lib.fromUint(raw[k]), q[k]);
         }
         s.b0 = b[0];
         s.b1 = b[1];
         s.out = amount;
-        int256 annP = FP256Lib.div(FP256Lib.fromUint(p.amp * 2), FP256Lib.fromUint(BalancerV2.AMP_PRECISION));
-        Solve memory r = _inv256(annP, b[0], b[1], false);
+        int256 annP = FP19Lib.div(FP19Lib.fromUint(p.amp * 2), FP19Lib.fromUint(BalancerV2.AMP_PRECISION));
+        Solve memory r = _inv19(annP, b[0], b[1], false);
         (s.D, s.itD, s.howD) = (r.x, r.it, r.how);
-        s.litD = _inv256(annP, b[0], b[1], true).it;
-        s.other = FP256Lib.sub(b[j > p.bpt ? j - 1 : j], FP256Lib.mul(FP256Lib.fromUint(amount), q[j]));
+        s.litD = _inv19(annP, b[0], b[1], true).it;
+        s.other = FP19Lib.sub(b[j > p.bpt ? j - 1 : j], FP19Lib.mul(FP19Lib.fromUint(amount), q[j]));
         int256 bIn = b[i > p.bpt ? i - 1 : i];
-        r = _bal256(annP, bIn, s.other, s.D, false);
+        r = _bal19(annP, bIn, s.other, s.D, false);
         (s.y, s.itY, s.howY) = (r.x, r.it, r.how);
-        s.litY = _bal256(annP, bIn, s.other, s.D, true).it;
-        s.amountIn = _charge256(FP256Lib.div(FP256Lib.sub(s.y, bIn), q[i]), p.fee);
+        s.litY = _bal19(annP, bIn, s.other, s.D, true).it;
+        s.amountIn = _charge19(FP19Lib.div(FP19Lib.sub(s.y, bIn), q[i]), p.fee);
     }
 
-    function _charge256(int256 tokens, uint256 fee) internal pure returns (uint256) {
-        return _ceil256(FP256Lib.div(tokens, FP256Lib.sub(FP256Lib.ONE, FP256Lib.fromFixed18(int256(fee)))));
+    function _charge19(int256 tokens, uint256 fee) internal pure returns (uint256) {
+        return _ceil19(FP19Lib.div(tokens, FP19Lib.sub(FP19Lib.ONE, FP19Lib.fromFixed18(int256(fee)))));
     }
 
     // ------------------------------------------------------------------ one call, under a model
@@ -481,7 +481,7 @@ contract Balancer is Test {
         Deployed,
         MulUp,
         FP127,
-        FP256
+        FP19
     }
 
     function _swap(Pool memory p, Model m, uint256[3] memory raw, uint256 i, uint256 j, uint256 amount)
@@ -492,7 +492,7 @@ contract Balancer is Test {
         if (m == Model.Deployed) return _swapDeployed(p, raw, i, j, amount, false);
         if (m == Model.MulUp) return _swapDeployed(p, raw, i, j, amount, true);
         if (m == Model.FP127) return _swap127(p, raw, i, j, amount);
-        return _swap256(p, raw, i, j, amount);
+        return _swap19(p, raw, i, j, amount);
     }
 
     function _log(Pool memory p, string memory model, uint256 t, Step memory s, bool words) internal pure {
@@ -549,7 +549,7 @@ contract Balancer is Test {
         for (uint256 t = 0; t < p.i.length; t++) {
             uint256[3] memory raw = [p.bal[0][t], p.bal[1][t], p.bal[2][t]];
             Step memory s = _swap(p, m, raw, p.i[t], p.j[t], p.amount[t]);
-            _log(p, model, t, s, m == Model.FP127 || m == Model.FP256);
+            _log(p, model, t, s, m == Model.FP127 || m == Model.FP19);
             assertEq(s.amountIn, expected[t], string.concat(name, " ", model, " swap ", vm.toString(p.first + t)));
         }
     }
@@ -603,7 +603,7 @@ contract Balancer is Test {
         _calls("wstETH", Model.MulUp, "mulUp", _expect("wstETH", "expectMulUp"));
     }
 
-    /// The same calls in FP127 / FP256, ceil to wei once: equal to the exact-rational charge on every call.
+    /// The same calls in FP127 / FP19, ceil to wei once: equal to the exact-rational charge on every call.
     function test_fp127_osETH() public view {
         _calls("osETH", Model.FP127, "fp127", _expect("osETH", "expectExact"));
     }
@@ -612,12 +612,12 @@ contract Balancer is Test {
         _calls("wstETH", Model.FP127, "fp127", _expect("wstETH", "expectExact"));
     }
 
-    function test_fp256_osETH() public view {
-        _calls("osETH", Model.FP256, "fp256", _expect("osETH", "expectExact"));
+    function test_fp19_osETH() public view {
+        _calls("osETH", Model.FP19, "fp19", _expect("osETH", "expectExact"));
     }
 
-    function test_fp256_wstETH() public view {
-        _calls("wstETH", Model.FP256, "fp256", _expect("wstETH", "expectExact"));
+    function test_fp19_wstETH() public view {
+        _calls("wstETH", Model.FP19, "fp19", _expect("wstETH", "expectExact"));
     }
 
     /// The headline step, by hand: 17 wei of osETH at the in-transaction rate upscales to 17.988... and

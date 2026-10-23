@@ -9,7 +9,7 @@
 {% include "pagehead.html" %}
 <p class="proofs-pitch"><strong>{{ s.proven }} of {{ s.ops }}</strong> core ops proven for every input, {{ s.proven_except }} for every input but a stated window, {{ s.fuzzed }} fuzzed{% if s.in_progress %}, {{ s.in_progress }} in progress{% endif %}. {{ s.counterexamples }} counterexamples found and pinned. {{ s.solver_seconds | num_format }} s of solver time.</p>
 {{ page.content | safe }}
-{%- for lib in ["FP127", "FP256"] %}
+{%- for lib in ["FP127", "FP19"] %}
 <h2 id="{{ lib | lower }}">{{ lib }}</h2>
 <div class="scroll">
 <table class="proofs">

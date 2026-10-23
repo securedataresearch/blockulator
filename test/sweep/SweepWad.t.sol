@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {BlockulatorWad} from "../../contracts/src/wad/BlockulatorWad.sol";
 
 /// BlockulatorWad's rows of the random-input sweep, as Sweep.t.sol runs the
-/// FP127 and FP256 ops: every direction of every function on the seeded
+/// FP127 and FP19 ops: every direction of every function on the seeded
 /// inputs scripts/sweep/wad.py writes to cache/sweep/wad_<function>.json,
 /// one result word (or "R" + revert data) and its gas per line to
 /// wad_<function>.out. Its own contract, so Sweep.t.sol's dispatch (and the

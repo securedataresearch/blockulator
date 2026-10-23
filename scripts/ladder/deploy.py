@@ -34,7 +34,7 @@ SALT_ASCII = "FP127 ladder v12"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
-            "LadderQuad", "LadderBalancer", "LadderAave", "LadderMorpho", "LadderMaker", "LadderFP256",
+            "LadderQuad", "LadderBalancer", "LadderAave", "LadderMorpho", "LadderMaker", "LadderFP19",
             "LadderSolmate", "LadderOZ", "LadderUniswap", "LadderPRBUD", "LadderSnekmate"]
 # Vyper contracts the adapters call, deployed first: name -> the adapter that takes its address
 VYPER = {"SnekmateMath": "LadderSnekmate"}
@@ -104,7 +104,7 @@ def cmd_deploy(rpc: str) -> int:
             continue
         data = SALT + c["init"].hex()
         # Public RPCs cap eth_estimateGas (50M on some; publicnode answers "reverted" past its cap),
-        # and LadderFP256's 43 KB deposit needs about 67M. When the estimate fails, send with
+        # and LadderFP19's 43 KB deposit needs about 67M. When the estimate fails, send with
         # LADDER_GAS (default 90M, under Sepolia's 200M block limit); a short limit only reverts.
         try:
             est = int(cast("estimate", PROXY, data, "--rpc-url", rpc))

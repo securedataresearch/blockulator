@@ -32,15 +32,15 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-LIB = "fp256" if "--lib" in sys.argv and sys.argv[sys.argv.index("--lib") + 1] == "fp256" else "fp127"
-OUT_JSON = ROOT / "docs" / "benchmarks" / ("gas256.json" if LIB == "fp256" else "gas.json")
-OUT_MD = ROOT / "docs" / "benchmarks" / ("gas256.md" if LIB == "fp256" else "gas.md")
-FORMS = ["yul", "lib", "fp127lib", "quad"] if LIB == "fp256" else ["huff", "yul", "caller", "lib", "abdk", "solady", "prb", "quad", "balancer", "solmate", "oz", "uniswap", "prbud", "snekmate"]
+LIB = "fp19" if "--lib" in sys.argv and sys.argv[sys.argv.index("--lib") + 1] == "fp19" else "fp127"
+OUT_JSON = ROOT / "docs" / "benchmarks" / ("gas19.json" if LIB == "fp19" else "gas.json")
+OUT_MD = ROOT / "docs" / "benchmarks" / ("gas19.md" if LIB == "fp19" else "gas.md")
+FORMS = ["yul", "lib", "fp127lib", "quad"] if LIB == "fp19" else ["huff", "yul", "caller", "lib", "abdk", "solady", "prb", "quad", "balancer", "solmate", "oz", "uniswap", "prbud", "snekmate"]
 FORM_LABEL = {
     "huff": "Huff (Sepolia, staticcall)",
     "yul": "Yul object (staticcall)",
     "caller": "FP127Caller",
-    "lib": "FP256Lib (inline)" if LIB == "fp256" else "FP127Lib (inline)",
+    "lib": "FP19Lib (inline)" if LIB == "fp19" else "FP127Lib (inline)",
     "abdk": "ABDKMath64x64",
     "solady": "Solady",
     "prb": "PRBMath SD59x18",
@@ -137,7 +137,7 @@ CALLS_FP127 = {
         "avg": "_int256_average(a, b)",
     },
 }
-CALLS_FP256 = {
+CALLS_FP19 = {
     "quad": {
         "exp": "exp(x)", "exp2": "pow_2(x)", "ln": "ln(x)", "log2": "log_2(x)", "sqrt": "sqrt(x)",
         "inv": "div(fromUInt(1), x) (composed)", "abs": "abs(x)", "neg": "neg(x)", "sign": "sign(x)",
@@ -151,7 +151,7 @@ CALLS_FP256 = {
         "fromUintDown": "fromUInt(x) (truncates the significand)",
     },
 }
-CALLS = CALLS_FP256 if LIB == "fp256" else CALLS_FP127
+CALLS = CALLS_FP19 if LIB == "fp19" else CALLS_FP127
 
 
 def git(*args: str) -> str:
@@ -264,7 +264,7 @@ def main() -> int:
 
     doc = {
         "generated": date.today().isoformat(),
-        "description": ("Gas per FP256 op across an input ladder: the object (staticcall), the inline library, the same op in FP127Lib on the same value where it fits, and ABDKMathQuad. null = no measurement on that input; reverts counts, per form, the inputs where the form offers the op but reverted or the input is outside its domain or format; a form with neither gas nor reverts does not offer the op. calls says what each Quad cell calls. summary holds min/median/max per form. The internal forms are the library call alone, timed inside the harness's entry point net of its dispatch. typical (where present) is the same over random inputs that take no shortcut." if LIB == "fp256" else
+        "description": ("Gas per FP19 op across an input ladder: the object (staticcall), the inline library, the same op in FP127Lib on the same value where it fits, and ABDKMathQuad. null = no measurement on that input; reverts counts, per form, the inputs where the form offers the op but reverted or the input is outside its domain or format; a form with neither gas nor reverts does not offer the op. calls says what each Quad cell calls. summary holds min/median/max per form. The internal forms are the library call alone, timed inside the harness's entry point net of its dispatch. typical (where present) is the same over random inputs that take no shortcut." if LIB == "fp19" else
                         "Gas per op across an input ladder. First four forms are FP127; the first two and the third include the external call. FP127Lib and the competitors are the internal library call alone, timed inside the harness's entry point net of its dispatch. null = no measurement on that input; reverts counts, per form, the inputs where the form offers the op but reverted or the input is outside its domain or format; a form with neither gas nor reverts does not offer the op (the Huff and FP127Caller columns record any failure as not offered). calls says what each competitor cell calls. summary holds min/median/max per form, null where there is no measurement. typical (where present) is the same over random inputs that take no shortcut."),
         "versions": versions(),
         "forms": FORMS,
@@ -276,13 +276,13 @@ def main() -> int:
     OUT_JSON.write_text(json.dumps(doc, indent=1) + "\n")
 
     lines = [
-        f"# {'FP256' if LIB == 'fp256' else 'FP127'} gas ladder",
+        f"# {'FP19' if LIB == 'fp19' else 'FP127'} gas ladder",
         "",
         f"Generated {doc['generated']} by `make bench`. Versions: " + ", ".join(f"{k} {v}" for k, v in doc["versions"].items()) + ".",
         "",
         "Each cell is min / median / max gas over the op's input ladder. " + (
             "The object column includes the `staticcall` (and the object's own selector dispatch); "
-            if LIB == "fp256" else
+            if LIB == "fp19" else
             "The first two FP127 columns and the Caller column include the `staticcall` (and the object's own selector dispatch); ")
         + "the inline columns are the internal library call alone, timed inside the harness's entry point with the dispatch "
           "outside the window (the same cost for every op, whatever its place in the harness's list). An empty cell means "
