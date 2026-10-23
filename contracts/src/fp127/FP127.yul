@@ -405,32 +405,37 @@ object "FP127" {
                 r := or(shl(128, p1), shr(128, p0))
             }
 
+            function divw(a, b) -> q {
+                switch shr(192, or(a, b))
+                case 0 {
+                    let n := shl(64, a)
+                    q := div(n, b)
+                    if gt(q, 0x800000000000000000000000000000000000000000000000) { rev(0x35278d12) }
+                    q := or(shl(64, q), div(shl(64, mod(n, b)), b))
+                }
+                default {
+                    switch shr(128, a)
+                    case 0 { q := div(shl(128, a), b) }
+                    default {
+                        switch shr(192, b)
+                        case 0 {
+                            q := div(a, b)
+                            if gt(q, 0x80000000000000000000000000000000) { rev(0x35278d12) }
+                            let n := shl(64, mod(a, b))
+                            q := or(or(shl(128, q), shl(64, div(n, b))), div(shl(64, mod(n, b)), b))
+                        }
+                        default {
+                            if iszero(lt(shr(128, a), b)) { rev(0x35278d12) }
+                            q := divu(a, b)
+                        }
+                    }
+                }
+            }
+
             function fp127_div(a, b) -> r {
                 if iszero(b) { rev(0x23d359a3) }
                 let ng := xor(slt(a, 0), slt(b, 0))
-                let ua := absw(a)
-                let ub := absw(b)
-                let q := shr(128, ua)
-                switch q
-                case 0 { q := div(shl(128, ua), ub) }
-                default {
-                    if iszero(lt(q, ub)) { rev(0x35278d12) }
-                    let prod0 := shl(128, ua)
-                    let rem := mulmod(ua, 0x100000000000000000000000000000000, ub)
-                    q := sub(q, gt(rem, prod0))
-                    prod0 := sub(prod0, rem)
-                    let twos := and(sub(0, ub), ub)
-                    let d := div(ub, twos)
-                    prod0 := or(div(prod0, twos), mul(q, add(div(sub(0, twos), twos), 1)))
-                    let iv := xor(mul(3, d), 2)
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    iv := mul(iv, sub(2, mul(d, iv)))
-                    q := mul(prod0, iv)
-                }
+                let q := divw(absw(a), absw(b))
                 if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
                 r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
@@ -448,19 +453,25 @@ object "FP127" {
             }
 
             function fp127_divDown(a, b) -> r {
-                r := fp127_div(a, b)
-                if and(xor(slt(a, 0), slt(b, 0)), iszero(iszero(mulmod(absw(a), 0x100000000000000000000000000000000, absw(b))))) {
-                    if eq(r, 0x8000000000000000000000000000000000000000000000000000000000000000) { rev(0x35278d12) }
-                    r := sub(r, 1)
-                }
+                if iszero(b) { rev(0x23d359a3) }
+                let ng := xor(slt(a, 0), slt(b, 0))
+                let ua := absw(a)
+                let ub := absw(b)
+                // a negative inexact quotient is one more in magnitude
+                let q := add(divw(ua, ub), and(ng, iszero(iszero(mulmod(ua, 0x100000000000000000000000000000000, ub)))))
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+                r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
 
             function fp127_divUp(a, b) -> r {
-                r := fp127_div(a, b)
-                if and(iszero(xor(slt(a, 0), slt(b, 0))), iszero(iszero(mulmod(absw(a), 0x100000000000000000000000000000000, absw(b))))) {
-                    if eq(r, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) { rev(0x35278d12) }
-                    r := add(r, 1)
-                }
+                if iszero(b) { rev(0x23d359a3) }
+                let ng := xor(slt(a, 0), slt(b, 0))
+                let ua := absw(a)
+                let ub := absw(b)
+                // a positive inexact quotient is one more
+                let q := add(divw(ua, ub), and(iszero(ng), iszero(iszero(mulmod(ua, 0x100000000000000000000000000000000, ub)))))
+                if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+                r := sub(xor(q, sub(0, ng)), sub(0, ng))
             }
 
             function exp2frac(f) -> r {

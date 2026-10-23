@@ -45,8 +45,9 @@ interface IFP127 {
     function mul(int256 a, int256 b) external pure returns (int256 r);
     /// @notice a / b in 127.128, truncated toward zero.
     /// @dev Signs are stripped, the unsigned quotient floor(|a| * 2^128 / |b|)
-    ///      is formed with a 512-by-256 division, and the sign is restored. That
-    ///      is truncation toward zero, matching the Huff. Reverts with
+    ///      is formed exactly (divw: 64-bit digits when |a| and |b| are under
+    ///      2^64, a 512-by-256 division otherwise), and the sign is restored.
+    ///      That is truncation toward zero, matching the Huff. Reverts with
     ///      DivisionByZero when b == 0 (the Huff returned garbage) and with
     ///      Overflow when the quotient does not fit in int256 (the Huff wrapped).
     function div(int256 a, int256 b) external pure returns (int256 r);

@@ -262,6 +262,14 @@ their bounds; `precise_model.py` and `erf_model.py` take them from there.
 Blockulator 2.2's `expk` kept v5's eight 2-bit groups (each factor
 multiplied in line, 4,046 gas in the inline library).
 
+**Division (after 2.2).** `div`, `divDown` and `divUp` share `divw`, the exact
+floor(|a|·2^128 / |b|): when |a| and |b| are both under 2^64 it is long
+division in two 64-bit digits (|a|·2^64 fits a word and every remainder is
+below |b| < 2^192, so shifted by 64 it fits too: three `div`s and a `mod`);
+a third digit when only |b| is under 2^64; Bloemen's mulDiv (`divu`)
+beyond. 2.2 ran the mulDiv for every |a| ≥ 1. The directed forms add one
+`mulmod` for exactness. Same words and the same reverts.
+
 **The double-word exp kernel (after 2.2).** `expk` works in X form, a value
 H·2^-256 + L·2^-384 with L a small word: about 300 bits are what the
 callers round (2^n(1 + s) at 2^-128 with n up to 126), not 512, so every
