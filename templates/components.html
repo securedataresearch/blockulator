@@ -300,3 +300,27 @@
   {%- endfor %}
 </table></div>
 {%- endcomponent %}
+
+
+{#- One generated table from data/tables.json by its path ("wad.wrong", "deployed"): a library-column table goes to
+    libtable, a row-group table to grouptable. -#}
+{% component table(name: string, first: string, heat: bool = false, cls: string = "") -%}
+{%- set t = load_data(path="data/tables.json") -%}{% for k in name | split(pat=".") %}{% set_global t = t[k] %}{% endfor -%}
+{%- if t.colgroups is defined %}{{ <libtable t={t} first={first} heat={heat} cls={cls} /> }}{% else %}{{ <grouptable t={t} first={first} /> }}{% endif %}
+{%- endcomponent %}
+
+{#- Each replayed incident (scripts/site/home.py INCIDENTS): its verdict section from the generated replay document,
+    then the section with its full numbers behind a disclosure, and the document itself. -#}
+{% component incidents() -%}
+{%- set tb = load_data(path="data/tables.json") -%}
+{%- for i in tb.incidents %}
+<section class="incident" id="{{ i.id }}">
+<h2>{{ i.title }}</h2>
+{{ i.lead | markdown | safe }}
+<details class="method"><summary>{{ i.moreTitle }}</summary>
+{{ i.more | markdown | safe }}
+</details>
+<p class="small">The whole replay, with its provenance and what its test asserts: <a href="https://github.com/securedataresearch/blockulator/blob/master/{{ i.src }}">{{ i.src }}</a>.</p>
+</section>
+{%- endfor %}
+{%- endcomponent %}

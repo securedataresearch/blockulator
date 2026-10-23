@@ -1,14 +1,14 @@
-{% extends "base.html" %}
-{% block title %}{{ page.title }} · {{ config.title }}{% endblock title %}
-{% block description %}{{ page.description }}{% endblock description %}
-{% block content %}
+{% extends "page.html" %}
+{% block width %} wide{% endblock width %}
+{% block lead %}
+{%- set d = load_data(path="static/data/proofs.json") -%}
+{%- set s = d.summary -%}
+<p class="proofs-pitch"><strong>{{ s.proven }} of {{ s.ops }}</strong> core ops proven for every input, {{ s.proven_except }} for every input but a stated window, {{ s.fuzzed }} fuzzed{% if s.in_progress %}, {{ s.in_progress }} in progress{% endif %}. {{ s.counterexamples }} counterexamples found and pinned. {{ s.solver_seconds | num_format }} s of solver time.</p>
+{% endblock lead %}
+{% block body %}
 {%- set d = load_data(path="static/data/proofs.json") -%}
 {%- set s = d.summary -%}
 {%- set labels = {"proven": "proven", "proven-except": "proven outside one window", "proven-given-lemma": "proven, given a lemma", "fuzzed": "fuzzed", "counterexample": "counterexample", "unproven": "not proven", "in-progress": "in progress"} -%}
-<article class="prose doc wide">
-{% include "pagehead.html" %}
-<p class="proofs-pitch"><strong>{{ s.proven }} of {{ s.ops }}</strong> core ops proven for every input, {{ s.proven_except }} for every input but a stated window, {{ s.fuzzed }} fuzzed{% if s.in_progress %}, {{ s.in_progress }} in progress{% endif %}. {{ s.counterexamples }} counterexamples found and pinned. {{ s.solver_seconds | num_format }} s of solver time.</p>
-{{ page.content | safe }}
 {%- for lib in ["FP127", "FP19"] %}
 <h2 id="{{ lib | lower }}">{{ lib }}</h2>
 <div class="scroll">
@@ -39,5 +39,4 @@
 {%- endif %}{% endfor %}
 </ul>
 <p class="note">Status: <strong>proven</strong>, every input against the spec, its primitives proved; <strong>proven outside one window</strong>, every input but the stated family, where a pinned test shows the op leaving its documented result; <strong>fuzzed</strong>, no symbolic proof, the op is fuzzed against the exact spec; <strong>counterexample</strong>, fuzzed, with a pinned input where it leaves the spec. Solver time is Halmos's own on one machine, two solver threads per check; it varies run to run. Tools: Halmos {{ d.tools.halmos }} with CLZ added and commuted products ({{ d.tools.solver }}), {{ d.tools.forge | replace(from="forge Version: ", to="forge ") }}, solc {{ d.tools.solc }}. Every check: <code>make proofs PROOFS_FULL=1</code>. Dataset: <a href="/data/proofs.json">proofs.json</a>.</p>
-</article>
-{% endblock content %}
+{% endblock body %}
