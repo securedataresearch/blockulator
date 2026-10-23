@@ -104,10 +104,10 @@ salt) is the one list the Makefile, `stdjson.py` and `deploy.py` read.
 
 | object | the idea | ops | runtime | salt |
 |---|---|---|---:|---|
-| FP256 | the number | add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg; neg, abs, sign; cmp, lt, eq, min, max, clamp; floor, ceil, round, frac; avg, dist, zeroFloorSub, lerp; mulDown, mulUp, divDown, divUp; fromUint, fromUintDown, fromUintUp, toUintDown, toUintUp, toIntDown, toIntUp, fromFixed18, toFixed18, toFixed18Down, toFixed18Up, fromFP127, toFP127: 43 | 10,024 | `FP256 v5` |
-| FP256E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 23,265 | `FP256E v5` |
+| FP256 | the number | add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg; neg, abs, sign; cmp, lt, eq, min, max, clamp; floor, ceil, round, frac; avg, dist, zeroFloorSub, lerp; mulDown, mulUp, divDown, divUp; fromUint, fromUintDown, fromUintUp, toUintDown, toUintUp, toIntDown, toIntUp, fromFixed18, toFixed18, toFixed18Down, toFixed18Up, fromFP127, toFP127: 43 | 10,333 | `FP256 v5` |
+| FP256E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 23,293 | `FP256E v5` |
 | FP256H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 15,302 | `FP256H v5` |
-| FP256S | the special functions | erf, erfc, normCdf, lambertW0, lambertWm1, factorial: 6 | 23,595 | `FP256S v5` |
+| FP256S | the special functions | erf, erfc, normCdf, lambertW0, lambertWm1, factorial: 6 | 23,623 | `FP256S v5` |
 
 **Why the hyperbolics have their own object.** They are elementary functions
 on the same kernel and belong with FP256E by idea, but FP256E with them
@@ -116,6 +116,17 @@ thousand bytes to spare. So FP256H carries its own copy of the exp/log kernel
 at its own address. That costs bytes at deployment and nothing per call: a
 call runs one object's code either way. A smaller kernel (the table-level
 exp/ln rewrite on the plan) may fold FP256H back into FP256E.
+
+**The core's room goes to the basic ops.** Without the kernels FP256 is
+about 10 KB, so its fast paths can spend bytes: `normtop`, where add, sub,
+mul, div, inv, avg and fromFixed18 end, writes the word itself instead of
+calling `pack` (41 gas less each); `toIntDown`, `toIntUp`, `toFixed18Down`,
+`toFixed18Up` and `toFP127` read the word in place instead of through
+`unpack` (67 to 70 less); `mulDown`, `mulUp`, `divDown` and `divUp` read
+their words in place and round through `dirtop`, which knows the top bit of
+mul's and div's significand as `normtop` does and writes the word itself
+(265 to 281 less). Every result is bit-identical (measured inline, the
+default pipeline; `docs/benchmarks/gas256.md` has the objects).
 
 `pi` is not an op: `FP256Lib.PI` is the word nearest π,
 `0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c762`, which an

@@ -826,7 +826,12 @@ object "FP256E" {
             function normtop(s, e, D) -> r {
                 let t := shr(255, D)
                 let m := shr(1, add(shr(add(17, t), D), 1))
-                r := pack(s, add(add(e, t), shr(237, m)), m)
+                e := add(add(e, t), shr(237, m))
+                if gt(sub(e, 1), 0x7fffe) {
+                    if sgt(e, 0x7ffff) { rev(0x35278d12) }
+                    leave
+                }
+                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
             }
 
             function check(x) {

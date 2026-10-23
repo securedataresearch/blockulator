@@ -352,7 +352,12 @@ object "FP256" {
             function normtop(s, e, D) -> r {
                 let t := shr(255, D)
                 let m := shr(1, add(shr(add(17, t), D), 1))
-                r := pack(s, add(add(e, t), shr(237, m)), m)
+                e := add(add(e, t), shr(237, m))
+                if gt(sub(e, 1), 0x7fffe) {
+                    if sgt(e, 0x7ffff) { rev(0x35278d12) }
+                    leave
+                }
+                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
             }
 
             function check(x) {
@@ -557,8 +562,13 @@ object "FP256" {
             }
 
             function fp256_toFP127(x) -> r {
-                let s, e, m := unpack(x)
-                if iszero(e) { r := 0 leave }
+                let e := and(shr(236, x), 0x7ffff)
+                if iszero(e) {
+                    check(x)
+                    leave
+                }
+                let s := shr(255, x)
+                let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
                 let sh := sub(e, 0x4006b)
                 switch slt(sh, 0)
                 case 1 {
@@ -641,22 +651,55 @@ object "FP256" {
                 r := pack(s, e, m)
             }
 
+            function dirtop(s, e, D, st, away) -> r {
+                let t := shr(255, D)
+                e := add(e, t)
+                D := shl(sub(1, t), D)
+                let m := shr(19, D)
+                if and(away, or(iszero(iszero(and(D, 0x7ffff))), iszero(iszero(st)))) {
+                    m := add(m, 1)
+                    if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
+                        m := 0x100000000000000000000000000000000000000000000000000000000000
+                        e := add(e, 1)
+                    }
+                }
+                if and(away, slt(e, 1)) {
+                    e := 1
+                    m := 0x100000000000000000000000000000000000000000000000000000000000
+                }
+                if gt(sub(e, 1), 0x7fffe) {
+                    if sgt(e, 0x7ffff) { rev(0x35278d12) }
+                    leave
+                }
+                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
+            }
+
             function muldir(a, b, up) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                if or(iszero(ea), iszero(eb)) { leave }
-                let p1, p0 := mul512(ma, mb)
-                let s := xor(sa, sb)
-                r := dirround(s, sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)), and(p0, 0x3ffffffffffffffffffffffffffffffffffffffffffffffffffffff), xor(s, up))
+                let ea := and(shr(236, a), 0x7ffff)
+                let eb := and(shr(236, b), 0x7ffff)
+                if iszero(mul(ea, eb)) {
+                    check(a)
+                    check(b)
+                    leave
+                }
+                let p1, p0 := mul512(or(and(a, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000), or(and(b, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000))
+                let s := shr(255, xor(a, b))
+                r := dirtop(s, sub(add(ea, eb), 0x3ffff), or(shl(38, p1), shr(218, p0)), and(p0, 0x3ffffffffffffffffffffffffffffffffffffffffffffffffffffff), xor(s, up))
             }
 
             function divdir(a, b, up) -> r {
-                let sa, ea, ma := unpack(a)
-                let sb, eb, mb := unpack(b)
-                if iszero(eb) { rev(0x23d359a3) }
-                if iszero(ea) { leave }
-                let s := xor(sa, sb)
-                r := dirround(s, sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
+                let ea := and(shr(236, a), 0x7ffff)
+                let eb := and(shr(236, b), 0x7ffff)
+                if iszero(mul(ea, eb)) {
+                    check(a)
+                    check(b)
+                    if iszero(eb) { rev(0x23d359a3) }
+                    leave
+                }
+                let ma := or(and(a, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+                let mb := or(and(b, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
+                let s := shr(255, xor(a, b))
+                r := dirtop(s, sub(add(ea, 0x3ffff), add(eb, 1)), divh(ma, mb), mulmod(ma, 0x8000000000000000000000000000000000000000000000000000000000000000, mb), xor(s, up))
             }
 
             function touint(x, up) -> r {
@@ -684,8 +727,13 @@ object "FP256" {
             }
 
             function toint(x, up) -> r {
-                let s, e, m := unpack(x)
-                if iszero(e) { leave }
+                let e := and(shr(236, x), 0x7ffff)
+                if iszero(e) {
+                    check(x)
+                    leave
+                }
+                let s := shr(255, x)
+                let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
                 let u := sub(e, 0x3ffff)
                 let away := xor(s, up)
                 let a := away
@@ -774,8 +822,13 @@ object "FP256" {
             }
 
             function tofix18(x, up) -> r {
-                let s, e, m := unpack(x)
-                if iszero(e) { leave }
+                let e := and(shr(236, x), 0x7ffff)
+                if iszero(e) {
+                    check(x)
+                    leave
+                }
+                let s := shr(255, x)
+                let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
                 let k := sub(0x400eb, e)
                 if iszero(sgt(k, 0)) { rev(0x35278d12) }
                 let away := xor(s, up)
