@@ -15,7 +15,7 @@ interface IFP256H {
 
     /// @notice sinh(x) = (U + U/(1 + U)) / 2 with U = e^|x| - 1 from expm1's
     ///         machinery: below 2^-8, x times T = (e^|x| - 1)/|x| from its
-    ///         series (no cancellation, so the relative precision holds all the
+    ///         polynomial (no cancellation, so the relative precision holds all the
     ///         way down); to 1/2, U from exp's unrounded kernel; above, (e^|x| -
     ///         e^-|x|) / 2 from that kernel and its reciprocal. One rounding when
     ///         the bound clears the rounding boundary, else the series or both
@@ -28,7 +28,7 @@ interface IFP256H {
     function cosh(int256 x) external pure returns (int256 r);
     /// @notice tanh(x) = U/(U + 2) with U = e^2|x| - 1 from expm1's machinery:
     ///         below 2^-9, x times T/(1 + |x| T) with T = (e^2|x| - 1)/(2|x|) from
-    ///         its series; to 1/2, U from exp's unrounded kernel; above, 1 -
+    ///         its polynomial; to 1/2, U from exp's unrounded kernel; above, 1 -
     ///         2/(e^2|x| + 1) from that kernel. One rounding when the bound
     ///         clears the rounding boundary, else sinh's and cosh's series or
     ///         the exponential in two words: correctly rounded. Exactly +-1 once

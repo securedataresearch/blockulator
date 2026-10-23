@@ -1,90 +1,96 @@
 #!/usr/bin/env python3
-"""The wide kernels for FP256 release two (#78): 2^f and log2(1 + f) at 2^-254,
-modelled in exact integer arithmetic as the Yul runs them, with the constants
-and the Yul text they need.
+"""FP256's exp/log kernels at 2^-254, modelled in exact integer arithmetic as
+the Yul runs them, with the fits, the bounds and the Yul text they need.
 
-    uv run scripts/fp256/generators/kernel254.py            # fit, measure the kernels and the ops
+    uv run scripts/fp256/generators/kernel254.py            # fit, certify, measure the kernels and the ops
     uv run scripts/fp256/generators/kernel254.py --yul      # print the Yul kernel functions
 
-Scale: 2^-254 (values below 4 fit a word). Every product is
-mulw(a, b) = floor(a b / 2^254), the top of the 512-bit product.
+Scale: 2^-254 (values below 4 fit a word) at the kernels' edges. Inside
+them every product is hi(a, b) = floor(a b / 2^256), the 512-bit product's
+high word (mul, mulmod, sub, sub, lt), written out in line: a call to a
+product helper costs about 130 gas more than its body here, and the
+kernels make 15 to 30 products.
 
-exp2: f in [0, 1) is split as j/16 + r with j the top four bits and
-r in [0, 1/16); 2^f = T[j] 2^r with T a 16-entry table of 2^(j/16) and 2^r a
-Chebyshev-fitted polynomial on [0, 1/16) with error below 2^-262.
+Blockulator 2.2 (Phase K) replaces release two's kernels (2^f from a
+16-entry table and a degree-26 polynomial, log2 from twelve reduction
+stages and a degree-17 polynomial, ln near one by the 32- and 64-term Taylor
+series of ln(1 + d)/d):
 
-log2: the mantissa in [1, 2) is reduced by K stages (K = 12): if
-mm >= 2^(1/2^k) then mm *= 2^(-1/2^k), acc += 2^-k; the residual
-f = mm - 1 < 2^(1/4096) - 1 goes to a Chebyshev fit of log2(1 + f)/f.
+exp2 (exp2frac): f in [0, 1) is split as j1/16 + j2/256 + r, r in
+[0, 2^-8); 2^f = T1[j1] T2[j2] 2^r. 2^r is the degree-19 minimax polynomial
+on [0, 2^-8) (Remez, minimax.py; certified sup norm 2^-270.7 relative),
+Horner at 2^-255 with r at 2^-256, the top steps in one word (below). Each
+table level is v + hi(v, (T - 1) 2^256), T - 1 rounded at 2^-256; the
+result floored to 2^-254.
 
-ln near one: ln(1 + d)/d = sum (-d)^k/(k + 1), 32 terms for |d| < 2^-8.
+log2 (log2m): the mantissa 1 + w in [1, 2) is reduced by two additive levels
+of 16 by word-only operations: i = floor(16 w), 1 + w1 = (1 + w)/(1 + i/16)
+as w1 = 16 (w - i/16)/(16 + i), one shift and one div by a small integer
+(no product), log2(1 + i/16) from a table and added; then the same by
+1 + i/256. That leaves w2 in [0, 2^-8) and log2(1 + w2) = 2 log2(e)
+atanh(y), y = w2/(2 + w2) by one divh, = y P(y^2) with P(s) = 2 log2(e)
+atanh(sqrt s)/sqrt s the degree-12 minimax polynomial on [0, (2^-8/(2 -
+2^-8))^2] (certified 2^-263.7 relative).
 
-expm1 near zero (release three): (e^d - 1)/d = sum d^k/(k + 1)!, 24 terms for
-|d| < 2^-8 (truncation below 2^-263). log1p below 2^-4 is d times the same
-ln series (32 terms below 2^-8, 64 from there, truncation below 2^-261), so the log2 kernel's
-2^-250 never meets a result below 2^-4; above, 1 + x is formed exactly on a
-2^-254 grid under its leading bit and goes through log2m. expm1 above 2^-8 takes exp's unrounded 2^f and
-subtracts the one on the same grid, so neither op cancels.
+ln near one (ln1pseries, |d| < 2^-8; ln1pwide, |d| < 2^-4): ln(1 + d)/d =
+(ln 2/2)(1 - y) P(y^2), y = d/(2 + d) by one divh (2/(2 + d) is 1 - y), with
+the same P below 2^-8 and a degree-21 fit of it on [0, (2^-4/(2 - 2^-4))^2]
+(certified 2^-266.5) for log1p's band to 2^-4. The relative precision holds
+however small d is: y carries d's sign and a fixed absolute grid, and only
+1 - y and y^2 enter.
 
-The op models below (model_exp, model_ln, model_pow, model_log1p, model_expm1) are the Yul in Python:
-unpack, the same shifts and products, normround. They are measured against
-mpmath over random floats; the Precision floors in test/fp256 are set from
-what they report.
+One-word steps: in p_j = c_j + p_{j+1} u the error of p_j reaches the result
+times u^j, so where u^j is small the product needs far fewer than 256 bits:
+p_j = c_j + ((p_{j+1} >> a) (T >> b)) >> (256 - a - b), one mul. Its error is
+below 1 + (2^a T + 2^b p)/2^256 units; the generator takes a step in one
+word when that, times u^j, is under 2^-9 units and the whole is under 2^-6.
+
+Every fit is minimax (Remez exchange, minimax.py), never a Taylor
+truncation; each sup norm is certified on 20,002 points at 110 digits.
+
+expm1 near zero (expm1series, |d| < 2^-8): (e^d - 1)/d, which was the
+24-term Taylor series, is the degree-21 minimax polynomial on [-2^-8, 2^-8]
+(certified 2^-270.7 relative), signed Horner on d at 2^-256: the one-word
+steps by mul and sar, the full ones the high word less p when d < 0, all
+partial sums positive. expm1 above 2^-8 takes
+exp's unrounded 2^f and subtracts the one on the same grid; log1p from 2^-4
+forms 1 + x exactly on a 2^-254 grid under its leading bit for log2m.
+
+The op models below (model_exp, model_ln, model_pow, model_log1p,
+model_expm1) are the Yul in Python: unpack, the same shifts and products,
+normround. They are measured against mpmath over random floats; bounds.py
+checks every fast value's error against the err the Yul's rounding test
+uses.
 """
 from __future__ import annotations
 
 import random
 import sys
+from pathlib import Path
 
-from mpmath import mp, mpf, log, power, exp as mexp, nint, cos, pi, matrix, lu_solve, frexp
+from mpmath import mp, mpf, log, power, exp as mexp, nint, frexp, atanh, sqrt, ceil
 
-mp.dps = 160
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from minimax import remez, certify  # noqa: E402
+
+mp.dps = 110
 MASK = (1 << 256) - 1
 W = 254
 WS = 1 << W
 M254 = WS - 1
-TABLE_BITS = 4
-STAGES = 12
-SERIES_TERMS = 32
-WIDE_TERMS = 64        # log1p's band, |d| < 2^-4
-EXPM1_TERMS = 24
 BIAS = 0x3FFFF
 HIDDEN = 1 << 236
 FMASK = HIDDEN - 1
 
-
-# ---- fitting -----------------------------------------------------------------
-
-def fit(func, degree, a, b):
-    n = degree + 1
-    nodes = [(b - a) / 2 * cos(pi * (2 * k + 1) / (2 * n)) + (b + a) / 2 for k in range(n)]
-    V = matrix(n, n); y = matrix(n, 1)
-    for i, x in enumerate(nodes):
-        for j in range(n):
-            V[i, j] = x ** j
-        y[i, 0] = func(x)
-    c = lu_solve(V, y)
-    return [c[i, 0] for i in range(n)]
-
-
-def max_err(coeffs, func, a, b, pts=3000):
-    worst = mpf(0)
-    for i in range(pts + 1):
-        x = a + (b - a) * i / pts
-        r = coeffs[-1]
-        for c in reversed(coeffs[:-1]):
-            r = r * x + c
-        worst = max(worst, abs(r - func(x)))
-    return worst
-
-
-def choose(func, a, b, lo, hi, target_bits):
-    for d in range(lo, hi):
-        c = fit(func, d, a, b)
-        e = max_err(c, func, a, b)
-        if e < mpf(2) ** (-target_bits):
-            return d, c, e
-    raise RuntimeError("no degree reached the target")
+EXP_LEVELS = 2             # 16-entry table levels for 2^f
+EXP_DEG = 19               # 2^r on [0, 2^(-4 EXP_LEVELS))
+LN_DEG = 12                # P(s) for |y| below 2^-8/(2 - 2^-8)
+LNW_DEG = 21               # P(s) for |y| below 2^-4/(2 - 2^-4)
+EM1_DEG = 21               # (e^d - 1)/d for |d| below 2^-8
+SY = 259                   # y = d/(2 + d) at 2^-259 in log2m and the near-one ln
+SS = 2 * SY - 256          # y^2 at 2^-262
+CHEAP_STEP = mpf(2) ** -9  # one-word step admitted when its error times u^j is below this
+CHEAP_ALL = mpf(2) ** -6   # and the one-word steps together below this
 
 
 # ---- the word-level primitives, as the Yul does them -------------------------
@@ -104,6 +110,16 @@ def mulw(a: int, b: int) -> int:
 
 def mulwu(a: int, b: int) -> int:
     return (a * b) >> W
+
+
+def hi(a: int, b: int) -> int:
+    return (a * b) >> 256
+
+
+def divh(a: int, b: int) -> int:
+    """floor(a 2^255 / b), a < 2 b."""
+    assert 0 < b and a < 2 * b
+    return (a << 255) // b
 
 
 def shr512(p: int, n: int) -> int:
@@ -154,57 +170,288 @@ def decode(w: int):
     return -v if s else v
 
 
+def hx(v: int) -> str:
+    return f"0x{v:x}"
+
+
+# ---- Horner with full and one-word steps ----------------------------------------
+
+class Horner:
+    """P(v) = sum c_j v^j for v in [0, vmax], all c_j > 0, as the Yul runs it:
+    T = v 2^sigma an integer, p at 2^-rho, p_d = C_d and then
+    p_j = C_j + hi(p_{j+1}, T) or, in one word, C_j + ((p_{j+1} >> a_j)
+    (T >> b)) >> (256 - a_j - b). hi(p, T) = p_val v 2^(rho + sigma - 256), so
+    the Yul's Horner runs in u = v 2^(sigma - 256) with C_j = c_j 2^(-(sigma -
+    256) j) 2^rho rounded to nearest. Error bound (units of 2^-rho):
+    sum_j (1/2 + theta_j) umax^j, theta_j the step's floor (1) plus the
+    one-word truncation; plus the fit's."""
+
+    def __init__(self, coeffs, sigma, rho, vmax, fit_rel, fmax, name, var, signed=False):
+        self.name, self.var, self.signed = name, var, signed
+        self.sigma, self.rho = sigma, rho
+        k = sigma - 256
+        self.C = [int(nint(c * power(2, -k * j) * power(2, rho))) for j, c in enumerate(coeffs)]
+        assert all(c > 0 for c in self.C), "a coefficient is not positive"
+        self.Tmax = int(ceil(vmax * power(2, sigma)))
+        assert self.Tmax < 1 << 256
+        self.umax = mpf(self.Tmax) / power(2, 256)
+        d = len(self.C) - 1
+        # Pmax[j]: a bound on the computed p_j
+        self.Pmax = [0] * (d + 1)
+        for j in range(d, -1, -1):
+            self.Pmax[j] = int(sum(mpf(self.C[i]) * self.umax ** (i - j) for i in range(j, d + 1))) + 8
+        best = None
+        for b in range(0, 257):
+            steps, extra = self._plan(b)
+            ncheap = sum(1 for s in steps if s)
+            if best is None or ncheap > best[0]:
+                best = (ncheap, b, steps, extra)
+        self.ncheap, self.b, self.steps, self.extra = best
+        self.fit_units = fit_rel * fmax * power(2, rho)
+        theta = [1 + (st[2] if st else 0) for st in self.steps]    # for j = d-1 .. 0
+        self.err = mpf(1) / 2 * self.umax ** d                     # C_d's rounding
+        for idx, j in enumerate(range(d - 1, -1, -1)):
+            self.err += (mpf(1) / 2 + theta[idx]) * self.umax ** j
+        self.err += self.fit_units
+
+    def _plan(self, b):
+        """One-word steps from the top for a given b, while admitted."""
+        d = len(self.C) - 1
+        Ts = self.Tmax >> b
+        steps = []
+        extra = mpf(0)
+        cheap = True
+        for j in range(d - 1, -1, -1):
+            st = None
+            if cheap and Ts:
+                P = self.Pmax[j + 1]
+                a = max(0, P.bit_length() + Ts.bit_length() - (255 if self.signed else 256))
+                s = 256 - a - b
+                if s >= 0:
+                    t = (mpf(2) ** a * self.Tmax + mpf(2) ** b * P) / power(2, 256)
+                    if t * self.umax ** j <= CHEAP_STEP and extra + t * self.umax ** j <= CHEAP_ALL:
+                        st = (a, s, t)
+                        extra += t * self.umax ** j
+            if st is None:
+                cheap = False
+            steps.append(st)
+        return steps, extra
+
+    def eval(self, T: int) -> int:
+        """T a Python int (negative allowed when signed): floors toward minus
+        infinity, as sar and the corrected high word do."""
+        assert abs(T) <= self.Tmax and (self.signed or T >= 0)
+        p = self.C[-1]
+        Ts = T >> self.b
+        for st, c in zip(self.steps, reversed(self.C[:-1])):
+            assert p >= 0
+            if st:
+                a, s, _ = st
+                pr = (p >> a) * Ts
+                assert abs(pr) < 1 << 255
+                p = (pr >> s) + c
+            else:
+                p = ((p * T) >> 256) + c
+        return p
+
+    def yul(self, acc: str) -> list[str]:
+        """The Horner lines on the variable self.var into acc. Signed: the
+        one-word product of p >= 0 and a signed T >> b is a plain mul (it
+        fits), floored by sar; the high word of p T is the unsigned one less
+        p when T < 0 (ng)."""
+        out = []
+        sh = "sar" if self.signed else "shr"
+        if self.ncheap:
+            out.append(f"let {self.var}s := {sh}({self.b}, {self.var})")
+        out.append(f"{acc} := {hx(self.C[-1])}")
+        for st, c in zip(self.steps, reversed(self.C[:-1])):
+            if st:
+                a, s, _ = st
+                pa = f"shr({a}, {acc})" if a else acc
+                out.append(f"{acc} := add({sh}({s}, mul({pa}, {self.var}s)), {hx(c)})")
+            elif self.signed:
+                out.append(f"{{ let pl := mul({acc}, {self.var}) let ph := mulmod({acc}, {self.var}, not(0)) "
+                           f"{acc} := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(ng, {acc})), {hx(c)}) }}")
+            else:
+                out.append(hiline(acc, acc, self.var, hx(c)))
+        return out
+
+
+def hiline(dst: str, a: str, b: str, plus: str) -> str:
+    """dst := hi(a, b) + plus, in line."""
+    return (f"{{ let pl := mul({a}, {b}) let ph := mulmod({a}, {b}, not(0)) "
+            f"{dst} := add(sub(sub(ph, pl), lt(ph, pl)), {plus}) }}")
+
+
+def hiset(dst: str, a: str, b: str) -> str:
+    """dst := hi(a, b), in line."""
+    return (f"{{ let pl := mul({a}, {b}) let ph := mulmod({a}, {b}, not(0)) "
+            f"{dst} := sub(sub(ph, pl), lt(ph, pl)) }}")
+
+
+def tree(var: str, leaf, nbits: int = 4, ind: str = "    ") -> list[str]:
+    """Binary dispatch on the low nbits of var: four tests reach any of 16
+    entries (the linear switch averages eight; K1 measured 156 against 252
+    gas). leaf(j) is the code for entry j, '' for none."""
+    out = []
+
+    def rec(bit, prefix, depth):
+        pad = ind * depth
+        if bit < 0:
+            code = leaf(prefix)
+            if code:
+                out.append(pad + code)
+            return
+        out.append(f"{pad}switch and({var}, {1 << bit})")
+        out.append(f"{pad}case 0 {{")
+        rec(bit - 1, prefix, depth + 1)
+        out.append(f"{pad}}}")
+        out.append(f"{pad}default {{")
+        rec(bit - 1, prefix | (1 << bit), depth + 1)
+        out.append(f"{pad}}}")
+
+    rec(nbits - 1, 0, 1)
+    return out
+
+
+# ---- the fits --------------------------------------------------------------------
+
+def em1fun(d):
+    """(e^d - 1)/d."""
+    from mpmath import expm1
+    return expm1(d) / d if d else mpf(1)
+
+
+def pfun(s):
+    """P(s) = 2 log2(e) atanh(sqrt s)/sqrt s."""
+    if s == 0:
+        return 2 / log(2)
+    y = sqrt(s)
+    return 2 / log(2) * atanh(y) / y
+
+
+class Fit:
+    def __init__(self, name, f, deg, a, b):
+        self.name, self.deg, self.a, self.b = name, deg, mpf(a), mpf(b)
+        self.coeffs, self.E = remez(f, deg, a, b)
+        self.sup = certify(self.coeffs, f, a, b)
+
+    def line(self):
+        return (f"{self.name}: degree {self.deg} minimax, levelled error 2^{float(log(self.E, 2)):.1f}, "
+                f"certified sup norm 2^{float(log(self.sup, 2)):.1f} relative on 20,002 points")
+
+
 # ---- kernels -------------------------------------------------------------------
 
 class Kernels:
-    def __init__(self, exp_c, table, log_c, thr, inv, series, ln2, log2e_hi, log2e_lo, eseries):
-        self.exp_c = exp_c          # ascending, for 2^r on [0, 1/16)
-        self.table = table          # 2^(j/16), j = 0..15
-        self.log_c = log_c          # ascending, for log2(1+f)/f
-        self.thr = thr              # 2^(1/2^k), k = 1..STAGES
-        self.inv = inv              # 2^(-1/2^k)
-        self.series = series        # 1/(k+1) with alternating signs, k = 0..WIDE_TERMS-1, at 2^-254
-        self.LN2 = ln2
-        self.LOG2E_HI = log2e_hi    # log2 e at 2^-254
-        self.LOG2E_LO = log2e_lo    # the next 254 bits
-        self.eseries = eseries      # 1/(k+1)!, k = 0..EXPM1_TERMS-1, at 2^-254
+    def __init__(self):
+        rb = mpf(2) ** (-4 * EXP_LEVELS)
+        self.fit_exp = Fit("2^r", lambda r: power(2, r), EXP_DEG, 0, rb)
+        ymax_n = mpf(2) ** -8 / (2 - mpf(2) ** -8)
+        ymax_w = mpf(2) ** -4 / (2 - mpf(2) ** -4)
+        self.fit_ln = Fit("P(s)", pfun, LN_DEG, 0, ymax_n ** 2)
+        self.fit_lnw = Fit("P(s), wide", pfun, LNW_DEG, 0, ymax_w ** 2)
+        h8 = mpf(2) ** -8
+        self.fit_em1 = Fit("(e^d - 1)/d", em1fun, EM1_DEG, -h8, h8)
+        self.hexp = Horner(self.fit_exp.coeffs, 256, 255, rb, self.fit_exp.sup, power(2, rb), "exp2frac", "x")
+        self.hln = Horner(self.fit_ln.coeffs, SS, 254, ymax_n ** 2, self.fit_ln.sup, pfun(ymax_n ** 2), "lnp", "t")
+        self.hlnw = Horner(self.fit_lnw.coeffs, SS, 254, ymax_w ** 2, self.fit_lnw.sup, pfun(ymax_w ** 2), "lnpw", "t")
+        self.hem1 = Horner(self.fit_em1.coeffs, 256, 254, h8, self.fit_em1.sup, em1fun(h8), "expm1series", "x", signed=True)
+        # exp tables: (2^(j/16^(l+1)) - 1) 2^256, rounded
+        self.etab = [[int(nint((power(2, mpf(j) / 16 ** (lv + 1)) - 1) * power(2, 256))) for j in range(16)]
+                     for lv in range(EXP_LEVELS)]
+        # log tables at 2^-256: log2(1 + i/16), log2(1 + i/256)
+        self.ltab = [[int(nint(log(1 + mpf(i) / 16 ** (lv + 1), 2) * power(2, 256))) for i in range(16)]
+                     for lv in range(2)]
+        self.LN2H = int(nint(log(2) / 2 * power(2, 256)))
+        self.LN2 = q(log(2))
+        log2e = 1 / log(2)
+        self.LOG2E_HI = int(mp.floor(log2e * WS))
+        self.LOG2E_LO = int(nint((log2e * WS - self.LOG2E_HI) * WS))
 
+    # 2^f -----------------------------------------------------------------------
     def exp2frac(self, f: int) -> int:
         """2^f for f in [0, 2^254) at 2^-254, result in [2^254, 2^255)."""
-        j = f >> (W - TABLE_BITS)
-        r = f & ((1 << (W - TABLE_BITS)) - 1)
-        p = self.exp_c[-1]
-        for c in reversed(self.exp_c[:-1]):
-            p = mulwu(p, r) + c
-        return mulwu(self.table[j], p)
+        rb = 254 - 4 * EXP_LEVELS
+        x = (f & ((1 << rb) - 1)) << 2
+        v = self.hexp.eval(x)
+        for lv in reversed(range(EXP_LEVELS)):
+            j = (f >> (250 - 4 * lv)) & 15
+            if j:
+                v = hi(v, self.etab[lv][j]) + v
+        return v >> 1
 
+    def exp2frac_bound(self):
+        """|v - 2^f 2^254| in units of 2^-254: the Horner's bound at 2^-255,
+        each level Delta T + 1/2 (the table's rounding times v < 2^256) + 1
+        (the floor), the final halving and its floor."""
+        e = self.hexp.err
+        for lv in reversed(range(EXP_LEVELS)):
+            e = e * power(2, mpf(15) / 16 ** (lv + 1)) + mpf(3) / 2
+        return e / 2 + 1
+
+    # log2 ----------------------------------------------------------------------
     def log2m(self, mm: int) -> int:
-        """log2(mm) for mm in [2^254, 2^255) at 2^-254, result in [0, 2^254)."""
-        acc = 0
-        for k in range(STAGES):
-            if mm >= self.thr[k]:
-                mm = mulwu(mm, self.inv[k])
-                acc += 1 << (W - 1 - k)
-        f = mm - WS
-        p = self.log_c[-1]
-        for c in reversed(self.log_c[:-1]):
-            p = (mulw(p, f) + c) & MASK
-        return (acc + signed(mulw(p, f))) & MASK
+        """log2(mm) for mm in [2^254, 2^255) at 2^-254, result in [0, 2^254]."""
+        w = mm - WS
+        i = w >> 250
+        w = ((w - (i << 250)) << 6) // (16 + i)          # w1 at 2^-256, below 2^252
+        acc = self.ltab[0][i]
+        i = w >> 248
+        w = ((w - (i << 248)) << 8) // (256 + i)         # w2 at 2^-256, below 2^248
+        acc += self.ltab[1][i]
+        y = divh(w << 2, (1 << 255) + (w >> 2))          # y at 2^-259
+        p = self.hln.eval(hi(y, y))
+        return (acc + (hi(y, p) >> 1)) >> 2
 
-    def ln1pseries(self, df: int, terms: int = SERIES_TERMS) -> int:
-        """ln(1 + d)/d at 2^-254 for a signed d at 2^-254: 32 terms for |d| < 2^-8,
-        64 (ln1pwide) for |d| < 2^-4. Horner from zero, as the Yul quarters run it."""
-        p = 0
-        for c in reversed(self.series[:terms]):
-            p = (mulw(df, p) + c) & MASK
-        return p
+    def log2m_bound(self):
+        """|log2m - log2(mm) 2^254| in units of 2^-254 (the derivation in
+        log2m's Yul comment)."""
+        L2E = 1 / log(2)
+        tables = mpf(1) / 4                              # two roundings at 2^-256
+        floors = 2 * L2E / 4                             # w1 and w2's floors, under 2^-256 each, through 1/(1 + w) ln 2
+        ymax = mpf(2) ** -8 / (2 + 0)
+        pm = pfun(ymax ** 2)
+        ydiv = pm * (power(2, -SY) + ymax * power(2, -255)) * power(2, 254)
+        poly = (self.hln.err + 1) * ymax                 # P's bound and s's floor, times y
+        prod = mpf(1) / 4                                # hi(y, p) >> 1 at 2^-256
+        return tables + floors + ydiv + poly + prod + 1   # the final floor
+
+    # ln(1 + d)/d near one ---------------------------------------------------------
+    def ln1pk(self, df: int, wide: int) -> int:
+        """ln(1 + d)/d at 2^-254 for a signed d at 2^-254, |d| < 2^-8 (wide:
+        2^-4)."""
+        sd = signed(df)
+        a = abs(sd)
+        y = divh(a << 4, (1 << 255) + sd)               # |y| at 2^-259
+        t = hi(y, y)
+        p = (self.hlnw if wide else self.hln).eval(t)
+        yp = hi(y, p) >> 3
+        p = p - yp if sd >= 0 else p + yp
+        return hi(p, self.LN2H)
+
+    def ln1pseries(self, df: int) -> int:
+        return self.ln1pk(df, 0)
+
+    def ln1pwide(self, df: int) -> int:
+        return self.ln1pk(df, 1)
+
+    def ln1pk_bound(self, wide: int):
+        """|ln1pk - ln(1 + d)/d 2^254| in units of 2^-254."""
+        h = self.hlnw if wide else self.hln
+        ymax = (mpf(2) ** -4 if wide else mpf(2) ** -8) / (2 - (mpf(2) ** -4 if wide else mpf(2) ** -8))
+        pm = pfun(ymax ** 2)
+        c = log(2) / 2 * (1 + ymax)                       # (ln 2/2)(1 - y) at most
+        ydiv = pm * power(2, -SY) * power(2, 254) * log(2) / 2    # y's floor, through (ln 2/2) P
+        poly = (h.err + 1) * c                            # P's bound and s's floor
+        yp = 1 * log(2) / 2                               # floor of y P at 2^-254
+        ln2h = pm * (1 + ymax) / 2 * power(2, -256) * power(2, 254)   # LN2H's rounding times p
+        return ydiv + poly + yp + ln2h + 1                # the final floor
 
     def expm1series(self, df: int) -> int:
-        """(e^d - 1)/d at 2^-254 for a signed d at 2^-254, |d| < 2^-8."""
-        p = self.eseries[-1]
-        for c in reversed(self.eseries[:-1]):
-            p = (mulw(df, p) + c) & MASK
-        return p
+        """(e^d - 1)/d at 2^-254 for a signed d at 2^-254, |d| < 2^-8: the
+        minimax polynomial on d at 2^-256, signed Horner."""
+        return self.hem1.eval(signed(df) << 2)
 
     # ---- the ops ------------------------------------------------------------------
 
@@ -247,7 +494,6 @@ class Kernels:
         if not s and u < -84 and (m >> tz) & 1 and m & ((1 << tz) - 1) == 0:
             a = m >> tz                       # x = a 2^-118: 1 + x + x^2/2 is a tie
             return normround(0, BIAS, WS + (m >> -(u + 18)) + ((a * a) << 17))
-        # t = x log2 e = m 2^(u-236) (LOG2E_HI + LOG2E_LO 2^-254) 2^-254
         k, f = self.explog2(u, m)
         if k >= 1 << 19:
             if s:
@@ -313,7 +559,7 @@ class Kernels:
         if band is not None:
             sd, ud, md = band
             p = self.ln1pseries(self.tofixed254(sd, ud, md))
-            P = md * p                       # 491 bits, value d p 2^(ud - 490)... as D 2^(e - bias - 254)
+            P = md * p
             return normround(sd, BIAS + ud, P >> 236)
         Lm, Ls = self.log2pair(e, m)
         r = mulw(Lm, self.LN2)
@@ -321,7 +567,6 @@ class Kernels:
         return normround(1 if rs < 0 else 0, BIAS + Ls + 254, abs(rs))
 
     def model_pow(self, x: int, y: int) -> int:
-        ONE = BIAS << 236
         sx, ex, mx = unpack(x)
         sy, ey, my = unpack(y)
         assert ex and not sx and ey
@@ -329,19 +574,17 @@ class Kernels:
         if band is not None:
             sd, ud, md = band
             p = self.ln1pseries(self.tofixed254(sd, ud, md))
-            # log2(x) = d p / ln2 = md p LOG2E 2^(ud - 236 - 508)
-            Lm = mulwu(mulwu(md << 17, p), self.LOG2E_HI)      # at 2^-254, times 2^(ud+1); below 2^255
+            Lm = mulwu(mulwu(md << 17, p), self.LOG2E_HI)
             Ls = ud - 253
             Lneg = sd
         else:
             Lm, Ls = self.log2pair(ex, mx)
             Lneg = 1 if signed(Lm) < 0 else 0
             Lm = abs(signed(Lm))
-        P = Lm * my                                     # |t| = P 2^(Ls + uy - 236)
+        P = Lm * my
         es = Ls + (ey - BIAS) - 236
         qsh = -es
         if qsh < 254:
-            # |t| >= 2^(489 - 253): overflow or zero
             k = 1 << 19; f = 0
         else:
             f = shr512(P, qsh - 254) & M254
@@ -360,7 +603,8 @@ def _model_log1p(self, x: int) -> int:
         return 0
     u = e - BIAS
     if u < -4:
-        P = m * self.ln1pseries(self.tofixed254(s, u, m), SERIES_TERMS if u < -8 else WIDE_TERMS)
+        df = self.tofixed254(s, u, m)
+        P = m * (self.ln1pseries(df) if u < -8 else self.ln1pwide(df))
         return normround(s, e, P >> 236)
     assert not (s and u >= 0)
     b = max(u, 0)
@@ -413,111 +657,189 @@ def bits(got: int, truth) -> float:
     return float(-log(abs(g - truth) / abs(truth), 2))
 
 
+_BUILT = None
+
+
 def build():
-    sixteenth = mpf(1) / 16
-    d1, ec, e1 = choose(lambda r: power(2, r), mpf(0), sixteenth, 16, 40, 262)
-    print(f"exp2: degree {d1} on [0, 1/16), max poly error 2^{float(log(e1, 2)):.1f}")
-    b = power(2, mpf(1) / 2 ** STAGES) - 1
-    P = lambda f: (log(1 + f, 2) / f) if f != 0 else 1 / log(2)
-    d2, lc, e2 = choose(P, mpf(0), b, 8, 40, 262)
-    print(f"log2: degree {d2} on [0, 2^(1/{2 ** STAGES}) - 1), max poly error 2^{float(log(e2, 2)):.1f}")
-    log2e = 1 / log(2)
-    hi = int(mp.floor(log2e * WS))
-    lo = int(nint((log2e * WS - hi) * WS))
-    return Kernels([q(c) for c in ec],
-                   [q(power(2, mpf(j) / 16)) for j in range(16)],
-                   [q(c) for c in lc],
-                   [q(power(2, mpf(1) / 2 ** (k + 1))) for k in range(STAGES)],
-                   [q(power(2, -mpf(1) / 2 ** (k + 1))) for k in range(STAGES)],
-                   [q(mpf((-1) ** k) / (k + 1)) for k in range(WIDE_TERMS)],
-                   q(log(2)), hi, lo,
-                   [q(1 / mp.factorial(k + 1)) for k in range(EXPM1_TERMS)]), d1, d2
+    """The kernels (fitted once per process), and the two kernel degrees."""
+    global _BUILT
+    if _BUILT is None:
+        _BUILT = Kernels()
+    return _BUILT, EXP_DEG, LN_DEG
 
 
-def hx(v: int) -> str:
-    return f"0x{v:x}"
+# ---- the Yul -----------------------------------------------------------------------
 
-
-def emit_yul(K: Kernels, d1: int, d2: int) -> str:
+def emit_yul(K: Kernels) -> str:
     out = []
-    out.append(f"/// 2^f for f in [0, 1) at 2^-254, result at 2^-254 in [1, 2): f = j/16 + r,\n"
-               f"/// 2^(j/16) from a 16-entry table and 2^r from a degree-{d1} Chebyshev fit on\n"
-               f"/// [0, 1/16) (max error 2^-262, kernel254.py), Horner with a floor at 2^-254\n"
-               f"/// at every step. Unsigned throughout.\n"
-               f"function exp2frac(f) -> r {{\n"
-               f"    let x := and(f, {hx((1 << 250) - 1)})\n"
-               f"    r := {hx(K.exp_c[-1])}")
-    for c in reversed(K.exp_c[:-1]):
-        out.append(f"    r := add(mulwu(r, x), {hx(c)})")
-    out.append("    switch shr(250, f)")
-    for j, t in enumerate(K.table):
-        if j == 0:
-            continue
-        out.append(f"    case {j} {{ r := mulwu(r, {hx(t)}) }}")
-    out.append("}\n")
-    out.append(f"/// f * P(f) = log2(1 + f) for f in [0, 2^(1/4096) - 1) at 2^-254. P is a\n"
-               f"/// degree-{d2} Chebyshev fit of log2(1 + f) / f (max error 2^-262), Horner with\n"
-               f"/// a floor at 2^-254 at every step; the coefficients alternate in sign.\n"
-               f"function log2poly(f) -> r {{\n"
-               f"    r := {hx(K.log_c[-1])}")
-    for c in reversed(K.log_c[:-1]):
-        out.append(f"    r := add(mulw(r, f), {hx(c)})")
-    out.append("    r := mulw(r, f)\n}\n")
-    out.append(f"/// log2(mm) for a mantissa mm in [1, 2) at 2^-254, result at 2^-254 in [0, 1),\n"
-               f"/// unrounded: {STAGES} range-reduction stages by 2^(1/2^k) and the polynomial on\n"
-               f"/// the residual. Absolute error below 2^-250 (kernel254.py).\n"
-               f"function log2m(mm) -> r {{\n"
-               f"    let acc := 0")
-    for k in range(STAGES):
-        out.append(f"    if iszero(gt({hx(K.thr[k])}, mm)) {{\n"
-                   f"        mm := mulwu(mm, {hx(K.inv[k])})\n"
-                   f"        acc := add(acc, {hx(1 << (W - 1 - k))})\n"
-                   f"    }}")
-    out.append(f"    r := add(acc, log2poly(sub(mm, {hx(WS)})))\n}}\n")
-    out.append(f"/// ln(1 + d) / d: the series sum_{{k>=0}} (-d)^k / (k + 1) at 2^-254, Horner\n"
-               f"/// in {SERIES_TERMS} terms for |d| < 2^-8 (truncation below 2^-261), from zero\n"
-               f"/// through two 16-term quarters so the Yul pipeline's stack stays shallow.\n"
-               f"function ln1pseries(df) -> p {{\n"
-               f"    p := ln1pq1(df, ln1pq2(df, 0))\n}}\n")
-    out.append(f"/// The same series in {WIDE_TERMS} terms for |d| < 2^-4 (truncation below\n"
-               f"/// 2^-262): log1p's band, four quarters.\n"
-               f"function ln1pwide(df) -> p {{\n"
-               f"    p := ln1pq1(df, ln1pq2(df, ln1pq3(df, ln1pq4(df, 0))))\n}}\n")
-    for qn in range(1, WIDE_TERMS // 16 + 1):
-        lo, hi = 16 * (qn - 1), 16 * qn
-        out.append(f"/// Horner steps for terms {hi - 1} down to {lo} of the ln series.\n"
-                   f"function ln1pq{qn}(df, q) -> p {{\n"
-                   f"    p := q")
-        for c in reversed(K.series[lo:hi]):
-            out.append(f"    p := add({hx(c)}, mulw(df, p))")
+    he, hl, hw = K.hexp, K.hln, K.hlnw
+    rb = 254 - 4 * EXP_LEVELS
+    eb = K.exp2frac_bound()
+    out.append(
+        f"/// 2^f for f in [0, 1) at 2^-254, result at 2^-254 in [1, 2), unrounded:\n"
+        f"/// f = j1/16 + j2/256 + r, 2^f = T1[j1] T2[j2] 2^r. 2^r on [0, 2^-8) is\n"
+        f"/// the degree-{EXP_DEG} minimax polynomial (kernel254.py; certified sup norm\n"
+        f"/// 2^{float(log(K.fit_exp.sup, 2)):.1f} relative), Horner at 2^-255 on r at 2^-256 with each\n"
+        f"/// product's high word in line, the top {he.ncheap} steps in one word (their\n"
+        f"/// truncation, times r^j, is under 2^{float(log(he.extra, 2)):.1f} in all); each table level\n"
+        f"/// adds hi(v, (T - 1) 2^256), T - 1 rounded at 2^-256, the inner level\n"
+        f"/// first; the result floored to 2^-254. Within {float(eb):.2f} units of 2^-254: the\n"
+        f"/// Horner {float(he.err):.2f} units of 2^-255, each level Delta T + 1/2 + 1, then\n"
+        f"/// halved, plus the floor. Unsigned throughout; two table tests of four\n"
+        f"/// branches each in place of release two's 15-way switch.\n"
+        f"function exp2frac(f) -> r {{\n"
+        f"    let x := shl(2, and(f, {hx((1 << rb) - 1)}))")
+    out += ["    " + l for l in he.yul("r")]
+    for lv in reversed(range(EXP_LEVELS)):
+        sh = 250 - 4 * lv
+        expr = f"and(shr({sh}, f), 15)" if lv else f"shr({sh}, f)"
+        out.append(f"    let j{lv + 1} := {expr}")
+        out += tree(f"j{lv + 1}", lambda j, lv=lv: hiline("r", "r", hx(K.etab[lv][j]), "r") if j else "")
+    out.append("    r := shr(1, r)\n}\n")
+
+    lb = K.log2m_bound()
+    out.append(
+        f"/// log2(mm) for a mantissa mm in [1, 2) at 2^-254, result at 2^-254 in [0, 1],\n"
+        f"/// unrounded. Two additive levels by word-only operations: i = floor(16 w)\n"
+        f"/// for mm = 1 + w, then 1 + w1 = (1 + w)/(1 + i/16) exactly as w1 = 16 (w -\n"
+        f"/// i/16)/(16 + i), one shift and one div by a small integer, floored at\n"
+        f"/// 2^-256, and log2(1 + i/16) (at 2^-256, rounded) added from a table; then\n"
+        f"/// the same by 1 + i/256, leaving w2 in [0, 2^-8). log2(1 + w2) = y P(y^2),\n"
+        f"/// y = w2/(2 + w2) at 2^-259 by one divh, P = 2 log2(e) atanh(sqrt s)/sqrt s\n"
+        f"/// by lnp. Within {float(lb):.2f} units of 2^-254: the tables 1/4, w1 and w2's floors\n"
+        f"/// (under 2^-256 each) 2 log2(e)/4, y's floor and its divisor's, P's\n"
+        f"/// bound times y, y P's floor 1/4 and the final floor 1\n"
+        f"/// (kernel254.py; release two's twelve stages were bounded at 37).\n"
+        f"function log2m(mm) -> r {{\n"
+        f"    let w := sub(mm, {hx(WS)})\n"
+        f"    let i := shr(250, w)\n"
+        f"    w := div(shl(6, sub(w, shl(250, i))), add(16, i))\n"
+        f"    let acc := 0")
+    out += tree("i", lambda j: f"acc := {hx(K.ltab[0][j])}" if j else "")
+    out.append("    i := shr(248, w)\n"
+               "    w := div(shl(8, sub(w, shl(248, i))), add(256, i))")
+    out += tree("i", lambda j: f"acc := add(acc, {hx(K.ltab[1][j])})" if j else "")
+    out.append(f"    let y := divh(shl(2, w), add({hx(1 << 255)}, shr(2, w)))\n"
+               f"    let p := lnp(y)\n"
+               f"    {hiset('w', 'y', 'p')}\n"
+               f"    r := shr(2, add(acc, shr(1, w)))\n}}\n")
+
+    for h, nm, fit, dom in ((hl, "lnp", K.fit_ln, "2^-8/(2 - 2^-8)"), (hw, "lnpw", K.fit_lnw, "2^-4/(2 - 2^-4)")):
+        out.append(
+            f"/// P(y^2) = 2 log2(e) atanh(y)/y at 2^-254 for y at 2^-259, |y| below\n"
+            f"/// {dom}: the degree-{fit.deg} minimax polynomial in s = y^2 (kernel254.py;\n"
+            f"/// certified sup norm 2^{float(log(fit.sup, 2)):.1f} relative), Horner on s at 2^-262 with\n"
+            f"/// the products' high words in line, the top {h.ncheap} steps in one word; within\n"
+            f"/// {float(h.err):.2f} units. No Taylor coefficients: the fit is a Remez exchange.\n"
+            f"function {nm}(y) -> p {{")
+        out.append("    let t := 0")
+        out.append("    " + hiset("t", "y", "y"))
+        out += ["    " + l for l in h.yul("p")]
         out.append("}\n")
-    eh = EXPM1_TERMS // 2
-    out.append(f"/// (e^d - 1) / d: the series sum_{{k>=0}} d^k / (k + 1)! at 2^-254 for\n"
-               f"/// |d| < 2^-8, Horner in {EXPM1_TERMS} terms (truncation below 2^-263), in\n"
-               f"/// two halves as ln1pseries.\n"
-               f"function expm1series(df) -> p {{\n"
-               f"    p := expm1tail(df)")
-    for c in reversed(K.eseries[:eh]):
-        out.append(f"    p := add({hx(c)}, mulw(df, p))")
+
+    nb, wb = K.ln1pk_bound(0), K.ln1pk_bound(1)
+    out.append(
+        f"/// ln(1 + d)/d at 2^-254 for a signed d at 2^-254, |d| < 2^-8 (wide = 0)\n"
+        f"/// or 2^-4 (wide = 1): 2 atanh(y)/d with y = d/(2 + d) at 2^-259 by one\n"
+        f"/// divh, and 2/(2 + d) = 1 - y, so (ln 2/2)(1 - y) P(y^2), P by lnp or lnpw.\n"
+        f"/// y holds d's sign on a fixed grid and only 1 - y and y^2 enter, so the\n"
+        f"/// value keeps its relative precision however small d is: within {float(nb):.2f}\n"
+        f"/// units (wide {float(wb):.2f}): y's floor, P's bound, y P's floor, ln 2/2's rounding\n"
+        f"/// and the final floor (kernel254.py).\n"
+        f"function ln1pk(df, wide) -> p {{\n"
+        f"    let a := df\n"
+        f"    if slt(df, 0) {{ a := sub(0, df) }}\n"
+        f"    let y := divh(shl(4, a), add({hx(1 << 255)}, df))\n"
+        f"    switch wide\n"
+        f"    case 0 {{ p := lnp(y) }}\n"
+        f"    default {{ p := lnpw(y) }}\n"
+        f"    let yp := 0\n"
+        f"    {hiset('yp', 'y', 'p')}\n"
+        f"    yp := shr(3, yp)\n"
+        f"    switch slt(df, 0)\n"
+        f"    case 0 {{ p := sub(p, yp) }}\n"
+        f"    default {{ p := add(p, yp) }}\n"
+        f"    {hiset('p', 'p', hx(K.LN2H))}\n}}\n")
+    out.append("/// ln(1 + d)/d for |d| < 2^-8: ln1pk on lnp.\n"
+               "function ln1pseries(df) -> p {\n    p := ln1pk(df, 0)\n}\n")
+    out.append("/// ln(1 + d)/d for |d| < 2^-4: ln1pk on lnpw.\n"
+               "function ln1pwide(df) -> p {\n    p := ln1pk(df, 1)\n}\n")
+    he1, fe1 = K.hem1, K.fit_em1
+    out.append(
+        f"/// (e^d - 1)/d at 2^-254 for a signed d at 2^-254, |d| < 2^-8: the\n"
+        f"/// degree-{fe1.deg} minimax polynomial on [-2^-8, 2^-8] (kernel254.py; certified\n"
+        f"/// sup norm 2^{float(log(fe1.sup, 2)):.1f} relative), release three's 24-term Taylor series\n"
+        f"/// before it. Signed Horner on d at 2^-256: every partial sum is positive,\n"
+        f"/// the top {he1.ncheap} steps in one word by mul and sar, the others the high word\n"
+        f"/// less p when d < 0 (ng); within {float(he1.err):.2f} units of 2^-254.\n"
+        f"function expm1series(df) -> p {{\n"
+        f"    let x := shl(2, df)\n"
+        f"    let ng := slt(df, 0)")
+    out += ["    " + l for l in he1.yul("p")]
     out.append("}\n")
-    out.append(f"/// The upper {EXPM1_TERMS - eh} terms of expm1series.\n"
-               f"function expm1tail(df) -> p {{\n"
-               f"    p := {hx(K.eseries[-1])}")
-    for c in reversed(K.eseries[eh:-1]):
-        out.append(f"    p := add({hx(c)}, mulw(df, p))")
-    out.append("}\n")
-    out.append(f"// LN2      {hx(K.LN2)}\n// LOG2E_HI {hx(K.LOG2E_HI)}\n// LOG2E_LO {hx(K.LOG2E_LO)}")
     return "\n".join(out)
 
 
-def rand_float(rng, lo, hi, s=None):
-    u = rng.randint(lo, hi)
+# ---- measurement -----------------------------------------------------------------
+
+def rand_float(rng, lo, hi_, s=None):
+    u = rng.randint(lo, hi_)
     sg = rng.getrandbits(1) if s is None else s
     return (sg << 255) | ((u + BIAS) << 236) | rng.getrandbits(236)
 
 
+def measure_kernels(K: Kernels, rng, n=4000):
+    """Each kernel against mpmath at 110 digits on random and edge inputs:
+    the largest error seen, the bound, and their ratio."""
+    rows = []
+    rb = 254 - 4 * EXP_LEVELS
+    fs = [rng.getrandbits(W) for _ in range(n)]
+    fs += [1, WS - 1, (1 << rb) - 1, 1 << rb, WS >> 1, (WS >> 4) - 1, WS >> 4, (WS * 15) >> 4, ((WS * 15) >> 4) + (1 << rb) - 1]
+    fs += [(j1 << 250) | (j2 << 246) | rng.choice([0, 1, (1 << rb) - 1, rng.getrandbits(rb)]) for j1 in range(16) for j2 in range(16)]
+    worst = max(abs(mpf(K.exp2frac(f)) - power(2, mpf(f) / WS) * WS) for f in fs if f)
+    rows.append(("exp2frac", len(fs), worst, K.exp2frac_bound()))
+    ms = [WS + rng.getrandbits(W) for _ in range(n)]
+    ms += [WS, WS + 1, 2 * WS - 1, WS + (WS >> 1), WS + (WS >> 100)]
+    ms += [WS + (i1 << 250) + (i2 << 246) + rng.choice([0, 1, (1 << 246) - 1, rng.getrandbits(246)]) for i1 in range(16) for i2 in range(16)]
+    worst = max(abs(mpf(K.log2m(m)) - log(mpf(m) / WS, 2) * WS) for m in ms)
+    rows.append(("log2m", len(ms), worst, K.log2m_bound()))
+    for wide, lim in ((0, 8), (1, 4)):
+        ds = []
+        for _ in range(n):
+            e = rng.randint(lim, 250)
+            v = rng.getrandbits(W - e)
+            ds.append(v if rng.getrandbits(1) else (-v) & MASK)
+        ds += [(1 << (W - lim)) - 1, (-((1 << (W - lim)) - 1)) & MASK, 1, MASK, 0]
+        worst = mpf(0)
+        for df in ds:
+            d = mpf(signed(df)) / WS
+            exact = (log(1 + d) / d if d else mpf(1)) * WS
+            worst = max(worst, abs(mpf(K.ln1pk(df, wide)) - exact))
+        rows.append(("ln1pwide" if wide else "ln1pseries", len(ds), worst, K.ln1pk_bound(wide)))
+    ds = []
+    for _ in range(n):
+        e = rng.randint(8, 250)
+        v = rng.getrandbits(W - e)
+        ds.append(v if rng.getrandbits(1) else (-v) & MASK)
+    ds += [(1 << (W - 8)) - 1, (-((1 << (W - 8)) - 1)) & MASK, 1, MASK, 0]
+    worst = mpf(0)
+    from mpmath import expm1 as mexpm1
+    for df in ds:
+        d = mpf(signed(df)) / WS
+        exact = (mexpm1(d) / d if d else mpf(1)) * WS
+        worst = max(worst, abs(mpf(K.expm1series(df)) - exact))
+    rows.append(("expm1series", len(ds), worst, K.hem1.err))
+    print(f"{'kernel':12} {'n':>6} {'max error':>10} {'bound':>7} {'ratio':>7}   (units of 2^-254)")
+    bad = False
+    for nm, cnt, worst, bound in rows:
+        r = float(worst / bound)
+        bad |= r >= 1
+        print(f"{nm:12} {cnt:6d} {float(worst):10.3f} {float(bound):7.3f} {r:7.4f}{'  EXCEEDS' if r >= 1 else ''}")
+    return bad
+
+
 def measure_ops(K: Kernels, rng):
-    mp.dps = 160
+    mp.dps = 110
     rows = []
     xs = [rand_float(rng, -118, 17) for _ in range(300)] + [rand_float(rng, -237, -119) for _ in range(60)]
     b = []
@@ -568,22 +890,20 @@ def measure_ops(K: Kernels, rng):
 
 
 def main(argv):
-    random.seed(254)
-    rng = random.Random(254)
-    K, d1, d2 = build()
+    K, _, _ = build()
     if "--yul" in argv:
-        print(emit_yul(K, d1, d2))
+        print(emit_yul(K))
         return 0
-    exp_in = [random.getrandbits(W) for _ in range(400)] + [0, 1, WS - 1, WS >> 1, (WS >> 4) - 1, WS >> 4, (WS * 15) >> 4]
-    log_in = [WS + random.getrandbits(W) for _ in range(400)] + [WS + 1, 2 * WS - 1, WS + (WS >> 1), WS + (WS >> 100)]
-    print("\nkernels at 2^-254, exact-integer model:")
-    eb = [float(-log(abs(mpf(K.exp2frac(x)) / WS - power(2, mpf(x) / WS)) / power(2, mpf(x) / WS), 2)) for x in exp_in]
-    print(f"exp2frac   n={len(eb):4} relative bits min {min(eb):7.2f}")
-    worst = max(abs(mpf(signed(K.log2m(x))) / WS - log(mpf(x) / WS, 2)) for x in log_in)
-    print(f"log2m      n={len(log_in):4} absolute error max 2^{float(log(worst, 2)):.1f}")
+    for ft in (K.fit_exp, K.fit_ln, K.fit_lnw, K.fit_em1):
+        print(ft.line())
+    for h in (K.hexp, K.hln, K.hlnw, K.hem1):
+        print(f"{h.name}: {len(h.C) - 1} steps, {h.ncheap} in one word (b = {h.b}, their truncation "
+              f"2^{float(log(h.extra, 2)) if h.extra else float('-inf'):.1f}), bound {float(h.err):.3f} units of 2^-{h.rho}")
+    print("\nkernels at 2^-254, exact-integer model against mpmath:")
+    bad = measure_kernels(K, random.Random(254))
     print("\nthe ops, modelled as the Yul runs them, against mpmath:")
-    measure_ops(K, rng)
-    return 0
+    measure_ops(K, random.Random(254))
+    return 1 if bad else 0
 
 
 if __name__ == "__main__":

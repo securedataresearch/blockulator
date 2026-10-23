@@ -20,19 +20,21 @@ contracts/src/fp256/README.md; the measured maxima are the check that the
 analysis is not off by a missed term.
 
   op, region            err in the Yul       analytic bound (units of D's last bit)
-  exp                   8                    2^f kernel 4.1 (fit 2^-262, Horner floors 1.07,
-                                             table product 1 + 1.07) + f's floor 1.4
+  exp                   8                    2^f kernel 4.7 (kernel254.py's exp2frac_bound: the
+                                             fit 2^-270.7, Horner 1.51 at 2^-255, two table
+                                             levels Delta T + 1.5, halved, + 1) + f's floor 1.4
   expm1, |x| < 2^-8     8                    2 x series 1.6 + 1
   expm1, kernel         8                    as exp; the one is subtracted exactly
-  ln, near one          8                    2 x series 2.1 + 1
-  ln, kernel            40                   (log2m 37 + Lm's shift 1) ln 2 + 2
-  log1p, series         8                    2 x series 3 + 1
-  log1p, kernel         44                   as ln + 1 + x's normalisation + the dropped one
+  ln, near one          8                    2 x ln1pk 2.7 + 1 (kernel254.py's ln1pk_bound)
+  ln, kernel            5                    (log2m 2.4 + Lm's shift 1) ln 2 + 2 = 4.4
+                                             (kernel254.py's log2m_bound)
+  log1p, series         8                    2 x ln1pk 2.7 (the wide P from 2^-8) + 1
+  log1p, kernel         7                    as ln + 1 + x's normalisation 1 + the dropped one 1
   pow, compound         16 + 12 (k + 1)      near one (series, relative 8 units of log2 x)
-                        8 + yq (39 + 2|u|) 355 / 2^16
-                                             off it (log2m 37 + Lm's shift 2^sh <= 2|u|, and
+                        8 + yq (8 + 2|u|) 355 / 2^16
+                                             off it (log2m 2.4 + Lm's shift 2^sh <= 2|u|, and
                                              compound's dropped one 1.45), yq >= 2^8 |y|
-                                             (2^8 (|n| + 1)); 6 + 1.3863 x t's error
+                                             (2^8 (|n| + 1)); 6.1 + 1.3863 x t's error
   compsure              sure to miss         the bound reaches 2^17 for every input it
                                              passes, and |t| < 2^19 (checked by sure() below)
   powu                  2 n + 8              each 256-bit product within 2^-255, squarings
@@ -41,7 +43,7 @@ analysis is not off by a missed term.
                         192 (anchors)        2 x g's 81 (1.6 per Taylor term, 50 terms, anchor 0.5) + 8
                         32 n + 64 (CF)       A and B each gain 2^-251 relative per step: 2^5 n
                         64 (y >= 18)         the asymptotic series' terms' floors at 2^-262, w's
-                                             2^-254, Q's 2 units, v's 6, two floors (under 48)
+                                             2^-254, Q's 2 units, v's 6.1, two floors (under 49)
                         er >> -ee + 2        for the differences 1 - erfc, 2 - erfc
 """
 from __future__ import annotations
@@ -107,7 +109,7 @@ def powyb(y):
 
 def powerr0(u, yq):
     """The Yul's powerr off the near-one band."""
-    return 8 + ((yq * (39 + 2 * abs(u)) * 355) >> 16)
+    return 8 + ((yq * (8 + 2 * abs(u)) * 355) >> 16)
 
 
 def compsure(u, n):
@@ -187,7 +189,7 @@ def run(n):
         else:
             Lm, Ls = ker.log2pair(e, m)
             l = K.signed(K.mulw(Lm, ker.LN2))
-            M.add("ln, kernel", 40, abs(l), abs(lx) * power(2, -Ls))
+            M.add("ln, kernel", 5, abs(l), abs(lx) * power(2, -Ls))
     # log1p: the series and the kernel
     for _ in range(n):
         r = rng.random()
@@ -196,7 +198,8 @@ def run(n):
         u = e - BIAS
         lv = log1p(dec(x))
         if u < -4:
-            p = ker.ln1pseries(ker.tofixed254(s, u, m), K.SERIES_TERMS if u < -8 else K.WIDE_TERMS)
+            df = ker.tofixed254(s, u, m)
+            p = ker.ln1pseries(df) if u < -8 else ker.ln1pwide(df)
             M.add("log1p, series", 8, (m * p) >> 236, abs(lv) * power(2, 254 - u))
         else:
             b = max(u, 0)
@@ -208,7 +211,7 @@ def run(n):
             a = a << (254 - nb) if nb < 254 else a >> (nb - 254)
             Lm, Ls = ker.log2pairm(kk, a)
             l = K.signed(K.mulw(Lm, ker.LN2))
-            M.add("log1p, kernel", 44, abs(l), abs(lv) * power(2, -Ls))
+            M.add("log1p, kernel", 7, abs(l), abs(lv) * power(2, -Ls))
     # pow (and compound's tail): v against 2^(t - kk) 2^254
     for _ in range(n):
         if rng.random() < 0.4:
@@ -348,24 +351,24 @@ def run79(ker, rng, M, n):
     """exp2, exp10, log2, log10, sinh, cosh, tanh, atanh: each fast value D
     against the exact value on D's grid. The analytic bounds:
 
-      exp2, exp10           8    as exp: the 2^f kernel 4.1 and f's floor 1.4 (log2 10's
+      exp2, exp10           8    as exp: the 2^f kernel 4.7 and f's floor 1.4 (log2 10's
                                  tail under 2^-490 of a unit)
-      log2, near one        8    d P within 3 (the series 2, the floor 1), times log2 e:
-                                 3 log2 e + 2
-      log2, kernel          38   log2m 37, the shift into Lm 1
-      log10, near one       8    ln's D within 5, times log10 e: 5 log10 e + 2
-      log10, kernel         16   (37 + 1) log10 2 + 2
+      log2, near one        8    d P within 3.7 (ln1pk 2.7, the floor 1), times log2 e:
+                                 3.7 log2 e + 2
+      log2, kernel          4    log2m 2.4, the shift into Lm 1
+      log10, near one       8    ln's D within 6.4, times log10 e: 6.4 log10 e + 2
+      log10, kernel         4    (2.4 + 1) log10 2 + 2
       sinh, |x| < 2^-8      18   expm1's series T within 2.5 (|x|'s floor), |x| T within 2.1,
                                  the quotient T/(1 + |x| T) within 5.6, the sum 8.1: 2 x 8.1 + 1
-      sinh, to 1/2          14   U = e^|x| - 1 from the kernel within 6, U/(1 + U) within 7
-      sinh, cosh, kernel    16   v within 6; 2^508/v within 7, one more for the shift
+      sinh, to 1/2          14   U = e^|x| - 1 from the kernel within 6.1, U/(1 + U) within 7.1
+      sinh, cosh, kernel    16   v within 6.1; 2^508/v within 7.1, one more for the shift
       tanh, |x| < 2^-9      14   T within 3 (2|x|'s floor), |x| T within 2.1, the quotient
                                  within 6.1: 2 x 6.1 + 1
-      tanh, to 1/2          8    U = e^2|x| - 1 within 12, U/(U + 2) has slope under 1/2: 6 + 1
-      tanh, kernel          8    2/(V + 1) within 6 x 0.54 + 2
+      tanh, to 1/2          8    U = e^2|x| - 1 within 12.2, U/(U + 2) has slope under 1/2: 6.1 + 1
+      tanh, kernel          8    2/(V + 1) within 6.1 x 0.54 + 2
       atanh, |x| < 2^-6     18   R = 1/(1 - |x|) within 2.1, y = 2|x|R within 4.2, log1p's
-                                 series P within 3 + 2.1, R P within 8.3: 2 x 8.3 + 1
-      atanh, kernel         32   two log2m within 37 each, the shift halves: 38 ln 2 + 2
+                                 ln1pk P within 3 + 2.1, R P within 8.3: 2 x 8.3 + 1
+      atanh, kernel         5    two log2m within 2.4 each, the shift halves: 3.4 ln 2 + 2
       cbrt seed             2    the seed within two of floor(cbrt N); exact cubes then fix it
     """
     for _ in range(n):
@@ -405,9 +408,9 @@ def run79(ker, rng, M, n):
             M.add("log10, near one", 8, D, abs(log(xv, 10)) * power(2, 254 - ud))
         else:
             Lm, Ls = ker.log2pair(e, m)
-            M.add("log2, kernel", 38, abs(K.signed(Lm)), abs(log(xv, 2)) * power(2, -Ls))
+            M.add("log2, kernel", 4, abs(K.signed(Lm)), abs(log(xv, 2)) * power(2, -Ls))
             l = K.signed(K.mulw(Lm, LOG10_2))
-            M.add("log10, kernel", 16, abs(l), abs(log(xv, 10)) * power(2, -Ls))
+            M.add("log10, kernel", 4, abs(l), abs(log(xv, 10)) * power(2, -Ls))
     for _ in range(n):
         x = rf(rng, -120, -2) if rng.random() < 0.5 else rf(rng, -1, 8)
         s, e, m = K.unpack(x)
@@ -449,7 +452,7 @@ def run79(ker, rng, M, n):
             xf = ker.tofixed254(0, u, m)
             Rr = div254(WS, WS - xf)
             y = 2 * K.mulwu(xf, Rr)
-            P = ker.ln1pseries(y, K.SERIES_TERMS if u < -10 else K.WIDE_TERMS)
+            P = ker.ln1pseries(y) if u < -10 else ker.ln1pwide(y)
             M.add("atanh, |x| < 2^-6", 18, (m * K.mulwu(Rr, P)) >> 236, mp.atanh(xv) * power(2, 254 - u))
             continue
         uu1, a1 = onep(0, u, m)
@@ -457,7 +460,7 @@ def run79(ker, rng, M, n):
         i = uu1 - uu2
         sh = K.msb(i) + 1
         T = (i << (254 - sh)) + ((ker.log2m(a1) - ker.log2m(a2)) >> sh)
-        M.add("atanh, kernel", 32, K.mulwu(T, LN2_FLOOR), mp.atanh(xv) * power(2, 255 - sh))
+        M.add("atanh, kernel", 5, K.mulwu(T, LN2_FLOOR), mp.atanh(xv) * power(2, 255 - sh))
     for _ in range(n):
         x = rf(rng, -2000, 2000)
         s, e, m = K.unpack(x)
@@ -924,9 +927,20 @@ def cf_depth(n):
     return worst > mpf(2) ** -390
 
 
+def kernels(n):
+    """The exp/log kernels themselves (kernel254.py): each fit's certified sup
+    norm, then each kernel's largest error on n random and edge inputs against
+    its stated bound."""
+    ker, _, _ = K.build()
+    for ft in (ker.fit_exp, ker.fit_ln, ker.fit_lnw, ker.fit_em1):
+        print(ft.line())
+    return K.measure_kernels(ker, random.Random(254), n)
+
+
 if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 2000
-    bad = run(n)
+    bad = kernels(n)
+    bad |= run(n)
     bad |= sure(n * 4)
     bad |= cf_depth(max(n // 20, 50))
     sys.exit(1 if bad else 0)

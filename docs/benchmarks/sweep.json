@@ -85,9 +85,9 @@
    "hist": {
     "0": 21913
    },
-   "gasMedian": 7077,
-   "gasP99": 7247,
-   "gasMax": 29211,
+   "gasMedian": 3241,
+   "gasP99": 3310,
+   "gasMax": 25236,
    "fallback": 1,
    "fallbackRuns": 1,
    "fallbackPct": 0.005
@@ -105,12 +105,12 @@
    "hist": {
     "0": 20000
    },
-   "gasMedian": 7640,
-   "gasP99": 8919,
-   "gasMax": 32237,
-   "fallback": 59,
-   "fallbackRuns": 59,
-   "fallbackPct": 0.295
+   "gasMedian": 3623,
+   "gasP99": 4130,
+   "gasMax": 27459,
+   "fallback": 4,
+   "fallbackRuns": 4,
+   "fallbackPct": 0.02
   },
   {
    "lib": "fp256",
@@ -126,12 +126,12 @@
    "hist": {
     "0": 21573
    },
-   "gasMedian": 8727,
-   "gasP99": 16261,
-   "gasMax": 38418,
-   "fallback": 13,
-   "fallbackRuns": 13,
-   "fallbackPct": 0.059
+   "gasMedian": 2558,
+   "gasP99": 3454,
+   "gasMax": 28820,
+   "fallback": 5,
+   "fallbackRuns": 5,
+   "fallbackPct": 0.023
   },
   {
    "lib": "fp256",
@@ -147,9 +147,9 @@
    "hist": {
     "0": 21957
    },
-   "gasMedian": 6523,
-   "gasP99": 7312,
-   "gasMax": 29867,
+   "gasMedian": 2390,
+   "gasP99": 3361,
+   "gasMax": 25910,
    "fallback": 13,
    "fallbackRuns": 13,
    "fallbackPct": 0.059
@@ -168,12 +168,12 @@
    "hist": {
     "0": 21985
    },
-   "gasMedian": 14011,
-   "gasP99": 66566,
-   "gasMax": 69934,
-   "fallback": 377,
-   "fallbackRuns": 377,
-   "fallbackPct": 1.714
+   "gasMedian": 5844,
+   "gasP99": 54473,
+   "gasMax": 57020,
+   "fallback": 271,
+   "fallbackRuns": 271,
+   "fallbackPct": 1.232
   },
   {
    "lib": "fp256",
@@ -188,9 +188,9 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 16962,
-   "gasP99": 70409,
-   "gasMax": 93851,
+   "gasMedian": 12932,
+   "gasP99": 66531,
+   "gasMax": 89904,
    "fallback": 4,
    "fallbackRuns": 4,
    "fallbackPct": 0.1
@@ -208,9 +208,9 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 17694,
-   "gasP99": 69455,
-   "gasMax": 403133,
+   "gasMedian": 13885,
+   "gasP99": 65481,
+   "gasMax": 399281,
    "fallback": 16,
    "fallbackRuns": 16,
    "fallbackPct": 0.267
@@ -228,9 +228,9 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 17342,
-   "gasP99": 66677,
-   "gasMax": 409089,
+   "gasMedian": 13515,
+   "gasP99": 62963,
+   "gasMax": 405142,
    "fallback": 20,
    "fallbackRuns": 20,
    "fallbackPct": 0.333
@@ -249,12 +249,12 @@
    "hist": {
     "0": 5644
    },
-   "gasMedian": 16113,
-   "gasP99": 114972,
-   "gasMax": 159252,
-   "fallback": 964,
-   "fallbackRuns": 964,
-   "fallbackPct": 16.067
+   "gasMedian": 6246,
+   "gasP99": 105960,
+   "gasMax": 142129,
+   "fallback": 808,
+   "fallbackRuns": 808,
+   "fallbackPct": 13.467
   },
   {
    "lib": "fp256",
@@ -269,9 +269,9 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 14524,
+   "gasMedian": 10623,
    "gasP99": 32279,
-   "gasMax": 49986,
+   "gasMax": 41638,
    "fallback": 4,
    "fallbackRuns": 4,
    "fallbackPct": 0.067
@@ -289,9 +289,9 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 17373,
+   "gasMedian": 13150,
    "gasP99": 33141,
-   "gasMax": 50305,
+   "gasMax": 41433,
    "fallback": 8,
    "fallbackRuns": 8,
    "fallbackPct": 0.2
@@ -310,9 +310,9 @@
    "hist": {
     "0": 5853
    },
-   "gasMedian": 5065,
-   "gasP99": 69912,
-   "gasMax": 71382,
+   "gasMedian": 4998,
+   "gasP99": 59027,
+   "gasMax": 60807,
    "fallback": 587,
    "fallbackRuns": 587,
    "fallbackPct": 9.783
@@ -571,9 +571,9 @@
    "hist": {
     "0": 7937
    },
-   "gasMedian": 6891,
-   "gasP99": 7067,
-   "gasMax": 7067,
+   "gasMedian": 3044,
+   "gasP99": 3130,
+   "gasMax": 3130,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -592,9 +592,9 @@
    "hist": {
     "0": 7938
    },
-   "gasMedian": 6985,
-   "gasP99": 7166,
-   "gasMax": 7166,
+   "gasMedian": 3142,
+   "gasP99": 3229,
+   "gasMax": 3229,
    "fallback": 0,
    "fallbackRuns": 0,
    "fallbackPct": 0.0
@@ -612,12 +612,12 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 7419,
-   "gasP99": 10039,
-   "gasMax": 33526,
-   "fallback": 11,
-   "fallbackRuns": 11,
-   "fallbackPct": 0.138
+   "gasMedian": 3711,
+   "gasP99": 3904,
+   "gasMax": 26609,
+   "fallback": 1,
+   "fallbackRuns": 1,
+   "fallbackPct": 0.013
   },
   {
    "lib": "fp256",
@@ -632,12 +632,12 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 7656,
-   "gasP99": 9960,
-   "gasMax": 32692,
-   "fallback": 13,
-   "fallbackRuns": 13,
-   "fallbackPct": 0.163
+   "gasMedian": 3746,
+   "gasP99": 4130,
+   "gasMax": 27913,
+   "fallback": 5,
+   "fallbackRuns": 5,
+   "fallbackPct": 0.062
   },
   {
    "lib": "fp256",
@@ -653,9 +653,9 @@
    "hist": {
     "0": 3800
    },
-   "gasMedian": 697,
-   "gasP99": 697,
-   "gasMax": 697
+   "gasMedian": 693,
+   "gasP99": 693,
+   "gasMax": 693
   },
   {
    "lib": "fp256",
@@ -687,9 +687,9 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 7331,
-   "gasP99": 7595,
-   "gasMax": 35491,
+   "gasMedian": 3565,
+   "gasP99": 3660,
+   "gasMax": 31590,
    "fallback": 1,
    "fallbackRuns": 1,
    "fallbackPct": 0.013
@@ -707,9 +707,9 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 7431,
-   "gasP99": 7612,
-   "gasMax": 31469,
+   "gasMedian": 3551,
+   "gasP99": 3655,
+   "gasMax": 27778,
    "fallback": 1,
    "fallbackRuns": 1,
    "fallbackPct": 0.013
@@ -727,9 +727,9 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 7367,
-   "gasP99": 7635,
-   "gasMax": 58854,
+   "gasMedian": 3581,
+   "gasP99": 3685,
+   "gasMax": 54953,
    "fallback": 1,
    "fallbackRuns": 1,
    "fallbackPct": 0.013
@@ -747,12 +747,12 @@
    "hist": {
     "0": 8000
    },
-   "gasMedian": 12606,
-   "gasP99": 17085,
-   "gasMax": 71856,
-   "fallback": 17,
-   "fallbackRuns": 17,
-   "fallbackPct": 0.212
+   "gasMedian": 5073,
+   "gasP99": 5129,
+   "gasMax": 54147,
+   "fallback": 2,
+   "fallbackRuns": 2,
+   "fallbackPct": 0.025
   },
   {
    "lib": "fp256",
@@ -938,9 +938,9 @@
    "hist": {
     "0": 20367
    },
-   "gasMedian": 1070317,
-   "gasP99": 2118307,
-   "gasMax": 2139259
+   "gasMedian": 1070313,
+   "gasP99": 2118303,
+   "gasMax": 2139255
   },
   {
    "lib": "fp256",
@@ -991,9 +991,9 @@
     "0": 5913
    },
    "stage": "second",
-   "gasMedian": 28896,
-   "gasP99": 29067,
-   "gasMax": 29069
+   "gasMedian": 25057,
+   "gasP99": 25130,
+   "gasMax": 25132
   },
   {
    "lib": "fp256",
@@ -1009,9 +1009,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 30014,
-   "gasP99": 30782,
-   "gasMax": 31729
+   "gasMedian": 25973,
+   "gasP99": 26051,
+   "gasMax": 27132
   },
   {
    "lib": "fp256",
@@ -1028,9 +1028,9 @@
     "0": 5921
    },
    "stage": "second",
-   "gasMedian": 35809,
-   "gasP99": 104134,
-   "gasMax": 125359
+   "gasMedian": 28409,
+   "gasP99": 90923,
+   "gasMax": 112148
   },
   {
    "lib": "fp256",
@@ -1047,9 +1047,9 @@
     "0": 5957
    },
    "stage": "second",
-   "gasMedian": 29130,
-   "gasP99": 44917,
-   "gasMax": 44917
+   "gasMedian": 25251,
+   "gasP99": 40784,
+   "gasMax": 40784
   },
   {
    "lib": "fp256",
@@ -1066,9 +1066,9 @@
     "0": 5985
    },
    "stage": "second",
-   "gasMedian": 66512,
-   "gasP99": 69406,
-   "gasMax": 97380
+   "gasMedian": 54253,
+   "gasP99": 56639,
+   "gasMax": 87284
   },
   {
    "lib": "fp256",
@@ -1084,9 +1084,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 100216,
-   "gasP99": 402790,
-   "gasMax": 414585
+   "gasMedian": 96259,
+   "gasP99": 399056,
+   "gasMax": 410673
   },
   {
    "lib": "fp256",
@@ -1102,9 +1102,9 @@
     "0": 6000
    },
    "stage": "second",
-   "gasMedian": 104155,
-   "gasP99": 398789,
-   "gasMax": 414849
+   "gasMedian": 100231,
+   "gasP99": 394994,
+   "gasMax": 410969
   },
   {
    "lib": "fp256",
@@ -1120,9 +1120,9 @@
     "0": 6000
    },
    "stage": "second",
-   "gasMedian": 96439,
-   "gasP99": 377338,
-   "gasMax": 415591
+   "gasMedian": 92482,
+   "gasP99": 373498,
+   "gasMax": 411737
   },
   {
    "lib": "fp256",
@@ -1139,9 +1139,9 @@
     "0": 5644
    },
    "stage": "second",
-   "gasMedian": 66232,
-   "gasP99": 113359,
-   "gasMax": 157345
+   "gasMedian": 54839,
+   "gasP99": 104568,
+   "gasMax": 140222
   },
   {
    "lib": "fp256",
@@ -1157,9 +1157,9 @@
     "0": 6000
    },
    "stage": "second",
-   "gasMedian": 48754,
-   "gasP99": 66693,
-   "gasMax": 67317
+   "gasMedian": 40858,
+   "gasP99": 62662,
+   "gasMax": 62680
   },
   {
    "lib": "fp256",
@@ -1175,9 +1175,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 51175,
-   "gasP99": 67884,
-   "gasMax": 68208
+   "gasMedian": 43057,
+   "gasP99": 63563,
+   "gasMax": 63573
   },
   {
    "lib": "fp256",
@@ -1194,9 +1194,9 @@
     "0": 5853
    },
    "stage": "second",
-   "gasMedian": 58307,
-   "gasP99": 69778,
-   "gasMax": 97074
+   "gasMedian": 54188,
+   "gasP99": 59359,
+   "gasMax": 88329
   },
   {
    "lib": "fp256",
@@ -1213,9 +1213,9 @@
     "0": 3965
    },
    "stage": "second",
-   "gasMedian": 29604,
-   "gasP99": 29882,
-   "gasMax": 29884
+   "gasMedian": 25808,
+   "gasP99": 25945,
+   "gasMax": 25947
   },
   {
    "lib": "fp256",
@@ -1232,9 +1232,9 @@
     "0": 3968
    },
    "stage": "second",
-   "gasMedian": 29676,
-   "gasP99": 29976,
-   "gasMax": 29976
+   "gasMedian": 25839,
+   "gasP99": 26039,
+   "gasMax": 26039
   },
   {
    "lib": "fp256",
@@ -1250,9 +1250,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 30365,
-   "gasP99": 31133,
-   "gasMax": 33210
+   "gasMedian": 26303,
+   "gasP99": 26354,
+   "gasMax": 28421
   },
   {
    "lib": "fp256",
@@ -1268,9 +1268,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 30469,
-   "gasP99": 31237,
-   "gasMax": 32232
+   "gasMedian": 26421,
+   "gasP99": 26506,
+   "gasMax": 27607
   },
   {
    "lib": "fp256",
@@ -1286,9 +1286,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 13349,
-   "gasP99": 42442,
-   "gasMax": 42535
+   "gasMedian": 9216,
+   "gasP99": 38625,
+   "gasMax": 38655
   },
   {
    "lib": "fp256",
@@ -1304,9 +1304,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 31276,
-   "gasP99": 31411,
-   "gasMax": 31444
+   "gasMedian": 27301,
+   "gasP99": 27477,
+   "gasMax": 27497
   },
   {
    "lib": "fp256",
@@ -1322,9 +1322,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 21237,
-   "gasP99": 79189,
-   "gasMax": 79354
+   "gasMedian": 17104,
+   "gasP99": 75377,
+   "gasMax": 75407
   },
   {
    "lib": "fp256",
@@ -1340,9 +1340,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 14130,
-   "gasP99": 70209,
-   "gasMax": 71745
+   "gasMedian": 7950,
+   "gasP99": 53681,
+   "gasMax": 53761
   },
   {
    "lib": "fp127",
@@ -1523,7 +1523,7 @@
    "minBits": 129.2,
    "below": 2121,
    "above": 1860,
-   "gasMedian": 2065,
+   "gasMedian": 2061,
    "gasP99": 6781,
    "gasMax": 7049
   },
@@ -1860,7 +1860,7 @@
    "minBits": 129.1,
    "below": 662,
    "above": 741,
-   "gasMedian": 11769,
+   "gasMedian": 11765,
    "gasP99": 14135,
    "gasMax": 14443
   },

@@ -105,17 +105,18 @@ salt) is the one list the Makefile, `stdjson.py` and `deploy.py` read.
 | object | the idea | ops | runtime | salt |
 |---|---|---|---:|---|
 | FP256 | the number | add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg; neg, abs, sign; cmp, lt, eq, min, max, clamp; floor, ceil, round, frac; avg, dist, zeroFloorSub, lerp; mulDown, mulUp, divDown, divUp; fromUint, fromUintDown, fromUintUp, toUintDown, toUintUp, toIntDown, toIntUp, fromFixed18, toFixed18, toFixed18Down, toFixed18Up, fromFP127, toFP127: 43 | 10,333 | `FP256 v5` |
-| FP256E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 23,293 | `FP256E v5` |
-| FP256H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 15,302 | `FP256H v5` |
-| FP256S | the special functions | erf, erfc, normCdf, lambertW0, lambertWm1, factorial: 6 | 23,623 | `FP256S v5` |
+| FP256E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 21,598 | `FP256E v5` |
+| FP256H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 13,021 | `FP256H v5` |
+| FP256S | the special functions | erf, erfc, normCdf, lambertW0, lambertWm1, factorial: 6 | 24,263 | `FP256S v5` |
 
 **Why the hyperbolics have their own object.** They are elementary functions
 on the same kernel and belong with FP256E by idea, but FP256E with them
 measured 27,308 bytes, 2,732 over the 24,576 limit, and FP256S has under a
 thousand bytes to spare. So FP256H carries its own copy of the exp/log kernel
 at its own address. That costs bytes at deployment and nothing per call: a
-call runs one object's code either way. A smaller kernel (the table-level
-exp/ln rewrite on the plan) may fold FP256H back into FP256E.
+call runs one object's code either way. The kernels' rewrite (below) took
+FP256E to 21,598 bytes, 2,978 under the limit: still short of the hyperbolics,
+so the four objects stay.
 
 **The core's room goes to the basic ops.** Without the kernels FP256 is
 about 10 KB, so its fast paths can spend bytes: `normtop`, where add, sub,
@@ -143,6 +144,37 @@ pow and the conversions), FP256X (erf, erfc, normCdf, Lambert W), FP256X2
 (exp2, exp10, the logs, cbrt, the hyperbolics) and FP256X3 (the algebraic
 ops, gcd, factorial, pi): where the bytes fit, not by idea, with the exp/log
 kernel in three of them and the core at 64 bytes from the limit.
+
+## The kernels
+
+Every exp/log op runs on four kernels at 2^−254 (`scripts/fp256/generators/kernel254.py`
+fits and models them; `minimax.py` is the Remez exchange and the
+certificate). Blockulator 2.2 rewrote them after measuring what an EVM
+kernel pays for (a throwaway harness, inline library, median gas): a
+product through the `mulwu` helper cost 215 gas, the same high word written
+in line 91, a one-word product 32, a 16-way switch 252 against 156 for four
+binary tests, and a 512/256 division (`divh`) 393. So a multiplication saved
+is worth about 90 gas, a table level about 250 and a division about four
+products.
+
+| kernel | release two | now | gas then → now |
+|---|---|---|---:|
+| `exp2frac`, 2^f | a 16-entry table, a degree-26 Chebyshev fit on [0, 1/16) | two 16-entry levels (r < 2^−8), the degree-19 minimax polynomial (sup norm 2^−270.7), Horner at 2^−255, 7 of 19 steps in one word; within 4.7 units | 5,295 → 1,483 |
+| `log2m`, log2 of a mantissa | twelve multiplicative stages by 2^(1/2^k), a degree-17 fit; bounded at 37 units | two additive 16-entry levels by word-only reductions (one shift and one div by 16 + i or 256 + i, the table value added), y = w/(2 + w) by one `divh`, y·P(y²) with P the degree-12 minimax polynomial (2^−263.7); within 2.4 units | 5,810 → 1,653 |
+| `ln1pseries`, `ln1pwide`, ln(1 + d)/d below 2^−8 and 2^−4 | the 32- and 64-term Taylor series | (ln 2/2)(1 − y)·P(y²), y = d/(2 + d) by one `divh` (2/(2 + d) = 1 − y): the same P below 2^−8, a degree-21 one (2^−266.5) to 2^−4; within 2.7 units, relative however small d is | 7,586 → 1,406; 15,099 → 1,867 |
+| `expm1series`, (e^d − 1)/d below 2^−8 | the 24-term Taylor series | the degree-21 minimax polynomial on [−2^−8, 2^−8] (2^−271.5), signed Horner (one-word steps by `mul` and `sar`); within 1.6 units | 5,433 → 1,300 |
+
+Every fit is a minimax polynomial, none a Taylor truncation. A step of
+p_j = c_j + p_{j+1}·u whose error reaches the result times u^j runs in one
+word, ((p >> a)·(u >> b)) >> (256 − a − b), when that error times u^j is
+under 2^−9 units; the generator picks a and b and adds the excess (under
+2^−6 units in all) to the bound. The candidates that did not pay or did not
+fit: a third exp table level (1,465 gas, 1.5 KiB more, and FP256S, which
+carries the kernels, has 313 bytes left), a minimax rational corrector for
+exp, (A + zB)/(A − zB) by one `divh` (1,718 to 1,755: the division costs
+more than the products it saves), two 32-entry log levels (1,679 for 1 KiB
+more than two 16-entry ones at 1,702), and log2 straight from the reduced
+w without the division (1,934).
 
 ## Rounding
 
@@ -294,34 +326,34 @@ The bounds, and what they give:
 
 | op, region | err (units of D's last bit) | from | measured, 4,000 inputs | second stage within | misrounds only within |
 |---|---:|---|---:|---:|---:|
-| exp | 8 | kernel 4.1 + f's floor 1.4 | 4.08 | 2^−503 rel. | 2^−266 ULP of a tie |
-| expm1 | 8 | as exp; series 2 × 1.6 + 1 | 4.08 | 2^−495 rel. | 2^−258 ULP |
-| ln, log1p near one | 8 | series 2 × 3 + 1 | 3.45 | 2^−505 rel. | 2^−268 ULP |
-| ln | 40 | (log2m 37 + 1) ln 2 + 2 | 5.18 | 2^−489 rel. | 2^−252 ULP |
-| log1p | 44 | as ln, + 1 + x's normalisation | 6.73 | 2^−489 rel. | 2^−252 ULP |
-| pow, compound near one | 16 + 12(k + 1) | t within 8(k + 1) + 2 units | 0.42 of it | 2^−486 rel. | 2^−249 ULP |
-| pow, compound | 8 + yq·(39 + 2\|u\|)·355/2^16 | 6 + 1.3863·\|y\|·(log2m 37 + Lm's shift 2\|u\| + compound's dropped one 1.45); yq ≥ 2^8\|y\| (2^8(\|n\| + 1)) | 0.49 of it | 2^−470 rel. | 2^−233 ULP |
+| exp | 8 | kernel 4.7 + f's floor 1.4 | 3.24 | 2^−503 rel. | 2^−266 ULP of a tie |
+| expm1 | 8 | as exp; `expm1series` 2 × 1.6 + 1 | 3.67 | 2^−495 rel. | 2^−258 ULP |
+| ln, log1p near one | 8 | `ln1pk` 2 × 2.7 + 1 | 4.27 | 2^−505 rel. | 2^−268 ULP |
+| ln | 5 | (log2m 2.4 + 1) ln 2 + 2 | 1.75 | 2^−489 rel. | 2^−252 ULP |
+| log1p | 7 | as ln, + 1 + x's normalisation + the dropped one | 1.81 | 2^−489 rel. | 2^−252 ULP |
+| pow, compound near one | 16 + 12(k + 1) | t within 8(k + 1) + 2 units | 0.46 of it | 2^−486 rel. | 2^−249 ULP |
+| pow, compound | 8 + yq·(8 + 2\|u\|)·355/2^16 | 6.1 + 1.3863·\|y\|·(log2m 2.4 + Lm's shift 2^sh ≤ 2\|u\| + compound's dropped one 1.45, the 8 with room as 2^sh meets 2\|u\| at powers of two); yq ≥ 2^8\|y\| (2^8(\|n\| + 1)) | 0.78 of it | 2^−470 rel. | 2^−233 ULP |
 | powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it | as pow | 2^−233 ULP |
 | erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 10.6 | 2^−499 rel. | 2^−262 ULP |
 | erf, erfc, Φ, ½ ≤ y < 6 | 192 | 2 × g's 81 + 8 | 11.3 | 2^−444 rel. | 2^−207 ULP |
 | erfc, Φ, 6 ≤ y < 18 | 32n + 64 | A and B gain 2^−251 a step | 186 | 2^−392 rel. | 2^−155 ULP |
-| erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 76 terms), w's floor 2^−254, Q's 2 units, v's 6, two floors: under 48; the remainder below the first omitted term | 6.2 | 2^−392 rel. | 2^−155 ULP |
+| erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 76 terms), w's floor 2^−254, Q's 2 units, v's 6.1, two floors: under 49; the remainder below the first omitted term | 6.2 | 2^−392 rel. | 2^−155 ULP |
 | lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.13, 0.18 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
-| exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.54 | 2^−492 rel. | 2^−255 ULP |
-| log2, near one | 8 | d P within 3, times log2 e: 3 log2 e + 2 | 4.64 | 2^−497 rel. | 2^−260 ULP |
-| log2 | 38 | log2m 37, the shift into Lm 1 | 2.25 | 2^−489 rel. | 2^−252 ULP |
-| log10, near one | 8 | ln's 5, times log10 e: 5 log10 e + 2 | 1.30 | 2^−497 rel. | 2^−260 ULP |
-| log10 | 16 | (37 + 1) log10 2 + 2 | 1.68 | 2^−489 rel. | 2^−252 ULP |
-| sinh, \|x\| < 2^−8; to ½ | 18; 14 | expm1's series T within 2.5, \|x\|T within 2.1, the quotient T/(1 + \|x\|T) and the sum: 2 × 8.1 + 1; the kernel's U = e^\|x\| − 1 within 6, U/(1 + U) within 7 | 5.55; 3.92 | 2^−500 rel. | 2^−263 ULP |
-| tanh, \|x\| < 2^−9; to ½ | 14; 8 | T = (e^2\|x\| − 1)/(2\|x\|) within 3, the quotient T/(1 + \|x\|T) within 6.1: 2 × 6.1 + 1; U = e^2\|x\| − 1 within 12, U/(U + 2) has slope under ½: 6 + 1 | 3.68; 1.66 | 2^−500 rel. | 2^−263 ULP |
-| sinh, cosh | 16 | v within 6, 2^508/v within 7, the shift 1 | 4.76 | 2^−500 rel. | 2^−263 ULP |
-| tanh | 8 | 2/(V + 1) within 6 × 0.54 + 2 | 0.99 | 2^−500 rel. | 2^−263 ULP |
-| atanh, \|x\| < 2^−6 | 18 | R = 1/(1 − \|x\|) within 2.1, y = 2\|x\|R within 4.2, log1p's series P within 3 + 2.1, RP within 8.3: 2 × 8.3 + 1 | 4.38 | 2^−500 rel. | 2^−263 ULP |
-| atanh | 32 | two log2m within 37, halved by the shift: 38 ln 2 + 2 | 3.72 | 2^−491 rel. | 2^−254 ULP |
+| exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.66 | 2^−492 rel. | 2^−255 ULP |
+| log2, near one | 8 | d P within 3.7, times log2 e: 3.7 log2 e + 2 | 5.10 | 2^−497 rel. | 2^−260 ULP |
+| log2 | 4 | log2m 2.4, the shift into Lm 1 | 1.03 | 2^−489 rel. | 2^−252 ULP |
+| log10, near one | 8 | ln's 6.4, times log10 e: 6.4 log10 e + 2 | 1.60 | 2^−497 rel. | 2^−260 ULP |
+| log10 | 4 | (2.4 + 1) log10 2 + 2 | 1.66 | 2^−489 rel. | 2^−252 ULP |
+| sinh, \|x\| < 2^−8; to ½ | 18; 14 | expm1's series T within 2.5, \|x\|T within 2.1, the quotient T/(1 + \|x\|T) and the sum: 2 × 8.1 + 1; the kernel's U = e^\|x\| − 1 within 6.1, U/(1 + U) within 7.1 | 6.47; 4.79 | 2^−500 rel. | 2^−263 ULP |
+| tanh, \|x\| < 2^−9; to ½ | 14; 8 | T = (e^2\|x\| − 1)/(2\|x\|) within 3, the quotient T/(1 + \|x\|T) within 6.1: 2 × 6.1 + 1; U = e^2\|x\| − 1 within 12.2, U/(U + 2) has slope under ½: 6.1 + 1 | 4.58; 1.77 | 2^−500 rel. | 2^−263 ULP |
+| sinh, cosh | 16 | v within 6.1, 2^508/v within 7.1, the shift 1 | 4.60 | 2^−500 rel. | 2^−263 ULP |
+| tanh | 8 | 2/(V + 1) within 6.1 × 0.54 + 2 | 1.00 | 2^−500 rel. | 2^−263 ULP |
+| atanh, \|x\| < 2^−6 | 18 | R = 1/(1 − \|x\|) within 2.1, y = 2\|x\|R within 4.2, `ln1pk`'s P within 3 + 2.1, RP within 8.3: 2 × 8.3 + 1 | 4.27 | 2^−500 rel. | 2^−263 ULP |
+| atanh | 5 | two log2m within 2.4, halved by the shift: 3.4 ln 2 + 2 | 2.47 | 2^−491 rel. | 2^−254 ULP |
 
 `scripts/fp256/generators/bounds.py` recomputes each D as the Yul does (the
 kernel254.py and erf256.py models) against 120-digit truth: no measured
-error reaches 0.67 of its bound. An input misrounds only if its exact value lies
+error reaches 0.79 of its bound (pow's, where the shift's floor 2^sh meets 2|u|). An input misrounds only if its exact value lies
 within the last column's distance of a tie: for a value without structure,
 a chance of about twice that distance per input, 2^−116 at worst (next to
 Lambert W's branch point). None is known.
@@ -336,10 +368,10 @@ Lambert W's branch point). None is known.
 | `mulDown`, `mulUp` | FP256 | the product rounded toward −∞ / +∞; away from zero below the format: the smallest number | `Overflow`, `OutOfRange` |
 | `divDown`, `divUp` | FP256 | the quotient rounded toward −∞ / +∞ | `DivisionByZero`, `Overflow`, `OutOfRange` |
 | `sqrt` | FP256 | the integer root of the significand at 2^136 (the word root of the top 256 bits, one residual Newton step in a word, corrected by squaring), one rounding; never overflows | `OutOfRange` for x < 0 |
-| `exp` | FP256E | 2^(x log2 e): the 512-bit product with log2 e, 2^f from a 16-entry table and a degree-26 polynomial at 2^−254, the test; 1 + x + x²/2 floored exactly below 2^−118; exactly one below 2^−238 | `Overflow` above about 181,705; zero below −181,700 |
-| `ln` | FP256E | (E − bias + log2(M/2^236)) ln 2 through twelve reduction stages and a degree-17 polynomial; within 2^−8 of one, d = x − 1 exact and a 32-term series; the test | `OutOfRange` for x ≤ 0 |
-| `log1p` | FP256E | ln(1 + x) without a rounded 1 + x: x times the series below 2^−4, 1 + x exact above (ln x + 1/x from 2^254 in the second stage) | `OutOfRange` for x ≤ −1 |
-| `expm1` | FP256E | e^x − 1 without cancellation: x times the series below 2^−8, exp's unrounded 2^f minus one above; −1 below about −176 | `Overflow` above about 181,705 |
+| `exp` | FP256E | 2^(x log2 e): the 512-bit product with log2 e, 2^f from two 16-entry table levels and a degree-19 minimax polynomial at 2^−254, the test; 1 + x + x²/2 floored exactly below 2^−118; exactly one below 2^−238 | `Overflow` above about 181,705; zero below −181,700 |
+| `ln` | FP256E | (E − bias + log2(M/2^236)) ln 2 through two additive table levels, one division and a degree-12 minimax polynomial in y²; within 2^−8 of one, d = x − 1 exact and d·(ln 2/2)(1 − y)P(y²), y = d/(2 + d); the test | `OutOfRange` for x ≤ 0 |
+| `log1p` | FP256E | ln(1 + x) without a rounded 1 + x: x·(ln 2/2)(1 − y)P(y²) below 2^−4, 1 + x exact above (ln x + 1/x from 2^254 in the second stage) | `OutOfRange` for x ≤ −1 |
+| `expm1` | FP256E | e^x − 1 without cancellation: x times (e^x − 1)/x's minimax polynomial below 2^−8, exp's unrounded 2^f minus one above; −1 below about −176 | `Overflow` above about 181,705 |
 | `pow` | FP256E | 2^(y log2 x) through the kernels, the exact tie when x^y has at most 238 bits, else the second stage; shortcuts for y ∈ {1, 2, ½, −1}; 0^0 = 1 | `OutOfRange` for x < 0, `DivisionByZero` for 0^negative, `Overflow` |
 | `powu(x, n)` | FP256E | x^n for a plain integer n: below 2^16 binary exponentiation on a 256-bit significand, exact when it fits, tested when not; pow when the test fails and from 2^16; correctly rounded for \|n\| < 2^237 (n is a number above) | `Overflow`, `DivisionByZero` for 0^negative |
 | `compound(rate, n)` | FP256E | (1 + rate)^n without a rounded 1 + rate: log2(1 + rate) as log1p takes it, its product with n, 2^t; ties exact | `OutOfRange` below −1, `DivisionByZero` for −1 with n < 0, `Overflow` |
@@ -362,13 +394,13 @@ Lambert W's branch point). None is known.
 | `toFixed18(x)` | FP256 | the nearest 18-decimal word from the exact product M·10^18 | `Overflow` |
 | `exp2` | FP256E | 2^x: the integer part to the exponent, the fraction (exact from 2^−18) through the 2^f kernel, the test; exact for integral x; one below 2^−238 | `Overflow` from 262,145 |
 | `exp10` | FP256E | 2^(x log2 10) through exp's split and kernel, the test; 10^0 to 10^102 exact | `Overflow` above about 78,913.4 |
-| `log2` | FP256E | (E − bias) + log2m of the mantissa, the test; d series(d) log2 e within 2^−8 of one; exact at powers of two | `OutOfRange` for x ≤ 0 |
-| `log10` | FP256E | log2 x times log10 2, the test; ln's series times log10 e near one; exact at 10^0 to 10^102 | `OutOfRange` for x ≤ 0 |
+| `log2` | FP256E | (E − bias) + log2m of the mantissa, the test; d·ln1pk(d)·log2 e within 2^−8 of one; exact at powers of two | `OutOfRange` for x ≤ 0 |
+| `log10` | FP256E | log2 x times log10 2, the test; ln's near-one value times log10 e; exact at 10^0 to 10^102 | `OutOfRange` for x ≤ 0 |
 | `log2Up` | FP256E | ⌈log2 x⌉ as a number, exact | `OutOfRange` for x ≤ 0 |
 | `cbrt` | FP256 | the floor of the cube root at 238+ bits by Newton with precision doubling from a seed in the bits, an exact cube at the end, one rounding; odd | never |
-| `sinh`, `cosh` | FP256H | sinh = (U + U/(1 + U))/2 with U = e^\|x\| − 1 from expm1's machinery below ½ (its series below 2^−8, exp's unrounded kernel above); (e^\|x\| ∓ e^−\|x\|)/2 from that kernel and its reciprocal otherwise; cosh exactly one below 2^−118 | `Overflow` beyond about 181,705 |
-| `tanh` | FP256H | U/(U + 2) with U = e^2\|x\| − 1 from expm1's machinery below ½ (its series below 2^−9, the kernel above); 1 − 2/(e^2\|x\| + 1) above; ±1 once 2\|x\| log2 e passes 240 | never |
-| `atanh` | FP256H | log1p(y)/2 for y = 2\|x\|/(1 − \|x\|): x R P from log1p's series below 2^−6; (log2(1 + \|x\|) − log2(1 − \|x\|)) ln 2 / 2 from the exact arguments above | `OutOfRange` for \|x\| ≥ 1 |
+| `sinh`, `cosh` | FP256H | sinh = (U + U/(1 + U))/2 with U = e^\|x\| − 1 from expm1's machinery below ½ (its minimax polynomial below 2^−8, exp's unrounded kernel above); (e^\|x\| ∓ e^−\|x\|)/2 from that kernel and its reciprocal otherwise; cosh exactly one below 2^−118 | `Overflow` beyond about 181,705 |
+| `tanh` | FP256H | U/(U + 2) with U = e^2\|x\| − 1 from expm1's machinery below ½ (its polynomial below 2^−9, the kernel above); 1 − 2/(e^2\|x\| + 1) above; ±1 once 2\|x\| log2 e passes 240 | never |
+| `atanh` | FP256H | log1p(y)/2 for y = 2\|x\|/(1 − \|x\|): x R P from log1p's ln1pk below 2^−6; (log2(1 + \|x\|) − log2(1 − \|x\|)) ln 2 / 2 from the exact arguments above | `OutOfRange` for \|x\| ≥ 1 |
 | `min`, `max`, `clamp` | FP256 | one of the words, through the comparison key; clamp is min(hi, max(lo, x)), hi when lo > hi | `OutOfRange` |
 | `avg` | FP256 | (a + b)/2 from add's aligned sum, its exponent one lower: one rounding, no overflow | `OutOfRange` |
 | `dist`, `zeroFloorSub` | FP256 | \|a − b\| and max(0, a − b), sub's one rounding | `Overflow` |
@@ -402,7 +434,7 @@ misrounded there too.
 
 Exact ties in truncated series need care: 1 + x + x²/2 is a tie whenever
 x = a·2^−118 with a odd, so `exp` floors 1 + x + x²/2 exactly on the
-2^−254 grid below 2^−118 (the cubic only breaks the tie). The series bands
+2^−254 grid below 2^−118 (the cubic only breaks the tie). The near-one bands
 of `ln`, `log1p` and `expm1` meet the same ties (x ± x²/2), and their
 remainder x³/3 is at least 2^−236 ULP there, well inside what the second
 stage resolves.

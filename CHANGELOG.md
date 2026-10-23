@@ -21,6 +21,18 @@ path, bit-identical: through the object `mulDown`/`mulUp` 201 to 267 gas
 less, `divDown`/`divUp` 250 to 256, the in-place conversions up to 67, and
 add, sub, mul, div 10 to 70 (`docs/benchmarks/gas256.md`).
 
+FP256's exp/log kernels are rewritten, measured first and bit-identical in
+every result (correct rounding fixes the word; only the gas and the
+fallback rates move): 2^f by two 16-entry table levels and a degree-19
+minimax polynomial, log2 by two additive 16-entry levels, one division and a
+degree-12 minimax polynomial in y², ln(1 + d)/d and (e^d − 1)/d near zero by
+minimax polynomials in place of the Taylor series, every product's high word
+in line and the top polynomial steps in one word. Sweep medians, inline:
+exp 7,077 → 3,241, ln 7,640 → 3,623, log1p 8,727 → 2,558, expm1 6,523 →
+2,390, pow 14,011 → 5,844, compound 16,113 → 6,246, sinh 7,331 → 3,565,
+atanh 12,606 → 5,073, erf 16,962 → 12,932, lambertW0 14,524 → 10,623.
+FP256E is 21,598 bytes and FP256H 13,021.
+
 Migration: `pi(terms)` → `FP127Lib.PI` / `FP256Lib.PI` (the format's word
 nearest π; an object caller copies the literal); `gcd` has no replacement;
 an FP256 caller of FP256X, FP256X2 or FP256X3 calls the object that now

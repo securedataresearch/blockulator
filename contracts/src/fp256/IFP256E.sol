@@ -16,7 +16,7 @@ interface IFP256E {
 
     /// @notice e^x = 2^(x log2 e): the 512-bit product of the significand and
     ///         log2 e in two words (2^-508), split into the integer part and a
-    ///         fraction at 2^-254, then the 2^f kernel (within 6 units of
+    ///         fraction at 2^-254, then the 2^f kernel (within 6.1 units of
     ///         2^-254) and one rounding when that bound clears the rounding
     ///         boundary, else e^r - 1 in two words for r = x - k ln 2:
     ///         correctly rounded. Below 2^-118,
@@ -28,11 +28,12 @@ interface IFP256E {
     function exp(int256 x) external pure returns (int256 r);
     /// @notice ln(x) = (E - bias + log2(M / 2^236)) ln 2: the exponent exactly,
     ///         the mantissa through the log2 kernel at 2^-254, the sum scaled to
-    ///         fill a word, one product with ln 2 and one rounding when its 40
+    ///         fill a word, one product with ln 2 and one rounding when its 5
     ///         units clear the rounding boundary, else u ln 2 + ln(mantissa) in
     ///         two words (one Newton step on the kernel's value): correctly
     ///         rounded. Within 2^-8 of one, d = x - 1 is exact and ln(1 + d) =
-    ///         d * series(d) at 2^-254 (in two words when needed), so the
+    ///         d * (ln 2/2)(1 - y) P(y^2), y = d/(2 + d), at 2^-254 (in two words
+    ///         when needed), so the
     ///         relative precision holds all the way down.
     function ln(int256 x) external pure returns (int256 r);
     /// @notice x^y = 2^(y log2 x): log2 x as a scaled word from the kernel (or
@@ -45,15 +46,16 @@ interface IFP256E {
     ///         Shortcuts for y in {1, 2, 1/2, -1}.
     function pow(int256 x, int256 y) external pure returns (int256 r);
     /// @notice ln(1 + x) without forming a rounded 1 + x. Below 2^-4, x times
-    ///         the ln series at 2^-254 (32 terms below 2^-8, 64 above), so the
-    ///         relative precision holds all the way down; above, 1 + x exactly
+    ///         ln(1 + x)/x = (ln 2/2)(1 - y) P(y^2), y = x/(2 + x), at 2^-254
+    ///         (P the kernel's minimax polynomial below 2^-8, a wider one above),
+    ///         so the relative precision holds all the way down; above, 1 + x exactly
     ///         on a 2^-254 grid under its leading bit, the log2 kernel and one
     ///         product with ln 2. Each fast value carries its error bound; when
     ///         it reaches the rounding boundary the series or ln(1 + x) is
     ///         recomputed in two words. Correctly rounded.
     function log1p(int256 x) external pure returns (int256 r);
-    /// @notice e^x - 1 without cancellation. Below 2^-8, x times the series
-    ///         sum x^k / (k + 1)! at 2^-254; above, exp's split of x log2 e and
+    /// @notice e^x - 1 without cancellation. Below 2^-8, x times (e^x - 1)/x
+    ///         from its minimax polynomial at 2^-254; above, exp's split of x log2 e and
     ///         its unrounded 2^f, with the one subtracted on the same 2^-254
     ///         grid; each within its bound, recomputed in two words when that
     ///         reaches the rounding boundary. Correctly rounded; -1 below about
@@ -92,14 +94,14 @@ interface IFP256E {
     ///         Exactly one below 2^-240.
     function exp10(int256 x) external pure returns (int256 r);
     /// @notice log2(x) = (E - bias) + log2(M / 2^236): the exponent exactly and
-    ///         the mantissa through the log2 kernel, one rounding when its 38
+    ///         the mantissa through the log2 kernel, one rounding when its 4
     ///         units clear the rounding boundary; within 2^-8 of one, d = x - 1
-    ///         exact and d series(d) log2 e. Else the same in two words (pow's
+    ///         exact and d ln1pk(d) log2 e. Else the same in two words (pow's
     ///         wide log2): correctly rounded, exact at powers of two.
     function log2(int256 x) external pure returns (int256 r);
     /// @notice log10(x) = log2(x) log10 2: the exponent exactly, the mantissa
     ///         through the log2 kernel, one product and one rounding when its
-    ///         16 units clear the rounding boundary; within 2^-8 of one, ln's
+    ///         4 units clear the rounding boundary; within 2^-8 of one, ln's
     ///         series times log10 e. Else u log10 2 + ln(mantissa) log10 e in
     ///         three words: correctly rounded, exact at the powers of ten that
     ///         are numbers (10^0 to 10^102).
