@@ -219,6 +219,14 @@ half an ULP. Only then a second stage recomputes the value in two words at
 
 The second stage:
 
+Its three series (`wexpm1`, `wln1ps`, `em1w`) stay series on purpose. Each is
+convergent, not fitted: the number of terms is computed from the argument so
+the truncation sits below a stated bound (2^−503 to 2^−517), the way a
+series run to convergence works at any precision. They run only when `rbad`
+says the fast value cannot round with certainty, so no typical call pays for
+them; rebuilding them on the fast path's tables would change 20 ops'
+bytecode to speed up the rare path (decided 2026-10-23, #155).
+
 - `wexpm1`: e^r − 1 for r in [0, 1): z = r/2^24, e^z − 1 = z·T(z) by 19
   Horner terms (k = 20..12 in one word, k = 11..2 in two), then 24
   doublings E ← 2E + E² on the value scaled by 2^24, which keep its
