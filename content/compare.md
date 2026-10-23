@@ -10,13 +10,13 @@ group = "results"
 
 {{ <pitch layout="ops" /> }}
 
-FP127's transcendentals compute twice the bits and round to the nearest word; Quad and FP256 ([its table](/library/fp256/#the-ops)) pay for the moving point on every op. Only FP127 and FP256 have `erf`, `erfc`, `normCdf` and W₋₁ (Solady has W₀), and they are the expensive ones.
+Only FP256 and FP127 offer `erf`, `erfc`, `normCdf` and both Lambert W branches (Solady has W₀ alone), each correctly rounded or the nearest word. FP256's per-op detail, with the deployed objects, is [on its page](/library/fp256/#the-ops).
 
 ## Gas per op
 
-Every op, every library, inline unless the column says otherwise.
+Every op of FP256 and FP127 against every library we compare, all called inline.
 
-{{ <gastable repo={config.extra.repo} /> }}
+{{ <gasall /> }}
 
 ## Precision per op
 

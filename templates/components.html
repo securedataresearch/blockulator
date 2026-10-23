@@ -59,12 +59,38 @@
 {#- Median gas per op and form, on the site's one basis (typical inputs where the op has them, marked t, else the
     ladder). Empty: the library does not offer the op; rev: it does, and reverted (or the input was outside its domain
     or format) on every input. Each cell's title is the call it measures (gas.calls). -#}
+{#- Every op of both libraries against every comparison library, all inline, ours first. FP256 and Quad from fp256/gas.json
+    (Quad measured on the same values as FP256), the rest from gas.json; each cell is the typical-input median where the op has
+    one, else the ladder median. Empty: the library does not offer the op; rev: it offers it and reverted on every input. -#}
+{% component gasall() -%}
+{%- set a = load_data(path="static/data/gas.json") %}{% set b = load_data(path="static/data/fp256/gas.json") -%}
+{%- set cols = [["FP256", "b", "lib"], ["FP127", "a", "lib"], ["ABDKMathQuad", "b", "quad"], ["PRBMath", "a", "prb"], ["Solady", "a", "solady"], ["ABDK 64.64", "a", "abdk"], ["Balancer", "a", "balancer"]] -%}
+{%- set_global names = "" %}{% for n, o in b.ops %}{% set_global names = names ~ n ~ "," %}{% endfor %}{% for n, o in a.ops %}{% if not ("," ~ n ~ ",") in ("," ~ names) %}{% set_global names = names ~ n ~ "," %}{% endif %}{% endfor -%}
+<div class="scroll">
+<table class="gasall">
+<thead><tr><th>op</th>{% for c in cols %}<th class="num{% if loop.index <= 2 %} ours{% endif %}">{{ c[0] }}</th>{% endfor %}</tr></thead>
+<tbody>
+{%- for n in names | split(pat=",") | sort %}{% if n != "" %}
+{%- set_global ty = false %}{% if b.ops[n] is defined %}{% if b.ops[n].typical is defined %}{% set_global ty = true %}{% endif %}{% endif %}{% if a.ops[n] is defined %}{% if a.ops[n].typical is defined %}{% set_global ty = true %}{% endif %}{% endif %}
+<tr><td class="mono">{{ n }}{% if ty %} <sup class="t" title="typical inputs">t</sup>{% endif %}</td>
+{%- for c in cols %}{% if c[1] == "a" %}{% set g = a %}{% else %}{% set g = b %}{% endif %}{% set f = c[2] %}{% set_global v = "" %}{% set_global r = false %}{% set_global t = false %}{% set_global call = "" -%}
+{%- if g.ops[n] is defined %}{% set o = g.ops[n] %}{% if o.typical is defined %}{% set sm = o.typical.summary %}{% set_global t = true %}{% if o.typical.reverts is defined %}{% if o.typical.reverts[f] is defined %}{% set_global r = true %}{% endif %}{% endif %}{% else %}{% set sm = o.summary %}{% if o.reverts is defined %}{% if o.reverts[f] is defined %}{% set_global r = true %}{% endif %}{% endif %}{% endif %}{% if sm[f] %}{% set_global v = sm[f].median %}{% endif %}{% endif -%}
+{%- if g.calls is defined %}{% if g.calls[f] is defined %}{% if g.calls[f][n] is defined %}{% set_global call = g.calls[f][n] %}{% endif %}{% endif %}{% endif -%}
+<td class="num{% if loop.index <= 2 %} ours{% endif %}"{% if call %} title="{{ call }}"{% endif %}>{% if v != "" %}{{ v | num_format }}{% elif r %}<span class="rev">rev</span>{% endif %}</td>
+{%- endfor %}</tr>
+{%- endif %}{% endfor %}
+</tbody>
+</table>
+</div>
+<p class="note">Median gas per inline call: over random inputs that take no shortcut for the ops marked <sup class="t">t</sup>, else over the op's input ladder. FP256 and ABDKMathQuad are measured on the same values (<a href="/data/fp256/gas.json">fp256/gas.json</a>), the others on FP127's inputs (<a href="/data/gas.json">gas.json</a>). Empty: the library does not offer the op; <span class="rev">rev</span>: it offers it and reverted on every input. Hover a cell for the function it calls. Calling the deployed contract instead adds the <code>staticcall</code>: about {{ (a.ops.add.summary.yul.median - a.ops.add.summary.lib.median) | num_format }} gas on FP127's <code>add</code> ({{ <gas lib="fp127" op="add" form="yul" /> }} against {{ <gas lib="fp127" op="add" /> }}); every op's object figure is on the <a href="/library/#the-ops">FP127</a> and <a href="/library/fp256/#the-ops">FP256</a> pages.</p>
+{%- endcomponent %}
+
 {% component gastable(repo: string, lib: string = "fp127") -%}
 {%- if lib == "fp256" %}{% set gas = load_data(path="static/data/fp256/gas.json") %}{% set forms = ["yul", "lib", "fp127lib", "quad"] %}{% set src = "/data/fp256/gas.json" %}{% set md = "gas256.md" -%}
 {%- else %}{% set gas = load_data(path="static/data/gas.json") %}{% set forms = ["yul", "lib", "abdk", "solady", "prb", "quad", "balancer"] %}{% set src = "/data/gas.json" %}{% set md = "gas.md" %}{% endif -%}
 <div class="scroll">
 <table>
-<thead><tr><th>op</th>{% for f in forms %}<th class="num">{{ gas.formLabels[f] }}</th>{% endfor %}</tr></thead>
+<thead><tr><th>op</th>{% for f in forms %}<th class="num">{% if f == "yul" %}{% if lib == "fp256" %}FP256{% else %}FP127{% endif %} deployed (staticcall){% else %}{{ gas.formLabels[f] }}{% endif %}</th>{% endfor %}</tr></thead>
 <tbody>
 {%- for name, o in gas.ops %}
 {%- if o.typical is defined %}{% set sm = o.typical.summary %}{% else %}{% set sm = o.summary %}{% endif %}
