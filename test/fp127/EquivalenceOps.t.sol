@@ -59,6 +59,18 @@ contract EquivalenceOps is FP127Harness {
         assertEq(o.value, h.value, string.concat(what, ": obj != huff"));
     }
 
+    /// For the ops built on the square root (sqrt, gavg, hypot): equal to the
+    /// Huff, or exactly one below it. The Huff's sqrt could stop one above the
+    /// floor near a perfect square; since #159 the Yul returns the floor there
+    /// (sqrt's floor is proven in test/proofs and fuzzed in FuzzProofs).
+    function _objHuffRoot(bytes memory newCall, bytes memory huffCall, string memory what) internal view {
+        Res memory o = _try(address(obj), newCall);
+        Res memory h = _try(address(huff), huffCall);
+        assertTrue(h.ok, string.concat(what, ": huff reverted"));
+        assertTrue(o.ok, string.concat(what, ": obj reverted"));
+        if (o.value != h.value) assertEq(o.value + 1, h.value, string.concat(what, ": obj neither huff nor huff - 1"));
+    }
+
     function _u(int256 x) internal pure returns (uint256) { return uint256(x); }
 
     /// The transcendentals now run with 64 guard bits and round to nearest,
@@ -205,7 +217,7 @@ contract EquivalenceOps is FP127Harness {
 
     function testFuzz_huff_sqrt(int256 x) public view {
         x = bound(x, 0, MAX);
-        _objHuff(abi.encodeCall(IFP127.sqrt, (x)), abi.encodeCall(IHuffOps.sqrtRaw, (_u(x))), "sqrt");
+        _objHuffRoot(abi.encodeCall(IFP127.sqrt, (x)), abi.encodeCall(IHuffOps.sqrtRaw, (_u(x))), "sqrt");
     }
 
     function testFuzz_huff_cbrt(int256 x) public view {
@@ -291,13 +303,13 @@ contract EquivalenceOps is FP127Harness {
         _objHuff(abi.encodeCall(IFP127.zeroFloorSub, (a, b)), abi.encodeCall(IHuffOps.zeroFloorSubRaw, (_u(a), _u(b))), "zeroFloorSub");
         _objHuff(abi.encodeCall(IFP127.dist, (a, b)), abi.encodeCall(IHuffOps.distRaw, (_u(a), _u(b))), "dist");
         _objHuff(abi.encodeCall(IFP127.lerp, (a, b, t)), abi.encodeCall(IHuffOps.lerpRaw, (_u(a), _u(b), _u(t))), "lerp");
-        _objHuff(abi.encodeCall(IFP127.hypot, (a, b)), abi.encodeCall(IHuffOps.hypotRaw, (_u(a), _u(b))), "hypot");
+        _objHuffRoot(abi.encodeCall(IFP127.hypot, (a, b)), abi.encodeCall(IHuffOps.hypotRaw, (_u(a), _u(b))), "hypot");
     }
 
     function testFuzz_huff_gavg(int256 a, int256 b) public view {
         a = bound(a, 0, B190);
         b = bound(b, 0, B190);
-        _objHuff(abi.encodeCall(IFP127.gavg, (a, b)), abi.encodeCall(IHuffOps.gavgRaw, (_u(a), _u(b))), "gavg");
+        _objHuffRoot(abi.encodeCall(IFP127.gavg, (a, b)), abi.encodeCall(IHuffOps.gavgRaw, (_u(a), _u(b))), "gavg");
     }
 
     function testFuzz_huff_factorial(int256 n) public view {
