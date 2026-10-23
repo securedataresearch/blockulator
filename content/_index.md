@@ -5,8 +5,8 @@ template = "home.html"
 
 [extra]
 eyebrow = "Blockulator 2.2 · Secure Data Research"
-headline = "Dust is Over."
-sub = "Two rulers for EVM arithmetic: FP127 for the money range, FP256 for everything. Round once; never run out of ruler."
+headline = "Exact math for real money."
+sub = "When the amounts are large or the call is free, 18 digits are not enough. FP127 keeps 38 and FP256 keeps 71, every op correctly rounded and checked on chain. On gas, FP127 now beats PRBMath on most ops, and both beat binary128."
 cta_primary_text = "See the results"
 cta_primary_href = "/results/"
 cta_secondary_text = "Use the library"

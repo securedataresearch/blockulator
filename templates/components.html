@@ -91,7 +91,8 @@
 {%- set g127 = load_data(path="static/data/gas.json") -%}
 {%- set g256 = load_data(path="static/data/fp256/gas.json") -%}
 {%- set oplist = ["add", "mul", "div", "exp", "ln", "pow", "sqrt"] -%}
-{%- if layout == "ops" %}{% set libs = ["fp127", "fp256", "quad", "solady", "prb"] %}{% else %}{% set libs = ["fp256", "quad", "fp127", "prb", "solady"] %}{% endif -%}
+{#- ours first, then the libraries they are measured against, in the same order on every page -#}
+{%- set libs = ["fp256", "fp127", "quad", "prb", "solady"] -%}
 {%- set names = {"fp256": "FP256", "quad": "ABDKMathQuad", "fp127": "FP127", "prb": "PRBMath SD59x18", "solady": "Solady"} -%}
 {%- set what = {"fp256": "256-bit float", "quad": "binary128 float", "fp127": "127.128 fixed point", "prb": "18-decimal fixed point", "solady": "18-decimal fixed point"} -%}
 {%- set digits = {"fp256": 71, "quad": 34, "fp127": 38, "prb": 18, "solady": 18} -%}
