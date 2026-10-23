@@ -76,7 +76,8 @@ INTEREST = {"compound", "compound-pow", "compound-annual", "accrual-per-second",
 # deep-tail-option: absolute error in the strike's smallest unit, 18 decimals
 WEI = {"deep-tail-option": mpf(10) ** 18}
 SCALE_OF_FORM = {"fp127": "fp127", "fp127lib": "fp127", "abdk": "abdk", "solady": "wad", "prb": "wad",
-                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "fp256": "fp256"}
+                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "fp256": "fp256",
+                 "solmate": "wad", "oz": "wad", "uniswap": "wad", "prbud": "wad", "snekmate": "wad"}
 SCALE_INT = {k: v[1] for k, v in INPUT_SCALES.items()}
 SCALE_NAME = {k: v[0] for k, v in INPUT_SCALES.items()}
 REASONS = {
@@ -89,7 +90,12 @@ REASONS = {
     "0x7964b44f": "ParamOutOfRange(uint256): the value does not fit the representation",
     "0x7bb9ae15": "Unsupported(uint8): the library has no model for this scenario",
     "0xa28f5c6b": "Quad NaN or infinity",
-    "0x34d81929": "Balancer: negative base or exponent",
+    "0x34d81929": "Negative(): a negative value where the library is unsigned (Balancer pow, PRBMath UD60x18, the WAD roots)",
+    "0x059b101b": "PRBMath_SD59x18_Log_InputTooSmall", "0x063103bf": "PRBMath_SD59x18_Sqrt_Overflow",
+    "0xca7ec0c5": "PRBMath_SD59x18_Exp_InputTooBig", "0x36d32ef0": "PRBMath_UD60x18_Log_InputTooSmall",
+    "0x1af63aca": "PRBMath_UD60x18_Exp_InputTooBig", "0xedc236ad": "PRBMath_UD60x18_Sqrt_Overflow",
+    "0x1615e638": "Solady LnWadUndefined()", "0x5c43740d": "Solady SDivWadFailed()",
+    "0x08c379a0": "Error(string): a require with a message (Solmate's wadLn and snekmate's wad_ln below zero)",
     "0x022701e0": "Balancer BaseOutOfBounds()", "0xd8317311": "Balancer ExponentOutOfBounds()",
     "0xa2f9f7e3": "Balancer ProductOutOfBounds()", "0xd4794efd": "Balancer InvalidExponent()", "0xb4120f14": "Balancer OutOfBounds()",
 }
@@ -99,6 +105,7 @@ REASON_SIGS = {
     "0x35278d12": "Overflow()", "0x23d359a3": "DivisionByZero()", "0x7db3aba7": "OutOfRange()",
     "0xedcd4dd4": "SMulWadFailed()", "0xa37bfec9": "ExpOverflow()", "0x49f7642b": "RPowOverflow()",
     "0x4e487b71": "Panic(uint256)", "0x7964b44f": "ParamOutOfRange(uint256)", "0x7bb9ae15": "Unsupported(uint8)",
+    "0x34d81929": "Negative()",
 }
 
 METHODOLOGY = {
@@ -113,7 +120,7 @@ METHODOLOGY = {
     "wei": "For the deep-tail option, absErrWei is |v - t| in wei of the strike at 18 decimals ($100 = 10^20 wei). Past d1 = -8 the true price falls below one wei and every library's error with it, so relative digits there describe the format, not money.",
     "headline": "The Results page shows a single N = 10,000 per scenario; the ladder page shows every N.",
     "agree": "agree is the count of leading significant digits of the printed value (42 significant digits) that are literally equal to the printed truth. The demo page colours the rest of the value with it. It is a reading aid, not a measurement: a carry across 0.999… / 1.000… gives 0.",
-    "gas": "gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the FP127 object, so the call into the adapter and the ABI decoding are excluded. The FP127 (deployed) form includes one staticcall per op; FP127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe and report Unsupported elsewhere, which the tables and charts leave empty (a library with no model is not a revert). gasPerStep = gasTotal / N. Reverted cells carry no gas.",
+    "gas": "gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the FP127 object, so the call into the adapter and the ABI decoding are excluded. The FP127 (deployed) form includes one staticcall per op, and so does snekmate, a Vyper library that a Solidity adapter can only call; FP127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe, and OpenZeppelin and Uniswap FullMath, which have no exp, ln or real power (and FullMath no root), only the scenarios built from mul, div and their roots; each reports Unsupported elsewhere, which the tables and charts leave empty (a library with no model is not a revert). gasPerStep = gasTotal / N. Reverted cells carry no gas.",
     "live": "LadderRunner.run(scenario, form, n, p) on Sepolia executes any cell with one eth_call and returns (ok, raw, reason, gasPerStep, gasTotal). scripts/ladder/livecap.py sends every cell's floored parameters p and compares the returned raw word with the committed one bit for bit (or the revert selector for a reverted cell). liveMaxN is the largest N per form the public RPC completed within its gas limit, measured by scripts/ladder/livecap.py.",
     "reproduce": "make ladder regenerates ladder.json and ladder.md from the Foundry harness (test/ladder/Ladder.t.sol) and this script; make ladder-check fails CI when the committed dataset differs. Versions of every library and of forge are recorded in the dataset.",
 }
@@ -523,7 +530,8 @@ def fmt_cell(c: dict, key: str, exact: bool) -> str:
 
 
 def render_md(doc: dict) -> str:
-    forms = [f["id"] for f in doc["forms"]]
+    # FP256 and FP127 first, then the rest in form-id order
+    forms = sorted((f["id"] for f in doc["forms"]), key=lambda f: (f != "fp256", f not in ("fp127", "fp127lib")))
     L = ["# Terminal precision ladder", "",
          f"Generated {doc['generated']} by `make ladder`. Versions: " + ", ".join(f"{k} {v}" for k, v in doc["versions"].items()) + ".", "",
          "Each scenario is run for several inputs; the first table is the reference input in full (`digits / digitsFormat / gas per step`, where digits is against the exact truth and digitsFormat against the truth from the parameters as the library received them, both to one decimal and capped at what the format holds at that magnitude), the next two summarise all inputs (`median (min–max)` of the capped digits over the inputs every library completed at that N; `k/n` where a library completed k of n inputs). Full values, both truths, signed errors and raw words are in ladder.json; the method is in the Methodology section at the end.", ""]

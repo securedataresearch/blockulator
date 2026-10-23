@@ -66,7 +66,7 @@
     one, else the ladder median. Empty: the library does not offer the op; rev: it offers it and reverted on every input. -#}
 {% component gasall() -%}
 {%- set a = load_data(path="static/data/gas.json") %}{% set b = load_data(path="static/data/fp256/gas.json") -%}
-{%- set cols = [["FP256", "b", "lib"], ["FP127", "a", "lib"], ["ABDKMathQuad", "b", "quad"], ["PRBMath", "a", "prb"], ["Solady", "a", "solady"], ["ABDK 64.64", "a", "abdk"], ["Balancer", "a", "balancer"]] -%}
+{%- set cols = [["FP256", "b", "lib"], ["FP127", "a", "lib"], ["ABDKMathQuad", "b", "quad"], ["PRBMath", "a", "prb"], ["Solady", "a", "solady"], ["ABDK 64.64", "a", "abdk"], ["Balancer", "a", "balancer"], ["Solmate", "a", "solmate"], ["PRB UD60x18", "a", "prbud"], ["snekmate", "a", "snekmate"], ["OpenZeppelin", "a", "oz"], ["Uniswap", "a", "uniswap"]] -%}
 {%- set_global names = "" %}{% for n, o in b.ops %}{% set_global names = names ~ n ~ "," %}{% endfor %}{% for n, o in a.ops %}{% if not ("," ~ n ~ ",") in ("," ~ names) %}{% set_global names = names ~ n ~ "," %}{% endif %}{% endfor -%}
 <div class="scroll">
 <table class="gasall">
@@ -89,7 +89,7 @@
 
 {% component gastable(repo: string, lib: string = "fp127") -%}
 {%- if lib == "fp256" %}{% set gas = load_data(path="static/data/fp256/gas.json") %}{% set forms = ["yul", "lib", "fp127lib", "quad"] %}{% set src = "/data/fp256/gas.json" %}{% set md = "gas256.md" -%}
-{%- else %}{% set gas = load_data(path="static/data/gas.json") %}{% set forms = ["yul", "lib", "abdk", "solady", "prb", "quad", "balancer"] %}{% set src = "/data/gas.json" %}{% set md = "gas.md" %}{% endif -%}
+{%- else %}{% set gas = load_data(path="static/data/gas.json") %}{% set forms = ["yul", "lib", "abdk", "solady", "prb", "quad", "balancer", "solmate", "prbud", "snekmate", "oz", "uniswap"] %}{% set src = "/data/gas.json" %}{% set md = "gas.md" %}{% endif -%}
 <div class="scroll">
 <table>
 <thead><tr><th>op</th>{% for f in forms %}<th class="num">{% if f == "yul" %}{% if lib == "fp256" %}FP256{% else %}FP127{% endif %} deployed (staticcall){% else %}{{ gas.formLabels[f] }}{% endif %}</th>{% endfor %}</tr></thead>
@@ -210,7 +210,7 @@
 {% component ladderchart(cells: map, ladder: array, log10: map, W: integer = 720, H: integer = 340) -%}
 {%- set lines = ["fp256", "fp127", "quad"] -%}
 {%- set names = {"fp256": "FP256", "fp127": "FP127", "quad": "binary128"} -%}
-{%- set bcls = ["s-solady", "s-aave"] %}{% if W > 500 %}{% set blbl = ["WAD libraries, 64.64", "Aave, Morpho"] %}{% else %}{% set blbl = ["WAD, 64.64", "Aave, Morpho"] %}{% endif %}{% set bforms = [["solady", "prb", "balancer", "abdk"], ["aave", "morpho"]] -%}
+{%- set bcls = ["s-solady", "s-aave"] %}{% if W > 500 %}{% set blbl = ["WAD libraries, 64.64", "Aave, Morpho"] %}{% else %}{% set blbl = ["WAD, 64.64", "Aave, Morpho"] %}{% endif %}{% set bforms = [["solady", "prb", "balancer", "abdk", "solmate", "prbud", "snekmate", "oz", "uniswap"], ["aave", "morpho"]] -%}
 {%- set cap = 72 %}{% if W > 500 %}{% set L = 30 %}{% set R = 168 %}{% set gap = 15 %}{% else %}{% set L = 26 %}{% set R = 116 %}{% set gap = 13 %}{% endif %}{% set T = 12 %}{% set B = 40 -%}
 {%- set pw = W - L - R %}{% set ph = H - T - B -%}
 <svg viewBox="0 0 {{ W }} {{ H }}" width="100%" aria-hidden="true">
@@ -266,8 +266,8 @@
     the one below it, inside the plot. -#}
 {% component ladderband(summary: map, key: string, ladder: array, log10: map, W: integer = 640, H: integer = 300) -%}
 {%- set series = ["fp256", "fp127", "quad", "abdk", "maker", "aave", "morpho"] -%}
-{%- set wad = ["solady", "prb", "balancer"] -%}
-{%- set labels = {"fp256": "FP256", "fp127": "FP127", "quad": "Quad", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
+{%- set wad = ["solady", "prb", "balancer", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
+{%- set labels = {"fp256": "FP256", "fp127": "FP127", "quad": "Quad", "solady": "Solady", "abdk": "ABDK", "prb": "PRBMath", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
 {%- set cap = 72 -%}
 {%- if W > 500 %}{% set L = 44 %}{% set R = 112 %}{% set gap = 13 %}{% set wlbl = "WAD libraries" %}{% else %}{% set L = 34 %}{% set R = 78 %}{% set gap = 13 %}{% set wlbl = "WAD" %}{% endif %}{% set T = 16 %}{% set B = 40 -%}
 {%- set pw = W - L - R %}{% set ph = H - T - B -%}

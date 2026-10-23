@@ -66,6 +66,31 @@
    "id": "fp256",
    "label": "FP256 (float, inline)",
    "scale": "fp256"
+  },
+  {
+   "id": "solmate",
+   "label": "Solmate SignedWadMath / FixedPointMathLib",
+   "scale": "10**18"
+  },
+  {
+   "id": "oz",
+   "label": "OpenZeppelin Math (mulDiv, sqrt)",
+   "scale": "10**18"
+  },
+  {
+   "id": "uniswap",
+   "label": "Uniswap v4 FullMath (mulDiv)",
+   "scale": "10**18"
+  },
+  {
+   "id": "prbud",
+   "label": "PRBMath UD60x18",
+   "scale": "10**18"
+  },
+  {
+   "id": "snekmate",
+   "label": "snekmate math (Vyper)",
+   "scale": "10**18"
   }
  ],
  "scenarios": [
@@ -198,6 +223,21 @@
     ],
     "fp256": [
      "mul"
+    ],
+    "solmate": [
+     "wadMul"
+    ],
+    "oz": [
+     "mulDiv(a, b, 1e18)"
+    ],
+    "uniswap": [
+     "mulDiv(a, b, 1e18)"
+    ],
+    "prbud": [
+     "mul"
+    ],
+    "snekmate": [
+     "mul_div(a, b, 1e18)"
     ]
    }
   },
@@ -338,6 +378,24 @@
     "fp256": [
      "pow",
      "mul"
+    ],
+    "solmate": [
+     "wadPow",
+     "wadMul"
+    ],
+    "oz": [
+     "unsupported"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "pow",
+     "mul"
+    ],
+    "snekmate": [
+     "wad_exp(wad_ln(x) y)",
+     "mul_div(a, b, 1e18)"
     ]
    }
   },
@@ -452,6 +510,25 @@
     ],
     "fp256": [
      "sqrt",
+     "add"
+    ],
+    "solmate": [
+     "sqrt(x 1e18)",
+     "add"
+    ],
+    "oz": [
+     "sqrt(x 1e18)",
+     "add"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "sqrt",
+     "add"
+    ],
+    "snekmate": [
+     "isqrt(x 1e18) (Vyper built-in)",
      "add"
     ]
    }
@@ -581,6 +658,24 @@
     "fp256": [
      "ln",
      "exp"
+    ],
+    "solmate": [
+     "wadLn",
+     "wadExp"
+    ],
+    "oz": [
+     "unsupported"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "ln",
+     "exp"
+    ],
+    "snekmate": [
+     "wad_ln",
+     "wad_exp"
     ]
    }
   },
@@ -716,6 +811,26 @@
     "fp256": [
      "mul",
      "sub"
+    ],
+    "solmate": [
+     "wadMul",
+     "sub"
+    ],
+    "oz": [
+     "mulDiv(a, b, 1e18)",
+     "sub"
+    ],
+    "uniswap": [
+     "mulDiv(a, b, 1e18)",
+     "sub"
+    ],
+    "prbud": [
+     "mul",
+     "sub"
+    ],
+    "snekmate": [
+     "mul_div(a, b, 1e18)",
+     "sub"
     ]
    }
   },
@@ -793,6 +908,30 @@
      "ln",
      "add",
      "exp"
+    ],
+    "solmate": [
+     "wadDiv",
+     "wadLn",
+     "add",
+     "wadExp"
+    ],
+    "oz": [
+     "unsupported"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "div",
+     "ln",
+     "add",
+     "exp"
+    ],
+    "snekmate": [
+     "mul_div(a, 1e18, b)",
+     "wad_ln",
+     "add",
+     "wad_exp"
     ]
    }
   },
@@ -976,6 +1115,33 @@
      "add",
      "sqrt",
      "mul"
+    ],
+    "solmate": [
+     "wadDiv",
+     "wadLn",
+     "add",
+     "sqrt(x 1e18)",
+     "wadMul"
+    ],
+    "oz": [
+     "unsupported"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "div",
+     "ln",
+     "add",
+     "sqrt",
+     "mul"
+    ],
+    "snekmate": [
+     "mul_div(a, 1e18, b)",
+     "wad_ln",
+     "add",
+     "isqrt(x 1e18) (Vyper built-in)",
+     "mul_div(a, b, 1e18)"
     ]
    }
   },
@@ -1061,6 +1227,21 @@
     ],
     "fp256": [
      "mul"
+    ],
+    "solmate": [
+     "wadMul"
+    ],
+    "oz": [
+     "mulDiv(a, b, 1e18)"
+    ],
+    "uniswap": [
+     "mulDiv(a, b, 1e18)"
+    ],
+    "prbud": [
+     "mul"
+    ],
+    "snekmate": [
+     "mul_div(a, b, 1e18)"
     ]
    }
   },
@@ -1153,6 +1334,21 @@
     ],
     "fp256": [
      "mul"
+    ],
+    "solmate": [
+     "wadMul"
+    ],
+    "oz": [
+     "mulDiv(a, b, 1e18)"
+    ],
+    "uniswap": [
+     "mulDiv(a, b, 1e18)"
+    ],
+    "prbud": [
+     "mul"
+    ],
+    "snekmate": [
+     "mul_div(a, b, 1e18)"
     ]
    }
   },
@@ -1212,6 +1408,24 @@
     "fp256": [
      "compound",
      "mul"
+    ],
+    "solmate": [
+     "wadPow",
+     "wadMul"
+    ],
+    "oz": [
+     "unsupported"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "pow",
+     "mul"
+    ],
+    "snekmate": [
+     "wad_exp(wad_ln(x) y)",
+     "mul_div(a, b, 1e18)"
     ]
    },
    "inputs": [
@@ -1333,6 +1547,27 @@
      "mul",
      "div",
      "exp"
+    ],
+    "solmate": [
+     "wadMul",
+     "wadDiv",
+     "wadExp"
+    ],
+    "oz": [
+     "unsupported"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "snekmate": [
+     "mul_div(a, b, 1e18)",
+     "mul_div(a, 1e18, b)",
+     "wad_exp"
     ]
    },
    "inputs": [
@@ -1486,6 +1721,36 @@
      "exp",
      "sub",
      "normCdf"
+    ],
+    "solmate": [
+     "wadMul",
+     "sqrt(x 1e18)",
+     "wadLn",
+     "wadDiv",
+     "wadExp",
+     "normCdf by the series/fraction through these"
+    ],
+    "oz": [
+     "unsupported"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "mul",
+     "sqrt",
+     "ln",
+     "div",
+     "exp",
+     "normCdf by the series/fraction through these"
+    ],
+    "snekmate": [
+     "mul_div(a, b, 1e18)",
+     "isqrt(x 1e18) (Vyper built-in)",
+     "wad_ln",
+     "mul_div(a, 1e18, b)",
+     "wad_exp",
+     "normCdf by the series/fraction through these"
     ]
    },
    "inputs": [
@@ -1621,6 +1886,24 @@
      "exp",
      "mul",
      "sub"
+    ],
+    "solmate": [
+     "wadExp",
+     "wadMul"
+    ],
+    "oz": [
+     "unsupported"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "exp",
+     "mul"
+    ],
+    "snekmate": [
+     "wad_exp",
+     "mul_div(a, b, 1e18)"
     ]
    },
    "inputs": [

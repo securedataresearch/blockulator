@@ -15,6 +15,11 @@ import {LadderAave} from "../../contracts/src/ladder/LadderAave.sol";
 import {LadderMorpho} from "../../contracts/src/ladder/LadderMorpho.sol";
 import {LadderMaker} from "../../contracts/src/ladder/LadderMaker.sol";
 import {LadderFP256} from "../../contracts/src/ladder/LadderFP256.sol";
+import {LadderSolmate} from "../../contracts/src/ladder/LadderSolmate.sol";
+import {LadderOZ} from "../../contracts/src/ladder/LadderOZ.sol";
+import {LadderUniswap} from "../../contracts/src/ladder/LadderUniswap.sol";
+import {LadderPRBUD} from "../../contracts/src/ladder/LadderPRBUD.sol";
+import {LadderSnekmate} from "../../contracts/src/ladder/LadderSnekmate.sol";
 
 /// @title Edges
 /// @notice Produces the edges dataset: every probe of scripts/ladder/edge-inputs.json
@@ -25,11 +30,19 @@ import {LadderFP256} from "../../contracts/src/ladder/LadderFP256.sol";
 ///         computes the truth and writes docs/benchmarks/edges.json.
 contract Edges is Test {
     string constant INPUTS = "scripts/ladder/edge-inputs.json";
-    string[11] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256"];
-    string[11] SCALE = ["fp127", "fp127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray", "fp256"];
+    string[16] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp256", "solmate", "oz", "uniswap", "prbud", "snekmate"];
+    string[16] SCALE = ["fp127", "fp127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray", "fp256", "wad", "wad", "wad", "wad", "wad"];
 
     EdgeRunner runner;
     string json;
+
+    /// The Vyper SnekmateMath contract, deployed from its artifact
+    /// (scripts/ladder/vyper.py: snekmate v0.1.2, Vyper 0.4.3).
+    function _snekmate() internal returns (address m) {
+        bytes memory init = vm.parseJsonBytes(vm.readFile("out/vyper/SnekmateMath.json"), ".bytecode.object");
+        assembly { m := create(0, add(init, 32), mload(init)) }
+        require(m != address(0), "SnekmateMath deploy");
+    }
 
     function setUp() public {
         bytes memory runtime = vm.parseJsonBytes(vm.readFile("out/FP127.yul/FP127.json"), ".deployedBytecode.object");
@@ -45,7 +58,12 @@ contract Edges is Test {
             address(new LadderAave()),
             address(new LadderMorpho()),
             address(new LadderMaker()),
-            address(new LadderFP256())
+            address(new LadderFP256()),
+            address(new LadderSolmate()),
+            address(new LadderOZ()),
+            address(new LadderUniswap()),
+            address(new LadderPRBUD()),
+            address(new LadderSnekmate(_snekmate()))
         ]);
         json = vm.readFile(INPUTS);
     }

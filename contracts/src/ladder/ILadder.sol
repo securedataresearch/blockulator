@@ -31,7 +31,9 @@ library Scenario {
 
 /// @notice Library (form) ids, in the order of LadderRunner's constructor.
 ///         Ids 0 to 4 are the v4 runner's and keep their numbers; 5 to 9 were
-///         added with the v5 runner, 10 (FP256, the float) with v6.
+///         added with the v5 runner, 10 (FP256, the float) with v6, 11 to 15
+///         (Solmate, OpenZeppelin, Uniswap FullMath, PRBMath UD60x18,
+///         snekmate) with v12.
 library Form {
     uint8 constant FP127 = 0;
     uint8 constant FP127LIB = 1;
@@ -44,7 +46,12 @@ library Form {
     uint8 constant MORPHO = 8;
     uint8 constant MAKER = 9;
     uint8 constant FP256 = 10;
-    uint8 constant COUNT = 11;
+    uint8 constant SOLMATE = 11;
+    uint8 constant OZ = 12;
+    uint8 constant UNISWAP = 13;
+    uint8 constant PRBUD = 14;
+    uint8 constant SNEKMATE = 15;
+    uint8 constant COUNT = 16;
 }
 
 /// @notice One-shot op ids for the edges dataset (scripts/ladder/edges.json).

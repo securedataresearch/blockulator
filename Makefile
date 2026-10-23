@@ -1,4 +1,4 @@
-.PHONY: gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: gates proofs build-yul build-vyper talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 
@@ -96,12 +96,18 @@ vectors-fp256:
 build: gen-check gen-inputs-check
 	@forge build
 	@$(MAKE) -s build-yul
+	@$(PY) scripts/ladder/vyper.py
 
 # Every deployed Yul object is compiled by solc directly (stdjson.py: solc
 # 0.8.38, evm osaka, 0.8.24's optimizer sequence pinned); the artifact has the
 # Foundry shape. forge builds no Yul (foundry.toml skip).
 build-yul:
 	@set -e; for o in $(OBJECTS); do FP_LIB=$$o $(PY) scripts/fp127/stdjson.py artifact; done
+# The comparison's Vyper contracts (snekmate), each with the compiler its
+# library pins, through uvx -> out/vyper/<Name>.json. forge skips *.vy.
+build-vyper:
+	@$(PY) scripts/ladder/vyper.py
+
 build-fp256:
 	@set -e; for o in $(FP256_OBJECTS); do FP_LIB=$$o $(PY) scripts/fp127/stdjson.py artifact; done
 
@@ -282,7 +288,7 @@ deploy-ladder-sepolia: build
 	@$(PY) scripts/ladder/deploy.py record $(SEPOLIA_RPC)
 
 verify-ladder-sepolia: build
-	@set -e; for c in LadderFP127 LadderFP127Lib LadderABDK LadderSolady LadderPRB LadderQuad LadderBalancer LadderAave LadderMorpho LadderMaker LadderFP256; do \
+	@set -e; for c in LadderFP127 LadderFP127Lib LadderABDK LadderSolady LadderPRB LadderQuad LadderBalancer LadderAave LadderMorpho LadderMaker LadderFP256 LadderSolmate LadderOZ LadderUniswap LadderPRBUD; do \
 		A=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['$$c']['address'])"); \
 		echo "== $$c $$A"; \
 		forge verify-contract --chain sepolia --verifier sourcify --watch $$A contracts/src/ladder/$$c.sol:$$c || true; \
@@ -290,7 +296,11 @@ verify-ladder-sepolia: build
 	done; \
 	A=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderRunner']['address'])"); \
 	ARGS=$$($(PY) python -c "import json;d=json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderRunner']['constructorArgs'];print('[' + ','.join(d) + ']')"); \
-	ENC=$$(cast abi-encode "f(address[11])" $$ARGS); \
+	ENC=$$(cast abi-encode "f(address[16])" $$ARGS); \
+	S=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderSnekmate']['address'])"); \
+	M=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['SnekmateMath']['address'])"); \
+	echo "== LadderSnekmate $$S (SnekmateMath $$M is Vyper: verify it on Sourcify from contracts/src/ladder/vyper/SnekmateMath.vy, vyper 0.4.3)"; \
+	forge verify-contract --chain sepolia --verifier sourcify --watch --constructor-args $$(cast abi-encode "f(address)" $$M) $$S contracts/src/ladder/LadderSnekmate.sol:LadderSnekmate || true; \
 	echo "== LadderRunner $$A"; \
 	forge verify-contract --chain sepolia --verifier sourcify --watch --constructor-args $$ENC $$A contracts/src/ladder/LadderRunner.sol:LadderRunner || true; \
 	test -z "$$ETHERSCAN_API_KEY" || forge verify-contract --chain sepolia --verifier etherscan --watch --constructor-args $$ENC $$A contracts/src/ladder/LadderRunner.sol:LadderRunner || true; \

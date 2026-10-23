@@ -4,10 +4,10 @@
 {% block content %}
 {%- set d = load_data(path="static/data/ladder.json") -%}
 {#- columns as on the Results page: the floats and FP127 first; FP127Lib only in the reference table (it equals FP127) -#}
-{%- set forms = ["fp256", "fp127", "fp127lib", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho"] -%}
-{%- set sforms = ["fp256", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho"] -%}
-{%- set labels = {"fp127": "FP127 (deployed, staticcall)", "fp127lib": "FP127Lib (inline)", "abdk": "ABDKMath64x64", "solady": "Solady FixedPointMathLib", "prb": "PRBMath SD59x18", "quad": "ABDKMathQuad (binary128)", "balancer": "Balancer LogExpMath", "aave": "Aave v3 MathUtils (RAY)", "morpho": "Morpho Blue MathLib", "maker": "Maker rpow (RAY)", "fp256": "FP256 (float, inline)"} -%}
-{%- set short = {"fp127": "FP127", "fp127lib": "FP127Lib", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "fp256": "FP256"} -%}
+{%- set forms = ["fp256", "fp127", "fp127lib", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
+{%- set sforms = ["fp256", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
+{%- set labels = {"fp127": "FP127 (deployed, staticcall)", "fp127lib": "FP127Lib (inline)", "abdk": "ABDKMath64x64", "solady": "Solady FixedPointMathLib", "prb": "PRBMath SD59x18", "quad": "ABDKMathQuad (binary128)", "balancer": "Balancer LogExpMath", "aave": "Aave v3 MathUtils (RAY)", "morpho": "Morpho Blue MathLib", "maker": "Maker rpow (RAY)", "fp256": "FP256 (float, inline)", "solmate": "Solmate SignedWadMath / FixedPointMathLib", "prbud": "PRBMath UD60x18", "snekmate": "snekmate math (Vyper)", "oz": "OpenZeppelin Math (mulDiv, sqrt)", "uniswap": "Uniswap v4 FullMath (mulDiv)"} -%}
+{%- set short = {"fp127": "FP127", "fp127lib": "FP127Lib", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "fp256": "FP256", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
 <article class="prose doc wide">
 {% include "pagehead.html" %}
 {{ page.content | safe }}

@@ -30,6 +30,12 @@ abstract contract LadderBase is ILadderAdapter {
     function _sqrt(int256 x) internal view virtual returns (int256);
     function _pow(int256 x, int256 y) internal view virtual returns (int256);
 
+    /// Touch, outside the timed window, any contract the ops call, so the
+    /// measurement does not include a cold-account surcharge. The Vyper
+    /// adapter (LadderSnekmate) touches its library; the inline adapters
+    /// call nothing, and the runner warms the FP127 object itself.
+    function _warm() internal view virtual {}
+
     // ---- composite ops a library may have natively -------------------------
 
     /// Sign test in the representation. Every grid is a signed integer;
@@ -120,6 +126,7 @@ abstract contract LadderBase is ILadderAdapter {
     function op(uint8 o, int256[] calldata a) external view returns (int256 raw, uint256 gasUsed) {
         uint256 want = (o == Op.POW || o == Op.MUL || o == Op.DIV || o == Op.COMPOUND || o == Op.POWU) ? 2 : 1;
         if (a.length != want) revert BadParamCount(o, a.length);
+        _warm();
         uint256 g0 = gasleft();
         if (o == Op.LN) raw = _ln(_p(a, 0));
         else if (o == Op.EXP) raw = _exp(_p(a, 0));
@@ -167,6 +174,7 @@ abstract contract LadderBase is ILadderAdapter {
 
     function run(uint8 scenario, uint32 n, int256[] calldata p) external view returns (int256 raw, uint256 gasUsed) {
         _need(scenario, p, _arity(scenario));
+        _warm();
         uint256 g0 = gasleft();
         if (scenario == Scenario.COMPOUND) raw = _compound(p, n);
         else if (scenario == Scenario.COMPOUND_POW) raw = _compoundPow(p, n);

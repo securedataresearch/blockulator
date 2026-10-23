@@ -5,7 +5,7 @@ and docs/benchmarks/gas.md.
     forge test --match-contract GasLadder -vv | uv run scripts/fp127/gas_to_json.py
 
 Line format:  GAS|<op>|<inputIndex>|<input hex>|<form>|<gas, NA or REV>[|typical]
-Forms:        huff yul caller lib abdk solady prb quad balancer
+Forms:        huff yul caller lib abdk solady prb quad balancer solmate oz uniswap prbud snekmate
 
 NA: the form does not offer the op. REV: it does, but reverted on that input,
 or the input is outside the function's domain or its format's range.
@@ -35,7 +35,7 @@ ROOT = Path(__file__).resolve().parents[2]
 LIB = "fp256" if "--lib" in sys.argv and sys.argv[sys.argv.index("--lib") + 1] == "fp256" else "fp127"
 OUT_JSON = ROOT / "docs" / "benchmarks" / ("gas256.json" if LIB == "fp256" else "gas.json")
 OUT_MD = ROOT / "docs" / "benchmarks" / ("gas256.md" if LIB == "fp256" else "gas.md")
-FORMS = ["yul", "lib", "fp127lib", "quad"] if LIB == "fp256" else ["huff", "yul", "caller", "lib", "abdk", "solady", "prb", "quad", "balancer"]
+FORMS = ["yul", "lib", "fp127lib", "quad"] if LIB == "fp256" else ["huff", "yul", "caller", "lib", "abdk", "solady", "prb", "quad", "balancer", "solmate", "oz", "uniswap", "prbud", "snekmate"]
 FORM_LABEL = {
     "huff": "Huff (Sepolia, staticcall)",
     "yul": "Yul object (staticcall)",
@@ -46,6 +46,11 @@ FORM_LABEL = {
     "prb": "PRBMath SD59x18",
     "quad": "ABDKMathQuad",
     "balancer": "Balancer LogExpMath",
+    "solmate": "Solmate",
+    "oz": "OpenZeppelin Math",
+    "uniswap": "Uniswap FullMath",
+    "prbud": "PRBMath UD60x18",
+    "snekmate": "snekmate (Vyper)",
     "fp127lib": "FP127Lib (inline), the same op",
 }
 
@@ -97,6 +102,40 @@ CALLS_FP127 = {
         "sqrt": "pow(x, 0.5e18) (composed; x >= 0)", "cbrt": "pow(x, 333333333333333333) (composed; x >= 0)",
         "pow": "pow(x, y) (x, y >= 0)",
     },
+    "solmate": {
+        "exp": "wadExp(x)", "ln": "wadLn(x)", "sqrt": "sqrt(x * 1e18) (composed: the integer root; x >= 0)",
+        "mul": "wadMul(a, b) (toward zero)", "div": "wadDiv(a, b) (toward zero)", "pow": "wadPow(x, y)",
+        "mulDown": "mulWadDown(a, b) (a, b >= 0)", "mulUp": "mulWadUp(a, b) (a, b >= 0)",
+        "divDown": "divWadDown(a, b) (a, b >= 0)", "divUp": "divWadUp(a, b) (a, b >= 0)",
+        "powu": "rpow(x, n, 1e18) (x >= 0, n >= 0)",
+    },
+    "oz": {
+        "abs": "SignedMath.abs(int256)", "sqrt": "Math.sqrt(x * 1e18) (composed: the integer root; x >= 0)",
+        "log2Up": "Math.log2(uint256, Rounding.Ceil) on the integer x (integral x >= 1)",
+        "mulDown": "Math.mulDiv(a, b, 1e18) (a, b >= 0)", "mulUp": "Math.mulDiv(a, b, 1e18, Rounding.Ceil) (a, b >= 0)",
+        "divDown": "Math.mulDiv(a, 1e18, b) (a, b >= 0)", "divUp": "Math.mulDiv(a, 1e18, b, Rounding.Ceil) (a, b >= 0)",
+        "avg": "SignedMath.average(a, b) (toward zero; FP127's avg floors)", "min": "SignedMath.min(a, b)", "max": "SignedMath.max(a, b)",
+        "zeroFloorSub": "Math.saturatingSub(uint256, uint256) (a, b >= 0)",
+    },
+    "uniswap": {
+        "mulDown": "FullMath.mulDiv(a, b, 1e18) (a, b >= 0)", "mulUp": "FullMath.mulDivRoundingUp(a, b, 1e18) (a, b >= 0)",
+        "divDown": "FullMath.mulDiv(a, 1e18, b) (a, b >= 0)", "divUp": "FullMath.mulDivRoundingUp(a, 1e18, b) (a, b >= 0)",
+    },
+    "prbud": {
+        "exp": "exp(x) (x >= 0)", "exp2": "exp2(x) (x >= 0)", "ln": "ln(x) (x >= 0)", "log2": "log2(x) (x >= 0)",
+        "log10": "log10(x) (x >= 0)", "sqrt": "sqrt(x) (x >= 0)", "inv": "inv(x) (x >= 0)",
+        "floor": "floor(x) (x >= 0)", "ceil": "ceil(x) (x >= 0)", "frac": "frac(x) (x >= 0)",
+        "add": "add(a, b) (a, b >= 0)", "sub": "sub(a, b) (a, b >= 0)", "mul": "mul(a, b) (a, b >= 0)",
+        "div": "div(a, b) (a, b >= 0)", "pow": "pow(x, y) (x, y >= 0)",
+        "powu": "powu(x, n), n a uint256 (x >= 0, n >= 0)", "avg": "avg(a, b) (a, b >= 0)", "gavg": "gm(a, b) (a, b >= 0)",
+    },
+    "snekmate": {
+        "exp": "_wad_exp(x)", "ln": "_wad_ln(x)", "cbrt": "_wad_cbrt(x) (x >= 0)", "sign": "_signum(x)",
+        "log2Up": "_log2(uint256, True) on the integer x (integral x >= 1)",
+        "mulDown": "_mul_div(a, b, 1e18, False) (a, b >= 0)", "mulUp": "_mul_div(a, b, 1e18, True) (a, b >= 0)",
+        "divDown": "_mul_div(a, 1e18, b, False) (a, b >= 0)", "divUp": "_mul_div(a, 1e18, b, True) (a, b >= 0)",
+        "avg": "_int256_average(a, b)",
+    },
 }
 CALLS_FP256 = {
     "quad": {
@@ -133,6 +172,10 @@ def versions() -> dict[str, str]:
         "aave": "aave-v3-origin@8305565ae342 (MathUtils, transcribed)",
         "morpho": "morpho-blue@8e26ca6a8dbc (MathLib, transcribed)",
         "maker": "dss pot.sol rpow via solady " + tag("lib/solady"),
+        "solmate": "solmate@" + git("-C", str(ROOT / "lib/solmate"), "rev-parse", "--short", "HEAD") + " (no tag: v6 predates SignedWadMath)",
+        "openzeppelin": "openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored)",
+        "uniswap": "v4-core v4.0.0 (FullMath, vendored)",
+        "snekmate": tag("lib/snekmate") + " (math module, vyper 0.4.3)",
         "forge": subprocess.run(["forge", "--version"], capture_output=True, text=True).stdout.split("\n")[0].strip(),
     }
 

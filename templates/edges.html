@@ -3,10 +3,10 @@
 {% block description %}{{ page.description }}{% endblock description %}
 {% block content %}
 {%- set d = load_data(path="static/data/edges.json") -%}
-{%- set forms = ["fp127", "fp256", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker"] -%}
+{%- set forms = ["fp127", "fp256", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
 {#- display caps: FP256 to its 71 digits (72, 73 are where the truth sits near the grid); the rest as measured -#}
-{%- set caps = {"fp127": 999, "fp256": 71, "abdk": 999, "solady": 999, "prb": 999, "quad": 999, "balancer": 999, "aave": 999, "morpho": 999, "maker": 999} -%}
-{%- set short = {"fp127": "FP127", "fp256": "FP256", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker"} -%}
+{%- set caps = {"fp127": 999, "fp256": 71, "abdk": 999, "solady": 999, "prb": 999, "quad": 999, "balancer": 999, "aave": 999, "morpho": 999, "maker": 999, "solmate": 999, "prbud": 999, "snekmate": 999, "oz": 999, "uniswap": 999} -%}
+{%- set short = {"fp127": "FP127", "fp256": "FP256", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "maker": "Maker", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
 <article class="prose doc wide">
 {% include "pagehead.html" %}
 {{ page.content | safe }}
