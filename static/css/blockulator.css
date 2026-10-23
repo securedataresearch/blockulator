@@ -85,20 +85,25 @@
 @font-face { font-family: "Instrument Sans"; font-style: italic; font-weight: 400 700; font-display: optional; src: url(/fonts/instrument-sans-italic.woff2) format("woff2"); }
 @font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400 500; font-display: optional; src: url(/fonts/jetbrains-mono.woff2) format("woff2"); }
 
-/* page changes cross-fade; the bar stays put */
+/* page changes: the old page eases out, then the new one eases in, one after the other so no frame shows both;
+   between them the transition layer shows the same backdrop, and the bar stays put */
 @view-transition { navigation: auto; }
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: .12s; }
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; animation-timing-function: ease-out; }
-::view-transition-group(topbar) { animation: none; }
+::view-transition { background: var(--mesh), var(--bg); }
+::view-transition-group(root), ::view-transition-group(topbar) { animation: none; }
+::view-transition-image-pair(root) { isolation: auto; }
+::view-transition-old(root) { mix-blend-mode: normal; animation: page-out 90ms cubic-bezier(.4, 0, 1, 1) both; }
+::view-transition-new(root) { mix-blend-mode: normal; animation: page-in 240ms cubic-bezier(.2, .8, .2, 1) 60ms both; }
 ::view-transition-old(topbar) { display: none; }
 ::view-transition-new(topbar) { animation: none; }
+@keyframes page-out { to { opacity: 0; } }
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } }
 
 /* top bar (site.css): sticky on inner pages, fixed over the hero on the home page, the same element and place on both */
 .home .topbar { position: fixed; left: 0; right: 0; }
 @media (max-width: 640px) { .links { gap: 2px; font-size: 14px; } .links a { padding: 6px 9px; } .links .cta { margin-left: 2px; } .brand span { display: none; } }
 
 /* the shader stays hidden until hero.js has drawn its first frame (it adds .on), then fades in over the page background */
-canvas.cloth { opacity: 0; transition: opacity .9s ease-out; }
+canvas.cloth { opacity: 0; transition: opacity .45s cubic-bezier(.2, .8, .2, 1); }
 canvas.cloth.on { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { canvas.cloth { transition: none; } ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
 
