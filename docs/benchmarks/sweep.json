@@ -926,23 +926,6 @@
   },
   {
    "lib": "fp256",
-   "op": "gcd",
-   "n": 4000,
-   "status": {
-    "ok": 4000
-   },
-   "correctlyRounded": 4000,
-   "misrounded": 0,
-   "maxUlp": 0,
-   "hist": {
-    "0": 4000
-   },
-   "gasMedian": 4591,
-   "gasP99": 9039,
-   "gasMax": 9583
-  },
-  {
-   "lib": "fp256",
    "op": "factorial",
    "n": 20367,
    "status": {
@@ -958,23 +941,6 @@
    "gasMedian": 1070317,
    "gasP99": 2118307,
    "gasMax": 2139259
-  },
-  {
-   "lib": "fp256",
-   "op": "pi",
-   "n": 68,
-   "status": {
-    "ok": 68
-   },
-   "correctlyRounded": 68,
-   "misrounded": 0,
-   "maxUlp": 0,
-   "hist": {
-    "0": 68
-   },
-   "gasMedian": 521,
-   "gasP99": 541,
-   "gasMax": 541
   },
   {
    "lib": "fp256",

@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {FP127Harness} from "../base/FP127Harness.sol";
 import {IFP127} from "../../contracts/src/fp127/IFP127.sol";
+import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
 
 /// @title Behaviour
 /// @notice Known values, identities and shortcut dispatch for the Yul build.
@@ -78,20 +79,8 @@ contract Behaviour is FP127Harness {
         assertEq(obj.sign(1), ONE);
         assertEq(obj.factorial(5 * ONE + 1), 120 * ONE);
         assertEq(obj.factorial(0), ONE);
-        // pi by Ramanujan's series: about eight digits a term, the format's floor at five
-        int256 PI = 1069028584064966747859680373161870783300; // floor(pi * 2^128)
-        assertLe(_absd(obj.pi(ONE), PI), PI / 10000000, "one term: 7 digits");
-        assertLe(_absd(obj.pi(2 * ONE), PI), PI / 1000000000000000, "two terms: 15 digits");
-        assertLe(_absd(obj.pi(5 * ONE), PI), 400, "five terms: within 400 ULP (36 digits)");
-        assertEq(obj.pi(6 * ONE), obj.pi(5 * ONE), "a sixth term changes nothing");
-        _expectRevert(abi.encodeCall(IFP127.pi, (0)), IFP127.OutOfRange.selector, "pi(0): no terms");
-        _expectRevert(abi.encodeCall(IFP127.pi, (8 * ONE)), IFP127.OutOfRange.selector, "pi(8)");
-        _expectRevert(abi.encodeCall(IFP127.pi, (-1)), IFP127.OutOfRange.selector, "pi(-1)");
+        assertEq(FP127Lib.PI, 1069028584064966747859680373161870783301, "PI is pi * 2^128 to the nearest integer");
         assertEq(obj.factorial(33 * ONE), int256(8683317618811886495518194401280000000) * ONE);
-        assertEq(obj.gcd(12 * ONE, 18 * ONE), 6 * ONE);
-        assertEq(obj.gcd(-12 * ONE, 18 * ONE), 6 * ONE);
-        assertEq(obj.gcd(-4 * ONE, -4 * ONE), 4 * ONE);
-        assertEq(obj.gcd(7 * ONE, 0), 7 * ONE);
         assertEq(obj.log2Up(5 * ONE), 3 * ONE);
         assertEq(obj.log2Up(8 * ONE), 3 * ONE);
         assertEq(obj.log2Up(ONE / 3), -1 * ONE);

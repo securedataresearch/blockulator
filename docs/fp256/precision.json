@@ -209,13 +209,6 @@
     "reverts": 242,
     "worstInput": ""
   },
-  "gcd": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 380,
-    "reverts": 23,
-    "worstInput": ""
-  },
   "hypot": {
     "meanBits": 256,
     "minBits": 256,
@@ -340,13 +333,6 @@
     "minBits": 256,
     "n": 434,
     "reverts": 3,
-    "worstInput": ""
-  },
-  "pi": {
-    "meanBits": 256,
-    "minBits": 256,
-    "n": 19,
-    "reverts": 7,
     "worstInput": ""
   },
   "pow": {

@@ -23,9 +23,9 @@ contract GasLadder256 is FP256Harness {
     /// 2,500-gas cold-account surcharge.
     function _warm() internal view {
         obj.mul(ONE, ONE);
-        objX.erf(ONE);
-        objX2.exp2(ONE);
-        objX3.inv(ONE);
+        objE.exp(ONE);
+        objH.sinh(ONE);
+        objS.erf(ONE);
     }
 
     // ---- conversions --------------------------------------------------
@@ -115,7 +115,6 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("frac")) { g0 = gasleft(); r = FP256Lib.frac(x); g = gasleft(); }
         if (h == keccak256("round")) { g0 = gasleft(); r = FP256Lib.round(x); g = gasleft(); }
         if (h == keccak256("factorial")) { g0 = gasleft(); r = FP256Lib.factorial(x); g = gasleft(); }
-        if (h == keccak256("pi")) { g0 = gasleft(); r = FP256Lib.pi(x); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -144,7 +143,6 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("avg")) { g0 = gasleft(); r = FP256Lib.avg(a, b); g = gasleft(); }
         if (h == keccak256("dist")) { g0 = gasleft(); r = FP256Lib.dist(a, b); g = gasleft(); }
         if (h == keccak256("zeroFloorSub")) { g0 = gasleft(); r = FP256Lib.zeroFloorSub(a, b); g = gasleft(); }
-        if (h == keccak256("gcd")) { g0 = gasleft(); r = FP256Lib.gcd(a, b); g = gasleft(); }
         if (h == keccak256("gavg")) { g0 = gasleft(); r = FP256Lib.gavg(a, b); g = gasleft(); }
         if (h == keccak256("hypot")) { g0 = gasleft(); r = FP256Lib.hypot(a, b); g = gasleft(); }
         require(g0 != 0, "na");
@@ -185,7 +183,6 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("frac")) { g0 = gasleft(); r = FP127Lib.frac(x); g = gasleft(); }
         if (h == keccak256("round")) { g0 = gasleft(); r = FP127Lib.round(x); g = gasleft(); }
         if (h == keccak256("factorial")) { g0 = gasleft(); r = FP127Lib.factorial(x); g = gasleft(); }
-        if (h == keccak256("pi")) { g0 = gasleft(); r = FP127Lib.pi(x); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -205,7 +202,6 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("avg")) { g0 = gasleft(); r = FP127Lib.avg(a, b); g = gasleft(); }
         if (h == keccak256("dist")) { g0 = gasleft(); r = FP127Lib.dist(a, b); g = gasleft(); }
         if (h == keccak256("zeroFloorSub")) { g0 = gasleft(); r = FP127Lib.zeroFloorSub(a, b); g = gasleft(); }
-        if (h == keccak256("gcd")) { g0 = gasleft(); r = FP127Lib.gcd(a, b); g = gasleft(); }
         if (h == keccak256("gavg")) { g0 = gasleft(); r = FP127Lib.gavg(a, b); g = gasleft(); }
         if (h == keccak256("hypot")) { g0 = gasleft(); r = FP127Lib.hypot(a, b); g = gasleft(); }
         require(g0 != 0, "na");
@@ -496,7 +492,7 @@ contract GasLadder256 is FP256Harness {
         _run1("toFixed18Up", xs, false);
     }
 
-    // ---- #79: FP256X2 and FP256X3 ------------------------------------------
+    // ---- #79 ------------------------------------------------------------------
 
     function test_ladder_x2() public view {
         _warm();
@@ -529,10 +525,7 @@ contract GasLadder256 is FP256Harness {
         _run1("inv", xs, false);
         _run1("frac", [_v(-60, 0), _v(-1, 0), _nv(1, PI_F >> 20), _v(1, PI_F >> 20), _v(59, 0xf4240 << 216), _v(200, 1)], false);
         _run1("round", [_v(-60, 0), _v(-1, 0), _nv(1, PI_F >> 20), _v(1, PI_F >> 20), _v(59, 0xf4240 << 216), _v(200, 1)], false);
-        _run2("gcd", [_v(3, 0), _v(10, 0x1234 << 220), _v(60, 0), _v(100, 1 << 120), _v(200, 1), _v(236, 0x5555 << 220)],
-                     [_v(2, 0), _v(9, 0x4321 << 220), _v(40, 3 << 230), _v(80, 5 << 220), _v(150, 7 << 200), _v(236, 0x3333 << 220)]);
         _run1("factorial", [ONE, _v(2, 0x4 << 232), _v(4, 0), _v(6, 0x9 << 230), _v(9, 0xf4 << 228), _v(14, 0x3e << 230)], false);
-        _run1("pi", [ONE, _v(1, 0x8 << 232), _v(2, 0x4 << 232), _v(3, 0), _v(3, 0x2 << 232), _v(10, 0)], false);
         _run3("clamp", xs, [_v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0)], [TWO, TWO, TWO, TWO, TWO, TWO]);
         _run3("lerp", a, b, [HALF, _v(-2, 0), _nv(0, 0), _v(3, 0), _v(-100, 0), _v(100, 0)]);
     }

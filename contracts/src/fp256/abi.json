@@ -131,154 +131,6 @@
   },
   {
     "type": "function",
-    "name": "exp",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "ln",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "pow",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      },
-      {
-        "type": "int256",
-        "name": "y",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "log1p",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "expm1",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "powu",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "x",
-        "internalType": "int256"
-      },
-      {
-        "type": "int256",
-        "name": "n",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
-    "name": "compound",
-    "stateMutability": "pure",
-    "inputs": [
-      {
-        "type": "int256",
-        "name": "rate",
-        "internalType": "int256"
-      },
-      {
-        "type": "int256",
-        "name": "n",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [
-      {
-        "type": "int256",
-        "name": "r",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "function",
     "name": "neg",
     "stateMutability": "pure",
     "inputs": [
@@ -777,6 +629,308 @@
         "type": "uint256",
         "name": "x",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "min",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "max",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "clamp",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "lo",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "hi",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "avg",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "dist",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "zeroFloorSub",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "inv",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "lerp",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "t",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "frac",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "round",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "cbrt",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "x",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "gavg",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
+      }
+    ],
+    "outputs": [
+      {
+        "type": "int256",
+        "name": "r",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "hypot",
+    "stateMutability": "pure",
+    "inputs": [
+      {
+        "type": "int256",
+        "name": "a",
+        "internalType": "int256"
+      },
+      {
+        "type": "int256",
+        "name": "b",
+        "internalType": "int256"
       }
     ],
     "outputs": [

@@ -7,7 +7,7 @@ object "FP127" {
     object "runtime" {
         code {
             let dsel := shr(224, calldataload(0))
-            switch lt(dsel, 0x92b0c5b2)
+            switch lt(dsel, 0x973fe005)
             case 0 {
                 switch lt(dsel, 0xb47ca3c7)
                 case 0 {
@@ -112,12 +112,9 @@ object "FP127" {
                         }
                     }
                     default {
-                        switch lt(dsel, 0xa13ed853)
+                        switch lt(dsel, 0xa1985bb6)
                         case 0 {
                             switch dsel
-                            case 0xa13ed853 { /* gavg(int256,int256) */
-                                ret(fp127_gavg(calldataload(4), calldataload(36)))
-                            }
                             case 0xa1985bb6 { /* log2Up(int256) */
                                 ret(fp127_log2Up(calldataload(4)))
                             }
@@ -131,14 +128,14 @@ object "FP127" {
                         }
                         default {
                             switch dsel
-                            case 0x92b0c5b2 { /* pow(int256,int256) */
-                                ret(fp127_pow(calldataload(4), calldataload(36)))
-                            }
                             case 0x973fe005 { /* expm1(int256) */
                                 ret(fp127_expm1(calldataload(4)))
                             }
                             case 0x9aea0a13 { /* fromFixed18(int256) */
                                 ret(fp127_fromFixed18(calldataload(4)))
+                            }
+                            case 0xa13ed853 { /* gavg(int256,int256) */
+                                ret(fp127_gavg(calldataload(4), calldataload(36)))
                             }
                             default { revert(0, 0) }
                         }
@@ -162,8 +159,8 @@ object "FP127" {
                             case 0x8e6f2353 { /* ln(int256) */
                                 ret(fp127_ln(calldataload(4)))
                             }
-                            case 0x929edbfb { /* pi(int256) */
-                                ret(fp127_pi(calldataload(4)))
+                            case 0x92b0c5b2 { /* pow(int256,int256) */
+                                ret(fp127_pow(calldataload(4), calldataload(36)))
                             }
                             default { revert(0, 0) }
                         }
@@ -182,12 +179,9 @@ object "FP127" {
                         }
                     }
                     default {
-                        switch lt(dsel, 0x63b03896)
+                        switch lt(dsel, 0x665df460)
                         case 0 {
                             switch dsel
-                            case 0x63b03896 { /* gcd(int256,int256) */
-                                ret(fp127_gcd(calldataload(4), calldataload(36)))
-                            }
                             case 0x665df460 { /* sqrt(int256) */
                                 ret(fp127_sqrt(calldataload(4)))
                             }
@@ -1256,17 +1250,6 @@ object "FP127" {
                 r := fp127_floor(fp127_add(x, 0x80000000000000000000000000000000))
             }
 
-            function fp127_gcd(a, b) -> r {
-                let x := absw(sar(128, a))
-                let y := absw(sar(128, b))
-                for {} y {} {
-                    let t := mod(x, y)
-                    x := y
-                    y := t
-                }
-                r := shl(128, x)
-            }
-
             function fp127_factorial(n) -> r {
                 if slt(n, 0) { rev(0x7db3aba7) }
                 let k := shr(128, n)
@@ -1274,23 +1257,6 @@ object "FP127" {
                 r := 1
                 for { let i := 2 } iszero(gt(i, k)) { i := add(i, 1) } { r := mul(r, i) }
                 r := shl(128, r)
-            }
-
-            function fp127_pi(terms) -> r {
-                if slt(terms, 0) { rev(0x7db3aba7) }
-                let n := sar(128, terms)
-                if gt(n, 7) { rev(0x7db3aba7) }
-                let one := 0x100000000000000000000000000000000
-                let c := one
-                let s := 0
-                for { let k := 0 } lt(k, n) { k := add(k, 1) } {
-                    s := add(s, mul(c, add(1103, mul(26390, k))))
-                    let k4 := mul(4, k)
-                    c := div(mul(c, mul(mul(add(k4, 1), add(k4, 2)), mul(add(k4, 3), add(k4, 4)))), mul(exp(add(k, 1), 4), 24591257856))
-                }
-                if iszero(s) { rev(0x7db3aba7) }
-                let invpi := div(mulraw(shl(1, fp127_sqrt(0x200000000000000000000000000000000)), s), 9801)
-                r := fp127_div(one, invpi)
             }
 
             function lw(i) -> w {

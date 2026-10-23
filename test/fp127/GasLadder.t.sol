@@ -327,7 +327,6 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("factorial")) { g0 = gasleft(); r = FP127Lib.factorial(x); g = gasleft(); }
         if (h == keccak256("lambertW0")) { g0 = gasleft(); r = FP127Lib.lambertW0(x); g = gasleft(); }
         if (h == keccak256("lambertWm1")) { g0 = gasleft(); r = FP127Lib.lambertWm1(x); g = gasleft(); }
-        if (h == keccak256("pi")) { g0 = gasleft(); r = FP127Lib.pi(x); g = gasleft(); }
         if (h == keccak256("log1p")) { g0 = gasleft(); r = FP127Lib.log1p(x); g = gasleft(); }
         if (h == keccak256("expm1")) { g0 = gasleft(); r = FP127Lib.expm1(x); g = gasleft(); }
         if (h == keccak256("sinh")) { g0 = gasleft(); r = FP127Lib.sinh(x); g = gasleft(); }
@@ -364,7 +363,6 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("hypot")) { g0 = gasleft(); r = FP127Lib.hypot(a, b); g = gasleft(); }
         if (h == keccak256("dist")) { g0 = gasleft(); r = FP127Lib.dist(a, b); g = gasleft(); }
         if (h == keccak256("zeroFloorSub")) { g0 = gasleft(); r = FP127Lib.zeroFloorSub(a, b); g = gasleft(); }
-        if (h == keccak256("gcd")) { g0 = gasleft(); r = FP127Lib.gcd(a, b); g = gasleft(); }
         if (h == keccak256("mulDown")) { g0 = gasleft(); r = FP127Lib.mulDown(a, b); g = gasleft(); }
         if (h == keccak256("mulUp")) { g0 = gasleft(); r = FP127Lib.mulUp(a, b); g = gasleft(); }
         if (h == keccak256("divDown")) { g0 = gasleft(); r = FP127Lib.divDown(a, b); g = gasleft(); }
@@ -478,7 +476,6 @@ contract GasLadder is FP127Harness {
         _run2("zeroFloorSub", a, b, false);
         _run2("min", a, b, false);
         _run2("max", a, b, false);
-        _run2("gcd", [12 * ONE, 1000003 * ONE, 18 * ONE, ONE << 100, 7 * ONE, 0], [18 * ONE, 999983 * ONE, 6 * ONE, ONE << 90, 0, 5 * ONE], false);
     }
 
     function test_ladder_unary() public view {
@@ -533,7 +530,6 @@ contract GasLadder is FP127Harness {
         _run1("lambertW0", [-ONE / 4, ONE / 100, ONE / 2, ONE + ONE / 2, 10 * ONE, 1000 * ONE, ONE << 100], true);
         _run1("lambertWm1", [-int256(0x5e2d58d8b3bcdf1abadec7829054f90d) + 1, -ONE / 3, -ONE / 4, -ONE / 10, -ONE / 1000, -(ONE >> 40), -1], true);
         _run1("factorial", [int256(0), ONE, 5 * ONE, 10 * ONE, 20 * ONE, 30 * ONE, 33 * ONE], false);
-        _run1("pi", [ONE, 2 * ONE, 3 * ONE, 4 * ONE, 5 * ONE, 6 * ONE, 7 * ONE], false);
     }
 
     // v4 ops. The per-second rate is 5% APR / 31,536,000; the Black-Scholes

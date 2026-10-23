@@ -54,7 +54,6 @@ contract LibUser {
     function factorial(int256 x) external pure returns (int256) { return FP127Lib.factorial(x); }
     function lambertW0(int256 x) external pure returns (int256) { return FP127Lib.lambertW0(x); }
     function lambertWm1(int256 x) external pure returns (int256) { return FP127Lib.lambertWm1(x); }
-    function pi(int256 n) external pure returns (int256) { return FP127Lib.pi(n); }
     function pow(int256 a, int256 b) external pure returns (int256) { return FP127Lib.pow(a, b); }
     function min(int256 a, int256 b) external pure returns (int256) { return FP127Lib.min(a, b); }
     function max(int256 a, int256 b) external pure returns (int256) { return FP127Lib.max(a, b); }
@@ -63,7 +62,6 @@ contract LibUser {
     function dist(int256 a, int256 b) external pure returns (int256) { return FP127Lib.dist(a, b); }
     function gavg(int256 a, int256 b) external pure returns (int256) { return FP127Lib.gavg(a, b); }
     function hypot(int256 a, int256 b) external pure returns (int256) { return FP127Lib.hypot(a, b); }
-    function gcd(int256 a, int256 b) external pure returns (int256) { return FP127Lib.gcd(a, b); }
     function clamp(int256 a, int256 b, int256 c) external pure returns (int256) { return FP127Lib.clamp(a, b, c); }
     function lerp(int256 a, int256 b, int256 c) external pure returns (int256) { return FP127Lib.lerp(a, b, c); }
     function powu(int256 a, int256 b) external pure returns (int256) { return FP127Lib.powu(a, b); }

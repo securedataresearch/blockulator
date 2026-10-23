@@ -226,30 +226,11 @@ interface IFP127 {
     function frac(int256 x) external pure returns (int256 r);
     /// @notice Nearest integer, halves rounded up: floor(x + 1/2). Checked.
     function round(int256 x) external pure returns (int256 r);
-    /// @notice gcd of the integer parts |floor(a)|, |floor(b)|, as a 127.128 integer.
-    /// @dev The Huff extracted integer parts with a logical shift and then
-    ///      tested the sign bit of the shifted word, so it mishandled negative
-    ///      inputs. The Yul uses an arithmetic shift and absolute values.
-    ///      Results agree for non-negative inputs.
-    function gcd(int256 a, int256 b) external pure returns (int256 r);
     /// @notice floor(n)! for 0 <= n < 34. 33! is the largest that fits.
     /// @dev Reverts with OutOfRange outside that domain (the Huff returned
     ///      MAX_UINT256). Computed by exact integer multiplication rather than
     ///      the Huff jump table; the values are identical.
     function factorial(int256 n) external pure returns (int256 r);
-    /// @notice pi by Ramanujan's 1914 series, floor(terms) terms:
-    ///         1/pi = (2 sqrt2 / 9801) sum_k (4k)! (1103 + 26390 k) / ((k!)^4 396^(4k)).
-    ///         Each term adds about eight digits: 7, 15, 23, 31, then 36 at five
-    ///         terms, the format's floor; more terms change nothing.
-    /// @dev Term to term the series is a ratio of integers, so the running
-    ///      term is updated with one exact integer multiply and divide,
-    ///      (4k+1)(4k+2)(4k+3)(4k+4) over (k+1)^4 396^4, and the sum is formed
-    ///      with the integer coefficient 1103 + 26390 k applied to a 127.128
-    ///      word. The only transcendental op is one sqrt(2); the constant
-    ///      2 sqrt2 / 9801 is applied as a multiply and then an integer
-    ///      division last, so it is never floored as a small number on its own.
-    ///      The last two digits are the sqrt and the final reciprocal flooring.
-    function pi(int256 terms) external pure returns (int256 r);
     /// @notice Principal branch of the Lambert W function, W(x) e^W(x) = x, for
     ///         x >= -1/e, rounded to nearest.
     /// @dev Reverts with OutOfRange below -1/e (the Huff returned 0). W(x) = x

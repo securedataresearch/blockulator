@@ -18,15 +18,15 @@ ORDER_FP256 = ["add", "sub", "mul", "div", "sqrt", "exp", "ln", "pow", "log1p", 
                "fromUintDown", "fromUintUp", "toFixed18Down", "toFixed18Up",
                "exp2", "exp10", "log2", "log10", "log2Up", "cbrt", "sinh", "cosh", "tanh", "atanh",
                "min", "max", "clamp", "avg", "dist", "zeroFloorSub", "inv", "lerp", "frac", "round",
-               "gcd", "factorial", "pi", "gavg", "hypot"]
+               "factorial", "gavg", "hypot"]
 
 ORDER = [
     "add", "sub", "mul", "mulDown", "mulUp", "div", "divDown", "divUp",
     "fromFixed18", "toFixed18", "toFixed18Down", "toFixed18Up",
     "exp", "exp2", "exp10", "ln", "log2", "log10", "log2Up",
     "sqrt", "cbrt", "pow", "inv", "abs", "neg", "sign", "min", "max", "clamp", "avg",
-    "zeroFloorSub", "dist", "lerp", "floor", "ceil", "frac", "round", "gcd", "factorial",
-    "hypot", "gavg", "lambertW0", "lambertWm1", "pi",
+    "zeroFloorSub", "dist", "lerp", "floor", "ceil", "frac", "round", "factorial",
+    "hypot", "gavg", "lambertW0", "lambertWm1",
     "powu", "compound", "log1p", "expm1", "sinh", "cosh", "tanh", "atanh", "erf", "erfc", "normCdf",
 ]
 
@@ -91,7 +91,7 @@ def fp127(data: dict) -> int:
         "*floor*, *ceil* and *trunc* under 1 ULP in their direction, *nearest* at most 0.5 ULP (a directed op shows 1.0000 where its distance is within 2^-65 of one ULP). "
         "*sqrt of floors* (gavg, hypot, kept bit-identical to the Huff) must equal its definition, the "
         "floored root of a floored product or sum; its distance from the real root is shown, not bounded. "
-        "*series* is pi's Ramanujan partial sum in integers. *nearest* counts results within 0.5 ULP. "
+        "*nearest* counts results within 0.5 ULP. "
         "*min bits* is the fewest relative correct bits, msb(|truth|) − msb(|got − truth|), over results "
         "of magnitude 1 or more (\"exact\" when every such result is the truth itself). "
         "`reverts` counts vectors where the oracle and the Yul both reject the input with the same error.",

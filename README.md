@@ -5,7 +5,8 @@ ends: [blockulator.com](https://blockulator.com).
 
 - **FP127** is a signed 127.128 fixed point: one `int256` holding
   `value × 2^128`, a grid of 2^−128: 38 digits at 1, 32 at 10^−6, 8 at
-  10^−30. v5 (55 ops, live on Sepolia since 2026-10-21): `add` and
+  10^−30. v5 (55 ops, live on Sepolia since 2026-10-21; the source now has
+  53, with `pi` the constant `FP127Lib.PI` and `gcd` removed): `add` and
   `sub` exact; every transcendental the nearest word, within half an ULP on
   every one of 1,500 to 4,000 random inputs per op (`exp`, `pow`, `cbrt`,
   `ln`, `log2`, `powu`, `compound`, Lambert W and the rest; v4 had `exp` and
@@ -28,11 +29,14 @@ ends: [blockulator.com](https://blockulator.com).
   `fromUintDown`, `fromUintUp`. With #79 FP256 has every op FP127 has:
   `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `hypot`, `gavg`, `inv`,
   the hyperbolics, `min`, `max`, `clamp`, `avg`, `lerp`, `dist`,
-  `zeroFloorSub`, `frac`, `round`, `gcd`, `factorial`, `pi`. Four objects:
-  FP256 (24,512 bytes), FP256X (22,266: erf, erfc, normCdf, Lambert W),
-  FP256X2 (19,889: the exponential family and cbrt) and FP256X3 (6,844: the
-  algebraic ops). Release three (28 ops,
-  within 1 to 4 ULP on five of them) stays deployed at its own address.
+  `zeroFloorSub`, `frac`, `round`, `factorial`. Release four deployed four
+  objects, FP256, FP256X, FP256X2 and FP256X3. The source (65 ops, `pi` now
+  the constant `FP256Lib.PI`, `gcd` removed) deploys as four objects by
+  idea: FP256, the number (43 ops); FP256E, the elementary functions on one
+  exp/log kernel (12); FP256H, the hyperbolic functions (4), on their own
+  copy of that kernel because FP256E with them measured 27,308 bytes, over
+  the 24,576 limit; FP256S, the special functions (6). Release three (28
+  ops, within 1 to 4 ULP on five of them) stays deployed at its own address.
 
 Both are one Yul source each that generates two forms, fuzzed to agree bit
 for bit across the full `int256` domain: a **deployed object** at a CREATE2
@@ -211,7 +215,6 @@ blockulator/
 ├── contracts/src/{identity,games,market,tools,content}/  Vyper: badges, and the archived apps
 ├── contracts/archive/huff/     the Huff implementation and its Sepolia bytecode (FP127's equivalence baseline)
 ├── contracts/deployments/      CREATE2 records: FP127, FP256, Ladder
-├── script/                     DeployFP127.s.sol, DeployFP256.s.sol, DeployFP256X.s.sol, DeployFP256X2.s.sol, DeployFP256X3.s.sol
 ├── scripts/fp127/              generator (both libraries), FP127 oracle, verification, gas report
 ├── scripts/fp256/              FP256 oracle, vector spec, kernel models and bounds.py
 ├── scripts/ladder/             scenarios, edges, inputs, datasets, deploy and live-check tooling
@@ -246,15 +249,16 @@ make ladder              # terminal-precision ladder -> docs/benchmarks/ladder.{
 make edges               # the edges -> docs/benchmarks/edges.{json,md}
 make pi-compare          # docs/benchmarks/pi.md
 make precision-report precision-report-fp256
-make size size-fp256     # runtime bytes against the 24,576 limit (FP256, FP256X, FP256X2, FP256X3)
+make size size-fp256     # runtime bytes against the 24,576 limit (FP127; FP256, FP256E, FP256H, FP256S)
 make sweep               # random inputs through every op, both stages -> docs/benchmarks/sweep.{json,md}
 make site site-check     # zola build -> public/; zola check, the symlink test, deno task test
 ```
 
 `make *-check` targets fail when a committed dataset no longer matches the
 code; CI runs them all. Deploying follows the records: `make predict`,
-`deploy-sepolia`, `verify-sepolia`, `smoke-sepolia` for FP127, the `-fp256`
-`-fp256x`, `-fp256x2` and `-fp256x3` variants for FP256's four objects, and `predict-ladder` / `deploy-ladder-sepolia` /
+`deploy-sepolia`, `verify-sepolia`, `smoke-sepolia` for FP127, the `-fp256`,
+`-fp256e`, `-fp256h` and `-fp256s` variants for FP256's four objects (one
+pattern rule each over the objects table in `scripts/fp127/gen.py`), and `predict-ladder` / `deploy-ladder-sepolia` /
 `verify-ladder-sepolia` then `scripts/ladder/livecap.py` and `liveedges.py`
 for the runners. The deployer key is read from `DEPLOYER_KEY` and never
 stored.

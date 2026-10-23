@@ -1,4 +1,4 @@
-.PHONY: build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia predict-fp256x deploy-fp256x-sepolia verify-fp256x-sepolia predict-fp256x2 deploy-fp256x2-sepolia verify-fp256x2-sepolia predict-fp256x3 deploy-fp256x3-sepolia verify-fp256x3-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
+.PHONY: build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp256 predict-fp256 deploy-fp256-sepolia verify-fp256-sepolia smoke-fp256-sepolia bench-fp256 precision-report-fp256 gen-fp256 vectors-fp256 size-fp256 gen-edges gen-edges-check edges edges-check pi-compare site site-check help gen gen-check vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia
 
 PY := uv run
 
@@ -49,11 +49,11 @@ help:
 	@echo "  make verify-ladder-sepolia - Verify them on Sourcify (and Etherscan if ETHERSCAN_API_KEY is set)"
 	@echo "  make fetch-baseline   - Re-fetch the legacy Huff runtime bytecode from Sepolia"
 	@echo "  make predict          - Print the CREATE2 address of the current FP127 object"
-	@echo "  make predict-fp256 / predict-fp256x / predict-fp256x2 / predict-fp256x3 - CREATE2 addresses of FP256's four objects (release four)"
-	@echo "  make deploy-fp256-sepolia / deploy-fp256x-sepolia / -fp256x2- / -fp256x3- - Deploy them (reads DEPLOYER_KEY; DEPLOY_GAS, default 40M)"
-	@echo "  make verify-fp256-sepolia / verify-fp256x-sepolia / -fp256x2- / -fp256x3- - Prove runtime = artifact, verify on Sourcify + Blockscout"
+	@echo "  make predict-fp256 / predict-fp256e / predict-fp256h / predict-fp256s - CREATE2 addresses of FP256's four objects (the number, elementary, hyperbolic, special)"
+	@echo "  make deploy-fp256-sepolia / deploy-fp256e-sepolia / -fp256h- / -fp256s- - Deploy them (reads DEPLOYER_KEY; DEPLOY_GAS, default 40M)"
+	@echo "  make verify-fp256-sepolia / verify-fp256e-sepolia / -fp256h- / -fp256s- - Prove runtime = artifact, verify on Sourcify + Blockscout"
 	@echo "  make smoke-fp256-sepolia - Every committed FP256 vector against the live objects"
-	@echo "  make size-fp256       - FP256, FP256X, FP256X2 and FP256X3 runtime sizes"
+	@echo "  make size-fp256       - FP256, FP256E, FP256H and FP256S runtime sizes"
 	@echo "  make build-yul        - Compile every deployed Yul object with the pinned solc (stdjson.py) -> out/<Object>.yul/"
 	@echo "  make probe-clz [RPC=] - Does the chain have CLZ (EIP-7939)? Every deploy runs this first"
 	@echo "  make deploy-sepolia   - Deploy via the CREATE2 proxy (reads DEPLOYER_KEY)"
@@ -203,7 +203,7 @@ fetch-baseline:
 # Every deployed object from the one objects table in scripts/fp127/gen.py
 # (LIBS[...]["objects"]: name, library, salt). The targets are static pattern
 # rules over that list, so a re-layout or a new salt edits only the table. For
-# each object stem <o> (fp127 fp256 fp256x fp256x2 fp256x3, `gen.py --objects`):
+# each object stem <o> (fp127 fp256 fp256e fp256h fp256s, `gen.py --objects`):
 # predict-<o>, deploy-<o>-sepolia, verify-<o>-sepolia; predict, deploy-sepolia
 # and verify-sepolia are FP127's, as before. deploy-* go through Arachnid's
 # CREATE2 proxy and read DEPLOYER_KEY. The objects use CLZ (EIP-7939): every
@@ -244,7 +244,7 @@ smoke-sepolia: build
 	@forge test --match-contract Deployed --fork-url $(SEPOLIA_RPC) -vv
 
 # every object: every committed vector against FP256.json's address and, when
-# they exist, FP256X.json's, FP256X2.json's and FP256X3.json's
+# they exist, FP256E.json's, FP256H.json's and FP256S.json's
 smoke-fp256-sepolia: build
 	@forge test --match-contract Deployed256 --fork-url $(SEPOLIA_RPC) -vv
 

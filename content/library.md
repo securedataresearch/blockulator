@@ -1,6 +1,6 @@
 +++
 title = "FP127"
-description = "Signed 127.128 fixed point. One int256, 128 fractional bits (38 digits at 1), 55 ops in v5, every transcendental the nearest word. One Yul source, two forms: a deployed object and an inline library."
+description = "Signed 127.128 fixed point. One int256, 128 fractional bits (38 digits at 1), 53 ops, every transcendental the nearest word. One Yul source, two forms: a deployed object and an inline library."
 
 [extra]
 group = "library"
@@ -20,7 +20,7 @@ Errors: `Overflow()`, `DivisionByZero()`, `OutOfRange()`. Nothing wraps.
 
 {{ <deployment /> }}
 
-No storage, no owner, no upgrade path. A new version is a new salt and a new address. The address above is v5 (55 ops, Blockulator 2.1), the source the op table below is generated from: it adds the directed `mulUp`, `mulDown`, `divUp`, `divDown`, `toFixed18Up` and `toFixed18Down` and rounds every transcendental to the nearest word. v1 to v4 stay deployed at the addresses in the record.
+No storage, no owner, no upgrade path. A new version is a new salt and a new address. The address above is v5 (55 ops, Blockulator 2.1). The op table below is generated from the source, which has 53: `pi` is now the constant `FP127Lib.PI` (π · 2^128 to the nearest integer) and `gcd` is gone; the source redeploys with Blockulator 2.2. v5 added the directed `mulUp`, `mulDown`, `divUp`, `divDown`, `toFixed18Up` and `toFixed18Down` and rounded every transcendental to the nearest word. v1 to v4 stay deployed at the addresses in the record.
 
 `sqrt(2)` from the command line:
 

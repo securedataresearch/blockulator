@@ -479,18 +479,6 @@
       "reverts": "Overflow() when the result is 2^127"
     },
     {
-      "name": "gcd",
-      "signature": "gcd(int256,int256)",
-      "selector": "0x63b03896",
-      "inputs": [
-        "a",
-        "b"
-      ],
-      "notice": "gcd of the integer parts |floor(a)|, |floor(b)|, as a 127.128 integer.",
-      "domain": "any a, b",
-      "reverts": "never"
-    },
-    {
       "name": "factorial",
       "signature": "factorial(int256)",
       "selector": "0x5ad78e8a",
@@ -499,17 +487,6 @@
       ],
       "notice": "floor(n)! for 0 <= n < 34. 33! is the largest that fits.",
       "domain": "0 <= n < 34",
-      "reverts": "OutOfRange() outside that"
-    },
-    {
-      "name": "pi",
-      "signature": "pi(int256)",
-      "selector": "0x929edbfb",
-      "inputs": [
-        "terms"
-      ],
-      "notice": "pi by Ramanujan's 1914 series, floor(terms) terms: 1/pi = (2 sqrt2 / 9801) sum_k (4k)! (1103 + 26390 k) / ((k!)^4 396^(4k)). Each term adds about eight digits: 7, 15, 23, 31, then 36 at five terms, the format's floor; more terms change nothing.",
-      "domain": "0 <= terms < 8, an integer in 127.128",
       "reverts": "OutOfRange() outside that"
     },
     {

@@ -65,13 +65,19 @@
 // toIntDown, toIntUp, toFixed18Down, toFixed18Up, floor, ceil, fromUintDown,
 // fromUintUp) round once
 // toward minus or plus infinity from the exact value, so a protocol can
-// round toward itself. The error function family and Lambert W are tagged
-// @object FP256X: they deploy as a second object (FP256's runtime would pass
-// 24,576 bytes); the inline library holds everything. #79 adds the ops FP127
-// has and FP256 lacked as two more objects: FP256X2 (exp2, exp10, log2,
-// log10, log2Up, cbrt and the hyperbolic functions, on the same kernels) and
-// FP256X3 (selection, avg, dist, inv, lerp, frac, round, gcd, factorial, pi,
-// gavg, hypot).
+// round toward itself. #79 added the ops FP127 has and FP256 lacked.
+//
+// Deployed objects (Blockulator 2.2), one idea each; the inline library holds
+// every export. An untagged export is in FP256, the number: arithmetic,
+// roots, comparison, rounding and conversions. `@object FP256E` is the
+// elementary functions on the one exp/log kernel (exp, exp2, exp10, expm1,
+// ln, log2, log10, log2Up, log1p, pow, powu, compound); `@object FP256H` the
+// hyperbolic functions (sinh, cosh, tanh, atanh), which run on the same
+// kernel but have their own object because FP256E with them measured 27,308
+// bytes, over the 24,576 limit: FP256H carries its own copy of the kernel at
+// its own address, which costs bytes and no gas; a smaller kernel may fold it
+// back into FP256E. `@object FP256S` is the special functions (erf, erfc,
+// normCdf, lambertW0, lambertWm1, factorial).
 
 /// @error Overflow() 0x35278d12
 /// @error DivisionByZero() 0x23d359a3
@@ -1261,6 +1267,7 @@ function expsmall(s, u, m) -> r {
     r := normround(0, 0x3ffff, d)
 }
 
+/// @object FP256E
 /// @export exp(int256 x) returns (int256 r)
 /// @domain x < 2^18
 /// @reverts Overflow() when e^x does not fit (x above about 181,705); OutOfRange() for a word that is not a number
@@ -1346,6 +1353,7 @@ function nearone(x) -> near, sd, ud, md {
     near := lt(ed, 0x3fff7)
 }
 
+/// @object FP256E
 /// @export ln(int256 x) returns (int256 r)
 /// @domain x > 0
 /// @reverts OutOfRange() for x <= 0 or a word that is not a number
@@ -1387,6 +1395,7 @@ function fp256_ln(x) -> r {
     r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
 }
 
+/// @object FP256E
 /// @export pow(int256 x, int256 y) returns (int256 r)
 /// @domain x >= 0
 /// @reverts OutOfRange() for x < 0; DivisionByZero() for 0^y with y < 0; Overflow() when the result does not fit
@@ -1568,6 +1577,7 @@ function log2of1p(s, u, m) -> Lm, Ls {
     Lm, Ls := log2pairm(uu, a)
 }
 
+/// @object FP256E
 /// @export log1p(int256 x) returns (int256 r)
 /// @domain x > -1
 /// @reverts OutOfRange() for x <= -1 or a word that is not a number
@@ -1611,6 +1621,7 @@ function fp256_log1p(x) -> r {
     r := normround(slt(l, 0), add(0x3ffff, add(Ls, 254)), absw(l))
 }
 
+/// @object FP256E
 /// @export expm1(int256 x) returns (int256 r)
 /// @domain x < 2^18
 /// @reverts Overflow() when e^x - 1 does not fit (x above about 181,705); OutOfRange() for a word that is not a number
@@ -2013,7 +2024,7 @@ function ge13(Y, uy) -> t {
     t := or(sgt(uy, 3), and(eq(uy, 3), iszero(lt(Y, 0x6800000000000000000000000000000000000000000000000000000000000000))))
 }
 
-/// @object FP256X
+/// @object FP256S
 /// @export erf(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
@@ -2054,7 +2065,7 @@ function fp256_erf(x) -> r {
     r := normround(s, 0x3ffff, D2)
 }
 
-/// @object FP256X
+/// @object FP256S
 /// @export erfc(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
@@ -2094,7 +2105,7 @@ function fp256_erfc(x) -> r {
     r := normround(0, add(0x3ffff, ee), D)
 }
 
-/// @object FP256X
+/// @object FP256S
 /// @export normCdf(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
@@ -2564,7 +2575,7 @@ function lwbr(x, sg, Y, ey, yh, yl) -> r {
     if rbad(D, 5) { r := lwfix(x, r) }
 }
 
-/// @object FP256X
+/// @object FP256S
 /// @export lambertW0(int256 x) returns (int256 r)
 /// @domain x >= -1/e
 /// @reverts OutOfRange() below -1/e or for a word that is not a number
@@ -2606,7 +2617,7 @@ function fp256_lambertW0(x) -> r {
     r := lwiter(x, w)
 }
 
-/// @object FP256X
+/// @object FP256S
 /// @export lambertWm1(int256 x) returns (int256 r)
 /// @domain -1/e <= x < 0
 /// @reverts OutOfRange() outside that or for a word that is not a number
@@ -2970,6 +2981,7 @@ function mant(a, b) -> mm, c, dr {
     }
 }
 
+/// @object FP256E
 /// @export powu(int256 x, int256 n) returns (int256 r)
 /// @domain any number x, any plain integer n (not a number); the result must fit
 /// @reverts Overflow() when x^n does not fit; DivisionByZero() for 0^n with n < 0; OutOfRange() for a word that is not a number
@@ -3062,6 +3074,7 @@ function powupow(x, k, recip, sgn, slow) -> r {
     if sgn { r := fp256_neg(r) }
 }
 
+/// @object FP256E
 /// @export compound(int256 rate, int256 n) returns (int256 r)
 /// @domain rate >= -1, any plain integer n (not a number); the result must fit
 /// @reverts OutOfRange() for rate < -1; DivisionByZero() for rate = -1 with n < 0; Overflow() when the result does not fit
@@ -3678,17 +3691,13 @@ function fp256_fromUintUp(x) -> r {
 }
 
 // ---------------------------------------------------------------------------
-// Release four, #79: the ops FP127 has and FP256 lacked. FP256 and FP256X
-// are full and the 25 ops together are 25,479 bytes, so they deploy as two
-// more objects by family: FP256X2 (the ops on the exp and log kernels) and
-// FP256X3 (the algebraic ones); the inline library holds them with the rest.
-// Each is correctly rounded or exact by construction, as everything else in
-// release four.
+// Release four, #79: the ops FP127 has and FP256 lacked, each in the object
+// of its idea (the header). Each is correctly rounded or exact by
+// construction, as everything else in release four.
 // ---------------------------------------------------------------------------
 
 // ---- selection, exact -----------------------------------------------------
 
-/// @object FP256X3
 /// @export min(int256 a, int256 b) returns (int256 r)
 /// @domain any two numbers
 /// @reverts OutOfRange() for a word that is not a number
@@ -3699,7 +3708,6 @@ function fp256_min(a, b) -> r {
     if slt(key(a), key(b)) { r := a }
 }
 
-/// @object FP256X3
 /// @export max(int256 a, int256 b) returns (int256 r)
 /// @domain any two numbers
 /// @reverts OutOfRange() for a word that is not a number
@@ -3710,7 +3718,6 @@ function fp256_max(a, b) -> r {
     if sgt(key(a), key(b)) { r := a }
 }
 
-/// @object FP256X3
 /// @export clamp(int256 x, int256 lo, int256 hi) returns (int256 r)
 /// @domain any three numbers
 /// @reverts OutOfRange() for a word that is not a number
@@ -3722,7 +3729,6 @@ function fp256_clamp(x, lo, hi) -> r {
 
 // ---- sums and differences, one rounding ------------------------------------
 
-/// @object FP256X3
 /// @export avg(int256 a, int256 b) returns (int256 r)
 /// @domain any two numbers
 /// @reverts OutOfRange() for a word that is not a number
@@ -3732,7 +3738,6 @@ function fp256_avg(a, b) -> r {
     r := addsub(a, b, 0, 1)
 }
 
-/// @object FP256X3
 /// @export dist(int256 a, int256 b) returns (int256 r)
 /// @domain any two numbers
 /// @reverts Overflow() when |a - b| does not fit; OutOfRange() for a word that is not a number
@@ -3742,7 +3747,6 @@ function fp256_dist(a, b) -> r {
     r := and(fp256_sub(a, b), 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
 }
 
-/// @object FP256X3
 /// @export zeroFloorSub(int256 a, int256 b) returns (int256 r)
 /// @domain any two numbers
 /// @reverts Overflow() when a - b does not fit; OutOfRange() for a word that is not a number
@@ -3752,7 +3756,6 @@ function fp256_zeroFloorSub(a, b) -> r {
     if slt(r, 0) { r := 0 }
 }
 
-/// @object FP256X3
 /// @export inv(int256 x) returns (int256 r)
 /// @domain x != 0
 /// @reverts DivisionByZero() for x == 0; Overflow() when 1/x does not fit; OutOfRange() for a word that is not a number
@@ -4069,7 +4072,6 @@ function lerp3(a, b, t) -> r {
     default { r := lerpw(p, a, b, t, L, tr) }
 }
 
-/// @object FP256X3
 /// @export lerp(int256 a, int256 b, int256 t) returns (int256 r)
 /// @domain any three numbers; the result must fit
 /// @reverts Overflow() when the result does not fit; OutOfRange() for a word that is not a number
@@ -4093,7 +4095,6 @@ function fp256_lerp(a, b, t) -> r {
 
 // ---- integral values, exact ------------------------------------------------
 
-/// @object FP256X3
 /// @export frac(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
@@ -4121,7 +4122,6 @@ function fp256_frac(x) -> r {
     if low { r := normround(0, e, shl(18, low)) }
 }
 
-/// @object FP256X3
 /// @export round(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
@@ -4158,7 +4158,7 @@ function fromint(v) -> r {
     r := normround(slt(v, 0), 0x400fd, absw(v))
 }
 
-/// @object FP256X2
+/// @object FP256E
 /// @export log2Up(int256 x) returns (int256 r)
 /// @domain x > 0
 /// @reverts OutOfRange() for x <= 0 or a word that is not a number
@@ -4170,42 +4170,6 @@ function fp256_log2Up(x) -> r {
     let u := sub(e, 0x3ffff)
     if iszero(eq(m, 0x100000000000000000000000000000000000000000000000000000000000)) { u := add(u, 1) }
     r := fromint(u)
-}
-
-/// |y| = c 2^k with c odd for an integral number y; c = 0 for y = 0.
-function intodd(y) -> c, k {
-    let s, e, m := unpack(y)
-    if iszero(e) { leave }
-    let tz := ctz(m)
-    c := shr(tz, m)
-    k := add(sub(e, 0x400eb), tz)
-}
-
-/// @object FP256X3
-/// @export gcd(int256 a, int256 b) returns (int256 r)
-/// @domain any two numbers
-/// @reverts OutOfRange() for a word that is not a number
-/// @notice The greatest common divisor of |floor(a)| and |floor(b)| as a
-///         number, exact at any magnitude: the odd parts by Euclid's
-///         algorithm times the smaller power of two. gcd(0, 0) = 0.
-function fp256_gcd(a, b) -> r {
-    let x, kx := intodd(fltdir(a, 0))
-    let y, ky := intodd(fltdir(b, 0))
-    if iszero(x) {
-        x := y
-        kx := ky
-        y := 0
-    }
-    if iszero(x) { leave }
-    if y {
-        if lt(ky, kx) { kx := ky }
-        for {} y {} {
-            let t := mod(x, y)
-            x := y
-            y := t
-        }
-    }
-    r := normround(0, add(kx, 0x400fd), x)
 }
 
 /// n! for 2 <= n <= 20366: the product in a two-word mantissa (top bit at
@@ -4229,7 +4193,7 @@ function factw(n) -> r {
     r := normround(0, add(ex, 0x401fd), h)
 }
 
-/// @object FP256X3
+/// @object FP256S
 /// @export factorial(int256 n) returns (int256 r)
 /// @domain 0 <= n < 20367 (floor(n)! fits below 2^262145)
 /// @reverts OutOfRange() for n < 0 or a word that is not a number; Overflow() from 20367
@@ -4248,34 +4212,6 @@ function fp256_factorial(n) -> r {
     if gt(k, 20366) { rev(0x35278d12) }
     if lt(k, 2) { leave }
     r := factw(k)
-}
-
-/// @object FP256X3
-/// @export pi(int256 terms) returns (int256 r)
-/// @domain terms >= 1 (its floor is the number of terms)
-/// @reverts OutOfRange() below 1 or for a word that is not a number
-/// @notice The word nearest Ramanujan's 1914 series with floor(terms)
-///         terms, 1/pi = (2 sqrt 2 / 9801) sum_k (4k)! (1103 + 26390 k) /
-///         ((k!)^4 396^(4k)): each partial sum rounded once from 300 digits
-///         and tabulated, about eight digits a term; nine terms is one ULP
-///         above pi, and from ten on every partial sum rounds to pi's word.
-function fp256_pi(terms) -> r {
-    let s, e, m := unpack(terms)
-    let u := sub(e, 0x3ffff)
-    if or(s, or(iszero(e), slt(u, 0))) { rev(0x7db3aba7) }
-    let n := 10
-    if slt(u, 4) { n := shr(sub(236, u), m) }
-    switch n
-    case 1 { r := 0x40000921fb5e86116b4ef76f50c1f1395da2ace718f1a15d0f1492cdbfcfbcbd }
-    case 2 { r := 0x40000921fb54442d19b7437dae4bba9b80357c63e0878ae5b3170f659a1b0b14 }
-    case 3 { r := 0x40000921fb54442d1846989903466fbbac22653a0d558c7430434879b401c226 }
-    case 4 { r := 0x40000921fb54442d18469898cc51702403c1273c74de67d74c1d3981c061109c }
-    case 5 { r := 0x40000921fb54442d18469898cc51701b839a2678d902132ca387ebfd273410c7 }
-    case 6 { r := 0x40000921fb54442d18469898cc51701b839a252049c148bb8f40fffc85fdb2fe }
-    case 7 { r := 0x40000921fb54442d18469898cc51701b839a252049c1114cf99785a8c2af22b3 }
-    case 8 { r := 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e8041794fe6be }
-    case 9 { r := 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c763 }
-    default { r := 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c762 }
 }
 
 // ---- roots, exact to the floor ----------------------------------------------
@@ -4320,7 +4256,6 @@ function cbrtw(n, y) -> r {
     r := sub(r, gt(mul(r, r), div(n, r)))
 }
 
-/// @object FP256X2
 /// @export cbrt(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
@@ -4401,7 +4336,6 @@ function isqrtw(n1, n0) -> y {
     for {} sqle(add(y, 1), n1, n0) {} { y := add(y, 1) }
 }
 
-/// @object FP256X3
 /// @export gavg(int256 a, int256 b) returns (int256 r)
 /// @domain a b >= 0
 /// @reverts OutOfRange() if a and b have opposite signs (both nonzero) or for a word that is not a number
@@ -4441,7 +4375,6 @@ function sqsh(m, n) -> h, l {
     h, l := wsh(p1, p0, n)
 }
 
-/// @object FP256X3
 /// @export hypot(int256 a, int256 b) returns (int256 r)
 /// @domain any two numbers; the result must fit
 /// @reverts Overflow() when sqrt(a^2 + b^2) does not fit; OutOfRange() for a word that is not a number
@@ -4486,7 +4419,7 @@ function explog10(u, m) -> k, f {
     k := shr512(p1, p0, add(sh, 254))
 }
 
-/// @object FP256X2
+/// @object FP256E
 /// @export exp2(int256 x) returns (int256 r)
 /// @domain x < 262145
 /// @reverts Overflow() when 2^x does not fit (x at or above 262,145); OutOfRange() for a word that is not a number
@@ -4519,7 +4452,7 @@ function fp256_exp2(x) -> r {
     r := normround(0, add(kk, 0x3ffff), v)
 }
 
-/// @object FP256X2
+/// @object FP256E
 /// @export exp10(int256 x) returns (int256 r)
 /// @domain x below about 78,913.4
 /// @reverts Overflow() when 10^x does not fit; OutOfRange() for a word that is not a number
@@ -4549,7 +4482,7 @@ function fp256_exp10(x) -> r {
     r := normround(0, add(kk, 0x3ffff), v)
 }
 
-/// @object FP256X2
+/// @object FP256E
 /// @export log2(int256 x) returns (int256 r)
 /// @domain x > 0
 /// @reverts OutOfRange() for x <= 0 or a word that is not a number
@@ -4624,7 +4557,7 @@ function log10w1p(s, u, m) -> r {
     r := xwide(s, u, m, ph, pl)
 }
 
-/// @object FP256X2
+/// @object FP256E
 /// @export log10(int256 x) returns (int256 r)
 /// @domain x > 0
 /// @reverts OutOfRange() for x <= 0 or a word that is not a number
@@ -4708,7 +4641,7 @@ function hypw(s, u, m, kk, c) -> r {
     r := round2(s, add(0x3fefe, k2), eh, el)
 }
 
-/// @object FP256X2
+/// @object FP256H
 /// @export sinh(int256 x) returns (int256 r)
 /// @domain |x| below about 181,705
 /// @reverts Overflow() when sinh(x) does not fit; OutOfRange() for a word that is not a number
@@ -4771,7 +4704,7 @@ function fp256_sinh(x) -> r {
     r := normround(s, add(kk, 0x3fffe), D)
 }
 
-/// @object FP256X2
+/// @object FP256H
 /// @export cosh(int256 x) returns (int256 r)
 /// @domain |x| below about 181,705
 /// @reverts Overflow() when cosh(x) does not fit; OutOfRange() for a word that is not a number
@@ -4818,7 +4751,7 @@ function tanhw2(s, u, m, kk) -> r {
     r := round2(s, 0x3feff, eh, el)
 }
 
-/// @object FP256X2
+/// @object FP256H
 /// @export tanh(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
@@ -4905,7 +4838,7 @@ function atanhw2(s, uu1, a1, uu2, a2) -> r {
     r := round3(s, 0x3fefe, p2, p1, p0)
 }
 
-/// @object FP256X2
+/// @object FP256H
 /// @export atanh(int256 x) returns (int256 r)
 /// @domain |x| < 1
 /// @reverts OutOfRange() for |x| >= 1 or a word that is not a number

@@ -3,9 +3,9 @@ pragma solidity ^0.8.24;
 
 import {FP256Harness} from "../base/FP256Harness.sol";
 import {IFP256} from "../../contracts/src/fp256/IFP256.sol";
-import {IFP256X} from "../../contracts/src/fp256/IFP256X.sol";
-import {IFP256X2} from "../../contracts/src/fp256/IFP256X2.sol";
-import {IFP256X3} from "../../contracts/src/fp256/IFP256X3.sol";
+import {IFP256E} from "../../contracts/src/fp256/IFP256E.sol";
+import {IFP256H} from "../../contracts/src/fp256/IFP256H.sol";
+import {IFP256S} from "../../contracts/src/fp256/IFP256S.sol";
 
 /// @title Equivalence256
 /// @notice The deployed object and the inline library return identical
@@ -22,18 +22,18 @@ contract Equivalence256 is FP256Harness {
     function testFuzz_objEqLib_mul(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.mul, (a, b)), "mul"); }
     function testFuzz_objEqLib_div(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.div, (a, b)), "div"); }
     function testFuzz_objEqLib_sqrt(int256 x) public view { _objLib(abi.encodeCall(IFP256.sqrt, (x)), "sqrt"); }
-    function testFuzz_objEqLib_exp(int256 x) public view { _objLib(abi.encodeCall(IFP256.exp, (x)), "exp"); }
-    function testFuzz_objEqLib_ln(int256 x) public view { _objLib(abi.encodeCall(IFP256.ln, (x)), "ln"); }
-    function testFuzz_objEqLib_pow(int256 x, int256 y) public view { _objLib(abi.encodeCall(IFP256.pow, (x, y)), "pow"); }
-    function testFuzz_objEqLib_powu(int256 x, int256 n) public view { _objLib(abi.encodeCall(IFP256.powu, (x, n)), "powu"); }
-    function testFuzz_objEqLib_compound(int256 r, int256 n) public view { _objLib(abi.encodeCall(IFP256.compound, (r, n)), "compound"); }
-    function testFuzz_objEqLib_log1p(int256 x) public view { _objLib(abi.encodeCall(IFP256.log1p, (x)), "log1p"); }
-    function testFuzz_objEqLib_expm1(int256 x) public view { _objLib(abi.encodeCall(IFP256.expm1, (x)), "expm1"); }
-    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP256X.erf, (x)), "erf"); }
-    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP256X.erfc, (x)), "erfc"); }
-    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP256X.normCdf, (x)), "normCdf"); }
-    function testFuzz_objEqLib_lambertW0(int256 x) public view { _objLib(abi.encodeCall(IFP256X.lambertW0, (x)), "lambertW0"); }
-    function testFuzz_objEqLib_lambertWm1(int256 x) public view { _objLib(abi.encodeCall(IFP256X.lambertWm1, (x)), "lambertWm1"); }
+    function testFuzz_objEqLib_exp(int256 x) public view { _objLib(abi.encodeCall(IFP256E.exp, (x)), "exp"); }
+    function testFuzz_objEqLib_ln(int256 x) public view { _objLib(abi.encodeCall(IFP256E.ln, (x)), "ln"); }
+    function testFuzz_objEqLib_pow(int256 x, int256 y) public view { _objLib(abi.encodeCall(IFP256E.pow, (x, y)), "pow"); }
+    function testFuzz_objEqLib_powu(int256 x, int256 n) public view { _objLib(abi.encodeCall(IFP256E.powu, (x, n)), "powu"); }
+    function testFuzz_objEqLib_compound(int256 r, int256 n) public view { _objLib(abi.encodeCall(IFP256E.compound, (r, n)), "compound"); }
+    function testFuzz_objEqLib_log1p(int256 x) public view { _objLib(abi.encodeCall(IFP256E.log1p, (x)), "log1p"); }
+    function testFuzz_objEqLib_expm1(int256 x) public view { _objLib(abi.encodeCall(IFP256E.expm1, (x)), "expm1"); }
+    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP256S.erf, (x)), "erf"); }
+    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP256S.erfc, (x)), "erfc"); }
+    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP256S.normCdf, (x)), "normCdf"); }
+    function testFuzz_objEqLib_lambertW0(int256 x) public view { _objLib(abi.encodeCall(IFP256S.lambertW0, (x)), "lambertW0"); }
+    function testFuzz_objEqLib_lambertWm1(int256 x) public view { _objLib(abi.encodeCall(IFP256S.lambertWm1, (x)), "lambertWm1"); }
     function testFuzz_objEqLib_neg(int256 x) public view { _objLib(abi.encodeCall(IFP256.neg, (x)), "neg"); }
     function testFuzz_objEqLib_abs(int256 x) public view { _objLib(abi.encodeCall(IFP256.abs, (x)), "abs"); }
     function testFuzz_objEqLib_sign(int256 x) public view { _objLib(abi.encodeCall(IFP256.sign, (x)), "sign"); }
@@ -60,35 +60,33 @@ contract Equivalence256 is FP256Harness {
     function testFuzz_objEqLib_toFixed18Down(int256 x) public view { _objLib(abi.encodeCall(IFP256.toFixed18Down, (x)), "toFixed18Down"); }
     function testFuzz_objEqLib_toFixed18Up(int256 x) public view { _objLib(abi.encodeCall(IFP256.toFixed18Up, (x)), "toFixed18Up"); }
     // #79: FP256X2 and FP256X3, on raw words and on numbers in a working range
-    function testFuzz_objEqLib_exp2(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.exp2, (x)), "exp2"); }
-    function testFuzz_objEqLib_exp10(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.exp10, (x)), "exp10"); }
-    function testFuzz_objEqLib_log2(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.log2, (x)), "log2"); }
-    function testFuzz_objEqLib_log10(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.log10, (x)), "log10"); }
-    function testFuzz_objEqLib_log2Up(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.log2Up, (x)), "log2Up"); }
-    function testFuzz_objEqLib_cbrt(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.cbrt, (x)), "cbrt"); }
-    function testFuzz_objEqLib_sinh(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.sinh, (x)), "sinh"); }
-    function testFuzz_objEqLib_cosh(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.cosh, (x)), "cosh"); }
-    function testFuzz_objEqLib_tanh(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.tanh, (x)), "tanh"); }
-    function testFuzz_objEqLib_atanh(int256 x) public view { _objLib(abi.encodeCall(IFP256X2.atanh, (x)), "atanh"); }
-    function testFuzz_objEqLib_min(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256X3.min, (a, b)), "min"); }
-    function testFuzz_objEqLib_max(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256X3.max, (a, b)), "max"); }
-    function testFuzz_objEqLib_avg(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256X3.avg, (a, b)), "avg"); }
-    function testFuzz_objEqLib_dist(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256X3.dist, (a, b)), "dist"); }
-    function testFuzz_objEqLib_zeroFloorSub(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256X3.zeroFloorSub, (a, b)), "zeroFloorSub"); }
-    function testFuzz_objEqLib_gcd(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256X3.gcd, (a, b)), "gcd"); }
-    function testFuzz_objEqLib_gavg(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256X3.gavg, (a, b)), "gavg"); }
-    function testFuzz_objEqLib_hypot(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256X3.hypot, (a, b)), "hypot"); }
-    function testFuzz_objEqLib_inv(int256 x) public view { _objLib(abi.encodeCall(IFP256X3.inv, (x)), "inv"); }
-    function testFuzz_objEqLib_frac(int256 x) public view { _objLib(abi.encodeCall(IFP256X3.frac, (x)), "frac"); }
-    function testFuzz_objEqLib_round(int256 x) public view { _objLib(abi.encodeCall(IFP256X3.round, (x)), "round"); }
-    function testFuzz_objEqLib_factorial(int256 x) public view { _objLib(abi.encodeCall(IFP256X3.factorial, (x)), "factorial"); }
-    function testFuzz_objEqLib_pi(int256 x) public view { _objLib(abi.encodeCall(IFP256X3.pi, (x)), "pi"); }
-    function testFuzz_objEqLib_clamp(int256 x, int256 lo, int256 hi) public view { _objLib(abi.encodeCall(IFP256X3.clamp, (x, lo, hi)), "clamp"); }
-    function testFuzz_objEqLib_lerp(int256 a, int256 b, int256 t) public view { _objLib(abi.encodeCall(IFP256X3.lerp, (a, b, t)), "lerp"); }
+    function testFuzz_objEqLib_exp2(int256 x) public view { _objLib(abi.encodeCall(IFP256E.exp2, (x)), "exp2"); }
+    function testFuzz_objEqLib_exp10(int256 x) public view { _objLib(abi.encodeCall(IFP256E.exp10, (x)), "exp10"); }
+    function testFuzz_objEqLib_log2(int256 x) public view { _objLib(abi.encodeCall(IFP256E.log2, (x)), "log2"); }
+    function testFuzz_objEqLib_log10(int256 x) public view { _objLib(abi.encodeCall(IFP256E.log10, (x)), "log10"); }
+    function testFuzz_objEqLib_log2Up(int256 x) public view { _objLib(abi.encodeCall(IFP256E.log2Up, (x)), "log2Up"); }
+    function testFuzz_objEqLib_cbrt(int256 x) public view { _objLib(abi.encodeCall(IFP256.cbrt, (x)), "cbrt"); }
+    function testFuzz_objEqLib_sinh(int256 x) public view { _objLib(abi.encodeCall(IFP256H.sinh, (x)), "sinh"); }
+    function testFuzz_objEqLib_cosh(int256 x) public view { _objLib(abi.encodeCall(IFP256H.cosh, (x)), "cosh"); }
+    function testFuzz_objEqLib_tanh(int256 x) public view { _objLib(abi.encodeCall(IFP256H.tanh, (x)), "tanh"); }
+    function testFuzz_objEqLib_atanh(int256 x) public view { _objLib(abi.encodeCall(IFP256H.atanh, (x)), "atanh"); }
+    function testFuzz_objEqLib_min(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.min, (a, b)), "min"); }
+    function testFuzz_objEqLib_max(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.max, (a, b)), "max"); }
+    function testFuzz_objEqLib_avg(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.avg, (a, b)), "avg"); }
+    function testFuzz_objEqLib_dist(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.dist, (a, b)), "dist"); }
+    function testFuzz_objEqLib_zeroFloorSub(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.zeroFloorSub, (a, b)), "zeroFloorSub"); }
+    function testFuzz_objEqLib_gavg(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.gavg, (a, b)), "gavg"); }
+    function testFuzz_objEqLib_hypot(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP256.hypot, (a, b)), "hypot"); }
+    function testFuzz_objEqLib_inv(int256 x) public view { _objLib(abi.encodeCall(IFP256.inv, (x)), "inv"); }
+    function testFuzz_objEqLib_frac(int256 x) public view { _objLib(abi.encodeCall(IFP256.frac, (x)), "frac"); }
+    function testFuzz_objEqLib_round(int256 x) public view { _objLib(abi.encodeCall(IFP256.round, (x)), "round"); }
+    function testFuzz_objEqLib_factorial(int256 x) public view { _objLib(abi.encodeCall(IFP256S.factorial, (x)), "factorial"); }
+    function testFuzz_objEqLib_clamp(int256 x, int256 lo, int256 hi) public view { _objLib(abi.encodeCall(IFP256.clamp, (x, lo, hi)), "clamp"); }
+    function testFuzz_objEqLib_lerp(int256 a, int256 b, int256 t) public view { _objLib(abi.encodeCall(IFP256.lerp, (a, b, t)), "lerp"); }
     function testFuzz_objEqLib_num1_79(int256 w, uint8 which) public view {
         int256 x = _num(w, -300, 300);
-        string[15] memory ops = ["exp2", "exp10", "log2", "log10", "log2Up", "cbrt", "sinh", "cosh", "tanh", "atanh", "inv", "frac", "round", "factorial", "pi"];
-        string memory op = ops[which % 15];
+        string[14] memory ops = ["exp2", "exp10", "log2", "log10", "log2Up", "cbrt", "sinh", "cosh", "tanh", "atanh", "inv", "frac", "round", "factorial"];
+        string memory op = ops[which % 14];
         _objLib(abi.encodeWithSignature(string.concat(op, "(int256)"), x), op);
         int256 y = _num(w, -12, 12);
         _objLib(abi.encodeWithSignature(string.concat(op, "(int256)"), y), op);
@@ -97,14 +95,14 @@ contract Equivalence256 is FP256Harness {
     function testFuzz_objEqLib_num2_79(int256 wa, int256 wb, uint8 which) public view {
         int256 a = _num(wa, -300, 300);
         int256 b = _num(wb, -300, 300);
-        string[8] memory ops = ["min", "max", "avg", "dist", "zeroFloorSub", "gcd", "gavg", "hypot"];
-        string memory op = ops[which % 8];
+        string[7] memory ops = ["min", "max", "avg", "dist", "zeroFloorSub", "gavg", "hypot"];
+        string memory op = ops[which % 7];
         _objLib(abi.encodeWithSignature(string.concat(op, "(int256,int256)"), a, b), op);
     }
 
     function testFuzz_objEqLib_lerp_num(int256 wa, int256 wb, int256 wt, uint8 spread) public view {
         int256 lim = spread % 2 == 0 ? int256(40) : int256(200000);
-        _objLib(abi.encodeCall(IFP256X3.lerp, (_num(wa, -lim, lim), _num(wb, -lim, lim), _num(wt, -lim, lim))), "lerp");
+        _objLib(abi.encodeCall(IFP256.lerp, (_num(wa, -lim, lim), _num(wb, -lim, lim), _num(wt, -lim, lim))), "lerp");
     }
 
     // ---- a valid number from fuzz input -------------------------------------
@@ -176,7 +174,7 @@ contract Equivalence256 is FP256Harness {
     function testFuzz_prop_exp_ln(int256 w) public view {
         int256 x = _mk(false, int256(bound(uint256(w) & 0xffff, 0, 400)) - 200, uint256(w) & ((uint256(1) << 236) - 1));
         // ln then exp: two roundings, the second scaled by |ln x| (up to 139 here)
-        assertGe(_bits(obj.exp(obj.ln(x)), x), 228, "exp(ln x)");
+        assertGe(_bits(objE.exp(objE.ln(x)), x), 228, "exp(ln x)");
     }
 
     function testFuzz_prop_compare(int256 wa, int256 wb) public view {
@@ -310,13 +308,13 @@ contract Equivalence256 is FP256Harness {
         int256 scale = _mk(false, k, uint256(1) << 236);
         int256 x = obj.mul(obj.fromUint(c), scale);
         int256 want = obj.mul(obj.fromUint(p), _mk(false, k * int256(n), uint256(1) << 236));
-        assertEq(obj.pow(x, obj.fromUint(n)), want, "pow(c 2^k, n) is the tie rounded away");
-        assertEq(obj.powu(x, int256(n)), want, "powu(c 2^k, n)");
-        if (n % 2 == 1) assertEq(obj.powu(obj.neg(x), int256(n)), obj.neg(want), "powu(-c, odd n)");
+        assertEq(objE.pow(x, obj.fromUint(n)), want, "pow(c 2^k, n) is the tie rounded away");
+        assertEq(objE.powu(x, int256(n)), want, "powu(c 2^k, n)");
+        if (n % 2 == 1) assertEq(objE.powu(obj.neg(x), int256(n)), obj.neg(want), "powu(-c, odd n)");
         // c^2 to the n/2: the tie through a square root
         if (n % 2 == 1 && n <= 5) {
             int256 y = obj.div(obj.fromUint(n), TWO);
-            assertEq(obj.pow(obj.mul(x, x), y), want, "pow(c^2 2^2k, n/2)");
+            assertEq(objE.pow(obj.mul(x, x), y), want, "pow(c^2 2^2k, n/2)");
         }
     }
 
@@ -325,13 +323,13 @@ contract Equivalence256 is FP256Harness {
         (uint256 c, uint256 p) = _tie(seed, n);
         vm.assume(c != 0);
         // 1 + rate = c, and 1 + rate = c 2^-b in [1/2, 1) (a negative rate)
-        assertEq(obj.compound(obj.fromUint(c - 1), int256(n)), obj.fromUint(p), "compound(c - 1, n)");
+        assertEq(objE.compound(obj.fromUint(c - 1), int256(n)), obj.fromUint(p), "compound(c - 1, n)");
         uint256 b = 256 - _lz(c);
         int256 r = obj.sub(_mk(false, -1, c << (237 - b)), ONE);
         int256 want = obj.mul(obj.fromUint(p), _mk(false, -int256(b * n), uint256(1) << 236));
-        assertEq(obj.compound(r, int256(n)), want, "compound(c 2^-b - 1, n)");
+        assertEq(objE.compound(r, int256(n)), want, "compound(c 2^-b - 1, n)");
         // (1 + 2^-79)^3 and 3^150
-        assertEq(obj.compound(_mk(false, -79, uint256(1) << 236), 3),
+        assertEq(objE.compound(_mk(false, -79, uint256(1) << 236), 3),
                  obj.mul(obj.fromUint(((uint256(1) << 79) + 1) ** 3), _mk(false, -237, uint256(1) << 236)), "(1 + 2^-79)^3");
     }
 
@@ -346,64 +344,62 @@ contract Equivalence256 is FP256Harness {
         int256 a = _num(wa, -300, 300);
         int256 b = _num(wb, -300, 300);
         int256 c = _num(wc, -300, 300);
-        int256 lo = objX3.min(a, b);
-        int256 hi = objX3.max(a, b);
+        int256 lo = obj.min(a, b);
+        int256 hi = obj.max(a, b);
         assertTrue((lo == a && hi == b) || (lo == b && hi == a), "min and max are the two words");
         assertEq(obj.lt(hi, lo), 0, "min <= max");
-        int256 k = objX3.clamp(c, lo, hi);
+        int256 k = obj.clamp(c, lo, hi);
         assertEq(obj.lt(k, lo) + obj.lt(hi, k), 0, "clamp lands in [lo, hi]");
-        int256 m = objX3.avg(a, b);
+        int256 m = obj.avg(a, b);
         assertEq(obj.lt(m, lo) + obj.lt(hi, m), 0, "avg lies between");
-        assertEq(objX3.avg(a, a), a, "avg(a, a) = a");
-        assertEq(objX3.dist(a, b), objX3.dist(b, a), "dist is symmetric");
-        assertEq(objX3.dist(a, b), obj.abs(obj.sub(a, b)), "dist = |a - b|");
-        assertEq(objX3.lerp(a, b, 0), a, "lerp at 0");
-        assertEq(objX3.lerp(a, b, ONE), b, "lerp at 1");
-        assertEq(objX3.lerp(a, a, c), a, "lerp of equal ends");
-        assertEq(objX3.lerp(a, b, HALF), objX3.avg(a, b), "lerp at 1/2 is avg: one rounding of the same value");
+        assertEq(obj.avg(a, a), a, "avg(a, a) = a");
+        assertEq(obj.dist(a, b), obj.dist(b, a), "dist is symmetric");
+        assertEq(obj.dist(a, b), obj.abs(obj.sub(a, b)), "dist = |a - b|");
+        assertEq(obj.lerp(a, b, 0), a, "lerp at 0");
+        assertEq(obj.lerp(a, b, ONE), b, "lerp at 1");
+        assertEq(obj.lerp(a, a, c), a, "lerp of equal ends");
+        assertEq(obj.lerp(a, b, HALF), obj.avg(a, b), "lerp at 1/2 is avg: one rounding of the same value");
     }
 
     function testFuzz_prop_integral(int256 w) public view {
         int256 x = _num(w, -8, 250);
-        int256 r = objX3.round(x);
-        assertEq(objX3.round(obj.neg(x)), obj.neg(r), "round is odd");
+        int256 r = obj.round(x);
+        assertEq(obj.round(obj.neg(x)), obj.neg(r), "round is odd");
         assertEq(obj.floor(r), r, "round is integral");
         assertEq(obj.lt(HALF, obj.abs(obj.sub(r, x))), 0, "within a half");
-        int256 f = objX3.frac(x);
+        int256 f = obj.frac(x);
         assertEq(f, obj.sub(x, obj.floor(x)), "frac = x - floor(x)");
         if (x >= 0) assertEq(obj.add(obj.floor(x), f), x, "floor + frac = x, exactly, for x >= 0");
-        int256 g = objX3.gcd(x, obj.fromUint(360));
-        assertEq(g, objX3.gcd(obj.fromUint(360), x), "gcd is symmetric");
     }
 
     function testFuzz_prop_roots(int256 wa, int256 wb) public view {
         int256 a = _num(wa, -100000, 100000);
         int256 b = _num(wb, -100000, 100000);
-        assertEq(objX2.cbrt(obj.neg(a)), obj.neg(objX2.cbrt(a)), "cbrt is odd");
-        assertEq(objX3.hypot(a, b), objX3.hypot(obj.neg(b), a), "hypot is symmetric and even");
-        assertEq(objX3.hypot(a, 0), obj.abs(a));
-        assertEq(objX3.gavg(a, a), obj.abs(a), "gavg(a, a) = |a|");
+        assertEq(obj.cbrt(obj.neg(a)), obj.neg(obj.cbrt(a)), "cbrt is odd");
+        assertEq(obj.hypot(a, b), obj.hypot(obj.neg(b), a), "hypot is symmetric and even");
+        assertEq(obj.hypot(a, 0), obj.abs(a));
+        assertEq(obj.gavg(a, a), obj.abs(a), "gavg(a, a) = |a|");
         // a 79-bit significand cubed is exact, and its cube root is that number
         int256 c = _mk(false, int256(uint256(wb) % 2000) - 1000, (uint256(wa) >> 100) << 158);
-        assertEq(objX2.cbrt(obj.mul(obj.mul(c, c), c)), c, "cbrt of an exact cube");
+        assertEq(obj.cbrt(obj.mul(obj.mul(c, c), c)), c, "cbrt of an exact cube");
     }
 
     function testFuzz_prop_bases(int16 k, int256 w) public view {
         int256 n = int256(k) % 262000;
         int256 p = _mk(false, n, uint256(1) << 236);
-        assertEq(objX2.exp2(obj.fromFP127(n << 128)), p, "2^n exact");
-        assertEq(objX2.log2(p), obj.fromFP127(n << 128), "log2 2^n = n");
-        assertEq(objX2.log2Up(p), obj.fromFP127(n << 128), "log2Up 2^n = n");
+        assertEq(objE.exp2(obj.fromFP127(n << 128)), p, "2^n exact");
+        assertEq(objE.log2(p), obj.fromFP127(n << 128), "log2 2^n = n");
+        assertEq(objE.log2Up(p), obj.fromFP127(n << 128), "log2Up 2^n = n");
         int256 x = _num(w, -100, 100);
         x = obj.abs(x);
         if (x != 0 && x != ONE) {
-            assertGe(_bits(objX2.exp2(objX2.log2(x)), x), 228, "exp2(log2 x)");
-            assertGe(_bits(objX2.exp10(objX2.log10(x)), x), 228, "exp10(log10 x)");
+            assertGe(_bits(objE.exp2(objE.log2(x)), x), 228, "exp2(log2 x)");
+            assertGe(_bits(objE.exp10(objE.log10(x)), x), 228, "exp10(log10 x)");
         }
         int256 y = _num(w, -60, 7);
-        assertEq(objX2.sinh(obj.neg(y)), obj.neg(objX2.sinh(y)), "sinh is odd");
-        assertEq(objX2.cosh(obj.neg(y)), objX2.cosh(y), "cosh is even");
-        assertEq(objX2.tanh(obj.neg(y)), obj.neg(objX2.tanh(y)), "tanh is odd");
+        assertEq(objH.sinh(obj.neg(y)), obj.neg(objH.sinh(y)), "sinh is odd");
+        assertEq(objH.cosh(obj.neg(y)), objH.cosh(y), "cosh is even");
+        assertEq(objH.tanh(obj.neg(y)), obj.neg(objH.tanh(y)), "tanh is odd");
     }
 
     function testFuzz_invalid_words_revert(int256 w) public view {
@@ -415,12 +411,12 @@ contract Equivalence256 is FP256Harness {
         _expectRevert(abi.encodeCall(IFP256.neg, (bad)), IFP256.OutOfRange.selector, "neg");
         _expectRevert(abi.encodeCall(IFP256.cmp, (bad, ONE)), IFP256.OutOfRange.selector, "cmp");
         _expectRevert(abi.encodeCall(IFP256.eq, (ONE, bad)), IFP256.OutOfRange.selector, "eq");
-        _expectRevert(abi.encodeCall(IFP256.exp, (bad)), IFP256.OutOfRange.selector, "exp");
+        _expectRevertAt(address(objE), abi.encodeCall(IFP256E.exp, (bad)), IFP256.OutOfRange.selector, "exp");
         _expectRevert(abi.encodeCall(IFP256.toFixed18, (bad)), IFP256.OutOfRange.selector, "toFixed18");
-        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.exp2, (bad)), IFP256.OutOfRange.selector, "exp2");
-        _expectRevertAt(address(objX2), abi.encodeCall(IFP256X2.tanh, (bad)), IFP256.OutOfRange.selector, "tanh");
-        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.min, (bad, ONE)), IFP256.OutOfRange.selector, "min");
-        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.lerp, (ONE, ONE, bad)), IFP256.OutOfRange.selector, "lerp");
-        _expectRevertAt(address(objX3), abi.encodeCall(IFP256X3.round, (bad)), IFP256.OutOfRange.selector, "round");
+        _expectRevertAt(address(objE), abi.encodeCall(IFP256E.exp2, (bad)), IFP256.OutOfRange.selector, "exp2");
+        _expectRevertAt(address(objH), abi.encodeCall(IFP256H.tanh, (bad)), IFP256.OutOfRange.selector, "tanh");
+        _expectRevertAt(address(obj), abi.encodeCall(IFP256.min, (bad, ONE)), IFP256.OutOfRange.selector, "min");
+        _expectRevertAt(address(obj), abi.encodeCall(IFP256.lerp, (ONE, ONE, bad)), IFP256.OutOfRange.selector, "lerp");
+        _expectRevertAt(address(obj), abi.encodeCall(IFP256.round, (bad)), IFP256.OutOfRange.selector, "round");
     }
 }

@@ -222,11 +222,6 @@ def op_frac(x): return x & MASK
 def op_round(x): return op_floor(op_add(x, HALF))
 
 
-def op_gcd(a, b):
-    import math
-    return math.gcd(abs(a >> 128), abs(b >> 128)) << 128
-
-
 def op_factorial(n):
     if n < 0:
         raise Revert("OutOfRange")
@@ -269,21 +264,6 @@ def op_exp2(x):
 
 def op_exp10(x):
     return _pow2_domain(mp.power(10, to_mpf(x)))
-
-
-def op_pi(terms):
-    """Ramanujan's 1914 series in exact reals, floor(terms) terms, floored
-    to the grid; 1 <= floor(terms) <= 7 (zero terms is an empty sum)."""
-    if terms < 0:
-        raise Revert("OutOfRange")
-    n = terms >> 128
-    if n > 7 or n == 0:
-        raise Revert("OutOfRange")
-    s = mpf(0)
-    for k in range(n):
-        s += mp.factorial(4 * k) * (1103 + 26390 * k) / (mp.factorial(k) ** 4 * mpf(396) ** (4 * k))
-    v = 1 / (2 * mp.sqrt(2) / 9801 * s)
-    return T(mfloor(v), v * ONE)
 
 
 def _pos(x):

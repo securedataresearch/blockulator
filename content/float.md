@@ -30,15 +30,18 @@ Rounding: once per op (Lambert W iterates), ties away from zero. Overflow revert
 
 {{ <deployment lib="fp256" /> }}
 
-Release four (Blockulator 2.1) is four objects from one source; the record above is FP256's. The other three, on the same CREATE2 proxy:
+Release four (Blockulator 2.1) is live as four objects from one source; the record above is FP256's, and [`FP256.md`](/contracts/deployments/FP256.md) has the other three (FP256X, FP256X2, FP256X3).
 
-| object | ops | address |
+The source now deploys as four objects by idea, one idea each, with ops that share a kernel in one object:
+
+| object | the idea | ops |
 |---|---|---|
-| FP256X | `erf`, `erfc`, `normCdf`, `lambertW0`, `lambertWm1` | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
-| FP256X2 | `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `sinh`, `cosh`, `tanh`, `atanh` | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
-| FP256X3 | `min`, `max`, `clamp`, `avg`, `dist`, `zeroFloorSub`, `inv`, `lerp`, `frac`, `round`, `gcd`, `factorial`, `pi`, `gavg`, `hypot` | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
+| FP256 | the number | `add` `sub` `mul` `div` `inv` `sqrt` `cbrt` `hypot` `gavg`; `neg` `abs` `sign`; `cmp` `lt` `eq` `min` `max` `clamp`; `floor` `ceil` `round` `frac`; `avg` `dist` `zeroFloorSub` `lerp`; `mulDown` `mulUp` `divDown` `divUp`; every conversion |
+| FP256E | the elementary functions, on one exp/log kernel | `exp` `exp2` `exp10` `expm1` `ln` `log2` `log10` `log2Up` `log1p` `pow` `powu` `compound` |
+| FP256H | the hyperbolic functions | `sinh` `cosh` `tanh` `atanh` |
+| FP256S | the special functions | `erf` `erfc` `normCdf` `lambertW0` `lambertWm1` `factorial` |
 
-The inline library holds all 67 ops. Records: [`FP256.md`](/contracts/deployments/FP256.md).
+The hyperbolics are elementary functions too, but FP256E with them measured 27,308 bytes, over the 24,576 limit, so FP256H carries its own copy of the exp/log kernel at its own address: bytes at deployment, no gas per call. A smaller kernel may fold it back into FP256E. `pi` is the constant `FP256Lib.PI`, the word nearest π; `gcd` is gone. The inline library holds all 65 ops. Their addresses come with the deployment.
 
 ## Inline form
 

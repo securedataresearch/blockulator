@@ -33,7 +33,6 @@ interface IHuffOps {
     function fracRaw(uint256) external pure returns (uint256);
     function roundRaw(uint256) external pure returns (uint256);
     function log2UpRaw(uint256) external pure returns (uint256);
-    function gcdRaw(uint256, uint256) external pure returns (uint256);
     function factorialRaw(uint256) external pure returns (uint256);
     function lambertW0Raw(uint256) external pure returns (uint256);
 }
@@ -106,9 +105,7 @@ contract EquivalenceOps is FP127Harness {
     function testFuzz_objEqLib_ceil(int256 x) public view { _objLib(abi.encodeCall(IFP127.ceil, (x)), "ceil"); }
     function testFuzz_objEqLib_frac(int256 x) public view { _objLib(abi.encodeCall(IFP127.frac, (x)), "frac"); }
     function testFuzz_objEqLib_round(int256 x) public view { _objLib(abi.encodeCall(IFP127.round, (x)), "round"); }
-    function testFuzz_objEqLib_gcd(int256 a, int256 b) public view { _objLib(abi.encodeCall(IFP127.gcd, (a, b)), "gcd"); }
     function testFuzz_objEqLib_factorial(int256 n) public view { _objLib(abi.encodeCall(IFP127.factorial, (n)), "factorial"); }
-    function testFuzz_objEqLib_pi(int256 n) public view { _objLib(abi.encodeCall(IFP127.pi, (n)), "pi"); }
     function testFuzz_objEqLib_powu(int256 x, int256 n) public view { _objLib(abi.encodeCall(IFP127.powu, (x, n)), "powu"); }
     function testFuzz_objEqLib_compound(int256 r, int256 n) public view { _objLib(abi.encodeCall(IFP127.compound, (r, n)), "compound"); }
     function testFuzz_objEqLib_log1p(int256 x) public view { _objLib(abi.encodeCall(IFP127.log1p, (x)), "log1p"); }
@@ -303,12 +300,6 @@ contract EquivalenceOps is FP127Harness {
         _objHuff(abi.encodeCall(IFP127.gavg, (a, b)), abi.encodeCall(IHuffOps.gavgRaw, (_u(a), _u(b))), "gavg");
     }
 
-    function testFuzz_huff_gcd(int256 a, int256 b) public view {
-        a = bound(a, 0, MAX);
-        b = bound(b, 0, MAX);
-        _objHuff(abi.encodeCall(IFP127.gcd, (a, b)), abi.encodeCall(IHuffOps.gcdRaw, (_u(a), _u(b))), "gcd");
-    }
-
     function testFuzz_huff_factorial(int256 n) public view {
         n = bound(n, 0, 34 * ONE - 1);
         _objHuff(abi.encodeCall(IFP127.factorial, (n)), abi.encodeCall(IHuffOps.factorialRaw, (_u(n))), "factorial");
@@ -402,14 +393,6 @@ contract EquivalenceOps is FP127Harness {
         _expectRevert(abi.encodeCall(IFP127.neg, (MIN)), IFP127.Overflow.selector, "neg");
     }
 
-    function test_divergence_gcd_negative() public view {
-        // Huff used a logical shift, so gcd(-4, 6) saw 2^128 - 4 and gave 2.
-        // The Yul takes |floor(x)| and gives gcd(4, 6) = 2 as well here, but
-        // gcd(-4, -4) exposes it: Huff 2^128-4 vs Yul 4.
-        assertEq(obj.gcd(-4 * ONE, -4 * ONE), 4 * ONE);
-        assertEq(obj.gcd(-12 * ONE, 18 * ONE), 6 * ONE);
-    }
-
     // ------------------------------------------------------------------
     // Known values and identities
     // ------------------------------------------------------------------
@@ -433,7 +416,6 @@ contract EquivalenceOps is FP127Harness {
         assertEq(obj.pow(10 * ONE, 2 * ONE), 100 * ONE);
         assertEq(obj.factorial(5 * ONE + 1), 120 * ONE);
         assertEq(obj.factorial(0), ONE);
-        assertEq(obj.gcd(12 * ONE, 18 * ONE), 6 * ONE);
         assertEq(obj.lambertW0(ONE), 0x91304d7c74b2ba5eafddaa6286dc28e1);
         assertEq(obj.lambertW0(0), 0);
         assertEq(obj.floor(-ONE / 2), -ONE);

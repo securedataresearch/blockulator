@@ -19,6 +19,10 @@ library FP256Lib {
 
     int256 internal constant ONE = int256(0x3ffff) << 236;
 
+    /// @notice pi as the FP256 word nearest it: 237 bits, about 71 digits.
+    ///         A constant, not an op: an object caller can copy the literal.
+    int256 internal constant PI = 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c762;
+
     /// @notice a + b, rounded once (half up on the magnitude). The result is
     ///         exact whenever it is representable; a - a is +0.
     function add(int256 _a, int256 _b) internal pure returns (int256 _r) {
@@ -11234,115 +11238,6 @@ library FP256Lib {
             _r := fp256_log2Up(_x)
         }
     }
-    /// @notice The greatest common divisor of |floor(a)| and |floor(b)| as a
-    ///         number, exact at any magnitude: the odd parts by Euclid's
-    ///         algorithm times the smaller power of two. gcd(0, 0) = 0.
-    function gcd(int256 _a, int256 _b) internal pure returns (int256 _r) {
-        assembly ("memory-safe") {
-            function rev(sel) {
-                mstore(0x00, shl(224, sel))
-                revert(0x00, 0x04)
-            }
-
-            function check(x) {
-                if and(iszero(and(x, 0x7ffff00000000000000000000000000000000000000000000000000000000000)), iszero(iszero(x))) { rev(0x7db3aba7) }
-            }
-
-            function pack(s, e, m) -> r {
-                if gt(sub(e, 1), 0x7fffe) {
-                    if sgt(e, 0x7ffff) { rev(0x35278d12) }
-                    leave
-                }
-                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
-            }
-
-            function fltdir(x, up) -> r {
-                let e := and(shr(236, x), 0x7ffff)
-                if iszero(e) {
-                    check(x)
-                    leave
-                }
-                let s := shr(255, x)
-                let m := or(and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000)
-                let u := sub(e, 0x3ffff)
-                if iszero(slt(u, 236)) {
-                    r := x
-                    leave
-                }
-                let away := xor(s, up)
-                if slt(u, 0) {
-                    if away { r := or(shl(255, s), 0x3ffff00000000000000000000000000000000000000000000000000000000000) }
-                    leave
-                }
-                let k := sub(236, u)
-                let low := and(m, sub(shl(k, 1), 1))
-                m := sub(m, low)
-                if and(away, iszero(iszero(low))) { m := add(m, shl(k, 1)) }
-                if eq(m, 0x200000000000000000000000000000000000000000000000000000000000) {
-                    m := 0x100000000000000000000000000000000000000000000000000000000000
-                    e := add(e, 1)
-                }
-                r := pack(s, e, m)
-            }
-
-            function ctz(x) -> r {
-                if x { r := sub(255, clz(and(x, sub(0, x)))) }
-            }
-
-            function unpack(x) -> s, e, m {
-                s := shr(255, x)
-                e := and(shr(236, x), 0x7ffff)
-                m := and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
-                if iszero(e) {
-                    if or(s, m) { rev(0x7db3aba7) }
-                    leave
-                }
-                m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
-            }
-
-            function intodd(y) -> c, k {
-                let s, e, m := unpack(y)
-                if iszero(e) { leave }
-                let tz := ctz(m)
-                c := shr(tz, m)
-                k := add(sub(e, 0x400eb), tz)
-            }
-
-            function msb(x) -> r {
-                if iszero(x) { leave }
-                r := sub(255, clz(x))
-            }
-
-            function normround(s, e, D) -> r {
-                let n := msb(D)
-                D := shl(sub(255, n), D)
-                let m := shr(1, add(shr(18, D), 1))
-                r := pack(s, add(add(e, sub(n, 254)), shr(237, m)), m)
-            }
-
-            function fp256_gcd(a, b) -> r {
-                let x, kx := intodd(fltdir(a, 0))
-                let y, ky := intodd(fltdir(b, 0))
-                if iszero(x) {
-                    x := y
-                    kx := ky
-                    y := 0
-                }
-                if iszero(x) { leave }
-                if y {
-                    if lt(ky, kx) { kx := ky }
-                    for {} y {} {
-                        let t := mod(x, y)
-                        x := y
-                        y := t
-                    }
-                }
-                r := normround(0, add(kx, 0x400fd), x)
-            }
-
-            _r := fp256_gcd(_a, _b)
-        }
-    }
     /// @notice floor(n)! rounded once: the exact product while its odd part
     ///         fits 512 bits (every exact tie), a 512-bit running product
     ///         within 2^-500 above that; every n in the domain is checked
@@ -11448,51 +11343,6 @@ library FP256Lib {
             }
 
             _r := fp256_factorial(_n)
-        }
-    }
-    /// @notice The word nearest Ramanujan's 1914 series with floor(terms)
-    ///         terms, 1/pi = (2 sqrt 2 / 9801) sum_k (4k)! (1103 + 26390 k) /
-    ///         ((k!)^4 396^(4k)): each partial sum rounded once from 300 digits
-    ///         and tabulated, about eight digits a term; nine terms is one ULP
-    ///         above pi, and from ten on every partial sum rounds to pi's word.
-    function pi(int256 _terms) internal pure returns (int256 _r) {
-        assembly ("memory-safe") {
-            function rev(sel) {
-                mstore(0x00, shl(224, sel))
-                revert(0x00, 0x04)
-            }
-
-            function unpack(x) -> s, e, m {
-                s := shr(255, x)
-                e := and(shr(236, x), 0x7ffff)
-                m := and(x, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
-                if iszero(e) {
-                    if or(s, m) { rev(0x7db3aba7) }
-                    leave
-                }
-                m := or(m, 0x100000000000000000000000000000000000000000000000000000000000)
-            }
-
-            function fp256_pi(terms) -> r {
-                let s, e, m := unpack(terms)
-                let u := sub(e, 0x3ffff)
-                if or(s, or(iszero(e), slt(u, 0))) { rev(0x7db3aba7) }
-                let n := 10
-                if slt(u, 4) { n := shr(sub(236, u), m) }
-                switch n
-                case 1 { r := 0x40000921fb5e86116b4ef76f50c1f1395da2ace718f1a15d0f1492cdbfcfbcbd }
-                case 2 { r := 0x40000921fb54442d19b7437dae4bba9b80357c63e0878ae5b3170f659a1b0b14 }
-                case 3 { r := 0x40000921fb54442d1846989903466fbbac22653a0d558c7430434879b401c226 }
-                case 4 { r := 0x40000921fb54442d18469898cc51702403c1273c74de67d74c1d3981c061109c }
-                case 5 { r := 0x40000921fb54442d18469898cc51701b839a2678d902132ca387ebfd273410c7 }
-                case 6 { r := 0x40000921fb54442d18469898cc51701b839a252049c148bb8f40fffc85fdb2fe }
-                case 7 { r := 0x40000921fb54442d18469898cc51701b839a252049c1114cf99785a8c2af22b3 }
-                case 8 { r := 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e8041794fe6be }
-                case 9 { r := 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c763 }
-                default { r := 0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c762 }
-            }
-
-            _r := fp256_pi(_terms)
         }
     }
     /// @notice The cube root, cbrt(-x) = -cbrt(x): floor(cbrt(N)) of the
