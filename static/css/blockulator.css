@@ -210,8 +210,8 @@ h1, .hero .sub, .block h2, .askcard h2, .doc h2, .step h3 { font-variant-numeric
 @media (max-width: 640px) { .doc > table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; } .doc :not(pre) > code { overflow-wrap: anywhere; } .doc p, .doc li { overflow-wrap: break-word; } }
 
 /* the pitch table (components.html pitch): ours in weight, the typical-input mark small */
-.pitch tr.ours td, .pitch td.ours, .pitch th.ours { font-weight: 600; color: var(--ink); }
-.pitch tr.ours td, .pitch td.ours { background: var(--g-50); }
+.pitch tr.ours td, .pitch td.ours, .pitch th.ours, .gasall td.ours, .gasall th.ours { font-weight: 600; color: var(--ink); }
+.pitch tr.ours td, .pitch td.ours, .gasall td.ours { background: var(--g-50); }
 .pitch td { white-space: nowrap; }
 @media (max-width: 640px) { .pitch .what { display: none; } .pitch th, .pitch td { padding-inline: 8px; } }
 sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: var(--g-700); }
