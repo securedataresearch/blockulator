@@ -1,0 +1,44 @@
+name: proofs
+
+# The formal proofs (docs/proofs.md) take tens of minutes of solver time, so they
+# run nightly, on demand, and when the proofs or the library sources change on
+# master: never on every pull request. Local full runs: PROOFS_FULL=1 make proofs.
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "test/proofs/**"
+      - "contracts/src/fp127/FP127.yul.src"
+      - "contracts/src/fp256/FP256.yul.src"
+
+concurrency:
+  group: proofs
+  cancel-in-progress: true
+
+jobs:
+  proofs:
+    runs-on: ubuntu-latest
+    # the fast subset (checks that passed in under 120 s, lemmas, fuzz)
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Halmos 0.3.3
+        run: |
+          uv tool install halmos==0.3.3
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Formal proofs, the CI subset (docs/proofs.md; PROOFS_FULL=1 locally for all)
+        run: JOBS=2 SOLVER_THREADS=2 make proofs
+

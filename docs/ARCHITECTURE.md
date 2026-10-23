@@ -34,13 +34,20 @@ commits and explains the licensing).
 
 ## The site
 
-A Zola site in the style of securedataresearch.net.
-`static/css/site.css` and `static/js/hero.js` are pulled from the live
-company site by `scripts/sync-sdr.sh`; `static/css/blockulator.css` layers
-this site's changes on top. The shader hero runs on the home page only;
-inner pages get a static header (`templates/pagehead.html`) and a sub-nav
-for their group (Results, Library). The fonts are self-hosted in
-`static/fonts/` (OFL) and preloaded, so navigation never swaps them.
+A Zola site, started from securedataresearch.net's style and now its own.
+`static/css/site.css` holds the theme: every colour token, light and dark
+(the system's choice, no theme script), the mesh background and the one
+glass recipe for cards; `static/css/blockulator.css` styles the components
+with those tokens only. `templates/base.html` repeats the page colour in an
+inline critical block, and every page cross-fades through a view transition
+with the frosted top bar held still, so no navigation shows a blank or
+off-colour frame. The cloth shader (`static/js/hero.js`) runs on the home
+page only, drawn on the page's own colour and revealed after its first
+frame; inner pages are one frosted sheet with a static header
+(`templates/pagehead.html`) and a sub-nav for their group (Results,
+Library). The fonts are self-hosted in `static/fonts/` (OFL), preloaded,
+`font-display: optional`, with metric-matched fallbacks, so nothing swaps
+or shifts.
 Pages are Markdown under `content/`; `path` and `aliases` in the front
 matter place them and keep the old URLs (`/demo/`, `/edges/`, `/compare/`,
 `/float/`). Tables and the ladder chart are Tera components in
