@@ -46,26 +46,33 @@
 {%- if lib == "fp256" %}
 <p class="note">Bits are relative correct bits on the decoded values against exact rationals and mpmath at 300 decimal places over the committed vectors; "exact" is bit-identical. Gas is the median over each op's input ladder: "object" includes the <code>staticcall</code> to the deployed object that holds the op (FP256, FP256E, FP256H or FP256S), "inline" is <code>FP256Lib</code>. Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>.</p>
 {%- else %}
-<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. Gas is the median over each op's input ladder: "object" includes the <code>staticcall</code> to the deployed FP127, "inline" is <code>FP127Lib</code>. Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>. <code>lerp</code> and <code>clamp</code> are not on the gas ladder.</p>
+<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. Gas is the median over each op's input ladder: "object" includes the <code>staticcall</code> to the deployed FP127, "inline" is <code>FP127Lib</code>. Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>.</p>
 {%- endif %}
 {%- endcomponent %}
 
-{% component gastable(repo: string) -%}
-{%- set gas = load_data(path="static/data/gas.json") -%}
-{%- set forms = ["yul", "lib", "abdk", "solady", "prb", "quad", "balancer"] -%}
+{#- Median gas per op and form. Empty: the library does not offer the op; rev: it does, and reverted (or the input
+    was outside its domain or format) on every ladder input. Each cell's title is the call it measures (gas.calls). -#}
+{% component gastable(repo: string, lib: string = "fp127") -%}
+{%- if lib == "fp256" %}{% set gas = load_data(path="static/data/fp256/gas.json") %}{% set forms = ["yul", "lib", "fp127lib", "quad"] %}{% set src = "/data/fp256/gas.json" %}{% set md = "gas256.md" -%}
+{%- else %}{% set gas = load_data(path="static/data/gas.json") %}{% set forms = ["yul", "lib", "abdk", "solady", "prb", "quad", "balancer"] %}{% set src = "/data/gas.json" %}{% set md = "gas.md" %}{% endif -%}
 <div class="scroll">
 <table>
 <thead><tr><th>op</th>{% for f in forms %}<th class="num">{{ gas.formLabels[f] }}</th>{% endfor %}</tr></thead>
 <tbody>
 {%- for name, o in gas.ops %}
 <tr><td class="mono">{{ name }}</td>
-{%- for f in forms %}{% set s = o.summary[f] %}<td class="num">{% if s %}{{ s.median }}{% endif %}</td>{% endfor %}
+{%- for f in forms %}{% set s = o.summary[f] %}{% set call = "" %}{% if gas.calls[f] is defined %}{% if gas.calls[f][name] is defined %}{% set call = gas.calls[f][name] %}{% endif %}{% endif -%}
+<td class="num"{% if call %} title="{{ call }}"{% endif %}>{% if s %}{{ s.median }}{% elif o.reverts is defined %}{% if o.reverts[f] is defined %}<span class="rev">rev</span>{% endif %}{% endif %}</td>{% endfor %}
 </tr>
 {%- endfor %}
 </tbody>
 </table>
 </div>
-<p class="note">Median gas per op over its input ladder, {{ gas.generated }}. The Yul object column includes the <code>staticcall</code>; the other six are internal library calls. An empty cell is an op the library does not offer, or that reverted on every ladder input. Min and max per cell are in <a href="/data/gas.json">gas.json</a>; the Huff and FP127Caller columns are in <a href="{{ repo }}/blob/master/docs/benchmarks/gas.md">gas.md</a>. Versions: {% for k, v in gas.versions %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+{%- if lib == "fp256" %}
+<p class="note">Median gas per op over its input ladder, {{ gas.generated }}. The object column includes the <code>staticcall</code>; the other three are internal library calls: <code>FP256Lib</code>, the same op in <code>FP127Lib</code> on the same value where 127.128 holds it, and ABDKMathQuad, the other float. An empty cell is an op the library does not offer; <span class="rev">rev</span> would be one it offers that reverted, or whose inputs were outside its domain or format, on every ladder input. Hover a Quad cell for the call it measures: <code>lt</code>, <code>inv</code> and <code>pow</code> are composed from Quad's own functions, and its conversions truncate where FP256's round. The WAD libraries and 64.64 are compared on <a href="/results/ops/">FP127's table</a>. Min and max per cell are in <a href="{{ src }}">gas.json</a> and <a href="{{ repo }}/blob/master/docs/benchmarks/{{ md }}">{{ md }}</a>; every function of every comparison library is mapped in <a href="{{ repo }}/blob/master/docs/benchmarks/coverage.md">coverage.md</a>.</p>
+{%- else %}
+<p class="note">Median gas per op over its input ladder, {{ gas.generated }}. The Yul object column includes the <code>staticcall</code>; the other six are internal library calls. An empty cell is an op the library does not offer; <span class="rev">rev</span> would be one it offers that reverted, or whose inputs were outside its domain or format, on every ladder input. Hover a cell for the function it measures. A few are composed from the library's own functions (Solady and Quad <code>inv</code>, Quad <code>pow</code>, Balancer <code>sqrt</code> and <code>cbrt</code>); some keep to part of the ladder (Solady's unsigned functions to non-negative inputs, its integer <code>log2Up</code> and <code>factorial</code> to integers, its <code>lerp</code> to t in [0, 1]). Solady's <code>add</code> and <code>sub</code> are its unchecked <code>rawAdd</code> and <code>rawSub</code>. Every function of every comparison library is mapped, or listed as not compared with the reason, in <a href="{{ repo }}/blob/master/docs/benchmarks/coverage.md">coverage.md</a>. Min and max per cell are in <a href="{{ src }}">gas.json</a>; the Huff and FP127Caller columns are in <a href="{{ repo }}/blob/master/docs/benchmarks/{{ md }}">{{ md }}</a>. Versions: {% for k, v in gas.versions %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+{%- endif %}
 {%- endcomponent %}
 
 {% component precisiontable() -%}

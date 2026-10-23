@@ -4,8 +4,18 @@ and docs/benchmarks/gas.md.
 
     forge test --match-contract GasLadder -vv | uv run scripts/fp127/gas_to_json.py
 
-Line format:  GAS|<op>|<inputIndex>|<input hex>|<form>|<gas or NA>[|typical]
+Line format:  GAS|<op>|<inputIndex>|<input hex>|<form>|<gas, NA or REV>[|typical]
 Forms:        huff yul caller lib abdk solady prb quad balancer
+
+NA: the form does not offer the op. REV: it does, but reverted on that input,
+or the input is outside the function's domain or its format's range.
+ops[op].reverts counts the REV inputs per form; a form with no gas and a
+revert count reverted on every input ("rev" in gas.md and on the site).
+
+CALLS says what each competitor cell calls; the run fails if a cell is
+measured (or reverts) without an entry here, or an entry has no cell, so the
+list and the harness cannot drift. docs/benchmarks/coverage.md maps every
+function of every comparison library to an op or says why it is not compared.
 
 A line with the seventh field `typical` belongs to the op's typical-input set
 (random non-integer inputs that take no shortcut), kept apart from the ladder:
@@ -38,6 +48,71 @@ FORM_LABEL = {
     "balancer": "Balancer LogExpMath",
     "fp127lib": "FP127Lib (inline), the same op",
 }
+
+# What each competitor cell calls. "composed" marks a cell built from the
+# library's own functions where it has no function of that name; a note in
+# parentheses is a domain the harness keeps to, or a rounding difference.
+CALLS_FP127 = {
+    "abdk": {
+        "exp": "exp(x)", "exp2": "exp_2(x)", "ln": "ln(x)", "log2": "log_2(x)", "sqrt": "sqrt(x)",
+        "inv": "inv(x)", "abs": "abs(x)", "neg": "neg(x)",
+        "add": "add(a, b)", "sub": "sub(a, b)", "mul": "mul(a, b)", "div": "div(a, b)",
+        "avg": "avg(a, b)", "gavg": "gavg(a, b)",
+        "powu": "pow(x, n), n a uint256 (n >= 0)",
+    },
+    "solady": {
+        "exp": "expWad(x)", "ln": "lnWad(x)", "lambertW0": "lambertW0Wad(x)",
+        "sqrt": "sqrtWad(x) (x >= 0)", "cbrt": "cbrtWad(x) (x >= 0)",
+        "inv": "sDivWad(1e18, x) (composed)", "abs": "abs(int256)",
+        "log2Up": "log2Up(uint256) on the integer x (integral x >= 1)",
+        "factorial": "factorial(uint256) on the integer x (integral x)",
+        "add": "rawAdd(int256, int256) (unchecked)", "sub": "rawSub(int256, int256) (unchecked)",
+        "mul": "sMulWad(a, b) (toward zero)", "div": "sDivWad(a, b)", "pow": "powWad(x, y)",
+        "mulDown": "mulWad(a, b) (a, b >= 0)", "mulUp": "mulWadUp(a, b) (a, b >= 0)",
+        "divDown": "divWad(a, b) (a >= 0, b > 0)", "divUp": "divWadUp(a, b) (a >= 0, b > 0)",
+        "avg": "avg(int256, int256)", "dist": "dist(int256, int256)",
+        "min": "min(int256, int256)", "max": "max(int256, int256)",
+        "zeroFloorSub": "zeroFloorSub(uint256, uint256) (a, b >= 0)",
+        "gavg": "mulSqrt(a, b) (a, b >= 0)",
+        "powu": "rpow(x, n, 1e18) (x >= 0, n >= 0)",
+        "clamp": "clamp(int256, int256, int256)",
+        "lerp": "lerp(a, b, t, 0, 1e18) (t in [0, 1]: Solady clamps t)",
+    },
+    "prb": {
+        "exp": "exp(x)", "exp2": "exp2(x)", "ln": "ln(x)", "log2": "log2(x)", "log10": "log10(x)",
+        "sqrt": "sqrt(x)", "inv": "inv(x)", "abs": "abs(x)", "neg": "unary(x)", "sign": "sign(x)",
+        "floor": "floor(x)", "ceil": "ceil(x)", "frac": "frac(x)",
+        "add": "add(a, b)", "sub": "sub(a, b)", "mul": "mul(a, b)", "div": "div(a, b)",
+        "pow": "pow(x, y)", "powu": "powu(x, n), n a uint256 (n >= 0)",
+        "avg": "avg(a, b)", "gavg": "gm(a, b)",
+    },
+    "quad": {
+        "exp": "exp(x)", "exp2": "pow_2(x)", "ln": "ln(x)", "log2": "log_2(x)", "sqrt": "sqrt(x)",
+        "inv": "div(fromUInt(1), x) (composed)", "abs": "abs(x)", "neg": "neg(x)", "sign": "sign(x)",
+        "add": "add(a, b)", "sub": "sub(a, b)", "mul": "mul(a, b)", "div": "div(a, b)",
+        "pow": "exp(mul(y, ln(x))) (composed)",
+    },
+    "balancer": {
+        "exp": "exp(x)", "ln": "ln(x)", "log2": "log(x, 2e18)", "log10": "log(x, 10e18)",
+        "sqrt": "pow(x, 0.5e18) (composed; x >= 0)", "cbrt": "pow(x, 333333333333333333) (composed; x >= 0)",
+        "pow": "pow(x, y) (x, y >= 0)",
+    },
+}
+CALLS_FP256 = {
+    "quad": {
+        "exp": "exp(x)", "exp2": "pow_2(x)", "ln": "ln(x)", "log2": "log_2(x)", "sqrt": "sqrt(x)",
+        "inv": "div(fromUInt(1), x) (composed)", "abs": "abs(x)", "neg": "neg(x)", "sign": "sign(x)",
+        "add": "add(a, b)", "sub": "sub(a, b)", "mul": "mul(a, b)", "div": "div(a, b)",
+        "pow": "exp(mul(y, ln(x))) (composed)",
+        "cmp": "cmp(a, b)", "eq": "eq(a, b)", "lt": "cmp(a, b) < 0 (composed)",
+        "toUintDown": "toUInt(x) (truncates: floor for x >= 0)",
+        "toIntDown": "toInt(x) (truncates: floor for x >= 0, the rows kept)",
+        "toFP127": "to128x128(x) (truncates; toFP127 rounds to nearest)",
+        "fromFP127": "from128x128(x) (truncates; fromFP127 rounds to nearest)",
+        "fromUintDown": "fromUInt(x) (truncates the significand)",
+    },
+}
+CALLS = CALLS_FP256 if LIB == "fp256" else CALLS_FP127
 
 
 def git(*args: str) -> str:
@@ -72,7 +147,28 @@ def collect(e: dict) -> dict:
             {"min": min(vals), "median": int(statistics.median(vals)), "max": max(vals)}
             if vals else None
         )
-    return {"inputs": [e["inputs"].get(i) for i in range(n)], "gas": gas, "summary": summary}
+    out = {"inputs": [e["inputs"].get(i) for i in range(n)], "gas": gas, "summary": summary}
+    reverts = {f: len(e["rev"][f]) for f in FORMS if e["rev"][f]}
+    if reverts:
+        out["reverts"] = reverts
+    return out
+
+
+def check_calls(sets: list[dict]) -> list[str]:
+    """Every measured or reverting competitor cell has a CALLS entry and every entry a cell."""
+    seen: dict[str, set[str]] = {f: set() for f in CALLS}
+    for ops in sets:
+        for op, e in ops.items():
+            for f in CALLS:
+                if e["gas"][f] or e["rev"][f]:
+                    seen[f].add(op)
+    errs = []
+    for f, ops in CALLS.items():
+        for op in sorted(seen[f] - set(ops)):
+            errs.append(f"{f}.{op} is measured but has no CALLS entry")
+        for op in sorted(set(ops) - seen[f]):
+            errs.append(f"{f}.{op} is in CALLS but the harness has no cell for it")
+    return errs
 
 
 def table(rows: dict[str, dict]) -> list[str]:
@@ -82,7 +178,8 @@ def table(rows: dict[str, dict]) -> list[str]:
         cells = []
         for f in FORMS:
             s = e["summary"][f]
-            cells.append("—" if s is None else f"{s['min']:,} / {s['median']:,} / {s['max']:,}")
+            cells.append(f"{s['min']:,} / {s['median']:,} / {s['max']:,}" if s
+                         else "rev" if e.get("reverts", {}).get(f) else "")
         lines.append(f"| {op} | " + " | ".join(cells) + " |")
     return lines
 
@@ -103,9 +200,18 @@ def main() -> int:
         else:
             continue
         _, op, idx, inp, form, gas = parts[:6]
-        e = sets.setdefault(op, {"inputs": {}, "gas": {f: {} for f in FORMS}})
+        e = sets.setdefault(op, {"inputs": {}, "gas": {f: {} for f in FORMS}, "rev": {f: set() for f in FORMS}})
         e["inputs"][int(idx)] = inp.strip()
-        e["gas"][form][int(idx)] = None if gas.strip() == "NA" else int(gas)
+        g = gas.strip()
+        if g == "REV":
+            e["rev"][form].add(int(idx))
+        elif g != "NA":
+            e["gas"][form][int(idx)] = int(g)
+
+    errs = check_calls([ops, typ])
+    if errs:
+        print("gas_to_json: CALLS and the harness disagree:\n  " + "\n  ".join(errs), file=sys.stderr)
+        return 1
 
     out_ops = {}
     for op, e in sorted(ops.items()):
@@ -115,11 +221,12 @@ def main() -> int:
 
     doc = {
         "generated": date.today().isoformat(),
-        "description": ("Gas per FP256 op across an input ladder: the object (staticcall), the inline library, the same op in FP127Lib on the same value where it fits, and ABDKMathQuad. null = reverted or unsupported. summary holds min/median/max per form. The internal forms are the library call alone, timed inside the harness's entry point net of its dispatch. typical (where present) is the same over random inputs that take no shortcut." if LIB == "fp256" else
-                        "Gas per op across an input ladder. First four forms are FP127; the first two and the third include the external call. FP127Lib and the competitors are the internal library call alone, timed inside the harness's entry point net of its dispatch. null = reverted or unsupported. summary holds min/median/max per form, null where there is no measurement. typical (where present) is the same over random inputs that take no shortcut."),
+        "description": ("Gas per FP256 op across an input ladder: the object (staticcall), the inline library, the same op in FP127Lib on the same value where it fits, and ABDKMathQuad. null = no measurement on that input; reverts counts, per form, the inputs where the form offers the op but reverted or the input is outside its domain or format; a form with neither gas nor reverts does not offer the op. calls says what each Quad cell calls. summary holds min/median/max per form. The internal forms are the library call alone, timed inside the harness's entry point net of its dispatch. typical (where present) is the same over random inputs that take no shortcut." if LIB == "fp256" else
+                        "Gas per op across an input ladder. First four forms are FP127; the first two and the third include the external call. FP127Lib and the competitors are the internal library call alone, timed inside the harness's entry point net of its dispatch. null = no measurement on that input; reverts counts, per form, the inputs where the form offers the op but reverted or the input is outside its domain or format; a form with neither gas nor reverts does not offer the op (the Huff and FP127Caller columns record any failure as not offered). calls says what each competitor cell calls. summary holds min/median/max per form, null where there is no measurement. typical (where present) is the same over random inputs that take no shortcut."),
         "versions": versions(),
         "forms": FORMS,
         "formLabels": FORM_LABEL,
+        "calls": CALLS,
         "ops": out_ops,
     }
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
@@ -135,8 +242,10 @@ def main() -> int:
             if LIB == "fp256" else
             "The first two FP127 columns and the Caller column include the `staticcall` (and the object's own selector dispatch); ")
         + "the inline columns are the internal library call alone, timed inside the harness's entry point with the dispatch "
-          "outside the window (the same cost for every op, whatever its place in the harness's list). A dash means the "
-          "library does not offer the op or reverted on every ladder input.",
+          "outside the window (the same cost for every op, whatever its place in the harness's list). An empty cell means "
+          "the library does not offer the op; `rev` means it does, but reverted (or the input was outside its domain or "
+          "format) on every ladder input. What each library cell calls is listed at the end; "
+          "[coverage.md](coverage.md) maps every function of every comparison library.",
         "",
         *table(out_ops),
     ]
@@ -152,6 +261,13 @@ def main() -> int:
             "",
             *table(typical),
         ]
+    lines += ["", "## What each cell calls", "",
+              "The competitor function behind each cell, on the inputs converted once to its representation. "
+              "\"composed\" is built from the library's own functions where it has none of that name; a note in "
+              "parentheses is the domain the harness keeps to (other inputs count as `rev`) or a rounding difference.", "",
+              "| op | " + " | ".join(FORM_LABEL[f] for f in CALLS) + " |", "|---|" + "---|" * len(CALLS)]
+    for op in sorted({o for c in CALLS.values() for o in c}):
+        lines.append(f"| {op} | " + " | ".join(f"`{CALLS[f][op]}`" if op in CALLS[f] else "" for f in CALLS) + " |")
     OUT_MD.write_text("\n".join(lines) + "\n")
     print(f"wrote {OUT_JSON.relative_to(ROOT)} and {OUT_MD.relative_to(ROOT)}: {len(out_ops)} ops")
     return 0

@@ -193,4 +193,8 @@ Blockulator 2.0's FP256, still deployed at `0x67eFfb11bF93c79a2B12cc7872cBaC12b3
 
 {{ <optable lib="fp256" /> }}
 
+### Gas against FP127 and Quad
+
+{{ <gastable repo={config.extra.repo} lib="fp256" /> }}
+
 Source: `contracts/src/fp256/FP256.yul.src`, built by FP127's generator; object and library fuzzed equal across all of `int256`. Full reference: [`contracts/src/fp256/README.md`]({{ config.extra.repo }}/blob/master/contracts/src/fp256/README.md).

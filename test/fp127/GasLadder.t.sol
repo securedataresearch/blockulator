@@ -8,6 +8,7 @@ import {ABDKMath64x64} from "../../lib/abdk-libraries-solidity/ABDKMath64x64.sol
 import {FixedPointMathLib} from "../../lib/solady/src/utils/FixedPointMathLib.sol";
 import {SD59x18, sd} from "../../lib/prb-math/src/SD59x18.sol";
 import * as PRB from "../../lib/prb-math/src/sd59x18/Math.sol";
+import {add as prbAdd, sub as prbSub, unary as prbNeg} from "../../lib/prb-math/src/sd59x18/Helpers.sol";
 import {ABDKMathQuad as Q} from "../../lib/abdk-libraries-solidity/ABDKMathQuad.sol";
 import {LogExpMath} from "../../contracts/src/ladder/vendor/balancer/LogExpMath.sol";
 
@@ -19,14 +20,22 @@ import {LogExpMath} from "../../contracts/src/ladder/vendor/balancer/LogExpMath.
 ///         internal calls on the same inputs converted once to their
 ///         representation.
 ///
-/// Prints GAS|op|idx|input|form|gas (NA when the form reverted or lacks the
-/// op), with a seventh field |typical on the typical-input rows.
-/// scripts/fp127/gas_to_json.py turns the lines into gas.json. The internal
-/// forms are timed inside their entry point, net of dispatch (see _timed).
+/// Prints GAS|op|idx|input|form|gas, with a seventh field |typical on the
+/// typical-input rows. gas is NA when the form does not offer the op and REV
+/// when it does but reverted, or the input is outside the function's domain
+/// or its format's range (a guard in the entry point, outside the timed
+/// window, reverts with "domain"). The Huff and FP127Caller columns offer a
+/// subset of the ops and are NA on any failure.
+/// scripts/fp127/gas_to_json.py turns the lines into gas.json and holds what
+/// each competitor cell calls (CALLS), checked against these lines. The
+/// internal forms are timed inside their entry point, net of dispatch (see
+/// _timed). docs/benchmarks/coverage.md maps every competitor function.
 contract GasLadder is FP127Harness {
     int256 constant PI = 1069028584064966747859680373161870783300; // floor(pi * 2^128)
     int256 constant E_ = 924983374546220337150911035843336795079;
     int256 constant NA = type(int256).min;
+    int256 constant REV = type(int256).min + 1;
+    bytes32 constant NA_REASON = keccak256(abi.encodeWithSignature("Error(string)", "na"));
 
     /// Each test runs as its own transaction, so the accounts setUp touched
     /// are cold again: touch every called object first, so no row pays the
@@ -44,7 +53,7 @@ contract GasLadder is FP127Harness {
     /// 127.128 -> binary128 (ABDKMathQuad's own conversion, to nearest).
     function _quad(int256 x) internal pure returns (bytes16) { return Q.from128x128(x); }
 
-    /// 127.128 -> 64.64; NA when it does not fit int128.
+    /// 127.128 -> 64.64; not ok when it does not fit int128.
     function _abdk(int256 x) internal pure returns (int128, bool) {
         int256 v = x >> 64;
         if (v > type(int128).max || v < type(int128).min) return (0, false);
@@ -53,30 +62,33 @@ contract GasLadder is FP127Harness {
 
     // ---- measurement --------------------------------------------------
 
-    function _ext(address t, bytes memory data) internal view returns (int256) {
+    /// failed: what a failed call records (REV for the object, which offers
+    /// every op; NA for the Huff and the Caller, which offer a subset).
+    function _ext(address t, bytes memory data, int256 failed) internal view returns (int256) {
         uint256 g0 = gasleft();
         (bool ok,) = t.staticcall(data);
         uint256 g = g0 - gasleft();
-        return ok ? int256(g) : NA;
+        return ok ? int256(g) : failed;
     }
 
     /// One GAS| line; set is "" for the ladder rows and "typical" for the
     /// typical-input rows, which carry it as a seventh field.
     function _emit(string memory op, uint256 idx, string memory input, string memory form, int256 g, string memory set) internal pure {
-        string memory line = string.concat("GAS|", op, "|", vm.toString(idx), "|", input, "|", form, "|", g == NA ? "NA" : vm.toString(uint256(g)));
+        string memory line = string.concat("GAS|", op, "|", vm.toString(idx), "|", input, "|", form, "|", g == NA ? "NA" : g == REV ? "REV" : vm.toString(uint256(g)));
         console.log(bytes(set).length == 0 ? line : string.concat(line, "|", set));
     }
 
     function _fp127Rows(string memory op, uint256 idx, string memory label, bytes memory newCall, bytes memory huffCall, int256 libGas, string memory set) internal view {
-        _emit(op, idx, label, "huff", _ext(address(huff), huffCall), set);
-        _emit(op, idx, label, "yul", _ext(address(obj), newCall), set);
-        _emit(op, idx, label, "caller", _ext(address(caller), newCall), set);
+        _emit(op, idx, label, "huff", _ext(address(huff), huffCall, NA), set);
+        _emit(op, idx, label, "yul", _ext(address(obj), newCall, REV), set);
+        _emit(op, idx, label, "caller", _ext(address(caller), newCall, NA), set);
         _emit(op, idx, label, "lib", libGas, set);
     }
 
     /// The internal forms (FP127Lib and the competitors) are timed inside an
     /// external entry point of this contract, so a revert is caught and
-    /// recorded as NA. The entry point finds the op by name, then reads
+    /// recorded: NA when the entry point has no such op (it reverts "na"),
+    /// REV for any other revert. The entry point finds the op by name, then reads
     /// gasleft() on either side of the one library call, so neither the
     /// dispatch nor the ABI decoding is in the window; the same window around
     /// a plain assignment (op "id") is subtracted. What is left is the
@@ -84,7 +96,7 @@ contract GasLadder is FP127Harness {
     /// whatever its place in the entry point's list.
     function _timed(bytes memory call, bytes memory idCall) internal view returns (int256) {
         (bool ok, bytes memory out) = address(this).staticcall(call);
-        if (!ok) return NA;
+        if (!ok) return keccak256(out) == NA_REASON ? NA : REV;
         (bool okId, bytes memory outId) = address(this).staticcall(idCall);
         require(okId, "id");
         return int256(abi.decode(out, (uint256))) - int256(abi.decode(outId, (uint256)));
@@ -135,7 +147,13 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("sub")) { g0 = gasleft(); r = ABDKMath64x64.sub(a, b); g = gasleft(); }
         if (h == keccak256("avg")) { g0 = gasleft(); r = ABDKMath64x64.avg(a, b); g = gasleft(); }
         if (h == keccak256("gavg")) { g0 = gasleft(); r = ABDKMath64x64.gavg(a, b); g = gasleft(); }
-        if (h == keccak256("pow")) { g0 = gasleft(); r = ABDKMath64x64.pow(a, uint256(int256(b >> 64))); g = gasleft(); }
+        // pow(int128, uint256) takes a plain unsigned integer exponent: it is
+        // powu, on the rows whose exponent is a non-negative integer
+        if (h == keccak256("powu")) {
+            require(b >= 0 && b & 0xffffffffffffffff == 0, "domain");
+            uint256 n = uint256(int256(b >> 64));
+            g0 = gasleft(); r = ABDKMath64x64.pow(a, n); g = gasleft();
+        }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -147,10 +165,24 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("id")) { g0 = gasleft(); r = x; g = gasleft(); }
         if (h == keccak256("exp")) { g0 = gasleft(); r = FixedPointMathLib.expWad(x); g = gasleft(); }
         if (h == keccak256("ln")) { g0 = gasleft(); r = FixedPointMathLib.lnWad(x); g = gasleft(); }
-        if (h == keccak256("sqrt")) { g0 = gasleft(); r = int256(FixedPointMathLib.sqrtWad(uint256(x))); g = gasleft(); }
-        if (h == keccak256("cbrt")) { g0 = gasleft(); r = int256(FixedPointMathLib.cbrtWad(uint256(x))); g = gasleft(); }
+        // sqrtWad and cbrtWad are unsigned
+        if (h == keccak256("sqrt")) { require(x >= 0, "domain"); g0 = gasleft(); r = int256(FixedPointMathLib.sqrtWad(uint256(x))); g = gasleft(); }
+        if (h == keccak256("cbrt")) { require(x >= 0, "domain"); g0 = gasleft(); r = int256(FixedPointMathLib.cbrtWad(uint256(x))); g = gasleft(); }
         if (h == keccak256("lambertW0")) { g0 = gasleft(); r = FixedPointMathLib.lambertW0Wad(x); g = gasleft(); }
         if (h == keccak256("inv")) { g0 = gasleft(); r = FixedPointMathLib.sDivWad(1e18, x); g = gasleft(); }
+        if (h == keccak256("abs")) { g0 = gasleft(); r = int256(FixedPointMathLib.abs(x)); g = gasleft(); }
+        // log2Up(uint256) and factorial(uint256) are integer functions: the
+        // same function as FP127's on an integral x, given the plain integer
+        if (h == keccak256("log2Up")) {
+            require(x >= 1e18 && x % 1e18 == 0, "domain");
+            uint256 n = uint256(x) / 1e18;
+            g0 = gasleft(); r = int256(FixedPointMathLib.log2Up(n)); g = gasleft();
+        }
+        if (h == keccak256("factorial")) {
+            require(x >= 0 && x % 1e18 == 0, "domain");
+            uint256 n = uint256(x) / 1e18;
+            g0 = gasleft(); r = int256(FixedPointMathLib.factorial(n)); g = gasleft();
+        }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -164,12 +196,26 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("div")) { g0 = gasleft(); r = FixedPointMathLib.sDivWad(a, b); g = gasleft(); }
         if (h == keccak256("pow")) { g0 = gasleft(); r = FixedPointMathLib.powWad(a, b); g = gasleft(); }
         // Solady's directed WAD ops are unsigned
-        if (h == keccak256("mulDown") && a >= 0 && b >= 0) { g0 = gasleft(); r = int256(FixedPointMathLib.mulWad(uint256(a), uint256(b))); g = gasleft(); }
-        if (h == keccak256("mulUp") && a >= 0 && b >= 0) { g0 = gasleft(); r = int256(FixedPointMathLib.mulWadUp(uint256(a), uint256(b))); g = gasleft(); }
-        if (h == keccak256("divDown") && a >= 0 && b > 0) { g0 = gasleft(); r = int256(FixedPointMathLib.divWad(uint256(a), uint256(b))); g = gasleft(); }
-        if (h == keccak256("divUp") && a >= 0 && b > 0) { g0 = gasleft(); r = int256(FixedPointMathLib.divWadUp(uint256(a), uint256(b))); g = gasleft(); }
-        if (h == keccak256("add")) { g0 = gasleft(); r = a + b; g = gasleft(); }
-        if (h == keccak256("sub")) { g0 = gasleft(); r = a - b; g = gasleft(); }
+        if (h == keccak256("mulDown")) { require(a >= 0 && b >= 0, "domain"); g0 = gasleft(); r = int256(FixedPointMathLib.mulWad(uint256(a), uint256(b))); g = gasleft(); }
+        if (h == keccak256("mulUp")) { require(a >= 0 && b >= 0, "domain"); g0 = gasleft(); r = int256(FixedPointMathLib.mulWadUp(uint256(a), uint256(b))); g = gasleft(); }
+        if (h == keccak256("divDown")) { require(a >= 0 && b > 0, "domain"); g0 = gasleft(); r = int256(FixedPointMathLib.divWad(uint256(a), uint256(b))); g = gasleft(); }
+        if (h == keccak256("divUp")) { require(a >= 0 && b > 0, "domain"); g0 = gasleft(); r = int256(FixedPointMathLib.divWadUp(uint256(a), uint256(b))); g = gasleft(); }
+        // a WAD sum is the integer sum; Solady's is rawAdd / rawSub (unchecked)
+        if (h == keccak256("add")) { g0 = gasleft(); r = FixedPointMathLib.rawAdd(a, b); g = gasleft(); }
+        if (h == keccak256("sub")) { g0 = gasleft(); r = FixedPointMathLib.rawSub(a, b); g = gasleft(); }
+        if (h == keccak256("avg")) { g0 = gasleft(); r = FixedPointMathLib.avg(a, b); g = gasleft(); }
+        if (h == keccak256("dist")) { g0 = gasleft(); r = int256(FixedPointMathLib.dist(a, b)); g = gasleft(); }
+        if (h == keccak256("min")) { g0 = gasleft(); r = FixedPointMathLib.min(a, b); g = gasleft(); }
+        if (h == keccak256("max")) { g0 = gasleft(); r = FixedPointMathLib.max(a, b); g = gasleft(); }
+        if (h == keccak256("zeroFloorSub")) { require(a >= 0 && b >= 0, "domain"); g0 = gasleft(); r = int256(FixedPointMathLib.zeroFloorSub(uint256(a), uint256(b))); g = gasleft(); }
+        // mulSqrt(x, y) = sqrt(x y): on two WADs, sqrt(a b 1e36), the WAD geometric mean
+        if (h == keccak256("gavg")) { require(a >= 0 && b >= 0, "domain"); g0 = gasleft(); r = int256(FixedPointMathLib.mulSqrt(uint256(a), uint256(b))); g = gasleft(); }
+        // rpow(x, n, 1e18): x^n in WAD for a plain unsigned integer n
+        if (h == keccak256("powu")) {
+            require(a >= 0 && b >= 0 && b % 1e18 == 0, "domain");
+            uint256 n = uint256(b) / 1e18;
+            g0 = gasleft(); r = int256(FixedPointMathLib.rpow(uint256(a), n, 1e18)); g = gasleft();
+        }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -192,6 +238,7 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("ceil")) { g0 = gasleft(); r = PRB.ceil(v).unwrap(); g = gasleft(); }
         if (h == keccak256("frac")) { g0 = gasleft(); r = PRB.frac(v).unwrap(); g = gasleft(); }
         if (h == keccak256("sign")) { g0 = gasleft(); r = PRB.sign(v).unwrap(); g = gasleft(); }
+        if (h == keccak256("neg")) { g0 = gasleft(); r = prbNeg(v).unwrap(); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -206,8 +253,14 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("pow")) { g0 = gasleft(); r = PRB.pow(sd(a), sd(b)).unwrap(); g = gasleft(); }
         if (h == keccak256("avg")) { g0 = gasleft(); r = PRB.avg(sd(a), sd(b)).unwrap(); g = gasleft(); }
         if (h == keccak256("gavg")) { g0 = gasleft(); r = PRB.gm(sd(a), sd(b)).unwrap(); g = gasleft(); }
-        if (h == keccak256("add")) { g0 = gasleft(); r = a + b; g = gasleft(); }
-        if (h == keccak256("sub")) { g0 = gasleft(); r = a - b; g = gasleft(); }
+        if (h == keccak256("add")) { g0 = gasleft(); r = prbAdd(sd(a), sd(b)).unwrap(); g = gasleft(); }
+        if (h == keccak256("sub")) { g0 = gasleft(); r = prbSub(sd(a), sd(b)).unwrap(); g = gasleft(); }
+        // powu(SD59x18, uint256): a plain unsigned integer exponent
+        if (h == keccak256("powu")) {
+            require(b >= 0 && b % 1e18 == 0, "domain");
+            uint256 n = uint256(b) / 1e18;
+            g0 = gasleft(); r = PRB.powu(sd(a), n).unwrap(); g = gasleft();
+        }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -225,6 +278,8 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("inv")) { g0 = gasleft(); r = Q.div(Q.fromUInt(1), x); g = gasleft(); }
         if (h == keccak256("abs")) { g0 = gasleft(); r = Q.abs(x); g = gasleft(); }
         if (h == keccak256("neg")) { g0 = gasleft(); r = Q.neg(x); g = gasleft(); }
+        int8 s8;
+        if (h == keccak256("sign")) { g0 = gasleft(); s8 = Q.sign(x); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -250,8 +305,12 @@ contract GasLadder is FP127Harness {
         if (h == keccak256("id")) { g0 = gasleft(); r = x; g = gasleft(); }
         if (h == keccak256("exp")) { g0 = gasleft(); r = LogExpMath.exp(x); g = gasleft(); }
         if (h == keccak256("ln")) { g0 = gasleft(); r = LogExpMath.ln(x); g = gasleft(); }
-        if (h == keccak256("sqrt")) { g0 = gasleft(); r = int256(LogExpMath.pow(uint256(x), 5e17)); g = gasleft(); }
-        if (h == keccak256("cbrt")) { g0 = gasleft(); r = int256(LogExpMath.pow(uint256(x), 333333333333333333)); g = gasleft(); }
+        // log(arg, base) = ln(arg) / ln(base), each to 36 decimals near one
+        if (h == keccak256("log2")) { g0 = gasleft(); r = LogExpMath.log(x, 2e18); g = gasleft(); }
+        if (h == keccak256("log10")) { g0 = gasleft(); r = LogExpMath.log(x, 10e18); g = gasleft(); }
+        // pow(x, y) is unsigned
+        if (h == keccak256("sqrt")) { require(x >= 0, "domain"); g0 = gasleft(); r = int256(LogExpMath.pow(uint256(x), 5e17)); g = gasleft(); }
+        if (h == keccak256("cbrt")) { require(x >= 0, "domain"); g0 = gasleft(); r = int256(LogExpMath.pow(uint256(x), 333333333333333333)); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -261,16 +320,15 @@ contract GasLadder is FP127Harness {
         uint256 g0;
         int256 r;
         if (h == keccak256("id")) { g0 = gasleft(); r = a; g = gasleft(); }
-        if (h == keccak256("pow")) { g0 = gasleft(); r = int256(LogExpMath.pow(uint256(a), uint256(b))); g = gasleft(); }
-        if (h == keccak256("mul")) { g0 = gasleft(); r = a * b / 1e18; g = gasleft(); }
-        if (h == keccak256("div")) { g0 = gasleft(); r = a * 1e18 / b; g = gasleft(); }
+        // LogExpMath has no mul or div (Balancer's are in FixedPoint, not vendored)
+        if (h == keccak256("pow")) { require(a >= 0 && b >= 0, "domain"); g0 = gasleft(); r = int256(LogExpMath.pow(uint256(a), uint256(b))); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
 
     function _comp1(string memory op, uint256 idx, string memory label, int256 x, string memory set) internal view {
         (int128 xa, bool okA) = _abdk(x);
-        _emit(op, idx, label, "abdk", okA ? _timed(abi.encodeCall(this.cAbdk1, (op, xa)), abi.encodeCall(this.cAbdk1, ("id", xa))) : NA, set);
+        _emit(op, idx, label, "abdk", okA ? _timed(abi.encodeCall(this.cAbdk1, (op, xa)), abi.encodeCall(this.cAbdk1, ("id", xa))) : _abdkOutOfRange(op, true), set);
         _emit(op, idx, label, "solady", _timed(abi.encodeCall(this.cSolady1, (op, _wad(x))), abi.encodeCall(this.cSolady1, ("id", _wad(x)))), set);
         _emit(op, idx, label, "prb", _timed(abi.encodeCall(this.cPrb1, (op, _wad(x))), abi.encodeCall(this.cPrb1, ("id", _wad(x)))), set);
         _emit(op, idx, label, "quad", _timed(abi.encodeCall(this.cQuad1, (op, _quad(x))), abi.encodeCall(this.cQuad1, ("id", _quad(x)))), set);
@@ -280,8 +338,17 @@ contract GasLadder is FP127Harness {
     function _abdkGas2(string memory op, int256 a, int256 b) internal view returns (int256) {
         (int128 aa, bool okA) = _abdk(a);
         (int128 ba, bool okB) = _abdk(b);
-        if (!(okA && okB)) return NA;
+        if (!(okA && okB)) return _abdkOutOfRange(op, false);
         return _timed(abi.encodeCall(this.cAbdk2, (op, aa, ba)), abi.encodeCall(this.cAbdk2, ("id", aa, ba)));
+    }
+
+    /// An input outside 64.64's range: REV where ABDK offers the op (its own
+    /// fromInt would revert), NA where it does not. The probe call on zeros
+    /// only asks whether the entry point knows the op.
+    function _abdkOutOfRange(string memory op, bool unary) internal view returns (int256) {
+        int256 g = unary ? _timed(abi.encodeCall(this.cAbdk1, (op, int128(0))), abi.encodeCall(this.cAbdk1, ("id", int128(0))))
+                         : _timed(abi.encodeCall(this.cAbdk2, (op, int128(0), int128(0))), abi.encodeCall(this.cAbdk2, ("id", int128(0), int128(0))));
+        return g == NA ? NA : REV;
     }
 
     function _comp2(string memory op, uint256 idx, string memory label, int256 a, int256 b, string memory set) internal view {
@@ -290,6 +357,31 @@ contract GasLadder is FP127Harness {
         _emit(op, idx, label, "prb", _timed(abi.encodeCall(this.cPrb2, (op, _wad(a), _wad(b))), abi.encodeCall(this.cPrb2, ("id", _wad(a), _wad(b)))), set);
         _emit(op, idx, label, "quad", _timed(abi.encodeCall(this.cQuad2, (op, _quad(a), _quad(b))), abi.encodeCall(this.cQuad2, ("id", _quad(a), _quad(b)))), set);
         _emit(op, idx, label, "balancer", _timed(abi.encodeCall(this.cBal2, (op, _wad(a), _wad(b))), abi.encodeCall(this.cBal2, ("id", _wad(a), _wad(b)))), set);
+    }
+
+    /// clamp(int256 x, lo, hi) is FP127's clamp on WADs; lerp(a, b, t, 0, 1e18)
+    /// is a + t (b - a) for t in [0, 1] (Solady clamps t to [begin, end], FP127
+    /// does not), so only those rows are compared.
+    function cSolady3(string calldata op, int256 a, int256 b, int256 c) external view returns (uint256 g) {
+        bytes32 h = keccak256(bytes(op));
+        uint256 g0;
+        int256 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = a; g = gasleft(); }
+        if (h == keccak256("clamp")) { g0 = gasleft(); r = FixedPointMathLib.clamp(a, b, c); g = gasleft(); }
+        if (h == keccak256("lerp")) { require(c >= 0 && c <= 1e18, "domain"); g0 = gasleft(); r = FixedPointMathLib.lerp(a, b, c, 0, 1e18); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
+    }
+
+    function cLib3(string calldata op, int256 a, int256 b, int256 c) external view returns (uint256 g) {
+        bytes32 h = keccak256(bytes(op));
+        uint256 g0;
+        int256 r;
+        if (h == keccak256("id")) { g0 = gasleft(); r = a; g = gasleft(); }
+        if (h == keccak256("clamp")) { g0 = gasleft(); r = FP127Lib.clamp(a, b, c); g = gasleft(); }
+        if (h == keccak256("lerp")) { g0 = gasleft(); r = FP127Lib.lerp(a, b, c); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
     }
 
     // ---- FP127Lib internal timing per op ------------------------------
@@ -391,6 +483,17 @@ contract GasLadder is FP127Harness {
         if (competitors) _comp2(op, i, label, a, b, set);
     }
 
+    /// clamp and lerp: no Huff or Caller form; of the competitors only Solady
+    /// has them.
+    function _row3(string memory op, uint256 i, int256 a, int256 b, int256 c) internal view {
+        string memory label = string.concat(vm.toString(a), ",", vm.toString(b), ",", vm.toString(c));
+        _emit(op, i, label, "huff", NA, "");
+        _emit(op, i, label, "yul", _ext(address(obj), abi.encodeWithSignature(string.concat(op, "(int256,int256,int256)"), a, b, c), REV), "");
+        _emit(op, i, label, "caller", NA, "");
+        _emit(op, i, label, "lib", _timed(abi.encodeCall(this.cLib3, (op, a, b, c)), abi.encodeCall(this.cLib3, ("id", a, b, c))), "");
+        _emit(op, i, label, "solady", _timed(abi.encodeCall(this.cSolady3, (op, _wad(a), _wad(b), _wad(c))), abi.encodeCall(this.cSolady3, ("id", _wad(a), _wad(b), _wad(c)))), "");
+    }
+
     function _run1(string memory op, int256[7] memory xs, bool competitors) internal view {
         for (uint256 i; i < xs.length; i++) _row1(op, i, xs[i], competitors, "");
     }
@@ -458,7 +561,7 @@ contract GasLadder is FP127Harness {
         for (uint256 i; i < TYPICAL; i++) {
             _row2("pow", i, _typ("pow", i, -4, 4, 1), _typ("pow", i + 100, -4, 3, 0), true, "typical");
             (int256 r, int256 n) = _typRate("powu", i);
-            _row2("powu", i, ONE + r, n << 128, false, "typical");
+            _row2("powu", i, ONE + r, n << 128, true, "typical");
             (r, n) = _typRate("compound", i);
             _row2("compound", i, r, n << 128, false, "typical");
         }
@@ -472,10 +575,19 @@ contract GasLadder is FP127Harness {
         _run2("mul", a, b, true);
         _run2("div", a, b, true);
         _run2("avg", a, b, true);
-        _run2("dist", a, b, false);
-        _run2("zeroFloorSub", a, b, false);
-        _run2("min", a, b, false);
-        _run2("max", a, b, false);
+        _run2("dist", a, b, true);
+        _run2("zeroFloorSub", a, b, true);
+        _run2("min", a, b, true);
+        _run2("max", a, b, true);
+    }
+
+    function test_ladder_three() public view {
+        _warm();
+        int256[7] memory xs = _unary();
+        for (uint256 i; i < xs.length; i++) _row3("clamp", i, xs[i], ONE / 4, 2 * ONE);
+        (int256[6] memory a, int256[6] memory b) = _binary();
+        int256[6] memory t = [ONE / 2, ONE / 4, -ONE, 8 * ONE, ONE >> 100, 100 * ONE];
+        for (uint256 i; i < a.length; i++) _row3("lerp", i, a[i], b[i], t[i]);
     }
 
     function test_ladder_unary() public view {
@@ -506,7 +618,7 @@ contract GasLadder is FP127Harness {
         _run1("ln", xs, true);
         _run1("log2", xs, true);
         _run1("log10", xs, true);
-        _run1("log2Up", xs, false);
+        _run1("log2Up", xs, true);
     }
 
     function test_ladder_roots() public view {
@@ -529,7 +641,7 @@ contract GasLadder is FP127Harness {
         _warm();
         _run1("lambertW0", [-ONE / 4, ONE / 100, ONE / 2, ONE + ONE / 2, 10 * ONE, 1000 * ONE, ONE << 100], true);
         _run1("lambertWm1", [-int256(0x5e2d58d8b3bcdf1abadec7829054f90d) + 1, -ONE / 3, -ONE / 4, -ONE / 10, -ONE / 1000, -(ONE >> 40), -1], true);
-        _run1("factorial", [int256(0), ONE, 5 * ONE, 10 * ONE, 20 * ONE, 30 * ONE, 33 * ONE], false);
+        _run1("factorial", [int256(0), ONE, 5 * ONE, 10 * ONE, 20 * ONE, 30 * ONE, 33 * ONE], true);
     }
 
     // v4 ops. The per-second rate is 5% APR / 31,536,000; the Black-Scholes
@@ -539,7 +651,7 @@ contract GasLadder is FP127Harness {
     function test_ladder_v4_powers() public view {
         _warm();
         _run2("powu", [2 * ONE, ONE + ONE / 100, ONE + R_SEC, ONE / 2, PI, 3 * ONE],
-                      [10 * ONE, 365 * ONE, 31536000 * ONE, 100 * ONE, 7 * ONE, -5 * ONE], false);
+                      [10 * ONE, 365 * ONE, 31536000 * ONE, 100 * ONE, 7 * ONE, -5 * ONE], true);
         _run2("compound", [ONE / 10, ONE / 3650, R_SEC, ONE / 2, -ONE / 100, ONE / 100],
                           [10 * ONE, 365 * ONE, 31536000 * ONE, 100 * ONE, 365 * ONE, 315360000 * ONE], false);
     }

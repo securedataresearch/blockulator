@@ -85,6 +85,10 @@ pi, the replays and the accrual are not diffed in CI.
 - [`gas256.md`](gas256.md) / [`gas256.json`](gas256.json): gas for every FP256
   op (object, inline, the same op in FP127Lib on the same value, and
   ABDKMathQuad), the same way. `make bench-fp256`.
+- [`coverage.md`](coverage.md): every function of every comparison library
+  mapped to the op it is benched against, or why it is not compared. An empty
+  gas cell means only "not offered"; `rev` means offered but reverted on every
+  input. The bench checks the harness against its list of calls.
 - [`../fp256/precision.md`](../fp256/precision.md) / [`../fp256/precision.json`](../fp256/precision.json):
   correct bits of every FP256 op on the decoded values. `make test` then
   `make precision-report-fp256`.

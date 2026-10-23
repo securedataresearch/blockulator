@@ -12,11 +12,15 @@ import {console} from "forge-std/console.sol";
 ///         (staticcall), the inline library, the same op in FP127Lib on the
 ///         same value (where it is in range) and ABDKMathQuad, the other
 ///         float. Prints GAS|op|idx|input|form|gas (and |typical on the
-///         typical-input rows); scripts/fp127/gas_to_json.py --lib fp256
-///         writes docs/benchmarks/gas256.{json,md}. The internal forms are
-///         timed as test/fp127/GasLadder.t.sol times them (_timed).
+///         typical-input rows); gas is NA where the form does not offer the
+///         op and REV where it does but reverted or the input is outside its
+///         domain or its format's range. scripts/fp127/gas_to_json.py --lib
+///         fp256 writes docs/benchmarks/gas256.{json,md}. The internal forms
+///         are timed as test/fp127/GasLadder.t.sol times them (_timed).
 contract GasLadder256 is FP256Harness {
     int256 constant NA = type(int256).min;
+    int256 constant REV = type(int256).min + 1;
+    bytes32 constant NA_REASON = keccak256(abi.encodeWithSignature("Error(string)", "na"));
 
     /// Each test runs as its own transaction, so the accounts setUp touched
     /// are cold again: touch every object first, so no row pays the
@@ -35,10 +39,16 @@ contract GasLadder256 is FP256Harness {
         return ok ? (abi.decode(out, (int256)), true) : (int256(0), false);
     }
 
-    function _quad(int256 x) internal view returns (bytes16, bool) {
-        (int256 f, bool ok) = _fp127(x);
-        if (!ok) return (bytes16(0), false);
-        return (Q.from128x128(f), true);
+    /// FP256 word -> binary128 directly (sign, exponent rebiased, the 236-bit
+    /// fraction truncated to 112), so Quad gets every value it can hold, not
+    /// only those that fit 127.128. Not ok outside binary128's normal range.
+    function _quad(int256 x) internal pure returns (bytes16, bool) {
+        if (x == 0) return (bytes16(0), true);
+        (bool s, uint256 e, uint256 m) = _unpack(x);
+        int256 qe = int256(e) - int256(BIAS) + 16383;
+        if (qe < 1 || qe > 32766) return (bytes16(0), false);
+        uint256 q = (s ? uint256(1) << 127 : 0) | (uint256(qe) << 112) | (m >> 124);
+        return (bytes16(uint128(q)), true);
     }
 
     // ---- measurement --------------------------------------------------
@@ -47,20 +57,21 @@ contract GasLadder256 is FP256Harness {
         uint256 g0 = gasleft();
         (bool ok,) = t.staticcall(data);
         uint256 g = g0 - gasleft();
-        return ok ? int256(g) : NA;
+        return ok ? int256(g) : REV;
     }
 
     function _emit(string memory op, uint256 idx, string memory input, string memory form, int256 g, string memory set) internal pure {
-        string memory line = string.concat("GAS|", op, "|", vm.toString(idx), "|", input, "|", form, "|", g == NA ? "NA" : vm.toString(uint256(g)));
+        string memory line = string.concat("GAS|", op, "|", vm.toString(idx), "|", input, "|", form, "|", g == NA ? "NA" : g == REV ? "REV" : vm.toString(uint256(g)));
         console.log(bytes(set).length == 0 ? line : string.concat(line, "|", set));
     }
 
     /// The entry point's own gasleft() window around the one library call,
     /// minus the same window around a plain assignment (op "id"): dispatch
     /// and ABI decoding stay outside, whatever the op's place in the list.
+    /// A revert is NA when the entry point has no such op ("na"), else REV.
     function _timed(bytes memory call, bytes memory idCall) internal view returns (int256) {
         (bool ok, bytes memory out) = address(this).staticcall(call);
-        if (!ok) return NA;
+        if (!ok) return keccak256(out) == NA_REASON ? NA : REV;
         (bool okId, bytes memory outId) = address(this).staticcall(idCall);
         require(okId, "id");
         return int256(abi.decode(out, (uint256))) - int256(abi.decode(outId, (uint256)));
@@ -183,6 +194,10 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("frac")) { g0 = gasleft(); r = FP127Lib.frac(x); g = gasleft(); }
         if (h == keccak256("round")) { g0 = gasleft(); r = FP127Lib.round(x); g = gasleft(); }
         if (h == keccak256("factorial")) { g0 = gasleft(); r = FP127Lib.factorial(x); g = gasleft(); }
+        if (h == keccak256("floor")) { g0 = gasleft(); r = FP127Lib.floor(x); g = gasleft(); }
+        if (h == keccak256("ceil")) { g0 = gasleft(); r = FP127Lib.ceil(x); g = gasleft(); }
+        if (h == keccak256("toFixed18Down")) { g0 = gasleft(); r = FP127Lib.toFixed18Down(x); g = gasleft(); }
+        if (h == keccak256("toFixed18Up")) { g0 = gasleft(); r = FP127Lib.toFixed18Up(x); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -204,6 +219,13 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("zeroFloorSub")) { g0 = gasleft(); r = FP127Lib.zeroFloorSub(a, b); g = gasleft(); }
         if (h == keccak256("gavg")) { g0 = gasleft(); r = FP127Lib.gavg(a, b); g = gasleft(); }
         if (h == keccak256("hypot")) { g0 = gasleft(); r = FP127Lib.hypot(a, b); g = gasleft(); }
+        if (h == keccak256("mulDown")) { g0 = gasleft(); r = FP127Lib.mulDown(a, b); g = gasleft(); }
+        if (h == keccak256("mulUp")) { g0 = gasleft(); r = FP127Lib.mulUp(a, b); g = gasleft(); }
+        if (h == keccak256("divDown")) { g0 = gasleft(); r = FP127Lib.divDown(a, b); g = gasleft(); }
+        if (h == keccak256("divUp")) { g0 = gasleft(); r = FP127Lib.divUp(a, b); g = gasleft(); }
+        // b arrives as n << 128 (see _fp127Gas2)
+        if (h == keccak256("powu")) { g0 = gasleft(); r = FP127Lib.powu(a, b); g = gasleft(); }
+        if (h == keccak256("compound")) { g0 = gasleft(); r = FP127Lib.compound(a, b); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -220,6 +242,30 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("abs")) { g0 = gasleft(); r = Q.abs(x); g = gasleft(); }
         if (h == keccak256("exp2")) { g0 = gasleft(); r = Q.pow_2(x); g = gasleft(); }
         if (h == keccak256("log2")) { g0 = gasleft(); r = Q.log_2(x); g = gasleft(); }
+        if (h == keccak256("inv")) { g0 = gasleft(); r = Q.div(Q.fromUInt(1), x); g = gasleft(); }
+        int256 n;
+        int8 s8;
+        if (h == keccak256("sign")) { g0 = gasleft(); s8 = Q.sign(x); g = gasleft(); }
+        // toUInt and toInt truncate toward zero: floor on x >= 0
+        if (h == keccak256("toUintDown")) { g0 = gasleft(); n = int256(Q.toUInt(x)); g = gasleft(); }
+        if (h == keccak256("toIntDown")) { require(Q.sign(x) >= 0, "domain"); g0 = gasleft(); n = Q.toInt(x); g = gasleft(); }
+        // to128x128 truncates toward zero; FP256's toFP127 rounds to nearest
+        if (h == keccak256("toFP127")) { g0 = gasleft(); n = Q.to128x128(x); g = gasleft(); }
+        require(g0 != 0, "na");
+        g = g0 - g;
+    }
+
+    /// The conversions into Quad, from a plain integer or a 127.128 word.
+    function cQuadFrom(string calldata op, int256 x) external view returns (uint256 g) {
+        bytes32 h = keccak256(bytes(op));
+        uint256 g0;
+        bytes16 r;
+        int256 y;
+        if (h == keccak256("id")) { g0 = gasleft(); y = x; g = gasleft(); }
+        // fromUInt truncates the significand: FP256's fromUintDown
+        if (h == keccak256("fromUintDown")) { g0 = gasleft(); r = Q.fromUInt(uint256(x)); g = gasleft(); }
+        // from128x128 truncates toward zero; FP256's fromFP127 rounds to nearest
+        if (h == keccak256("fromFP127")) { g0 = gasleft(); r = Q.from128x128(x); g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -234,6 +280,11 @@ contract GasLadder256 is FP256Harness {
         if (h == keccak256("mul")) { g0 = gasleft(); r = Q.mul(a, b); g = gasleft(); }
         if (h == keccak256("div")) { g0 = gasleft(); r = Q.div(a, b); g = gasleft(); }
         if (h == keccak256("pow")) { g0 = gasleft(); r = Q.exp(Q.mul(b, Q.ln(a))); g = gasleft(); }
+        int8 c8;
+        bool e;
+        if (h == keccak256("cmp")) { g0 = gasleft(); c8 = Q.cmp(a, b); g = gasleft(); }
+        if (h == keccak256("eq")) { g0 = gasleft(); e = Q.eq(a, b); g = gasleft(); }
+        if (h == keccak256("lt")) { g0 = gasleft(); e = Q.cmp(a, b) < 0; g = gasleft(); }
         require(g0 != 0, "na");
         g = g0 - g;
     }
@@ -276,15 +327,29 @@ contract GasLadder256 is FP256Harness {
         for (uint256 i; i < xs.length; i++) _row1(op, i, xs[i], uintArg, "");
     }
 
+    /// An input the form's format cannot hold is REV where the form offers
+    /// the op and NA where it does not; the call on zeros only asks which.
+    function _outOfRange(int256 probe) internal pure returns (int256) {
+        return probe == NA ? NA : REV;
+    }
+
     function _fp127Gas1(string memory op, int256 x) internal view returns (int256) {
+        // fromFixed18 takes the plain 18-decimal integer in both libraries
+        if (keccak256(bytes(op)) == keccak256("fromFixed18")) {
+            return _timed(abi.encodeCall(this.cFp127_1, (op, x)), abi.encodeCall(this.cFp127_1, ("id", x)));
+        }
         (int256 f, bool ok) = _fp127(x);
-        if (!ok) return NA;
+        if (!ok) return _outOfRange(_timed(abi.encodeCall(this.cFp127_1, (op, int256(0))), abi.encodeCall(this.cFp127_1, ("id", int256(0)))));
         return _timed(abi.encodeCall(this.cFp127_1, (op, f)), abi.encodeCall(this.cFp127_1, ("id", f)));
     }
 
     function _quadGas1(string memory op, int256 x) internal view returns (int256) {
+        bytes32 h = keccak256(bytes(op));
+        if (h == keccak256("fromUintDown") || h == keccak256("fromFP127")) {
+            return _timed(abi.encodeCall(this.cQuadFrom, (op, x)), abi.encodeCall(this.cQuadFrom, ("id", x)));
+        }
         (bytes16 q, bool ok) = _quad(x);
-        if (!ok) return NA;
+        if (!ok) return _outOfRange(_timed(abi.encodeCall(this.cQuad1, (op, bytes16(0))), abi.encodeCall(this.cQuad1, ("id", bytes16(0)))));
         return _timed(abi.encodeCall(this.cQuad1, (op, q)), abi.encodeCall(this.cQuad1, ("id", q)));
     }
 
@@ -300,17 +365,26 @@ contract GasLadder256 is FP256Harness {
         for (uint256 i; i < a.length; i++) _row2(op, i, a[i], b[i], "");
     }
 
+    /// powu and compound take a plain integer n here; FP127's take n << 128.
     function _fp127Gas2(string memory op, int256 a, int256 b) internal view returns (int256) {
         (int256 fa, bool okA) = _fp127(a);
-        (int256 fb, bool okB) = _fp127(b);
-        if (!(okA && okB)) return NA;
+        bool plainN = keccak256(bytes(op)) == keccak256("powu") || keccak256(bytes(op)) == keccak256("compound");
+        int256 fb;
+        bool okB;
+        if (plainN) {
+            okB = b >= -(int256(1) << 127) && b < int256(1) << 127;
+            fb = okB ? b << 128 : int256(0);
+        } else {
+            (fb, okB) = _fp127(b);
+        }
+        if (!(okA && okB)) return _outOfRange(_timed(abi.encodeCall(this.cFp127_2, (op, int256(0), int256(0))), abi.encodeCall(this.cFp127_2, ("id", int256(0), int256(0)))));
         return _timed(abi.encodeCall(this.cFp127_2, (op, fa, fb)), abi.encodeCall(this.cFp127_2, ("id", fa, fb)));
     }
 
     function _quadGas2(string memory op, int256 a, int256 b) internal view returns (int256) {
         (bytes16 qa, bool okA) = _quad(a);
         (bytes16 qb, bool okB) = _quad(b);
-        if (!(okA && okB)) return NA;
+        if (!(okA && okB)) return _outOfRange(_timed(abi.encodeCall(this.cQuad2, (op, bytes16(0), bytes16(0))), abi.encodeCall(this.cQuad2, ("id", bytes16(0), bytes16(0)))));
         return _timed(abi.encodeCall(this.cQuad2, (op, qa, qb)), abi.encodeCall(this.cQuad2, ("id", qa, qb)));
     }
 
@@ -374,7 +448,8 @@ contract GasLadder256 is FP256Harness {
                      [_v(8, 0x6d << 229), _v(1, E_F >> 20), _v(3, 0x4 << 232), _v(1, 0x4 << 232), _nv(1, 0x8 << 232), TWO]);
     }
 
-    /// powu and compound take a plain integer n; the FP127 and Quad columns are blank.
+    /// powu and compound take a plain integer n (FP127's column gets n << 128);
+    /// Quad has neither.
     function test_ladder_powu() public view {
         _warm();
         _run2("powu", [_v(0, 0x28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c28f5c >> 20), _v(1, PI_F >> 20), TWO, _v(0, 1 << 200), HALF, _v(-1, 0x8 << 232)],
@@ -399,7 +474,7 @@ contract GasLadder256 is FP256Harness {
         (int256 fa, bool okA) = _fp127(a);
         (int256 fb, bool okB) = _fp127(b);
         (int256 fc, bool okC) = _fp127(c);
-        if (!(okA && okB && okC)) return NA;
+        if (!(okA && okB && okC)) return _outOfRange(_timed(abi.encodeCall(this.cFp127_3, (op, int256(0), int256(0), int256(0))), abi.encodeCall(this.cFp127_3, ("id", int256(0), int256(0), int256(0)))));
         return _timed(abi.encodeCall(this.cFp127_3, (op, fa, fb, fc)), abi.encodeCall(this.cFp127_3, ("id", fa, fb, fc)));
     }
 
