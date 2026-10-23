@@ -139,6 +139,8 @@ test: gen-check vectors-check
 # The typed API (FP127Type.sol, FP256Type.sol) against the raw libraries: the
 # same words and reverts under fuzzing, and each op's gas both ways, under the
 # default profile and again through the IR, where no difference is allowed.
+# The IR pass sets src to test/typed, and forge >= 1.8 then auto-remaps
+# forge-std/ to lib/forge-std/test/typed/, so its remapping is explicit.
 .PHONY: typed
 typed:
 	@mkdir -p cache/typed-ir
@@ -146,7 +148,7 @@ typed:
 	@grep -E "TYPED\|.*\|worst|Suite result" cache/typed-ir/default.log
 	@TYPED_GAS_TOL=0 FOUNDRY_SRC=test/typed FOUNDRY_TEST=test/typed FOUNDRY_SCRIPT=test/typed \
 		FOUNDRY_OUT=cache/typed-ir/out FOUNDRY_CACHE_PATH=cache/typed-ir/cache FOUNDRY_VIA_IR=true \
-		forge test --match-test test_gas -vv > cache/typed-ir/via-ir.log || { cat cache/typed-ir/via-ir.log; exit 1; }
+		forge test --match-test test_gas -vv --remappings forge-std/=lib/forge-std/src/ > cache/typed-ir/via-ir.log || { cat cache/typed-ir/via-ir.log; exit 1; }
 	@grep -E "TYPED\|.*\|worst|Suite result" cache/typed-ir/via-ir.log
 
 size-fp256: build
