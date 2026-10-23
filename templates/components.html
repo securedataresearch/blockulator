@@ -21,6 +21,8 @@
 {%- set ops = load_data(path=pre ~ "ops.json") -%}
 {%- set prec = load_data(path=pre ~ "precision.json") -%}
 {%- set gas = load_data(path=pre ~ "gas.json") -%}
+{%- set proofs = load_data(path="static/data/proofs.json") -%}
+{%- set_global proven = "," %}{% for q in proofs.ops %}{% if q.lib | lower == lib and q.status == "proven" %}{% set_global proven = proven ~ q.op ~ "," %}{% endif %}{% endfor -%}
 {#- FP256 ops whose result is always the exact value; every other FP256 op is correctly rounded (CR) -#}
 {%- set exact256 = ["neg", "abs", "sign", "cmp", "lt", "eq", "min", "max", "clamp", "floor", "ceil", "round", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "log2Up"] -%}
 <div class="scroll">
@@ -31,7 +33,7 @@
 {%- set p = prec[o.name] %}
 {%- set what = o.notice | split(pat=". ") | first %}{% if what | length > 80 %}{% set what = what | split(pat=": ") | first %}{% endif %}{% if what | length > 90 %}{% set what = what | truncate(length=80) %}{% endif %}
 <tr>
-<td class="mono"><a href="#{{ o.name }}" id="{{ o.name }}">{{ o.signature }}</a><br><span class="sel">{{ o.selector }}</span></td>
+<td class="mono"><a href="#{{ o.name }}" id="{{ o.name }}">{{ o.signature }}</a>{% if ("," ~ o.name ~ ",") in proven %}<a class="proven" href="/proofs/#{{ lib }}-{{ o.name }}" title="proven for every input against a reference spec">proven</a>{% endif %}<br><span class="sel">{{ o.selector }}</span></td>
 <td>{% if what == o.notice or o.notice | length <= 110 %}{{ o.notice }}{% else %}<details class="what"><summary>{{ what }}</summary>{{ o.notice }}</details>{% endif %}</td>
 <td>{{ o.domain }}</td>
 <td{% if o.reverts != "never" %} title="{{ o.reverts }}"{% endif %}>{% for r in o.reverts | split(pat="; ") %}{{ r | split(pat=" ") | first | replace(from="()", to="") }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
@@ -50,9 +52,9 @@
 </div>
 {%- set_global nt = 0 %}{% for name, g in gas.ops %}{% if g.typical is defined %}{% set_global nt = nt + 1 %}{% endif %}{% endfor %}
 {%- if lib == "fp256" %}
-<p class="note">Bits against exact rationals and mpmath at 300 decimal places over the committed vectors. <strong>CR</strong>: the correctly rounded word at every vector, to nearest or in the direction the name gives; <strong>exact</strong>: the result is always the exact value. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed object that holds the op (FP256, FP256E, FP256H or FP256S); "inline" is <code>FP256Lib</code>. Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>.</p>
+<p class="note">Bits against exact rationals and mpmath at 300 decimal places over the committed vectors. <strong>CR</strong>: the correctly rounded word at every vector, to nearest or in the direction the name gives; <strong>exact</strong>: the result is always the exact value. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed object that holds the op (FP256, FP256E, FP256H or FP256S); "inline" is <code>FP256Lib</code>. Sources: <a href="/data/fp256/ops.json">ops.json</a>, <a href="/data/fp256/precision.json">precision.json</a>, <a href="/data/fp256/gas.json">gas.json</a>.</p>
 {%- else %}
-<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed FP127; "inline" is <code>FP127Lib</code>. Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>.</p>
+<p class="note">Bits are relative correct bits against mpmath at 200 decimal places over the committed vectors; "exact" is bit-identical. <strong>proven</strong>: every input against a reference spec, on the <a href="/proofs/">proofs</a> page. Open an op for its method; hover a reverts cell for when. Gas is the median over random inputs that take no shortcut for the {{ nt }} ops that have them (the transcendentals, roots and powers), else over the op's input ladder. "Object" includes the <code>staticcall</code> to the deployed FP127; "inline" is <code>FP127Lib</code>. Sources: <a href="/data/ops.json">ops.json</a> (generated from the Yul source), <a href="/data/precision.json">precision.json</a>, <a href="/data/gas.json">gas.json</a>.</p>
 {%- endif %}
 {%- endcomponent %}
 

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} · {{ config.title }}{% endblock title %}
+{% block description %}{{ page.description }}{% endblock description %}
+{% block content %}
+{%- set d = load_data(path="static/data/proofs.json") -%}
+{%- set s = d.summary -%}
+{%- set labels = {"proven": "proven", "proven-except": "proven outside one window", "proven-given-lemma": "proven, given a lemma", "fuzzed": "fuzzed", "counterexample": "counterexample", "unproven": "not proven", "in-progress": "in progress"} -%}
+<article class="prose doc wide">
+{% include "pagehead.html" %}
+<p class="proofs-pitch"><strong>{{ s.proven }} of {{ s.ops }}</strong> core ops proven for every input, {{ s.proven_except }} for every input but a stated window, {{ s.fuzzed }} fuzzed{% if s.in_progress %}, {{ s.in_progress }} in progress{% endif %}. {{ s.counterexamples }} counterexamples found and pinned. {{ s.solver_seconds | num_format }} s of solver time.</p>
+{{ page.content | safe }}
+{%- for lib in ["FP127", "FP256"] %}
+<h2 id="{{ lib | lower }}">{{ lib }}</h2>
+<div class="scroll">
+<table class="proofs">
+<thead><tr><th>op</th><th>status</th><th>the spec</th><th>tool</th><th class="num">solver</th><th>reproduce</th></tr></thead>
+<tbody>
+{%- for o in d.ops %}{% if o.lib == lib %}
+<tr id="{{ lib | lower }}-{{ o.op }}">
+<td class="mono">{{ o.op }}</td>
+<td><span class="st st-{{ o.status }}">{{ labels[o.status] | default(value=o.status) }}</span>{% if o.lemmas %}<br><span class="meta">{{ o.lemmas | join(sep=", ") }}</span>{% endif %}</td>
+<td>{{ o.spec }}{% if o.note %}<br><span class="meta">{{ o.note }}</span>{% endif %}</td>
+<td class="meta">{{ o.tool }}</td>
+<td class="num">{% if o.seconds is number %}{% if o.seconds < 1 %}&lt; 1 s{% else %}{{ o.seconds | round | int | num_format }} s{% endif %}{% endif %}</td>
+<td><code class="repro">{{ o.reproduce }}</code></td>
+</tr>
+{%- endif %}{% endfor %}
+</tbody>
+</table>
+</div>
+{%- endfor %}
+
+<h2 id="lemmas">Lemmas</h2>
+<p>The specifications reach exact integers through a few primitives built from the EVM's own opcodes; each is proved over unbounded integers with Z3 ({{ d.tools.z3 }}), and the op proofs keep multiplication and division uninterpreted, so they hold whatever the solver might assume about a 256-bit product.</p>
+<ul class="lemmas">
+{%- set_global seen = "" %}
+{%- for l in d.lemmas %}{% if not ("," ~ l.lemma ~ ",") in seen %}{% set_global seen = seen ~ "," ~ l.lemma ~ "," %}
+<li><strong>{{ l.lemma }}</strong> {{ l.result }}: {{ l.text }}</li>
+{%- endif %}{% endfor %}
+</ul>
+<p class="note">Status: <strong>proven</strong>, every input against the spec, its primitives proved; <strong>proven outside one window</strong>, every input but the stated family, where a pinned test shows the op leaving its documented result; <strong>fuzzed</strong>, no symbolic proof, the op is fuzzed against the exact spec; <strong>counterexample</strong>, fuzzed, with a pinned input where it leaves the spec. Solver time is Halmos's own on one machine, two solver threads per check; it varies run to run. Tools: Halmos {{ d.tools.halmos }} with CLZ added and commuted products ({{ d.tools.solver }}), {{ d.tools.forge | replace(from="forge Version: ", to="forge ") }}, solc {{ d.tools.solc }}. Every check: <code>make proofs PROOFS_FULL=1</code>. Dataset: <a href="/data/proofs.json">proofs.json</a>.</p>
+</article>
+{% endblock content %}
