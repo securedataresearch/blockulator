@@ -2,34 +2,35 @@
  "contract": "FP256",
  "chainId": 11155111,
  "network": "sepolia",
- "address": "0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9",
+ "address": "0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52",
  "deployer": "0x4e59b44847b379578588920cA78FbF26c0B4956C",
- "salt": "0x4650323536207634000000000000000000000000000000000000000000000000",
- "saltAscii": "FP256 v4",
- "initCodeHash": "0x3cac0285cff464274572f034682cdae1d9d770508fe66f6bf5dd5dfd0811029c",
- "runtimeKeccak": "0xde448471e5321fb9e30222069f5faffdd8a1f8df059a5c052a9da9750847e6bb",
- "runtimeBytes": 24512,
+ "salt": "0x4650323536207635000000000000000000000000000000000000000000000000",
+ "saltAscii": "FP256 v5",
+ "initCodeHash": "0x476685947058e5d24adf3a1c1cdff1e30c4e5fee3f31cb82939ab3368881ce7c",
+ "runtimeKeccak": "0xc8e37d8828b81656310c3f66ce7615a0cb14d464c6bc601459b368e379eaed95",
+ "runtimeBytes": 10333,
  "source": "contracts/src/fp256/FP256.yul",
- "sourceCommit": "8e65894",
+ "sourceCommit": "d37c8b1",
  "compiler": {
   "language": "Yul",
-  "solc": "0.8.24+commit.e11b9ed9",
+  "solc": "0.8.38+commit.1835d247",
   "optimizer": true,
   "runs": 200,
-  "evmVersion": "shanghai"
+  "evmVersion": "osaka",
+  "optimizerSequence": "0.8.24 default (pinned in scripts/fp127/stdjson.py)"
  },
- "txHash": "0x0a1b6e695daf18aec72e06e845054a4f88c1a5efd7970e68c6d1d9d41519e2d3",
- "block": 11966126,
+ "txHash": "0x0cdfb53f58b261b6895bac0ebf10ed6ef57c9afde85b7a28f9c3eca0a5d26134",
+ "block": 11974969,
  "verification": {
-  "sourcify": "https://sourcify.dev/server/v2/contract/11155111/0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9",
-  "sourcifyRepo": "https://repo.sourcify.dev/11155111/0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9",
-  "blockscout": "https://eth-sepolia.blockscout.com/address/0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9?tab=contract",
+  "sourcify": "https://sourcify.dev/server/v2/contract/11155111/0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52",
+  "sourcifyRepo": "https://repo.sourcify.dev/11155111/0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52",
+  "blockscout": "https://eth-sepolia.blockscout.com/address/0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52?tab=contract",
   "etherscan": "unverified: the Etherscan API has no Yul path"
  },
  "abi": "contracts/src/fp256/abi.json",
  "deployedBy": "0xe6306669b2f188d616bfb518e7b9255d001d731d",
- "gasUsed": 38127306,
- "explorerTx": "https://sepolia.etherscan.io/tx/0x0a1b6e695daf18aec72e06e845054a4f88c1a5efd7970e68c6d1d9d41519e2d3",
+ "gasUsed": 16193275,
+ "explorerTx": "https://sepolia.etherscan.io/tx/0x0cdfb53f58b261b6895bac0ebf10ed6ef57c9afde85b7a28f9c3eca0a5d26134",
  "previous": [
   {
    "release": 3,
@@ -58,6 +59,26 @@
    "saltAscii": "FP256 v1",
    "txHash": "0xb034dadee495b2b63fcf63a2820f0064c248584050d7243250900a5251fc3cd4",
    "note": "release two's code sent with release one's salt by a stale Makefile constant; identical runtime, not the published address"
+  },
+  {
+   "release": 4,
+   "address": "0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9",
+   "salt": "0x4650323536207634000000000000000000000000000000000000000000000000",
+   "saltAscii": "FP256 v4",
+   "initCodeHash": "0x3cac0285cff464274572f034682cdae1d9d770508fe66f6bf5dd5dfd0811029c",
+   "runtimeKeccak": "0xde448471e5321fb9e30222069f5faffdd8a1f8df059a5c052a9da9750847e6bb",
+   "runtimeBytes": 24512,
+   "sourceCommit": "8e65894",
+   "txHash": "0x0a1b6e695daf18aec72e06e845054a4f88c1a5efd7970e68c6d1d9d41519e2d3",
+   "block": 11966126,
+   "gasUsed": 38127306,
+   "explorerTx": "https://sepolia.etherscan.io/tx/0x0a1b6e695daf18aec72e06e845054a4f88c1a5efd7970e68c6d1d9d41519e2d3",
+   "verification": {
+    "sourcify": "https://sourcify.dev/server/v2/contract/11155111/0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9",
+    "sourcifyRepo": "https://repo.sourcify.dev/11155111/0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9",
+    "blockscout": "https://eth-sepolia.blockscout.com/address/0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9?tab=contract",
+    "etherscan": "unverified: the Etherscan API has no Yul path"
+   }
   }
  ]
 }
