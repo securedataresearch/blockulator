@@ -21,7 +21,20 @@ Everything in this directory is served at blockulator.com/contracts/deployments/
   `make deploy-ladder-sepolia`, `make verify-ladder-sepolia`.
 - `RELEASE.md`, `RELEASE.json`: every address in Blockulator 2.2, and those
   of 2.1 and 2.0, which stay live.
-- `*.sepolia.receipt.json`: the raw receipt of each object's deployment.
+- `*.sepolia.receipt.json`, `*.mainnet.receipt.json`: the raw receipt of each object's deployment.
+
+## Ethereum mainnet
+
+The library objects go to mainnet at the same CREATE2 addresses as on Sepolia; the ladder stays on Sepolia. The
+deployer key is public, so ETH sent to it is swept within a block. `make deploy-mainnet` therefore sends the funding
+and every deploy as one Flashbots bundle (`scripts/fp127/bundle.py`): `FUNDER_KEY`'s account moves exactly the gas
+the deploys need to the deployer in the bundle's first transaction, and the relay includes the whole bundle in one
+block or none of it. The bundle is rebuilt for each block at that block's base fee plus a tip.
+
+1. `make predict-mainnet`: every object's address, and whether it is already there.
+2. `make deploy-mainnet-dry`: the identical transactions on an anvil fork, which checks every address and runtime
+   and prints the gas and the ETH to fund. No keys needed.
+3. `FUNDER_KEY=… DEPLOYER_KEY=… make deploy-mainnet`, then `make verify-mainnet` and `make smoke-mainnet`.
 
 The badge, game, calculator and market contracts were deployed by hand in
 the Huff era; their addresses live in
