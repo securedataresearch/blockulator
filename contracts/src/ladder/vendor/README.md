@@ -10,11 +10,14 @@ and license; nothing here is part of FP127.
 | `openzeppelin/utils/math/{Math,SignedMath,SafeCast}.sol`, `openzeppelin/utils/Panic.sol` | [OpenZeppelin/openzeppelin-contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) `contracts/utils/...` | tag v5.7.0, fetched 2026-10-23 | MIT |
 | `uniswap/FullMath.sol` | [Uniswap/v4-core](https://github.com/Uniswap/v4-core) `src/libraries/FullMath.sol` | tag v4.0.0, fetched 2026-10-23 | MIT |
 
-Two comparison libraries are AGPL-3.0-only and are submodules instead, never
+Three comparison libraries are AGPL-3.0-only (or link AGPL code) and are submodules instead, never
 copied here: Solmate (`lib/solmate`, main @ `89365b8`; its only tag, v6,
-predates `SignedWadMath`) and snekmate (`lib/snekmate`, tag v0.1.2). The files
-that link them carry the same licence: `../LadderSolmate.sol`,
-`../vyper/SnekmateMath.vy` and `test/fp127/GasLibs.sol`. snekmate is Vyper;
+predates `SignedWadMath`), snekmate (`lib/snekmate`, tag v0.1.2) and solstat
+(`lib/solstat`, [primitivefinance/solstat](https://github.com/primitivefinance/solstat) main @ `80c603f`, for the
+normal CDF and erfc; its `Gaussian.sol` is MIT but links solmate v7, `lib/solstat/lib/solmate` @ `ed67fed`, through
+the `lib/solstat/:solmate/` remapping). The files that link them carry the same licence: `../LadderSolmate.sol`,
+`../vyper/SnekmateMath.vy`, `test/fp127/GasLibs.sol` and `test/cdf/Cdf.t.sol`. None of them is imported by FP127,
+FP19 or BlockulatorWad: they are benchmarks only. snekmate is Vyper;
 `scripts/ladder/vyper.py` compiles the wrapper with Vyper 0.4.3, the version
 snekmate v0.1.2 pins.
 
