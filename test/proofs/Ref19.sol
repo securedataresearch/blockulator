@@ -244,7 +244,9 @@ library Ref19 {
             return (0, int256(J));
         }
         if (J > uint256(type(int256).max) + 1) return (OVERFLOW, 0);
-        return (0, int256(0 - J)); // two's complement of J
+        unchecked {
+            return (0, int256(0 - J)); // two's complement of J
+        }
     }
 
     // ---- the ops ----------------------------------------------------------------

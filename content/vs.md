@@ -45,4 +45,4 @@ Each established library does something better. This page says what, then puts t
 
 - **Chains without CLZ.** FP19, FP127 and BlockulatorWad need the CLZ opcode (EIP-7939, the osaka EVM) and solc 0.8.31 or later, so they do not run on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list](https://github.com/securedataresearch/blockulator/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)).
 - **The cheapest exp.** Where a wei of error per call is acceptable, Solady is cheaper.
-- **FP19's proofs.** All 17 of FP127's core ops are proven for every input; FP19's are still in progress ([proofs](/proofs/)).
+- **Six FP19 ops without a proof.** All 17 of FP127's core ops and 18 of FP19's 24 are proven for every input. FP19's `add`, `sub`, `sqrt` and the three `toFixed18` are fuzzed against their exact specs, not proven ([proofs](/proofs/)).

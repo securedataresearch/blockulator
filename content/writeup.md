@@ -15,7 +15,7 @@ An 18-decimal number has about 60 bits of fraction, and every `mulWad` rounds. O
 
 - **Measured.** The [ladder](/results/ladder/) runs 14 real calculations, repeated up to 10,000 times, in every library against 300-digit arithmetic. On the [edges](/results/edges/), 139 calls at the ends of each domain, FP19 keeps at least 53 digits.
 - **To the last wei.** BlockulatorWad keeps Solady's function names and is exact on all 108,000 results we tested. The WAD libraries it replaces are a wei or more off on 24% to 98% of their `exp`, `ln` and `pow` results.
-- **Proven.** All 17 of FP127's core ops are proven for every input. FP19's proofs are in progress ([proofs](/proofs/)).
+- **Proven.** All 17 of FP127's core ops and 18 of FP19's 24 are proven for every input; FP19's other six are fuzzed against their exact specs ([proofs](/proofs/)).
 - **No owner.** No contract has storage, an owner, a proxy or an upgrade path, and each is verified on Sourcify and Blockscout.
 
 ## What it costs
