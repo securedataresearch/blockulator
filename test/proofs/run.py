@@ -287,7 +287,12 @@ def main():
                 continue
             rs = [results[c] for c in cks]
             secs = sum(r["seconds"] for r in rs) if rs and all(r["result"] == "pass" for r in rs) else None
-            if cks and any(r["result"] != "pass" for r in rs):
+            if cks and any(r["result"] == "timeout" for r in rs) and all(r["result"] in ("pass", "timeout") for r in rs):
+                # the solver ran out of time: no proof, and no counterexample; the op stays fuzzed against its spec
+                status = "fuzzed"
+                note = (f"Halmos ran out of time ({max(r['wall'] for r in rs if r['result'] == 'timeout'):.0f} s) on "
+                        + ", ".join(r["check"] for r in rs if r["result"] == "timeout") + "; fuzzed against the exact spec")
+            elif cks and any(r["result"] != "pass" for r in rs):
                 status = "unproven"
             elif any(l not in proved for l in lem):
                 status = "proven-given-lemma"

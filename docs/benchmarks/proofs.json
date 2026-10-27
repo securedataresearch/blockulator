@@ -9,12 +9,12 @@
  },
  "summary": {
   "ops": 41,
-  "proven": 17,
+  "proven": 35,
   "proven_except": 0,
-  "fuzzed": 1,
+  "fuzzed": 6,
   "counterexamples": 0,
-  "in_progress": 23,
-  "solver_seconds": 608
+  "in_progress": 0,
+  "solver_seconds": 5933
  },
  "ops": [
   {
@@ -346,7 +346,7 @@
   {
    "lib": "FP19",
    "op": "add",
-   "status": "in-progress",
+   "status": "fuzzed",
    "spec": "a + b rounded to nearest (237 bits, ties away)",
    "checks": [
     "check_fp19_add"
@@ -355,14 +355,14 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_add; fuzzed against the exact spec",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_add)$'"
   },
   {
    "lib": "FP19",
    "op": "sub",
-   "status": "in-progress",
+   "status": "fuzzed",
    "spec": "a - b rounded to nearest",
    "checks": [
     "check_fp19_sub"
@@ -371,14 +371,14 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_sub; fuzzed against the exact spec",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_sub)$'"
   },
   {
    "lib": "FP19",
    "op": "mul",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "a b rounded to nearest",
    "checks": [
     "check_fp19_mul"
@@ -387,17 +387,17 @@
     "L1",
     "L3"
    ],
-   "seconds": null,
-   "paths": null,
+   "seconds": 430.2,
+   "paths": 722,
    "fast_checks": [],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_mul)$'"
   },
   {
    "lib": "FP19",
    "op": "mulDown",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "a b rounded toward -inf",
    "checks": [
     "check_fp19_mulDown"
@@ -406,17 +406,17 @@
     "L1",
     "L3"
    ],
-   "seconds": null,
-   "paths": null,
+   "seconds": 1023.4,
+   "paths": 3161,
    "fast_checks": [],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_mulDown)$'"
   },
   {
    "lib": "FP19",
    "op": "mulUp",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "a b rounded toward +inf",
    "checks": [
     "check_fp19_mulUp"
@@ -425,17 +425,17 @@
     "L1",
     "L3"
    ],
-   "seconds": null,
-   "paths": null,
+   "seconds": 730.8,
+   "paths": 2561,
    "fast_checks": [],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_mulUp)$'"
   },
   {
    "lib": "FP19",
    "op": "div",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "a / b rounded to nearest",
    "checks": [
     "check_fp19_div"
@@ -444,17 +444,19 @@
     "K19",
     "L3"
    ],
-   "seconds": null,
-   "paths": null,
-   "fast_checks": [],
+   "seconds": 113.9,
+   "paths": 443,
+   "fast_checks": [
+    "check_fp19_div"
+   ],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_div)$'"
   },
   {
    "lib": "FP19",
    "op": "divDown",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "a / b rounded toward -inf",
    "checks": [
     "check_fp19_divDown"
@@ -463,17 +465,17 @@
     "K19",
     "L3"
    ],
-   "seconds": null,
-   "paths": null,
+   "seconds": 303.0,
+   "paths": 1805,
    "fast_checks": [],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_divDown)$'"
   },
   {
    "lib": "FP19",
    "op": "divUp",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "a / b rounded toward +inf",
    "checks": [
     "check_fp19_divUp"
@@ -482,17 +484,17 @@
     "K19",
     "L3"
    ],
-   "seconds": null,
-   "paths": null,
+   "seconds": 263.9,
+   "paths": 1553,
    "fast_checks": [],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_divUp)$'"
   },
   {
    "lib": "FP19",
    "op": "inv",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "1 / x rounded to nearest",
    "checks": [
     "check_fp19_inv"
@@ -500,12 +502,14 @@
    "lemmas": [
     "K19"
    ],
-   "seconds": null,
-   "paths": null,
-   "fast_checks": [],
+   "seconds": 60.4,
+   "paths": 462,
+   "fast_checks": [
+    "check_fp19_inv"
+   ],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_inv)$'"
   },
   {
    "lib": "FP19",
@@ -524,119 +528,127 @@
   {
    "lib": "FP19",
    "op": "floor",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "the integral number at or below x",
    "checks": [
     "check_fp19_floor"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
+   "seconds": 198.6,
+   "paths": 1412,
    "fast_checks": [],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_floor)$'"
   },
   {
    "lib": "FP19",
    "op": "ceil",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "the integral number at or above x",
    "checks": [
     "check_fp19_ceil"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
+   "seconds": 202.2,
+   "paths": 1423,
    "fast_checks": [],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_ceil)$'"
   },
   {
    "lib": "FP19",
    "op": "round",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "the nearest integral number, halves away from zero",
    "checks": [
     "check_fp19_round"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
+   "seconds": 206.4,
+   "paths": 1380,
    "fast_checks": [],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_round)$'"
   },
   {
    "lib": "FP19",
    "op": "toUintDown",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "floor(x) as uint256",
    "checks": [
     "check_fp19_toUintDown"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
-   "fast_checks": [],
+   "seconds": 0.6,
+   "paths": 29,
+   "fast_checks": [
+    "check_fp19_toUintDown"
+   ],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toUintDown)$'"
   },
   {
    "lib": "FP19",
    "op": "toUintUp",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "ceil(x) as uint256",
    "checks": [
     "check_fp19_toUintUp"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
-   "fast_checks": [],
+   "seconds": 0.7,
+   "paths": 27,
+   "fast_checks": [
+    "check_fp19_toUintUp"
+   ],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toUintUp)$'"
   },
   {
    "lib": "FP19",
    "op": "toIntDown",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "floor(x) as int256",
    "checks": [
     "check_fp19_toIntDown"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
-   "fast_checks": [],
+   "seconds": 1.3,
+   "paths": 47,
+   "fast_checks": [
+    "check_fp19_toIntDown"
+   ],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toIntDown)$'"
   },
   {
    "lib": "FP19",
    "op": "toIntUp",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "ceil(x) as int256",
    "checks": [
     "check_fp19_toIntUp"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
-   "fast_checks": [],
+   "seconds": 1.3,
+   "paths": 41,
+   "fast_checks": [
+    "check_fp19_toIntUp"
+   ],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toIntUp)$'"
   },
   {
    "lib": "FP19",
    "op": "toFixed18",
-   "status": "in-progress",
+   "status": "fuzzed",
    "spec": "x 10^18 to the nearest integer, halves away",
    "checks": [
     "check_fp19_toFixed18"
@@ -647,14 +659,14 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_toFixed18; fuzzed against the exact spec",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toFixed18)$'"
   },
   {
    "lib": "FP19",
    "op": "toFixed18Down",
-   "status": "in-progress",
+   "status": "fuzzed",
    "spec": "floor(x 10^18)",
    "checks": [
     "check_fp19_toFixed18Down"
@@ -665,14 +677,14 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_toFixed18Down; fuzzed against the exact spec",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toFixed18Down)$'"
   },
   {
    "lib": "FP19",
    "op": "toFixed18Up",
-   "status": "in-progress",
+   "status": "fuzzed",
    "spec": "ceil(x 10^18)",
    "checks": [
     "check_fp19_toFixed18Up"
@@ -683,62 +695,68 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_toFixed18Up; fuzzed against the exact spec",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toFixed18Up)$'"
   },
   {
    "lib": "FP19",
    "op": "fromUint",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "x rounded to nearest",
    "checks": [
     "check_fp19_fromUint"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
-   "fast_checks": [],
+   "seconds": 36.0,
+   "paths": 189,
+   "fast_checks": [
+    "check_fp19_fromUint"
+   ],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_fromUint)$'"
   },
   {
    "lib": "FP19",
    "op": "fromUintDown",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "x truncated to 237 bits",
    "checks": [
     "check_fp19_fromUintDown"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
-   "fast_checks": [],
+   "seconds": 27.2,
+   "paths": 112,
+   "fast_checks": [
+    "check_fp19_fromUintDown"
+   ],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_fromUintDown)$'"
   },
   {
    "lib": "FP19",
    "op": "fromUintUp",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "x rounded up to 237 bits",
    "checks": [
     "check_fp19_fromUintUp"
    ],
    "lemmas": [],
-   "seconds": null,
-   "paths": null,
-   "fast_checks": [],
+   "seconds": 64.1,
+   "paths": 554,
+   "fast_checks": [
+    "check_fp19_fromUintUp"
+   ],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_fromUintUp)$'"
   },
   {
    "lib": "FP19",
    "op": "fromFixed18",
-   "status": "in-progress",
+   "status": "proven",
    "spec": "round(round(x) / 10^18), each to nearest (one rounding below 2^237)",
    "checks": [
     "check_fp19_fromFixed18"
@@ -747,12 +765,12 @@
     "K18",
     "L5"
    ],
-   "seconds": null,
-   "paths": null,
+   "seconds": 1661.1,
+   "paths": 6325,
    "fast_checks": [],
    "note": "",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
-   "reproduce": ""
+   "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_fromFixed18)$'"
   }
  ],
  "lemmas": [

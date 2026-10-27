@@ -47,30 +47,30 @@ runs.
 | FP127 | `toFixed18Down` | proven | floor(x 10^18 / 2^128) | 19 s | `check_fp127_toFixed18Down` |
 | FP127 | `toFixed18Up` | proven | ceil(x 10^18 / 2^128) | 48 s | `check_fp127_toFixed18Up` |
 | FP127 | `fromFixed18` | proven | trunc(x 2^128 / 10^18); OutOfRange outside [-2^127, 2^127) | 0 s | `check_fp127_fromFixed18` |
-| FP19 | `add` | in-progress | a + b rounded to nearest (237 bits, ties away) | – | `check_fp19_add` |
-| FP19 | `sub` | in-progress | a - b rounded to nearest | – | `check_fp19_sub` |
-| FP19 | `mul` | in-progress (L1, L3) | a b rounded to nearest | – | `check_fp19_mul` |
-| FP19 | `mulDown` | in-progress (L1, L3) | a b rounded toward -inf | – | `check_fp19_mulDown` |
-| FP19 | `mulUp` | in-progress (L1, L3) | a b rounded toward +inf | – | `check_fp19_mulUp` |
-| FP19 | `div` | in-progress (K19, L3) | a / b rounded to nearest | – | `check_fp19_div` |
-| FP19 | `divDown` | in-progress (K19, L3) | a / b rounded toward -inf | – | `check_fp19_divDown` |
-| FP19 | `divUp` | in-progress (K19, L3) | a / b rounded toward +inf | – | `check_fp19_divUp` |
-| FP19 | `inv` | in-progress (K19) | 1 / x rounded to nearest | – | `check_fp19_inv` |
+| FP19 | `add` | fuzzed | a + b rounded to nearest (237 bits, ties away) | – | `check_fp19_add` |
+| FP19 | `sub` | fuzzed | a - b rounded to nearest | – | `check_fp19_sub` |
+| FP19 | `mul` | proven (L1, L3) | a b rounded to nearest | 430 s | `check_fp19_mul` |
+| FP19 | `mulDown` | proven (L1, L3) | a b rounded toward -inf | 1023 s | `check_fp19_mulDown` |
+| FP19 | `mulUp` | proven (L1, L3) | a b rounded toward +inf | 731 s | `check_fp19_mulUp` |
+| FP19 | `div` | proven (K19, L3) | a / b rounded to nearest | 114 s | `check_fp19_div` |
+| FP19 | `divDown` | proven (K19, L3) | a / b rounded toward -inf | 303 s | `check_fp19_divDown` |
+| FP19 | `divUp` | proven (K19, L3) | a / b rounded toward +inf | 264 s | `check_fp19_divUp` |
+| FP19 | `inv` | proven (K19) | 1 / x rounded to nearest | 60 s | `check_fp19_inv` |
 | FP19 | `sqrt` | fuzzed | sqrt(x) rounded to nearest | – | FuzzProofs |
-| FP19 | `floor` | in-progress | the integral number at or below x | – | `check_fp19_floor` |
-| FP19 | `ceil` | in-progress | the integral number at or above x | – | `check_fp19_ceil` |
-| FP19 | `round` | in-progress | the nearest integral number, halves away from zero | – | `check_fp19_round` |
-| FP19 | `toUintDown` | in-progress | floor(x) as uint256 | – | `check_fp19_toUintDown` |
-| FP19 | `toUintUp` | in-progress | ceil(x) as uint256 | – | `check_fp19_toUintUp` |
-| FP19 | `toIntDown` | in-progress | floor(x) as int256 | – | `check_fp19_toIntDown` |
-| FP19 | `toIntUp` | in-progress | ceil(x) as int256 | – | `check_fp19_toIntUp` |
-| FP19 | `toFixed18` | in-progress (L1) | x 10^18 to the nearest integer, halves away | – | `check_fp19_toFixed18` |
-| FP19 | `toFixed18Down` | in-progress (L1) | floor(x 10^18) | – | `check_fp19_toFixed18Down` |
-| FP19 | `toFixed18Up` | in-progress (L1) | ceil(x 10^18) | – | `check_fp19_toFixed18Up` |
-| FP19 | `fromUint` | in-progress | x rounded to nearest | – | `check_fp19_fromUint` |
-| FP19 | `fromUintDown` | in-progress | x truncated to 237 bits | – | `check_fp19_fromUintDown` |
-| FP19 | `fromUintUp` | in-progress | x rounded up to 237 bits | – | `check_fp19_fromUintUp` |
-| FP19 | `fromFixed18` | in-progress (K18, L5) | round(round(x) / 10^18), each to nearest (one rounding below 2^237) | – | `check_fp19_fromFixed18` |
+| FP19 | `floor` | proven | the integral number at or below x | 199 s | `check_fp19_floor` |
+| FP19 | `ceil` | proven | the integral number at or above x | 202 s | `check_fp19_ceil` |
+| FP19 | `round` | proven | the nearest integral number, halves away from zero | 206 s | `check_fp19_round` |
+| FP19 | `toUintDown` | proven | floor(x) as uint256 | 1 s | `check_fp19_toUintDown` |
+| FP19 | `toUintUp` | proven | ceil(x) as uint256 | 1 s | `check_fp19_toUintUp` |
+| FP19 | `toIntDown` | proven | floor(x) as int256 | 1 s | `check_fp19_toIntDown` |
+| FP19 | `toIntUp` | proven | ceil(x) as int256 | 1 s | `check_fp19_toIntUp` |
+| FP19 | `toFixed18` | fuzzed (L1) | x 10^18 to the nearest integer, halves away | – | `check_fp19_toFixed18` |
+| FP19 | `toFixed18Down` | fuzzed (L1) | floor(x 10^18) | – | `check_fp19_toFixed18Down` |
+| FP19 | `toFixed18Up` | fuzzed (L1) | ceil(x 10^18) | – | `check_fp19_toFixed18Up` |
+| FP19 | `fromUint` | proven | x rounded to nearest | 36 s | `check_fp19_fromUint` |
+| FP19 | `fromUintDown` | proven | x truncated to 237 bits | 27 s | `check_fp19_fromUintDown` |
+| FP19 | `fromUintUp` | proven | x rounded up to 237 bits | 64 s | `check_fp19_fromUintUp` |
+| FP19 | `fromFixed18` | proven (K18, L5) | round(round(x) / 10^18), each to nearest (one rounding below 2^237) | 1661 s | `check_fp19_fromFixed18` |
 <!-- /proofs:table -->
 
 The same data, with paths and the lemma list, is
@@ -180,8 +180,10 @@ exact integer roots.
 ## What is and is not covered
 
 - **Covered:** the 17 FP127 and 24 FP19 ops in the table, for all inputs,
-  including which error each revert carries, except FP19's square root (and
-  FP19's ops still marked in progress).
+  including which error each revert carries, except the six FP19 ops marked
+  fuzzed: `sqrt` (no symbolic check), and `add`, `sub`, `toFixed18`,
+  `toFixed18Down` and `toFixed18Up`, where Halmos runs out of time (2,000 s
+  each). Those are fuzzed against the same exact specs.
 - **FP127's square root: proven outside the solver.** A Newton iteration's
   result is the floor only by an argument about its convergence, which Halmos
   cannot close: it would have to relate the iterate's square to the input

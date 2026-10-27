@@ -88,6 +88,47 @@ contract ProofsFP19 is Harness {
         vm.assume(Kernels.q18(Ref19.unpack(w).m) >> 254 != 0);
     }
 
+    // ---- input classes ----
+    // Where one symbolic run does not close in time, a check splits its
+    // inputs by a field: `pin` forks one path per value of the field in a
+    // window, and on each path the field is the constant the search reached,
+    // so the op and the spec run with concrete shift amounts. Every input is
+    // still covered: inside the window by its own path, outside it by the
+    // symbolic run.
+
+    /// d for 0 <= d < 2^10, as the literal a ten-step binary search reaches:
+    /// on each path the result is a constant (and equal to d).
+    function pin(uint256 d) internal pure returns (uint256 k) {
+        assembly {
+            if iszero(lt(d, add(k, 512))) { k := add(k, 512) }
+            if iszero(lt(d, add(k, 256))) { k := add(k, 256) }
+            if iszero(lt(d, add(k, 128))) { k := add(k, 128) }
+            if iszero(lt(d, add(k, 64))) { k := add(k, 64) }
+            if iszero(lt(d, add(k, 32))) { k := add(k, 32) }
+            if iszero(lt(d, add(k, 16))) { k := add(k, 16) }
+            if iszero(lt(d, add(k, 8))) { k := add(k, 8) }
+            if iszero(lt(d, add(k, 4))) { k := add(k, 4) }
+            if iszero(lt(d, add(k, 2))) { k := add(k, 2) }
+            if iszero(lt(d, add(k, 1))) { k := add(k, 1) }
+        }
+    }
+
+    /// x with its exponent field rewritten as a literal when it lies in
+    /// [lo, lo + n), n <= 2^10; x itself otherwise. The word is unchanged.
+    function pinExp(int256 x, uint256 lo, uint256 n) internal pure returns (int256) {
+        uint256 e = (uint256(x) >> 236) & 0x7ffff;
+        if (e < lo || e >= lo + n) return x;
+        uint256 k = lo + pin(e - lo);
+        return int256((uint256(x) & ~(uint256(0x7ffff) << 236)) | (k << 236));
+    }
+
+    /// toFixed18's window: |x| 10^18 = m 10^18 2^-k with k = 0x400eb - e in
+    /// [1, 297], the exponents whose result needs a shift (below, Overflow;
+    /// above, zero).
+    function pinToFixed18(int256 x) internal pure returns (int256) {
+        return pinExp(x, 0x400eb - 297, 297);
+    }
+
     function check_fp19_add(int256 a, int256 b) public view {
         (bytes4 e, int256 r) = run2(this.fp19_add.selector, a, b);
         (bytes4 se, int256 sr) = spec(abi.encodeCall(this.ref_add, (a, b)));
@@ -198,18 +239,21 @@ contract ProofsFP19 is Harness {
     }
 
     function check_fp19_toFixed18(int256 x) public view {
+        x = pinToFixed18(x);
         (bytes4 e, int256 r) = run1(this.fp19_toFixed18.selector, x);
         (bytes4 se, int256 sr) = spec(abi.encodeCall(this.ref_toFixed18, (x, N)));
         same(e, r, se, sr);
     }
 
     function check_fp19_toFixed18Down(int256 x) public view {
+        x = pinToFixed18(x);
         (bytes4 e, int256 r) = run1(this.fp19_toFixed18Down.selector, x);
         (bytes4 se, int256 sr) = spec(abi.encodeCall(this.ref_toFixed18, (x, D)));
         same(e, r, se, sr);
     }
 
     function check_fp19_toFixed18Up(int256 x) public view {
+        x = pinToFixed18(x);
         (bytes4 e, int256 r) = run1(this.fp19_toFixed18Up.selector, x);
         (bytes4 se, int256 sr) = spec(abi.encodeCall(this.ref_toFixed18, (x, U)));
         same(e, r, se, sr);
