@@ -1,38 +1,22 @@
-{% extends "base.html" %}
-{% block title %}{{ page.title }} · {{ config.title }}{% endblock title %}
-{% block description %}{{ page.description }}{% endblock description %}
-{% block content %}
+{% extends "page.html" %}
+{% block width %} wide{% endblock width %}
+{% block body %}
 {%- set d = load_data(path="static/data/ladder.json") -%}
 {%- set e = load_data(path="static/data/edges.json") -%}
-{%- set forms = ["fp19", "fp127", "quad", "maker", "abdk", "solady", "prb", "balancer", "aave", "morpho", "fraxlend", "euler", "solmate", "prbud", "snekmate", "oz", "uniswap"] -%}
-{%- set short = {"fp127": "FP127", "abdk": "ABDK", "solady": "Solady", "prb": "PRBMath", "quad": "Quad", "balancer": "Balancer", "aave": "Aave", "morpho": "Morpho", "fraxlend": "FraxLend", "euler": "Euler", "maker": "Maker", "fp19": "FP19", "solmate": "Solmate", "prbud": "PRB UD60x18", "snekmate": "snekmate", "oz": "OpenZeppelin", "uniswap": "Uniswap"} -%}
-{%- set ns = page.extra.n | str -%}
-<article class="prose doc wide">
-{% include "pagehead.html" %}
-{{ page.content | safe }}
+{%- set h = load_data(path="static/data/home.json") -%}
+{{ <plot chart="ladder" src="home" label="Median correct digits after the last step of each scenario, every library; the numbers are in the table below." /> }}
 
-<div class="scroll">
-<table class="matrix">
-<thead><tr><th>scenario</th>{% for f in forms %}<th class="num">{{ short[f] }}</th>{% endfor %}</tr></thead>
-<tbody>
-{%- for sc in d.scenarios %}
-<tr><td><a href="/results/ladder/#{{ sc.id }}">{{ sc.title }}</a></td>
-{%- for f in forms %}{% set row = sc.summary[f][ns] %}{% set rc = sc.inputs[0].cells[f][ns] %}
-<td class="num{% if f == 'fp127' or f == 'fp19' %} ours{% endif %}">{% if rc.reasonName is defined and "Unsupported" in rc.reasonName %}{% elif row.digits is defined %}{% if row.exact == row.count %}<span class="exact">exact</span>{% else %}<span title="range {{ row.digits.min }}–{{ row.digits.max }} over {{ row.count }} inputs">{{ row.digits.median }}</span>{% endif %}{% if row.completed < row.inputs %} <span class="rev meta" title="completed {{ row.completed }} of {{ row.inputs }} inputs">{{ row.completed }}/{{ row.inputs }}</span>{% endif %}{% else %}<span class="rev">rev</span>{% endif %}</td>
-{%- endfor %}
-</tr>
-{%- endfor %}
-</tbody>
-</table>
-</div>
-<p class="small">Median correct digits at N = {{ page.extra.n | num_format }} over the inputs of each scenario that every library with a result completed, against exact inputs, each capped at what its format holds at that magnitude (FP19 71.3, binary128 34.0, the fixed grids by their last place). <span class="rev">k/n</span>: the library completed k of n inputs; <span class="rev">rev</span>: every input reverted. Empty: the library has no model for that scenario. FP127Lib equals FP127 and is left out. One N is a headline; <a href="/results/ladder/">the ladder</a> has every N from 1.</p>
+{{ <libtable t={h.ladder.table} first="scenario · median digits" heat={true} /> }}
+<p class="small">Median correct digits at N = {{ page.extra.n | num_format }} over each scenario's inputs, each capped at what the library's format holds at that size (FP19 71.3, binary128 34.0, a fixed-point library its last place). A dash means the library has no model for the scenario or reverted on every input. Per-second accrual is FP127's lowest score because a per-second rate rounded to 2<sup>−128</sup> holds about 29 digits; against the rate as stored, FP127 keeps 40. FP127Lib returns the same words as FP127, so it is not shown. Hover a cell for detail; <a href="/results/ladder/">the ladder</a> has every N from 1.</p>
 {{ <stamp d={d} script="livecap.py" /> }}
 
-<h2>Where to go next</h2>
-<ul class="next">
-<li><a href="/results/ladder/"><strong>Ladder</strong></a> {{ d.scenarios | length }} scenarios, N from 1 to 10,000, the reference input cell by cell.</li>
-<li><a href="/results/edges/"><strong>Edges</strong></a> {% set_global probes = 0 %}{% for op in e.ops %}{% set_global probes = probes + op.probes | length %}{% endfor %}{{ probes }} single calls at the ends of each library's domain: where results go to zero or revert.</li>
-<li><a href="/results/ops/"><strong>Per op</strong></a> gas and precision for each op, against each library.</li>
-</ul>
-</article>
-{% endblock content %}
+{% set_global probes = 0 %}{% for op in e.ops %}{% set_global probes = probes + op.probes | length %}{% endfor -%}
+<div class="stories next">
+  <a class="card story" href="/results/ladder/"><span class="label">ladder</span><h3>Step by step</h3><p>Each of the {{ d.scenarios | length }} scenarios from N = 1 to 10,000, input by input.</p></a>
+  <a class="card story" href="/results/edges/"><span class="label">edges</span><h3>Where formats break</h3><p>{{ probes }} single calls at the ends of each library's range: where results go to zero or revert.</p></a>
+  <a class="card story" href="/results/ops/"><span class="label">per op</span><h3>Gas and precision per op</h3><p>Every op against every library that offers it.</p></a>
+  <a class="card story" href="/results/wad/"><span class="label">wad</span><h3>To the last wei</h3><p>BlockulatorWad and every library's WAD functions on the same inputs: how often each is a wei off.</p></a>
+  <a class="card story" href="/results/deployed/"><span class="label">deployed</span><h3>Aave and Morpho live</h3><p>The deployed markets against the formula each says it computes.</p></a>
+  <a class="card story" href="/results/incidents/"><span class="label">incidents</span><h3>Four exploits, replayed</h3><p>Real attacks rerun from their own transactions, and what would have stopped each one.</p></a>
+</div>
+{% endblock body %}

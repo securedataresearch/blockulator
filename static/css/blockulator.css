@@ -1,7 +1,9 @@
 /* components, on site.css's theme. No colour literals: tokens only. */
-/* one column for every page, as wide as the window allows (--wrap); prose keeps a readable measure, data takes the width */
+/* one column for every page, as wide as the window allows (--wrap): the banner and the data take the width, and the
+   prose is a readable measure centred under the banner, so no page is text on the left and air on the right */
 .doc, .doc.wide { max-width: none; }
-.doc > :is(p, ul, ol, h2, h3, h4, blockquote, dl, .lead, .note, .small, .kv), .pagehead > *, .home .unit > :is(h2, .note, .small) { max-width: var(--measure); }
+.doc > :is(p, ul, ol, h2, h3, h4, blockquote, dl, .lead, .note, .small, .kv, pre, .stamp, .wordstrip),
+.doc > :is(section, .scenario) > :is(p, ul, ol, h2, h3, h4, .note, .small) { max-width: var(--measure); margin-inline: auto; }
 .doc > table { background: var(--surface-solid); border-radius: var(--radius-s); box-shadow: inset 0 1px 0 var(--edge), var(--shadow); }
 .doc pre, .doc code { font-family: var(--mono); font-size: .88em; }
 .doc pre { background: var(--tint); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 16px 18px; overflow-x: auto; line-height: 1.5; }
@@ -30,10 +32,10 @@
 
 /* demo: tabs, chart, ladder table */
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 1.2em 0 1.6em; }
-.tabs a { font-size: 14px; text-decoration: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); transition: border-color .18s ease, background .18s ease, color .18s ease; }
+.tabs a { font-size: 14px; text-decoration: none; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); transition: border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out); }
 .tabs a:hover { border-color: var(--text-strong); }
 .tabs a.on { border-color: var(--text-strong); background: var(--text-strong); color: var(--bg); }
-.doc .scenario h2 { font-family: var(--sans); font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; text-transform: none; color: var(--text-strong); margin: 1.2em 0 .4em; }
+.doc .scenario h2 { font-family: var(--sans); font-size: clamp(24px, 3vw, 32px); letter-spacing: -.02em; text-transform: none; color: var(--text-strong); margin-block: 1.2em .4em; }
 .chart svg text { font-family: var(--sans); }
 .chart .grid { stroke: var(--line); stroke-width: 1; }
 .chart .tick { font-size: 12px; fill: var(--faint); }
@@ -73,7 +75,7 @@
 .method dl { margin: 12px 0 4px; }
 .method dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin-top: 12px; }
 .method dd { margin: 4px 0 0; font-size: 15px; }
-.doc .scenario h3 { font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 2em 0 .6em; font-weight: 500; }
+.doc .scenario h3 { font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin-block: 2em .6em; font-weight: 500; }
 .toggle { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; margin: 0 0 10px; }
 .toggle label { cursor: pointer; }
 .chart .band { opacity: .14; stroke: none; }
@@ -89,32 +91,29 @@
 
 /* page changes: the old page eases out, then the new one eases in, one after the other so no frame shows both;
    between them the transition layer shows the same backdrop, and the bar stays put */
-@view-transition { navigation: auto; }
 ::view-transition { background: var(--mesh), var(--bg); }
 ::view-transition-group(root), ::view-transition-group(topbar) { animation: none; }
 ::view-transition-image-pair(root) { isolation: auto; }
-::view-transition-old(root) { mix-blend-mode: normal; animation: page-out 90ms cubic-bezier(.4, 0, 1, 1) both; }
-::view-transition-new(root) { mix-blend-mode: normal; animation: page-in 240ms cubic-bezier(.2, .8, .2, 1) 60ms both; }
+::view-transition-old(root) { mix-blend-mode: normal; animation: page-out var(--t-out) var(--ease-in) both; }
+::view-transition-new(root) { mix-blend-mode: normal; animation: page-in var(--t-in) var(--ease-out) 60ms both; }
 ::view-transition-old(topbar) { display: none; }
 ::view-transition-new(topbar) { animation: none; }
 @keyframes page-out { to { opacity: 0; } }
 @keyframes page-in { from { opacity: 0; transform: translateY(6px); } }
 
-/* top bar (site.css): sticky on inner pages, fixed over the hero on the home page, the same element and place on both */
-.home .topbar { position: fixed; left: 0; right: 0; }
-@media (max-width: 640px) { .links { gap: 2px; font-size: 14px; } .links a { padding: 6px 9px; } .links .cta { margin-left: 2px; } .brand span { display: none; } }
+/* the banner holds still between pages (site.css .banner): its old and new pictures cross-fade in place, dark to dark */
+::view-transition-group(banner) { animation-duration: var(--t-in); animation-timing-function: var(--ease-out); }
+::view-transition-old(banner), ::view-transition-new(banner) { animation-duration: var(--t-in); }
+@media (max-width: 640px) { .links { gap: 2px; font-size: 14px; } .links a { padding: 6px 9px; } .links .cta { margin-left: 2px; } .brand span { display: none; } .brand img { width: 32px; height: 32px; } }
 
 /* the shader stays hidden until hero.js has drawn its first frame (it adds .on), then fades in over the page background */
-canvas.cloth { opacity: 0; transition: opacity .45s cubic-bezier(.2, .8, .2, 1); }
+canvas.cloth { opacity: 0; transition: opacity var(--t-slow) var(--ease-out); }
 canvas.cloth.on { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { canvas.cloth { transition: none; } ::view-transition-old(root), ::view-transition-new(root) { animation: none; } }
 
-/* inner page header */
-.pagehead { margin: 0 0 1.6em; }
-.pagehead .subnav { margin: 1.1em 0 0; }
-.doc .pagehead h1 { margin: 0 0 .3em; }
-.pagehead .lead { color: var(--muted); margin: 0; }
-.doc h2 { font-family: var(--sans); font-size: clamp(22px, 2.6vw, 28px); letter-spacing: -.02em; text-transform: none; color: var(--text-strong); font-weight: 600; margin: 1.8em 0 .5em; }
+/* inner page header: the banner (pagehead.html) */
+.doc > .pagehead { margin: 0 0 clamp(32px, 4vw, 52px); }
+.doc .pagehead h1 { margin: 0 0 .3em; color: var(--on-dark); }
+.doc h2 { font-family: var(--sans); font-size: clamp(22px, 2.6vw, 28px); letter-spacing: -.02em; text-transform: none; color: var(--text-strong); font-weight: 600; margin-block: 1.8em .5em; }
 
 /* home: correct digits against N, one line per family, the WAD libraries as one band. Drawn twice (components.html ladderchart); one shows */
 .digitchart { margin: 0 0 14px; max-width: 820px; }
@@ -136,12 +135,6 @@ canvas.cloth.on { opacity: 1; }
 .digitchart .lbl { fill: var(--c); font-size: 13px; font-weight: 600; }
 .digitchart .s-solady .lbl { fill: color-mix(in oklab, var(--c) 70%, var(--text-strong)); }
 .digitchart .narrow .tick { font-size: 11px; } .digitchart .narrow .lbl { font-size: 11.5px; }
-/* the ladder page's band chart, drawn wide and narrow like the home chart */
-.bandchart svg { display: block; max-width: 640px; }
-.bandchart .narrow { display: none; }
-@media (max-width: 560px) { .bandchart .wide { display: none; } .bandchart .narrow { display: block; } }
-.bandchart .wadband { opacity: .22; stroke: none; }
-.bandchart .narrow .tick { font-size: 11px; } .bandchart .narrow .lbl { font-size: 11.5px; }
 /* an exact result is a ring, not a number */
 .chart circle.exact { fill: var(--surface-solid); stroke: var(--c, var(--text-strong)); stroke-width: 2; }
 .digitchart circle.exact { stroke: var(--c); stroke-width: 2; }
@@ -161,9 +154,6 @@ canvas.cloth.on { opacity: 1; }
 .stamp { font-size: 14px; background: var(--surface-hi); border-left: 3px solid var(--emerald); border-radius: 8px; box-shadow: var(--shadow); padding: 10px 14px; margin: 1em 0 1.4em; }
 .stamp.pending { border-left-color: var(--gold); }
 .stamp.bad { border-left-color: var(--red); }
-.next { list-style: none; padding: 0; }
-.next li { margin: .5em 0; }
-.next a { margin-right: .4em; }
 
 /* footer */
 .foot { padding-block: 28px 40px; margin-top: clamp(40px, 6vw, 72px); border-top: 1px solid var(--line-2); font-size: 14px; color: var(--faint); }
@@ -244,7 +234,7 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 
 /* inner pages sit on the backdrop: one layer of glass, on the data itself (tables, charts), never a sheet under it */
 .doc th { background: var(--tint); }
-.doc tbody tr { transition: background .15s ease; }
+.doc tbody tr { transition: background var(--t-fast) var(--ease-out); }
 .doc tbody tr:hover td { background: var(--tint); }
 .card.story:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 var(--edge), var(--shadow-lift); }
 
@@ -298,7 +288,6 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .wb .val.none { fill: var(--faint); font-weight: 400; }
 .wb .narrow .fn, .wb .narrow .name, .wb .narrow .val { font-size: 11.5px; }
 
-@media (prefers-reduced-motion: reduce) { .doc tbody tr, .card { transition: none; } }
 
 /* home units: a chart over its table, from the same rows (static/data/home.json); wider than the text column,
    up to 1320px, so every library's column fits without scrolling on a desktop */
@@ -325,6 +314,8 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .datatable .na { color: var(--rule); }
 .datatable tbody tr:last-child th, .datatable tbody tr:last-child td { border-bottom: 0; }
 .datatable.heat td[style] { background: color-mix(in oklab, var(--emerald) calc(min(var(--h), 1) * 42%), transparent); }
+/* a table of losses (share wrong): the shade is red, darker for worse */
+.datatable.heat.loss td[style] { background: color-mix(in oklab, var(--red) calc(min(var(--h), 1) * 32%), transparent); }
 .datatable.heat th.group { text-align: center; border-bottom: 1px solid var(--line-2); }
 .datatable.heat th a { color: inherit; text-decoration: none; } .datatable.heat th a:hover { text-decoration: underline; }
 @media (max-width: 760px) {
@@ -338,26 +329,57 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 
 /* the same page change where cross-document view transitions are missing (html.nvt, set in base.html):
    the page eases in on arrival and out before leaving; the bar is outside .page and stays put */
-html.nvt .page { animation: page-in 240ms cubic-bezier(.2, .8, .2, 1) both; }
-html.nvt.leaving .page { animation: page-out 90ms cubic-bezier(.4, 0, 1, 1) both; }
-@media (prefers-reduced-motion: reduce) { html.nvt .page, html.nvt.leaving .page { animation: none; } }
-.datatable.edges th.probe { white-space: normal; min-width: 12em; max-width: 20em; font-weight: 400; }
-.datatable.edges th.probe code { font-size: 12px; overflow-wrap: anywhere; }
-.datatable.edges .truth { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+html.nvt .page { animation: page-in var(--t-in) var(--ease-out) both; }
+html.nvt.leaving .page { animation: page-out var(--t-out) var(--ease-in) both; }
+.datatable.edges tbody th { white-space: normal; min-width: 12em; max-width: 20em; font-weight: 400; }
+.datatable.edges tbody th code { font-size: 12px; overflow-wrap: anywhere; }
+.datatable td.aside { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .datatable tfoot th, .datatable tfoot td { border-top: 1px solid var(--line-2); font-weight: 600; }
-.doc > pre { max-width: min(100%, 76em); }
+.doc > pre { max-width: min(100%, 52em); }
 /* each chart's space is held before it draws, so the table under it never moves */
 .plot[data-chart="gas"] { min-height: 520px; } .plot[data-chart="accrual"] { min-height: 440px; } .plot[data-chart="wad"] { min-height: 600px; }
 .plot[data-chart="ladder"] { min-height: 440px; } .plot[data-chart="edges"] { min-height: 440px; }
+.plot[data-chart="steps"] { min-height: 400px; } .plot[data-chart="edgeop"] { min-height: 300px; } .plot[data-chart="gasops"] { min-height: 1200px; } .plot[data-chart="libops"] { min-height: 460px; } .plot[data-chart="deployed"] { min-height: 520px; } .plot[data-chart="live"] { min-height: 340px; }
 @media (max-width: 760px) { .plot[data-chart] { min-height: 320px; } }
 .datatable tr.unitrow th, .datatable tr.unitrow td { color: var(--muted); font-style: italic; border-bottom: 1px solid var(--line-2); }
-/* dots burst: a halo in the dot's own colour blooms and settles when its chart first draws, and grows again on
-   hover (plots.js burst). Stroke only: a CSS transform would replace the SVG translate that places the dot. */
-.plot .dotm { transition: stroke-width .2s ease-out, stroke-opacity .2s ease-out; animation: dot-burst .65s cubic-bezier(.2, .8, .2, 1) var(--delay, 0ms) both; }
-.plot .dotm.hot { stroke: var(--dc); stroke-width: 12px; stroke-opacity: .3; animation: none; }
-@keyframes dot-burst {
-  0% { opacity: 0; stroke: var(--dc); stroke-width: 0; stroke-opacity: .5; }
-  45% { opacity: 1; stroke: var(--dc); stroke-width: 18px; stroke-opacity: .28; }
-  100% { stroke: var(--surface-solid); stroke-width: 1.5px; stroke-opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) { .plot .dotm { animation: none; transition: none; } }
+/* a chart fades in once, as it comes near the viewport (plots.js); a redraw (resize, theme, truth toggle) does not fade.
+   On hover the nearest dot takes a halo in its own colour. Stroke only: a CSS transform would replace the SVG
+   translate that places the dot. */
+.plot > * { opacity: 0; transition: opacity var(--t-in) var(--ease-out); }
+.plot.in > * { opacity: 1; }
+.plot .dotm { transition: stroke-width var(--t-fast) var(--ease-out), stroke-opacity var(--t-fast) var(--ease-out); }
+.plot .dotm.hot { stroke: var(--dc); stroke-width: 12px; stroke-opacity: .3; }
+
+/* home units: the takeaway on the left, its chart on the right, the table folded under both; one column below 1100px */
+.home .unit { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 8fr); gap: 20px clamp(28px, 4vw, 56px); align-items: start; margin-top: clamp(56px, 7vw, 96px); }
+.home .unit-text { position: sticky; top: 88px; }
+.home .unit-text h2 { margin: 0 0 .5em; font-size: clamp(26px, 3vw, 36px); line-height: 1.12; letter-spacing: -.03em; font-weight: 600; color: var(--text-strong); text-wrap: balance; }
+.home .unit-text .note { margin: 0 0 1em; font-size: 18px; color: var(--text); }
+.home .unit-chart { padding: clamp(12px, 1.8vw, 22px); }
+.home .unit-chart .plot { margin: 0; }
+.numbers { grid-column: 1 / -1; }
+.numbers > summary { cursor: pointer; width: max-content; font-size: 14.5px; font-weight: 600; color: var(--text-strong); padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); list-style: none; transition: border-color var(--t-fast) var(--ease-out); }
+.numbers > summary::-webkit-details-marker { display: none; }
+.numbers > summary::before { content: "+"; display: inline-block; width: 1em; font-family: var(--mono); color: var(--faint); }
+.numbers[open] > summary::before { content: "−"; }
+.numbers > summary:hover { border-color: var(--text-strong); }
+.numbers[open] > summary { margin-bottom: 14px; }
+@media (max-width: 1100px) { .home .unit { grid-template-columns: 1fr; } .home .unit-text { position: static; max-width: var(--measure); } }
+.home .more h2 { margin-bottom: 24px; }
+.home .stories { grid-template-columns: repeat(4, 1fr); }
+.home a.story { text-decoration: none; }
+.home a.story h3 { margin-top: 6px; }
+@media (max-width: 1100px) { .home .stories { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .home .stories { grid-template-columns: 1fr; } }
+.home .block:first-of-type { padding-top: clamp(28px, 4vw, 44px); }
+/* a chart's held space shows a faint frame until it draws (plots.js adds .in), so a section never looks empty */
+.plot:not(.in) { border-radius: var(--radius-s); background: repeating-linear-gradient(180deg, transparent 0 63px, var(--line) 63px 64px), var(--tint); }
+/* results: where to go next, one card per page */
+.doc > .stories.next { margin: clamp(32px, 4vw, 48px) 0 0; grid-template-columns: repeat(3, 1fr); }
+.doc a.story { text-decoration: none; }
+@media (max-width: 900px) { .doc > .stories.next { grid-template-columns: 1fr; } }
+.doc details.record { max-width: var(--measure); margin: -.4em auto 1.4em; }
+.doc details.record > summary { cursor: pointer; font-size: 14.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 12px; }
+@media (max-width: 640px) { .home .unit-chart { padding: 8px 6px; } }
+/* an inner page's chart is a readable size on a wide screen, centred like the prose; its table keeps the full width */
+.doc .plot { max-width: 1180px; margin-inline: auto; }

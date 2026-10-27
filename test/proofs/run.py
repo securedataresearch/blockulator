@@ -94,6 +94,13 @@ def contract_of(check):
     return "ProofsFP127" if check.startswith("check_fp127") else "ProofsFP19"
 
 
+def install_solver(py):
+    """Fetches the solver once, before the checks run in parallel: two Halmos processes that find it missing
+    at the same moment both download it, and the second fails with "File already exists" (a false [ERROR])."""
+    subprocess.run([py, "-c", f"from halmos.solvers import get_solver_command; get_solver_command({SOLVER!r})"],
+                   env=dict(os.environ, HALMOS_ALLOW_DOWNLOAD="1"), check=True, capture_output=True)
+
+
 def halmos_python():
     exe = os.environ.get("HALMOS_PY")
     if exe:
@@ -242,6 +249,7 @@ def main():
         ok &= fok
 
     build()
+    install_solver(py)
     print(f"Halmos, {SOLVER}: {len(checks)} checks, {args.jobs} at a time")
     results = {}
     with ThreadPoolExecutor(args.jobs) as ex:

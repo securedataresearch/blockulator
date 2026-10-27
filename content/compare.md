@@ -16,6 +16,8 @@ Only FP19 and FP127 offer `erf`, `erfc`, `normCdf` and both Lambert W branches (
 
 Every op of FP19 and FP127 against every library we compare, all called inline.
 
+{{ <plot chart="gasops" label="Median gas per call for every op and library on a log scale, one row per op; the numbers are in the table below." /> }}
+
 {{ <gasall /> }}
 
 ## Precision per op

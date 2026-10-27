@@ -45,7 +45,7 @@ html { background: #f3f4f0; color: #1b1c1c; }
 {%- set here = current_path | default(value="/") %}
 <div class="topbar">
 <header class="top">
-  <a class="brand" href="/"><img src="/blockulator_favicon.png" alt="" width="28" height="28"><span>blockulator</span></a>
+  <a class="brand" href="/"><img src="/blockulator_favicon.png" alt="" width="36" height="36"><span>blockulator</span></a>
   <nav class="links" aria-label="Main">
     <a href="/results/"{% if "/results/" in here %} aria-current="page"{% endif %}>Results</a>
     <a href="/library/"{% if "/library/" in here %} aria-current="page"{% endif %}>Library</a>
@@ -74,11 +74,12 @@ html { background: #f3f4f0; color: #1b1c1c; }
   <p>Blockulator, FP127 and FP19 are made by Secure Data Research LLC and released under the <a href="{{ config.extra.repo }}/blob/master/LICENSE">MIT licence</a>.</p>
 </footer>
 </div>
+<script src="/js/hero.js" defer></script>
 {% block scripts %}{% endblock scripts %}
 <script>(function(){var h=document.documentElement;if(!h.classList.contains('nvt')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
 document.addEventListener('click',function(e){var a=e.target.closest('a[href]');if(!a||e.defaultPrevented||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||a.target||a.hasAttribute('download'))return;
 var u=new URL(a.href,location.href);if(u.origin!==location.origin||(u.pathname===location.pathname&&u.search===location.search)||/\.(?!html?$)[a-z0-9]+$/i.test(u.pathname))return;
-e.preventDefault();h.classList.add('leaving');setTimeout(function(){location.href=u.href;},90);});
+e.preventDefault();h.classList.add('leaving');setTimeout(function(){location.href=u.href;},parseFloat(getComputedStyle(h).getPropertyValue('--t-out'))||90);});
 addEventListener('pageshow',function(e){if(e.persisted)h.classList.remove('leaving');});})();</script>
 <script>document.addEventListener('click',function(e){var b=e.target.closest('.copy');if(!b||!navigator.clipboard)return;navigator.clipboard.writeText(b.dataset.copy).then(function(){var t=b.textContent;b.textContent='copied';setTimeout(function(){b.textContent=t;},1200);});});</script>
 </body>

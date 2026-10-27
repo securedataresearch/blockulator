@@ -1,74 +1,25 @@
 {% extends "base.html" %}
 {% block title %}{{ section.title }}{% endblock title %}
 {% block bodyclass %}home{% endblock bodyclass %}
-{% block hero %}{% set x = section.extra %}
-<section class="hero">
+{% block content %}{% set x = section.extra %}
+{#- The banner (the moving cloth), what Blockulator is, then three proofs, each a takeaway beside its chart with the
+    table folded under it, all from the same rows of static/data/home.json (scripts/site/home.py) and drawn by
+    static/js/islands/plots.js. Libraries come in static/data/libraries.json's order, floating point first, then
+    fixed point. Every number in the copy is substituted here from the data. -#}
+{%- set h = load_data(path="static/data/home.json") -%}
+{%- set w = h.wad -%}
+
+<section class="banner hero">
   <canvas class="cloth" data-quiet aria-hidden="true"></canvas>
-  <div class="hero-inner wrap">
+  <div class="banner-inner">
     {%- if x.eyebrow %}<p class="eyebrow">{{ x.eyebrow }}</p>{% endif %}
     <h1>{{ x.headline }}</h1>
-    <p class="sub">{{ x.sub }}</p>
+    <p class="sub">{{ <fill s={x.sub} /> }}</p>
     <p class="actions">
       <a class="btn primary" href="{{ x.cta_primary_href }}">{{ x.cta_primary_text }}</a>
       <a class="btn ghost" href="{{ x.cta_secondary_href }}">{{ x.cta_secondary_text }}</a>
     </p>
   </div>
-</section>
-{% endblock hero %}
-{% block content %}{% set x = section.extra %}
-{#- Every section is one unit: a chart (static/js/islands/plots.js) over a table, both from the same rows of
-    static/data/home.json (scripts/site/home.py). Libraries come in static/data/libraries.json's order,
-    floating point first, then fixed point; a library is listed where the data has a number for it. -#}
-{%- set h = load_data(path="static/data/home.json") -%}
-
-{#- ---- digits and gas ---- -#}
-{%- set g = h.gas -%}
-<section class="unit" id="gas">
-  <h2>{{ x.gas_title }}</h2>
-  <p class="note">{{ x.gas_note | safe }}</p>
-  <div class="plot" data-chart="gas" role="img" aria-label="Median gas per call for each library and op, floating point and fixed point apart; the numbers are in the table below."></div>
-  {{ <libtable t={g.table} first="op · gas per call" /> }}
-  <p class="small">{{ x.gas_source | safe }}</p>
-</section>
-
-{#- ---- interest over time ---- -#}
-{%- set a = h.accrual -%}
-<section class="unit" id="accrual">
-  <h2>{{ x.accrual_title }}</h2>
-  <p class="note">{{ x.accrual_note | safe }}</p>
-  <div class="plot" data-chart="accrual" role="img" aria-label="Correct digits of one accrual after 1 to 10,000 days without an update, every library; the numbers are in the table below."></div>
-  {{ <grouptable t={a.table} first="library · correct digits after" /> }}
-  <p class="small">{{ x.accrual_source | safe }}</p>
-</section>
-
-{#- ---- WAD to the last wei ---- -#}
-{%- set w = h.wad -%}
-<section class="unit" id="wad">
-  <h2>{{ x.wad_title }}</h2>
-  <p class="note">{{ x.wad_note | replace(from="{n}", to=w.results | num_format) | replace(from="{fns}", to=w.functionsTotal ~ "") | safe }}</p>
-  <div class="plot" data-chart="wad" role="img" aria-label="Share of results off by at least one wei, per function and library; BlockulatorWad is at 0 on every function. The numbers are in the table below."></div>
-  {{ <libtable t={w.table} first="function · share wrong" /> }}
-  <p class="small">{{ x.wad_source | safe }} Every library that offers them is exact on {% for f in w.exact %}<code>{{ f }}</code>{% if not loop.last %}, {% endif %}{% endfor %}. Counts: <a href="{{ config.extra.repo }}/blob/master/docs/benchmarks/wad.md">wad.md</a>.</p>
-</section>
-
-{#- ---- thirteen scenarios ---- -#}
-{%- set ld = h.ladder -%}
-<section class="unit" id="ladder">
-  <h2>{{ x.ladder_title }}</h2>
-  <p class="note">{{ x.ladder_note | replace(from="{scenarios}", to=ld.scenarios | length ~ "") | safe }}</p>
-  <div class="plot" data-chart="ladder" role="img" aria-label="Median correct digits after the last step of each scenario, every library; the numbers are in the table below."></div>
-  {{ <libtable t={ld.table} first="scenario · median digits" heat={true} /> }}
-  <p class="small">{{ x.ladder_source | safe }}</p>
-</section>
-
-{#- ---- the edges ---- -#}
-{%- set e = h.edges -%}
-<section class="unit" id="edges">
-  <h2>{{ x.edges_title }}</h2>
-  <p class="note">{{ x.edges_note | replace(from="{probes}", to=e.probes ~ "") | replace(from="{ops}", to=e.ops ~ "") | safe }}</p>
-  <div class="plot" data-chart="edges" role="img" aria-label="Correct digits on each edge probe, per library, with the probes each library sends to zero, reverts on or cannot hold; the numbers are in the table below."></div>
-  {{ <grouptable t={e.table} first="library · over the probes" /> }}
-  <p class="small">{{ x.edges_source | safe }}</p>
 </section>
 
 <section class="block">
@@ -76,16 +27,66 @@
     {% for s in x.steps %}
     <div class="card step">
       <span class="label">{{ s.label }}</span>
-      <h3>{% if s.href %}<a href="{{ s.href }}">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}</h3>
-      <p>{{ s.text | replace(from="{scenarios}", to=ld.scenarios | length ~ "") | replace(from="{others}", to=((h.libraries | length) - 3) ~ "") | safe }}</p>
+      <h3>{% if s.href %}<a href="{{ s.href }}">{{ <fill s={s.title} /> }}</a>{% else %}{{ <fill s={s.title} /> }}{% endif %}</h3>
+      <p>{{ <fill s={s.text} /> }}</p>
     </div>
     {% endfor %}
   </div>
 </section>
 
+{#- ---- interest over time ---- -#}
+{%- set a = h.accrual -%}
+<section class="unit" id="accrual">
+  <div class="unit-text">
+    <h2>{{ x.accrual_title }}</h2>
+    <p class="note">{{ <fill s={x.accrual_note} /> }}</p>
+    <p class="small">{{ x.accrual_source | safe }}</p>
+  </div>
+  <div class="unit-chart card">{{ <plot chart="accrual" src="home" label="Correct digits of one accrual after 1 to 10,000 days without an update, every library; the numbers are in the table below." /> }}</div>
+  <details class="numbers"><summary>Every library, every N</summary>{{ <grouptable t={a.table} first="library · correct digits after" /> }}</details>
+</section>
+
+{#- ---- digits and gas ---- -#}
+{%- set g = h.gas -%}
+<section class="unit" id="gas">
+  <div class="unit-text">
+    <h2>{{ x.gas_title }}</h2>
+    <p class="note">{{ <fill s={x.gas_note} /> }}</p>
+    <p class="small">{{ x.gas_source | safe }}</p>
+  </div>
+  <div class="unit-chart card">{{ <plot chart="gas" src="home" label="Median gas per call for each library and op, floating point and fixed point apart; the numbers are in the table below." /> }}</div>
+  <details class="numbers"><summary>Gas per call, {{ g.ops | length }} ops</summary>{{ <libtable t={g.table} first="op · gas per call" /> }}</details>
+</section>
+
+{#- ---- WAD to the last wei ---- -#}
+<section class="unit" id="wad">
+  <div class="unit-text">
+    <h2>{{ x.wad_title }}</h2>
+    <p class="note">{{ <fill s={x.wad_note} /> }}</p>
+    <p class="small">{{ x.wad_source | safe }} Every library that offers them is exact on {% for f in w.exact %}<code>{{ f }}</code>{% if not loop.last %}, {% endif %}{% endfor %}. Counts: <a href="{{ config.extra.repo }}/blob/master/docs/benchmarks/wad.md">wad.md</a>.</p>
+  </div>
+  <div class="unit-chart card">{{ <plot chart="wad" src="home" label="Share of results off by at least one wei, per function and library; BlockulatorWad is at 0 on every function. The numbers are in the table below." /> }}</div>
+  <details class="numbers"><summary>Share wrong, per function</summary>{{ <libtable t={w.table} first="function · share wrong" /> }}</details>
+</section>
+
+{#- ---- the rest of the results, one card each ---- -#}
+<section class="block more">
+  <h2>{{ x.more_title }}</h2>
+  <div class="stories">
+    {% for s in x.more %}
+    <a class="card story" href="{{ s.href }}">
+      <span class="label">{{ s.label }}</span>
+      <h3>{{ <fill s={s.title} /> }}</h3>
+      <p>{{ <fill s={s.text} /> }}</p>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
 <section class="ask">
-  <div class="card askcard">
-    <div class="askinner">
+  <div class="banner askcard">
+    <canvas class="cloth" data-seed="3.1" aria-hidden="true"></canvas>
+    <div class="banner-inner">
     <h2>{{ x.ask_title }}</h2>
     <p>{{ x.ask_text | safe }}</p>
     <p class="actions"><a class="btn primary" href="{{ x.ask_primary_href }}">{{ x.ask_primary_text }}</a> <a class="btn ghost" href="{{ x.ask_secondary_href }}">{{ x.ask_secondary_text }}</a></p>
@@ -93,5 +94,3 @@
   </div>
 </section>
 {% endblock content %}
-{% block scripts %}<script src="/js/hero.js" defer></script>
-<script type="module" src="/js/islands/plots.js"></script>{% endblock scripts %}
