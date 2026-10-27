@@ -91,6 +91,18 @@ contract ProofsFP127 is Harness {
         same(e, r, se, sr);
     }
 
+    /// mulUp inside that window, the inputs check_fp127_mulUp_outside leaves out: the floor is -2^255 - 1, the
+    /// remainder is nonzero, and the ceiling -2^255 fits (it reverted there before #159). With the check above,
+    /// every input.
+    function check_fp127_mulUp_window(int256 a, int256 b) public view {
+        (int256 ph, uint256 pl) = Wide.smul(a, b);
+        (int256 fh, uint256 fl) = Wide.sshr(ph, pl, 128);
+        vm.assume(fh == -1 && fl == uint256(type(int256).max) && pl & Ref127.LOW128 != 0);
+        (bytes4 e, int256 r) = run2(this.fp127_mulUp.selector, a, b);
+        (bytes4 se, int256 sr) = spec(abi.encodeCall(this.ref_mulUp, (a, b)));
+        same(e, r, se, sr);
+    }
+
     function check_fp127_div(int256 a, int256 b) public view {
         (bytes4 e, int256 r) = run2(this.fp127_div.selector, a, b);
         (bytes4 se, int256 sr) = spec(abi.encodeCall(this.ref_div, (a, b)));

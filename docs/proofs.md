@@ -34,12 +34,12 @@ runs.
 | FP127 | `sub` | proven | a - b exact; Overflow outside int256 | 1 s | `check_fp127_sub` |
 | FP127 | `mul` | proven (L1, L2) | floor(a b / 2^128); Overflow when it leaves int256 | 45 s | `check_fp127_mul` |
 | FP127 | `mulDown` | proven (L1, L2) | floor(a b / 2^128) | 48 s | `check_fp127_mulDown` |
-| FP127 | `mulUp` | proven-except (L1, L2) | ceil(a b / 2^128); Overflow when it leaves int256 | 183 s | `check_fp127_mulUp_outside` |
+| FP127 | `mulUp` | proven (L1, L2) | ceil(a b / 2^128); Overflow when it leaves int256 | 419 s | `check_fp127_mulUp_outside`, `check_fp127_mulUp_window` |
 | FP127 | `div` | proven (K127, L5) | trunc(a 2^128 / b); DivisionByZero; Overflow | 1 s | `check_fp127_div` |
 | FP127 | `divDown` | proven (K127, L5) | floor(a 2^128 / b) | 3 s | `check_fp127_divDown` |
 | FP127 | `divUp` | proven (K127, L5) | ceil(a 2^128 / b) | 2 s | `check_fp127_divUp` |
 | FP127 | `inv` | proven (L4, L5) | trunc(2^256 / x); DivisionByZero; Overflow | 0 s | `check_fp127_inv` |
-| FP127 | `sqrt` | fuzzed | floor(sqrt(x 2^128)); OutOfRange below zero | – | FuzzProofs |
+| FP127 | `sqrt` | proven (R1, R2, L1) | floor(sqrt(x 2^128)); OutOfRange below zero | – | `isqrt.py` |
 | FP127 | `floor` | proven | 2^128 floor(x / 2^128) | 0 s | `check_fp127_floor` |
 | FP127 | `ceil` | proven | 2^128 ceil(x / 2^128); Overflow at 2^255 | 0 s | `check_fp127_ceil` |
 | FP127 | `round` | proven | 2^128 floor(x / 2^128 + 1/2); Overflow at 2^255 | 0 s | `check_fp127_round` |
@@ -80,8 +80,8 @@ The same data, with paths and the lemma list, is
 
 The proofs found two FP127 ops leaving their documented semantics; both are fixed in #159 and pinned as regression tests in [`test/proofs/Fuzz.t.sol`](../test/proofs/Fuzz.t.sol).
 
-- **`sqrt` returned floor + 1** where x·2^128 + 1 is a perfect square (s + 1)^2 (e.g. raw x = 2^126 + 1): the Huff's seven Newton steps, kept bit for bit until #159, could stop one above the floor. FP127 now returns the floor on every input; `sqrt` is fuzzed against the exact root (no symbolic proof yet). `gavg` and `hypot`, built on it, may now be one below the Huff on those inputs.
-- **`mulUp` reverted where its result fits**: where floor(a·b/2^128) = −2^255 − 1 the ceiling −2^255 fits; mulUp now returns it. Proven on every other input.
+- **`sqrt` returned floor + 1** where x·2^128 + 1 is a perfect square (s + 1)^2 (e.g. raw x = 2^126 + 1): the Huff's seven Newton steps, kept bit for bit until #159, could stop one above the floor. FP127 now returns the floor on every input, and that is now proven (R1, R2 below). `gavg` and `hypot`, built on it, may now be one below the Huff on those inputs.
+- **`mulUp` reverted where its result fits**: where floor(a·b/2^128) = −2^255 − 1 the ceiling −2^255 fits; mulUp now returns it, proven in that window (`check_fp127_mulUp_window`) as on every other input.
 
 ## How the proofs work
 
@@ -147,7 +147,9 @@ it is a primitive below, used as the definition of the integer it stands for.
 [`test/proofs/kernel.py`](../test/proofs/kernel.py) prove them with Z3 over
 unbounded integers, reading each opcode by its definition (MUL is a b mod
 2^256, DIV the floor quotient, MULMOD a b mod n) and settling the bit
-operations with bit-vector lemmas.
+operations with bit-vector lemmas. [`test/proofs/isqrt.py`](../test/proofs/isqrt.py)
+proves R1 and R2 in exact integers: an exhaustive check of the seed, then the
+Newton error bound iterated in exact rationals.
 
 | lemma | statement | used by |
 |---|---|---|
@@ -159,6 +161,8 @@ operations with bit-vector lemmas.
 | K18 | `Kernels.q18(m)` (two word divisions by 5^18, m split at bit 100) = floor(m 2^60 / 5^18), every intermediate a word | FP19 fromFixed18 |
 | K127 | `Kernels.divq(a, b)` = floor(a 2^128 / b) for 0 < a >> 128 < b | FP127 div, divDown, divUp |
 | K19 | `Kernels.divh(a, b)` = floor(a 2^255 / b) for 0 < b, a < 2 b | FP19 div, divDown, divUp, inv |
+| R1 | `isqrtw(z)` = floor(sqrt z) for 2^128 <= z < 2^256: the seed within 2^-4 for every leading value, five Newton steps to below 2^-128, the correction exact | FP127 sqrt |
+| R2 | FP127 `sqrt(x)` = floor(sqrt(x 2^128)) for 0 < x < 2^255: above 2^128 one more Newton step lands on the floor or one above, and the 512-bit square check takes off the one | FP127 sqrt |
 
 K127 and K19 are Remco Bloemen's mulDiv, copied verbatim into
 [`Kernels.sol`](../test/proofs/Kernels.sol) from the library source: the
@@ -176,15 +180,20 @@ exact integer roots.
 ## What is and is not covered
 
 - **Covered:** the 17 FP127 and 24 FP19 ops in the table, for all inputs,
-  including which error each revert carries, except FP127 `mulUp`'s window and
-  the two square roots.
-- **Square roots: fuzzed.** The result of a Newton iteration is the floor only
-  by an argument about the iteration's convergence, which no check here
-  closes: the solver would have to relate the iterate's square to the input
-  through uninterpreted products. Both are fuzzed against an exact integer
-  root (`testFuzz_fp127_sqrt`, `testFuzz_fp19_sqrt`, and next to exact
-  squares `testFuzz_fp19_sqrt_near_squares`); FP127's has the pinned
-  counterexample above.
+  including which error each revert carries, except FP19's square root (and
+  FP19's ops still marked in progress).
+- **FP127's square root: proven outside the solver.** A Newton iteration's
+  result is the floor only by an argument about its convergence, which Halmos
+  cannot close: it would have to relate the iterate's square to the input
+  through uninterpreted products. [`test/proofs/isqrt.py`](../test/proofs/isqrt.py)
+  makes that argument in exact integers: the seed is within 2^-4 of the root
+  for each of its 196,608 leading values (checked one by one), five steps take
+  the relative error to below 2^-128, so the last iterate is the floor or one
+  above it, and the two corrections are exact (R1, R2). It also checks that a
+  line-by-line transcription of the code is `math.isqrt` on 60,973 edge and
+  random inputs. FP19's root is fuzzed against an exact integer root
+  (`testFuzz_fp19_sqrt`, and next to exact squares
+  `testFuzz_fp19_sqrt_near_squares`).
 - **Not covered:** the deployed objects directly (see the top), every other op
   (the transcendentals, `avg`, `lerp`, `hypot`, the comparisons and so on),
   gas, and the compiler. The proofs trust Halmos's model of the EVM, the
