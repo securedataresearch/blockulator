@@ -7,6 +7,8 @@
     uv run scripts/fp127/deploy.py deploy <key> <rpc>     # send it (reads DEPLOYER_KEY)
     uv run scripts/fp127/deploy.py address <key>          # the recorded address
     uv run scripts/fp127/deploy.py size <key>...          # runtime sizes of the artifacts
+    uv run scripts/fp127/deploy.py bundle [--dry-run] <rpc> <key>...  # funding + deploys as one Flashbots bundle
+                                                          # (bundle.py; for a chain where the deployer key is public)
 
 <key> is an object's make stem (fp127, fp19, fp19e, ...: gen.py --objects).
 Every object goes through Arachnid's CREATE2 proxy with its salt, so it lands
@@ -190,6 +192,9 @@ def main(argv: list[str]) -> int:
         return cmd_address(argv[1])
     if len(argv) >= 2 and argv[0] == "size":
         return cmd_size(argv[1:])
+    if len(argv) >= 3 and argv[0] == "bundle":
+        import bundle
+        return bundle.main(argv[1:])
     print(__doc__)
     return 2
 

@@ -59,6 +59,11 @@ help:
 	@echo "  make og               - Redraw static/og.png, the link-preview card (scripts/og/og.py)"
 	@echo "  make deploy-ladder-sepolia - Deploy them (reads DEPLOYER_KEY), then record"
 	@echo "  make cdf              - The normal CDF and erfc of every on-chain implementation against mpmath -> docs/benchmarks/cdf.{json,md}"
+	@echo "  make predict-mainnet  - Every release object's CREATE2 address on Ethereum mainnet, and whether it is there"
+	@echo "  make deploy-mainnet-dry - The mainnet bundle on an anvil fork: addresses, runtimes, gas and the ETH to fund"
+	@echo "  make deploy-mainnet   - Funding + deploys as one Flashbots bundle (FUNDER_KEY pays, DEPLOYER_KEY deploys)"
+	@echo "  make verify-mainnet   - Live runtime equals the artifact; Sourcify and Blockscout"
+	@echo "  make smoke-mainnet    - Every committed vector against the mainnet addresses (fork)"
 	@echo "  make verify-ladder-sepolia - Verify them on Sourcify (and Etherscan if ETHERSCAN_API_KEY is set)"
 	@echo "  make fetch-baseline   - Re-fetch the legacy Huff runtime bytecode from Sepolia"
 	@echo "  make predict          - Print the CREATE2 address of the current FP127 object"
@@ -308,6 +313,31 @@ $(OBJECTS:%=verify-%-sepolia): verify-%-sepolia: build
 	@FP_LIB=$* $(PY) scripts/fp127/stdjson.py check
 	@FP_LIB=$* $(PY) scripts/fp127/stdjson.py onchain $(SEPOLIA_RPC) $$($(DEPLOY) address $*)
 	@FP_LIB=$* $(PY) scripts/fp127/verify.py 11155111 $$($(DEPLOY) address $*)
+
+# Ethereum mainnet: the library objects only (the ladder stays on Sepolia). The deployer key is public, so the funding
+# and every deploy go out as one Flashbots bundle (scripts/fp127/bundle.py): FUNDER_KEY pays, DEPLOYER_KEY deploys.
+# deploy-mainnet-dry runs the identical transactions on an anvil fork first and needs no keys.
+MAINNET_RPC ?= https://ethereum-rpc.publicnode.com
+RELEASE_OBJECTS ?= $(OBJECTS)
+.PHONY: predict-mainnet deploy-mainnet-dry deploy-mainnet verify-mainnet smoke-mainnet
+
+predict-mainnet: build
+	@set -e; for o in $(RELEASE_OBJECTS); do echo "== $$o"; $(DEPLOY) predict $$o $(MAINNET_RPC); done
+
+deploy-mainnet-dry: build
+	@$(DEPLOY) bundle --dry-run $(MAINNET_RPC) $(RELEASE_OBJECTS)
+
+deploy-mainnet: build
+	@test -n "$$FUNDER_KEY" || (echo "FUNDER_KEY is not set (the account that pays)" && exit 1)
+	@test -n "$$DEPLOYER_KEY" || (echo "DEPLOYER_KEY is not set" && exit 1)
+	@$(DEPLOY) bundle $(MAINNET_RPC) $(RELEASE_OBJECTS)
+
+verify-mainnet: build
+	@set -e; for o in $(RELEASE_OBJECTS); do echo "== $$o"; A=$$($(DEPLOY) address $$o); \
+		FP_LIB=$$o $(PY) scripts/fp127/stdjson.py onchain $(MAINNET_RPC) $$A; FP_LIB=$$o $(PY) scripts/fp127/verify.py 1 $$A; done
+
+smoke-mainnet: build
+	@forge test --match-contract "^Deployed(19)?$$" --fork-url $(MAINNET_RPC) -vv
 
 # does the chain at RPC (default Sepolia) have CLZ? exit 1 if not
 probe-clz:

@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Oracle, generators, and the FP127 Yul generator for blockulator"
 requires-python = ">=3.11"
 dependencies = [
+    "eth-account>=0.13",
     "mpmath>=1.3",
     "pycryptodome>=3.20",
 ]
