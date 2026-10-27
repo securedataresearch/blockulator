@@ -1888,6 +1888,7 @@
    "op": "mulWad",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3720,
     "bothrev": 280
@@ -1913,6 +1914,7 @@
    "op": "mulWadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3720,
     "bothrev": 280
@@ -1938,6 +1940,7 @@
    "op": "divWad",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3966,
     "bothrev": 34
@@ -1963,6 +1966,7 @@
    "op": "divWadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3966,
     "bothrev": 34
@@ -1988,6 +1992,7 @@
    "op": "sMulWad",
    "direction": "toward zero",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3715,
     "bothrev": 285
@@ -2013,6 +2018,7 @@
    "op": "sMulWadDown",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3715,
     "bothrev": 285
@@ -2038,6 +2044,7 @@
    "op": "sMulWadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3715,
     "bothrev": 285
@@ -2063,6 +2070,7 @@
    "op": "sDivWad",
    "direction": "toward zero",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3937,
     "bothrev": 63
@@ -2088,6 +2096,7 @@
    "op": "sDivWadDown",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3937,
     "bothrev": 63
@@ -2113,6 +2122,7 @@
    "op": "sDivWadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3937,
     "bothrev": 63
@@ -2138,6 +2148,7 @@
    "op": "sqrtWad",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 4000
    },
@@ -2162,6 +2173,7 @@
    "op": "sqrtWadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 4000
    },
@@ -2186,6 +2198,7 @@
    "op": "cbrtWad",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 4000
    },
@@ -2210,6 +2223,7 @@
    "op": "cbrtWadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 4000
    },
@@ -2234,6 +2248,7 @@
    "op": "expWad",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3995,
     "bothrev": 5
@@ -2262,6 +2277,7 @@
    "op": "expWadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3995,
     "bothrev": 5
@@ -2290,6 +2306,7 @@
    "op": "lnWad",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2318,6 +2335,7 @@
    "op": "lnWadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2346,6 +2364,7 @@
    "op": "log2Wad",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2374,6 +2393,7 @@
    "op": "log2WadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2402,6 +2422,7 @@
    "op": "log10Wad",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2430,6 +2451,7 @@
    "op": "log10WadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2458,6 +2480,7 @@
    "op": "powWad",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3461,
     "bothrev": 539
@@ -2486,6 +2509,7 @@
    "op": "powWadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3461,
     "bothrev": 539
@@ -2514,6 +2538,7 @@
    "op": "lambertW0Wad",
    "direction": "toward zero",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3999,
     "bothrev": 1
@@ -2542,6 +2567,7 @@
    "op": "lambertW0WadDown",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3999,
     "bothrev": 1
@@ -2570,6 +2596,7 @@
    "op": "lambertW0WadUp",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3999,
     "bothrev": 1
@@ -2599,6 +2626,7 @@
    "stage": "second",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3995,
     "bothrev": 5
@@ -2625,6 +2653,7 @@
    "stage": "second",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3995,
     "bothrev": 5
@@ -2651,6 +2680,7 @@
    "stage": "second",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2677,6 +2707,7 @@
    "stage": "second",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2703,6 +2734,7 @@
    "stage": "second",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2729,6 +2761,7 @@
    "stage": "second",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2755,6 +2788,7 @@
    "stage": "second",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2781,6 +2815,7 @@
    "stage": "second",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3998,
     "bothrev": 2
@@ -2807,6 +2842,7 @@
    "stage": "second",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3461,
     "bothrev": 539
@@ -2833,6 +2869,7 @@
    "stage": "second",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3461,
     "bothrev": 539
@@ -2859,6 +2896,7 @@
    "stage": "second",
    "direction": "toward zero",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3999,
     "bothrev": 1
@@ -2885,6 +2923,7 @@
    "stage": "second",
    "direction": "floor",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3999,
     "bothrev": 1
@@ -2911,6 +2950,7 @@
    "stage": "second",
    "direction": "ceiling",
    "n": 4000,
+   "outsideDomain": 0,
    "status": {
     "ok": 3999,
     "bothrev": 1
