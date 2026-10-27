@@ -189,6 +189,7 @@ abstract contract LadderBase is ILadderAdapter {
         else if (scenario == Scenario.ACCRUAL_CONTINUOUS) raw = _accrualContinuous(p, n);
         else if (scenario == Scenario.DEEP_TAIL_OPTION) raw = _deepTailOption(p, n);
         else if (scenario == Scenario.DECAY) raw = _decay(p, n);
+        else if (scenario == Scenario.ADAPTIVE_RATE) raw = _adaptiveRate(p, n);
         else revert UnknownScenario(scenario);
         gasUsed = g0 - gasleft();
     }
@@ -206,6 +207,7 @@ abstract contract LadderBase is ILadderAdapter {
         if (scenario == Scenario.ACCRUAL_CONTINUOUS) return 3;
         if (scenario == Scenario.DEEP_TAIL_OPTION) return 6;
         if (scenario == Scenario.DECAY) return 1;
+        if (scenario == Scenario.ADAPTIVE_RATE) return 6;
         revert UnknownScenario(scenario);
     }
 
@@ -321,5 +323,14 @@ abstract contract LadderBase is ILadderAdapter {
         int256 D = one;
         for (uint32 i; i < n; i++) D = _mul(D, _exp(_sub(_fromUint(0), eps)));
         return _sub(one, D);
+    }
+
+    /// p = [rate0, x, util, step, halfLife, speed]: the rate an adaptive
+    /// model holds after N idle steps, as the protocols document it,
+    /// rate0 e^(x N) with x = speed * err * step the exponent per step. The
+    /// last four parameters are the protocols' own inputs (LadderFraxlend,
+    /// LadderEuler); a library computes the documented model from the first two.
+    function _adaptiveRate(int256[] calldata p, uint32 n) internal view returns (int256) {
+        return _mul(_p(p, 0), _exp(_mul(_p(p, 1), _fromUint(n))));
     }
 }

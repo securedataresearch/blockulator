@@ -171,6 +171,8 @@ def versions() -> dict[str, str]:
         "balancer": "balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored)",
         "aave": "aave-v3-origin@8305565ae342 (MathUtils, transcribed)",
         "morpho": "morpho-blue@8e26ca6a8dbc (MathLib, transcribed)",
+        "fraxlend": "fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed)",
+        "euler": "evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed)",
         "maker": "dss pot.sol rpow via solady " + tag("lib/solady"),
         "solmate": "solmate@" + git("-C", str(ROOT / "lib/solmate"), "rev-parse", "--short", "HEAD") + " (no tag: v6 predates SignedWadMath)",
         "openzeppelin": "openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored)",

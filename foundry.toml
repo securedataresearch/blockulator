@@ -17,8 +17,10 @@ skip = ["contracts/src/**/*.vy", "contracts/src/**/*.yul", "contracts/src/tools/
         "contracts/src/market/**", "contracts/src/content/**",
         "contracts/src/identity/**", "contracts/src/interfaces/**",
         # the deployed-accrual suite imports lib/aave-v3-origin and lib/morpho-blue,
-        # which CI does not fetch (update = none); it builds under profile.accrual
-        "test/accrual/**"]
+        # which CI does not fetch (update = none); it builds under profile.accrual.
+        # test/accrual/DeployedRates.t.sol imports only the ladder and builds here
+        # (make rates-verify runs it on a mainnet fork; without one it skips)
+        "test/accrual/DeployedAccrual.t.sol", "test/accrual/IdealAccrual.sol"]
 
 # The libraries use the CLZ opcode (EIP-7939): solc >= 0.8.31, evm osaka.
 solc_version = "0.8.38"

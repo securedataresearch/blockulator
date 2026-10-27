@@ -20,6 +20,8 @@ import {LadderOZ} from "../../contracts/src/ladder/LadderOZ.sol";
 import {LadderUniswap} from "../../contracts/src/ladder/LadderUniswap.sol";
 import {LadderPRBUD} from "../../contracts/src/ladder/LadderPRBUD.sol";
 import {LadderSnekmate} from "../../contracts/src/ladder/LadderSnekmate.sol";
+import {LadderFraxlend} from "../../contracts/src/ladder/LadderFraxlend.sol";
+import {LadderEuler} from "../../contracts/src/ladder/LadderEuler.sol";
 
 /// @title Edges
 /// @notice Produces the edges dataset: every probe of scripts/ladder/edge-inputs.json
@@ -30,8 +32,8 @@ import {LadderSnekmate} from "../../contracts/src/ladder/LadderSnekmate.sol";
 ///         computes the truth and writes docs/benchmarks/edges.json.
 contract Edges is Test {
     string constant INPUTS = "scripts/ladder/edge-inputs.json";
-    string[16] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate"];
-    string[16] SCALE = ["fp127", "fp127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray", "fp19", "wad", "wad", "wad", "wad", "wad"];
+    string[18] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"];
+    string[18] SCALE = ["fp127", "fp127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray", "fp19", "wad", "wad", "wad", "wad", "wad", "wad", "wad"];
 
     EdgeRunner runner;
     string json;
@@ -63,7 +65,9 @@ contract Edges is Test {
             address(new LadderOZ()),
             address(new LadderUniswap()),
             address(new LadderPRBUD()),
-            address(new LadderSnekmate(_snekmate()))
+            address(new LadderSnekmate(_snekmate())),
+            address(new LadderFraxlend()),
+            address(new LadderEuler())
         ]);
         json = vm.readFile(INPUTS);
     }

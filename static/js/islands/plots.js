@@ -6,7 +6,7 @@
 import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.16/+esm";
 
 const KINDS = [["float", "Floating point"], ["fixed", "Fixed point"]];
-const FAMILIES = [["fp19", "FP19"], ["fp127", "FP127 · BlockulatorWad"], ["quad", "binary128 (ABDKMathQuad)"], ["6464", "ABDK 64.64"], ["wad", "WAD libraries"], ["protocol", "Maker, Aave, Morpho"]];
+const FAMILIES = [["fp19", "FP19"], ["fp127", "FP127 · BlockulatorWad"], ["quad", "binary128 (ABDKMathQuad)"], ["6464", "ABDK 64.64"], ["wad", "WAD libraries"], ["protocol", "Maker, Aave, Morpho, FraxLend, Euler"]];
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
 let data, pages, lib;

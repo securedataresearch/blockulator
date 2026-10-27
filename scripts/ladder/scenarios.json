@@ -91,6 +91,16 @@
    "id": "snekmate",
    "label": "snekmate math (Vyper)",
    "scale": "10**18"
+  },
+  {
+   "id": "fraxlend",
+   "label": "FraxLend VariableInterestRate V2",
+   "scale": "10**18"
+  },
+  {
+   "id": "euler",
+   "label": "Euler v2 IRMAdaptiveCurve",
+   "scale": "10**18"
   }
  ],
  "scenarios": [
@@ -238,6 +248,12 @@
     ],
     "snekmate": [
      "mul_div(a, b, 1e18)"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    }
   },
@@ -396,6 +412,12 @@
     "snekmate": [
      "wad_exp(wad_ln(x) y)",
      "mul_div(a, b, 1e18)"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    }
   },
@@ -530,6 +552,12 @@
     "snekmate": [
      "isqrt(x 1e18) (Vyper built-in)",
      "add"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    }
   },
@@ -676,6 +704,12 @@
     "snekmate": [
      "wad_ln",
      "wad_exp"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    }
   },
@@ -831,6 +865,12 @@
     "snekmate": [
      "mul_div(a, b, 1e18)",
      "sub"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    }
   },
@@ -932,6 +972,12 @@
      "wad_ln",
      "add",
      "wad_exp"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    }
   },
@@ -1142,6 +1188,12 @@
      "add",
      "isqrt(x 1e18) (Vyper built-in)",
      "mul_div(a, b, 1e18)"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    }
   },
@@ -1242,6 +1294,12 @@
     ],
     "snekmate": [
      "mul_div(a, b, 1e18)"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    }
   },
@@ -1349,6 +1407,12 @@
     ],
     "snekmate": [
      "mul_div(a, b, 1e18)"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    }
   },
@@ -1426,6 +1490,12 @@
     "snekmate": [
      "wad_exp(wad_ln(x) y)",
      "mul_div(a, b, 1e18)"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    },
    "inputs": [
@@ -1568,6 +1638,12 @@
      "mul_div(a, b, 1e18)",
      "mul_div(a, 1e18, b)",
      "wad_exp"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    },
    "inputs": [
@@ -1751,6 +1827,12 @@
      "mul_div(a, 1e18, b)",
      "wad_exp",
      "normCdf by the series/fraction through these"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    },
    "inputs": [
@@ -1904,6 +1986,12 @@
     "snekmate": [
      "wad_exp",
      "mul_div(a, b, 1e18)"
+    ],
+    "fraxlend": [
+     "unsupported"
+    ],
+    "euler": [
+     "unsupported"
     ]
    },
    "inputs": [
@@ -1942,6 +2030,222 @@
       "eps": "1/94608000000000000"
      },
      "why": "stepped every ten nanoseconds: eps = 1.06e-17, ten and a half wei"
+    }
+   ]
+  },
+  {
+   "id": "adaptive-rate",
+   "index": 13,
+   "demo": true,
+   "title": "An adaptive rate after an idle period",
+   "step": "r = r0 * e^(speed * err * N * step)",
+   "result": "the adaptive rate after N idle steps and one update",
+   "why": "FraxLend and Euler v2 move a rate up while utilisation sits above a target and down while it sits below, and both document the move as exponential in time. FraxLend's documentation states it as a half-life: at 100% utilisation 'the increase will be 100% per half-life', at 0% the rates 'decrease by 50% each half-life', the model 2^(t/H). Its VariableInterestRate V2 computes one update after an interval dt as F (1 + d^2 dt / H) above the target band and F H / (H + d^2 dt) below it, d the normalised distance from the band, which equals 2^(t/H) at dt = H only. The comment on Euler's IRMAdaptiveCurve._newRateAtTarget states rateAtTarget = startRateAtTarget * e^linearAdaptation, where the code forms linearAdaptation = ADJUSTMENT_SPEED * err * elapsed, and it computes e^x with Morpho's ExpLib.wExp, a second-order Taylor polynomial of e^r after reducing x by ln 2. Both models are r0 e^(speed err t) with speed = ln 2 / H; at the three utilisations here (100%, 0%, 92.5%) FraxLend's signed d^2 and Euler's err are equal (1, -1, 0.25), so each input is one documented model that both protocols compute from their own inputs. The market is idle for N steps and updated once, which is what a market nobody touched computes on its next interaction; the result is the adaptive state (FraxLend's full-utilisation rate, Euler's rate at target), from which each protocol derives the borrow rate. Every other library computes rate0 e^(x N) with its own mul and exp. The rate is per second, as both protocols hold it, so the 18-decimal grid keeps about ten digits of it before any arithmetic. The protocol adapters run with the rate bounds set wide so they do not bind; the deployed contracts clamp the rate (FraxLend to [MIN_FULL_UTIL_RATE, MAX_FULL_UTIL_RATE], Euler to [MIN_RATE_AT_TARGET, MAX_RATE_AT_TARGET]), which would stop the large-N cells at a bound.",
+   "order": [
+    "rate0",
+    "x",
+    "util",
+    "step",
+    "halfLife",
+    "speed"
+   ],
+   "derived": {
+    "rate0": "rateAnnual / 31536000, the rate per second",
+    "speed": "ln 2 / halfLife, or speedAnnual / 31536000",
+    "halfLife": "ln 2 / speed when the input gives speedAnnual",
+    "x": "speed * err * step, err the documented deviation at util (1 at 100%, -1 at 0%, 0.25 at 92.5%)"
+   },
+   "ops": {
+    "fp127": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "fp127lib": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "abdk": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "solady": [
+     "sMulWad",
+     "sDivWad",
+     "expWad"
+    ],
+    "prb": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "quad": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "balancer": [
+     "mulDown",
+     "divDown",
+     "exp"
+    ],
+    "aave": [
+     "unsupported"
+    ],
+    "morpho": [
+     "unsupported"
+    ],
+    "maker": [
+     "unsupported"
+    ],
+    "fp19": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "solmate": [
+     "wadMul",
+     "wadDiv",
+     "wadExp"
+    ],
+    "oz": [
+     "unsupported"
+    ],
+    "uniswap": [
+     "unsupported"
+    ],
+    "prbud": [
+     "mul",
+     "div",
+     "exp"
+    ],
+    "snekmate": [
+     "mul_div(a, b, 1e18)",
+     "mul_div(a, 1e18, b)",
+     "wad_exp"
+    ],
+    "fraxlend": [
+     "getFullUtilizationInterest"
+    ],
+    "euler": [
+     "_calcErr",
+     "_newRateAtTarget",
+     "ExpLib.wExp"
+    ]
+   },
+   "inputs": [
+    {
+     "name": "reference",
+     "reference": true,
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "1",
+      "step": "86400",
+      "halfLife": "172800"
+     },
+     "why": "100% utilisation, a day per step, FraxLend's deployed half-life of two days (rate contract 0x18500cB1...F261); Euler at the same speed, ln 2 / 2 days, 126 per year"
+    },
+    {
+     "name": "halving",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "0",
+      "step": "86400",
+      "halfLife": "172800"
+     },
+     "why": "0% utilisation at the same half-life: the documented rate halves every two days"
+    },
+    {
+     "name": "realistic",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "0.925",
+      "step": "86400",
+      "halfLife": "172800"
+     },
+     "why": "92.5% utilisation: FraxLend d = 0.5 above its 85% band (d^2 = 0.25), Euler err = 0.25 above its 90% target"
+    },
+    {
+     "name": "block",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "1",
+      "step": "12",
+      "halfLife": "172800"
+     },
+     "why": "a 12-second block per step, from one block to 33 hours idle (N = 10,000)"
+    },
+    {
+     "name": "hourly",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "1",
+      "step": "3600",
+      "halfLife": "172800"
+     },
+     "why": "an hour per step, from one hour to 417 days idle"
+    },
+    {
+     "name": "weekly",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "1",
+      "step": "604800",
+      "halfLife": "172800"
+     },
+     "why": "a week per step"
+    },
+    {
+     "name": "euler-speed",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "1",
+      "step": "86400",
+      "speedAnnual": "100"
+     },
+     "why": "Euler's deployed ADJUSTMENT_SPEED, 100 per 365-day year (3170979198376 wei per second at 0xC9A0109D...C23D); FraxLend at the same speed, a half-life of ln 2 / 100 years, 2.53 days"
+    },
+    {
+     "name": "euler-halving",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "0",
+      "step": "86400",
+      "speedAnnual": "100"
+     },
+     "why": "0% utilisation at Euler's speed"
+    },
+    {
+     "name": "euler-realistic",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "0.925",
+      "step": "86400",
+      "speedAnnual": "100"
+     },
+     "why": "92.5% utilisation at Euler's speed"
+    },
+    {
+     "name": "euler-weekly",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "1",
+      "step": "604800",
+      "speedAnnual": "100"
+     },
+     "why": "a week per step at Euler's speed"
+    },
+    {
+     "name": "euler-block",
+     "params": {
+      "rateAnnual": "0.04",
+      "util": "1",
+      "step": "12",
+      "speedAnnual": "100"
+     },
+     "why": "a 12-second block per step at Euler's speed"
     }
    ]
   }

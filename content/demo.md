@@ -1,6 +1,6 @@
 +++
 title = "Ladder"
-description = "13 scenarios, 87 inputs, N from 1 to 10,000, every cell against 300-digit arithmetic."
+description = "14 scenarios, 98 inputs, N from 1 to 10,000, every cell against 300-digit arithmetic."
 template = "demo.html"
 path = "results/ladder"
 aliases = ["/demo/"]

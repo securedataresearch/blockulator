@@ -31,9 +31,11 @@ contract LadderRunner {
     address public immutable uniswap;
     address public immutable prbud;
     address public immutable snekmate;
+    address public immutable fraxlend;
+    address public immutable euler;
 
     /// The adapters in form-id order (ILadder.sol `Form`).
-    constructor(address[16] memory adapters) {
+    constructor(address[18] memory adapters) {
         fp127 = adapters[0];
         fp127lib = adapters[1];
         abdk = adapters[2];
@@ -50,6 +52,8 @@ contract LadderRunner {
         uniswap = adapters[13];
         prbud = adapters[14];
         snekmate = adapters[15];
+        fraxlend = adapters[16];
+        euler = adapters[17];
     }
 
     function adapter(uint8 form) public view returns (address) {
@@ -69,6 +73,8 @@ contract LadderRunner {
         if (form == Form.UNISWAP) return uniswap;
         if (form == Form.PRBUD) return prbud;
         if (form == Form.SNEKMATE) return snekmate;
+        if (form == Form.FRAXLEND) return fraxlend;
+        if (form == Form.EULER) return euler;
         revert UnknownForm(form);
     }
 
