@@ -9,12 +9,16 @@ and license; nothing here is part of FP127.
 | `balancer/LogExpMath.sol` | [balancer/balancer-v3-monorepo](https://github.com/balancer/balancer-v3-monorepo) `pkg/solidity-utils/contracts/math/LogExpMath.sol` | main @ `2b9ce4b1b8ad`, fetched 2026-10-15 | MIT |
 | `openzeppelin/utils/math/{Math,SignedMath,SafeCast}.sol`, `openzeppelin/utils/Panic.sol` | [OpenZeppelin/openzeppelin-contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) `contracts/utils/...` | tag v5.7.0, fetched 2026-10-23 | MIT |
 | `uniswap/FullMath.sol` | [Uniswap/v4-core](https://github.com/Uniswap/v4-core) `src/libraries/FullMath.sol` | tag v4.0.0, fetched 2026-10-23 | MIT |
+| `lyra/libraries/{BlackScholes,FixedPointMathLib,Math}.sol`, `lyra/synthetix/{DecimalMath,SignedDecimalMath}.sol` | [lyra-finance/lyra-protocol](https://github.com/lyra-finance/lyra-protocol) `contracts/...` | master @ `ea9e36a`, fetched 2026-10-27; the one change is `pragma solidity 0.8.16` to `^0.8.16`, so they build with this repo's solc | ISC (DecimalMath, SignedDecimalMath: MIT) |
 
-Two comparison libraries are AGPL-3.0-only and are submodules instead, never
+Three comparison libraries are AGPL-3.0-only (or link AGPL code) and are submodules instead, never
 copied here: Solmate (`lib/solmate`, main @ `89365b8`; its only tag, v6,
-predates `SignedWadMath`) and snekmate (`lib/snekmate`, tag v0.1.2). The files
-that link them carry the same licence: `../LadderSolmate.sol`,
-`../vyper/SnekmateMath.vy` and `test/fp127/GasLibs.sol`. snekmate is Vyper;
+predates `SignedWadMath`), snekmate (`lib/snekmate`, tag v0.1.2) and solstat
+(`lib/solstat`, [primitivefinance/solstat](https://github.com/primitivefinance/solstat) main @ `80c603f`, for the
+normal CDF and erfc; its `Gaussian.sol` is MIT but links solmate v7, `lib/solstat/lib/solmate` @ `ed67fed`, through
+the `lib/solstat/:solmate/` remapping). The files that link them carry the same licence: `../LadderSolmate.sol`,
+`../vyper/SnekmateMath.vy`, `test/fp127/GasLibs.sol` and `test/cdf/Cdf.t.sol`. None of them is imported by FP127,
+FP19 or BlockulatorWad: they are benchmarks only. snekmate is Vyper;
 `scripts/ladder/vyper.py` compiles the wrapper with Vyper 0.4.3, the version
 snekmate v0.1.2 pins.
 
@@ -73,3 +77,10 @@ deployed Morpho.sol (v1.0.0) carries a BUSL-1.1 header (MathLib.sol is
 GPL-2.0-or-later; later `main` relicensed Morpho.sol to GPL), and
 LadderMorpho models a constant per-second rate, not the AdaptiveCurveIrm,
 whose rate-path approximations are measured in the accrual study.
+
+For the normal CDF comparison (`test/cdf/`), Primitive's RMM-01 `getCDF` is GPL-3.0-only and is transcribed, not
+vendored: `test/cdf/CdfRmm.sol` carries its licence and follows
+[primitivefinance/rmm-core](https://github.com/primitivefinance/rmm-core)
+`contracts/libraries/CumulativeNormalDistribution.sol` @ `8d3ef9b` line for line, on the ABDKMath64x64 already in
+`lib/`. Its results equal the original's, run on rmm-core's own ABDK copy, at every point the two runs share.
+

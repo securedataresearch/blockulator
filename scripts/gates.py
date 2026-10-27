@@ -124,6 +124,7 @@ def main() -> int:
         ("size", "make size size-fp19 size-inline-check"),
         ("ladder", "make ladder-check"),
         ("edges", "make edges-check"),
+        ("cdf", "make cdf-check"),
         ("sweep", sweep),
     ]
     if a.quick:

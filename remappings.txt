@@ -1,2 +1,3 @@
 fp127/=contracts/src/fp127/
 fp19/=contracts/src/fp19/
+lib/solstat/:solmate/=lib/solstat/lib/solmate/src/
