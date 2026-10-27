@@ -15,10 +15,8 @@ import argparse
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.metadata import version as pkg_version
@@ -96,6 +94,13 @@ def contract_of(check):
     return "ProofsFP127" if check.startswith("check_fp127") else "ProofsFP19"
 
 
+def install_solver(py):
+    """Fetches the solver once, before the checks run in parallel: two Halmos processes that find it missing
+    at the same moment both download it, and the second fails with "File already exists" (a false [ERROR])."""
+    subprocess.run([py, "-c", f"from halmos.solvers import get_solver_command; get_solver_command({SOLVER!r})"],
+                   env=dict(os.environ, HALMOS_ALLOW_DOWNLOAD="1"), check=True, capture_output=True)
+
+
 def halmos_python():
     exe = os.environ.get("HALMOS_PY")
     if exe:
@@ -121,17 +126,7 @@ PASS_RE = re.compile(r"\[PASS\] (\w+)\([^)]*\) \(paths: (\d+), time: ([\d.]+)s, 
 
 
 def run_check(py, check, timeout, threads):
-    # each check gets its own temporary directory: Halmos names its query files by time, and two checks
-    # started in the same instant otherwise collide ("File already exists") and report a false error
-    work = tempfile.mkdtemp(prefix=f"halmos-{check}-")
-    try:
-        return _run_check(py, check, timeout, threads, work)
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
-
-
-def _run_check(py, check, timeout, threads, work):
-    env = dict(os.environ, FOUNDRY_PROFILE="proofs", HALMOS_ALLOW_DOWNLOAD="1", TMPDIR=work)
+    env = dict(os.environ, FOUNDRY_PROFILE="proofs", HALMOS_ALLOW_DOWNLOAD="1")
     cmd = [
         py, str(HERE / "halmos_clz.py"),
         "--forge-build-out", "out-proofs",
@@ -140,7 +135,6 @@ def _run_check(py, check, timeout, threads, work):
         "--solver", SOLVER,
         "--solver-threads", str(threads),
         "--solver-timeout-assertion", "0",
-        "--dump-smt-directory", work,
     ]
     t0 = time.time()
     try:
@@ -255,6 +249,7 @@ def main():
         ok &= fok
 
     build()
+    install_solver(py)
     print(f"Halmos, {SOLVER}: {len(checks)} checks, {args.jobs} at a time")
     results = {}
     with ThreadPoolExecutor(args.jobs) as ex:
