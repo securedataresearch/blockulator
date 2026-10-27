@@ -45,7 +45,7 @@ html { background: #f3f4f0; color: #1b1c1c; }
 {%- set here = current_path | default(value="/") %}
 <div class="topbar">
 <header class="top">
-  <a class="brand" href="/"><img src="/blockulator_favicon.png" alt="" width="28" height="28"><span>blockulator</span></a>
+  <a class="brand" href="/"><img src="/blockulator_favicon.png" alt="" width="36" height="36"><span>blockulator</span></a>
   <nav class="links" aria-label="Main">
     <a href="/results/"{% if "/results/" in here %} aria-current="page"{% endif %}>Results</a>
     <a href="/library/"{% if "/library/" in here %} aria-current="page"{% endif %}>Library</a>
@@ -74,6 +74,7 @@ html { background: #f3f4f0; color: #1b1c1c; }
   <p>Blockulator, FP127 and FP19 are made by Secure Data Research LLC and released under the <a href="{{ config.extra.repo }}/blob/master/LICENSE">MIT licence</a>.</p>
 </footer>
 </div>
+<script src="/js/hero.js" defer></script>
 {% block scripts %}{% endblock scripts %}
 <script>(function(){var h=document.documentElement;if(!h.classList.contains('nvt')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
 document.addEventListener('click',function(e){var a=e.target.closest('a[href]');if(!a||e.defaultPrevented||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||a.target||a.hasAttribute('download'))return;

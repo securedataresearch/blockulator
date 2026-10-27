@@ -18,8 +18,39 @@ const fmt = (n) => n.toLocaleString("en-US");
 const symbol = (d) => (lib[d.lib].kind === "float" ? "diamond2" : "circle");
 const ours = (d) => !!lib[d.lib].ours;
 
+const fontSize = (width) => (width >= 760 ? 13 : 12);
 function base(t, width, extra) {
-  return { width, style: { background: "transparent", color: t.text, fontFamily: css("--sans"), fontSize: "12px", overflow: "visible" }, ...extra };
+  // r is always pixels: a radius given per dot (ours larger) is not data to be scaled
+  return { width, r: { type: "identity" }, style: { background: "transparent", color: t.text, fontFamily: css("--sans"), fontSize: `${fontSize(width)}px`, overflow: "visible" }, ...extra };
+}
+
+// a label's width in pixels, in the charts' own font, so labels are placed by what they measure rather than a guess
+let pen;
+function measure(text, size, weight = 400) {
+  pen ??= document.createElement("canvas").getContext("2d");
+  pen.font = `${weight} ${size}px ${css("--sans")}`;
+  return pen.measureText(text).width;
+}
+
+// faint bands behind every other row of a long chart, so the eye keeps its row across the width
+const band = (t, domain, step) => [Plot.ruleY(domain.filter((_, i) => i % 2), { stroke: t.line, strokeOpacity: 0.28, strokeWidth: step })];
+
+// a chart with one row per name. The names go in a left margin as wide as the longest, while that leaves the data
+// most of the width; when it would not (a long name on a phone), each name sits on its own line above its row and
+// the data takes the whole width. step is the row height; it grows by a line when the names move up. left keeps
+// the names in the margin regardless (short names, or marks that would rise into the line above).
+function rowAxis(t, width, domain, { fmt = (d) => d, step = 24, channel = "y", left = false } = {}) {
+  const fs = fontSize(width), names = domain.map(fmt);
+  const need = Math.ceil(Math.max(...names.map((n) => measure(n, fs)))) + 12;
+  if (left || need <= width * (width < 560 ? 0.3 : 0.34)) {
+    return { above: false, step, marginLeft: Math.max(need, 40), axis: { domain, label: null, tickSize: 0, tickFormat: fmt }, marks: [] };
+  }
+  const s = step + fs + 6;
+  return {
+    above: true, step: s, marginLeft: 6, axis: { domain, label: null, axis: null },
+    marks: [Plot.text(domain, { [channel]: (d) => d, text: fmt, frameAnchor: channel === "fy" ? "top-left" : "left", textAnchor: "start",
+      dy: channel === "fy" ? 2 : -(s / 2) + fs / 2, fill: t.faint, fontWeight: 500 })],
+  };
 }
 
 // the key: the families this chart draws, then the two symbols
@@ -44,30 +75,44 @@ const charts = {
       const gm = Math.exp(rs.reduce((s, r) => s + Math.log(r.ratio), 0) / rs.length);
       return { lib: id, ratio: gm, lo: Math.min(...rs.map((r) => r.ratio)), hi: Math.max(...rs.map((r) => r.ratio)), digits: lib[id].digits, ops: rs.length };
     });
-    // labels sit just above their dots; where a name would run into one already placed on its level of digits,
-    // it takes the lowest free row above (4.5 digits each), with a leader line back to its dot
-    const [lo, hi] = [0.15, 6], plotW = width - 52 - 30;
-    const px = (r) => ((Math.log(r) - Math.log(lo)) / (Math.log(hi) - Math.log(lo))) * plotW;
-    const rows = new Map();
-    for (const p of [...pts].sort((a, b) => a.ratio - b.ratio)) {
-      const band = Math.round(p.digits / 6), ends = rows.get(band) || [];
-      const x = px(p.ratio), k = ends.findIndex((e) => e < x - 2);
-      const row = k < 0 ? ends.length : k;
-      ends[row] = x + 6 + 6.6 * label(p.lib).length;
-      rows.set(band, ends);
-      p.ly = p.digits + 2.2 + 4.5 * row;
+    // every name is placed in pixels, by its measured width, where it hits no dot and no name already placed: right of
+    // its dot, else left, else in the lowest free line above with a leader back to the dot. On a phone the WAD
+    // libraries share one name. The x domain is the data's, padded, so the dots use the width.
+    const narrow = width < 560, fs = fontSize(width), H = 480, M = { l: narrow ? 40 : 52, r: 16, t: 30, b: 44 };
+    const lo = Math.min(...pts.map((p) => p.ratio)) / 1.35, hi = Math.max(...pts.map((p) => p.ratio)) * 1.6;
+    const W = width - M.l - M.r, Hp = H - M.t - M.b, L = Math.log(hi / lo);
+    const px = (r) => (Math.log(r / lo) / L) * W, py = (d) => (1 - d / 76) * Hp;
+    const ix = (x) => lo * Math.exp((x / W) * L), iy = (y) => (1 - y / Hp) * 76;
+    const rad = (p) => (ours(p) ? 10.5 : 8);
+    const boxes = pts.map((p) => ({ x0: px(p.ratio) - rad(p) - 1, x1: px(p.ratio) + rad(p) + 1, y0: py(p.digits) - rad(p) - 1, y1: py(p.digits) + rad(p) + 1 }));
+    const hit = (b) => b.x0 < 0 || b.x1 > W + M.r || b.y0 < -M.t + 4 || boxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
+    const wads = pts.filter((p) => lib[p.lib].family === "wad");
+    const names = narrow && wads.length > 1
+      ? [...pts.filter((p) => lib[p.lib].family !== "wad").map((p) => ({ p, text: label(p.lib) })),
+         { p: { ...wads[0], ratio: Math.exp(wads.reduce((s, q) => s + Math.log(q.ratio), 0) / wads.length) }, text: `WAD libraries (${wads.length})`, group: true }]
+      : pts.map((p) => ({ p, text: label(p.lib) }));
+    const placed = [];
+    for (const n of names.sort((a, b) => ours(b.p) - ours(a.p) || b.p.digits - a.p.digits || a.p.ratio - b.p.ratio)) {
+      const w = measure(n.text, fs, ours(n.p) ? 700 : 500), h = fs + 2, x = px(n.p.ratio), y = py(n.p.digits), r = n.group ? 0 : rad(n.p);
+      const tries = n.group ? [] : [[x + r + 4, y], [x - r - 4 - w, y]];
+      for (let k = 1; k < 12; k++) tries.push([x - (n.group ? w / 2 : 0) + (n.group ? 0 : 2), y - r - 4 - h * (k - 0.5)]);
+      const [tx, ty] = tries.find(([tx, ty]) => !hit({ x0: tx - 1, x1: tx + w + 1, y0: ty - h / 2, y1: ty + h / 2 })) || tries[tries.length - 1];
+      boxes.push({ x0: tx - 1, x1: tx + w + 1, y0: ty - h / 2, y1: ty + h / 2 });
+      placed.push({ lib: n.p.lib, text: n.text, x: ix(tx), y: iy(ty), ox: n.p.ratio, oy: n.p.digits, lead: Math.abs(ty - y) > r + 2 && !n.group,
+        lx: ix(Math.min(Math.max(x, tx + 2), tx + w - 2)), ly: iy(ty + h / 2 - 1) });
     }
+    const ticks = [0.1, 0.2, 0.3, 0.5, 1, 2, 3, 5, 10].filter((v) => v >= lo && v <= hi);
     el.append(Plot.plot(base(t, width, {
-      height: 480, marginLeft: 52, marginRight: 30, marginBottom: 44, marginTop: 30,
-      x: { type: "log", domain: [lo, hi], label: "gas per call, as a multiple of FP127's on the same ops (log scale) →", tickFormat: (v) => v + "×", ticks: [0.2, 0.3, 0.5, 1, 2, 3, 5] },
+      height: H, marginLeft: M.l, marginRight: M.r, marginBottom: M.b, marginTop: M.t,
+      x: { type: "log", domain: [lo, hi], label: narrow ? "gas, × FP127's on the same ops (log) →" : "gas per call, as a multiple of FP127's on the same ops (log scale) →", tickFormat: (v) => v + "×", ticks },
       y: { domain: [0, 76], label: "↑ decimal digits at 1", grid: true },
       marks: [
         Plot.ruleX([1], { stroke: t.faint, strokeDasharray: "3 3" }),
         Plot.text([{ x: 1, y: 75 }], { x: "x", y: "y", text: () => "FP127's gas", dx: 5, textAnchor: "start", fill: t.faint }),
+        Plot.link(placed.filter((d) => d.lead), { x1: "ox", y1: "oy", x2: "lx", y2: "ly", stroke: t.faint, strokeWidth: 0.8 }),
         Plot.dot(pts.filter((d) => !ours(d)), { x: "ratio", y: "digits", fill: colour(t), r: 8, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
         Plot.dot(pts.filter(ours), { x: "ratio", y: "digits", fill: colour(t), r: 10.5, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
-        Plot.link(pts.filter((d) => d.ly - d.digits > 3), { x1: "ratio", y1: "digits", x2: "ratio", y2: (d) => d.ly - 0.8, stroke: t.faint, strokeWidth: 0.8 }),
-        Plot.text(pts, { x: "ratio", y: "ly", text: (d) => label(d.lib), dx: 5, textAnchor: "start", fill: t.text, fontWeight: (d) => (ours(d) ? 700 : 500) }),
+        Plot.text(placed, { x: "x", y: "y", text: "text", textAnchor: "start", lineAnchor: "middle", fill: t.text, fontWeight: (d) => (ours(d) ? 700 : 500) }),
         Plot.tip(pts, Plot.pointer({ x: "ratio", y: "digits", title: (d) => `${lib[d.lib].long}\n${d.digits} digits at 1\ngas ${d.ratio.toFixed(2)}× FP127's (geometric mean over ${d.ops} ops; ${d.lo.toFixed(2)}–${d.hi.toFixed(2)}×)` })),
       ],
     })));
@@ -91,8 +136,9 @@ const charts = {
     })).sort((p, q) => q.y - p.y);
     for (let i = 1; i < labels.length; i++) labels[i].y = Math.min(labels[i].y, labels[i - 1].y - 4.5);
     el.append(Plot.plot(base(t, width, {
-      height: 400, marginRight: 210, marginLeft: 48, marginBottom: 42,
-      x: { type: "log", domain: [1, last], label: "days since the last update (log scale) →", ticks: a.cols, tickFormat: fmt },
+      height: 400, marginRight: Math.min(210, Math.round(width * 0.42)), marginLeft: 48, marginBottom: 42,
+      x: { type: "log", domain: [1, last], label: width < 560 ? "days without an update (log) →" : "days since the last update (log scale) →",
+           ticks: width < 560 ? a.cols.filter((c) => [1, 10, 100, 1000, 10000].includes(c)) : a.cols, tickFormat: (v) => (width < 560 && v >= 1000 ? v / 1000 + "k" : fmt(v)) },
       y: { domain: [0, 76], label: "↑ correct decimal digits", grid: true },
       marks: [
         Plot.line(a.rows, { x: "n", y: "digits", z: "lib", stroke: colour(t), strokeWidth: (d) => (ours(d) ? 3 : 1.6), strokeOpacity: (d) => (ours(d) ? 1 : 0.8), curve: "monotone-x" }),
@@ -107,14 +153,17 @@ const charts = {
   // one row per function, one dot per library at its share of results off by a wei; equal shares stack apart
   wad(el, t, width) {
     const w = data.wad;
-    const rows = w.rows.map((r) => ({ ...r, kind: lib[r.lib].ours ? "ours" : "other" }));
+    // BlockulatorWad first, so the dodge gives it the middle of its row and the others stack around it
+    const rows = [...w.rows].sort((a, b) => ours(b) - ours(a));
+    const rw = rowAxis(t, width, w.functions, { step: 40, channel: "fy", left: true });
     el.append(Plot.plot(base(t, width, {
-      height: w.functions.length * 40 + 70, marginLeft: 116, marginRight: 30, marginBottom: 44, marginTop: 10,
-      fy: { domain: w.functions, label: null, padding: 0 },
+      height: w.functions.length * rw.step + 70, marginLeft: rw.marginLeft, marginRight: 30, marginBottom: 44, marginTop: 10,
+      fy: { ...rw.axis, padding: 0 },
       x: { domain: [-2, 102], ticks: [0, 25, 50, 75, 100], tickFormat: (v) => v + "%", label: "share of results off by ≥ 1 wei →", grid: true },
       marks: [
+        ...rw.marks,
         Plot.frame({ anchor: "bottom", stroke: t.line, strokeOpacity: 0.5 }),
-        Plot.dot(rows, Plot.dodgeY("middle", { fy: "fn", x: "pct", r: 7.5, fill: colour(t), stroke: "var(--surface-solid)", strokeWidth: 1.5, padding: 1.5 })),
+        Plot.dot(rows, Plot.dodgeY("middle", { fy: "fn", x: "pct", r: (d) => (ours(d) ? 9 : 7), fill: colour(t), stroke: "var(--surface-solid)", strokeWidth: 1.5, padding: 1.5 })),
         Plot.tip(rows, Plot.pointer({ fy: "fn", x: "pct", title: (d) => `${lib[d.lib].long}\n${d.fn}: ${fmt(d.wrong)} of ${fmt(d.n)} results off by a wei or more (${d.pct}%)` })),
       ],
     })));
@@ -124,12 +173,14 @@ const charts = {
   ladder(el, t, width) {
     const ld = data.ladder;
     const rows = ld.rows.filter((r) => r.digits != null).map((r) => ({ ...r, title: ld.scenarios.find((s) => s.id === r.scenario).title }));
+    const titles = ld.scenarios.map((s) => s.title), rw = rowAxis(t, width, titles, { step: 32 });
     el.append(Plot.plot(base(t, width, {
-      height: 32 * ld.scenarios.length + 60, marginLeft: 280, marginRight: 16, marginBottom: 42,
-      x: { domain: [0, 76], label: "median correct decimal digits after the last step →", grid: true },
-      y: { domain: ld.scenarios.map((s) => s.title), label: null, tickSize: 0 },
+      height: rw.step * titles.length + 60, marginLeft: rw.marginLeft, marginRight: 16, marginBottom: 42,
+      x: { domain: [0, 76], label: width < 560 ? "median correct digits, last step →" : "median correct decimal digits after the last step →", grid: true },
+      y: rw.axis,
       marks: [
-        Plot.ruleY(ld.scenarios.map((s) => s.title), { stroke: t.line, strokeOpacity: 0.5 }),
+        ...rw.marks,
+        Plot.ruleY(titles, { stroke: t.line, strokeOpacity: 0.5 }),
         Plot.dot(rows.filter((d) => !ours(d)), { x: "digits", y: "title", fill: colour(t), r: 6, fillOpacity: 0.9, symbol }),
         Plot.dot(rows.filter(ours), { x: "digits", y: "title", fill: colour(t), r: 8, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
         Plot.tip(rows, Plot.pointer({ x: "digits", y: "title", title: (d) => `${lib[d.lib].long}\n${d.title}: ${d.digits.toFixed(1)} digits after ${fmt(d.n)} steps` })),
@@ -232,11 +283,14 @@ const charts = {
   gasops(el, t, width) {
     const rows = pages.gas;
     const ops = [...new Set(rows.map((r) => r.op))].sort((a, b) => rows.filter((r) => r.op === b).length - rows.filter((r) => r.op === a).length || a.localeCompare(b));
+    const rw = rowAxis(t, width, ops, { step: 22 });
     el.append(Plot.plot(base(t, width, {
-      height: 22 * ops.length + 60, marginLeft: 110, marginRight: 20, marginBottom: 42,
-      x: { type: "log", label: "median gas per call (log scale) →", grid: true, tickFormat: fmt },
-      y: { domain: ops, label: null, tickSize: 0 },
+      height: rw.step * ops.length + 80, marginLeft: rw.marginLeft, marginRight: 20, marginBottom: 42, marginTop: 36,
+      x: { type: "log", label: "median gas per call (log scale) →", grid: true, tickFormat: fmt, axis: "both" },
+      y: rw.axis,
       marks: [
+        ...band(t, ops, rw.step),
+        ...rw.marks,
         Plot.ruleY(ops, { stroke: t.line, strokeOpacity: 0.4 }),
         Plot.dot(rows.filter((d) => !ours(d)), { x: "gas", y: "op", fill: colour(t), r: 5, fillOpacity: 0.85, symbol }),
         Plot.dot(rows.filter(ours), { x: "gas", y: "op", fill: colour(t), r: 6.5, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
@@ -250,11 +304,14 @@ const charts = {
   libops(el, t, width) {
     const id = el.dataset.arg, c = t.family(lib[id].family);
     const rows = [...pages.libops[id]].sort((a, b) => a.inline - b.inline);
+    const opsL = rows.map((r) => r.op), rw = rowAxis(t, width, opsL, { step: 16 });
     el.append(Plot.plot(base(t, width, {
-      height: 15 * rows.length + 60, marginLeft: 110, marginRight: 20, marginBottom: 42,
-      x: { type: "log", label: "median gas per call (log scale) →", grid: true, tickFormat: fmt },
-      y: { domain: rows.map((r) => r.op), label: null, tickSize: 0 },
+      height: rw.step * rows.length + 80, marginLeft: rw.marginLeft, marginRight: 20, marginBottom: 42, marginTop: 36,
+      x: { type: "log", label: "median gas per call (log scale) →", grid: true, tickFormat: fmt, axis: "both" },
+      y: rw.axis,
       marks: [
+        ...band(t, opsL, rw.step),
+        ...rw.marks,
         Plot.link(rows.filter((r) => r.object), { x1: "inline", x2: "object", y1: "op", y2: "op", stroke: c, strokeOpacity: 0.35, strokeWidth: 2 }),
         Plot.dot(rows.filter((r) => r.object), { x: "object", y: "op", r: 4, stroke: c, strokeWidth: 1.5, fill: "var(--surface-solid)" }),
         Plot.dot(rows, { x: "inline", y: "op", r: 4.5, fill: c }),
@@ -272,14 +329,20 @@ const charts = {
     const cs = pages.deployed.cases;
     const pts = cs.flatMap((c) => [[c.protocol, c.deployed, "as deployed"], ["fp127", c.fp127, "in FP127"], ["fp19", c.fp19, "in FP19"]]
       .map(([l, v, how]) => ({ lib: l, digits: v, how, label: c.label })));
+    const rw = rowAxis(t, width, cs.map((c) => c.label), { step: 22 });
     el.append(Plot.plot(base(t, width, {
-      height: 18 * cs.length + 60, marginLeft: 250, marginRight: 20, marginBottom: 42,
+      height: rw.step * cs.length + 60, marginLeft: rw.marginLeft, marginRight: 20, marginBottom: 42,
       x: { domain: [0, 76], label: "correct decimal digits of the interest →", grid: true },
-      y: { domain: cs.map((c) => c.label), label: null, tickSize: 0 },
+      y: rw.axis,
       marks: [
+        ...band(t, cs.map((c) => c.label), rw.step),
+        ...rw.marks,
         Plot.link(cs, { x1: "deployed", x2: "fp19", y1: "label", y2: "label", stroke: t.line, strokeOpacity: 0.6 }),
-        Plot.tickX(cs.filter((c) => c.grid != null), { x: "grid", y: "label", stroke: t.faint, strokeWidth: 2, strokeDasharray: "2 2" }),
-        Plot.dot(pts, { x: "digits", y: "label", fill: colour(t), r: (d) => (ours(d) ? 4.5 : 5), symbol }),
+        // the token grid's limit: a dashed tick, or on a phone (names above the rows) the legend's ┆, which stays on its row
+        rw.above
+          ? Plot.text(cs.filter((c) => c.grid != null), { x: "grid", y: "label", text: () => "┆", fill: t.faint, fontSize: 12, fontWeight: 700 })
+          : Plot.tickX(cs.filter((c) => c.grid != null), { x: "grid", y: "label", stroke: t.faint, strokeWidth: 2, strokeDasharray: "2 2" }),
+        Plot.dot(pts, { x: "digits", y: "label", fill: colour(t), r: (d) => (ours(d) ? 6 : 6.5), stroke: "var(--surface-solid)", strokeWidth: 1.2, symbol }),
         Plot.tip(pts, Plot.pointer({ x: "digits", y: "label", title: (d) => `${d.label}\n${d.how}: ${d.digits.toFixed(2)} digits of the interest` })),
       ],
     })));
@@ -294,13 +357,20 @@ const charts = {
       { lib: c.protocol, digits: c.deployed, row: `${lib[c.protocol].label}, as deployed`, label: c.label },
       { lib: c.protocol, digits: c.grid, row: `${lib[c.protocol].label}, token grid allows`, label: c.label, grid: true },
     ]);
-    const order = [...new Set(rows.map((r) => r.row))];
+    const order = [...new Set(rows.map((r) => r.row))], narrow = width < 560;
+    // each row is tall enough for its swarm: the most dots that fall within one dot's width of each other, stacked
+    const r = narrow ? 1.7 : 2.4, bin = (2 * r * 26) / (width * 0.8), bins = new Map();
+    for (const d of rows) { const k = `${d.row}|${Math.round(d.digits / bin)}`; bins.set(k, (bins.get(k) || 0) + 1); }
+    // the swarm sits in the middle of its row, so a line of clearance above and below keeps it off a name over the row
+    const swarm = Math.max(...bins.values()) * 2 * r * 1.1, clear = fontSize(width) + 10;
+    const rw = rowAxis(t, width, order, { step: Math.min(320, Math.max(70, swarm + 2 * clear)) - (narrow ? fontSize(width) + 6 : 0), channel: "fy" });
     el.append(Plot.plot(base(t, width, {
-      height: 380, marginLeft: 170, marginRight: 20, marginBottom: 42,
-      x: { domain: [0, 26], label: "correct decimal digits of the pending interest →", grid: true },
-      fy: { domain: order, label: null, axis: "left", padding: 0.1 }, y: { axis: null },
+      height: rw.step * order.length + 52, marginLeft: rw.marginLeft, marginRight: 20, marginBottom: 42,
+      x: { domain: [0, 26], label: narrow ? "correct digits of the pending interest →" : "correct decimal digits of the pending interest →", grid: true, ticks: narrow ? [0, 5, 10, 15, 20, 25] : undefined },
+      fy: { ...rw.axis, padding: 0.08 }, y: { axis: null },
       marks: [
-        Plot.dot(rows, Plot.dodgeY("middle", { x: "digits", fy: "row", r: 2, fill: (d) => (d.grid ? t.faint : t.family(lib[d.lib].family)), fillOpacity: 0.85 })),
+        ...rw.marks,
+        Plot.dot(rows, Plot.dodgeY("middle", { x: "digits", fy: "row", r, fill: (d) => (d.grid ? t.faint : t.family(lib[d.lib].family)), fillOpacity: 0.85, clip: true })),
         Plot.tip(rows, Plot.pointer({ x: "digits", fy: "row", title: (d) => `${d.label}: ${d.digits.toFixed(2)} digits${d.grid ? " at most on the token grid" : " as deployed"}` })),
       ],
     })));
@@ -353,7 +423,7 @@ async function draw(el, force = false) {
 function main() {
   const els = [...document.querySelectorAll(".plot[data-chart]")];
   // drawn once they are within a screen of the viewport; a hidden tab's charts draw when it is shown and scrolled to
-  const near = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && draw(e.target)), { rootMargin: "100% 0px" });
+  const near = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && draw(e.target)), { rootMargin: "200% 0px" });
   const resized = new ResizeObserver((es) => es.forEach((e) => e.target.dataset.drawn && draw(e.target)));
   els.forEach((el) => { near.observe(el); resized.observe(el); });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => els.forEach((el) => el.dataset.drawn && draw(el, true)));

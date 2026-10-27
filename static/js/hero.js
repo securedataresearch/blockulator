@@ -1,78 +1,72 @@
-// Home hero: a slow cloth in the four site colours. WebGL 1, no libraries.
-// The cloth is drawn on the page's own background colour (site.css --bg, read at run time), pale in light mode and dark in
-// dark mode, so it blends into the page instead of sitting on it. The canvas stays transparent (CSS opacity 0) until the
-// first frame is on it; only then does it get .on and fade in. One fixed seed: the same cloth on every visit.
+// The banner on every page: a cloth in the four site colours, lit dye on ink, in both themes. WebGL 1, no libraries.
+// Each banner (site.css .banner) paints its CSS gradient first; the canvas stays transparent (opacity 0) until its first
+// frame is drawn, then gets .on and fades in over a gradient of about the same brightness, so nothing flashes.
+// data-seed picks the cloth (one per page group, the same on every visit). Every banner drifts slowly; with reduced motion,
+// or data-still, it draws one frame and stops. A banner off screen or in a hidden tab does not draw.
 (function () {
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var darkQ = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
   var panels = document.querySelectorAll('canvas.cloth');
-  for (var i = 0; i < panels.length; i++) mount(panels[i], i);
+  for (var i = 0; i < panels.length; i++) mount(panels[i]);
 
-  function bg() {
-    // "#rrggbb" from the theme token; falls back to the page's computed background
-    var v = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-    var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(v);
-    if (m) return [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255];
-    var c = getComputedStyle(document.documentElement).backgroundColor.match(/\d+(\.\d+)?/g) || [0, 0, 0];
-    return [c[0] / 255, c[1] / 255, c[2] / 255];
-  }
-
-  function mount(canvas, index) {
+  function mount(canvas) {
+  var still = reduce || canvas.hasAttribute('data-still');
   var gl = canvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: true, preserveDrawingBuffer: false });
   if (!gl) { canvas.remove(); return; } // the page background stands in
 
   var vs = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
   var fs = [
-    'precision mediump float;',
-    'uniform vec2 r; uniform float t; uniform vec2 m; uniform float seed; uniform float quiet; uniform vec3 base; uniform float dark;',
-    'void main(){',
-    '  vec2 uv = gl_FragCoord.xy / r; vec2 p = uv; p.x *= r.x / r.y;',
-    // one wave, set at an angle, sliding across; angle, wavelength, lean, speed and dye come from the seed
-    '  float h1 = fract(sin(seed * 12.9898) * 43758.5453);',
-    '  float h2 = fract(sin(seed * 78.233) * 43758.5453);',
-    '  float h3 = fract(sin(seed * 39.425) * 43758.5453);',
-    '  float h4 = fract(sin(seed * 93.989) * 43758.5453);',
-    '  float h5 = fract(sin(seed * 57.114) * 43758.5453);',
-    '  float ang = 0.25 + h1 * 1.25;',
-    '  vec2 dir = vec2(cos(ang), sin(ang));',
-    '  float wl = 1.7 + h2 * 1.6;',
-    '  float lean = 0.3 + h3 * 0.45;',
-    '  float speed = (0.18 + h4 * 0.22) * (h5 > 0.5 ? 1.0 : -1.0);',
-    '  float u = dot(p, dir) * wl - t * speed + seed;',
-    // a slumped fold: a sine with a little second harmonic so the crest leans
-    '  float fold  = sin(u) + lean * sin(2.0 * u + 1.0);',
-    '  float slope = cos(u) + 2.0 * lean * cos(2.0 * u + 1.0);',
-    '  float ph = fract((u - 0.9) / 6.2831853);',
-    '  float lipd = ph * 34.0; float lip = exp(-lipd * lipd);',
-    '  float shd = (ph - 0.07) * 14.0; float tuck = exp(-shd * shd);',
-    '  float light = clamp(0.5 + 0.5 * slope + (m.x - 0.5) * 0.15, 0.0, 1.0);',
-    '  light = light * (1.0 - 0.85 * tuck) + 0.6 * lip;',
-    '  float sheen = pow(light, 10.0);',
-    // the weave follows the surface and bunches where the slope is steep
-    '  vec2 perp = vec2(-dir.y, dir.x);',
-    '  float along  = dot(p, dir)  + fold * 0.10;',
-    '  float across = dot(p, perp) + fold * 0.04;',
-    '  float squeeze = 1.0 + 0.9 * max(-slope, 0.0);',
-    '  float wu = fract(along * 16.0 * squeeze); float wv = fract(across * 16.0);',
-    '  float lineU = smoothstep(0.30, 0.5, abs(wu - 0.5)); float lineV = smoothstep(0.30, 0.5, abs(wv - 0.5));',
-    '  float weave = 0.22 * max(lineU, lineV) * (0.4 + 0.6 * light);',
-    // dye: emerald in the troughs, sapphire on the crests, a little gold on the very top
-    '  vec3 emerald = vec3(0.0, 0.41, 0.31); vec3 sapphire = vec3(0.25, 0.44, 0.63); vec3 gold = vec3(0.63, 0.60, 0.38);',
-    '  float h = clamp(0.5 + 0.5 * fold / 1.4, 0.0, 1.0);',
-    '  vec3 trough = mix(emerald, sapphire, h4);',
-    '  vec3 crest  = mix(sapphire, mix(emerald, gold, h2), h5);',
-    '  vec3 dye = mix(trough, crest, h);',
-    '  dye = mix(dye, gold, smoothstep(0.85, 1.0, h) * (0.2 + 0.4 * h3));',
-    '  float vig = smoothstep(1.45, 0.3, length(uv - vec2(0.6, 0.5)));',
-    '  float hush = 1.0 - smoothstep(0.55, 0.0, uv.x) * 0.55 * quiet;',
-    // dark: lit dye on the page colour, as the cloth always was
-    '  vec3 cd = base + dye * (0.05 + 0.95 * light) * (1.0 - weave) + vec3(0.85, 0.88, 0.9) * (sheen * 0.25 + lip * 0.18);',
-    '  cd = mix(base, cd, (0.3 + 0.7 * vig) * hush);',
-    // light: the same folds as a pale wash of dye on paper, deepest in the shade, a white lip on the crest
-    '  float k = (0.14 + 0.44 * (1.0 - light)) * (0.35 + 0.65 * vig) * hush;',
-    '  vec3 cl = mix(base, dye, k) * (1.0 - weave * 0.22 * k * 3.0);',
-    '  cl = mix(cl, vec3(1.0), (lip * 0.35 + sheen * 0.12) * vig * hush);',
-    '  gl_FragColor = vec4(mix(cl, cd, dark), 1.0);',
+    'precision highp float;',
+    'uniform vec2 r; uniform float t; uniform vec2 m; uniform float seed; uniform float quiet;',
+    'float hash(float n) { return fract(sin(n) * 43758.5453); }',
+    // smooth value noise, for the slow warp that keeps the folds from looking like ruled lines
+    'float noise(vec2 x) { vec2 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); float n = i.x + i.y * 57.0;',
+    '  return mix(mix(hash(n), hash(n + 1.0), f.x), mix(hash(n + 57.0), hash(n + 58.0), f.x), f.y); }',
+    // the drape: three folds at nearby angles, long to short, each a rounded crest over a tighter trough, on a warped plane
+    'float drape(vec2 p) {',
+    '  vec2 q = p + 0.45 * vec2(noise(p * 0.7 + seed * 3.1 + t * 0.018), noise(p * 0.7 - seed * 1.7 + 4.3 - t * 0.018)) - 0.22;',
+    '  float a = 0.45 + hash(seed) * 0.9, h = 0.0;',
+    '  for (int i = 0; i < 3; i++) {',
+    '    float fi = float(i);',
+    '    float ang = a + (hash(seed + fi * 7.3) - 0.5) * 0.7;',
+    '    vec2 d = vec2(cos(ang), sin(ang));',
+    '    float f = 2.3 * pow(1.7, fi), amp = pow(0.5, fi);',
+    '    float u = dot(q, d) * f + t * (0.05 + 0.035 * fi) * (mod(fi, 2.0) * 2.0 - 1.0) + hash(seed + fi) * 6.283;',
+    '    h += amp * (sin(u) - 0.28 * cos(2.0 * u));',
+    '  }',
+    '  return h;',
+    '}',
+    'void main() {',
+    '  vec2 uv = gl_FragCoord.xy / r; vec2 p = uv * vec2(r.x / r.y, 1.0) * 1.15;',
+    // the surface normal from the height field: the light, the sheen and the creases all come from it
+    '  float e = 1.0 / r.y, h = drape(p);',
+    '  float hx = drape(p + vec2(e, 0.0)) - h, hy = drape(p + vec2(0.0, e)) - h;',
+    '  vec3 n = normalize(vec3(-hx / e * 0.2, -hy / e * 0.2, 1.0));',
+    // light from across the main fold, raking low, so each fold has a lit face and a shaded one
+    '  float a = 0.45 + hash(seed) * 0.9;',
+    '  vec3 L = normalize(vec3(cos(a) + (m.x - 0.5) * 0.3, sin(a) + (m.y - 0.5) * 0.2, 0.85));',
+    '  vec3 V = vec3(0.0, 0.0, 1.0), H = normalize(L + V);',
+    '  float diff = clamp((dot(n, L) + 0.2) / 1.2, 0.0, 1.0);',
+    '  float spec = pow(max(dot(n, H), 0.0), 36.0);',
+    // satin: a broad soft highlight where the cloth turns away from the eye
+    '  float sheen = pow(1.0 - max(dot(n, V), 0.0), 2.2);',
+    '  float crease = 0.35 + 0.65 * smoothstep(-1.6, 0.9, h);',
+    // dye: emerald in the folds, sapphire across the drape, a little gold where it rises highest
+    '  vec3 emerald = vec3(0.01, 0.50, 0.38), sapphire = vec3(0.26, 0.50, 0.78), gold = vec3(0.78, 0.70, 0.42);',
+    '  float tone = clamp(0.5 + 0.32 * h + 0.25 * (uv.x - 0.5), 0.0, 1.0);',
+    '  vec3 dye = mix(emerald, sapphire, smoothstep(0.15, 0.7, tone + 0.25 * (hash(seed * 2.0) - 0.5)));',
+    '  dye = mix(dye, gold, smoothstep(0.86, 1.0, tone) * 0.35);',
+    '  vec3 ink = vec3(0.035, 0.038, 0.045);',
+    '  vec3 c = ink + dye * (0.04 + 1.1 * pow(diff, 1.8)) * crease;',
+    '  c += vec3(0.82, 0.88, 0.94) * spec * 0.2 * crease + dye * sheen * 0.32;',
+    // a soft shoulder on the brightest light, so a highlight glows instead of clipping to white
+    '  c = c / (1.0 + 0.55 * max(c.r, max(c.g, c.b) - 0.55));',
+    // vignette, and a quieter left side where the headline sits
+    '  float vig = smoothstep(1.5, 0.25, length((uv - vec2(0.62, 0.55)) * vec2(1.0, 1.3)));',
+    '  float hush = 1.0 - smoothstep(0.6, 0.0, uv.x) * 0.5 * quiet;',
+    '  c = mix(ink, c, (0.4 + 0.6 * vig) * hush);',
+    // dither below one 8-bit step, so the long gradients never band
+    '  c += (hash(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) - 0.5) / 255.0;',
+    '  gl_FragColor = vec4(c, 1.0);',
     '}'
   ].join('\n');
 
@@ -87,35 +81,30 @@
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
   var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   var uR = gl.getUniformLocation(prog, 'r'), uT = gl.getUniformLocation(prog, 't'), uM = gl.getUniformLocation(prog, 'm');
-  var uBase = gl.getUniformLocation(prog, 'base'), uDark = gl.getUniformLocation(prog, 'dark');
-  gl.uniform1f(gl.getUniformLocation(prog, 'seed'), index * 2.7 + 0.013);
+  gl.uniform1f(gl.getUniformLocation(prog, 'seed'), parseFloat(canvas.getAttribute('data-seed')) || 0.013);
   gl.uniform1f(gl.getUniformLocation(prog, 'quiet'), canvas.hasAttribute('data-quiet') ? 1.0 : 0.0);
-  function theme() { var b = bg(); gl.uniform3f(uBase, b[0], b[1], b[2]); gl.uniform1f(uDark, darkQ && darkQ.matches ? 1.0 : 0.0); }
-  theme();
-  if (darkQ && darkQ.addEventListener) darkQ.addEventListener('change', function () { theme(); if (reduce) frame(performance.now()); });
 
   var mx = 0.5, my = 0.5, tx = 0.5, ty = 0.5;
   window.addEventListener('pointermove', function (e) { tx = e.clientX / window.innerWidth; ty = 1 - e.clientY / window.innerHeight; }, { passive: true });
 
   function size() {
-    var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    // render at reduced resolution; the cloth is soft and it keeps the fan quiet
-    var scale = 0.6 * dpr;
+    // full resolution: a still frame up to 2x, the moving one up to 1.5x to keep the fan quiet
+    var scale = Math.min(window.devicePixelRatio || 1, still ? 2 : 1.5);
     canvas.width = Math.max(1, Math.floor(canvas.clientWidth * scale)); canvas.height = Math.max(1, Math.floor(canvas.clientHeight * scale));
     gl.viewport(0, 0, canvas.width, canvas.height);
   }
   var start = performance.now(), visible = true, raf = 0, onscreen = true, shown = false;
-  if ('IntersectionObserver' in window) { new IntersectionObserver(function (es) { onscreen = es[0].isIntersecting; if (onscreen && !reduce) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } }, { rootMargin: '80px' }).observe(canvas); }
+  if ('IntersectionObserver' in window) { new IntersectionObserver(function (es) { onscreen = es[0].isIntersecting; if (onscreen && !still) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } }, { rootMargin: '80px' }).observe(canvas); }
   function frame(now) {
     mx += (tx - mx) * 0.015; my += (ty - my) * 0.015;
     gl.uniform2f(uR, canvas.width, canvas.height); gl.uniform1f(uT, (now - start) / 1000 + 40.0); gl.uniform2f(uM, mx, my);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     // the first frame is in the buffer: show the canvas from the next paint
     if (!shown) { shown = true; canvas.classList.add('on'); }
-    if (!reduce && visible && onscreen) raf = requestAnimationFrame(frame);
+    if (!still && visible && onscreen) raf = requestAnimationFrame(frame);
   }
-  size(); window.addEventListener('resize', function () { size(); if (reduce) frame(performance.now()); });
-  document.addEventListener('visibilitychange', function () { visible = !document.hidden; if (visible && !reduce) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } });
+  size(); window.addEventListener('resize', function () { size(); if (still) frame(performance.now()); });
+  document.addEventListener('visibilitychange', function () { visible = !document.hidden; if (visible && !still) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } });
   raf = requestAnimationFrame(frame);
   }
 })();

@@ -1,6 +1,6 @@
 +++
 title = "FP127"
-description = "Signed 127.128 fixed point. One int256, 128 fractional bits (38 digits at 1), 53 ops, every transcendental the nearest word (pow near 2⁹⁰ excepted). One Yul source, two forms: a deployed object and an inline library."
+description = "Signed fixed point with 128 bits after the point: 38 correct digits at 1, in one int256. 53 ops, every transcendental rounded to the nearest representable value (pow near 2⁹⁰ excepted). Inline it or call the deployed contract."
 
 [extra]
 group = "library"
@@ -9,62 +9,11 @@ moved = ["rule-1-bunni-v2", "rule-2-resupply", "rule-2-balancer-v2", "rule-2-bal
 moved_to = "/library/integrating/"
 +++
 
-Both forms are generated from one file and fuzzed equal across the full `int256` domain, reverts included.
+FP127 is a number format and a math library for Solidity. A value is stored as `value × 2^128` in an `int256`, so it keeps 38 correct digits at 1 where WAD keeps 18, and the same Yul source ships two ways: a library you inline, and a deployed contract you call. The two are fuzzed equal on every `int256`, reverts included.
 
-## Encoding
+## Install
 
-`value × 2^128` in an `int256`, two's complement. `ONE` is `2^128`. Range ±1.7 × 10<sup>38</sup>, 128 fractional bits: 38 digits at 1, 32 at 10<sup>−6</sup>, 8 at 10<sup>−30</sup>. Every op takes and returns this one type. `fromFixed18` and `toFixed18` convert to and from WAD.
-
-{{ <wordstrip format="fp127,wad" /> }}
-
-Errors: `Overflow()`, `DivisionByZero()`, `OutOfRange()`. Nothing wraps.
-
-## Deployed form
-
-{{ <deployment /> }}
-
-No storage, no owner, no upgrade path. A new version is a new salt and a new address. The address above is v6 (53 ops, Blockulator 2.2): `pi` is now the constant `FP127Lib.PI` (π · 2<sup>128</sup> to the nearest integer) and `gcd` is gone, and every other op returns the same word as v5 for less gas. v6 is an evmVersion osaka build and needs the CLZ opcode (EIP-7939): it runs on Ethereum, Sepolia and the other chains with CLZ, not on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list]({{ config.extra.repo }}/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)). v5 (Blockulator 2.1, `0x619176d72D7a12390F8970802943D344c0fd3fE2`) added the directed `mulUp`, `mulDown`, `divUp`, `divDown`, `toFixed18Up` and `toFixed18Down` and rounded every transcendental to the nearest word. v1 to v5 stay deployed at the addresses in the record.
-
-`sqrt(2)` from the command line:
-
-```sh
-cast call 0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4 "sqrt(int256)(int256)" \
-  680564733841876926926749214863536422912 \
-  --rpc-url https://ethereum-sepolia-rpc.publicnode.com
-# 481231938336009023090067544955250113854
-python3 -c "print(481231938336009023090067544955250113854 / 2**128)"
-# 1.4142135623730951
-```
-
-From Solidity:
-
-```solidity
-import {IFP127} from "fp127/IFP127.sol";
-
-contract StaticcallExample {
-    IFP127 public constant FP127 = IFP127(0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4);
-    int256 internal constant ONE = int256(1) << 128;
-
-    function accrue(int256 principalWad, int256 rateWad, uint256 steps)
-        external view returns (int256 balanceWad)
-    {
-        int256 b = FP127.fromFixed18(principalWad);
-        int256 growth = FP127.add(ONE, FP127.fromFixed18(rateWad));
-        for (uint256 i = 0; i < steps; i++) {
-            b = FP127.mul(b, growth);
-        }
-        return FP127.toFixed18(b);
-    }
-}
-```
-
-## Inline form
-
-`FP127Lib.sol`: the same Yul in `memory-safe` assembly, one `internal pure` function per op. No external call: about 570 gas cheaper than the `staticcall` on `add`, 620 on `mul` and 610 on `sqrt`. On `exp`, `exp2`, `exp10`, `sinh`, `cosh` and both Lambert W branches the deployed object is cheaper, by 50 to 620 gas (medians on typical inputs in [`gas.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas.md)).
-
-Compile it with `via_ir = true` (in `foundry.toml`): solc's legacy pipeline leaves the heavy ops 5–14% dearer than the same Yul in the object (net of its call), and through the IR they come within about −7% to +3% of it, `mul` 263 → 181 and `ln` 1,886 → 1,625 gas on typical inputs; the build takes about 5.5× as long ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
-
-Install it one of three ways; the import path is the same in each:
+The import path is the same however you install it:
 
 ```sh
 # Foundry, from git
@@ -97,7 +46,7 @@ contract CompoundExample {
 }
 ```
 
-Both examples are compiled and tested in `test/examples/` against the [ladder's](/results/ladder/#compound) compound scenario.
+This example is compiled and tested in `test/examples/` against the [ladder's](/results/ladder/#compound) compound scenario. Compile with `via_ir = true` in `foundry.toml`: through the IR the inline ops come within a few percent of the deployed contract's gas, and on the legacy pipeline the heavy ops cost 5–14% more ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
 
 ## Typed API
 
@@ -110,6 +59,55 @@ FP127 b = fp127FromWad(1.5e18) * ONE.exp();  // 1.5e; * is FP127Lib.mul
 FP127 r = (b - ONE).ln() / PI + -ONE;        // operators and attached ops
 bool inside = r >= -ONE && r <= ONE;
 uint256 paid = b.toWadDown();                // 4077422742688567853, floored
+```
+
+## The format
+
+The range is ±1.7 × 10<sup>38</sup>. With 128 bits after the point, FP127 keeps 38 digits at 1, 32 at 10<sup>−6</sup> and 8 at 10<sup>−30</sup>. `ONE` is `2^128`, every op takes and returns this one type, and `fromFixed18` and `toFixed18` convert to and from WAD.
+
+{{ <wordstrip format="fp127,wad" /> }}
+
+Errors are `Overflow()`, `DivisionByZero()` and `OutOfRange()`. Nothing wraps.
+
+## The deployed contract
+
+Calling the deployed contract costs one `staticcall`, about 600 gas more than inlining on simple ops like `add` and `mul`. On the heavy ops (`exp`, `exp2`, `exp10`, `sinh`, `cosh` and both Lambert W branches) it is cheaper than inlining, by 50 to 620 gas ([`gas.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas.md)). It is also the way to use FP127 from an `eth_call`, where gas is free.
+
+{{ <deployment /> }}
+
+It has no storage, no owner and no upgrade path: a new version gets a new salt and a new address, and v1 to v5 stay deployed at the addresses in the record. It is built for evmVersion osaka and needs the CLZ opcode (EIP-7939), so it runs on Ethereum, Sepolia and the other chains with CLZ, but not on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list]({{ config.extra.repo }}/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)). What changed in each version is in the [changelog]({{ config.extra.repo }}/blob/master/CHANGELOG.md).
+
+`sqrt(2)` from the command line:
+
+```sh
+cast call 0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4 "sqrt(int256)(int256)" \
+  680564733841876926926749214863536422912 \
+  --rpc-url https://ethereum-sepolia-rpc.publicnode.com
+# 481231938336009023090067544955250113854
+python3 -c "print(481231938336009023090067544955250113854 / 2**128)"
+# 1.4142135623730951
+```
+
+From Solidity:
+
+```solidity
+import {IFP127} from "fp127/IFP127.sol";
+
+contract StaticcallExample {
+    IFP127 public constant FP127 = IFP127(0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4);
+    int256 internal constant ONE = int256(1) << 128;
+
+    function accrue(int256 principalWad, int256 rateWad, uint256 steps)
+        external view returns (int256 balanceWad)
+    {
+        int256 b = FP127.fromFixed18(principalWad);
+        int256 growth = FP127.add(ONE, FP127.fromFixed18(rateWad));
+        for (uint256 i = 0; i < steps; i++) {
+            b = FP127.mul(b, growth);
+        }
+        return FP127.toFixed18(b);
+    }
+}
 ```
 
 ## Integrating

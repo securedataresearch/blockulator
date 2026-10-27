@@ -1,10 +1,15 @@
-{#- Title, one line under it, then the sub-nav of the page's group: the title is first on every page, so it never moves between pages. No canvas: inner pages are static. -#}
+{#- The page's banner: title, one line under it, then the sub-nav of the page's group, on the cloth
+    (hero.js), drifting slowly. The banner is first on every page and the same element, so nothing moves between pages;
+    each group has its own cloth (seeds). -#}
 {%- set groups = {
   "results": [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/ops/", "Per op"], ["/results/wad/", "WAD"], ["/results/deployed/", "Deployed"], ["/results/incidents/", "Incidents"], ["/vs/", "Versus"]],
   "library": [["/library/", "FP127"], ["/library/fp19/", "FP19"], ["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]]
 } -%}
-<header class="pagehead">
-  {%- set g = page.extra.group | default(value="") %}
+{%- set seeds = {"results": "3.1", "library": "5.7"} -%}
+{%- set g = page.extra.group | default(value="") %}
+<header class="banner pagehead">
+  <canvas class="cloth" data-quiet data-seed="{% if seeds[g] is defined %}{{ seeds[g] }}{% else %}1.9{% endif %}" aria-hidden="true"></canvas>
+  <div class="banner-inner">
   <h1>{{ page.title }}</h1>
   {%- if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
   {%- if g and groups[g] is defined %}
@@ -12,4 +17,5 @@
     {%- for item in groups[g] %}<a href="{{ item[0] }}"{% if current_path == item[0] %} class="on" aria-current="page"{% endif %}>{{ item[1] }}</a>{% endfor %}
   </nav>
   {%- endif %}
+  </div>
 </header>
