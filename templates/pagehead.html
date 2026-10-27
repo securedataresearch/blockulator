@@ -1,6 +1,6 @@
-{#- The page's banner: title, one line under it, then the sub-nav of the page's group, on a still frame of the cloth
-    (hero.js, data-still). The banner is first on every page and the same element, so nothing moves between pages;
-    each group has its own cloth (seeds), the home page the moving one. -#}
+{#- The page's banner: title, one line under it, then the sub-nav of the page's group, on the cloth
+    (hero.js), drifting slowly. The banner is first on every page and the same element, so nothing moves between pages;
+    each group has its own cloth (seeds). -#}
 {%- set groups = {
   "results": [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/ops/", "Per op"], ["/results/wad/", "WAD"], ["/results/deployed/", "Deployed"], ["/results/incidents/", "Incidents"], ["/vs/", "Versus"]],
   "library": [["/library/", "FP127"], ["/library/fp19/", "FP19"], ["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]]
@@ -8,7 +8,7 @@
 {%- set seeds = {"results": "3.1", "library": "5.7"} -%}
 {%- set g = page.extra.group | default(value="") %}
 <header class="banner pagehead">
-  <canvas class="cloth" data-still data-quiet data-seed="{% if seeds[g] is defined %}{{ seeds[g] }}{% else %}1.9{% endif %}" aria-hidden="true"></canvas>
+  <canvas class="cloth" data-quiet data-seed="{% if seeds[g] is defined %}{{ seeds[g] }}{% else %}1.9{% endif %}" aria-hidden="true"></canvas>
   <div class="banner-inner">
   <h1>{{ page.title }}</h1>
   {%- if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
