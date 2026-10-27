@@ -104,7 +104,7 @@
 /* the banner holds still between pages (site.css .banner): its old and new pictures cross-fade in place, dark to dark */
 ::view-transition-group(banner) { animation-duration: var(--t-in); animation-timing-function: var(--ease-out); }
 ::view-transition-old(banner), ::view-transition-new(banner) { animation-duration: var(--t-in); }
-@media (max-width: 640px) { .links { gap: 2px; font-size: 14px; } .links a { padding: 6px 9px; } .links .cta { margin-left: 2px; } .brand span { display: none; } }
+@media (max-width: 640px) { .links { gap: 2px; font-size: 14px; } .links a { padding: 6px 9px; } .links .cta { margin-left: 2px; } .brand span { display: none; } .brand img { width: 32px; height: 32px; } }
 
 /* the shader stays hidden until hero.js has drawn its first frame (it adds .on), then fades in over the page background */
 canvas.cloth { opacity: 0; transition: opacity var(--t-slow) var(--ease-out); }
@@ -381,3 +381,5 @@ html.nvt.leaving .page { animation: page-out var(--t-out) var(--ease-in) both; }
 .doc details.record { max-width: var(--measure); margin: -.4em auto 1.4em; }
 .doc details.record > summary { cursor: pointer; font-size: 14.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 12px; }
 @media (max-width: 640px) { .home .unit-chart { padding: 8px 6px; } }
+/* an inner page's chart is a readable size on a wide screen, centred like the prose; its table keeps the full width */
+.doc .plot { max-width: 1180px; margin-inline: auto; }

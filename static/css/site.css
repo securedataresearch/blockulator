@@ -83,8 +83,8 @@ a { color: inherit; }
   .topbar { background: color-mix(in oklab, var(--bg) 62%, transparent); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
 }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: var(--wrap); margin-inline: auto; padding: 12px clamp(16px, 4vw, 32px); color: var(--text-strong); }
-.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; letter-spacing: -.01em; }
-.brand img { border-radius: 7px; filter: brightness(0); } /* the mark is a white mask: ink on the light bar */
+.brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 600; font-size: 19px; letter-spacing: -.015em; }
+.brand img { width: 36px; height: 36px; border-radius: 9px; filter: brightness(0); } /* the mark is a white mask: ink on the light bar */
 @media (prefers-color-scheme: dark) { .brand img { filter: none; } }
 .links { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 15px; }
 .links a { text-decoration: none; color: var(--muted); padding: 7px 12px; border-radius: 999px; transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out); }
