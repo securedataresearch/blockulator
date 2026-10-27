@@ -16,7 +16,7 @@ An 18-decimal number has about 60 bits of fraction, and every `mulWad` rounds on
 - **Built for the whole word.** Roots and inverses converge by Newton's method. `exp`, `ln` and `pow` reduce the argument with tables and finish with polynomials generated for the full precision of the word, their error bounds checked in exact integers; then every result rounds once. A short series fitted for small arguments, like a three-term expansion of e<sup>x</sup>, has no such margin, and its error grows with the argument.
 - **Measured against exact arithmetic.** Every op is checked against 200- to 300-digit arithmetic: 14 scenarios over N = 1 to 10,000 steps on the [ladder](/results/ladder/), 139 probes where formats break on the [edges](/results/edges/), against every other library on this site. FP19 has no zero, no revert and no out-of-range on any probe.
 - **To the last wei.** BlockulatorWad keeps Solady's names and computes in FP19: 0 wrong of 108,000 results, where the WAD libraries are wrong on 24–98% of `exp`, `ln` and `pow` results by at least a wei.
-- **Proven.** FP127's core arithmetic and directed rounding are proven for all inputs with Halmos; FP19's proofs are under way ([proofs](/proofs/)).
+- **Proven.** FP127's core arithmetic and directed rounding are proven for all inputs, with Halmos and, for the square root, an exact-integer proof; FP19's proofs are under way ([proofs](/proofs/)).
 - **Checked on chain.** The deployed contracts were re-run cell by cell against the data on this site: 9,411 ladder cells and 1,511 edge cells, 0 mismatches.
 
 ## What it costs

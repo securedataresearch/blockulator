@@ -30,7 +30,7 @@ DOC = ROOT / "docs" / "proofs.md"
 SOLVER = "bitwuzla"
 SOLVER_VERSION = "0.8.1"
 
-# Lemmas: proved by test/proofs/lemmas.py (Z3, integers) and kernel.py.
+# Lemmas: proved by test/proofs/lemmas.py (Z3, integers), kernel.py and isqrt.py (exact integers, exhaustion).
 # Ops: (lib, op, status, spec, the Halmos checks, the lemmas it rests on, note).
 # status: "proven"           every input, the spec's primitives all proved
 #         "proven-except"    every input but a stated window, where a counterexample is pinned
@@ -42,15 +42,15 @@ OPS = [
     ("FP127", "sub", "proven", "a - b exact; Overflow outside int256", ["check_fp127_sub"], [], ""),
     ("FP127", "mul", "proven", "floor(a b / 2^128); Overflow when it leaves int256", ["check_fp127_mul"], ["L1", "L2"], ""),
     ("FP127", "mulDown", "proven", "floor(a b / 2^128)", ["check_fp127_mulDown"], ["L1", "L2"], ""),
-    ("FP127", "mulUp", "proven-except", "ceil(a b / 2^128); Overflow when it leaves int256",
-     ["check_fp127_mulUp_outside"], ["L1", "L2"],
-     "reverts Overflow where floor(a b / 2^128) = -2^255 - 1 and the ceiling -2^255 fits; proven on every other input"),
+    ("FP127", "mulUp", "proven", "ceil(a b / 2^128); Overflow when it leaves int256",
+     ["check_fp127_mulUp_outside", "check_fp127_mulUp_window"], ["L1", "L2"],
+     "two checks: every input outside the window where floor(a b / 2^128) = -2^255 - 1, and the window itself (fixed in #159)"),
     ("FP127", "div", "proven", "trunc(a 2^128 / b); DivisionByZero; Overflow", ["check_fp127_div"], ["K127", "L5"], ""),
     ("FP127", "divDown", "proven", "floor(a 2^128 / b)", ["check_fp127_divDown"], ["K127", "L5"], ""),
     ("FP127", "divUp", "proven", "ceil(a 2^128 / b)", ["check_fp127_divUp"], ["K127", "L5"], ""),
     ("FP127", "inv", "proven", "trunc(2^256 / x); DivisionByZero; Overflow", ["check_fp127_inv"], ["L4", "L5"], ""),
-    ("FP127", "sqrt", "counterexample", "floor(sqrt(x 2^128)); OutOfRange below zero", [], [],
-     "returns floor + 1 where x 2^128 + 1 is a perfect square (s + 1)^2 and the Huff's Newton steps end on s + 1, e.g. x = 2^126 + 1"),
+    ("FP127", "sqrt", "proven", "floor(sqrt(x 2^128)); OutOfRange below zero", [], ["R1", "R2", "L1"],
+     "a proof by exhaustion and error bounds (test/proofs/isqrt.py): the seed within 2^-4 for each of its 196,608 leading values, five Newton steps to below 2^-128, and the corrections exact; fixed in #159 where it once returned floor + 1"),
     ("FP127", "floor", "proven", "2^128 floor(x / 2^128)", ["check_fp127_floor"], [], ""),
     ("FP127", "ceil", "proven", "2^128 ceil(x / 2^128); Overflow at 2^255", ["check_fp127_ceil"], [], ""),
     ("FP127", "round", "proven", "2^128 floor(x / 2^128 + 1/2); Overflow at 2^255", ["check_fp127_round"], [], ""),
@@ -156,7 +156,7 @@ def run_check(py, check, timeout, threads):
 
 def run_lemmas(py):
     out = []
-    for script in ("lemmas.py", "kernel.py"):
+    for script in ("lemmas.py", "kernel.py", "isqrt.py"):
         if not (HERE / script).exists():
             continue
         t0 = time.time()
@@ -164,7 +164,7 @@ def run_lemmas(py):
         for line in r.stdout.splitlines():
             if line.startswith(("PROVED", "FAILED")):
                 name = line.split()[1]
-                if not re.fullmatch(r"L\d|K\d+", name):
+                if not re.fullmatch(r"L\d|K\d+|R\d", name):
                     continue  # kernel.py's steps; its K lines sum them up
                 text = re.sub(r"\s+\([\d.]+s\)$", "", line[8:].strip())[len(name):].strip()
                 out.append({"lemma": name, "result": "proved" if line.startswith("PROVED") else "failed", "text": text})
@@ -203,7 +203,7 @@ def write_doc_table(record):
     rows = ["| library | op | status | spec | solver time | checks |", "|---|---|---|---|---:|---|"]
     for o in record["ops"]:
         t = f"{o['seconds']:.0f} s" if o["seconds"] is not None else "–"
-        checks = ", ".join(f"`{c}`" for c in o["checks"]) or "FuzzProofs"
+        checks = ", ".join(f"`{c}`" for c in o["checks"]) or ("`isqrt.py`" if o["status"] == "proven" else "FuzzProofs")
         status = o["status"] + (f" ({', '.join(o['lemmas'])})" if o["lemmas"] else "")
         rows.append(f"| {o['lib']} | `{o['op']}` | {status} | {o['spec']} | {t} | {checks} |")
     table = "\n".join(rows)
@@ -297,10 +297,12 @@ def main():
                 "paths": sum(r["paths"] for r in rs) if secs is not None else None,
                 "fast_checks": [c for c in cks if results[c]["result"] == "pass" and results[c]["seconds"] < 120],
                 "note": note,
-                "tool": f"Halmos {record_tools['halmos']}, {SOLVER} {SOLVER_VERSION}" if cks else f"forge fuzz, {fuzz_runs:,} runs",
+                "tool": (f"Halmos {record_tools['halmos']}, {SOLVER} {SOLVER_VERSION}" if cks
+                         else "exact integer arithmetic, test/proofs/isqrt.py" if status == "proven" else f"forge fuzz, {fuzz_runs:,} runs"),
                 "reproduce": (
                     "python3 test/proofs/run.py --only '^(" + "|".join(cks) + ")$'"
                     if cks
+                    else "python3 test/proofs/isqrt.py" if status == "proven"
                     else f"FOUNDRY_PROFILE=proofs forge test --match-contract {FUZZ} --match-test {lib.lower()}_{op}"
                 ),
             })
