@@ -91,7 +91,7 @@ const charts = {
     })).sort((p, q) => q.y - p.y);
     for (let i = 1; i < labels.length; i++) labels[i].y = Math.min(labels[i].y, labels[i - 1].y - 4.5);
     el.append(Plot.plot(base(t, width, {
-      height: 400, marginRight: 210, marginLeft: 48, marginBottom: 42,
+      height: 400, marginRight: Math.min(210, Math.round(width * 0.42)), marginLeft: 48, marginBottom: 42,
       x: { type: "log", domain: [1, last], label: "days since the last update (log scale) →", ticks: a.cols, tickFormat: fmt },
       y: { domain: [0, 76], label: "↑ correct decimal digits", grid: true },
       marks: [
@@ -353,7 +353,7 @@ async function draw(el, force = false) {
 function main() {
   const els = [...document.querySelectorAll(".plot[data-chart]")];
   // drawn once they are within a screen of the viewport; a hidden tab's charts draw when it is shown and scrolled to
-  const near = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && draw(e.target)), { rootMargin: "100% 0px" });
+  const near = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && draw(e.target)), { rootMargin: "200% 0px" });
   const resized = new ResizeObserver((es) => es.forEach((e) => e.target.dataset.drawn && draw(e.target)));
   els.forEach((el) => { near.observe(el); resized.observe(el); });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => els.forEach((el) => el.dataset.drawn && draw(el, true)));

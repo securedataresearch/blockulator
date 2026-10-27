@@ -6,53 +6,78 @@ template = "home.html"
 [extra]
 eyebrow = "Blockulator 2.2 · Secure Data Research"
 headline = "The definitive source for precision."
-sub = "Blockulator brings real scientific calculations to the blockchain with convergent iterations. It is the perfect companion for smart contracts, agents, and browser applications."
+# {fp127}, {fp19} and the other {placeholders} below are filled from static/data/home.json (templates/macros.html fill).
+sub = "Two Solidity math libraries that keep {fp127} and {fp19} correct digits where WAD keeps 18, so interest, prices and payouts stay right to the last wei. Use them when large sums are at stake or the call is free."
 cta_primary_text = "See the results"
 cta_primary_href = "/results/"
 cta_secondary_text = "Use the library"
 cta_secondary_href = "/library/"
+
+accrual_title = "Leave a market alone and its interest goes wrong"
+accrual_note = "Put $10,000 in at 5% a year and accrue it in one step after N days. Aave and Morpho approximate e<sup>x</sup> with three terms, so the longer a market waits for an update, the fewer digits survive: after 10,000 days, one. FP127 and FP19 lose less than two digits over the whole range."
+accrual_source = "Correct digits against exact arithmetic, each capped at what the library's format holds. OpenZeppelin, Uniswap and Maker have no exponential, so they are not here. The input is the <a href=\"/results/ladder/#accrual-continuous\">continuous-accrual scenario</a>'s; data: <a href=\"/data/ladder.json\">ladder.json</a>."
+
+gas_title = "Twice the digits, and competitive on gas"
+gas_note = "FP127 carries twice the digits of every 18-decimal library and costs less than PRBMath's SD59x18 on add, mul, div, exp, ln, pow and sqrt. FP19 carries twice binary128's digits and costs less than ABDKMathQuad on add, mul, div, exp, ln and pow. Solady is cheaper than both, at 18 digits."
+gas_source = "Each dot is a library: the digits its format holds at 1, against its gas as a multiple of FP127's over the ops both offer; hover for the range. Median of inline calls over random inputs that take no shortcut (<sup>t</sup>). Aave, Morpho and Maker are formulas inside protocols, so they have no gas. Every op: <a href=\"/results/ops/\">per op</a>; data: <a href=\"/data/gas.json\">gas.json</a>, <a href=\"/data/fp19/gas.json\">fp19/gas.json</a>."
+
+wad_title = "Correct to the last wei"
+wad_note = "BlockulatorWad keeps Solady's function names and returns the exact answer, rounded the way each function promises, on all {n} results we tested across {fns} functions and rounding directions. The libraries it replaces are a wei off on up to {worst}% of their results for some functions."
+wad_source = "Seeded inputs over each function's domain, including those whose exact value sits next to a wei boundary. Every library here is 18-decimal fixed point."
+
 ask_title = "Use FP127 and FP19."
 ask_text = "Both are a <code>forge install</code> away. Integration engineering is free."
 ask_primary_text = "Email us"
 ask_primary_href = "mailto:sam@securedataresearch.net?subject=Blockulator%20integration"
 ask_secondary_text = "Read the write-up"
 ask_secondary_href = "/writeup/"
-gas_title = "Twice the digits, at the same gas"
-gas_note = "Each library at the digits its format holds at 1, against its gas as a multiple of FP127's on the same ops. FP19 carries twice binary128's digits, FP127 twice every fixed-point library's, at the gas of the WAD libraries in the middle. Hover a dot for the range over its ops; the table has every op."
-gas_source = "Inline calls over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder. Aave, Morpho and Maker are formulas inside protocols, not libraries, so they have no gas row. Every op: <a href=\"/results/ops/\">per op</a>; data: <a href=\"/data/gas.json\">gas.json</a>, <a href=\"/data/fp19/gas.json\">fp19/gas.json</a>."
-accrual_title = "Leave a market alone and its interest goes wrong"
-accrual_note = "$10,000 at 5% APR, accrued in one step after N days without an update, against exact arithmetic. Aave and Morpho ship a three-term expansion of e<sup>x</sup> and fall to one digit; the other libraries keep what their format holds, which sets how far each can be trusted."
-accrual_source = "The reference input of the <a href=\"/results/ladder/#accrual-continuous\">continuous-accrual scenario</a>; each library's digits are capped at what its format holds. OpenZeppelin, Uniswap and Maker have no exponential, so they are not in it. Data: <a href=\"/data/ladder.json\">ladder.json</a>."
-wad_title = "Correct to the last wei"
-wad_note = "The share of results off by at least one wei, one dot per library, against the exact value rounded in each library's own direction. BlockulatorWad keeps Solady's names and is wrong on none: 0 of {n} results across {fns} functions and rounding directions."
-wad_source = "Seeded inputs over each function's domain, including those whose exact value sits next to a wei boundary. Every library here is 18-decimal fixed point."
-ladder_title = "Every scenario, every library"
-ladder_note = "Median correct digits after the last step of each of {scenarios} scenarios: compounding, amortising, bonding curves, option pricing, decay. Floating point on the left, fixed point on the right; a dash is a library with no model for that scenario, or one that reverts on it."
-ladder_source = "N up to 10,000 steps, each against 300-digit arithmetic; the step-by-step chart for each scenario is on <a href=\"/results/ladder/\">the ladder</a>. Data: <a href=\"/data/ladder.json\">ladder.json</a>."
-edges_title = "At the edges of each format"
-edges_note = "{probes} probes across {ops} ops where formats break: tiny and huge arguments, values next to a format's floor, the ends of each domain. Each bar counts a library's probes: to the left of zero the ones it fails (out of range, reverted, sent to zero, or no correct digit), to the right the ones it computes, by the digits it keeps."
-edges_source = "Each probe is one op evaluated once, against 200-digit arithmetic. Every probe: <a href=\"/results/edges/\">the edges</a>; data: <a href=\"/data/edges.json\">edges.json</a>."
+
+more_title = "Everything else we measured"
+[[extra.more]]
+label = "scenarios"
+title = "{scenarios} real calculations, up to 10,000 steps"
+text = "Compounding, loans, bonding curves, option pricing and decay, run in every library and checked against 300-digit arithmetic."
+href = "/results/ladder/"
+
+[[extra.more]]
+label = "edges"
+title = "{probes} calls where formats break"
+text = "Tiny and huge arguments and the ends of each domain, across {ops} ops: which libraries return zero, revert or lose every digit."
+href = "/results/edges/"
+
+[[extra.more]]
+label = "in production"
+title = "Aave and Morpho as deployed"
+text = "The live markets' own accrual against the formula each says it computes."
+href = "/results/deployed/"
+
+[[extra.more]]
+label = "incidents"
+title = "Four exploits, replayed"
+text = "Real attacks rerun from their own transactions, and what would have stopped each one."
+href = "/results/incidents/"
 
 [[extra.steps]]
-label = "the word"
-title = "128 fixed bits, 237 floating"
+label = "two formats"
+title = "{fp127} digits fixed, {fp19} floating"
 href = "/why/#where-the-bits-go-in-wad"
-text = "WAD gives the fraction 60 bits. FP127 gives it 128. FP19 floats 237 significant bits out to 10<sup>±78,913</sup>."
+text = "FP127 is fixed point with 128 bits after the point. FP19 is a 256-bit float that reaches 10<sup>±78,913</sup>. WAD gives the fraction 60 bits."
 
 [[extra.steps]]
-label = "the ladder"
-title = "Measured over N steps"
-# {scenarios} and {others} are counted from static/data/home.json by templates/home.html.
-text = "FP127, FP19 and {others} other libraries, {scenarios} scenarios, N = 1 to 10,000, against 300-digit arithmetic."
+label = "measured"
+title = "Against 300-digit arithmetic"
+href = "/results/"
+text = "FP127, FP19 and {others} other libraries, run through {scenarios} scenarios of up to 10,000 steps each."
 
 [[extra.steps]]
 label = "two forms"
-title = "One source each"
-text = "Each is one Yul source, generated into a deployed contract and an inline library, fuzzed equal on all of int256."
+title = "Deploy it or inline it"
+href = "/library/"
+text = "Each format is one Yul source, built into a deployed contract and an inline library that are fuzzed equal on every int256."
 
 [[extra.steps]]
 label = "trust"
-title = "No owner"
-text = "No contract has storage, a proxy or an upgrade. A change is a new salt and a new address."
+title = "No owner, no upgrades"
+text = "No contract has storage, a proxy or an admin key. A new version gets a new address, and the old ones stay."
 
 +++

@@ -3,15 +3,19 @@
 <dl class="kv">
   <dt>network</dt><dd>{{ d.network }} (chain id {{ d.chainId }})</dd>
   <dt>address</dt><dd>{{ d.address }} <button class="copy" data-copy="{{ d.address }}">copy</button></dd>
+  <dt>verified</dt><dd><a href="{{ d.verification.sourcifyRepo }}">Sourcify</a>, <a href="{{ d.verification.blockscout }}">Blockscout</a>. Etherscan has no Yul path.</dd>
+</dl>
+<details class="record"><summary>Deployment record</summary>
+<dl class="kv">
   <dt>deployer</dt><dd>{{ d.deployer }} (the CREATE2 proxy)</dd>
   <dt>salt</dt><dd>"{{ d.saltAscii }}" = {{ d.salt }}</dd>
   <dt>init code hash</dt><dd>{{ d.initCodeHash }}</dd>
   <dt>runtime</dt><dd>{{ d.runtimeBytes }} bytes, keccak {{ d.runtimeKeccak }}</dd>
   <dt>compiler</dt><dd>{{ d.compiler.language }}, solc {{ d.compiler.solc }}, optimizer {{ d.compiler.runs }} runs, {{ d.compiler.evmVersion }}</dd>
   <dt>deployed</dt><dd><a href="{{ d.explorerTx }}">block {{ d.block }}</a>, source commit {{ d.sourceCommit }}</dd>
-  <dt>verified</dt><dd><a href="{{ d.verification.sourcifyRepo }}">Sourcify</a>, <a href="{{ d.verification.blockscout }}">Blockscout</a>. Etherscan has no Yul path.</dd>
   <dt>record</dt><dd>{% if lib == "fp19" %}<a href="/contracts/deployments/FP19.md">FP19.md</a>, <a href="/data/fp19/fp19.json">fp19.json</a>{% else %}<a href="/contracts/deployments/FP127.md">FP127.md</a>, <a href="/data/fp127.json">fp127.json</a>{% endif %}</dd>
 </dl>
+</details>
 {%- endcomponent %}
 
 {#- One gas basis, site-wide: an op's typical inputs (random inputs that take no shortcut) where gas.json has them,
@@ -214,7 +218,7 @@
     liveChecked, liveMismatches, liveBlock and liveDate into the dataset. A regenerated dataset drops them. -#}
 {% component stamp(d: map, script: string) -%}
 {%- if d.runnersAhead is defined %}
-<p class="stamp pending"><strong>This data is ahead of the deployed runners.</strong> {{ d.runnersAhead.changed | join(sep=", ") }} changed after the ladder was deployed on Sepolia ("{{ d.runnersAhead.deployed }}"), so the live runner does not return these cells yet. They can be checked live after the "{{ d.runnersAhead.next }}" redeploy, with <code>uv run scripts/ladder/{{ script }}</code>; until then, <code>make ladder</code> reproduces them locally.</p>
+<p class="stamp pending"><strong>Live check pending a redeploy.</strong> These numbers come from a newer build than the runner on Sepolia ("{{ d.runnersAhead.deployed }}"); <code>make ladder</code> reproduces them, and <code>uv run scripts/ladder/{{ script }}</code> checks them live once "{{ d.runnersAhead.next }}" is deployed.</p>
 {%- elif d.liveChecked is defined %}
 <p class="stamp{% if d.liveMismatches > 0 %} bad{% endif %}"><strong>{{ d.liveChecked | num_format }} cells checked live on Sepolia at block {{ d.liveBlock | num_format }}, {{ d.liveMismatches }} mismatch{% if d.liveMismatches != 1 %}es{% endif %}.</strong> {{ d.liveDate }}, runner <a href="https://repo.sourcify.dev/11155111/{{ d.liveRunner }}">{{ d.liveRunner | truncate(length=10, end="…") }}</a>. Re-run: <code>uv run scripts/ladder/{{ script }}</code></p>
 {%- else %}
@@ -323,4 +327,13 @@
 <p class="small">The whole replay, with its provenance and what its test asserts: <a href="https://github.com/securedataresearch/blockulator/blob/master/{{ i.src }}">{{ i.src }}</a>.</p>
 </section>
 {%- endfor %}
+{%- endcomponent %}
+
+{#- The home copy's {placeholders} (content/_index.md), each counted from static/data/home.json: {{ <fill s={x.sub} /> }}. -#}
+{% component fill(s: string) -%}
+{%- set h = load_data(path="static/data/home.json") -%}
+{%- set_global worst = 0 -%}{%- for r in h.wad.rows %}{% if r.pct > worst %}{% set_global worst = r.pct %}{% endif %}{% endfor -%}
+{%- set_global d127 = 0 -%}{%- set_global d19 = 0 -%}
+{%- for l in h.libraries %}{% if l.id == "fp127" %}{% set_global d127 = l.digits %}{% elif l.id == "fp19" %}{% set_global d19 = l.digits %}{% endif %}{% endfor -%}
+{{ s | replace(from="{scenarios}", to=h.ladder.scenarios | length ~ "") | replace(from="{others}", to=((h.libraries | length) - 3) ~ "") | replace(from="{fp127}", to=d127 ~ "") | replace(from="{fp19}", to=d19 ~ "") | replace(from="{n}", to=h.wad.results | num_format) | replace(from="{fns}", to=h.wad.functionsTotal ~ "") | replace(from="{worst}", to=worst | round | int ~ "") | replace(from="{probes}", to=h.edges.probes ~ "") | replace(from="{ops}", to=h.edges.ops ~ "") | safe }}
 {%- endcomponent %}

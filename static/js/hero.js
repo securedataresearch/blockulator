@@ -1,30 +1,21 @@
-// Home hero: a slow cloth in the four site colours. WebGL 1, no libraries.
-// The cloth is drawn on the page's own background colour (site.css --bg, read at run time), pale in light mode and dark in
-// dark mode, so it blends into the page instead of sitting on it. The canvas stays transparent (CSS opacity 0) until the
-// first frame is on it; only then does it get .on and fade in. One fixed seed: the same cloth on every visit.
+// The banner on every page: a cloth in the four site colours, lit dye on ink, in both themes. WebGL 1, no libraries.
+// Each banner (site.css .banner) paints its CSS gradient first; the canvas stays transparent (opacity 0) until its first
+// frame is drawn, then gets .on and fades in over a gradient of about the same brightness, so nothing flashes.
+// data-seed picks the cloth (one per page group, the same on every visit); data-still draws one frame and stops.
 (function () {
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var darkQ = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
   var panels = document.querySelectorAll('canvas.cloth');
-  for (var i = 0; i < panels.length; i++) mount(panels[i], i);
+  for (var i = 0; i < panels.length; i++) mount(panels[i]);
 
-  function bg() {
-    // "#rrggbb" from the theme token; falls back to the page's computed background
-    var v = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-    var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(v);
-    if (m) return [parseInt(m[1], 16) / 255, parseInt(m[2], 16) / 255, parseInt(m[3], 16) / 255];
-    var c = getComputedStyle(document.documentElement).backgroundColor.match(/\d+(\.\d+)?/g) || [0, 0, 0];
-    return [c[0] / 255, c[1] / 255, c[2] / 255];
-  }
-
-  function mount(canvas, index) {
+  function mount(canvas) {
+  var still = reduce || canvas.hasAttribute('data-still');
   var gl = canvas.getContext('webgl', { antialias: false, alpha: true, premultipliedAlpha: true, preserveDrawingBuffer: false });
   if (!gl) { canvas.remove(); return; } // the page background stands in
 
   var vs = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
   var fs = [
     'precision mediump float;',
-    'uniform vec2 r; uniform float t; uniform vec2 m; uniform float seed; uniform float quiet; uniform vec3 base; uniform float dark;',
+    'uniform vec2 r; uniform float t; uniform vec2 m; uniform float seed; uniform float quiet;',
     'void main(){',
     '  vec2 uv = gl_FragCoord.xy / r; vec2 p = uv; p.x *= r.x / r.y;',
     // one wave, set at an angle, sliding across; angle, wavelength, lean, speed and dye come from the seed
@@ -64,15 +55,11 @@
     '  vec3 dye = mix(trough, crest, h);',
     '  dye = mix(dye, gold, smoothstep(0.85, 1.0, h) * (0.2 + 0.4 * h3));',
     '  float vig = smoothstep(1.45, 0.3, length(uv - vec2(0.6, 0.5)));',
-    '  float hush = 1.0 - smoothstep(0.55, 0.0, uv.x) * 0.55 * quiet;',
-    // dark: lit dye on the page colour, as the cloth always was
-    '  vec3 cd = base + dye * (0.05 + 0.95 * light) * (1.0 - weave) + vec3(0.85, 0.88, 0.9) * (sheen * 0.25 + lip * 0.18);',
-    '  cd = mix(base, cd, (0.3 + 0.7 * vig) * hush);',
-    // light: the same folds as a pale wash of dye on paper, deepest in the shade, a white lip on the crest
-    '  float k = (0.14 + 0.44 * (1.0 - light)) * (0.35 + 0.65 * vig) * hush;',
-    '  vec3 cl = mix(base, dye, k) * (1.0 - weave * 0.22 * k * 3.0);',
-    '  cl = mix(cl, vec3(1.0), (lip * 0.35 + sheen * 0.12) * vig * hush);',
-    '  gl_FragColor = vec4(mix(cl, cd, dark), 1.0);',
+    // a quieter left side, where the headline sits
+    '  float hush = 1.0 - smoothstep(0.55, 0.0, uv.x) * 0.45 * quiet;',
+    '  vec3 ink = vec3(0.045, 0.045, 0.05);',
+    '  vec3 c = ink + dye * (0.05 + 0.95 * light) * (1.0 - weave) + vec3(0.85, 0.88, 0.9) * (sheen * 0.25 + lip * 0.18);',
+    '  gl_FragColor = vec4(mix(ink, c, (0.3 + 0.7 * vig) * hush), 1.0);',
     '}'
   ].join('\n');
 
@@ -87,12 +74,8 @@
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
   var loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   var uR = gl.getUniformLocation(prog, 'r'), uT = gl.getUniformLocation(prog, 't'), uM = gl.getUniformLocation(prog, 'm');
-  var uBase = gl.getUniformLocation(prog, 'base'), uDark = gl.getUniformLocation(prog, 'dark');
-  gl.uniform1f(gl.getUniformLocation(prog, 'seed'), index * 2.7 + 0.013);
+  gl.uniform1f(gl.getUniformLocation(prog, 'seed'), parseFloat(canvas.getAttribute('data-seed')) || 0.013);
   gl.uniform1f(gl.getUniformLocation(prog, 'quiet'), canvas.hasAttribute('data-quiet') ? 1.0 : 0.0);
-  function theme() { var b = bg(); gl.uniform3f(uBase, b[0], b[1], b[2]); gl.uniform1f(uDark, darkQ && darkQ.matches ? 1.0 : 0.0); }
-  theme();
-  if (darkQ && darkQ.addEventListener) darkQ.addEventListener('change', function () { theme(); if (reduce) frame(performance.now()); });
 
   var mx = 0.5, my = 0.5, tx = 0.5, ty = 0.5;
   window.addEventListener('pointermove', function (e) { tx = e.clientX / window.innerWidth; ty = 1 - e.clientY / window.innerHeight; }, { passive: true });
@@ -105,17 +88,17 @@
     gl.viewport(0, 0, canvas.width, canvas.height);
   }
   var start = performance.now(), visible = true, raf = 0, onscreen = true, shown = false;
-  if ('IntersectionObserver' in window) { new IntersectionObserver(function (es) { onscreen = es[0].isIntersecting; if (onscreen && !reduce) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } }, { rootMargin: '80px' }).observe(canvas); }
+  if ('IntersectionObserver' in window) { new IntersectionObserver(function (es) { onscreen = es[0].isIntersecting; if (onscreen && !still) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } }, { rootMargin: '80px' }).observe(canvas); }
   function frame(now) {
     mx += (tx - mx) * 0.015; my += (ty - my) * 0.015;
     gl.uniform2f(uR, canvas.width, canvas.height); gl.uniform1f(uT, (now - start) / 1000 + 40.0); gl.uniform2f(uM, mx, my);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     // the first frame is in the buffer: show the canvas from the next paint
     if (!shown) { shown = true; canvas.classList.add('on'); }
-    if (!reduce && visible && onscreen) raf = requestAnimationFrame(frame);
+    if (!still && visible && onscreen) raf = requestAnimationFrame(frame);
   }
-  size(); window.addEventListener('resize', function () { size(); if (reduce) frame(performance.now()); });
-  document.addEventListener('visibilitychange', function () { visible = !document.hidden; if (visible && !reduce) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } });
+  size(); window.addEventListener('resize', function () { size(); if (still) frame(performance.now()); });
+  document.addEventListener('visibilitychange', function () { visible = !document.hidden; if (visible && !still) { cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); } });
   raf = requestAnimationFrame(frame);
   }
 })();
