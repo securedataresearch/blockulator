@@ -9,6 +9,8 @@ Each library's own code at x = k/32 for k = -192 to 192 (385 points on [-6, 6], 
 | FP19 | FP19, 256-bit float | 2.26e-72 | 71 | 71 | 29,937 | 35,774 |
 | FP127 | FP127, 127.128 fixed point | 1.47e-39 | 30 | 38 | 13,307 | 35,320 |
 | solstat | WAD (10^18) | 4.11e-8 | 7 | 7 | 4,879 | 4,985 |
+| Lyra v1 | 10^27 | 3.99e-17 | 9 | 16 | 7,426 | 9,855 |
+| Primitive RMM-01 | ABDK 64.64 | 0.0036 | 2 | 2 | 7,018 | 7,158 |
 
 ## erfc
 

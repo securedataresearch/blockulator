@@ -32,11 +32,15 @@ IMPLS = {
     "fp19": ("FP19", "FP19, 256-bit float", "contracts/src/fp19 (FP19Lib)"),
     "fp127": ("FP127", "FP127, 127.128 fixed point", "contracts/src/fp127 (FP127Lib)"),
     "solstat": ("solstat", "WAD (10^18)", "primitivefinance/solstat @ 80c603f, Gaussian.sol (lib/solstat)"),
+    "lyra": ("Lyra v1", "10^27", "lyra-finance/lyra-protocol @ ea9e36a, BlackScholes._stdNormalCDF (vendored)"),
+    "rmm": ("Primitive RMM-01", "ABDK 64.64", "primitivefinance/rmm-core @ 8d3ef9b, CumulativeNormalDistribution.getCDF (transcribed)"),
 }
 DECODE = {
     "fp19": fp19_decode,
     "fp127": lambda r: mpf(r) / mpf(2) ** 128,
     "solstat": lambda r: mpf(r) / mpf(10) ** 18,
+    "lyra": lambda r: mpf(r) / mpf(10) ** 27,
+    "rmm": lambda r: mpf(r) / mpf(2) ** 64,
 }
 TRUTH = {"normCdf": ncdf, "erfc": erfc}
 
