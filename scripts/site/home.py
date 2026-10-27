@@ -17,6 +17,7 @@ stays missing (no row), never a zero.
 from __future__ import annotations
 
 import json
+import re
 import statistics
 import sys
 from pathlib import Path
@@ -447,12 +448,115 @@ def incidents() -> list[dict]:
     return out
 
 
+# ---- /migrate/: each library's calls beside Blockulator's, from the same measurements ----
+def migrate(libs: list[dict]) -> dict:
+    """Per guide, tables in grouptable's shape. Solady and PRBMath: their WAD functions beside BlockulatorWad's
+    (wad.json: share off by a wei, worst error, gas). ABDK: 64.64 beside FP127 and Quad beside FP19, the same kind of
+    format, op by op (gas.json: gas, the call measured)."""
+    reg = {l["id"]: l for l in libs}
+    w = load("wad.json")
+    wad = {(r["lib"], r["function"]): r for r in w["rows"]}
+    g127, g19 = load("gas.json"), load("fp19/gas.json")
+
+    def med(g, op, form):
+        o = g["ops"].get(op)
+        sm = (o.get("typical") or o)["summary"].get(form) if o else None
+        return sm["median"] if sm else None
+
+    def pct(x):
+        return "0" if not x["wrong"] else f"{x['wrongPct']:.2g}%" if x["wrongPct"] < 1 else f"{round(x['wrongPct'])}%"
+
+    def wad_table(lib):
+        rows = []
+        for (l, fn), x in wad.items():
+            ours = wad.get(("blockulator", fn))
+            if l != lib or not ours:
+                continue
+            # the library's own function, out of the harness's wrapping: UD60x18.unwrap(PU.mul(UD60x18.wrap(...))) -> mul
+            name = next(m for m in re.findall(r"(?:\b\w+\.)?(\w+)\(", x["call"]) if m not in ("wrap", "unwrap", "int256", "uint256"))
+            t = re.search(r"\b(UD60x18|SD59x18)\b", x["call"])
+            rows.append({"label": f"{t[1]}.{name}" if t else name, "long": f"{reg[lib]['long']}: {x['call']}", "code": True, "family": reg[lib]["family"], "ours": False,
+                         "cells": [f"BlockulatorWad.{fn}", pct(x), pct(ours), f"{x['maxWei']:,}" if x["maxWei"] < 1e6 else f"{x['maxWei']:.2e}",
+                                   f"{x['gasTypical']:,}" if x.get("gasTypical") else None, f"{ours['gasTypical']:,}" if ours.get("gasTypical") else None]})
+        return {"cols": ["Blockulator", "off by a wei: theirs", "ours", "worst, wei", "gas: theirs", "ours"],
+                "groups": [{"name": reg[lib]["long"], "rows": rows}]} if rows else None
+
+    def op_table(lib, g, theirs, ours, target):
+        calls = g.get("calls", {}).get(lib, {})
+        rows = [{"label": call, "long": f"{reg[lib]['long']}: {op}", "code": True, "family": reg[lib]["family"], "ours": False,
+                 "cells": [f"{target}.{op}", f"{t:,}" if (t := med(g, op, theirs)) else None, f"{o:,}" if (o := med(g, op, ours)) else None]}
+                for op, call in calls.items()]
+        return {"cols": [target, "gas: theirs", "ours"], "groups": [{"name": reg[lib]["long"], "rows": rows}]}
+
+    return {
+        "solady": {"wad": wad_table("solady")},
+        "prbmath": {"wad": wad_table("prb"), "wadud": wad_table("prbud")},
+        "abdk": {"ops": op_table("abdk", g127, "abdk", "lib", "FP127Lib"), "quad": op_table("quad", g19, "quad", "lib", "FP19Lib")},
+    }
+
+
+# ---- /vs/: each established library against its Blockulator counterpart, every number from the datasets ----
+VS = [  # (section id, theirs, ours): ours are compared column by column
+    ("solady", "solady", ["blockulator", "fp127"]),
+    ("prbmath", "prb", ["blockulator", "fp127"]),
+    ("abdk", "abdk", ["fp127"]),
+    ("quad", "quad", ["fp19"]),
+]
+
+
+def vs(home: dict, libs: list[dict]) -> dict:
+    reg = {l["id"]: l for l in libs}
+    gas = {(r["lib"], r["op"]): r["gas"] for r in home["gas"]["rows"]}
+    w = {(r["lib"], r["function"]): r for r in load("wad.json")["rows"]}
+    wadname = {"mul": "mulWad", "exp": "expWad", "ln": "lnWad", "pow": "powWad", "sqrt": "sqrtWad"}
+    lad = {(r["lib"], r["scenario"]): r for r in home["ladder"]["rows"]}
+    edges = {r["lib"]: r for r in home["edges"]["rows"]}
+    proofs = load("proofs.json")["ops"]
+    sc = home["ladder"]["scenarios"][0]
+
+    def g(lib, op):
+        # the WAD libraries' gas is the same function in the same harness as BlockulatorWad's (wad.json)
+        if lib in ("blockulator", "solady", "prb") and (lib, wadname.get(op, "")) in w:
+            x = w.get((lib, wadname.get(op, "")))
+            return x and x.get("gasTypical")
+        return gas.get((lib, op))
+
+    def wrong(lib, op):
+        x = w.get((lib, wadname.get(op, "")))
+        return None if not x else "0" if not x["wrong"] else f"{x['wrongPct']:.2g}%" if x["wrongPct"] < 1 else f"{round(x['wrongPct'])}%"
+
+    def proven(lib):
+        name = {"fp127": "FP127", "fp19": "FP19"}.get(lib)
+        if not name:
+            return None
+        ps = [o for o in proofs if o["lib"] == name]
+        return f"{sum(o['status'] == 'proven' for o in ps)} of {len(ps)}"
+
+    def edge(lib, k):
+        x = edges.get(lib)
+        return None if not x else f"{x[k]:g}"
+
+    metrics = [("digits of precision at 1", lambda l: str(reg[l]["digits"]))] \
+        + [(f"gas, {op}", lambda l, op=op: (lambda v: f"{v:,}" if v else None)(g(l, op))) for op in ("mul", "exp", "ln", "pow", "sqrt")] \
+        + [(f"{wadname[op]} results off by a wei", lambda l, op=op: wrong(l, op)) for op in ("exp", "ln", "pow")] \
+        + [(f"{sc['title'].lower()}: median digits after the last step", lambda l: (lambda x: f"{x['digits']:.1f}" if x and x["digits"] is not None else None)(lad.get((l, sc["id"]))))] \
+        + [("edge probes: median digits", lambda l: edge(l, "median")), ("edge probes: reverted", lambda l: edge(l, "reverts")),
+           ("edge probes: went to zero", lambda l: edge(l, "zero")), ("core ops formally proven", proven)]
+    out = {}
+    for id, theirs, ours in VS:
+        cols = [theirs] + ours
+        rows = [{"label": name, "long": name, "family": reg[theirs]["family"], "ours": False, "cells": [f(c) for c in cols]} for name, f in metrics]
+        rows = [r for r in rows if any(c is not None for c in r["cells"][1:])]
+        out[id] = {"cols": [reg[c]["label"] for c in cols], "groups": [{"name": "", "rows": rows}]}
+    return out
+
+
 def main(argv: list[str]) -> int:
     home = build()
     libs = load("libraries.json")["libraries"]
     dchart, dtable = deployed_data()
     outs = {OUT: home, PAGES: pages(libs) | {"deployed": dchart},
-            TABLES: inner_tables(libs) | {"wad": wad_tables(libs), "deployed": dtable, "incidents": incidents()}}
+            TABLES: inner_tables(libs) | {"wad": wad_tables(libs), "deployed": dtable, "incidents": incidents(), "migrate": migrate(libs), "vs": vs(home, libs)}}
     stale = []
     for path, doc in outs.items():
         text = json.dumps(doc, separators=(",", ":")) + "\n"
