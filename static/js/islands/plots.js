@@ -376,6 +376,29 @@ const charts = {
     })));
   },
 
+
+  // /results/cdf/: one function (data-arg normCdf or erfc), correct digits at each x = k/32, every on-chain implementation
+  cdf(el, t, width) {
+    const op = el.dataset.arg, rows = [];
+    for (const i of pages.cdf) for (const [k, d] of i.series[op] || []) if (d != null) rows.push({ id: i.id, label: i.label, family: i.family, x: k / 32, d: Math.min(d, 75) });
+    const ids = [...new Set(rows.map((r) => r.id))];
+    const ends = ids.map((id) => { const rs = rows.filter((r) => r.id === id); const r = rs[rs.length - 1]; return { ...r, med: rs.map((q) => q.d).sort((a, b) => a - b)[rs.length >> 1] }; })
+      .sort((a, b) => b.med - a.med);
+    for (let i = 1; i < ends.length; i++) ends[i].ly = Math.min(ends[i].med, (ends[i - 1].ly ?? ends[i - 1].med) - 5);
+    ends[0].ly = ends[0].med;
+    const narrow = width < 560;
+    el.append(Plot.plot(base(t, width, {
+      height: narrow ? 320 : 380, marginLeft: 44, marginRight: narrow ? 78 : 96, marginBottom: 42,
+      x: { domain: [-6, 6], label: "x →", ticks: narrow ? [-6, -3, 0, 3, 6] : undefined },
+      y: { domain: [0, 76], label: "↑ correct digits of the result", grid: true },
+      marks: [
+        Plot.line(rows, { x: "x", y: "d", z: "id", stroke: (d) => t.family(d.family), strokeWidth: (d) => (d.id === "fp19" || d.id === "fp127" ? 2.6 : 1.8) }),
+        Plot.text(ends, { x: 6, y: "ly", text: (d) => `${d.label}: ${d.med}`, dx: 8, textAnchor: "start", fill: (d) => t.family(d.family), fontWeight: 600 }),
+        Plot.tip(rows, Plot.pointer({ x: "x", y: "d", title: (d) => `${d.label}\n${op}(${d.x}): ${d.d >= 75 ? "75 or more" : d.d} correct digits` })),
+      ],
+    })));
+  },
+
 };
 
 // on hover the nearest dot within 24px (as the tip finds it) takes a halo in its own colour (blockulator.css .plot .dotm)

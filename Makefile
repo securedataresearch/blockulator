@@ -58,6 +58,7 @@ help:
 	@echo "  make pack             - Stage the npm/Soldeer package in dist/contracts/ and check both dry runs' file lists (publishes nothing)"
 	@echo "  make og               - Redraw static/og.png, the link-preview card (scripts/og/og.py)"
 	@echo "  make deploy-ladder-sepolia - Deploy them (reads DEPLOYER_KEY), then record"
+	@echo "  make cdf              - The normal CDF and erfc of every on-chain implementation against mpmath -> docs/benchmarks/cdf.{json,md}"
 	@echo "  make verify-ladder-sepolia - Verify them on Sourcify (and Etherscan if ETHERSCAN_API_KEY is set)"
 	@echo "  make fetch-baseline   - Re-fetch the legacy Huff runtime bytecode from Sepolia"
 	@echo "  make predict          - Print the CREATE2 address of the current FP127 object"
@@ -139,6 +140,13 @@ edges: build
 
 edges-check: build gen-edges-check
 	@forge test --match-contract "^Edges$$" -vv | $(PY) scripts/ladder/edges.py --check
+
+# the normal CDF and erfc, every on-chain implementation (test/cdf/Cdf.t.sol) -> docs/benchmarks/cdf.{json,md}
+cdf: build
+	@forge test --match-contract "^Cdf$$" -vv | $(PY) scripts/cdf/cdf.py
+
+cdf-check: build
+	@forge test --match-contract "^Cdf$$" -vv | $(PY) scripts/cdf/cdf.py --check
 
 test: gen-check vectors-check
 	@forge test --match-path "test/fp127/*"

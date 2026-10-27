@@ -383,3 +383,7 @@ html.nvt.leaving .page { animation: page-out var(--t-out) var(--ease-in) both; }
 @media (max-width: 640px) { .home .unit-chart { padding: 8px 6px; } }
 /* an inner page's chart is a readable size on a wide screen, centred like the prose; its table keeps the full width */
 .doc .plot { max-width: 1180px; margin-inline: auto; }
+/* /results/cdf/: the library and its representation as plain text; on a phone the two detail columns give way */
+.cdftable tbody th { font: 500 14px/1.35 var(--sans); text-transform: none; letter-spacing: normal; color: var(--text-strong); }
+.cdftable tbody th .meta { font-weight: 400; font-size: 12.5px; color: var(--muted); }
+@media (max-width: 640px) { .cdftable .wide { display: none; } .cdftable thead th { white-space: normal; line-height: 1.3; } .cdftable th, .cdftable td { padding-inline: 8px; } }

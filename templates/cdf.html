@@ -1,0 +1,20 @@
+{% extends "page.html" %}
+{% block width %} wide{% endblock width %}
+{% block body %}
+{#- Every on-chain normal CDF and erfc: a chart per function over its table, from docs/benchmarks/cdf.json (make cdf). -#}
+{%- set d = load_data(path="static/data/cdf.json") -%}
+{%- for op in ["normCdf", "erfc"] %}
+<section class="scenario" id="{{ op | lower }}">
+<h2>{% if op == "normCdf" %}Φ(x), the normal CDF{% else %}erfc(x){% endif %}</h2>
+{{ <plot chart="cdf" arg={op} label="Correct digits of each implementation's result at x = k/32 from -6 to 6; the numbers are in the table below." /> }}
+<div class="tablewrap"><table class="datatable cdftable">
+<thead><tr><th scope="col">implementation</th><th scope="col" class="num wide">largest error</th><th scope="col" class="num wide">fewest digits</th><th scope="col" class="num">median digits</th><th scope="col" class="num">median gas</th></tr></thead>
+<tbody>
+{%- for i in d.implementations %}{% if i.ops[op] is defined %}{% set o = i.ops[op] %}
+<tr{% if i.id == "fp19" or i.id == "fp127" %} class="ours"{% endif %}><th scope="row" title="{{ i.source }}">{{ i.label }}<br><span class="meta">{{ i.representation }}</span></th><td class="num wide">{{ o.maxAbsErr }}</td><td class="num wide">{{ o.digitsMin }}</td><td class="num">{{ o.digitsMedian }}</td><td class="num">{{ o.gasMedian | num_format }}</td></tr>
+{%- endif %}{% endfor %}
+</tbody></table></div>
+</section>
+{%- endfor %}
+<p class="small">Each library's own code at the {{ d.grid.points }} points x = k/32 from −6 to 6, exact in every representation here, against {{ d.truth }}. Digits are correct significant digits; gas is the median of a call over the points. Data: <a href="/data/cdf.json">cdf.json</a>; reproduce with <code>make cdf</code>.</p>
+{% endblock body %}

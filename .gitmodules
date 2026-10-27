@@ -28,3 +28,6 @@
 [submodule "lib/snekmate"]
 	path = lib/snekmate
 	url = https://github.com/pcaversaccio/snekmate
+[submodule "lib/solstat"]
+	path = lib/solstat
+	url = https://github.com/primitivefinance/solstat
