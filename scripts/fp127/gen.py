@@ -85,6 +85,12 @@ LIBS = {
                        "iface_notice": "Interface of the deployed FP19S object, FP19's special functions:\n///         lambertW0 and lambertWm1, the two real branches of Lambert W, on\n///         the same 256-bit binary floating point words as IFP19."},
         },
         "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
+        # --wide-lib: both rounding tests forced, so every result comes from
+        # the second stage; --mid-lib: only the fast path's, so pow, powu and
+        # compound's results come from the middle stage (its own test kept)
+        "forced": {"rbad": "function rbad(D, err) -> b {\n    b := 1\n}",
+                   "rbadm": "function rbadm(D, err) -> b {\n    b := 1\n}"},
+        "mid_forced": {"rbad": "function rbad(D, err) -> b {\n    b := 1\n}"},
     },
     # BlockulatorWad: Solady's WAD names on FP19's kernels. Its source calls
     # FP19.yul.src's functions (the base), and only its own exports are
@@ -586,7 +592,10 @@ PROBE_RESIDUAL = 92
 # nonzero (the test said the fast value may round wrongly), "call" counts
 # every call (the helper is the fallback itself).
 COUNTS = {
-    "fp19": {"rbad": "ret"},
+    # FP19: rbad fires when the fast value cannot round (the middle stage or the
+    # second stage follows), rbadm when pow's, powu's or compound's middle stage
+    # cannot either (the second stage follows), counted in the next word
+    "fp19": {"rbad": "ret", "rbadm": "ret2"},
     # BlockulatorWad: wadbad fires when FP19's bound reaches a wei boundary
     "wad": {"wadbad": "ret"},
     # FP127: the double-word log l2p runs exactly when the one-word log or pow
@@ -598,6 +607,8 @@ COUNTS = {
 PROBES = {
     "fp19": ["log2m", "exp2frac", "wexpm1", "wlnw", "cfrun", "erfw", "lwfix",
               "lwlog", "lwf128", "lnc", "lwq510", "lwsp", "lwy", "powslow", "compslow", "wln1ps",
+              # the middle stage of pow, powu and compound
+              "powmid", "compmid", "mratio", "mlog2m",
               "erfser", "erfcxa", "erfcxcf", "erfasym", "expnegsq",
               # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp
               "em1k", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cbrtw", "cubegt",
@@ -621,13 +632,15 @@ def _sig(f: Func) -> tuple[str, str, str]:
 
 def count_wrap(f: Func, mode: str) -> str:
     """The helper renamed <name>cnt, and a wrapper that adds one to the word
-    at COUNT_SLOT when the rounding test fires (or on every call)."""
+    at COUNT_SLOT (ret2: the next word) when the rounding test fires (or on
+    every call)."""
     head, args, call = _sig(f)
-    cond = f.rets[0] if mode == "ret" else "1"
+    cond = f.rets[0] if mode.startswith("ret") else "1"
+    slot = COUNT_SLOT + (0x20 if mode.endswith("2") else 0)
     return (f"{_rename(f, f.name + 'cnt')}\n\n"
             f"{head} {{\n"
             f"    {call}{f.name}cnt({args})\n"
-            f"    if {cond} {{ mstore({COUNT_SLOT:#x}, add(mload({COUNT_SLOT:#x}), 1)) }}\n"
+            f"    if {cond} {{ mstore({slot:#x}, add(mload({slot:#x}), 1)) }}\n"
             f"}}")
 
 
@@ -666,11 +679,13 @@ def instrumented(lib: str, kind: str) -> dict[str, str]:
     return {n: PROBE_BASE + PROBE_STRIDE * i for i, n in enumerate(PROBES[lib])}
 
 
-def emit_library(src: Source, lib_name: str | None = None, wide: bool = False,
+def emit_library(src: Source, lib_name: str | None = None, wide: bool | str = False,
                  count: dict | None = None, probe: dict | None = None) -> str:
     """The inline library. wide=True is the test-only variant: rbad (the
     rounding test of every correctly rounded op) always says the fast result
-    is too close to a tie, so every call takes the wide second stage.
+    is too close to a tie, and so does the middle stage's rbadm, so every
+    call takes the wide second stage. wide="mid" forces rbad only, so pow,
+    powu and compound return their middle stage.
     count / probe (test only, never committed) wrap the named helpers to
     record fallbacks or gas in memory; see count_wrap and probe_wrap."""
     lib_name = lib_name or LIB_NAME
@@ -685,8 +700,9 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool = False,
         texts = []
         for f in funcs:
             t = f.text
-            if wide and f.name in LIB.get("forced", {"rbad": ""}):
-                t = LIB.get("forced", {}).get(f.name) or "function rbad(D, err) -> b {\n    b := 1\n}"
+            forced = LIB.get("mid_forced" if wide == "mid" else "forced", {"rbad": ""})
+            if wide and f.name in forced:
+                t = forced.get(f.name) or "function rbad(D, err) -> b {\n    b := 1\n}"
             elif count and f.name in count:
                 t = count_wrap(f, count[f.name])
             elif probe and f.name in probe:
@@ -733,6 +749,8 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool = False,
             what += ", with the rounding test forced to fail (every call takes the second stage)"
         notice = (f"TEST ONLY. {LIB_NAME} instrumented: {what}.\n///         "
                   "Results are unchanged. Generated for make sweep / make profile; never\n///         deploy or import it.")
+    elif wide == "mid":
+        notice = "TEST ONLY. " + LIB_NAME + " with the fast path's rounding test forced to fail, so\n///         pow, powu and compound return their middle stage (and the other\n///         correctly rounded ops their second stage). Generated for make sweep's\n///         middle-stage pass; never deploy or import it."
     elif wide:
         notice = "TEST ONLY. " + LIB_NAME + " with the rounding test forced to fail, so every\n///         correctly rounded op returns its wide second stage. Generated for\n///         make sweep's second-stage pass; never deploy or import it."
     else:
@@ -834,6 +852,7 @@ def main() -> int:
     ap.add_argument("--src", type=Path, default=None)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--wide-lib", type=Path, default=None, help="write only the test-only forced-second-stage library here")
+    ap.add_argument("--mid-lib", type=Path, default=None, help="write only the test-only library whose fast-path test is forced (FP19's middle stage) here")
     ap.add_argument("--count-lib", type=Path, default=None, help="write only the test-only library that counts rounding-test fallbacks here")
     ap.add_argument("--probe-lib", type=Path, default=None, help="write only the test-only library with gas probes on the profiled helpers here")
     ap.add_argument("--forced", action="store_true", help="with --count-lib or --probe-lib: also force the rounding test to fail, as --wide-lib")
@@ -856,12 +875,13 @@ def main() -> int:
         src = with_base(src, raw)
     else:
         validate(src, raw)
-    if args.wide_lib:
-        name = args.wide_lib.stem
-        args.wide_lib.parent.mkdir(parents=True, exist_ok=True)
-        args.wide_lib.write_text(emit_library(src, name, wide=True))
-        print(f"wrote {args.wide_lib} ({name}: {', '.join(LIB.get('forced', {'rbad': ''}))} forced to 1)")
-        return 0
+    for path, mode, key in ((args.wide_lib, True, "forced"), (args.mid_lib, "mid", "mid_forced")):
+        if path:
+            name = path.stem
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(emit_library(src, name, wide=mode))
+            print(f"wrote {path} ({name}: {', '.join(LIB.get(key, {'rbad': ''}))} forced to 1)")
+            return 0
     for path, kind in ((args.count_lib, "count"), (args.probe_lib, "probe")):
         if path:
             names = instrumented(args.lib, kind)

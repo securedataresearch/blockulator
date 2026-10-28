@@ -585,18 +585,23 @@ def emit_yul(K: Kernels) -> str:
         f"/// bound times y, y P's floor 1/4 and the final floor 1\n"
         f"/// (kernel254.py; release two's twelve stages were bounded at 37).\n"
         f"function log2m(mm) -> r {{\n"
-        f"    let w := sub(mm, {hx(WS)})\n"
+        f"    let acc, w := log2lv(sub(mm, {hx(WS)}))\n"
+        f"    let y := divh(shl(2, w), add({hx(1 << 255)}, shr(2, w)))\n"
+        f"    let p := lnp(y)\n"
+        f"    {hiset('w', 'y', 'p')}\n"
+        f"    r := shr(2, add(acc, shr(1, w)))\n}}\n")
+    out.append(
+        f"/// log2m's two table levels for w = mm - 1 at 2^-254: acc the sum of the two\n"
+        f"/// table words at 2^-256, v = w2 floored at 2^-256 (the middle stage's\n"
+        f"/// mlog2m reads the same words and redoes the reductions exactly).\n"
+        f"function log2lv(w) -> acc, v {{\n"
         f"    let i := shr(250, w)\n"
-        f"    w := div(shl(6, sub(w, shl(250, i))), add(16, i))\n"
-        f"    let acc := 0")
+        f"    v := div(shl(6, sub(w, shl(250, i))), add(16, i))")
     out += tree("i", lambda j: f"acc := {hx(K.ltab[0][j])}" if j else "")
-    out.append("    i := shr(248, w)\n"
-               "    w := div(shl(8, sub(w, shl(248, i))), add(256, i))")
+    out.append("    i := shr(248, v)\n"
+               "    v := div(shl(8, sub(v, shl(248, i))), add(256, i))")
     out += tree("i", lambda j: f"acc := add(acc, {hx(K.ltab[1][j])})" if j else "")
-    out.append(f"    let y := divh(shl(2, w), add({hx(1 << 255)}, shr(2, w)))\n"
-               f"    let p := lnp(y)\n"
-               f"    {hiset('w', 'y', 'p')}\n"
-               f"    r := shr(2, add(acc, shr(1, w)))\n}}\n")
+    out.append("}\n")
 
     for h, nm, fit, dom in ((hl, "lnp", K.fit_ln, "2^-8/(2 - 2^-8)"), (hw, "lnpw", K.fit_lnw, "2^-4/(2 - 2^-4)")):
         out.append(

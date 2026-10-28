@@ -105,7 +105,14 @@ The transcendental functions run in two stages
    the exact value is strictly between I and I + 1 and the direction picks
    one. On the sweep's inputs, which crowd the wei boundaries, the exact
    cases and the top of the range, 0 (lambertW0) to 0.9% (exp) go on, 6%
-   for log2 and log10 and 9% for pow, nearly all of them exact values.
+   for log2 and log10 and 9% for pow. Half of pow's are exact values: an
+   integer power of a decimal rational that is a whole number of wei
+   (x 10^-18 = p / (2^b2 5^b5) in lowest terms, so (x 10^-18)^n 10^18 is
+   p^n 2^(18 - b2 n) 5^(18 - b5 n), or for n < 0 a power of 2 and 5 over
+   p^-n). `wadpowx` decides those exactly before the second stage, in 6,900
+   to 7,700 gas against its 54,000. The other half are results above about
+   2^175 wei, where the cut needs the power itself to about 2^-275 and the
+   second stage is the stage that has it.
 2. **The second stage**, when the bound reaches a wei boundary (or the
    value is above about 2^240 wei, where 2^-254 is too coarse): the value
    from the exact input in two words at 2^-510, with FP19's own

@@ -20,7 +20,7 @@ next deploy):
   where the optimizer had made three.
 
 FP19's erf, erfc and normCdf move to a fifth object, FP19N (salt "FP19N
-v6", 17,962 bytes; FP19S keeps Lambert W at 11,339), and their fast path is
+v6", 17,962 bytes; FP19S keeps Lambert W at 11,338), and their fast path is
 a fit (`scripts/fp19/generators/erf19.py`, coefficients in `erfcxu.json`,
 checked in CI):
 
@@ -40,6 +40,32 @@ checked in CI):
   in place of 1700/ξ + 28, at least one above what 2^−392 needs at every band
   edge (`erf19.py --cf-depth`): 12% fewer. Its worst case (about 361k, the
   two-word series just below y = 7) is unchanged.
+
+FP19's pow, powu and compound gain a middle stage between the fast value and
+the second stage, the same words (`scripts/fp19/generators/mid254.py`,
+checked in CI; `bounds.py` measures it):
+
+- When the fast bound, which grows with |y log2 x|, reaches the rounding
+  boundary, log2 x is recomputed within 2^-272 relative near one (`mratio`,
+  ln(1 + d)/d from one divh, an exact residual and a degree-11 minimax
+  polynomial) or 2^-279.5 absolute off it (`mlog2m`, log2m's tables with
+  exact two-word reductions and 64-bit low parts), t = y log2 x formed
+  exactly from it, and the same 2^f kernel run; its bound is 10 units
+  whatever |y|, so the second stage runs for 0.005% (pow), 0.017% (powu)
+  and 0.067% (compound) of the sweep's inputs instead of 1.2%, 9.8% and
+  13.5%. p99 gas: pow 54,522 → 15,079, powu 59,027 → 19,098, compound
+  106,018 → 15,904; the fast path about 34 gas more (log2m's table walk is
+  now the function log2lv). `compsure` is gone.
+- FP19E is 23,621 bytes (2.2: 21,598) and FP19H 13,020 (13,021): both take
+  new salts at the next deploy.
+- `make sweep` runs a third FP19 pass, the middle stage alone (`gen.py
+  --mid-lib`: the fast path's test forced, `rbadm` kept); `--wide-lib` forces
+  both; the count pass records `rbadm` beside `rbad`.
+
+BlockulatorWad's powWad decides an integer power that is a whole number of
+wei exactly (`wadpowx`) before its second stage: half of the sweep's
+fallbacks, 54,000 → 6,900–7,700 gas. Results above about 2^175 wei still
+take the second stage.
 
 factorial is a table in both libraries (`scripts/fp19/generators/facttab.py`,
 checked in CI):
