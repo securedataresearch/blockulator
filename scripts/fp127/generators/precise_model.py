@@ -383,7 +383,7 @@ def pow2t(t: int, ay: int):
     at = abs(t)
     k = at >> 192
     e = k + 1 if t >= 0 else -k
-    eb = (ay >> (80 - e)) + ((1 << (e + 48)) if e + 48 >= 0 else 0) + 6
+    eb = ((ay >> (80 - e)) if e <= 80 else 0) + ((1 << (e + 48)) if e + 48 >= 0 else 0) + 6
     if eb > 1 << 61:
         return None, 0, None, eb
     f = at & (G - 1)
@@ -456,6 +456,76 @@ def fastpow(n=20000):
         worst = max(worst, err / eb)
     print(f"pow2t: {taken} of {total} inputs decided in one word, every one equal to the double word's; "
           f"largest (true error of both values) / eb = {mp.nstr(worst, 4)}")
+
+
+def fastcompound(n=20000):
+    """compound's one-word route (compt): on random rates (per-second to 2^-1,
+    both signs) and periods (16 to 2^31, both signs), whenever pow2t says ok
+    its word is the nearest word of the exact (1 + rate)^k, and the true
+    error of v stays under eb. Prints the share decided and the largest
+    (true error / eb)."""
+    rng = random.Random(11)
+    worst, taken, total = mpf(0), 0, 0
+    worst2, taken2 = mpf(0), 0
+    for i in range(n):
+        rate = rng.getrandbits(rng.randint(40, 127)) * rng.choice([1, 1, -1])
+        if i % 5 == 0:
+            rate = rng.getrandbits(rng.randint(100, 135))
+        k = rng.randint(16, 1 << rng.randint(5, 31)) * rng.choice([1, 1, -1])
+        X = ONE + rate
+        if X <= 0 or X >= 1 << 255:
+            continue
+        L = log2g(X)
+        t = k * L
+        truth = mp.power(mpf(X) / ONE, k) * G
+        want = int(mp.floor(truth / (1 << 64) + mpf(1) / 2))
+        if abs(t) >= 1 << 199:                       # decided by t's sign and size alone
+            if t > 0:
+                assert want >= 1 << 255, (rate, k)  # Overflow
+            elif t < -(130 << 192):
+                assert want == 0, (rate, k)
+            continue
+        total += 1
+        r, ok, v, eb = pow2t(t, (abs(k) << 113) + 1)
+        if ok:
+            taken += 1
+            assert r == want, (rate, k, r, want)
+            worst = max(worst, abs(mpf(v) - truth) / eb)
+            continue
+        r2, ok2, V, eb2, unit = pow2rt(k << 128, l2p(X), (abs(k) >> 42) + 3)
+        if not ok2:
+            continue
+        taken2 += 1
+        assert r2 == want, (rate, k, r2, want)
+        if V is not None:
+            worst2 = max(worst2, abs(V - truth / G * mpf(2) ** 129) / unit / eb2)
+    print(f"compt: {taken} of {total} inputs decided in one word, every one the nearest word; "
+          f"largest (true error of v) / eb = {mp.nstr(worst, 4)}")
+    print(f"pow2rt: {taken2} of the other {total - taken} decided at 2^-299, every one the nearest word; "
+          f"largest (true error of V) / eb = {mp.nstr(worst2, 4)}")
+
+
+def pow2rt(Y: int, L: int, eb: int):
+    """(r, ok, V, eb, unit) as the Yul's pow2rt: V = 2^e + sh 2^(e - 256), the
+    value the Yul halves, in units of 2^-128 (twice the result's scale), and
+    unit sh's last bit in the same units (V None where it decides without one)."""
+    n, f = y2nf(Y, L)
+    if n > 126:
+        return None, 0, None, eb, None
+    if n < -129:
+        return 0, int(n < -130), None, eb, None
+    sh = expkx(*lnmul(f)) >> 256
+    e = n + 129
+    sb = 256 - e
+    w = (1 << e) + (sh >> sb) + 1
+    r = w >> 1
+    if w >> 256:
+        return None, 0, None, eb, None
+    d = sh & ((1 << sb) - 1)
+    if w & 1:
+        d = (1 << sb) - d
+    V = (mpf(1) + mpf(sh) / mpf(2) ** 256) * mpf(2) ** e
+    return r, int(d > eb), V, eb, mpf(2) ** (e - 256)
 
 
 # ---------------------------------------------------------------------------
@@ -835,6 +905,8 @@ if __name__ == "__main__":
         constants()
     elif cmd == "lambertw":
         sys.exit(1 if lw_measure(int(sys.argv[2]) if len(sys.argv) > 2 else 8) else 0)
+    elif cmd == "fastcompound":
+        fastcompound(int(sys.argv[2]) if len(sys.argv) > 2 else 20000)
     elif cmd == "fastpow":
         fastpow(int(sys.argv[2]) if len(sys.argv) > 2 else 20000)
     else:
