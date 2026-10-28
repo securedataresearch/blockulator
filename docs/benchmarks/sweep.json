@@ -190,9 +190,9 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 10626,
-   "gasP99": 15745,
-   "gasMax": 89962,
+   "gasMedian": 10627,
+   "gasP99": 15746,
+   "gasMax": 89963,
    "fallback": 4,
    "fallbackRuns": 4,
    "fallbackPct": 0.1
@@ -210,9 +210,9 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 10867,
-   "gasP99": 24493,
-   "gasMax": 162141,
+   "gasMedian": 10868,
+   "gasP99": 24494,
+   "gasMax": 162142,
    "fallback": 5,
    "fallbackRuns": 5,
    "fallbackPct": 0.083
@@ -230,9 +230,9 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 11343,
-   "gasP99": 24221,
-   "gasMax": 222716,
+   "gasMedian": 11344,
+   "gasP99": 24222,
+   "gasMax": 222717,
    "fallback": 10,
    "fallbackRuns": 10,
    "fallbackPct": 0.167

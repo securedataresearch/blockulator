@@ -269,8 +269,8 @@
      },
      "median": 544,
      "max": {
-      "op": "powu",
-      "bytes": 15557
+      "op": "normCdf",
+      "bytes": 17159
      }
     },
     "viaIr": {
@@ -280,14 +280,14 @@
      },
      "median": 443,
      "max": {
-      "op": "powu",
-      "bytes": 13796
+      "op": "normCdf",
+      "bytes": 17344
      }
     }
    },
    "sum": {
-    "legacy": 211497,
-    "viaIr": 195587
+    "legacy": 225807,
+    "viaIr": 209090
    },
    "ops": {
     "add": {
@@ -331,16 +331,16 @@
      "viaIr": 8000
     },
     "erf": {
-     "legacy": 12261,
-     "viaIr": 12409
+     "legacy": 17031,
+     "viaIr": 16910
     },
     "erfc": {
-     "legacy": 12336,
-     "viaIr": 12638
+     "legacy": 17106,
+     "viaIr": 17139
     },
     "normCdf": {
-     "legacy": 12389,
-     "viaIr": 12843
+     "legacy": 17159,
+     "viaIr": 17344
     },
     "lambertW0": {
      "legacy": 10740,
@@ -703,11 +703,11 @@
     "erfc",
     "normCdf"
    ],
-   "legacy": 16431,
-   "viaIr": 15176,
+   "legacy": 20175,
+   "viaIr": 19495,
    "sumOfSingles": {
-    "legacy": 36986,
-    "viaIr": 37890
+    "legacy": 51296,
+    "viaIr": 51393
    }
   },
   {
