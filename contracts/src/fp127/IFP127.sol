@@ -322,7 +322,7 @@ interface IFP127 {
     ///      within 2^-145 plus one unit.
     function atanh(int256 x) external pure returns (int256 r);
     /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
-    ///         1 - erfc(x) by the continued fraction, both at 2^-192 and rounded
+    ///         1 - erfc(x) by the tail polynomial, both at 2^-192 and rounded
     ///         once; +-1 exactly from |x| >= 9.375, where 1 - erf is below
     ///         2^-130.8 and the subtraction rounds to one.
     function erf(int256 x) external pure returns (int256 r);

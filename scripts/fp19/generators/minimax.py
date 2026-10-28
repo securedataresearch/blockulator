@@ -6,7 +6,8 @@ certificate of their sup norm, for the FP19 and FP127 kernels.
 
 remez(f, deg, a, b, rel=True) returns the coefficients (ascending, in x) of
 the degree-deg polynomial that minimises max |P(x) - f(x)| (rel: divided by
-|f(x)|) on [a, b], and the levelled error E of the last reference. The fit
+|f(x)|; w: divided by w(x), a tolerance that varies across the interval) on
+[a, b], and the levelled error E of the last reference. The fit
 runs in t = (2x - a - b)/(b - a) on [-1, 1], where the monomial basis is well
 conditioned at the working precision, and converts back to x exactly in
 mpmath. Every fit here is a minimax fit: no coefficient is a Taylor
@@ -49,9 +50,10 @@ def _t_to_x(ct, a, b):
     return cx
 
 
-def remez(f, deg, a, b, rel=True, iters=40, tol=mpf(10) ** -12, grid=4000):
+def remez(f, deg, a, b, rel=True, iters=40, tol=mpf(10) ** -12, grid=4000, w=None):
     a, b = mpf(a), mpf(b)
     g = lambda t: f((b - a) / 2 * t + (a + b) / 2)
+    wt = (lambda t: w((b - a) / 2 * t + (a + b) / 2)) if w else None
     n = deg + 2
     ref = [-cos(pi * i / (n - 1)) for i in range(n)]
     E = mpf(0)
@@ -61,10 +63,10 @@ def remez(f, deg, a, b, rel=True, iters=40, tol=mpf(10) ** -12, grid=4000):
         y = matrix(n, 1)
         for i, t in enumerate(ref):
             gv = g(t)
-            w = fabs(gv) if rel else mpf(1)
+            wv = wt(t) if wt else fabs(gv) if rel else mpf(1)
             for j in range(deg + 1):
                 M[i, j] = t ** j
-            M[i, deg + 1] = (-1) ** i * w
+            M[i, deg + 1] = (-1) ** i * wv
             y[i, 0] = gv
         sol = lu_solve(M, y)
         ct = [sol[j, 0] for j in range(deg + 1)]
@@ -73,7 +75,7 @@ def remez(f, deg, a, b, rel=True, iters=40, tol=mpf(10) ** -12, grid=4000):
         def err(t):
             gv = g(t)
             e = _horner(ct, t) - gv
-            return e / fabs(gv) if rel else e
+            return e / wt(t) if wt else e / fabs(gv) if rel else e
 
         # local extrema of err on a dense Chebyshev-spaced grid, refined
         ts = [-cos(pi * i / grid) for i in range(grid + 1)]
@@ -115,7 +117,7 @@ def remez(f, deg, a, b, rel=True, iters=40, tol=mpf(10) ** -12, grid=4000):
     return _t_to_x(ct, a, b), fabs(E)
 
 
-def certify(coeffs, f, a, b, n=10000, rel=True):
+def certify(coeffs, f, a, b, n=10000, rel=True, w=None):
     a, b = mpf(a), mpf(b)
     worst = mpf(0)
     pts = [(b - a) / 2 * (-cos(pi * i / n)) + (a + b) / 2 for i in range(n + 1)]
@@ -123,7 +125,9 @@ def certify(coeffs, f, a, b, n=10000, rel=True):
     for x in pts:
         fv = f(x)
         e = fabs(_horner(coeffs, x) - fv)
-        if rel:
+        if w:
+            e /= w(x)
+        elif rel:
             e /= fabs(fv)
         worst = max(worst, e)
     return worst

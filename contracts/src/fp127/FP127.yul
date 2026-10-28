@@ -2345,61 +2345,142 @@ object "FP127" {
                 v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
             }
 
-            function erfcf(xg) -> v {
-                let x2 := mulg(xg, xg)
-                let n := add(div(1700, shr(192, x2)), 10)
-                let am := 0x1000000000000000000000000000000000000000000000000
-                let an := xg
-                let bm := 0
-                let bn := 0x1000000000000000000000000000000000000000000000000
+            function erfct(xg) -> v {
+                let t := sub(mulg(xg, 0x5d1745d1745d1745d1745d1745d1745d1745d1745d1745d1), 0x2745d1745d1745d1745d1745d1745d1745d1745d1745d1746)
+                let tn := slt(t, 0)
+                let p := sub(0, 0x7e2a9339ca52a4c78ee31bc306cd88f95)
                 let l := 0
                 let h := 0
-                // two steps a turn, the newest convergent alternating between (am, bm)
-                // and (an, bn), so nothing is copied: the same values as one step a turn
-                let k := 1
-                for {} lt(k, n) { k := add(k, 2) } {
-                    l := mul(xg, an)
-                    h := mulmod(xg, an, not(0))
-                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
-                    l := mul(xg, bn)
-                    h := mulmod(xg, bn, not(0))
-                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
-                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-                        am := shr(64, am)
-                        an := shr(64, an)
-                        bm := shr(64, bm)
-                        bn := shr(64, bn)
-                    }
-                    l := mul(xg, am)
-                    h := mulmod(xg, am, not(0))
-                    an := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), an)))
-                    l := mul(xg, bm)
-                    h := mulmod(xg, bm, not(0))
-                    bn := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), bn)))
-                    if gt(an, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-                        am := shr(64, am)
-                        an := shr(64, an)
-                        bm := shr(64, bm)
-                        bn := shr(64, bn)
-                    }
-                }
-                if eq(k, n) {
-                    l := mul(xg, an)
-                    h := mulmod(xg, an, not(0))
-                    am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
-                    l := mul(xg, bn)
-                    h := mulmod(xg, bn, not(0))
-                    bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
-                    if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-                        am := shr(64, am)
-                        an := shr(64, an)
-                        bm := shr(64, bm)
-                        bn := shr(64, bn)
-                    }
-                    an := am
-                    bn := bm
-                }
-                v := divg(mulg(expg(sub(0, x2)), bn), mulg(an, 0x1c5bf891b4ef6aa79c3b0520d5db9383fe3921546f63b252e))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x78dfef1317e566eca1d529cc995f2aeff2))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x37d9d24bb7e93a43550e91c8bf4fca67d21))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x1043472d59369235297a156b37c2f4691c40))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x34f2b4c78e9e8cc6b83b542c049779533640))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x7deb73cf55c41d617c47cd6edef652651259))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xdd5c8f59dc9a2ff0d1dd3803131924479866))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x116b458baf217511807765a5e3b5f4f906cf3))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xdbd2bd29703e2fde17d56d6382b8daf04a48))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x154523aa3edf52de17189faa14e9b8f4f704))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xce9b5aa8879e8c3eee6b374dcd7cb9fd9219)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x15d8f6bd4791d475eb3631d27ed1358a27f84)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xc3d6c24e7503157d520fa17dff2394742a5c)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xf3b87046034f16eebc0954019d3f55925bfa)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x29dbc46eda78017993d952d37728cb63b6462))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x65f2d5f27272108225c73774f2b931cffff11)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x157f298f33a10f32bffdbc61621c42e26a3484))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x40c81024b083b2a46130597f06f040a924580c)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xc4d1f982d76c96039ee300f446944225686bdc))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x252d12c767b3b041d0409e00c0ba8beb164c4cc)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x6f944930ea383c35dc2063e872b4c81eb7210a3))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x14cdcbbe7d619c7212aa1d1e8f0f3c0b69f6d036)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x3dab40fbbf2fde372877ddc5569bae21706f6716))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xb5a1205808a51b7d87198aef9b262357ea1a2f2a)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x21370ccfb9287989b4d9a440f48bc62b98b173492))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x6089dc5f2e3f692f726418865451e6abc0f45c6bb)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x116aecfe3721c7a24529e97473ccbb4d69f46fa6e1))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x31eedb640d39e6e5758978d026eb391eeef6c21c64)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x8e23c9e6eb8a5ce056f542791765467f57ed434424))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x191b5d7a916d3c1ff3f2809c4afd9ad2b5a8e13a4e4)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x466fb38c9de8b0620c5337ac6d507bd27742264be7e))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xc420ed62eeb56fc4b5565d3b92205d6cbe80e71636f)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x21df26a851557b281e29540e35160bdacf968062a07a))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x5cdd6ee3a2d03f7a0a38e320f2609f96bd5ce5ad6842)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xfc934391e20ec6eca65b9c94814bf8b89b13a99efb88))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x2a95b1322a98e3830e8d70cf291f04aaf9c9bc6603e20)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x71eb61e0d358161a285dcae5ed4388839ef545b8ee689))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x12e250826dfedd6c937ce5a2b81b1ea75e88bba89ac3f6)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x31a59d12d0665f9b211136ba61792fd1614bfe057f5781))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x815a119d290bc172f359fc2f74891e18cdd257f124970c)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x14de983204eaa991cc5cd50d2b9672c9212bf371966e03b))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x355cfb26a0d883ad9633a0ff14a5f864aea4a8286515262)
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x871f2fe7ada132110b75a266664936671b1e4853fd070d2))
+                l := mul(p, t)
+                h := mulmod(p, t, not(0))
+                p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x152b80d463c46f83418b76f03a108cebbf3ca83ee1d8a559)
+                v := mulg(expg(sub(0, mulg(xg, xg))), p)
             }
 
             function fp127_erf(x) -> r {
@@ -2411,7 +2492,7 @@ object "FP127" {
                     let xg := shl(64, ax)
                     switch gt(ax, 0x400000000000000000000000000000000)
                     case 0 { r := round64(erfs(xg)) }
-                    default { r := round64(sub(0x1000000000000000000000000000000000000000000000000, erfcf(xg))) }
+                    default { r := round64(sub(0x1000000000000000000000000000000000000000000000000, erfct(xg))) }
                 }
                 default { r := one }
                 if slt(x, 0) { r := sub(0, r) }
@@ -2426,7 +2507,7 @@ object "FP127" {
                     let xg := shl(64, ax)
                     switch gt(ax, 0x400000000000000000000000000000000)
                     case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(xg)) }
-                    default { v := erfcf(xg) }
+                    default { v := erfct(xg) }
                 }
                 if slt(x, 0) { v := sub(0x2000000000000000000000000000000000000000000000000, v) }
                 r := round64(v)
@@ -2442,7 +2523,7 @@ object "FP127" {
                     let yg := mulg(shl(64, ax), 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
                     switch gt(yg, 0x4000000000000000000000000000000000000000000000000)
                     case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(yg)) }
-                    default { v := erfcf(yg) }
+                    default { v := erfct(yg) }
                 }
                 switch slt(x, 0)
                 case 1 { r := round64(shr(1, v)) }
