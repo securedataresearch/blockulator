@@ -36,7 +36,7 @@ next deploy):
   `sinh`, `cosh`, `tanh` about −40%, Lambert W about −28%.
 - `div`, `divDown` and `divUp` share an exact core, two 64-bit digits when
   both operands are under 2^64: `div` 649 → 412, `divDown`/`divUp` 818 → 475.
-- The FP127 object is 20,776 bytes (2.2: 21,858): one copy of the kernel
+- The FP127 object is 20,603 bytes as deployed on 2026-10-27 (2.2: 21,858): one copy of the kernel
   where the optimizer had made three.
 
 FP19's erf, erfc and normCdf move to a fifth object, FP19N (salt "FP19N
