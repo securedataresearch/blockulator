@@ -137,6 +137,10 @@ interface IFP19 {
     /// @notice The nearest integral number, halves away from zero (FP19's tie
     ///         rule; FP127's round takes halves up), exact.
     function round(int256 x) external pure returns (int256 r);
+    /// @notice floor(n)! rounded once, from a table of the 169 correctly rounded
+    ///         words for 2 <= n <= 170 (exact to 64!), checked against the
+    ///         exact factorial for every n (make sweep). 0! = 1.
+    function factorial(int256 n) external pure returns (int256 r);
     /// @notice The cube root, cbrt(-x) = -cbrt(x): floor(cbrt(N)) of the
     ///         significand scaled to N = m 2^(477 + rr), 714 to 716 bits, by
     ///         Newton with precision doubling (a seed from the top bits, four

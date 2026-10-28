@@ -5439,10 +5439,110 @@ library FP127Lib {
     }
     /// @notice floor(n)! for 0 <= n < 34. 33! is the largest that fits.
     /// @dev Reverts with OutOfRange outside that domain (the Huff returned
-    ///      MAX_UINT256). Computed by exact integer multiplication rather than
-    ///      the Huff jump table; the values are identical.
+    ///      MAX_UINT256). A table of the 34 values, two to a word, as the Huff's
+    ///      jump table was (facttab.py); the values are identical.
     function factorial(int256 _n) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
+            function facttab(i) -> w {
+                switch lt(i, 8)
+                case 0 {
+                    switch lt(i, 12)
+                    case 0 {
+                        switch lt(i, 14)
+                        case 0 {
+                            switch lt(i, 15)
+                            case 0 {
+                                switch lt(i, 16)
+                                case 0 {
+                                    w := 0x0032ad5a155c6748ac18b9a5800000000688589cc0e9505e2f2fee5580000000
+                                }
+                                default {
+                                    w := 0x00000d13f6370f96865df5dd540000000001956ad0aae33a4560c5cd2c000000
+                                }
+                            }
+                            default {
+                                w := 0x00000003d925ba47ad2cd59dae0000000000006f99461a1e9e1432dcb6000000
+                            }
+                        }
+                        default {
+                            switch lt(i, 13)
+                            case 0 {
+                                w := 0x00000000014d9849ea37eeac9180000000000000232f0fcbb3e62c3358800000
+                            }
+                            default {
+                                w := 0x00000000000083629343d3dcd1c0000000000000000cd4a0619fb0907bc00000
+                            }
+                        }
+                    }
+                    default {
+                        switch lt(i, 10)
+                        case 0 {
+                            switch lt(i, 11)
+                            case 0 {
+                                w := 0x000000000000003ceea4c2b3e0d80000000000000000057970cd7e2933680000
+                            }
+                            default {
+                                w := 0x000000000000000021c3677c82b400000000000000000002c5077d36b8c40000
+                            }
+                        }
+                        default {
+                            switch lt(i, 9)
+                            case 0 {
+                                w := 0x00000000000000000016beecca730000000000000000000001b02b9306890000
+                            }
+                            default {
+                                w := 0x0000000000000000000013077775800000000000000000000001437eeecd8000
+                            }
+                        }
+                    }
+                }
+                default {
+                    switch lt(i, 4)
+                    case 0 {
+                        switch lt(i, 6)
+                        case 0 {
+                            switch lt(i, 7)
+                            case 0 {
+                                w := 0x0000000000000000000000144c3b280000000000000000000000013077775800
+                            }
+                            default {
+                                w := 0x0000000000000000000000001c8cfc000000000000000000000000017328cc00
+                            }
+                        }
+                        default {
+                            switch lt(i, 5)
+                            case 0 {
+                                w := 0x00000000000000000000000000375f0000000000000000000000000002611500
+                            }
+                            default {
+                                w := 0x00000000000000000000000000009d8000000000000000000000000000058980
+                            }
+                        }
+                    }
+                    default {
+                        switch lt(i, 2)
+                        case 0 {
+                            switch lt(i, 3)
+                            case 0 {
+                                w := 0x000000000000000000000000000002d0000000000000000000000000000013b0
+                            }
+                            default {
+                                w := 0x0000000000000000000000000000001800000000000000000000000000000078
+                            }
+                        }
+                        default {
+                            switch lt(i, 1)
+                            case 0 {
+                                w := 0x0000000000000000000000000000000200000000000000000000000000000006
+                            }
+                            default {
+                                w := 0x0000000000000000000000000000000100000000000000000000000000000001
+                            }
+                        }
+                    }
+                }
+            }
+
             function rev(sel) {
                 mstore(0x00, shl(224, sel))
                 revert(0x00, 0x04)
@@ -5452,9 +5552,7 @@ library FP127Lib {
                 if slt(n, 0) { rev(0x7db3aba7) }
                 let k := shr(128, n)
                 if gt(k, 33) { rev(0x7db3aba7) }
-                r := 1
-                for { let i := 2 } iszero(gt(i, k)) { i := add(i, 1) } { r := mul(r, i) }
-                r := shl(128, r)
+                r := and(shl(shl(7, and(k, 1)), facttab(shr(1, k))), not(0xffffffffffffffffffffffffffffffff))
             }
 
             _r := fp127_factorial(_n)

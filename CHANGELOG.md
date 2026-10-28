@@ -19,6 +19,18 @@ next deploy):
 - The FP127 object is 20,776 bytes (2.2: 21,858): one copy of the kernel
   where the optimizer had made three.
 
+factorial is a table in both libraries (`scripts/fp19/generators/facttab.py`,
+checked in CI):
+
+- FP19: the 169 correctly rounded words for 2 ≤ n ≤ 170, by a binary search
+  on n; the domain stops at 170! (the largest factorial a binary64 holds),
+  `Overflow` from 171 (2.2: n ≤ 20,366 by a 512-bit running product, 1.07M
+  gas at the median and 2.14M at the top; now 714 median, 762 at most).
+  factorial moves from FP19S to the FP19 core (17,221 bytes; FP19S 23,985),
+  so both take new salts at the next deploy.
+- FP127: the 34 values two to a word, as the Huff's jump table was: about 400
+  gas at every n (v6's multiplication: 190 to 1,918). The same words.
+
 BlockulatorWad, a third library (`contracts/src/wad/`, inline, no deployed
 object): Solady's `FixedPointMathLib` WAD names, signatures and error
 selectors (mulWad, divWad, sMulWad, sDivWad, sqrtWad, cbrtWad, expWad, lnWad,

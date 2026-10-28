@@ -222,8 +222,8 @@ interface IFP127 {
     function round(int256 x) external pure returns (int256 r);
     /// @notice floor(n)! for 0 <= n < 34. 33! is the largest that fits.
     /// @dev Reverts with OutOfRange outside that domain (the Huff returned
-    ///      MAX_UINT256). Computed by exact integer multiplication rather than
-    ///      the Huff jump table; the values are identical.
+    ///      MAX_UINT256). A table of the 34 values, two to a word, as the Huff's
+    ///      jump table was (facttab.py); the values are identical.
     function factorial(int256 n) external pure returns (int256 r);
     /// @notice Principal branch of the Lambert W function, W(x) e^W(x) = x, for
     ///         x >= -1/e, rounded to nearest.

@@ -61,9 +61,4 @@ interface IFP19S {
     ///         its rounding test and, on a miss, its Newton step at 2^-510:
     ///         correctly rounded.
     function lambertWm1(int256 x) external pure returns (int256 r);
-    /// @notice floor(n)! rounded once: the exact product while its odd part
-    ///         fits 512 bits (every exact tie), a 512-bit running product
-    ///         within 2^-500 above that; every n in the domain is checked
-    ///         against the exact factorial (make sweep). 0! = 1.
-    function factorial(int256 n) external pure returns (int256 r);
 }

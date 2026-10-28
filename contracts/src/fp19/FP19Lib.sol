@@ -13390,84 +13390,1026 @@ library FP19Lib {
             _r := fp19_log2Up(_x)
         }
     }
-    /// @notice floor(n)! rounded once: the exact product while its odd part
-    ///         fits 512 bits (every exact tie), a 512-bit running product
-    ///         within 2^-500 above that; every n in the domain is checked
-    ///         against the exact factorial (make sweep). 0! = 1.
+    /// @notice floor(n)! rounded once, from a table of the 169 correctly rounded
+    ///         words for 2 <= n <= 170 (exact to 64!), checked against the
+    ///         exact factorial for every n (make sweep). 0! = 1.
     function factorial(int256 _n) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function msb(x) -> r {
-                if iszero(x) { leave }
-                r := sub(255, clz(x))
-            }
-
-            function mul512(a, b) -> p1, p0 {
-                p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                p1 := sub(sub(mm, p0), lt(mm, p0))
-            }
-
-            function mul3(h, l, m) -> n2, n1, n0 {
-                let a1, a0 := mul512(h, m)
-                let b1 := 0
-                b1, n0 := mul512(l, m)
-                n1 := add(a0, b1)
-                n2 := add(a1, lt(n1, a0))
+            function facttab(n) -> r {
+                switch lt(n, 86)
+                case 0 {
+                    switch lt(n, 128)
+                    case 0 {
+                        switch lt(n, 149)
+                        case 0 {
+                            switch lt(n, 160)
+                            case 0 {
+                                switch lt(n, 165)
+                                case 0 {
+                                    switch lt(n, 168)
+                                    case 0 {
+                                        switch lt(n, 169)
+                                        case 0 {
+                                            switch lt(n, 170)
+                                            case 0 {
+                                                r := 0x403fa4ab7864418638f2203ba4f882f2c6c3b705bf37e2f330274ae066de0d38
+                                            }
+                                            default {
+                                                r := 0x403f2f2054eb4d96ec5787e158cd91fe284de06907dbb01ce5201060fb485c30
+                                            }
+                                        }
+                                        default {
+                                            r := 0x403eb7932fa79d3a42e8ec378d7be336a6db8d2fbd3ddec29245ba9b4097c085
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 166)
+                                        case 0 {
+                                            switch lt(n, 167)
+                                            case 0 {
+                                                r := 0x403e41f63cb077cadda54642b4f0ad1d72f06b921647852687d39a5de81218c7
+                                            }
+                                            default {
+                                                r := 0x403dcb88cb676c8528d8907ec8b8fd1c47f461731a7cf7087a5e6eeefe934f5f
+                                            }
+                                        }
+                                        default {
+                                            r := 0x403d553b370efa3b7f1c31bb34fdad9443d20749553217eddcd086e37730d140
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 162)
+                                    case 0 {
+                                        switch lt(n, 163)
+                                        case 0 {
+                                            switch lt(n, 164)
+                                            case 0 {
+                                                r := 0x403ce07868c5ccfaf472f67b818b62f872ac3d81cf477134a517ae758025ded6
+                                            }
+                                            default {
+                                                r := 0x403c69b5b6477e6883d2ac75dcf28e00b3006002d32ad62cb6c74ec3e7415bd7
+                                            }
+                                        }
+                                        default {
+                                            r := 0x403bf4307602be5b7f13602a4c216accb88a80cb3fbd1f8c56fde2c2ac2d0adf
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 161)
+                                        case 0 {
+                                            r := 0x403b7fe771cb7257b2b00042d71eaf174339af14efc8e2d773585036ca8cb586
+                                        }
+                                        default {
+                                            r := 0x403b095d5f3d928edd90b24b66a780127e96cdfa6269a6091a82a25b43383746
+                                        }
+                                    }
+                                }
+                            }
+                            default {
+                                switch lt(n, 154)
+                                case 0 {
+                                    switch lt(n, 157)
+                                    case 0 {
+                                        switch lt(n, 158)
+                                        case 0 {
+                                            switch lt(n, 159)
+                                            case 0 {
+                                                r := 0x403a944ab297a8724ada283c521f99a8654571951b87b807486881e29c2cf905
+                                            }
+                                            default {
+                                                r := 0x403a2055e51b1882a685c301de49bdb6416d0953013b58938c6773d504f8bb96
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4039aa77ba8027b685b515133acbbb7b8da6f1f16ceebce21a942d1855d3d1f7
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 155)
+                                        case 0 {
+                                            switch lt(n, 156)
+                                            case 0 {
+                                                r := 0x40393594292c26e6562e89d83cfae3dbc3629adba8b5985d06fe8356b1977f28
+                                            }
+                                            default {
+                                                r := 0x4038c1b4a51088f181ca49b7fd85a744ba928c30f3742e3f33b002bd4982de7c
+                                            }
+                                        }
+                                        default {
+                                            r := 0x40384d3e2cb341f8944c7325f89aaddcde42f80ec8983f2b4680d7ee4e7859fd
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 151)
+                                    case 0 {
+                                        switch lt(n, 152)
+                                        case 0 {
+                                            switch lt(n, 153)
+                                            case 0 {
+                                                r := 0x4037d84e466672ad5d56d0bf2512d9a6f494c0e1111e208e5bd8ce128a5d6212
+                                            }
+                                            default {
+                                                r := 0x40376455903aefd5a36bc463ad3cf252c9453b4c2fc8e40551dbdcec5fad7f39
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4036f11fa1e0c9f7463fcdcd3391a3a407ce82c6e4df10dc0f09fd68bc5c353d
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 150)
+                                        case 0 {
+                                            r := 0x40367d07da7ecb62cbddc2a166afb4cb7ed3175b5eb8e806e18cb2b4f4be3bbe
+                                        }
+                                        default {
+                                            r := 0x403608c5d92b5838ffe2c837cf17a484b07d84923c59852497824d67373f5887
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        default {
+                            switch lt(n, 138)
+                            case 0 {
+                                switch lt(n, 143)
+                                case 0 {
+                                    switch lt(n, 146)
+                                    case 0 {
+                                        switch lt(n, 147)
+                                        case 0 {
+                                            switch lt(n, 148)
+                                            case 0 {
+                                                r := 0x4035954807e082c4b975810bdcdb9ccb549bef4f3c6f43fd127a3f0eca177de0
+                                            }
+                                            default {
+                                                r := 0x40352267cf76103b6ff6ec25ef71d3b6c5b74b82cc7be7c61dd182a501cf20c2
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4034b006cd07056d3970424e4fa0112a77ea7cf63f1d85e5fa9e0cc07107f2ba
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 144)
+                                        case 0 {
+                                            switch lt(n, 145)
+                                            case 0 {
+                                                r := 0x40343c19f3c62c956f3c121214624f31eacfc290368ef1cb5c42b7ac9c1bf6c1
+                                            }
+                                            default {
+                                                r := 0x4033c8ce85fadb707e710e2fbd3fd4eabda07341832424e4f3df16aa07289334
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4033560ce8defbf23780f02a6f552f098c1cd83a3bae59af11a9db41cd796667
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 140)
+                                    case 0 {
+                                        switch lt(n, 141)
+                                        case 0 {
+                                            switch lt(n, 142)
+                                            case 0 {
+                                                r := 0x4032e3bcc9487d4438d7aa37e2c266f86f18075d4cb18b5a77a49221d65ac37f
+                                            }
+                                            default {
+                                                r := 0x403271ca9fcdf6532135c84f389264079a39b7507ed284d359d1a42cec7d152e
+                                            }
+                                        }
+                                        default {
+                                            r := 0x40320026b1c06b6a549dc28ce8ea914672966ff1ecc65f292b68fab6661e0855
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 139)
+                                        case 0 {
+                                            r := 0x40318d88957d1c3025b2c2d5c72944290c0bc5629b04563ca7265cbb3e62cd68
+                                        }
+                                        default {
+                                            r := 0x40311b3243ac4d8694e6eaab137c8fcd655659adae0f0b44bec1b70125309faf
+                                        }
+                                    }
+                                }
+                            }
+                            default {
+                                switch lt(n, 133)
+                                case 0 {
+                                    switch lt(n, 135)
+                                    case 0 {
+                                        switch lt(n, 136)
+                                        case 0 {
+                                            switch lt(n, 137)
+                                            case 0 {
+                                                r := 0x4030a939c09fd12eea9366a6197eaa7bbabf65bb10c00a73b4a4d643d84ac80e
+                                            }
+                                            default {
+                                                r := 0x4030379185413b0854a0241c1f4b5de1d97528db9f8872685e0841a62961e5e4
+                                            }
+                                        }
+                                        default {
+                                            r := 0x402fc62e9b88b007d72d4f2986dd85894522f9472cbca7e9c1e9a732f9c58d13
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 134)
+                                        case 0 {
+                                            r := 0x402f55082946d09f233fd1b1cd9ed5d77c5641af92b6aa9593d40e6938ac2327
+                                        }
+                                        default {
+                                            r := 0x402ee4171452ed7d440f1c5d6c887090b3e768c6475e3f9a57b774ee0fed06d5
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 130)
+                                    case 0 {
+                                        switch lt(n, 131)
+                                        case 0 {
+                                            switch lt(n, 132)
+                                            case 0 {
+                                                r := 0x402e7355bb04be109de4326575ed2cd08e57f90bd13248c2bc5bde3f9423a27c
+                                            }
+                                            default {
+                                                r := 0x402e02bfbd1bdf17deeccc054b90a793eee0f17fd29d5dd41b7fdf4568dcbc97
+                                            }
+                                        }
+                                        default {
+                                            r := 0x402d9251d22ec671379f119ba5ae9032be6a72cef8c8a9d9055fa17c7de944f9
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 129)
+                                        case 0 {
+                                            r := 0x402d2209ab80c363a8fb250787904ef6e2def6f32c1848b62cacedc568482468
+                                        }
+                                        default {
+                                            r := 0x402cb1e5dfc140e1e530c3808683486616b193cb94ee6bde6fcd531f29f43bf0
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    default {
+                        switch lt(n, 107)
+                        case 0 {
+                            switch lt(n, 117)
+                            case 0 {
+                                switch lt(n, 122)
+                                case 0 {
+                                    switch lt(n, 125)
+                                    case 0 {
+                                        switch lt(n, 126)
+                                        case 0 {
+                                            switch lt(n, 127)
+                                            case 0 {
+                                                r := 0x402c41e5dfc140e1e530c3808683486616b193cb94ee6bde6fcd531f29f43bf0
+                                            }
+                                            default {
+                                                r := 0x402bd209f3a89205f112e9532cdd026aec8aa91dd08f8af4587e4fbea742c173
+                                            }
+                                        }
+                                        default {
+                                            r := 0x402b625340ab3f01f8f6c464bfdc743bdbfa936b7e89b1bb4594a247c65c323c
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 123)
+                                        case 0 {
+                                            switch lt(n, 124)
+                                            case 0 {
+                                                r := 0x402af2c3d7b9989579d1ae7ba5beedceb433ca287130d6c3dcc1293f41e79ffc
+                                            }
+                                            default {
+                                                r := 0x402a835ece2af0162b2b06b12f38b36a04567e193b091fc1ec223b1801f75ad2
+                                            }
+                                        }
+                                        default {
+                                            r := 0x402a142861fee508802cc6719f73336c3eca661617f8d833f3a6be895fb466d7
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 119)
+                                    case 0 {
+                                        switch lt(n, 120)
+                                        case 0 {
+                                            switch lt(n, 121)
+                                            case 0 {
+                                                r := 0x4029a5262c0fa08f36bdaa6ed1424f21d4c390e09f723292d5aabf838a2e95dd
+                                            }
+                                            default {
+                                                r := 0x4029365f6380a9d915f0d624d4e6f045a3b79b5fdd9013a5e85fff7c56efb193
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4028c7dd36efa41ac211f57c9ed4337d7b6e839974ddf2d319ffff738fee9b47
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 118)
+                                        case 0 {
+                                            r := 0x402859ab418b722115968b47a8b09ea5170d75e372f3097df53e625e2f4130b4
+                                        }
+                                        default {
+                                            r := 0x4027ebd824633209daabfae141d5484af1f4913c25e942b405b02547cb1fa9fc
+                                        }
+                                    }
+                                }
+                            }
+                            default {
+                                switch lt(n, 112)
+                                case 0 {
+                                    switch lt(n, 114)
+                                    case 0 {
+                                        switch lt(n, 115)
+                                        case 0 {
+                                            switch lt(n, 116)
+                                            case 0 {
+                                                r := 0x40277e764f3171d1e44a5f0c50c6537730168041cd93fa34898140da93d3df29
+                                            }
+                                            default {
+                                                r := 0x402710ce83f7f82d2e814eec4fe02e0ccb153def56f08a0b54b13e43a10222d9
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4026a2b4e306a4ed47cc07b4a90b54a59d080f829aa554a3fc5185dbf837cdbe
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 113)
+                                        case 0 {
+                                            r := 0x40263500fee805882caf3112b4d2560f49048f2b584dd84c55b0de28630d40d6
+                                        }
+                                        default {
+                                            r := 0x4025c7cac197cfe5030a696d8b2018fcecc377213d8338f9952c06f9a44e7238
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 109)
+                                    case 0 {
+                                        switch lt(n, 110)
+                                        case 0 {
+                                            switch lt(n, 111)
+                                            case 0 {
+                                                r := 0x40255b30dd3fc905ba550ac655db8a45a0df6393b403aed41832511d4e108289
+                                            }
+                                            default {
+                                                r := 0x4024ef5af14bdc472e825ad6df8c27855656ef5e375e316347b8deb0c8b917af
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4024823e389bd8991fb6e5b986b7f1c1f111ffa1df0ce988e3e93bbf4ae4b558
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 108)
+                                        case 0 {
+                                            r := 0x4024156c4bdef04314cd6251a53f58f6897a2072ee71ce21ed1b4882b1322727
+                                        }
+                                        default {
+                                            r := 0x4023a963e824aafa2b9e15b6192ea25399744c624a0223b66e59397e7331f584
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        default {
+                            switch lt(n, 96)
+                            case 0 {
+                                switch lt(n, 101)
+                                case 0 {
+                                    switch lt(n, 104)
+                                    case 0 {
+                                        switch lt(n, 105)
+                                        case 0 {
+                                            switch lt(n, 106)
+                                            case 0 {
+                                                r := 0x40233e5f96e67b300de5c8a06aaf69a963d54aa0a5181794da22f5d31491e51a
+                                            }
+                                            default {
+                                                r := 0x4022d256b20d92d48fa2e365af820f7e6c9419bcc4488229923216d6635ceaee
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4022665b0eb1760a6fb5807bf5a5dd3fe853048e581de080b2382f583e9d2825
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 102)
+                                        case 0 {
+                                            switch lt(n, 103)
+                                            case 0 {
+                                                r := 0x4021fb83c3509147ebf31449cbdfd53af68d8f741dae9e283dceff318823e2a3
+                                            }
+                                            default {
+                                                r := 0x40219118b502d68b22c3c7039a04ddf7e63f1b00127178a43058da37a1a3f7b3
+                                            }
+                                        }
+                                        default {
+                                            r := 0x40212574569a26543fb46d31b2384dc3a37254142b390fdd1988995ee8f5eb8b
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 98)
+                                    case 0 {
+                                        switch lt(n, 99)
+                                        case 0 {
+                                            switch lt(n, 100)
+                                            case 0 {
+                                                r := 0x4020bb30964ec395dc24069528d54bbda40d16e966ef9a70eb21b5b2943a321d
+                                            }
+                                            default {
+                                                r := 0x40205166c698cf183af8562205a73ab6cf64898b2328b4c325d8225dcf8167c1
+                                            }
+                                        }
+                                        default {
+                                            r := 0x401fe67fb5c8283403d70fafddef7d0b641035b67b08aba6faa07f2e4cefb747
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 97)
+                                        case 0 {
+                                            r := 0x401f7d62e2fafb0a77f4532ed8bb69daa20ab918234f3e3d5c3f57bf161ef9d4
+                                        }
+                                        default {
+                                            r := 0x401f13638dd7bd63473a46b7fb3465830e8b08a3b84965c4324ebdda72e24b1b
+                                        }
+                                    }
+                                }
+                            }
+                            default {
+                                switch lt(n, 91)
+                                case 0 {
+                                    switch lt(n, 93)
+                                    case 0 {
+                                        switch lt(n, 94)
+                                        case 0 {
+                                            switch lt(n, 95)
+                                            case 0 {
+                                                r := 0x401ea9da1274fc845ef85e4aa445dcaebe0eb62fa061dd059868fd2343d86423
+                                            }
+                                            default {
+                                                r := 0x401e416a7d9cf591c405a33a5e7fe8350c2a3f739f3f3bf8fd94e06dfd3376a9
+                                            }
+                                        }
+                                        default {
+                                            r := 0x401dd7b722e0a018310d1fa12efa6d37e4fd9d35f414be99dc06a3fd42ff44fc
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 92)
+                                        case 0 {
+                                            r := 0x401d7051fc798c73bea8afeacafeead121b6c9c789b0af3594a9bb2ce949d1e2
+                                        }
+                                        default {
+                                            r := 0x401d06b4d9b43dd8b0389bb5f9099fbecabb880a7cc94cd01cbfa03e7c3a2f24
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 88)
+                                    case 0 {
+                                        switch lt(n, 89)
+                                        case 0 {
+                                            switch lt(n, 90)
+                                            case 0 {
+                                                r := 0x401c9ff0512a89a151e4b9437a6d2f77448c000ec0671a764fd2767f46a63caf
+                                            }
+                                            default {
+                                                r := 0x401c36b645188f61a65300e6076a166030be93f3bc050d20eece8d274eaf1a16
+                                            }
+                                        }
+                                        default {
+                                            r := 0x401bd0550c4b30743e136b12b7ab357bd2834ac087348800abb9ecb1d6c8b3d6
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 87)
+                                        case 0 {
+                                            r := 0x401b67c1863ed21d71909bbe226d65113233557521c0c5d26e25b55fc40ca87d
+                                        }
+                                        default {
+                                            r := 0x401b0179c3dbd279b4a53aa94b594d4a716f537688a5599dbde6c62905ebe2ef
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                default {
+                    switch lt(n, 44)
+                    case 0 {
+                        switch lt(n, 65)
+                        case 0 {
+                            switch lt(n, 75)
+                            case 0 {
+                                switch lt(n, 80)
+                                case 0 {
+                                    switch lt(n, 83)
+                                    case 0 {
+                                        switch lt(n, 84)
+                                        case 0 {
+                                            switch lt(n, 85)
+                                            case 0 {
+                                                r := 0x401a9a02a088aa61cb6115d24c6d19bc31c376454273202c445186312694ab11
+                                            }
+                                            default {
+                                                r := 0x401a33958df4743d961eef4d06582b789df0893d2f055d7eb1ef13b895850552
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4019cdd7b3bda4f021b53be315dbaff4bfe86f9a2f4520c10f232a3dd7a6207d
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 81)
+                                        case 0 {
+                                            switch lt(n, 82)
+                                            case 0 {
+                                                r := 0x40196702dac9bff3c3a156463c09030cea56b295bb94eafdbb7abac9e70dfa35
+                                            }
+                                            default {
+                                                r := 0x401901f5bd7e3e66d72043560964b135c9a153302e80b768605fc9fb3db37e9a
+                                            }
+                                        }
+                                        default {
+                                            r := 0x40189c619094edabfe9e70ba86f14a9a87511b295f9bff1065ba22bc6e25208e
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 77)
+                                    case 0 {
+                                        switch lt(n, 78)
+                                        case 0 {
+                                            switch lt(n, 79)
+                                            case 0 {
+                                                r := 0x401836b473aa57bccbb1f3c86bf43baed2a748ede61665a6b7c81bc9f1b74d3e
+                                            }
+                                            default {
+                                                r := 0x4017d264d25ca1d009797af69ebf60f553298c1838c79ce1cbf99b5f8cbb6239
+                                            }
+                                        }
+                                        default {
+                                            r := 0x40176e2f4c14bac4fbdb0b6d53472f8574c7764f22199efc626ba9a35d193eba
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 76)
+                                        case 0 {
+                                            r := 0x40170916b0466cb106878482c38e48beb781371d339d9b6ab58b5b20b7c530cf
+                                        }
+                                        default {
+                                            r := 0x4016a5209471331bcf9a8a891077d1782ebda7accd2667ee122482a249e96c79
+                                        }
+                                    }
+                                }
+                            }
+                            default {
+                                switch lt(n, 70)
+                                case 0 {
+                                    switch lt(n, 72)
+                                    case 0 {
+                                        switch lt(n, 73)
+                                        case 0 {
+                                            switch lt(n, 74)
+                                            case 0 {
+                                                r := 0x40164207524c1df599430593ae7ab992eddbdd96ded917d564d0a6166edbab12
+                                            }
+                                            default {
+                                                r := 0x4015df2f423e7902c3e98d1b1ff6e020be06afb8db69acaf62464fb819b3516b
+                                            }
+                                        }
+                                        default {
+                                            r := 0x40157b5705796695b6477f3757a3d607aa1ae7355aa9cbff75b861f20f84a992
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 71)
+                                        case 0 {
+                                            r := 0x4015184d5a3305da69231bbf6a58be3fb3a622da17b35fff8515ac65632096bb
+                                        }
+                                        default {
+                                            r := 0x4014b5e7fac56dd6e7c91c9e1ef5da5d7a466ebd61151206c7499f01401d6035
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 67)
+                                    case 0 {
+                                        switch lt(n, 68)
+                                        case 0 {
+                                            switch lt(n, 69)
+                                            case 0 {
+                                                r := 0x401454074bad313983760b8940e0c7a5ec23236b5172599fcc260db8001adb9e
+                                            }
+                                            default {
+                                                r := 0x4013f293c0a0a461de1bde2daf30f48b0ef7c7cf22bbafe2218778519fa22fe1
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4013917c0097314d0d4767b286c4a9ec4a529df020b0a58988f7f8c54af2ffe2
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 66)
+                                        case 0 {
+                                            r := 0x401330b395943e6086f3f811b267cc58286d7c1eb06b9a4de25bacad2cd8d5dc
+                                        }
+                                        default {
+                                            r := 0x4012d0320568f6ab2d87ba3fb4c1be65006a2ac86d037e5b0a0b521c4a84b059
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        default {
+                            switch lt(n, 54)
+                            case 0 {
+                                switch lt(n, 59)
+                                case 0 {
+                                    switch lt(n, 62)
+                                    case 0 {
+                                        switch lt(n, 63)
+                                        case 0 {
+                                            switch lt(n, 64)
+                                            case 0 {
+                                                r := 0x40126fe478ee348449e7d52abe89576c4f95fd9a7045e5218ddf279a2c5800b0
+                                            }
+                                            default {
+                                                r := 0x40120fe478ee348449e7d52abe89576c4f95fd9a7045e5218ddf279a2c5800b0
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4011b0330899804331bad5ed1392f79479b1c5e4cb50335e3fef51115b9a6a00
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 60)
+                                        case 0 {
+                                            switch lt(n, 61)
+                                            case 0 {
+                                                r := 0x401150b8cf1210c97da816a224b8bd807d9ebbc2e2634dcca518119e4e0ac000
+                                            }
+                                            default {
+                                                r := 0x4010f18b5727f009f525dcfe0d58e8653c742de9d889c2efe3c5516f88700000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x401092b6c35dccd76be41eecdb09806bfc37a870e6f95877595b018809000000
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 56)
+                                    case 0 {
+                                        switch lt(n, 57)
+                                        case 0 {
+                                            switch lt(n, 58)
+                                            case 0 {
+                                                r := 0x4010344cc291239fea2fdc1f4d0ea556c37d75a18565419728856e22c0000000
+                                            }
+                                            default {
+                                                r := 0x400fd6665b1bbd610269c6c16f82eb689117adf005f42510b9f4563800000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x400f792693359a4002b5a4c739d65da6cfd2ba50de4387eed9c5fe0000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 55)
+                                        case 0 {
+                                            r := 0x400f1cbe5f18b04927ab0575f8f4fd50ed831e1347289b5a1d74900000000000
+                                        }
+                                        default {
+                                            r := 0x400ec0b93bfbbf00ac066993c40c364b03350388e3954c6c48fe000000000000
+                                        }
+                                    }
+                                }
+                            }
+                            default {
+                                switch lt(n, 49)
+                                case 0 {
+                                    switch lt(n, 51)
+                                    case 0 {
+                                        switch lt(n, 52)
+                                        case 0 {
+                                            switch lt(n, 53)
+                                            case 0 {
+                                                r := 0x400e63d20e33d8e45a1a90176d17f47ed464c1d1a56e9376db40000000000000
+                                            }
+                                            default {
+                                                r := 0x400e07ef294d193a6324e7f5a58c056dae5cb0154f031c559000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x400dad751f23d047dc7c312e5598a438390f9da41279fb7d0000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 50)
+                                        case 0 {
+                                            r := 0x400d527baf2587b49e6c0ac7bd3ca3466a13d65ce874b1e00000000000000000
+                                        }
+                                        default {
+                                            r := 0x400cf7a88e4484be3b6b92eb2fa9c6c087c778c8d79f9c000000000000000000
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 46)
+                                    case 0 {
+                                        switch lt(n, 47)
+                                        case 0 {
+                                            switch lt(n, 48)
+                                            case 0 {
+                                                r := 0x400c9ee69a78d72cb61990df9711fe5ebbcb10b2bb9700000000000000000000
+                                            }
+                                            default {
+                                                r := 0x400c4499bc508f7324110b3fba0bfee9d287607727ba00000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x400bec0d41ca4b818db52a8d3eb3bd289bf441fed98000000000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 45)
+                                        case 0 {
+                                            r := 0x400b9383a833aef5f346606241e135acf20e17a6280000000000000000000000
+                                        }
+                                        default {
+                                            r := 0x400b3bc0ef38704cbab3bc477a23da8f91251bf2000000000000000000000000
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    default {
+                        switch lt(n, 23)
+                        case 0 {
+                            switch lt(n, 33)
+                            case 0 {
+                                switch lt(n, 38)
+                                case 0 {
+                                    switch lt(n, 41)
+                                    case 0 {
+                                        switch lt(n, 42)
+                                        case 0 {
+                                            switch lt(n, 43)
+                                            case 0 {
+                                                r := 0x400ae42f399d68f1fc25a033fbbcfc0b524988b0000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x400a8e0ac0ea48d947a91e11d5ef9adb44e48400000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x400a36e39f2c684405d62f4a8a9e2cd7d2f74000000000000000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 39)
+                                        case 0 {
+                                            switch lt(n, 40)
+                                            case 0 {
+                                                r := 0x4009e1dd5d037098fe4fc101fbcc9fe0a4a80000000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x40098c95619f1a8e63b2ce6992e0ffcdd4400000000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x40093774015499125eee9c3c5e4275fe38000000000000000000000000000000
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 35)
+                                    case 0 {
+                                        switch lt(n, 36)
+                                        case 0 {
+                                            switch lt(n, 37)
+                                            case 0 {
+                                                r := 0x4008e3c0011ed1bea0c8ef5b41e71ffe80000000000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x40089114c2b2deea0e8444a1f3cecf9000000000000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x40083e5dcbe8a8bc8b95cf58cde1710000000000000000000000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 34)
+                                        case 0 {
+                                            r := 0x4007ebc3789a33df9590488bb4eb600000000000000000000000000000000000
+                                        }
+                                        default {
+                                            r := 0x40079a21627303a54178bcbfb956000000000000000000000000000000000000
+                                        }
+                                    }
+                                }
+                            }
+                            default {
+                                switch lt(n, 28)
+                                case 0 {
+                                    switch lt(n, 30)
+                                    case 0 {
+                                        switch lt(n, 31)
+                                        case 0 {
+                                            switch lt(n, 32)
+                                            case 0 {
+                                                r := 0x40074956ad0aae33a4560c5cd2c0000000000000000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x4006f956ad0aae33a4560c5cd2c0000000000000000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4006aa27ec6e1f2d0cbbebbaa800000000000000000000000000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 29)
+                                        case 0 {
+                                            r := 0x40065be6518687a7850cb72d8000000000000000000000000000000000000000
+                                        }
+                                        default {
+                                            r := 0x40060ec92dd23d6966aced700000000000000000000000000000000000000000
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 25)
+                                    case 0 {
+                                        switch lt(n, 26)
+                                        case 0 {
+                                            switch lt(n, 27)
+                                            case 0 {
+                                                r := 0x4005c19787e5d9f31619ac400000000000000000000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x400574d9849ea37eeac918000000000000000000000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x400529a940c33f6120f780000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 24)
+                                        case 0 {
+                                            r := 0x4004e06c52687a7b9a3800000000000000000000000000000000000000000000
+                                        }
+                                        default {
+                                            r := 0x400495e5c335f8a4cda000000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        default {
+                            switch lt(n, 12)
+                            case 0 {
+                                switch lt(n, 17)
+                                case 0 {
+                                    switch lt(n, 20)
+                                    case 0 {
+                                        switch lt(n, 21)
+                                        case 0 {
+                                            switch lt(n, 22)
+                                            case 0 {
+                                                r := 0x40044e77526159f06c0000000000000000000000000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x400406283be9b5c6200000000000000000000000000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4003c0e1b3be415a000000000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 18)
+                                        case 0 {
+                                            switch lt(n, 19)
+                                            case 0 {
+                                                r := 0x40037b02b9306890000000000000000000000000000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x400336beecca7300000000000000000000000000000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4002f437eeecd800000000000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 14)
+                                    case 0 {
+                                        switch lt(n, 15)
+                                        case 0 {
+                                            switch lt(n, 16)
+                                            case 0 {
+                                                r := 0x4002b30777758000000000000000000000000000000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x4002730777758000000000000000000000000000000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4002344c3b280000000000000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 13)
+                                        case 0 {
+                                            r := 0x4001f7328cc00000000000000000000000000000000000000000000000000000
+                                        }
+                                        default {
+                                            r := 0x4001bc8cfc000000000000000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                }
+                            }
+                            default {
+                                switch lt(n, 7)
+                                case 0 {
+                                    switch lt(n, 9)
+                                    case 0 {
+                                        switch lt(n, 10)
+                                        case 0 {
+                                            switch lt(n, 11)
+                                            case 0 {
+                                                r := 0x40018308a8000000000000000000000000000000000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x40014baf80000000000000000000000000000000000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4001162600000000000000000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 8)
+                                        case 0 {
+                                            r := 0x4000e3b000000000000000000000000000000000000000000000000000000000
+                                        }
+                                        default {
+                                            r := 0x4000b3b000000000000000000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                }
+                                default {
+                                    switch lt(n, 4)
+                                    case 0 {
+                                        switch lt(n, 5)
+                                        case 0 {
+                                            switch lt(n, 6)
+                                            case 0 {
+                                                r := 0x4000868000000000000000000000000000000000000000000000000000000000
+                                            }
+                                            default {
+                                                r := 0x40005e0000000000000000000000000000000000000000000000000000000000
+                                            }
+                                        }
+                                        default {
+                                            r := 0x4000380000000000000000000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                    default {
+                                        switch lt(n, 3)
+                                        case 0 {
+                                            r := 0x4000180000000000000000000000000000000000000000000000000000000000
+                                        }
+                                        default {
+                                            r := 0x4000000000000000000000000000000000000000000000000000000000000000
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             function rev(sel) {
                 mstore(0x00, shl(224, sel))
                 revert(0x00, 0x04)
-            }
-
-            function pack(s, e, m) -> r {
-                if gt(sub(e, 1), 0x7fffe) {
-                    if sgt(e, 0x7ffff) { rev(0x35278d12) }
-                    leave
-                }
-                r := or(shl(255, s), or(shl(236, e), and(m, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))
-            }
-
-            function normround(s, e, D) -> r {
-                let n := msb(D)
-                D := shl(sub(255, n), D)
-                let m := shr(1, add(shr(18, D), 1))
-                r := pack(s, add(add(e, sub(n, 254)), shr(237, m)), m)
-            }
-
-            function wshr(h, l, n) -> rh, rl {
-                switch lt(n, 256)
-                case 1 {
-                    rh := shr(n, h)
-                    rl := or(shl(sub(256, n), h), shr(n, l))
-                }
-                default { rl := shr(sub(n, 256), h) }
-            }
-
-            function shr3(z2, z1, z0, n) -> rh, rl {
-                if lt(n, 256) {
-                    rh := or(shl(sub(256, n), z2), shr(n, z1))
-                    rl := or(shl(sub(256, n), z1), shr(n, z0))
-                    leave
-                }
-                rh, rl := wshr(z2, z1, sub(n, 256))
-            }
-
-            function factw(n) -> r {
-                let h := 0x8000000000000000000000000000000000000000000000000000000000000000
-                let l := 0
-                let ex := sub(0, 511)
-                for { let i := 2 } iszero(gt(i, n)) {} {
-                    let w := i
-                    let j := add(i, 16)
-                    if gt(j, add(n, 1)) { j := add(n, 1) }
-                    for { i := add(i, 1) } lt(i, j) { i := add(i, 1) } { w := mul(w, i) }
-                    let z2, z1, z0 := mul3(h, l, w)
-                    let k := add(msb(z2), 1)
-                    h, l := shr3(z2, z1, z0, k)
-                    ex := add(ex, k)
-                }
-                r := normround(0, add(ex, 0x401fd), h)
             }
 
             function unpack(x) -> s, e, m {
@@ -13487,11 +14429,11 @@ library FP19Lib {
                 r := 0x3ffff00000000000000000000000000000000000000000000000000000000000
                 let u := sub(e, 0x3ffff)
                 if or(iszero(e), slt(u, 0)) { leave }
-                if sgt(u, 14) { rev(0x35278d12) }
+                if sgt(u, 7) { rev(0x35278d12) }
                 let k := shr(sub(236, u), m)
-                if gt(k, 20366) { rev(0x35278d12) }
+                if gt(k, 170) { rev(0x35278d12) }
                 if lt(k, 2) { leave }
-                r := factw(k)
+                r := facttab(k)
             }
 
             _r := fp19_factorial(_n)

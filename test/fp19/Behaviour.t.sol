@@ -377,13 +377,14 @@ contract Behaviour19 is FP19Harness {
         assertEq(obj.round(obj.neg(two5)), obj.neg(obj.fromUint(3)));
         assertEq(obj.round(_mk(false, -1, (uint256(1) << 237) - 1)), ONE, "just under one");
         assertEq(obj.round(obj.sub(HALF, _mk(false, -237, uint256(1) << 236))), 0, "just under a half");
-        assertEq(objS.factorial(obj.fromUint(5)), obj.fromUint(120));
-        assertEq(objS.factorial(0), ONE);
-        assertEq(objS.factorial(HALF), ONE, "floor(1/2)! = 0! = 1");
-        assertEq(objS.factorial(obj.fromUint(34)), obj.fromUint(295232799039604140847618609643520000000), "34! is exact");
-        assertGt(objS.factorial(obj.fromUint(20366)), 0, "20366! fits");
-        _expectRevertAt(address(objS), abi.encodeCall(IFP19S.factorial, (obj.fromUint(20367))), IFP19.Overflow.selector, "20367!");
-        _expectRevertAt(address(objS), abi.encodeCall(IFP19S.factorial, (obj.neg(ONE))), IFP19.OutOfRange.selector, "(-1)!");
+        assertEq(obj.factorial(obj.fromUint(5)), obj.fromUint(120));
+        assertEq(obj.factorial(0), ONE);
+        assertEq(obj.factorial(HALF), ONE, "floor(1/2)! = 0! = 1");
+        assertEq(obj.factorial(obj.fromUint(34)), obj.fromUint(295232799039604140847618609643520000000), "34! is exact");
+        assertGt(obj.factorial(obj.fromUint(170)), 0, "170! is in the table");
+        _expectRevertAt(address(obj), abi.encodeCall(IFP19.factorial, (obj.fromUint(171))), IFP19.Overflow.selector, "171!");
+        _expectRevertAt(address(obj), abi.encodeCall(IFP19.factorial, (obj.fromUint(256))), IFP19.Overflow.selector, "256!");
+        _expectRevertAt(address(obj), abi.encodeCall(IFP19.factorial, (obj.neg(ONE))), IFP19.OutOfRange.selector, "(-1)!");
         int256 piWord = int256(0x40000921fb54442d18469898cc51701b839a252049c1114cf98e804177d4c762);
         assertEq(FP19Lib.PI, piWord, "PI is the word nearest pi (mpmath, 300 digits)");
     }

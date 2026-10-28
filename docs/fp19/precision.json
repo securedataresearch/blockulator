@@ -149,8 +149,8 @@
   "factorial": {
     "meanBits": 256,
     "minBits": 256,
-    "n": 39,
-    "reverts": 39,
+    "n": 26,
+    "reverts": 52,
     "worstInput": ""
   },
   "floor": {
