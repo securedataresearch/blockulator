@@ -102,7 +102,7 @@
         "x",
         "y"
       ],
-      "notice": "x^y = 2^(y log2 x): log2 x as a scaled word from the kernel (or the near-one series), its exact 512-bit product with y's significand split into the integer part and a fraction at 2^-254, then the 2^f kernel; one rounding when the error bound (which grows with |y| or |t|) clears the rounding boundary, else an exact tie when x^y has at most 238 bits, else log2 x in two words (wln) times y and 2^f by wexpm1: correctly rounded. 0^0 = 1. Shortcuts for y in {1, 2, 1/2, -1}.",
+      "notice": "x^y = 2^(y log2 x): log2 x as a scaled word from the kernel (or the near-one series), its exact 512-bit product with y's significand split into the integer part and a fraction at 2^-254, then the 2^f kernel; one rounding when the error bound (which grows with |y| or |t|) clears the rounding boundary, else the middle stage: log2 x within 2^-272 (mid254.py), t exact from it and the same 2^f kernel, its bound 10 units whatever |y|; else an exact tie when x^y has at most 238 bits, else log2 x in two words (wln) times y and 2^f by wexpm1: correctly rounded. 0^0 = 1. Shortcuts for y in {1, 2, 1/2, -1}.",
       "domain": "x >= 0",
       "reverts": "OutOfRange() for x < 0; DivisionByZero() for 0^y with y < 0; Overflow() when the result does not fit"
     },
@@ -199,7 +199,7 @@
         "x",
         "n"
       ],
-      "notice": "x^n for |n| below 2^16 by binary exponentiation on a 256-bit significand with its own exponent, each product keeping its top 256 bits, rounded once at the end: exact whenever x^n fits 256 bits (so every exactly representable power and every exact tie), else within (2n + 8) units, and through pow's second stage when that reaches the rounding boundary. n < 0 inverts the final significand once. From 2^16 on, pow(|x|, n) with the sign restored. Correctly rounded for |n| < 2^237 (n is a number from there). 0^0 = 1.",
+      "notice": "x^n for |n| below 2^16 by binary exponentiation on a 256-bit significand with its own exponent, each product keeping its top 256 bits, rounded once at the end: exact whenever x^n fits 256 bits (so every exactly representable power and every exact tie), else within (2n + 8) units, and through pow's middle stage when that reaches the rounding boundary. n < 0 inverts the final significand once. From 2^16 on, pow(|x|, n) with the sign restored. Correctly rounded for |n| < 2^237 (n is a number from there). 0^0 = 1.",
       "domain": "any number x, any plain integer n (not a number); the result must fit",
       "reverts": "Overflow() when x^n does not fit; DivisionByZero() for 0^n with n < 0; OutOfRange() for a word that is not a number"
     },
@@ -212,7 +212,7 @@
         "rate",
         "n"
       ],
-      "notice": "(1 + rate)^n without forming a rounded 1 + rate (a per-second rate needs 266 bits for it): log2(1 + rate) unrounded, as log1p takes it (the series below 2^-4, 1 + rate exact under its leading bit above), its exact product with n, then pow's 2^t; one rounding when its error bound clears the rounding boundary, else an exact tie when the power has at most 238 bits, else log2(1 + rate) in two words times n exactly: correctly rounded.",
+      "notice": "(1 + rate)^n without forming a rounded 1 + rate (a per-second rate needs 266 bits for it): log2(1 + rate) unrounded, as log1p takes it (the series below 2^-4, 1 + rate exact under its leading bit above), its exact product with n, then pow's 2^t; one rounding when its error bound clears the rounding boundary, else the middle stage as pow's (log2(1 + rate) within 2^-272, its bound 10 units whatever |n|), else an exact tie when the power has at most 238 bits, else log2(1 + rate) in two words times n exactly: correctly rounded.",
       "domain": "rate >= -1, any plain integer n (not a number); the result must fit",
       "reverts": "OutOfRange() for rate < -1; DivisionByZero() for rate = -1 with n < 0; Overflow() when the result does not fit"
     },

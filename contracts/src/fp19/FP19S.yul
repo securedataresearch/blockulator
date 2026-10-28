@@ -297,10 +297,16 @@ object "FP19S" {
             }
 
             function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
+                let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
+                let p := lnp(y)
+                { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
+                r := shr(2, add(acc, shr(1, w)))
+            }
+
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -391,8 +397,8 @@ object "FP19S" {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -483,10 +489,6 @@ object "FP19S" {
                         }
                     }
                 }
-                let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
-                let p := lnp(y)
-                { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
-                r := shr(2, add(acc, shr(1, w)))
             }
 
             function lnp(y) -> p {

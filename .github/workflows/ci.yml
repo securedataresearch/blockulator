@@ -41,9 +41,10 @@ jobs:
       - name: Ladder inputs are current
         run: make gen-inputs-check
 
-      - name: The exp/log kernels and the factorial tables are their generators' Yul (fits, models, bounds)
+      - name: The exp/log kernels, the middle stage and the factorial tables are their generators' Yul (fits, models, bounds)
         run: |
           uv run scripts/fp19/generators/kernel254.py --check
+          uv run scripts/fp19/generators/mid254.py --check
           uv run scripts/fp127/generators/kernel192.py --check
           uv run scripts/fp127/generators/expk.py --check
           uv run scripts/fp19/generators/facttab.py --check
