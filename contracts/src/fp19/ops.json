@@ -131,7 +131,7 @@
       "reverts": "Overflow() when e^x - 1 does not fit (x above about 181,705); OutOfRange() for a word that is not a number"
     },
     {
-      "object": "FP19S",
+      "object": "FP19N",
       "name": "erf",
       "signature": "erf(int256)",
       "selector": "0x7a959e36",
@@ -143,7 +143,7 @@
       "reverts": "OutOfRange() for a word that is not a number"
     },
     {
-      "object": "FP19S",
+      "object": "FP19N",
       "name": "erfc",
       "signature": "erfc(int256)",
       "selector": "0xa79456da",
@@ -155,7 +155,7 @@
       "reverts": "OutOfRange() for a word that is not a number"
     },
     {
-      "object": "FP19S",
+      "object": "FP19N",
       "name": "normCdf",
       "signature": "normCdf(int256)",
       "selector": "0x7b9745a0",

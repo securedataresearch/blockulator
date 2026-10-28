@@ -5,6 +5,7 @@ import {Precision19} from "./Precision.t.sol";
 import {IFP19} from "../../contracts/src/fp19/IFP19.sol";
 import {IFP19E} from "../../contracts/src/fp19/IFP19E.sol";
 import {IFP19H} from "../../contracts/src/fp19/IFP19H.sol";
+import {IFP19N} from "../../contracts/src/fp19/IFP19N.sol";
 import {IFP19S} from "../../contracts/src/fp19/IFP19S.sol";
 
 /// @title Deployed19
@@ -34,6 +35,8 @@ contract Deployed19 is Precision19 {
             if (a != address(0)) objE = IFP19E(a);
             a = _live("FP19H");
             if (a != address(0)) objH = IFP19H(a);
+            a = _live("FP19N");
+            if (a != address(0)) objN = IFP19N(a);
             a = _live("FP19S");
             if (a != address(0)) objS = IFP19S(a);
         }

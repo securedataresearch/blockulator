@@ -5,6 +5,7 @@ import {FP19Harness} from "../base/FP19Harness.sol";
 import {IFP19} from "../../contracts/src/fp19/IFP19.sol";
 import {IFP19E} from "../../contracts/src/fp19/IFP19E.sol";
 import {IFP19H} from "../../contracts/src/fp19/IFP19H.sol";
+import {IFP19N} from "../../contracts/src/fp19/IFP19N.sol";
 import {IFP19S} from "../../contracts/src/fp19/IFP19S.sol";
 
 /// @title Equivalence19
@@ -29,9 +30,9 @@ contract Equivalence19 is FP19Harness {
     function testFuzz_objEqLib_compound(int256 r, int256 n) public view { _objLib(abi.encodeCall(IFP19E.compound, (r, n)), "compound"); }
     function testFuzz_objEqLib_log1p(int256 x) public view { _objLib(abi.encodeCall(IFP19E.log1p, (x)), "log1p"); }
     function testFuzz_objEqLib_expm1(int256 x) public view { _objLib(abi.encodeCall(IFP19E.expm1, (x)), "expm1"); }
-    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP19S.erf, (x)), "erf"); }
-    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP19S.erfc, (x)), "erfc"); }
-    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP19S.normCdf, (x)), "normCdf"); }
+    function testFuzz_objEqLib_erf(int256 x) public view { _objLib(abi.encodeCall(IFP19N.erf, (x)), "erf"); }
+    function testFuzz_objEqLib_erfc(int256 x) public view { _objLib(abi.encodeCall(IFP19N.erfc, (x)), "erfc"); }
+    function testFuzz_objEqLib_normCdf(int256 x) public view { _objLib(abi.encodeCall(IFP19N.normCdf, (x)), "normCdf"); }
     function testFuzz_objEqLib_lambertW0(int256 x) public view { _objLib(abi.encodeCall(IFP19S.lambertW0, (x)), "lambertW0"); }
     function testFuzz_objEqLib_lambertWm1(int256 x) public view { _objLib(abi.encodeCall(IFP19S.lambertWm1, (x)), "lambertWm1"); }
     function testFuzz_objEqLib_neg(int256 x) public view { _objLib(abi.encodeCall(IFP19.neg, (x)), "neg"); }

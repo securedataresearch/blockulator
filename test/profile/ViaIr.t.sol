@@ -24,6 +24,7 @@ contract ViaIrBench is Test {
     address internal fp19;
     address internal fp19e;
     address internal fp19h;
+    address internal fp19n;
     address internal fp19s;
     uint256 constant N = 8;
 
@@ -32,6 +33,7 @@ contract ViaIrBench is Test {
         fp19 = _deploy("out/FP19.yul/FP19.json");
         fp19e = _deploy("out/FP19E.yul/FP19E.json");
         fp19h = _deploy("out/FP19H.yul/FP19H.json");
+        fp19n = _deploy("out/FP19N.yul/FP19N.json");
         fp19s = _deploy("out/FP19S.yul/FP19S.json");
     }
 
@@ -142,8 +144,8 @@ contract ViaIrBench is Test {
 
     function _obj19(string memory op) internal view returns (address) {
         bytes32 h = keccak256(bytes(op));
-        if (h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
-            || h == keccak256("lambertW0") || h == keccak256("lambertWm1")) return fp19s;
+        if (h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")) return fp19n;
+        if (h == keccak256("lambertW0") || h == keccak256("lambertWm1")) return fp19s;
         if (h == keccak256("sinh") || h == keccak256("cosh") || h == keccak256("tanh") || h == keccak256("atanh")) return fp19h;
         if (h == keccak256("exp") || h == keccak256("exp2") || h == keccak256("exp10") || h == keccak256("expm1")
             || h == keccak256("ln") || h == keccak256("log2") || h == keccak256("log10") || h == keccak256("log2Up")
@@ -222,7 +224,8 @@ contract ViaIrBench is Test {
         _object(fp19, abi.encodeWithSignature("abs(int256)", int256(1)));
         _object(fp19e, abi.encodeWithSignature("exp(int256)", int256(1)));
         _object(fp19h, abi.encodeWithSignature("sinh(int256)", int256(1)));
-        _object(fp19s, abi.encodeWithSignature("erf(int256)", int256(1)));
+        _object(fp19n, abi.encodeWithSignature("erf(int256)", int256(1)));
+        _object(fp19s, abi.encodeWithSignature("lambertW0(int256)", int256(1)));
         _u19("abs", -8, 8, 0);
         _u19("neg", -8, 8, 0);
         _u19("sign", -8, 8, 0);

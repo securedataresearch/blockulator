@@ -90,8 +90,9 @@
 // kernel but have their own object because FP19E with them measured 27,308
 // bytes, over the 24,576 limit: FP19H carries its own copy of the kernel at
 // its own address, which costs bytes and no gas; a smaller kernel may fold it
-// back into FP19E. `@object FP19S` is the special functions (erf, erfc,
-// normCdf, lambertW0, lambertWm1). factorial, a table, is in the core.
+// back into FP19E. `@object FP19N` is the normal
+// distribution (erf, erfc, normCdf) on its own tables, `@object FP19S` the
+// Lambert W functions (lambertW0, lambertWm1). factorial, a table, is in the core.
 
 /// @error Overflow() 0x35278d12
 /// @error DivisionByZero() 0x23d359a3
@@ -2332,7 +2333,7 @@ function ge13(Y, uy) -> t {
     t := or(sgt(uy, 3), and(eq(uy, 3), iszero(lt(Y, 0x6800000000000000000000000000000000000000000000000000000000000000))))
 }
 
-/// @object FP19S
+/// @object FP19N
 /// @export erf(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
@@ -2373,7 +2374,7 @@ function fp19_erf(x) -> r {
     r := normround(s, 0x3ffff, D2)
 }
 
-/// @object FP19S
+/// @object FP19N
 /// @export erfc(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number
@@ -2413,7 +2414,7 @@ function fp19_erfc(x) -> r {
     r := normround(0, add(0x3ffff, ee), D)
 }
 
-/// @object FP19S
+/// @object FP19N
 /// @export normCdf(int256 x) returns (int256 r)
 /// @domain any number
 /// @reverts OutOfRange() for a word that is not a number

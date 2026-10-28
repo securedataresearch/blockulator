@@ -29,7 +29,8 @@ contract GasLadder19 is FP19Harness {
         obj.mul(ONE, ONE);
         objE.exp(ONE);
         objH.sinh(ONE);
-        objS.erf(ONE);
+        objN.erf(ONE);
+        objS.lambertW0(ONE);
     }
 
     // ---- conversions --------------------------------------------------

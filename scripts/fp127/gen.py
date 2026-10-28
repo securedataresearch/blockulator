@@ -18,7 +18,7 @@ Usage:
                                                                # Makefile loops over this list
 
 An export may carry `/// @object <Name>` to go into another deployed object
-(FP19 deploys as FP19, FP19E, FP19H and FP19S). Each object then holds only
+(FP19 deploys as FP19, FP19E, FP19H, FP19N and FP19S). Each object then holds only
 its exports and their callees and gets its own interface and ABI; the
 inline library holds every export.
 
@@ -71,15 +71,18 @@ LIBS = {
         # FP19 is the number; FP19E the elementary functions on the one
         # exp/log kernel; FP19H the hyperbolic functions, on their own copy of
         # that kernel (with them FP19E measured 27,308 bytes, over the
-        # 24,576 limit); FP19S the special functions.
+        # 24,576 limit); FP19N the normal distribution (erf, erfc, normCdf),
+        # moved out of FP19S for its tables in 3.0; FP19S Lambert W.
         "objects": {
             "FP19": {"iface": "IFP19", "abi": "abi.json", "salt": "FP256 v5"},
             "FP19E": {"iface": "IFP19E", "abi": "abiE.json", "salt": "FP256E v5",
                        "iface_notice": "Interface of the deployed FP19E object, FP19's elementary\n///         functions on its one exp/log kernel: exp, exp2, exp10, expm1, ln,\n///         log2, log10, log2Up, log1p, pow, powu and compound, on the same\n///         256-bit binary floating point words as IFP19 (sign bit 255, a\n///         19-bit biased exponent, bias 262143, a 236-bit fraction; zero is\n///         the all-zero word)."},
             "FP19H": {"iface": "IFP19H", "abi": "abiH.json", "salt": "FP256H v5",
                        "iface_notice": "Interface of the deployed FP19H object, FP19's hyperbolic\n///         functions: sinh, cosh, tanh and atanh, on the same 256-bit binary\n///         floating point words as IFP19. They run on the exp/log kernel of\n///         FP19E, carried here as their own copy: beside FP19E's ops they\n///         would not fit one object."},
+            "FP19N": {"iface": "IFP19N", "abi": "abiN.json", "salt": "FP19N v6",
+                       "iface_notice": "Interface of the deployed FP19N object, FP19's normal distribution:\n///         erf, erfc and normCdf, on the same 256-bit binary floating point\n///         words as IFP19."},
             "FP19S": {"iface": "IFP19S", "abi": "abiS.json", "salt": "FP256S v5",
-                       "iface_notice": "Interface of the deployed FP19S object, FP19's special functions:\n///         erf, erfc, normCdf, lambertW0, lambertWm1 and factorial, on the\n///         same 256-bit binary floating point words as IFP19."},
+                       "iface_notice": "Interface of the deployed FP19S object, FP19's special functions:\n///         lambertW0 and lambertWm1, the two real branches of Lambert W, on\n///         the same 256-bit binary floating point words as IFP19."},
         },
         "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
     },
@@ -444,7 +447,7 @@ def _indent(text: str, n: int) -> str:
 # 55 save 465 gas a call on average, release four's FP19X3 with 15 saved 72,
 # FP19X2 with 10 saved 31 with some ops dearer, FP19X with 5 would have
 # lost). Objects with fewer than DISPATCH_MIN exports keep the flat switch:
-# FP19H (4) and FP19S (6). FP19 and FP19E (12) take the search; the FP19
+# FP19H (4), FP19N (3) and FP19S (2). FP19 and FP19E (12) take the search; the FP19
 # core took it in fp19-basic-fast (measured on the gas ladder: 278 gas a call
 # saved on average over its 37 benched exports then, up to 656, a few of the
 # first-ranked ones up to 85 dearer).
