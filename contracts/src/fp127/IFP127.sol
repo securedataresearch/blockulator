@@ -151,11 +151,17 @@ interface IFP127 {
     ///      stopped there and was up to 1.3e6 ULPs off for results near 2^127
     ///      with n near 2^25. 0^0 = 1.
     function powu(int256 x, int256 n) external pure returns (int256 r);
-    /// @notice (1 + rate)^floor(n): n periods of compounding at rate, through
-    ///         powu, so a per-second rate over years keeps every bit the format
-    ///         holds. 1 + rate is exact in 127.128 (the sum of two grid values),
-    ///         so nothing is lost before the exponentiation; on an 18-decimal
-    ///         grid the rate itself would have been the first loss.
+    /// @notice (1 + rate)^floor(n): n periods of compounding at rate, rounded
+    ///         to nearest, so a per-second rate over years keeps every bit the
+    ///         format holds. 1 + rate is exact in 127.128 (the sum of two grid
+    ///         values), so nothing is lost before the exponentiation; on an
+    ///         18-decimal grid the rate itself would have been the first loss.
+    /// @dev For |n| >= 16 the logarithm goes first: t = n log2(1 + rate)
+    ///      exactly from log2m (within 2^-160.5, kernel192.py), 2^t by pow2t,
+    ///      which decides when its bound cannot change the rounding; then
+    ///      log2 at 2^-299 (l2p) and 2^t in the double word with a test.
+    ///      Otherwise, and for exact ties, powu, whose 512-bit decider is the
+    ///      nearest word.
     function compound(int256 rate, int256 n) external pure returns (int256 r);
     /// @notice Cube root, defined for all x: cbrt(-x) = -cbrt(x). Rounded to
     ///         nearest (decided exactly); exact for perfect cubes.
@@ -316,7 +322,7 @@ interface IFP127 {
     ///      within 2^-145 plus one unit.
     function atanh(int256 x) external pure returns (int256 r);
     /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
-    ///         1 - erfc(x) by the continued fraction, both at 2^-192 and rounded
+    ///         1 - erfc(x) by the tail polynomial, both at 2^-192 and rounded
     ///         once; +-1 exactly from |x| >= 9.375, where 1 - erf is below
     ///         2^-130.8 and the subtraction rounds to one.
     function erf(int256 x) external pure returns (int256 r);

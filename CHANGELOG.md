@@ -57,6 +57,22 @@ checked in CI):
 - FP127: the 34 values two to a word, as the Huff's jump table was: about 400
   gas at every n (v6's multiplication: 190 to 1,918). The same words.
 
+FP127 `compound` and the erfc tail, the same words (nearest on every sweep
+and vector):
+
+- `compound` for |n| ≥ 16 takes n log2(1 + rate) from the one-word log and
+  2^t through `pow2t`, then log2 at 2^-299 and a tested `pow2r`, `powu`
+  last: sweep 9,245 / 10,913 / 33,268 → 3,360 / 9,344 / 41,484 gas (median,
+  p99, max; the largest is one result near 2^124 that `powus` decides).
+  `precise_model.py fastcompound` checks both bounds.
+- erfc for 4 < x ≤ 9.5 is e^(−x²) times a degree-43 minimax polynomial for
+  e^(x²) erfc(x), held to an absolute 2^-175 on erfc (`erf_model.py`,
+  `--check` in CI), where the continued fraction ran: 7,650 gas at every x
+  of the tail (the fraction: about 20,000 near 4). erf, erfc, normCdf max
+  35,352 → 20,746, p99 about 25,000 → 17,430.
+- The FP127 object is 23,797 bytes; inline `FP127Lib.compound` 11.0 KB
+  (was 1.3 KB).
+
 BlockulatorWad, a third library (`contracts/src/wad/`, inline, no deployed
 object): Solady's `FixedPointMathLib` WAD names, signatures and error
 selectors (mulWad, divWad, sMulWad, sDivWad, sqrtWad, cbrtWad, expWad, lnWad,

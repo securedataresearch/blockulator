@@ -265,7 +265,7 @@
         "rate",
         "n"
       ],
-      "notice": "(1 + rate)^floor(n): n periods of compounding at rate, through powu, so a per-second rate over years keeps every bit the format holds. 1 + rate is exact in 127.128 (the sum of two grid values), so nothing is lost before the exponentiation; on an 18-decimal grid the rate itself would have been the first loss.",
+      "notice": "(1 + rate)^floor(n): n periods of compounding at rate, rounded to nearest, so a per-second rate over years keeps every bit the format holds. 1 + rate is exact in 127.128 (the sum of two grid values), so nothing is lost before the exponentiation; on an 18-decimal grid the rate itself would have been the first loss.",
       "domain": "rate > -1 and 1 + rate fits; any integer n = floor(n)",
       "reverts": "Overflow() when 1 + rate or the result does not fit; DivisionByZero() for rate == -1 with n < 0"
     },
@@ -584,7 +584,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "The error function. |x| <= 4 by the series, |x| > 4 as 1 - erfc(x) by the continued fraction, both at 2^-192 and rounded once; +-1 exactly from |x| >= 9.375, where 1 - erf is below 2^-130.8 and the subtraction rounds to one.",
+      "notice": "The error function. |x| <= 4 by the series, |x| > 4 as 1 - erfc(x) by the tail polynomial, both at 2^-192 and rounded once; +-1 exactly from |x| >= 9.375, where 1 - erf is below 2^-130.8 and the subtraction rounds to one.",
       "domain": "any x",
       "reverts": "never"
     },

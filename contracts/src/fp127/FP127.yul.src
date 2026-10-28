@@ -1779,13 +1779,88 @@ function mant(a, b) -> m, c {
 /// @export compound(int256 rate, int256 n) returns (int256 r)
 /// @domain rate > -1 and 1 + rate fits; any integer n = floor(n)
 /// @reverts Overflow() when 1 + rate or the result does not fit; DivisionByZero() for rate == -1 with n < 0
-/// @notice (1 + rate)^floor(n): n periods of compounding at rate, through
-///         powu, so a per-second rate over years keeps every bit the format
-///         holds. 1 + rate is exact in 127.128 (the sum of two grid values),
-///         so nothing is lost before the exponentiation; on an 18-decimal
-///         grid the rate itself would have been the first loss.
+/// @notice (1 + rate)^floor(n): n periods of compounding at rate, rounded
+///         to nearest, so a per-second rate over years keeps every bit the
+///         format holds. 1 + rate is exact in 127.128 (the sum of two grid
+///         values), so nothing is lost before the exponentiation; on an
+///         18-decimal grid the rate itself would have been the first loss.
+/// @dev For |n| >= 16 the logarithm goes first: t = n log2(1 + rate)
+///      exactly from log2m (within 2^-160.5, kernel192.py), 2^t by pow2t,
+///      which decides when its bound cannot change the rounding; then
+///      log2 at 2^-299 (l2p) and 2^t in the double word with a test.
+///      Otherwise, and for exact ties, powu, whose 512-bit decider is the
+///      nearest word.
 function fp127_compound(rate, n) -> r {
-    r := fp127_powu(fp127_add(0x100000000000000000000000000000000, rate), n)
+    let x := fp127_add(0x100000000000000000000000000000000, rate)
+    let k := sar(128, n)
+    if and(sgt(x, 0), gt(absw(k), 15)) {
+        let ok := 0
+        r, ok := compt(x, k)
+        if ok { leave }
+    }
+    r := fp127_powu(x, n)
+}
+
+/// x^k rounded to nearest through the one-word kernels, for x > 0 and an
+/// integer k: ok = 1 when the rounding is certain. log2(x) at 2^-192 is
+/// within 2^-160 (log2m's 2^-160.5 and the mantissa's floor above 2^64), so
+/// t = k log2(x), exact, is within |k| 2^-160; pow2t takes |k| 2^113 + 1 for
+/// ay, which it reads as a bound of ay 2^-273 on t's error. Where pow2t
+/// cannot decide (a result from about 2^3 with a large k, or near a
+/// midpoint) l2p and pow2rt try again at 2^-299 (precise_model.py
+/// fastcompound).
+function compt(x, k) -> r, ok {
+    let ms := msb(x)
+    let y0 := 0
+    let v := shl(192, sub(ms, 128))
+    if and(x, sub(x, 1)) {
+        let mm := shl(sub(192, ms), x)
+        if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+        y0 := log2m(mm)
+        v := add(v, y0)
+    }
+    let t := mul(k, v)
+    let wide := iszero(eq(sdiv(t, k), v))
+    if or(wide, iszero(eq(sar(199, t), sar(255, t)))) {
+        // |t| from 128 (t within |k| 2^-160 of the truth): x^k is from
+        // 2^127, Overflow, or under 2^-130 from t = -130, where the
+        // nearest word is 0; between -130 and -128, powu
+        if iszero(xor(slt(k, 0), slt(v, 0))) { rev(0x35278d12) }
+        ok := or(wide, slt(t, sub(0, shl(192, 130))))
+        leave
+    }
+    r, ok := pow2t(t, add(shl(113, absw(k)), 1))
+    if ok { leave }
+    // out of pow2t's reach or near a midpoint: log2(x) to 2^-299 (l2p) and
+    // the double-word 2^t, with a test
+    let lh, ll := l2p(x, ms, y0)
+    r, ok := pow2rt(shl(128, k), lh, ll, add(shr(42, absw(k)), 3))
+}
+
+/// pow2r with a rounding test: ok = 1 when 2^(y L) is certainly nearest r.
+/// V = 2^e + sh 2^(e - 256), the value pow2r halves, is within (1 + |y|)
+/// 2^-299 relative of the truth (l2p's 2^-299, expk's 2^-311) plus sh's one
+/// unit, under eb units of sh's last bit for eb = |y| 2^-42 + 3: the word
+/// is certain when V's bits below the halving are more than eb from the
+/// midpoint, an odd integer. ok = 0 where pow2r would revert or the result
+/// is 0 within reach of 2^-129: the caller decides those.
+function pow2rt(y, lh, ll, eb) -> r, ok {
+    let n, fh, fl := y2nf(y, lh, ll)
+    if sgt(n, 126) { leave }
+    if slt(n, sub(0, 129)) {
+        ok := slt(n, sub(0, 130))
+        leave
+    }
+    let rh, rx := lnmul(fh, fl)
+    let sh, sl := expk(rh, rx)
+    let e := add(n, 129)
+    let sb := sub(256, e)
+    let w := add(add(shl(e, 1), shr(sb, sh)), 1)
+    r := shr(1, w)
+    if iszero(r) { leave }
+    let d := and(sh, sub(shl(sb, 1), 1))
+    if and(w, 1) { d := sub(shl(sb, 1), d) }
+    ok := gt(d, eb)
 }
 
 /// floor(cbrt(z)) for z in [2^253, 2^256) from a seed y within 2^-7 of
@@ -2797,77 +2872,159 @@ function erfs(xg) -> v {
     v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
 }
 
-/// erfc(x) at 2^-192 for x > 4 given at 2^-192, by the continued fraction
-/// erfc(x) = e^(-x^2) / (sqrt(pi) K), K = x + (1/2)/(x + 1/(x + (3/2)/(x + ...))),
-/// as the convergents A_k / B_k of the forward recurrence
-/// A_k = x A_(k-1) + (k/2) A_(k-2), renormalised by 2^-64 whenever A_k
-/// passes 2^240, to depth 1700 / floor(x^2) + 10 (erf_model.py). e^(-x^2)
-/// is taken at 2^-192 unrounded, so a result far below one keeps its bits:
-/// erfc(9.3) is the last value above half an ULP and comes out as one ULP.
-/// The recurrence's two mulg are inline and unsigned (x and the convergents
-/// are non-negative and below 2^255): the same floors.
-function erfcf(xg) -> v {
-    let x2 := mulg(xg, xg)
-    let n := add(div(1700, shr(192, x2)), 10)
-    let am := 0x1000000000000000000000000000000000000000000000000
-    let an := xg
-    let bm := 0
-    let bn := 0x1000000000000000000000000000000000000000000000000
+/// erfc(x) at 2^-192 for 4 < x <= 9.5 given at 2^-192: e^(-x^2) g(x),
+/// g(x) = e^(x^2) erfc(x) by the degree-43 minimax polynomial in
+/// t = (2x - 13.5) / 5.5 on [4, 9.5], fitted to the tolerance 2^-175 e^(x^2)
+/// (erf_model.py: certified 0.240 of it after the coefficients'
+/// rounding), so erfc is within 2^-175 before e^(-x^2)'s own error; signed
+/// Horner at 2^-192, each step's floor under a unit of g, the product
+/// written in line (mulg's words, t's sign once). e^(-x^2) is taken
+/// unrounded, so a result far below one keeps its bits: erfc(9.3) is the
+/// last value above half an ULP and comes out as one ULP. Release 2.2's
+/// continued fraction cost about 20,000 gas at x = 4.
+function erfct(xg) -> v {
+    let t := sub(mulg(xg, 0x5d1745d1745d1745d1745d1745d1745d1745d1745d1745d1), 0x2745d1745d1745d1745d1745d1745d1745d1745d1745d1746)
+    let tn := slt(t, 0)
+    let p := sub(0, 0x7e2a9339ca52a4c78ee31bc306cd88f95)
     let l := 0
     let h := 0
-    // two steps a turn, the newest convergent alternating between (am, bm)
-    // and (an, bn), so nothing is copied: the same values as one step a turn
-    let k := 1
-    for {} lt(k, n) { k := add(k, 2) } {
-        l := mul(xg, an)
-        h := mulmod(xg, an, not(0))
-        am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
-        l := mul(xg, bn)
-        h := mulmod(xg, bn, not(0))
-        bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
-        if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-            am := shr(64, am)
-            an := shr(64, an)
-            bm := shr(64, bm)
-            bn := shr(64, bn)
-        }
-        l := mul(xg, am)
-        h := mulmod(xg, am, not(0))
-        an := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), an)))
-        l := mul(xg, bm)
-        h := mulmod(xg, bm, not(0))
-        bn := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(add(k, 1), bn)))
-        if gt(an, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-            am := shr(64, am)
-            an := shr(64, an)
-            bm := shr(64, bm)
-            bn := shr(64, bn)
-        }
-    }
-    if eq(k, n) {
-        l := mul(xg, an)
-        h := mulmod(xg, an, not(0))
-        am := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, am)))
-        l := mul(xg, bn)
-        h := mulmod(xg, bn, not(0))
-        bm := add(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), shr(1, mul(k, bm)))
-        if gt(am, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-            am := shr(64, am)
-            an := shr(64, an)
-            bm := shr(64, bm)
-            bn := shr(64, bn)
-        }
-        an := am
-        bn := bm
-    }
-    v := divg(mulg(expg(sub(0, x2)), bn), mulg(an, 0x1c5bf891b4ef6aa79c3b0520d5db9383fe3921546f63b252e))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x78dfef1317e566eca1d529cc995f2aeff2))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x37d9d24bb7e93a43550e91c8bf4fca67d21))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x1043472d59369235297a156b37c2f4691c40))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x34f2b4c78e9e8cc6b83b542c049779533640))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x7deb73cf55c41d617c47cd6edef652651259))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xdd5c8f59dc9a2ff0d1dd3803131924479866))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x116b458baf217511807765a5e3b5f4f906cf3))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xdbd2bd29703e2fde17d56d6382b8daf04a48))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x154523aa3edf52de17189faa14e9b8f4f704))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xce9b5aa8879e8c3eee6b374dcd7cb9fd9219)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x15d8f6bd4791d475eb3631d27ed1358a27f84)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xc3d6c24e7503157d520fa17dff2394742a5c)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xf3b87046034f16eebc0954019d3f55925bfa)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x29dbc46eda78017993d952d37728cb63b6462))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x65f2d5f27272108225c73774f2b931cffff11)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x157f298f33a10f32bffdbc61621c42e26a3484))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x40c81024b083b2a46130597f06f040a924580c)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xc4d1f982d76c96039ee300f446944225686bdc))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x252d12c767b3b041d0409e00c0ba8beb164c4cc)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x6f944930ea383c35dc2063e872b4c81eb7210a3))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x14cdcbbe7d619c7212aa1d1e8f0f3c0b69f6d036)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x3dab40fbbf2fde372877ddc5569bae21706f6716))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xb5a1205808a51b7d87198aef9b262357ea1a2f2a)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x21370ccfb9287989b4d9a440f48bc62b98b173492))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x6089dc5f2e3f692f726418865451e6abc0f45c6bb)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x116aecfe3721c7a24529e97473ccbb4d69f46fa6e1))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x31eedb640d39e6e5758978d026eb391eeef6c21c64)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x8e23c9e6eb8a5ce056f542791765467f57ed434424))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x191b5d7a916d3c1ff3f2809c4afd9ad2b5a8e13a4e4)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x466fb38c9de8b0620c5337ac6d507bd27742264be7e))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xc420ed62eeb56fc4b5565d3b92205d6cbe80e71636f)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x21df26a851557b281e29540e35160bdacf968062a07a))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x5cdd6ee3a2d03f7a0a38e320f2609f96bd5ce5ad6842)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xfc934391e20ec6eca65b9c94814bf8b89b13a99efb88))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x2a95b1322a98e3830e8d70cf291f04aaf9c9bc6603e20)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x71eb61e0d358161a285dcae5ed4388839ef545b8ee689))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x12e250826dfedd6c937ce5a2b81b1ea75e88bba89ac3f6)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x31a59d12d0665f9b211136ba61792fd1614bfe057f5781))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x815a119d290bc172f359fc2f74891e18cdd257f124970c)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x14de983204eaa991cc5cd50d2b9672c9212bf371966e03b))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x355cfb26a0d883ad9633a0ff14a5f864aea4a8286515262)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x871f2fe7ada132110b75a266664936671b1e4853fd070d2))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x152b80d463c46f83418b76f03a108cebbf3ca83ee1d8a559)
+    v := mulg(expg(sub(0, mulg(xg, xg))), p)
 }
 
 /// @export erf(int256 x) returns (int256 r)
 /// @domain any x
 /// @reverts never
 /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
-///         1 - erfc(x) by the continued fraction, both at 2^-192 and rounded
+///         1 - erfc(x) by the tail polynomial, both at 2^-192 and rounded
 ///         once; +-1 exactly from |x| >= 9.375, where 1 - erf is below
 ///         2^-130.8 and the subtraction rounds to one.
 function fp127_erf(x) -> r {
@@ -2879,7 +3036,7 @@ function fp127_erf(x) -> r {
         let xg := shl(64, ax)
         switch gt(ax, 0x400000000000000000000000000000000)
         case 0 { r := round64(erfs(xg)) }
-        default { r := round64(sub(0x1000000000000000000000000000000000000000000000000, erfcf(xg))) }
+        default { r := round64(sub(0x1000000000000000000000000000000000000000000000000, erfct(xg))) }
     }
     default { r := one }
     if slt(x, 0) { r := sub(0, r) }
@@ -2901,7 +3058,7 @@ function fp127_erfc(x) -> r {
         let xg := shl(64, ax)
         switch gt(ax, 0x400000000000000000000000000000000)
         case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(xg)) }
-        default { v := erfcf(xg) }
+        default { v := erfct(xg) }
     }
     if slt(x, 0) { v := sub(0x2000000000000000000000000000000000000000000000000, v) }
     r := round64(v)
@@ -2926,7 +3083,7 @@ function fp127_normCdf(x) -> r {
         let yg := mulg(shl(64, ax), 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
         switch gt(yg, 0x4000000000000000000000000000000000000000000000000)
         case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(yg)) }
-        default { v := erfcf(yg) }
+        default { v := erfct(yg) }
     }
     switch slt(x, 0)
     case 1 { r := round64(shr(1, v)) }

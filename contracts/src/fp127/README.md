@@ -188,7 +188,7 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `cbrt(x)` | all x, odd; nearest decided exactly; exact for perfect cubes | `Overflow` only at −2^255 |
 | `pow(x, y)` | x^y for x ≥ 0; 0^0 = 1; shortcuts y = 1, y = 2 (the rounded square), x = 2, x = 10 | `OutOfRange` for x < 0, `Overflow` |
 | `powu(x, n)` | x^floor(n) for any integer n, binary exponentiation on a 256-bit mantissa, a 512-bit one where that is ambiguous, one rounding; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
-| `compound(r, n)` | (1 + r)^floor(n) through `powu` | `Overflow`, `DivisionByZero` |
+| `compound(r, n)` | (1 + r)^floor(n), rounded to nearest: for \|n\| ≥ 16 n log2(1 + r) and 2^t in one word, then at 2^-299 with a test, `powu` last | `Overflow`, `DivisionByZero` |
 | `inv(x)` | 1/x | `DivisionByZero`, `Overflow` |
 | `abs`, `neg` | | `Overflow` at −2^255 |
 | `sign`, `min`, `max`, `clamp`, `avg`, `floor`, `frac` | exact, never revert | |
@@ -202,7 +202,7 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `sinh`, `cosh` | \|x\| ≤ 88; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192, within 3 units of 2^-192; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
 | `tanh(x)` | all x; ±1 exactly from \|x\| = 46 | never |
 | `atanh(x)` | \|x\| < 1; log1p(2\|x\|/(1 − \|x\|))/2, one division and one unrounded log at 2^-192 | `OutOfRange` |
-| `erf(x)`, `erfc(x)` | all x; series to 4, continued fraction beyond, at 2^-192; erfc(9.3) is one ULP, zero beyond | never |
+| `erf(x)`, `erfc(x)` | all x; series to 4, e^(x²) erfc(x) by a minimax polynomial beyond, at 2^-192; erfc(9.3) is one ULP, zero beyond | never |
 | `normCdf(x)` | Φ(x) = erfc(−x/√2)/2, the N(d) of Black-Scholes; Φ(−13) is two ULPs, Φ(−14) is zero, Φ(14) is one | never |
 
 **Constants.** `FP127Lib.ONE` is 2^128 and `FP127Lib.PI` is π · 2^128 to
@@ -347,7 +347,37 @@ series (2/√π) e^(−x²) x Σ (2x²)^k/(2k+1)!! to x = 4 and the continued
 fraction e^(−x²)/(√π K) beyond, both at 2^-192 with e^(−x²) unrounded, so
 the tail keeps its digits down to the format's floor; `normCdf` is
 erfc(−x/√2)/2. The term counts, the regime split and the fraction depth
-1700/⌊x²⌋ + 10 come from `scripts/fp127/generators/erf_model.py`.
+1700/⌊x²⌋ + 10 came from `scripts/fp127/generators/erf_model.py`; 3.0
+replaces the fraction (below).
+
+**`compound` and the erfc tail (3.0).** `compound` went through `powu`'s
+binary exponentiation, about 9,200 gas for a per-second rate over a year
+(25 squarings and their multiplies). For |n| ≥ 16 it now takes the
+logarithm first: t = n log2(1 + r) is formed exactly from the one-word
+`log2m` (within 2^-160.5, so t within |n| 2^-160), and `pow2t` rounds 2^t
+when its bound, given |n| 2^113 + 1 as the scale of t's error, cannot
+change the word. Where it cannot (a result from about 2^3 with a large n,
+or within reach of a midpoint), `l2p` (log2 to 2^-299) and `pow2rt`, which
+is `pow2r` with a rounding test (V within (1 + |n|) 2^-299 relative plus
+one unit of `sh`, eb = |n| 2^-42 + 3 units), try again; |t| from 128 is
+Overflow or 0 by itself; `powu`, whose 512-bit decider is the nearest word,
+takes |n| < 16, ties and what is left. `precise_model.py fastcompound`
+checks both bounds on 10,008 random inputs (8,818 decided in one word,
+1,186 of the other 1,190 at 2^-299, every one the nearest word; largest
+error over bound 0.16 and 0.33). Sweep median 9,245 → 3,360 gas. The
+inline `FP127Lib.compound` now carries the log and exp kernels: 11.0 KB
+where it was 1.3 KB ([`size.md`](../../../docs/benchmarks/size.md)).
+
+The erfc tail, 4 < x ≤ 9.5, ran the continued fraction, about 20,000 gas
+near x = 4. It is now e^(−x²) g(x) with g(x) = e^(x²) erfc(x) the degree-43
+minimax polynomial in t = (2x − 13.5)/5.5 (`erfct`): what is rounded is
+erfc on the 2^-128 grid, so the fit is held to an absolute 2^-175 on erfc,
+the tolerance 2^-175 e^(x²) on g, which is 2^-149 relative at x = 4 and
+2^-45 at 9.5; certified 0.24 of it after the coefficients' rounding.
+`erf_model.py --tail` models the Horner in integers (largest error against
+erfc 2^18.25 units of 2^-192, the fraction's 2^18.17, both e^(−x²)'s);
+`--check` holds the source to its Yul (CI). 7,650 gas at every x of the
+tail; the products are written in line (calls to `mulg` cost 10,770).
 
 ## Precision
 
@@ -382,7 +412,9 @@ Huff had 50 to 100 bits: a median of 41k gas for `lambertW0` and 32k for
 `compound` cost 2,200 to 10,500 gas (one squaring step per bit of the
 exponent), the near-one and hyperbolic ops 4,000 to 11,500, and the error
 function family is the honest expensive one: 1,100 to 39,000 gas depending
-on where x falls, the continued fraction near x = 4 being the dearest.
+on where x falls, the continued fraction near x = 4 being the dearest. In
+3.0 `compound` is about 3,400 at the median and the erfc tail 7,650 at
+every x; the series just below 4 (about 20,500) is now the family's dearest.
 
 v5 against v4, medians through the object: `exp` 7,076 (+1,544), `exp10`
 5,794 (+908), `exp2` 4,664 (−696), `pow` 5,742 (−352), `cbrt` 7,270 (+551),
