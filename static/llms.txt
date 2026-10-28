@@ -10,40 +10,47 @@
 > agents get results more precise than a double by calling FP127, and at
 > any magnitude by calling FP19.
 
-Current release: Blockulator 2.2 (FP127 v6 + FP19 v5, ladder v11), live
-on Sepolia since 2026-10-22, every address in
-/contracts/deployments/RELEASE.json. CLZ required: the 2.2 contracts are
+Current release: Blockulator 3.0 (FP127 v8 + FP19 v6, ladder v13), live
+on Sepolia since 2026-10-28, every address in
+/contracts/deployments/RELEASE.json. CLZ required: the 3.0 contracts are
 evmVersion osaka builds using the CLZ opcode (EIP-7939); they run on
 Ethereum, Sepolia, Arbitrum, OP, Base, Unichain, Polygon PoS, BNB Chain,
 Gnosis and other chains with CLZ, not on zkSync Era, Avalanche C-Chain or
-Polygon zkEVM. Blockulator 2.1 (FP127 v5, FP19 v4, ladder v9)
-and 2.0 (FP127 v4, FP19 v3) stay live on Sepolia.
+Polygon zkEVM. Blockulator 2.2 (FP127 v6, FP19 v5, ladder v11), 2.1
+(FP127 v5, FP19 v4, ladder v9) and 2.0 (FP127 v4, FP19 v3) stay live on
+Sepolia, as does FP127 v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
+2026-10-27), superseded by v8 before mainnet.
 
 ## What it is
 
-- FP19 (/library/fp19/), v5, a 256-bit binary float: sign bit 255, a
+- FP19 (/library/fp19/), v6, a 256-bit binary float: sign bit 255, a
   19-bit biased exponent (bias 262143) in bits 254..236, a 236-bit fraction
   with an implicit one; about 71 digits at any magnitude, to 10^+-78,913; no
   NaN, infinity or subnormals (invalid words revert OutOfRange). 65 ops,
-  each correctly rounded or exact (0 misrounded of 360,590 random inputs),
-  in four objects by idea, live on Sepolia since 2026-10-22 (the same
-  CREATE2 proxy, Sourcify and Blockscout verified): FP19 at
-  0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52 (salt "FP256 v5": the
+  each correctly rounded or exact (0 misrounded on the release sweep), in
+  five objects by idea, live on Sepolia since 2026-10-28 (the same CREATE2
+  proxy, Sourcify and Blockscout verified): FP19 at
+  0x94d9d43D6202827429a8058959eeCf6d232b8729 (salt "FP19 v6": the
   number: add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg, neg, abs,
   sign, cmp, lt, eq, min, max, clamp, floor, ceil, round, frac, avg, dist,
-  zeroFloorSub, lerp, the edge (mulDown, mulUp, divDown, divUp,
-  toUintDown, toUintUp, toIntDown, toIntUp, toFixed18Down, toFixed18Up,
-  fromUintDown, fromUintUp) and the conversions), FP19E at
-  0x017F68A57dD53a6dF2043c24B712b287F9549AE2 (salt "FP256E v5": exp, exp2,
+  zeroFloorSub, lerp, factorial (n <= 170), the edge (mulDown, mulUp,
+  divDown, divUp, toUintDown, toUintUp, toIntDown, toIntUp, toFixed18Down,
+  toFixed18Up, fromUintDown, fromUintUp) and the conversions), FP19E at
+  0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092 (salt "FP19E v6": exp, exp2,
   exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound),
-  FP19H at 0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5 (salt "FP256H v5":
-  sinh, cosh, tanh, atanh) and FP19S at
-  0x73E8809F163d4358773cc5F25c134997B4b842F4 (salt "FP256S v5": erf, erfc,
-  normCdf, lambertW0, lambertWm1, factorial). pi is the constant
-  FP19Lib.PI. Ops table (with each op's object) /data/fp19/ops.json,
-  FP19's ABI /data/fp19/abi.json, record /data/fp19/fp19.json and
-  /contracts/deployments/FP19.md. FP19 v4 (Blockulator 2.1: FP19,
-  FP19X, FP19X2, FP19X3 at 0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9,
+  FP19H at 0xF059611C1c42543DE6EE82353Eb082Fd8999081f (salt "FP19H v6":
+  sinh, cosh, tanh, atanh), FP19N at
+  0xCe9F09D646B37a9100F05ED1FFD14E9f43180214 (salt "FP19N v6": erf, erfc,
+  normCdf) and FP19S at 0xf74ba90535224870830e6e89D2b328d4cc09DE48 (salt
+  "FP19S v6": lambertW0, lambertWm1). pi is the constant FP19Lib.PI. Ops
+  table (with each op's object) /data/fp19/ops.json, FP19's ABI
+  /data/fp19/abi.json, record /data/fp19/fp19.json and
+  /contracts/deployments/FP19.md. FP19 v5 (Blockulator 2.2: FP19, FP19E,
+  FP19H, FP19S at 0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52,
+  0x017F68A57dD53a6dF2043c24B712b287F9549AE2,
+  0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5,
+  0x73E8809F163d4358773cc5F25c134997B4b842F4), FP19 v4 (Blockulator 2.1:
+  FP19, FP19X, FP19X2, FP19X3 at 0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9,
   0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0,
   0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697,
   0x59D51481cb2EA924EC17FE263cd05b90CEF22383) and FP19 v3 (Blockulator 2.0, 28
@@ -75,8 +82,8 @@ and 2.0 (FP127 v4, FP19 v3) stay live on Sepolia.
 
 - Network: Ethereum Sepolia, chainId 11155111
 - RPC: https://ethereum-sepolia-rpc.publicnode.com
-- FP127: 0xb97E0b824d86470BfAA52fe44f09363755d52591 (CREATE2 through
-  0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v7"; record at
+- FP127: 0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B (CREATE2 through
+  0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v8"; record at
   /contracts/deployments/FP127.md and /data/fp127.json)
 - ABI: /data/abi.json. All functions are pure; selectors are in /data/ops.json.
 - Example: sqrt(2) is `sqrt(int256)` with 2 * 2**128 =
@@ -100,12 +107,15 @@ and 2.0 (FP127 v4, FP19 v3) stay live on Sepolia.
   inputs; the methodology key says how each number is defined. Daily
   compounding, reference input, N = 365: FP127 36 digits (40 against the
   format truth), Solady and PRBMath 16, ABDK 17.
-- Any cell can be re-run on chain against the deployed release (FP127 v6,
-  FP19 v5, the code the datasets describe): LadderRunner at
-  0x08b06D93620e7B33cD2d600118a75B45EF779Cec (salt "FP127 ladder v11"),
+- Any FP127 or FP19 cell can be re-run on chain against the deployed
+  release (FP127 v8, FP19 v6): LadderRunner at
+  0xCbD62BdD4Fdd66EA814198B3B7804Cfab80e170C (salt "FP127 ladder v13"),
   run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok,
   int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal), with p
-  the input's floored parameters from /data/ladder-inputs.json. Scenario
+  the input's floored parameters from /data/ladder-inputs.json; form 0 is
+  FP127 and form 10 FP19, and the other forms' slots are empty (the other
+  libraries run locally; ladder v11's runner at
+  0x08b06D93620e7B33cD2d600118a75B45EF779Cec still runs 2.2's eleven forms). Scenario
   ids are in /data/scenarios.json; the record is
   /contracts/deployments/Ladder.md.
 - /data/gas.json: gas per op and form, min/median/max.
@@ -117,8 +127,8 @@ and 2.0 (FP127 v4, FP19 v3) stay live on Sepolia.
   power, both Lambert branches, erf/erfc/normCdf) through ten libraries,
   each cell with its digits or how the library had no answer (zero below
   its floor, revert, out of range, unsupported); /results/edges/ renders it;
-  any cell re-runs through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
-  at 0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83 (selector 0xf833b7d5) with
+  any FP127 or FP19 cell re-runs through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
+  at 0x05A77934179b701EE2a093bAd83497765ED20d91 (selector 0xf833b7d5) with
   the arguments from /data/edge-inputs.json.
 - /results/ the headline numbers, /results/ladder/ the ladder, /results/edges/ the cliffs,
   /results/ops/ gas and precision per op, /library/ address, ABI and the op table,

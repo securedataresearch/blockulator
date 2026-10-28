@@ -81,10 +81,12 @@ The same Yul function bodies are emitted twice.
 finds the 4-byte selector by binary search. It is deployed with CREATE2
 through the deterministic proxy at
 `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the version.
-v7 (salt `"FP127 v7"`, 53 ops, 20,603 bytes of runtime, an evm osaka
+v8 (salt `"FP127 v8"`, 53 ops, 23,797 bytes of runtime, an evm osaka
 build that needs CLZ) is live on Sepolia at
-`0xb97E0b824d86470BfAA52fe44f09363755d52591` since 2026-10-27 (Blockulator
-3.0): the same words as v6, with `exp` and `div` cheaper. v6 (salt `"FP127 v6"`, Blockulator 2.2) stays live at
+`0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B` since 2026-10-28 (Blockulator
+3.0): the same words as v6, with `exp`, `div`, `factorial`, `compound` and
+the erfc tail cheaper. v7 (salt `"FP127 v7"`, `0xb97E0b824d86470BfAA52fe44f09363755d52591`,
+2026-10-27: `exp` and `div` only) was superseded by v8 before mainnet and stays live. v6 (salt `"FP127 v6"`, Blockulator 2.2) stays live at
 `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4`; there `pi` became the constant `FP127Lib.PI` and `gcd` was removed. v5
 (salt `"FP127 v5"`, 55 ops, Blockulator 2.1) stays live at
 `0x619176d72D7a12390F8970802943D344c0fd3fE2`, and v1 to v4 stay deployed. Record and verification recipe in

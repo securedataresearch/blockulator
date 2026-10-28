@@ -35,18 +35,19 @@ Inline library, median gas per call on the same inputs ([full table](#gas-agains
 
 {{ <deployment lib="fp19" /> }}
 
-FP19 v5 (Blockulator 2.2) is four contracts from one source. The record above is the FP19 contract's; [`FP19.md`](/contracts/deployments/FP19.md) has all four.
+FP19 v6 (Blockulator 3.0) is five contracts from one source. The record above is the FP19 contract's; [`FP19.md`](/contracts/deployments/FP19.md) has all five.
 
 | contract | what it holds | address | ops |
 |---|---|---|---|
-| FP19 | the number | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` | `add` `sub` `mul` `div` `inv` `sqrt` `cbrt` `hypot` `gavg`; `neg` `abs` `sign`; `cmp` `lt` `eq` `min` `max` `clamp`; `floor` `ceil` `round` `frac`; `avg` `dist` `zeroFloorSub` `lerp`; `mulDown` `mulUp` `divDown` `divUp`; every conversion |
-| FP19E | the elementary functions, on one exp/log kernel | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` | `exp` `exp2` `exp10` `expm1` `ln` `log2` `log10` `log2Up` `log1p` `pow` `powu` `compound` |
-| FP19H | the hyperbolic functions | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` | `sinh` `cosh` `tanh` `atanh` |
-| FP19S | the special functions | `0x73E8809F163d4358773cc5F25c134997B4b842F4` | `erf` `erfc` `normCdf` `lambertW0` `lambertWm1` `factorial` |
+| FP19 | the number | `0x94d9d43D6202827429a8058959eeCf6d232b8729` | `add` `sub` `mul` `div` `inv` `sqrt` `cbrt` `hypot` `gavg`; `neg` `abs` `sign`; `cmp` `lt` `eq` `min` `max` `clamp`; `floor` `ceil` `round` `frac`; `avg` `dist` `zeroFloorSub` `lerp`; `factorial`; `mulDown` `mulUp` `divDown` `divUp`; every conversion |
+| FP19E | the elementary functions, on one exp/log kernel | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` | `exp` `exp2` `exp10` `expm1` `ln` `log2` `log10` `log2Up` `log1p` `pow` `powu` `compound` |
+| FP19H | the hyperbolic functions | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` | `sinh` `cosh` `tanh` `atanh` |
+| FP19N | the normal distribution | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` | `erf` `erfc` `normCdf` |
+| FP19S | Lambert W | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` | `lambertW0` `lambertWm1` |
 
-FP19H has its own copy of the exp/log kernel because FP19E with the hyperbolics was over the 24,576-byte limit. `pi` is the constant `FP19Lib.PI`, and `gcd` was removed in v5. The inline library holds all 65 ops.
+FP19H has its own copy of the exp/log kernel because FP19E with the hyperbolics was over the 24,576-byte limit, and FP19N holds the erf family's fitted polynomial. `factorial` is a table in the core, for n ≤ 170. `pi` is the constant `FP19Lib.PI`, and `gcd` was removed in v5. The inline library holds all 65 ops.
 
-The contracts need the CLZ opcode (EIP-7939, evmVersion osaka), so they do not run on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list]({{ config.extra.repo }}/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)). FP19 v4 (Blockulator 2.1: FP19, FP19X, FP19X2 and FP19X3) and v3 (Blockulator 2.0) stay live at the addresses in the record.
+The contracts need the CLZ opcode (EIP-7939, evmVersion osaka), so they do not run on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list]({{ config.extra.repo }}/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)). FP19 v5 (Blockulator 2.2: FP19, FP19E, FP19H and FP19S), v4 (Blockulator 2.1: FP19, FP19X, FP19X2 and FP19X3) and v3 (Blockulator 2.0) stay live at the addresses in the record.
 
 ## Install
 
