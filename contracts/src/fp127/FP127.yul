@@ -1630,7 +1630,61 @@ object "FP127" {
             }
 
             function fp127_compound(rate, n) -> r {
-                r := fp127_powu(fp127_add(0x100000000000000000000000000000000, rate), n)
+                let x := fp127_add(0x100000000000000000000000000000000, rate)
+                let k := sar(128, n)
+                if and(sgt(x, 0), gt(absw(k), 15)) {
+                    let ok := 0
+                    r, ok := compt(x, k)
+                    if ok { leave }
+                }
+                r := fp127_powu(x, n)
+            }
+
+            function compt(x, k) -> r, ok {
+                let ms := msb(x)
+                let y0 := 0
+                let v := shl(192, sub(ms, 128))
+                if and(x, sub(x, 1)) {
+                    let mm := shl(sub(192, ms), x)
+                    if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                    y0 := log2m(mm)
+                    v := add(v, y0)
+                }
+                let t := mul(k, v)
+                let wide := iszero(eq(sdiv(t, k), v))
+                if or(wide, iszero(eq(sar(199, t), sar(255, t)))) {
+                    // |t| from 128 (t within |k| 2^-160 of the truth): x^k is from
+                    // 2^127, Overflow, or under 2^-130 from t = -130, where the
+                    // nearest word is 0; between -130 and -128, powu
+                    if iszero(xor(slt(k, 0), slt(v, 0))) { rev(0x35278d12) }
+                    ok := or(wide, slt(t, sub(0, shl(192, 130))))
+                    leave
+                }
+                r, ok := pow2t(t, add(shl(113, absw(k)), 1))
+                if ok { leave }
+                // out of pow2t's reach or near a midpoint: log2(x) to 2^-299 (l2p) and
+                // the double-word 2^t, with a test
+                let lh, ll := l2p(x, ms, y0)
+                r, ok := pow2rt(shl(128, k), lh, ll, add(shr(42, absw(k)), 3))
+            }
+
+            function pow2rt(y, lh, ll, eb) -> r, ok {
+                let n, fh, fl := y2nf(y, lh, ll)
+                if sgt(n, 126) { leave }
+                if slt(n, sub(0, 129)) {
+                    ok := slt(n, sub(0, 130))
+                    leave
+                }
+                let rh, rx := lnmul(fh, fl)
+                let sh, sl := expk(rh, rx)
+                let e := add(n, 129)
+                let sb := sub(256, e)
+                let w := add(add(shl(e, 1), shr(sb, sh)), 1)
+                r := shr(1, w)
+                if iszero(r) { leave }
+                let d := and(sh, sub(shl(sb, 1), 1))
+                if and(w, 1) { d := sub(shl(sb, 1), d) }
+                ok := gt(d, eb)
             }
 
             function cbrtw(z, y) -> r {
