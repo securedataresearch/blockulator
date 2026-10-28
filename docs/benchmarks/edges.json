@@ -26271,7 +26271,11 @@
    ]
   }
  ],
- "liveRunner": "0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83",
+ "liveRunner": "0x7759691DAd3Fd4F6aed4a7D8ddBA61a287eF7781",
  "liveSelector": "0xf833b7d5",
- "liveNote": "Every cell was re-run through the live EdgeRunner on Sepolia by scripts/ladder/liveedges.py; the stamp on the results page records the run."
+ "liveNote": "Every cell was re-run through the live EdgeRunner on Sepolia by scripts/ladder/liveedges.py; the stamp on the results page records the run.",
+ "liveChecked": 276,
+ "liveMismatches": 0,
+ "liveBlock": 12008946,
+ "liveDate": "2026-10-28"
 }

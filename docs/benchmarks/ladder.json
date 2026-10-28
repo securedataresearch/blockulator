@@ -35380,15 +35380,6 @@
    },
    "liveMaxN": {
     "fp127": 10000,
-    "fp127lib": 10000,
-    "abdk": 10000,
-    "solady": 10000,
-    "prb": 10000,
-    "quad": 10000,
-    "balancer": 10000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 10000
    }
   },
@@ -66021,15 +66012,6 @@
    },
    "liveMaxN": {
     "fp127": 10000,
-    "fp127lib": 10000,
-    "abdk": 10000,
-    "solady": 10000,
-    "prb": 10000,
-    "quad": 10000,
-    "balancer": 10000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 10000
    }
   },
@@ -87247,15 +87229,6 @@
    },
    "liveMaxN": {
     "fp127": 1000,
-    "fp127lib": 10000,
-    "abdk": 10000,
-    "solady": 10000,
-    "prb": 10000,
-    "quad": 1000,
-    "balancer": 1000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 1000
    }
   },
@@ -114362,15 +114335,6 @@
    },
    "liveMaxN": {
     "fp127": 1000,
-    "fp127lib": 1000,
-    "abdk": 1000,
-    "solady": 10000,
-    "prb": 1000,
-    "quad": 365,
-    "balancer": 1000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 1000
    }
   },
@@ -139315,16 +139279,7 @@
    },
    "liveMaxN": {
     "fp127": 10000,
-    "fp127lib": 10000,
-    "abdk": 10000,
-    "solady": 10000,
-    "prb": 10000,
-    "quad": 1000,
-    "balancer": 10000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
-    "fp19": 10000
+    "fp19": 1000
    }
   },
   {
@@ -144503,16 +144458,7 @@
    },
    "liveMaxN": {
     "fp127": 10000,
-    "fp127lib": 1000,
-    "abdk": 1000,
-    "solady": 10000,
-    "prb": 1000,
-    "quad": 365,
-    "balancer": 10000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
-    "fp19": 1000
+    "fp19": 10000
    }
   },
   {
@@ -167334,15 +167280,6 @@
    },
    "liveMaxN": {
     "fp127": 1000,
-    "fp127lib": 1000,
-    "abdk": 1000,
-    "solady": 1000,
-    "prb": 1000,
-    "quad": 365,
-    "balancer": 1000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 1000
    }
   },
@@ -183800,15 +183737,6 @@
    },
    "liveMaxN": {
     "fp127": 10000,
-    "fp127lib": 10000,
-    "abdk": 10000,
-    "solady": 10000,
-    "prb": 10000,
-    "quad": 10000,
-    "balancer": 10000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 10000
    }
   },
@@ -200794,15 +200722,6 @@
    },
    "liveMaxN": {
     "fp127": 10000,
-    "fp127lib": 10000,
-    "abdk": 10000,
-    "solady": 10000,
-    "prb": 10000,
-    "quad": 10000,
-    "balancer": 10000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 10000
    }
   },
@@ -221485,15 +221404,6 @@
    },
    "liveMaxN": {
     "fp127": 10000,
-    "fp127lib": 10000,
-    "abdk": 10000,
-    "solady": 10000,
-    "prb": 10000,
-    "quad": 10000,
-    "balancer": 10000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 10000
    }
   },
@@ -243195,15 +243105,6 @@
    },
    "liveMaxN": {
     "fp127": 10000,
-    "fp127lib": 10000,
-    "abdk": 10000,
-    "solady": 10000,
-    "prb": 10000,
-    "quad": 10000,
-    "balancer": 10000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 10000
    }
   },
@@ -260891,15 +260792,6 @@
    },
    "liveMaxN": {
     "fp127": 10000,
-    "fp127lib": 10000,
-    "abdk": 10000,
-    "solady": 10000,
-    "prb": 10000,
-    "quad": 10000,
-    "balancer": 10000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 10000
    }
   },
@@ -275466,15 +275358,6 @@
    },
    "liveMaxN": {
     "fp127": 1000,
-    "fp127lib": 1000,
-    "abdk": 1000,
-    "solady": 10000,
-    "prb": 1000,
-    "quad": 1000,
-    "balancer": 1000,
-    "aave": 10000,
-    "morpho": 10000,
-    "maker": 10000,
     "fp19": 1000
    }
   },
@@ -306632,27 +306515,18 @@
       "euler-block"
      ]
     }
+   },
+   "liveMaxN": {
+    "fp127": 10000,
+    "fp19": 10000
    }
   }
  ],
- "liveRunner": "0x08b06D93620e7B33cD2d600118a75B45EF779Cec",
+ "liveRunner": "0xe19142cFF76CB942Fa1eEe78956DC9492F25802d",
  "liveSelector": "0x281dbbfe",
  "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell.",
- "runnersAhead": {
-  "deployed": "FP127 ladder v11",
-  "next": "FP127 ladder v12",
-  "changed": [
-   "LadderFP127",
-   "LadderFP127Lib",
-   "LadderABDK",
-   "LadderSolady",
-   "LadderPRB",
-   "LadderQuad",
-   "LadderBalancer",
-   "LadderAave",
-   "LadderMorpho",
-   "LadderMaker",
-   "LadderFP19"
-  ]
- }
+ "liveChecked": 1917,
+ "liveMismatches": 0,
+ "liveBlock": 12008919,
+ "liveDate": "2026-10-28"
 }

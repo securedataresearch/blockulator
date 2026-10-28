@@ -24,6 +24,9 @@ RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"
 INPUTS = ROOT / "scripts" / "ladder" / "edge-inputs.json"
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"]
+# the forms the on-chain runners hold an adapter for (scripts/ladder/deploy.py ONCHAIN): our deployed objects.
+# The other libraries' cells are reproduced with make ladder / make edges; on chain their slots are empty.
+ONCHAIN = {"fp127", "fp19"}
 SCALE_OF_FORM = {"fp127": "fp127", "fp127lib": "fp127", "abdk": "abdk", "solady": "wad", "prb": "wad",
                  "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "fp19": "fp19",
                  "solmate": "wad", "oz": "wad", "uniswap": "wad", "prbud": "wad", "snekmate": "wad",
@@ -55,6 +58,8 @@ def main(argv: list[str]) -> int:
     for op in doc["ops"]:
         for p in op["probes"]:
             for fi, form in enumerate(FORMS):
+                if form not in ONCHAIN:
+                    continue
                 c = p["cells"].get(form)
                 if c is None or c.get("range"):
                     continue

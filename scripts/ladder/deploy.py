@@ -5,12 +5,10 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Twenty-one contracts, salt "FP127 ladder v12": SnekmateMath (the Vyper build of
-snekmate's math module, out/vyper/SnekmateMath.json from scripts/ladder/vyper.py),
-the eighteen adapters (no constructor arguments, except LadderSnekmate, which
-takes SnekmateMath's address), LadderRunner and EdgeRunner (constructor = the
-eighteen adapter addresses as one array, in form-id order, so their init code
-depends on them). Each transaction is sent with the node's
+Four contracts, salt "FP127 ladder v12": the adapters of our two deployed forms (LadderFP127 and
+LadderFP19Deployed) and LadderRunner and EdgeRunner, whose constructor is the eighteen form slots as one array in
+form-id order, the zero address for every library that is not on chain (see ONCHAIN), so their init code depends
+on them. Each transaction is sent with the node's
 own gas estimate plus 25%, because Sepolia's code-deposit pricing is not
 what forge's local EVM models (see contracts/deployments/FP127.md).
 
@@ -37,8 +35,16 @@ ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "Ladd
             "LadderQuad", "LadderBalancer", "LadderAave", "LadderMorpho", "LadderMaker", "LadderFP19",
             "LadderSolmate", "LadderOZ", "LadderUniswap", "LadderPRBUD", "LadderSnekmate",
             "LadderFraxlend", "LadderEuler"]
-# Vyper contracts the adapters call, deployed first: name -> the adapter that takes its address
-VYPER = {"SnekmateMath": "LadderSnekmate"}
+# Only our deployed objects' forms go on chain: the runners' live check proves that the bytecode at FP127's and FP19's
+# addresses gives the published numbers. FP127Lib is compiled into its users' contracts and never runs from an
+# address of its own, so a deployed copy would prove nothing make ladder does not. The other libraries' adapters run the same Solidity locally (make ladder) and would prove
+# nothing more on chain, so their slots in the runners are the zero address. The FP19 form on chain is
+# LadderFP19Deployed (staticcalls to FP19's objects, 5.5 KB) in place of the 43 KB inline LadderFP19; the
+# Fp19Deployed test shows the two return the same word on every cell.
+ONCHAIN = {"LadderFP127": "LadderFP127", "LadderFP19": "LadderFP19Deployed"}
+ZERO = "0x0000000000000000000000000000000000000000"
+# Vyper contracts the adapters call, deployed first: name -> the adapter that takes its address (none on chain now)
+VYPER = {}
 RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"
 
 
@@ -70,13 +76,17 @@ def plan() -> list[dict]:
         init = init_code(name)
         out.append({"name": name, "init": init, "address": create2(init), "args": []})
         takes[adapter] = out[-1]["address"]
-    adapters = []
+    adapters, addrs = [], []
     for name in ADAPTERS:
+        if name not in ONCHAIN:
+            addrs.append(ZERO)
+            continue
+        contract = ONCHAIN[name]
         arg = takes.get(name)
-        init = init_code(name, bytes.fromhex(cast("abi-encode", "f(address)", arg)[2:]) if arg else b"")
-        adapters.append({"name": name, "init": init, "address": create2(init), "args": [arg] if arg else []})
+        init = init_code(contract, bytes.fromhex(cast("abi-encode", "f(address)", arg)[2:]) if arg else b"")
+        adapters.append({"name": contract, "init": init, "address": create2(init), "args": [arg] if arg else []})
+        addrs.append(adapters[-1]["address"])
     out += adapters
-    addrs = [c["address"] for c in adapters]
     args = bytes.fromhex(cast("abi-encode", f"f(address[{len(addrs)}])", "[" + ",".join(addrs) + "]")[2:])
     for runner in ("LadderRunner", "EdgeRunner"):
         init = init_code(runner, args)

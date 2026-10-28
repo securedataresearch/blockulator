@@ -75,8 +75,8 @@ and 2.0 (FP127 v4, FP19 v3) stay live on Sepolia.
 
 - Network: Ethereum Sepolia, chainId 11155111
 - RPC: https://ethereum-sepolia-rpc.publicnode.com
-- FP127: 0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4 (CREATE2 through
-  0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v6"; record at
+- FP127: 0xb97E0b824d86470BfAA52fe44f09363755d52591 (CREATE2 through
+  0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v7"; record at
   /contracts/deployments/FP127.md and /data/fp127.json)
 - ABI: /data/abi.json. All functions are pure; selectors are in /data/ops.json.
 - Example: sqrt(2) is `sqrt(int256)` with 2 * 2**128 =

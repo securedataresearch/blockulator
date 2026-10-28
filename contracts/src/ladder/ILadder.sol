@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// @notice The FP127 Yul object's CREATE2 address (contracts/deployments/FP127.md).
+// @notice The FP127 Yul object's CREATE2 address (contracts/deployments/FP127.md), salt "FP127 v7".
 //         Tests etch the artifact's runtime here, so the same adapter code runs
-//         in the harness and on Sepolia. Version 4; the adapters that call it
-//         are deployed after it.
-address constant FP127_ADDRESS = 0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4;
-// @notice The FP19 Yul object's CREATE2 address (contracts/deployments/FP19.md);
-//         the FP19 adapter is inline (FP19Lib) and does not call it, so the
-//         ladder does not depend on its deployment.
+//         in the harness and on chain; the adapters that call it are deployed after it.
+address constant FP127_ADDRESS = 0xb97E0b824d86470BfAA52fe44f09363755d52591;
+// @notice FP19's four Yul objects (contracts/deployments/FP19.md): the number, the elementary, hyperbolic and
+//         special functions. LadderFP19 is inline (FP19Lib) and calls none of them; LadderFP19Deployed, the form
+//         the on-chain runners use, calls these, and tests etch the artifacts' runtimes here.
 address constant FP19_ADDRESS = 0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52;
+address constant FP19E_ADDRESS = 0x017F68A57dD53a6dF2043c24B712b287F9549AE2;
+address constant FP19H_ADDRESS = 0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5;
+address constant FP19S_ADDRESS = 0x73E8809F163d4358773cc5F25c134997B4b842F4;
 
 /// @notice Scenario ids. Mirrors "index" in scripts/ladder/scenarios.json.
 library Scenario {

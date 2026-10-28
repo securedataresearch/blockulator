@@ -34,7 +34,7 @@
   "primaryContract": {
     "id": "fp127",
     "name": "FP127",
-    "address": "0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4",
+    "address": "0xb97E0b824d86470BfAA52fe44f09363755d52591",
     "deployment": "https://blockulator.com/contracts/deployments/FP127.json",
     "abi": "https://blockulator.com/data/abi.json",
     "source": "https://github.com/securedataresearch/blockulator/blob/master/contracts/src/fp127/FP127.yul.src",
@@ -99,7 +99,7 @@
       "forgeInstall": "forge install securedataresearch/blockulator",
       "remapping": "fp127/=lib/blockulator/contracts/src/fp127/"
     },
-    "version": "FP127 v6 (2026-10-22, Blockulator 2.2: 53 ops; pi is the constant FP127Lib.PI and gcd was removed; every other result the same word as v5, for less gas; an evmVersion osaka build that needs the CLZ opcode, EIP-7939); v5 (Blockulator 2.1, 0x619176d72D7a12390F8970802943D344c0fd3fE2), v4, v3, v2 and v1 stay live and verified at their recorded addresses"
+    "version": "FP127 v7 (2026-10-27, Blockulator 3.0: 53 ops, every result the same word as v6, with exp and div cheaper; an evmVersion osaka build that needs the CLZ opcode, EIP-7939); v6 (Blockulator 2.2, 0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4), v5 (Blockulator 2.1, 0x619176d72D7a12390F8970802943D344c0fd3fE2), v4, v3, v2 and v1 stay live and verified at their recorded addresses"
   },
   "floatContract": {
     "id": "fp19",

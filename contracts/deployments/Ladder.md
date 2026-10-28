@@ -10,6 +10,27 @@ called this same code, so the two cannot disagree; `scripts/ladder/livecap.py`
 re-runs every cell of every input through the live runner and records the
 largest N the public RPC completes.
 
+Version 12 (Blockulator 3.0, 2026-10-27, salt `"FP127 ladder v12"`) puts only our deployed objects' forms on
+chain: `LadderFP127`, which staticcalls FP127 v7 at `0xb97E0b824d86470BfAA52fe44f09363755d52591`, and
+`LadderFP19Deployed`, which staticcalls FP19's four objects (add, sub and fromUint inline, as `LadderBase` keeps
+them pure), with the two runners. Every other form's slot in the runners is the zero address. The other libraries'
+adapters run the same Solidity locally (`make ladder`, `make edges`); on chain they would prove nothing more, and
+FP127Lib is compiled into its users' contracts, never called at an address of its own. `LadderFP19Deployed` returns
+the same word as the inline `LadderFP19` on every cell (`test/ladder/Fp19Deployed.t.sol`).
+
+| contract | address |
+|---|---|
+| `LadderFP127` | `0x62c48bba4a319225172871B4e2fffF9dB54aB517` |
+| `LadderFP19Deployed` | `0x1Ac6cc7a8b10A6610878Ce1f13c65F984c14b50A` |
+| `LadderRunner` | `0xe19142cFF76CB942Fa1eEe78956DC9492F25802d` |
+| `EdgeRunner` | `0x7759691DAd3Fd4F6aed4a7D8ddBA61a287eF7781` |
+
+All four are verified on Sourcify (`make verify-ladder-sepolia`, exact match). The live check on 2026-10-28:
+1,917 ladder cells at block 12,008,919 and 276 edge cells at block
+12,008,946, 0 mismatches. An earlier attempt the same day sent
+eleven of the full ladder's twenty-one v12 contracts before the account ran dry; they sit unused at their CREATE2
+addresses.
+
 Version 11 (the eleven adapters; `LadderFP127` calls FP127 v6,
 `LadderFP127Lib` inlines it, and `LadderFP19` inlines FP19 v5 and now
 accrues per-second through `compound`; Blockulator 2.2) is deployed with
