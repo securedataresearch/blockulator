@@ -108,8 +108,8 @@ salt) is the one list the Makefile, `stdjson.py` and `deploy.py` read.
 | object | the idea | ops | runtime | salt |
 |---|---|---|---:|---|
 | FP19 | the number | add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg; neg, abs, sign; cmp, lt, eq, min, max, clamp; floor, ceil, round, frac; avg, dist, zeroFloorSub, lerp; mulDown, mulUp, divDown, divUp; fromUint, fromUintDown, fromUintUp, toUintDown, toUintUp, toIntDown, toIntUp, fromFixed18, toFixed18, toFixed18Down, toFixed18Up, fromFP127, toFP127: 43 | 10,333 | `FP19 v5` |
-| FP19E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 21,598 | `FP19E v5` |
-| FP19H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 13,021 | `FP19H v5` |
+| FP19E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 23,621 | `FP19E v5` (a new salt at the next deploy) |
+| FP19H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 13,020 | `FP19H v5` (a new salt at the next deploy: log2m's table walk is its own function, log2lv) |
 | FP19S | the special functions | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 23,985 | `FP19S v5` (a new salt at the next deploy) |
 
 **Why the hyperbolics have their own object.** They are elementary functions
@@ -217,6 +217,39 @@ differently from D: the bits under the 237-bit significand within err of
 half an ULP. Only then a second stage recomputes the value in two words at
 2^−510 (`(h, l)`, h a kernel word at 2^−254) and rounds that.
 
+pow, powu and compound have a middle stage between the two. Their fast
+bound grows with |y log2 x| (the kernel's few units of log2 x, times |y|),
+so it reaches the rounding boundary for large exponents: 13.5% of the
+sweep's compound inputs (per-second rates over long periods), 9.8% of
+powu's, 1.2% of pow's. The middle stage (`powmid`, `compmid`, the models and
+bounds in `scripts/fp19/generators/mid254.py`) recomputes log2 x within
+2^−272 relative near one or 2^−279.5 absolute off it, forms t = y log2 x
+exactly from it, and runs the same 2^f kernel. t's error is then under two
+units for every |t| < 2^19, the format's range, so its own test,
+`rbadm(v, 10)`, fires about once in 13,000 calls; only then the second
+stage runs.
+
+- `mratio`: ln(1 + d)/d for |d| < 2^−8, d given in two words at 2^−512.
+  y = d/(2 + d) by one `divh` on d's top word (within 2^−257), then the
+  exact residual e = |d| − y0 (2 + σ|d|) and y = y0 + e (1 − σ y0)/2, since
+  1/(2 + d) = (1 − y)/2. Then ln(1 + d)/d = 1 − y + q, q = Q − y Q in one
+  word at 2^−275, Q = atanh(y)/y − 1 = s/3 + s² R2(s), s = y²: s/3 from
+  y0's exact square, R2 the degree-11 minimax polynomial (certified
+  2^−241.5), Horner on s. Within 2^−272.1 relative however small d is
+  (measured 2^−273.1).
+- `mlog2m`: log2 of a mantissa, as two words. log2m's two table levels
+  (`log2lv`, now its own function, the same words) with each reduction kept
+  exact in two words: a long division by 16 + i and by 256 + i in
+  word-size digits. Each table value is completed by a signed 64-bit low
+  part at 2^−320 (four to a word), and log2(1 + w2) = w2 mratio(w2) log2 e.
+  Within 2^−279.5 (measured 2^−281.1).
+- pow: near one, d = x − 1 is read from the significand and mratio gives
+  log2(1 + d); off it, u + mlog2m. compound: mratio on the rate below 2^−8,
+  else mlog2m on the exact 1 + rate (|n| < 2^26.5 there). powu: on its
+  256-bit miss, pow's middle stage at once (x^n is no tie there: a tie has
+  238 bits and would have fit). `compsure` is gone: every compound input
+  takes its fast value first.
+
 The second stage:
 
 Its three series (`wexpm1`, `wln1ps`, `em1w`) stay series on purpose. Each is
@@ -244,11 +277,8 @@ bytecode to speed up the rare path (decided 2026-10-23, #155).
 - pow and compound: log2 x (or log2(1 + rate)) in two words, its exact
   three-word product with y's significand (or with n, any int256), split at
   2^−510, 2^f by `wexpm1`. ln, log2 and log10 hand the second stage the
-  kernel's log2m they already have. powu, when its own bound misses, goes
-  straight to pow's second stage (pow's looser bound would miss too);
-  compound skips its fast value where its bound is sure to reach the
-  rounding boundary (`compsure`: a per-second rate with |n log2(1 + rate)|
-  from about 11,000 to 2^19).
+  kernel's log2m they already have. They run when the middle stage's own
+  test fires.
 - The error function: below y = 7 the all-positive series erf(y) =
   (2/√π) y e^(−y²) Σ (2y²)^k/(2k+1)!! in two words at a scale 2^−σ
   (σ = ⌊1.4434 ⌊y²⌋⌋ + 9), and 1 − erf for erfc (at most 74 bits of
@@ -349,6 +379,7 @@ The bounds, and what they give:
 | pow, compound near one | 16 + 12(k + 1) | t within 8(k + 1) + 2 units | 0.46 of it | 2^−486 rel. | 2^−249 ULP |
 | pow, compound | 8 + yq·(8 + 2\|u\|)·355/2^16 | 6.1 + 1.3863·\|y\|·(log2m 2.4 + Lm's shift 2^sh ≤ 2\|u\| + compound's dropped one 1.45, the 8 with room as 2^sh meets 2\|u\| at powers of two); yq ≥ 2^8\|y\| (2^8(\|n\| + 1)) | 0.78 of it | 2^−470 rel. | 2^−233 ULP |
 | powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it | as pow | 2^−233 ULP |
+| pow, powu, compound, middle stage | 10 | 8.7: the 2^f kernel 4.7, f's floor 1.39, and 1.39 × t's error, under 1.9 units (log2 within 2^−272.1 relative near one, \|t\| < 2^19; 2^−279.5 absolute off it, \|y\| < 2^26.5) | 3.3 | as pow | 2^−233 ULP |
 | erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 10.6 | 2^−499 rel. | 2^−262 ULP |
 | erf, erfc, Φ, ½ ≤ y < 6 | 192 | 2 × g's 81 + 8 | 11.3 | 2^−444 rel. | 2^−207 ULP |
 | erfc, Φ, 6 ≤ y < 18 | 32n + 64 | A and B gain 2^−251 a step | 186 | 2^−392 rel. | 2^−155 ULP |
@@ -497,8 +528,8 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 |---|---:|---:|---:|
 | exp, expm1 | 2,400–3,300 | 25,100–25,300 | 40,800 |
 | ln, log1p | 2,600–3,600 | 26,000–28,400 | 112,100 |
-| pow, powu | 5,000–5,900 | 54,200–54,300 | 88,300 |
-| compound | 6,300 | 54,800 | 142,200 |
+| pow, powu (middle stage) | 5,000–5,900 | 14,600–14,900 (second stage 63,200–63,300) | 96,000 |
+| compound (middle stage) | 6,200 | 13,300 (second stage 63,700) | 149,200 |
 | erf, erfc, normCdf | 13,000–13,900 | 92,500–100,200 | 411,700 (the continued fraction in two words) |
 | lambertW0, lambertWm1 | 10,600–13,200 | 40,900–43,100 | 63,600 |
 | the directed ops | 400–1,000 | | 1,000 |
@@ -516,9 +547,12 @@ inputs, erf's and Lambert W's by a quarter; the second stage, which keeps
 release four's two-word series, by about 4,000. The second stage runs for
 about 2·err/2^w of inputs, w = 17..19 the bits under D's significand: 5 in
 100,000 for exp, 2 in 10,000 for ln (from 3 in 1,000 with release two's
-log2 bound), more for pow at large |y log2 x| and in the continued
-fraction's region, where the rigorous bound is thirteen times the largest
-error measured.
+log2 bound), more in the continued fraction's region, where the rigorous
+bound is thirteen times the largest error measured. pow, powu and compound
+leave their fast value as often as before (1.2%, 9.8% and 13.5% of the
+sweep's inputs), but to the middle stage at about 9,000 more gas; the second
+stage now runs for 0.005%, 0.017% and 0.067% (compound's, mostly exact ties).
+Their p99 went from 54,500, 59,000 and 106,000 to 15,100, 19,100 and 15,900.
 
 ## What changed from FP127's conventions
 

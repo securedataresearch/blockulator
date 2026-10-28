@@ -41,6 +41,8 @@ interface IFP19E {
     ///         significand split into the integer part and a fraction at
     ///         2^-254, then the 2^f kernel; one rounding when the error bound
     ///         (which grows with |y| or |t|) clears the rounding boundary, else
+    ///         the middle stage: log2 x within 2^-272 (mid254.py), t exact from
+    ///         it and the same 2^f kernel, its bound 10 units whatever |y|; else
     ///         an exact tie when x^y has at most 238 bits, else log2 x in two
     ///         words (wln) times y and 2^f by wexpm1: correctly rounded. 0^0 = 1.
     ///         Shortcuts for y in {1, 2, 1/2, -1}.
@@ -65,7 +67,7 @@ interface IFP19E {
     ///         significand with its own exponent, each product keeping its top
     ///         256 bits, rounded once at the end: exact whenever x^n fits 256
     ///         bits (so every exactly representable power and every exact tie),
-    ///         else within (2n + 8) units, and through pow's second stage when
+    ///         else within (2n + 8) units, and through pow's middle stage when
     ///         that reaches the rounding boundary. n < 0 inverts the final
     ///         significand once. From 2^16 on, pow(|x|, n) with the sign restored. Correctly rounded for
     ///         |n| < 2^237 (n is a number from there). 0^0 = 1.
@@ -74,9 +76,11 @@ interface IFP19E {
     ///         rate needs 266 bits for it): log2(1 + rate) unrounded, as log1p
     ///         takes it (the series below 2^-4, 1 + rate exact under its leading
     ///         bit above), its exact product with n, then pow's 2^t; one rounding
-    ///         when its error bound clears the rounding boundary, else an exact
-    ///         tie when the power has at most 238 bits, else log2(1 + rate) in
-    ///         two words times n exactly: correctly rounded.
+    ///         when its error bound clears the rounding boundary, else the middle
+    ///         stage as pow's (log2(1 + rate) within 2^-272, its bound 10 units
+    ///         whatever |n|), else an exact tie when the power has at most 238
+    ///         bits, else log2(1 + rate) in two words times n exactly: correctly
+    ///         rounded.
     function compound(int256 rate, int256 n) external pure returns (int256 r);
     /// @notice ceil(log2 x) as a number: the exponent, plus one unless x is a
     ///         power of two. Exact.

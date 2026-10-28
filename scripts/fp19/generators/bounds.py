@@ -35,8 +35,10 @@ analysis is not off by a missed term.
                                              off it (log2m 2.4 + Lm's shift 2^sh <= 2|u|, and
                                              compound's dropped one 1.45), yq >= 2^8 |y|
                                              (2^8 (|n| + 1)); 6.1 + 1.3863 x t's error
-  compsure              sure to miss         the bound reaches 2^17 for every input it
-                                             passes, and |t| < 2^19 (checked by sure() below)
+  pow, powu, compound,   10                   mid254.py's 8.7: the 2^f kernel 4.7, f's floor
+  middle stage                               1.39, and t's error under 1.9 units (log2 within
+                                             2^-272 relative near one, |t| < 2^19; 2^-279.5
+                                             absolute off it, |y| < 2^26.5)
   powu                  2 n + 8              each 256-bit product within 2^-255, squarings
                                              double it: (n + 1) 2^-255 of am, plus 2 for 1/am
   erf, erfc, normCdf    128 (y < 1/2)        2 x F's 52 (erfser's rounded terms, e^-y^2, products) + 1
@@ -57,6 +59,7 @@ from mpmath import mp, mpf, exp, expm1, log, log1p, power, erf, erfc, ncdf, sqrt
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import kernel254 as K  # noqa: E402
 import erf19 as E  # noqa: E402
+import mid254 as MID  # noqa: E402
 
 BIAS = K.BIAS
 WS = K.WS
@@ -112,33 +115,77 @@ def powerr0(u, yq):
     return 8 + ((yq * (8 + 2 * abs(u)) * 355) >> 16)
 
 
-def compsure(u, n):
-    """The Yul's compsure: |n| in [2^(13 - u), 2^(17 - u)) on the series band."""
-    return u < -4 and 1 << (13 - u) <= abs(n) < 1 << (17 - u)
+def mid_t(Mn, le, my, uy, s):
+    """pow2m as the Yul runs it: the exact product, k and f at 2^-254 split as
+    tsplit does, then exp2kv: (kk, v)."""
+    Z = Mn * my
+    sg = 236 - uy - le - 510
+    F = (Z >> sg) if sg >= 0 else (Z << -sg)
+    k = Z >> (sg + 510) if sg + 510 >= 0 else Z << -(sg + 510)
+    fh = (F >> 256) & K.M254
+    return k, fh, s
 
 
-def sure(n):
-    """compsure sends an input straight to compound's second stage: it claims
-    the fast bound would reach 2^17 (half an ULP of v, so rbad fires for any
-    v) and |t| < 2^19 (compslow's range, where the fast stage's overflow and
-    zero tests cannot fire). Checked on inputs that pass it, with t exact and
-    the bound 16 + 12 (k + 1) at k = floor|t| less one for the fast t's error."""
-    rng = random.Random(11)
-    bad = 0
-    seen = 0
+def middle(ker, M, n):
+    """The middle stage of pow and compound (mid254.py's models): v against
+    2^(t - kk) 2^254, the bound 10."""
+    mid = MID.build()
+    rng = random.Random(285)
     for _ in range(n):
-        r = rf(rng, -60, -5)
-        s, e, m = K.unpack(r)
-        u = e - BIAS
-        nn = rng.randint(1, 1 << rng.randint(1, 70)) * rng.choice([1, -1])
-        if not compsure(u, nn):
+        kind = rng.random()
+        if kind < 0.4:
+            x = K.encode(1 + mpf(2) ** -rng.uniform(9, 200) * (1 if rng.getrandbits(1) else -1))
+            y = rf(rng, -20, 40)
+        else:
+            x = rf(rng, -60, 60, 0)
+            y = rf(rng, -20, 12)
+        if x == BIAS << 236:
             continue
-        seen += 1
-        t = abs(nn * log(1 + dec(r), 2))
-        k = int(t) - 1
-        bad += t >= 2 ** 19 or 16 + 12 * (k + 1) < 1 << 17
-    print(f"compsure {seen} inputs: {'all hold' if not bad else f'{bad} FAIL'}")
-    return bad > 0
+        sx, ex, mx = K.unpack(x)
+        sy, ey, my = K.unpack(y)
+        uy = ey - BIAS
+        md, ls = 1 << 237, 0
+        if ex == BIAS:
+            md = mx - (1 << 236)
+        elif ex == BIAS - 1:
+            md, ls = (1 << 237) - mx, 1
+        if md < (1 << 228) << ls:
+            Mn, le = mid.mlog2s(ls, -ls, md)
+        else:
+            u = ex - BIAS
+            N = abs((u << 510) + mid.mlog2m(mx << 18))
+            Mn, le = MID.norm3(N, -510)
+            ls = 1 if u < 0 else 0
+        t = abs(dec(y) * log(dec(x), 2))
+        if t >= 2 ** 19:
+            continue
+        k, fh, s = mid_t(Mn, le, my, uy, ls ^ sy)
+        kk, v = ker.exp2kv(s, k, fh)
+        M.add("pow, middle stage", MID.ERR_MID, v, power(2, (-t if s else t) - kk + 254))
+    for _ in range(n):
+        r = rng.random()
+        rate = rf(rng, -60, -9) if r < 0.6 else (rf(rng, -8, 3, 0) if r < 0.9 else rf(rng, -8, -1, 1))
+        nn = rng.randint(1, 1 << rng.randint(1, 40)) * rng.choice([1, -1])
+        s, e, m = K.unpack(rate)
+        u = e - BIAS
+        if u < -8:
+            Mn, le = mid.mlog2s(s, u, m)
+            ls = s
+        else:
+            bb = max(u, 0)
+            a = (1 << (254 - bb)) - (m << (18 + u)) if s else (1 << (254 - bb)) + (m << (18 + u - bb))
+            nb = K.msb(a)
+            a = a << (254 - nb) if nb < 254 else a >> (nb - 254)
+            uu = bb + nb - 254
+            N = abs((uu << 510) + mid.mlog2m(a))
+            Mn, le = MID.norm3(N, -510)
+            ls = 1 if uu < 0 else 0
+        t = abs(nn * log(1 + dec(rate), 2))
+        if t >= 2 ** 19:
+            continue
+        k, fh, sg = mid_t(Mn, le, abs(nn), 236, ls ^ (1 if nn < 0 else 0))
+        kk, v = ker.exp2kv(sg, k, fh)
+        M.add("compound, middle stage", MID.ERR_MID, v, power(2, (-t if sg else t) - kk + 254))
 
 
 def run(n):
@@ -315,6 +362,7 @@ def run(n):
             D2 = WS - (D >> -ee)
             M.add(f"1 - {nm}, {region}", (err >> -ee) + 2, D2, (1 - erfc(y)) * power(2, 254))
     run79(ker, rng, M, n)
+    middle(ker, M, n)
     bad = lambert(ker, M, max(n // 8, 50))
     return M.report() or bad
 
@@ -942,6 +990,5 @@ if __name__ == "__main__":
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 2000
     bad = kernels(n)
     bad |= run(n)
-    bad |= sure(n * 4)
     bad |= cf_depth(max(n // 20, 50))
     sys.exit(1 if bad else 0)

@@ -2570,11 +2570,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -2665,8 +2663,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -2757,6 +2755,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -3061,11 +3063,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -3156,8 +3156,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -3248,6 +3248,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -3552,11 +3556,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -3647,8 +3649,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -3739,6 +3741,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -4044,11 +4050,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -4139,8 +4143,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -4231,6 +4235,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -4539,11 +4547,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -4634,8 +4640,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -4726,6 +4732,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -5034,11 +5044,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -5129,8 +5137,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -5221,6 +5229,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -5530,11 +5542,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -5625,8 +5635,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -5717,6 +5727,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -6031,11 +6045,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -6126,8 +6138,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -6218,6 +6230,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -6532,11 +6548,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -6627,8 +6641,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -6719,6 +6733,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -7300,11 +7318,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -7395,8 +7411,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -7487,6 +7503,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -7826,6 +7846,65 @@ library BlockulatorWad {
                 errF := add(errF, shr(170, I))
             }
 
+            function ctz(x) -> r {
+                if x { r := sub(255, clz(and(x, sub(0, x)))) }
+            }
+
+            function wadpowx(x, n) -> ok, r {
+                let a2 := ctz(x)
+                if gt(a2, 18) { a2 := 18 }
+                let p := shr(a2, x)
+                let a5 := 0
+                for { } and(lt(a5, 18), iszero(mod(p, 5))) { } {
+                    p := div(p, 5)
+                    a5 := add(a5, 1)
+                }
+                let e2 := 18
+                let e5 := 18
+                switch slt(n, 0)
+                case 0 {
+                    e2 := sub(18, mul(sub(18, a2), n))
+                    e5 := sub(18, mul(sub(18, a5), n))
+                    if or(slt(e2, 0), slt(e5, 0)) { leave }
+                    if gt(n, 255) {
+                        if gt(p, 1) { leave }
+                        n := 0
+                    }
+                    r := 1
+                    for { } n { n := sub(n, 1) } {
+                        if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, p)) { leave }
+                        r := mul(r, p)
+                    }
+                }
+                default {
+                    let k := sub(0, n)
+                    if gt(k, 255) { leave }
+                    e2 := add(18, mul(sub(18, a2), k))
+                    e5 := add(18, mul(sub(18, a5), k))
+                    let c := ctz(p)
+                    p := shr(c, p)
+                    let d := 0
+                    for { } iszero(mod(p, 5)) { } {
+                        p := div(p, 5)
+                        d := add(d, 1)
+                    }
+                    if gt(p, 1) { leave }
+                    e2 := sub(e2, mul(c, k))
+                    e5 := sub(e5, mul(d, k))
+                    if or(slt(e2, 0), slt(e5, 0)) { leave }
+                    r := 1
+                }
+                // times 5^e5 2^e2, below 2^255
+                if gt(e5, 109) { leave }
+                let f := exp(5, e5)
+                if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, f)) { leave }
+                r := mul(r, f)
+                if gt(e2, 254) { leave }
+                if shr(sub(255, e2), r) { leave }
+                r := shl(e2, r)
+                ok := 1
+            }
+
             function isqrt(n) -> y {
                 y := 0x80000000000000000000000000000000
                 y := shr(1, add(y, div(n, y)))
@@ -7999,6 +8078,15 @@ library BlockulatorWad {
                     if and(ok, iszero(wadbad(F, errF))) {
                         r := add(I, eq(dir, 1))
                         if slt(r, 0) { rev(0xa37bfec9) }
+                        leave
+                    }
+                }
+                // an integer power that is a whole number of wei is that number, before
+                // the second stage (which would find it, at 54k gas)
+                if iszero(smod(y, 1000000000000000000)) {
+                    let ok, rx := wadpowx(x, sdiv(y, 1000000000000000000))
+                    if ok {
+                        r := rx
                         leave
                     }
                 }
@@ -8326,11 +8414,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -8421,8 +8507,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -8513,6 +8599,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -8852,6 +8942,65 @@ library BlockulatorWad {
                 errF := add(errF, shr(170, I))
             }
 
+            function ctz(x) -> r {
+                if x { r := sub(255, clz(and(x, sub(0, x)))) }
+            }
+
+            function wadpowx(x, n) -> ok, r {
+                let a2 := ctz(x)
+                if gt(a2, 18) { a2 := 18 }
+                let p := shr(a2, x)
+                let a5 := 0
+                for { } and(lt(a5, 18), iszero(mod(p, 5))) { } {
+                    p := div(p, 5)
+                    a5 := add(a5, 1)
+                }
+                let e2 := 18
+                let e5 := 18
+                switch slt(n, 0)
+                case 0 {
+                    e2 := sub(18, mul(sub(18, a2), n))
+                    e5 := sub(18, mul(sub(18, a5), n))
+                    if or(slt(e2, 0), slt(e5, 0)) { leave }
+                    if gt(n, 255) {
+                        if gt(p, 1) { leave }
+                        n := 0
+                    }
+                    r := 1
+                    for { } n { n := sub(n, 1) } {
+                        if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, p)) { leave }
+                        r := mul(r, p)
+                    }
+                }
+                default {
+                    let k := sub(0, n)
+                    if gt(k, 255) { leave }
+                    e2 := add(18, mul(sub(18, a2), k))
+                    e5 := add(18, mul(sub(18, a5), k))
+                    let c := ctz(p)
+                    p := shr(c, p)
+                    let d := 0
+                    for { } iszero(mod(p, 5)) { } {
+                        p := div(p, 5)
+                        d := add(d, 1)
+                    }
+                    if gt(p, 1) { leave }
+                    e2 := sub(e2, mul(c, k))
+                    e5 := sub(e5, mul(d, k))
+                    if or(slt(e2, 0), slt(e5, 0)) { leave }
+                    r := 1
+                }
+                // times 5^e5 2^e2, below 2^255
+                if gt(e5, 109) { leave }
+                let f := exp(5, e5)
+                if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, f)) { leave }
+                r := mul(r, f)
+                if gt(e2, 254) { leave }
+                if shr(sub(255, e2), r) { leave }
+                r := shl(e2, r)
+                ok := 1
+            }
+
             function isqrt(n) -> y {
                 y := 0x80000000000000000000000000000000
                 y := shr(1, add(y, div(n, y)))
@@ -9025,6 +9174,15 @@ library BlockulatorWad {
                     if and(ok, iszero(wadbad(F, errF))) {
                         r := add(I, eq(dir, 1))
                         if slt(r, 0) { rev(0xa37bfec9) }
+                        leave
+                    }
+                }
+                // an integer power that is a whole number of wei is that number, before
+                // the second stage (which would find it, at 54k gas)
+                if iszero(smod(y, 1000000000000000000)) {
+                    let ok, rx := wadpowx(x, sdiv(y, 1000000000000000000))
+                    if ok {
+                        r := rx
                         leave
                     }
                 }
@@ -9352,11 +9510,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -9447,8 +9603,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -9539,6 +9695,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -9878,6 +10038,65 @@ library BlockulatorWad {
                 errF := add(errF, shr(170, I))
             }
 
+            function ctz(x) -> r {
+                if x { r := sub(255, clz(and(x, sub(0, x)))) }
+            }
+
+            function wadpowx(x, n) -> ok, r {
+                let a2 := ctz(x)
+                if gt(a2, 18) { a2 := 18 }
+                let p := shr(a2, x)
+                let a5 := 0
+                for { } and(lt(a5, 18), iszero(mod(p, 5))) { } {
+                    p := div(p, 5)
+                    a5 := add(a5, 1)
+                }
+                let e2 := 18
+                let e5 := 18
+                switch slt(n, 0)
+                case 0 {
+                    e2 := sub(18, mul(sub(18, a2), n))
+                    e5 := sub(18, mul(sub(18, a5), n))
+                    if or(slt(e2, 0), slt(e5, 0)) { leave }
+                    if gt(n, 255) {
+                        if gt(p, 1) { leave }
+                        n := 0
+                    }
+                    r := 1
+                    for { } n { n := sub(n, 1) } {
+                        if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, p)) { leave }
+                        r := mul(r, p)
+                    }
+                }
+                default {
+                    let k := sub(0, n)
+                    if gt(k, 255) { leave }
+                    e2 := add(18, mul(sub(18, a2), k))
+                    e5 := add(18, mul(sub(18, a5), k))
+                    let c := ctz(p)
+                    p := shr(c, p)
+                    let d := 0
+                    for { } iszero(mod(p, 5)) { } {
+                        p := div(p, 5)
+                        d := add(d, 1)
+                    }
+                    if gt(p, 1) { leave }
+                    e2 := sub(e2, mul(c, k))
+                    e5 := sub(e5, mul(d, k))
+                    if or(slt(e2, 0), slt(e5, 0)) { leave }
+                    r := 1
+                }
+                // times 5^e5 2^e2, below 2^255
+                if gt(e5, 109) { leave }
+                let f := exp(5, e5)
+                if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, f)) { leave }
+                r := mul(r, f)
+                if gt(e2, 254) { leave }
+                if shr(sub(255, e2), r) { leave }
+                r := shl(e2, r)
+                ok := 1
+            }
+
             function isqrt(n) -> y {
                 y := 0x80000000000000000000000000000000
                 y := shr(1, add(y, div(n, y)))
@@ -10051,6 +10270,15 @@ library BlockulatorWad {
                     if and(ok, iszero(wadbad(F, errF))) {
                         r := add(I, eq(dir, 1))
                         if slt(r, 0) { rev(0xa37bfec9) }
+                        leave
+                    }
+                }
+                // an integer power that is a whole number of wei is that number, before
+                // the second stage (which would find it, at 54k gas)
+                if iszero(smod(y, 1000000000000000000)) {
+                    let ok, rx := wadpowx(x, sdiv(y, 1000000000000000000))
+                    if ok {
+                        r := rx
                         leave
                     }
                 }
@@ -10334,11 +10562,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -10429,8 +10655,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -10521,6 +10747,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -11550,11 +11780,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -11645,8 +11873,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -11737,6 +11965,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -12766,11 +12998,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -12861,8 +13091,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -12953,6 +13183,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -14222,11 +14456,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -14317,8 +14549,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -14409,6 +14641,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -14978,11 +15214,9 @@ library BlockulatorWad {
                 { let pl := mul(p, t) let ph := mulmod(p, t, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248) }
             }
 
-            function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -15073,8 +15307,8 @@ library BlockulatorWad {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -15165,6 +15399,10 @@ library BlockulatorWad {
                         }
                     }
                 }
+            }
+
+            function log2m(mm) -> r {
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
                 let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
                 let p := lnp(y)
                 { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
@@ -15504,6 +15742,65 @@ library BlockulatorWad {
                 errF := add(errF, shr(170, I))
             }
 
+            function ctz(x) -> r {
+                if x { r := sub(255, clz(and(x, sub(0, x)))) }
+            }
+
+            function wadpowx(x, n) -> ok, r {
+                let a2 := ctz(x)
+                if gt(a2, 18) { a2 := 18 }
+                let p := shr(a2, x)
+                let a5 := 0
+                for { } and(lt(a5, 18), iszero(mod(p, 5))) { } {
+                    p := div(p, 5)
+                    a5 := add(a5, 1)
+                }
+                let e2 := 18
+                let e5 := 18
+                switch slt(n, 0)
+                case 0 {
+                    e2 := sub(18, mul(sub(18, a2), n))
+                    e5 := sub(18, mul(sub(18, a5), n))
+                    if or(slt(e2, 0), slt(e5, 0)) { leave }
+                    if gt(n, 255) {
+                        if gt(p, 1) { leave }
+                        n := 0
+                    }
+                    r := 1
+                    for { } n { n := sub(n, 1) } {
+                        if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, p)) { leave }
+                        r := mul(r, p)
+                    }
+                }
+                default {
+                    let k := sub(0, n)
+                    if gt(k, 255) { leave }
+                    e2 := add(18, mul(sub(18, a2), k))
+                    e5 := add(18, mul(sub(18, a5), k))
+                    let c := ctz(p)
+                    p := shr(c, p)
+                    let d := 0
+                    for { } iszero(mod(p, 5)) { } {
+                        p := div(p, 5)
+                        d := add(d, 1)
+                    }
+                    if gt(p, 1) { leave }
+                    e2 := sub(e2, mul(c, k))
+                    e5 := sub(e5, mul(d, k))
+                    if or(slt(e2, 0), slt(e5, 0)) { leave }
+                    r := 1
+                }
+                // times 5^e5 2^e2, below 2^255
+                if gt(e5, 109) { leave }
+                let f := exp(5, e5)
+                if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, f)) { leave }
+                r := mul(r, f)
+                if gt(e2, 254) { leave }
+                if shr(sub(255, e2), r) { leave }
+                r := shl(e2, r)
+                ok := 1
+            }
+
             function isqrt(n) -> y {
                 y := 0x80000000000000000000000000000000
                 y := shr(1, add(y, div(n, y)))
@@ -15677,6 +15974,15 @@ library BlockulatorWad {
                     if and(ok, iszero(wadbad(F, errF))) {
                         r := add(I, eq(dir, 1))
                         if slt(r, 0) { rev(0xa37bfec9) }
+                        leave
+                    }
+                }
+                // an integer power that is a whole number of wei is that number, before
+                // the second stage (which would find it, at 54k gas)
+                if iszero(smod(y, 1000000000000000000)) {
+                    let ok, rx := wadpowx(x, sdiv(y, 1000000000000000000))
+                    if ok {
+                        r := rx
                         leave
                     }
                 }

@@ -72,6 +72,9 @@ OPS19 = ["add", "mul", "div", "sqrt", "exp", "ln", "log1p", "expm1", "pow", "erf
 WIDE19 = ["exp", "ln", "log1p", "expm1", "pow", "erf", "erfc", "normCdf", "compound", "lambertW0",
            "lambertWm1", "powu", "exp2", "exp10", "log2", "log10", "sinh", "cosh", "tanh", "atanh"]
 WIDE_N = 4000
+# the ops with a middle stage (FP19's pow family), swept again through
+# FP19LibMid: the fast path's test forced, the middle stage's kept
+MID19 = ["pow", "powu", "compound"]
 PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp", "toFixed18Down", "toFixed18Up"}
 SEL: set[str] | None = None   # --ops: the ops to run and re-score; None is all of them
 
@@ -319,13 +322,13 @@ EXTRA = ["exp", "expm1", "log1p", "pow", "compound", "erfc", "normCdf", "powu", 
 
 def load(name):
     lib, op = name.split("_", 1)
-    if lib in ("fp19", "wide") and op in EXTRA and (D / f"fp19_{op}x.json").exists():
+    if lib in ("fp19", "wide", "mid") and op in EXTRA and (D / f"fp19_{op}x.json").exists():
         return load1(name) + load1(name + "x")
     return load1(name)
 
 
 def load1(name):
-    src = name.replace("wide_", "fp19_")
+    src = name.replace("wide_", "fp19_").replace("mid_", "fp19_")
     j = json.loads((D / f"{src}.json").read_text())
     a = [int(x, 16) for x in j["a"]]
     b = [int(x, 16) for x in j.get("b", [])] or [0] * len(a)
@@ -333,7 +336,7 @@ def load1(name):
     lines = (D / f"{name}.out").read_text().splitlines()
     outs = [ln.split()[0] for ln in lines]
     gas = [int(ln.split()[1]) if len(ln.split()) > 1 else 0 for ln in lines]
-    if name.startswith("wide_"):
+    if name.startswith(("wide_", "mid_")):
         a, b, c = a[:len(outs)], b[:len(outs)], c[:len(outs)]
     assert len(outs) == len(a), name
     return list(zip(a, b, c, outs, gas))
@@ -455,6 +458,13 @@ def score():
             res = pool.map(job19, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=16)
             rows.append(dict(summarize19(op, res), stage="second", **gasstats([g for *_, g in data])))
             print(json.dumps(rows[-1]), flush=True)
+        for op in MID19:
+            if not selected(op) or not (D / f"mid_{op}.out").exists():
+                continue
+            data = load(f"mid_{op}")
+            res = pool.map(job19, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=16)
+            rows.append(dict(summarize19(op, res), stage="middle", **gasstats([g for *_, g in data])))
+            print(json.dumps(rows[-1]), flush=True)
         for op in OPS127 + ["lambertW0", "lambertWm1"]:
             if not selected(op):
                 continue
@@ -488,7 +498,8 @@ def score():
           "Gas is the inline library's (FP19Lib) own cost on these inputs, median / 99th "
           "percentile / largest, the second stage's runs included where the fast value's "
           "error bound reached the rounding boundary. *Fallback* is the share of inputs whose "
-          "rounding test fired (a dash: the op has none).",
+          "rounding test fired (a dash: the op has none); for pow, powu and compound, which "
+          "have a middle stage, the share that went on to the second stage follows the arrow.",
           "",
           "| op | inputs | correctly rounded | misrounded | max ULP | gas median / p99 / max | fallback |",
           "|---|---:|---:|---:|---:|---:|---:|"]
@@ -496,19 +507,34 @@ def score():
         if r["lib"] == "fp19" and "stage" not in r:
             md.append(f"| {r['op']} | {r['n']:,} | {r['correctlyRounded']:,} | {r['misrounded']:,} | {r['maxUlp']} | "
                       f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} | {pct(r)} |")
-    if any(r.get("stage") and r["lib"] == "fp19" for r in rows):
+    if any(r.get("stage") == "middle" and r["lib"] == "fp19" for r in rows):
+        md += ["",
+               "### The middle stage alone",
+               "",
+               "The first 4,000 inputs of pow, powu and compound again, through a test-only copy of "
+               "FP19Lib whose fast path's rounding test always fails and whose middle stage's test "
+               "is kept: log2 x within 2^-285 (scripts/fp19/generators/mid254.py), t = y log2 x "
+               "exact from it, the 2^f kernel, and the second stage only where that cannot decide.",
+               "",
+               "| op | inputs | correctly rounded | misrounded | max ULP | gas median / p99 / max |",
+               "|---|---:|---:|---:|---:|---:|"]
+        for r in rows:
+            if r.get("stage") == "middle" and r["lib"] == "fp19":
+                md.append(f"| {r['op']} | {r['n']:,} | {r['correctlyRounded']:,} | {r['misrounded']:,} | {r['maxUlp']} | "
+                          f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} |")
+    if any(r.get("stage") == "second" and r["lib"] == "fp19" for r in rows):
         md += ["",
                "### The second stage alone",
                "",
                "The first 4,000 inputs of each op again, through a test-only copy of FP19Lib whose "
-               "rounding test always fails, so every result comes from the wide second stage "
+               "rounding tests (the middle stage's too) always fail, so every result comes from the wide second stage "
                "(two words at 2^-510) that normally runs only when the fast value is too close to "
                "a tie.",
                "",
                "| op | inputs | correctly rounded | misrounded | max ULP | gas median / p99 / max |",
                "|---|---:|---:|---:|---:|---:|"]
         for r in rows:
-            if r.get("stage") and r["lib"] == "fp19":
+            if r.get("stage") == "second" and r["lib"] == "fp19":
                 md.append(f"| {r['op']} | {r['n']:,} | {r['correctlyRounded']:,} | {r['misrounded']:,} | {r['maxUlp']} | "
                           f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} |")
     md += ["",
@@ -541,9 +567,9 @@ pragma solidity ^0.8.24;
 // GENERATED by scripts/sweep/sweep.py for the second-stage pass; removed after the run.
 
 import {Test} from "forge-std/Test.sol";
-import {FP19LibWide} from "./FP19LibWide.sol";
+import {FP19LibWIDE} from "./FP19LibWIDE.sol";
 
-contract SweepWide is Test {
+contract SweepWIDE is Test {
     string constant DIR = "cache/sweep/";
 
     function f(bytes32 op, int256 a, int256 b) external view returns (int256 r, uint256 g) {
@@ -568,7 +594,7 @@ contract SweepWide is Test {
         string memory j = vm.readFile(path);
         bytes32[] memory a = vm.parseJsonBytes32Array(j, ".a");
         bytes32[] memory b = two ? vm.parseJsonBytes32Array(j, ".b") : new bytes32[](a.length);
-        string memory outp = string.concat(DIR, "wide_", op, ".out");
+        string memory outp = string.concat(DIR, "PREFIX_", op, ".out");
         if (vm.exists(outp)) vm.removeFile(outp);
         bytes32 k = bytes32(bytes(op));
         uint256 n = a.length < %d ? a.length : %d;
@@ -587,21 +613,26 @@ contract SweepWide is Test {
 """
 
 
-def run_wide():
-    """Generate FP19LibWide and its runner, run them, remove them."""
-    wd = ROOT / "test" / "sweep" / "wide"
-    names = [op for op in WIDE19 if selected(op)] + [f"{op}x" for op in EXTRA if selected(op)]
+def run_wide(tag="wide"):
+    """Generate FP19LibWide (tag "mid": FP19LibMid, the fast path's test
+    forced and the middle stage's kept, for the ops with a middle stage) and
+    its runner, run them, remove them."""
+    Tag = tag.capitalize()
+    wd = ROOT / "test" / "sweep" / tag
+    ops = WIDE19 if tag == "wide" else MID19
+    names = [op for op in ops if selected(op)] + [f"{op}x" for op in EXTRA if selected(op) and op in ops]
     if not names:
         return
-    subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", "fp19", "--wide-lib",
-                    str(wd / "FP19LibWide.sol")], cwd=ROOT, check=True)
+    subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", "fp19", f"--{tag}-lib",
+                    str(wd / f"FP19Lib{Tag}.sol")], cwd=ROOT, check=True)
     fn = {f"{op}x": op for op in EXTRA}
-    disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = FP19LibWide.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
+    disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = FP19Lib{Tag}.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
                       for n in names)
     runs = "\n".join(f'    function test_{n}() public {{ this.runOne("{n}", {"true" if fn.get(n, n) in TWO else "false"}); }}' for n in names)
-    (wd / "SweepWide.t.sol").write_text(WIDE_TEST % (disp, WIDE_N, WIDE_N, runs))
+    test = WIDE_TEST.replace("WIDE", Tag).replace("PREFIX", tag)
+    (wd / f"Sweep{Tag}.t.sol").write_text(test % (disp, WIDE_N, WIDE_N, runs))
     try:
-        subprocess.run(["forge", "test", "--match-path", "test/sweep/wide/SweepWide.t.sol", "-q"], cwd=ROOT, check=True)
+        subprocess.run(["forge", "test", "--match-path", f"test/sweep/{tag}/Sweep{Tag}.t.sol", "-q"], cwd=ROOT, check=True)
     finally:
         for f in wd.glob("*"):
             f.unlink()
@@ -683,7 +714,7 @@ def sweep_dispatch() -> list[tuple[str, str]]:
 def rec_words(kind: str) -> int:
     """Record words from 0x8000: the counter, or the probes' shared words and three per probe."""
     if kind == "count":
-        return 1
+        return 2
     return (G.PROBE_BASE - G.COUNT_SLOT + G.PROBE_STRIDE * max(len(v) for v in G.PROBES.values())) // 32
 
 
@@ -783,14 +814,18 @@ def fallback(lib: str, op: str, data) -> dict:
     got = [o for o, _, _ in rec]
     assert got == plain, f"{lib} {op}: the count pass changed a result"
     fired = [w[0] for o, _, w in rec if w]
-    return {"fallback": sum(1 for c in fired if c), "fallbackRuns": sum(fired), "fallbackPct": round(100 * sum(1 for c in fired if c) / len(rec), 3)}
+    out = {"fallback": sum(1 for c in fired if c), "fallbackRuns": sum(fired), "fallbackPct": round(100 * sum(1 for c in fired if c) / len(rec), 3)}
+    if lib == "fp19" and "rbadm" in closures(lib).get(op, set()):
+        second = sum(1 for o, _, w in rec if len(w) > 1 and w[1])
+        out.update(second=second, secondPct=round(100 * second / len(rec), 3))
+    return out
 
 
 def pct(r) -> str:
     if "fallbackPct" not in r:
         return "—"
-    p = r["fallbackPct"]
-    return "0" if p == 0 else f"{p:.2f}%" if p >= 0.01 else f"{p:.3f}%"
+    f = lambda p: "0" if p == 0 else f"{p:.2f}%" if p >= 0.01 else f"{p:.3f}%"  # noqa: E731
+    return f(r["fallbackPct"]) + (f" → {f(r['secondPct'])}" if "secondPct" in r else "")
 
 
 def main():
@@ -806,6 +841,7 @@ def main():
         gen()
         subprocess.run(["forge", "test", "--match-path", "test/sweep/Sweep*.t.sol", "-q"] + match_tests(), cwd=ROOT, check=True)
         run_wide()
+        run_wide("mid")
         WD.run_wide(SEL)
         run_instrumented("count")
     score()
