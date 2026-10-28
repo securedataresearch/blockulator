@@ -360,10 +360,16 @@ object "FP19E" {
             }
 
             function log2m(mm) -> r {
-                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                let acc, w := log2lv(sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000))
+                let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
+                let p := lnp(y)
+                { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
+                r := shr(2, add(acc, shr(1, w)))
+            }
+
+            function log2lv(w) -> acc, v {
                 let i := shr(250, w)
-                w := div(shl(6, sub(w, shl(250, i))), add(16, i))
-                let acc := 0
+                v := div(shl(6, sub(w, shl(250, i))), add(16, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -454,8 +460,8 @@ object "FP19E" {
                         }
                     }
                 }
-                i := shr(248, w)
-                w := div(shl(8, sub(w, shl(248, i))), add(256, i))
+                i := shr(248, v)
+                v := div(shl(8, sub(v, shl(248, i))), add(256, i))
                 switch and(i, 8)
                 case 0 {
                     switch and(i, 4)
@@ -546,10 +552,6 @@ object "FP19E" {
                         }
                     }
                 }
-                let y := divh(shl(2, w), add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, w)))
-                let p := lnp(y)
-                { let pl := mul(y, p) let ph := mulmod(y, p, not(0)) w := sub(sub(ph, pl), lt(ph, pl)) }
-                r := shr(2, add(acc, shr(1, w)))
             }
 
             function lnp(y) -> p {
@@ -651,7 +653,122 @@ object "FP19E" {
                 { let pl := mul(p, x) let ph := mulmod(p, x, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(ng, p)), 0x4000000000000000000000000000000000000000000000000000000000000000) }
             }
 
+            function mratio(sg, dh, dl) -> rh, rl {
+                let den := add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, dh))
+                if sg { den := sub(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, dh)) }
+                let y0 := divh(shl(6, dh), den)
+                let ah, al := wmulf(dh, dl, y0, 263)
+                let eh, el := wsub(dh, dl, shr(6, y0), shl(250, y0))
+                switch sg
+                case 0 { eh, el := wsub(eh, el, ah, al) }
+                default { eh, el := wadd(eh, el, ah, al) }
+                let c := or(shl(252, eh), shr(4, el))
+                let t := sar(6, sub(mulhi(c, y0), mul(slt(c, 0), y0)))
+                switch sg
+                case 0 { c := sub(shl(1, c), t) }
+                default { c := add(shl(1, c), t) }
+                t := sub(mulhi(c, y0), mul(slt(c, 0), y0))
+                let p1, p0 := mul512(y0, y0)
+                let s := add(or(shl(3, p1), shr(253, p0)), sar(242, t))
+                p1, p0 := wdivs(p1, p0, 3)
+                let q := add(or(shl(5, p1), shr(251, p0)), sdiv(sar(241, t), 3))
+                let v := shr(17, s)
+                let p := 0
+                let vs := shr(104, v)
+                p := 0x12f69f53dbda40bea02dab0b130a62cfcc8cf7ef15fc09cfb76a6085d261
+                p := add(shr(36, mul(shr(116, p), vs)), 0x147ae1479c90600e3e2c4ad817313c4cdc0f6f20150b341c66d8738e1b86)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1642c8590b216acd9588d4150b339a5f3c92251bb3e33e601a9ca3f81bfa)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x186186186186186184811649694e7873d88604818f87504ed1477032f384)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1af286bca1af286bca1af2c74c64108c3a55761c741a67ff9952c5cf9b95)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1e1e1e1e1e1e1e1e1e1e1e1e1e174a86a0b8619201dcf4d6d494af22b006)
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x222222222222222222222222222222229bc3bd8b6e2cdf594c940c087ca2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x2762762762762762762762762762762762762204bf9963433561f8c4b038) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2eaf6403e8d7b98f9ed2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38dbdd28692bf43) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x492492492492492492492492492492492492492492492492492492ef06c2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x666666666666666666666666666666666666666666666666666666666666) }
+                { let pl := mul(s, s) let ph := mulmod(s, s, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                { let pl := mul(t, p) let ph := mulmod(t, p, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                q := add(q, t)
+                { let pl := mul(y0, q) let ph := mulmod(y0, q, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                switch sg
+                case 0 { q := sub(q, shr(7, t)) }
+                default { q := add(q, shr(7, t)) }
+                rh := add(0x4000000000000000000000000000000000000000000000000000000000000000, shr(21, q))
+                rl := shl(235, q)
+                let yh := shr(9, y0)
+                let yl := shl(247, y0)
+                switch slt(c, 0)
+                case 0 { yh, yl := wadd(yh, yl, 0, c) }
+                default { yh, yl := wsub(yh, yl, 0, sub(0, c)) }
+                switch sg
+                case 0 { rh, rl := wsub(rh, rl, yh, yl) }
+                default { rh, rl := wadd(rh, rl, yh, yl) }
+            }
+
+            function l2lo1(i) -> c {
+                let v := 0x2ea87852ce4188cb29f79bff618add31f22480d459e564aa0000000000000000
+                switch shr(2, i)
+                case 1 { v := 0xab527fca73245debec824ff771f304a5893399591df86ee319943f7a77547ce9 }
+                case 2 { v := 0x3ef369ff12504bc9785e7275454e6a6733287ef4eea8f9d214fbcdffb0c56e98 }
+                case 3 { v := 0xd3664aee0f2b71152e900d7a2819eb818d763d9a2e1e64327437cb596d33004a }
+                c := signextend(7, shr(shl(6, and(i, 3)), v))
+            }
+
+            function l2lo2(i) -> c {
+                let v := 0x64a10ca049c6649c892660ddea5f6f9bc37a5d91fcde7f680000000000000000
+                switch shr(2, i)
+                case 1 { v := 0x4f28e131de69d90a0420532ece09c1e3b76dd9998fa9416391f2b1efbca2e750 }
+                case 2 { v := 0x51784e7c8b57aa4da2e043ac3b748915c12bc3a2ee6b0be6017e1df722b8733d }
+                case 3 { v := 0x584f232f983f15365887a97989a4c8b2ea748a3945a00f15061cbc1e62460079 }
+                c := signextend(7, shr(shl(6, and(i, 3)), v))
+            }
+
+            function mlog2m(mm) -> lh, ll {
+                let w := sub(mm, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                let acc, wf := log2lv(w)
+                let i := shr(250, w)
+                let d := add(16, i)
+                let x := shl(6, sub(w, shl(250, i)))
+                let qh := div(x, d)
+                x := shl(248, mod(x, d))
+                let ql := or(shl(8, div(x, d)), div(shl(8, mod(x, d)), d))
+                let lo := l2lo1(i)
+                i := shr(248, qh)
+                d := add(256, i)
+                let ah := or(shl(8, sub(qh, shl(248, i))), shr(248, ql))
+                let al := shl(8, ql)
+                qh := div(ah, d)
+                x := or(shl(247, mod(ah, d)), shr(9, al))
+                ql := div(x, d)
+                x := or(shl(9, mod(x, d)), and(al, 511))
+                ql := or(shl(9, ql), div(x, d))
+                lo := add(lo, l2lo2(i))
+                // sg = 0, as w < 2^254: a literal would have the optimizer specialise a
+                // second copy of mratio for it
+                let rh, rl := mratio(shr(254, w), qh, ql)
+                rh, rl := wmul(rh, rl, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+                rh, rl := wmul(shr(2, qh), or(shl(254, qh), shr(2, ql)), rh, rl)
+                lh, ll := wadd(shr(2, acc), shl(254, acc), rh, rl)
+                switch slt(lo, 0)
+                case 0 { lh, ll := wadd(lh, ll, 0, shl(190, lo)) }
+                default { lh, ll := wsub(lh, ll, 0, shl(190, sub(0, lo))) }
+            }
+
             function rbad(D, err) -> b {
+                let w := sub(msb(D), 236)
+                if slt(w, 2) {
+                    b := 1
+                    leave
+                }
+                let half := shl(sub(w, 1), 1)
+                let low := and(D, sub(shl(w, 1), 1))
+                let d := sub(low, half)
+                if lt(low, half) { d := sub(half, low) }
+                b := iszero(gt(d, err))
+            }
+
+            function rbadm(D, err) -> b {
                 let w := sub(msb(D), 236)
                 if slt(w, 2) {
                     b := 1
@@ -981,6 +1098,10 @@ object "FP19E" {
 
             function wlog2s(s, u, m) -> lh, ll, le {
                 let ph, pl := wln1ps(s, u, m)
+                lh, ll, le := wlog2r(ph, pl, u, m)
+            }
+
+            function wlog2r(ph, pl, u, m) -> lh, ll, le {
                 ph, pl := wmul(ph, pl, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
                 let n2, n1, n0 := mul3(ph, pl, m)
                 lh, ll, le := norm3(n2, n1, n0)
@@ -989,6 +1110,10 @@ object "FP19E" {
 
             function wlog2k(u, wh, wl) -> lh, ll, le {
                 wh, wl := wmul(wh, wl, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+                lh, ll, le := wlog2u(u, wh, wl)
+            }
+
+            function wlog2u(u, wh, wl) -> lh, ll, le {
                 let a := absw(u)
                 let n2 := shr(2, a)
                 let n1 := shl(254, a)
@@ -1372,7 +1497,7 @@ object "FP19E" {
                 let z, kk, v, k := pow2kv(Lm, Ls, xor(and(lb, 1), shr(255, y)), and(shr(236, y), 0x7ffff), or(and(y, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000))
                 if z { leave }
                 if rbad(v, powerr(shr(1, lb), k, sub(and(shr(236, x), 0x7ffff), 0x3ffff), powyb(y))) {
-                    r := powslow(x, y)
+                    r := powmid(x, y)
                     leave
                 }
                 r := normround(0, add(kk, 0x3ffff), v)
@@ -1406,6 +1531,59 @@ object "FP19E" {
                 switch band
                 case 1 { err := add(16, mul(12, add(k, 1))) }
                 default { err := add(8, shr(16, mul(mul(yq, add(8, shl(1, absw(u)))), 355))) }
+            }
+
+            function powmid(x, y) -> r {
+                let sx, ex, mx := unpack(x)
+                let sy, ey, my := unpack(y)
+                let lh, ll, le, ls := mlog2(x, ex, mx)
+                let miss := 0
+                r, miss := pow2m(lh, ll, le, xor(ls, sy), my, sub(ey, 0x3ffff))
+                if miss { r := powslow(x, y) }
+            }
+
+            function mlog2(x, ex, mx) -> lh, ll, le, ls {
+                let md := 0x200000000000000000000000000000000000000000000000000000000000
+                switch ex
+                case 0x3ffff { md := sub(mx, 0x100000000000000000000000000000000000000000000000000000000000) }
+                case 0x3fffe {
+                    md := sub(md, mx)
+                    ls := 1
+                }
+                if lt(md, shl(ls, 0x1000000000000000000000000000000000000000000000000000000000)) {
+                    lh, ll, le := mlog2s(ls, sub(0, ls), md)
+                    leave
+                }
+                let u := sub(ex, 0x3ffff)
+                let wh, wl := mlog2m(shl(18, mx))
+                lh, ll, le := wlog2u(u, wh, wl)
+                ls := slt(u, 0)
+            }
+
+            function mlog2s(s, u, m) -> lh, ll, le {
+                let k := add(u, 276)
+                let dh := 0
+                let dl := 0
+                switch slt(k, 0)
+                case 1 { dl := shr(sub(0, k), m) }
+                default {
+                    switch lt(k, 256)
+                    case 1 { dh, dl := wshl(0, m, k) }
+                    default { dh := shl(sub(k, 256), m) }
+                }
+                let ph, pl := mratio(s, dh, dl)
+                lh, ll, le := wlog2r(ph, pl, u, m)
+            }
+
+            function pow2m(lh, ll, le, s, my, uy) -> r, miss {
+                let z2, z1, z0 := mul3(lh, ll, my)
+                let k, fh, fl := tsplit(z2, z1, z0, sub(sub(sub(236, uy), le), 510))
+                let kk, v := exp2kv(s, k, fh)
+                if rbadm(v, 10) {
+                    miss := 1
+                    leave
+                }
+                r := normround(0, add(kk, 0x3ffff), v)
             }
 
             function powslow(x, y) -> r {
@@ -1678,7 +1856,8 @@ object "FP19E" {
                 // 2 n + 2 units, plus 2 for the reciprocal. On a miss pow's fast value
                 // misses too (its bound, at least 80 n units of a coarser grid, is the
                 // looser), so for |n| > 2 (off pow's shortcuts) and x^n's exponent ae
-                // within 2^18 (|t| < 2^19, powslow's range) powslow runs at once
+                // within 2^18 (|t| < 2^19, the middle stage's range) powmid runs at
+                // once; x^n is no tie there (a tie has 238 bits and would have fit)
                 if inx {
                     if rbad(am, add(shl(1, nk), 8)) {
                         r := powupow(x, nk, recip, sgn, and(gt(nk, 2), lt(add(ae, 0x40000), 0x80000)))
@@ -1694,7 +1873,7 @@ object "FP19E" {
                 x := and(x, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
                 switch slow
                 case 0 { r := fp19_pow(x, ny) }
-                default { r := powslow(x, ny) }
+                default { r := powmid(x, ny) }
                 if sgn { r := fp19_neg(r) }
             }
 
@@ -1714,26 +1893,35 @@ object "FP19E" {
             }
 
             function compgen(s, u, m, n) -> r {
-                if compsure(u, n) {
-                    // the miss compsure foresees, asked of rbad (v = 2^254 is as far from a
-                    // rounding boundary as v gets) so that it counts as one
-                    if rbad(0x4000000000000000000000000000000000000000000000000000000000000000, 0x20000) {
-                        r := compslow(s, u, m, n)
-                        leave
-                    }
-                }
                 let z, kk, v, err := compfast(s, u, m, n)
                 if z { leave }
                 if rbad(v, err) {
-                    r := compslow(s, u, m, n)
+                    r := compmid(s, u, m, n)
                     leave
                 }
                 r := normround(0, add(kk, 0x3ffff), v)
             }
 
-            function compsure(u, n) -> b {
-                let an := absw(n)
-                b := and(slt(u, sub(0, 4)), and(iszero(lt(an, shl(sub(13, u), 1))), lt(an, shl(sub(17, u), 1))))
+            function compmid(s, u, m, n) -> r {
+                let lh := 0
+                let ll := 0
+                let le := 0
+                let ls := s
+                switch slt(u, sub(0, 8))
+                case 1 { lh, ll, le := mlog2s(s, u, m) }
+                default {
+                    if sgt(u, 253) {
+                        r := compslow(s, u, m, n)
+                        leave
+                    }
+                    let uu, a := onep(s, u, m)
+                    let wh, wl := mlog2m(a)
+                    lh, ll, le := wlog2u(uu, wh, wl)
+                    ls := slt(uu, 0)
+                }
+                let miss := 0
+                r, miss := pow2m(lh, ll, le, xor(ls, slt(n, 0)), absw(n), 236)
+                if miss { r := compslow(s, u, m, n) }
             }
 
             function compfast(s, u, m, n) -> z, kk, v, err {

@@ -729,6 +729,68 @@ function wadpoww(x, y) -> o, I, F, errF {
     errF := add(errF, shr(170, I))
 }
 
+/// (x 10^-18)^n 10^18 for x > 0 and an integer n, when it is a whole number
+/// of wei below 2^255 (ok = 1), exactly: x 10^-18 = p / (2^b2 5^b5) in lowest
+/// terms (p the odd-of-5 part of x past ten to the eighteenth's twos and
+/// fives), so for n > 0 the value is p^n 2^(18 - b2 n) 5^(18 - b5 n), whole
+/// when both exponents are >= 0; for n < 0 it is 2^(b2 k + 18) 5^(b5 k + 18)
+/// / p^k, k = -n, whole when p = 2^c 5^d with c k <= 18 + b2 k and d k <= 18
+/// + b5 k. Every other x^n is not a whole number of wei, and ok = 0.
+function wadpowx(x, n) -> ok, r {
+    let a2 := ctz(x)
+    if gt(a2, 18) { a2 := 18 }
+    let p := shr(a2, x)
+    let a5 := 0
+    for { } and(lt(a5, 18), iszero(mod(p, 5))) { } {
+        p := div(p, 5)
+        a5 := add(a5, 1)
+    }
+    let e2 := 18
+    let e5 := 18
+    switch slt(n, 0)
+    case 0 {
+        e2 := sub(18, mul(sub(18, a2), n))
+        e5 := sub(18, mul(sub(18, a5), n))
+        if or(slt(e2, 0), slt(e5, 0)) { leave }
+        if gt(n, 255) {
+            if gt(p, 1) { leave }
+            n := 0
+        }
+        r := 1
+        for { } n { n := sub(n, 1) } {
+            if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, p)) { leave }
+            r := mul(r, p)
+        }
+    }
+    default {
+        let k := sub(0, n)
+        if gt(k, 255) { leave }
+        e2 := add(18, mul(sub(18, a2), k))
+        e5 := add(18, mul(sub(18, a5), k))
+        let c := ctz(p)
+        p := shr(c, p)
+        let d := 0
+        for { } iszero(mod(p, 5)) { } {
+            p := div(p, 5)
+            d := add(d, 1)
+        }
+        if gt(p, 1) { leave }
+        e2 := sub(e2, mul(c, k))
+        e5 := sub(e5, mul(d, k))
+        if or(slt(e2, 0), slt(e5, 0)) { leave }
+        r := 1
+    }
+    // times 5^e5 2^e2, below 2^255
+    if gt(e5, 109) { leave }
+    let f := exp(5, e5)
+    if gt(r, div(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, f)) { leave }
+    r := mul(r, f)
+    if gt(e2, 254) { leave }
+    if shr(sub(255, e2), r) { leave }
+    r := shl(e2, r)
+    ok := 1
+}
+
 /// (x 10^-18)^(y 10^-18) in WAD, rounded in direction dir. y = 1, 2, 1/2 and
 /// -1 are exact integer arithmetic (x, mulWad(x, x), sqrtWad(x), divWad(1,
 /// x)). The fast path is the kernels on the exact inputs: S = ln(x 10^-18)
@@ -829,6 +891,15 @@ function wadpow(x, y, dir) -> r {
         if and(ok, iszero(wadbad(F, errF))) {
             r := add(I, eq(dir, 1))
             if slt(r, 0) { rev(0xa37bfec9) }
+            leave
+        }
+    }
+    // an integer power that is a whole number of wei is that number, before
+    // the second stage (which would find it, at 54k gas)
+    if iszero(smod(y, 1000000000000000000)) {
+        let ok, rx := wadpowx(x, sdiv(y, 1000000000000000000))
+        if ok {
+            r := rx
             leave
         }
     }
