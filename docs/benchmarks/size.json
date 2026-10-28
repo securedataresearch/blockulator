@@ -24,8 +24,8 @@
      },
      "median": 457,
      "max": {
-      "op": "pow",
-      "bytes": 10153
+      "op": "compound",
+      "bytes": 10996
      }
     },
     "viaIr": {
@@ -35,14 +35,14 @@
      },
      "median": 321,
      "max": {
-      "op": "pow",
-      "bytes": 9604
+      "op": "compound",
+      "bytes": 10326
      }
     }
    },
    "sum": {
-    "legacy": 111107,
-    "viaIr": 101585
+    "legacy": 127384,
+    "viaIr": 117196
    },
    "ops": {
     "fromFixed18": {
@@ -134,8 +134,8 @@
      "viaIr": 1151
     },
     "compound": {
-     "legacy": 1268,
-     "viaIr": 1173
+     "legacy": 10996,
+     "viaIr": 10326
     },
     "cbrt": {
      "legacy": 600,
@@ -246,16 +246,16 @@
      "viaIr": 2711
     },
     "erf": {
-     "legacy": 3270,
-     "viaIr": 3210
+     "legacy": 5456,
+     "viaIr": 5364
     },
     "erfc": {
-     "legacy": 3245,
-     "viaIr": 3219
+     "legacy": 5431,
+     "viaIr": 5371
     },
     "normCdf": {
-     "legacy": 3313,
-     "viaIr": 3330
+     "legacy": 5490,
+     "viaIr": 5482
     }
    }
   },
@@ -630,11 +630,11 @@
     "erfc",
     "normCdf"
    ],
-   "legacy": 4188,
-   "viaIr": 4568,
+   "legacy": 5815,
+   "viaIr": 11394,
    "sumOfSingles": {
-    "legacy": 9828,
-    "viaIr": 9759
+    "legacy": 16377,
+    "viaIr": 16217
    }
   },
   {
@@ -647,11 +647,11 @@
     "mulUp",
     "compound"
    ],
-   "legacy": 1794,
-   "viaIr": 1505,
+   "legacy": 11522,
+   "viaIr": 10663,
    "sumOfSingles": {
-    "legacy": 1894,
-    "viaIr": 1545
+    "legacy": 11622,
+    "viaIr": 10698
    }
   },
   {

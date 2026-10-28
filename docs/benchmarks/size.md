@@ -8,8 +8,8 @@ The runtime bytecode one op adds to a contract that calls it through `FP127Lib` 
 
 | library | ops | smallest | median | largest | all ops, sum of singles |
 |---|---:|---|---:|---|---:|
-| FP127 legacy | 53 | `sign` 8 | 457 | `pow` 10,153 | 111,107 |
-| FP127 via_ir | 53 | `sign` 10 | 321 | `pow` 9,604 | 101,585 |
+| FP127 legacy | 53 | `sign` 8 | 457 | `compound` 10,996 | 127,384 |
+| FP127 via_ir | 53 | `sign` 10 | 321 | `compound` 10,326 | 117,196 |
 | FP19 legacy | 65 | `abs` 108 | 544 | `powu` 13,272 | 204,633 |
 | FP19 via_ir | 65 | `abs` 55 | 443 | `normCdf` 12,843 | 189,670 |
 
@@ -24,8 +24,8 @@ Every `FP*Lib` function is one self-contained `assembly` block that carries its 
 | FP127 | `exp`, `ln` | 7,768 | 11,868 | 7,222 | 10,975 |
 | FP127 | `exp`, `ln`, `pow` | 10,925 | 22,021 | 10,404 | 20,579 |
 | FP127 | `exp`, `log2`, `sqrt` | 7,855 | 12,032 | 7,227 | 11,000 |
-| FP127 | `erf`, `erfc`, `normCdf` | 4,188 | 9,828 | 4,568 | 9,759 |
-| FP127 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 1,794 | 1,894 | 1,505 | 1,545 |
+| FP127 | `erf`, `erfc`, `normCdf` | 5,815 | 16,377 | 11,394 | 16,217 |
+| FP127 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 11,522 | 11,622 | 10,663 | 10,698 |
 | FP19 | `add`, `sub`, `mul`, `div` | 1,113 | 2,046 | 1,031 | 1,661 |
 | FP19 | `exp`, `ln` | 11,838 | 12,750 | 10,340 | 10,833 |
 | FP19 | `exp`, `ln`, `pow` | 14,918 | 25,262 | 13,690 | 21,810 |
@@ -62,7 +62,7 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `sqrt` | 358 | 272 |
 | `pow` | 10,153 | 9,604 |
 | `powu` | 1,212 | 1,151 |
-| `compound` | 1,268 | 1,173 |
+| `compound` | 10,996 | 10,326 |
 | `cbrt` | 600 | 472 |
 | `gavg` | 457 | 343 |
 | `hypot` | 508 | 378 |
@@ -90,9 +90,9 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `cosh` | 4,888 | 4,394 |
 | `tanh` | 5,183 | 4,769 |
 | `atanh` | 2,967 | 2,711 |
-| `erf` | 3,270 | 3,210 |
-| `erfc` | 3,245 | 3,219 |
-| `normCdf` | 3,313 | 3,330 |
+| `erf` | 5,456 | 5,364 |
+| `erfc` | 5,431 | 5,371 |
+| `normCdf` | 5,490 | 5,482 |
 
 ## FP19
 
