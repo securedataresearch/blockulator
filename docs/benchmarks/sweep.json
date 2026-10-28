@@ -188,8 +188,8 @@
    "hist": {
     "0": 4000
    },
-   "gasMedian": 12990,
-   "gasP99": 66589,
+   "gasMedian": 10626,
+   "gasP99": 15745,
    "gasMax": 89962,
    "fallback": 4,
    "fallbackRuns": 4,
@@ -208,12 +208,12 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 13943,
-   "gasP99": 65539,
-   "gasMax": 399339,
-   "fallback": 16,
-   "fallbackRuns": 16,
-   "fallbackPct": 0.267
+   "gasMedian": 10867,
+   "gasP99": 24493,
+   "gasMax": 162141,
+   "fallback": 5,
+   "fallbackRuns": 5,
+   "fallbackPct": 0.083
   },
   {
    "lib": "fp19",
@@ -228,12 +228,12 @@
    "hist": {
     "0": 6000
    },
-   "gasMedian": 13562,
-   "gasP99": 63021,
-   "gasMax": 405200,
-   "fallback": 20,
-   "fallbackRuns": 20,
-   "fallbackPct": 0.333
+   "gasMedian": 11343,
+   "gasP99": 24221,
+   "gasMax": 222716,
+   "fallback": 10,
+   "fallbackRuns": 10,
+   "fallbackPct": 0.167
   },
   {
    "lib": "fp19",
@@ -1084,9 +1084,9 @@
     "0": 4000
    },
    "stage": "second",
-   "gasMedian": 96259,
-   "gasP99": 399056,
-   "gasMax": 410673
+   "gasMedian": 96262,
+   "gasP99": 343182,
+   "gasMax": 361184
   },
   {
    "lib": "fp19",
@@ -1102,9 +1102,9 @@
     "0": 6000
    },
    "stage": "second",
-   "gasMedian": 100231,
-   "gasP99": 394994,
-   "gasMax": 410969
+   "gasMedian": 95634,
+   "gasP99": 337628,
+   "gasMax": 361480
   },
   {
    "lib": "fp19",
@@ -1120,9 +1120,9 @@
     "0": 6000
    },
    "stage": "second",
-   "gasMedian": 92482,
-   "gasP99": 373498,
-   "gasMax": 411737
+   "gasMedian": 88979,
+   "gasP99": 315806,
+   "gasMax": 362248
   },
   {
    "lib": "fp19",
@@ -1544,7 +1544,7 @@
    "above": 963,
    "gasMedian": 3623,
    "gasP99": 23680,
-   "gasMax": 35152
+   "gasMax": 35149
   },
   {
    "lib": "fp127",
@@ -1562,8 +1562,8 @@
    "below": 1014,
    "above": 937,
    "gasMedian": 3497,
-   "gasP99": 20539,
-   "gasMax": 35155
+   "gasP99": 20538,
+   "gasMax": 35153
   },
   {
    "lib": "fp127",
@@ -1581,8 +1581,8 @@
    "below": 1001,
    "above": 989,
    "gasMedian": 3694,
-   "gasP99": 25361,
-   "gasMax": 35352
+   "gasP99": 25359,
+   "gasMax": 35351
   },
   {
    "lib": "fp127",

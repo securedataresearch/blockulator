@@ -13,7 +13,7 @@ address constant FP19E_ADDRESS = 0x017F68A57dD53a6dF2043c24B712b287F9549AE2;
 address constant FP19H_ADDRESS = 0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5;
 address constant FP19S_ADDRESS = 0x73E8809F163d4358773cc5F25c134997B4b842F4;
 // @notice FP19N (erf, erfc, normCdf; 3.0, salt "FP19N v6"): its predicted CREATE2 address, deployed with 3.0.
-address constant FP19N_ADDRESS = 0x7ea9f0731c7300E96772018363827cFd2AEA3CcC;
+address constant FP19N_ADDRESS = 0xCe9F09D646B37a9100F05ED1FFD14E9f43180214;
 
 /// @notice Scenario ids. Mirrors "index" in scripts/ladder/scenarios.json.
 library Scenario {

@@ -1,8 +1,8 @@
 {
- "generated": "2026-10-23",
+ "generated": "2026-10-28",
  "description": "Terminal precision: each scenario is N identical steps run through each library in its native representation for several inputs, against the same loop in exact arithmetic (mpmath, 300 digits), twice: from the exact parameters (digits) and from the parameters as the library received them (digitsFormat). See methodology.",
  "versions": {
-  "fp127": "e0546fb",
+  "fp127": "d11cd05",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -245021,8 +245021,8 @@
         "digitsFormatCapped": "68.1",
         "absErrWei": "6.86e-51",
         "raw": "28947906180483125925328020832472588853257203483564921093707177764010428110192",
-        "gas": 711163,
-        "gasPerStep": 711
+        "gas": 664287,
+        "gasPerStep": 664
        },
        "10000": {
         "value": "4.26395835385621571476498764907019748044021e-34",
@@ -245039,8 +245039,8 @@
         "digitsFormatCapped": "66.3",
         "absErrWei": "1.76e-82",
         "raw": "28935666194216341623244361747888634191134586856128347456262609302293796272832",
-        "gas": 6322792,
-        "gasPerStep": 632
+        "gas": 6252189,
+        "gasPerStep": 625
        }
       },
       "solmate": {
@@ -247556,8 +247556,8 @@
         "digitsFormatCapped": "66.2",
         "absErrWei": "1.83e-60",
         "raw": "28943687984379544558568320930191803987550188582661887266655314866995413631232",
-        "gas": 6292860,
-        "gasPerStep": 629
+        "gas": 6251989,
+        "gasPerStep": 625
        }
       },
       "solmate": {
@@ -250024,8 +250024,8 @@
         "digitsFormatCapped": "68.2",
         "absErrWei": "5.32e-51",
         "raw": "28947878621597167228613851848853874774257016870021778782071234632583062145744",
-        "gas": 308974,
-        "gasPerStep": 846
+        "gas": 270205,
+        "gasPerStep": 740
        },
        "1000": {
         "value": "0.00109943969984998026533527558027752018299614",
@@ -250042,8 +250042,8 @@
         "digitsFormatCapped": "67.4",
         "absErrWei": "3.66e-53",
         "raw": "28946821496706086236637939614973029727151072635040610860078974600143368030016",
-        "gas": 708260,
-        "gasPerStep": 708
+        "gas": 664245,
+        "gasPerStep": 664
        },
        "10000": {
         "value": "5.05223923467524791730898955780807523353602e-273",
@@ -250060,7 +250060,7 @@
         "digitsFormatCapped": "65.7",
         "absErrWei": "9.06e-321",
         "raw": "28848015073196492438987561929664896830544986442147663616284998060123392572160",
-        "gas": 6271925,
+        "gas": 6271769,
         "gasPerStep": 627
        }
       },
@@ -252402,8 +252402,8 @@
         "digitsFormatCapped": "70.4",
         "absErrWei": "1.16e-52",
         "raw": "28948075206565369116476091832541771761209167965584286351252487841120099128128",
-        "gas": 67193,
-        "gasPerStep": 67193
+        "gas": 50255,
+        "gasPerStep": 50255
        },
        "2": {
         "value": "2.95421570115641918029662731845011884746988",
@@ -252420,8 +252420,8 @@
         "digitsFormatCapped": "69.8",
         "absErrWei": "4.09e-52",
         "raw": "28948074995366884907992192592113478772590047402745352777385843280122479603872",
-        "gas": 67135,
-        "gasPerStep": 33567
+        "gas": 50876,
+        "gasPerStep": 25438
        },
        "5": {
         "value": "2.94275462411467794841925692740429106028653",
@@ -252438,8 +252438,8 @@
         "digitsFormatCapped": "69.5",
         "absErrWei": "8.50e-52",
         "raw": "28948074362555312083010200101071140628128175533490916994490210364384375797120",
-        "gas": 67547,
-        "gasPerStep": 13509
+        "gas": 52645,
+        "gasPerStep": 10529
        },
        "10": {
         "value": "2.92370027198797832948764579775522261399852",
@@ -252456,8 +252456,8 @@
         "digitsFormatCapped": "69.4",
         "absErrWei": "1.00e-51",
         "raw": "28948073310488870635729361819161670296966841920542900756571659197137885673280",
-        "gas": 68022,
-        "gasPerStep": 6802
+        "gas": 55834,
+        "gasPerStep": 5583
        },
        "20": {
         "value": "2.88577036739525706915549707408586521474377",
@@ -252546,8 +252546,8 @@
         "digitsFormatCapped": "67.6",
         "absErrWei": "1.18e-50",
         "raw": "28947792911421460221865089440077420819877971516405317701304001612244086008128",
-        "gas": 687050,
-        "gasPerStep": 687
+        "gas": 670113,
+        "gasPerStep": 670
        },
        "10000": {
         "value": "3.75465604958019777913972630043476589471278e-42",
@@ -252564,8 +252564,8 @@
         "digitsFormatCapped": "65.6",
         "absErrWei": "7.75e-90",
         "raw": "28932706871126428314268514846368787240441051122066093555186449190417124092416",
-        "gas": 6312914,
-        "gasPerStep": 631
+        "gas": 6253196,
+        "gasPerStep": 625
        }
       },
       "solmate": {
@@ -255050,8 +255050,8 @@
         "digitsFormatCapped": "68.3",
         "absErrWei": "9.50e-51",
         "raw": "28948032129609470478987225057767034282437338778784785403038611537877581411888",
-        "gas": 704015,
-        "gasPerStep": 704
+        "gas": 663265,
+        "gasPerStep": 663
        },
        "10000": {
         "value": "3.82757744406509619613785626700074611566004e-36",
@@ -255068,8 +255068,8 @@
         "digitsFormatCapped": "66.6",
         "absErrWei": "8.69e-85",
         "raw": "28934911413040339903236576112176435918557531297497591832484918520379934990336",
-        "gas": 6320455,
-        "gasPerStep": 632
+        "gas": 6252197,
+        "gasPerStep": 625
        }
       },
       "solmate": {
@@ -257554,8 +257554,8 @@
         "digitsFormatCapped": "66.7",
         "absErrWei": "1.05e-50",
         "raw": "28947465193205930659819784661709549986564225107223967565736219553598497767168",
-        "gas": 708451,
-        "gasPerStep": 708
+        "gas": 664261,
+        "gasPerStep": 664
        },
        "10000": {
         "value": "6.07195588997278369198932958225741638340403e-52",
@@ -257572,8 +257572,8 @@
         "digitsFormatCapped": "64.9",
         "absErrWei": "6.83e-99",
         "raw": "28929118970575297456061732420067433501082808150308718836438114861505039632384",
-        "gas": 6305124,
-        "gasPerStep": 630
+        "gas": 6253176,
+        "gasPerStep": 625
        }
       },
       "solmate": {
@@ -306525,8 +306525,12 @@
  "liveRunner": "0xe19142cFF76CB942Fa1eEe78956DC9492F25802d",
  "liveSelector": "0x281dbbfe",
  "liveNote": "liveMaxN is the largest N on the ladder that the public Sepolia RPC's eth_call completed for every input of that form. Above it the runner reports a bare revert because the adapter ran out of gas under the RPC's eth_call limits (calls needing more than about 40M gas, or a few seconds of execution, fail); cells above it are checked from your own node. Anyone with their own node can run every cell.",
- "liveChecked": 1917,
- "liveMismatches": 0,
- "liveBlock": 12008919,
- "liveDate": "2026-10-28"
+ "runnersAhead": {
+  "deployed": "FP127 ladder v12",
+  "next": "FP127 ladder v13",
+  "changed": [
+   "LadderFP127",
+   "LadderFP19Deployed"
+  ]
+ }
 }

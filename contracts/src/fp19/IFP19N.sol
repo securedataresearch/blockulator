@@ -13,8 +13,8 @@ interface IFP19N {
 
     /// @notice The error function. Below 1/2, x (2/sqrt pi) e^(-x^2) times the
     ///         all-positive series sum (2x^2)^k / (2k+1)!!; above, 1 - erfc with
-    ///         erfc = e^(-x^2) g(x) from the anchors or the continued fraction
-    ///         (see erfc). e^(-x^2) comes from the exact square. One rounding
+    ///         erfc = e^(-x^2) g(x) from g's two minimax pieces or the
+    ///         asymptotic series (see erfc). e^(-x^2) comes from the exact square. One rounding
     ///         when the fast value's error bound clears the rounding boundary,
     ///         else the series in two words below 7 and 1 - erfc by the
     ///         continued fraction in two words above: correctly rounded. +-1
@@ -22,8 +22,8 @@ interface IFP19N {
     function erf(int256 x) external pure returns (int256 r);
     /// @notice The complementary error function as a product, never a
     ///         difference, for x >= 1/2: erfc(x) = e^(-x^2) g(x), g = e^(x^2) erfc
-    ///         from a Taylor series around 45 anchors on [1/2, 6] and the
-    ///         continued fraction above, e^(-x^2) from the exact 474-bit square,
+    ///         from two degree-66 minimax pieces on [1/2, 18) and the
+    ///         asymptotic series above, e^(-x^2) from the exact 474-bit square,
     ///         so the tail keeps 71 digits until it underflows 2^-262142 near
     ///         x = 427. 1 - erf below 1/2, 2 - erfc(-x) below zero. One rounding,
     ///         or the wide second stage (the series and 1 - erf below 7, the

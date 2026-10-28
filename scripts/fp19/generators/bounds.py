@@ -40,8 +40,9 @@ analysis is not off by a missed term.
   powu                  2 n + 8              each 256-bit product within 2^-255, squarings
                                              double it: (n + 1) 2^-255 of am, plus 2 for 1/am
   erf, erfc, normCdf    128 (y < 1/2)        2 x F's 52 (erfser's rounded terms, e^-y^2, products) + 1
-                        192 (anchors)        2 x g's 81 (1.6 per Taylor term, 50 terms, anchor 0.5) + 8
-                        32 n + 64 (CF)       A and B each gain 2^-251 relative per step: 2^5 n
+                        26, 90 (g's pieces)  2 x g's 8.5 or 40.5 (Horner 3 units at 2^-256 or 2^-252,
+                                             w's 3.6 units, h u's floors, normCdf's y 5) + 2 g 6.1 + 1
+                                             (erf19.py's eu_pieces)
                         64 (y >= 18)         the asymptotic series' terms' floors at 2^-262, w's
                                              2^-254, Q's 2 units, v's 6.1, two floors (under 49)
                         er >> -ee + 2        for the differences 1 - erfc, 2 - erfc
@@ -292,25 +293,16 @@ def run(n):
                 if h == 0:
                     M.add("erf, y < 1/2", 128, (m * F) >> 236, erf(y) * power(2, 254 - u))
                 continue
-            val = E.erfc_big(ker, Y, uy, u, m, h)
+            val = E.erfc_big_er(ker, Y, uy, u, m, h)
             if val is None:
                 continue
-            D, ee = val
+            D, ee, err = val
             if D == 0:
                 continue
-            anchors = uy <= 1 or (uy == 2 and Y < 3 << 253)
-            if anchors:
-                err = 192
-            elif E.asym_regime(Y, uy):
-                err = 64
+            if E.asym_regime(Y, uy):
+                region = "asymptotic series"
             else:
-                y2 = K.mulwu(Y, Y)
-                ey = 2 * uy
-                if y2 >> 255:
-                    y2 >>= 1
-                    ey += 1
-                err = 64 + 32 * (4400 // (y2 >> (254 - ey)) + 48)
-            region = "anchors" if anchors else ("asymptotic series" if E.asym_regime(Y, uy) else "continued fraction")
+                region = f"g piece {0 if err == E.eu()[0]['er'] else 1}"
             M.add(f"{nm}, {region}", err, D, erfc(y) * power(2, 254 - ee))
             D2 = WS - (D >> -ee)
             M.add(f"1 - {nm}, {region}", (err >> -ee) + 2, D2, (1 - erfc(y)) * power(2, 254))
@@ -902,8 +894,9 @@ def lambert(ker, M, n):
 
 def cf_depth(n):
     """The second stage's continued fraction for erfc at y >= 7: depth
-    1700/floor|x| + 28 (erfc, x = y) or 2404/floor|x| + 28 (normCdf, x = y
-    sqrt 2), truncation error relative to erfc at 150 digits."""
+    C/xi^2 + D/xi + 26, xi = floor|x| (E.cf2_depth; x = y for erfc, y sqrt 2
+    for normCdf), truncation error relative to erfc at 150 digits. The fit
+    against the need at every band edge is erf19.py --cf-depth."""
     mp.dps = 150
     rng = random.Random(7)
     worst = mpf(0)
@@ -913,7 +906,7 @@ def cf_depth(n):
         if rng.random() < 0.5:
             x = mpf(7 * (1.4143 if h else 1)) + mpf(rng.random())
         xi = int(x)
-        depth = (1700 + 704 * h) // xi + 28
+        depth = E.cf2_depth(xi, h)
         y = x / sqrt(2 ** h)
         b, a = (2 * y, 2) if h == 0 else (x, 1)
         t = mpf(0)
@@ -922,7 +915,7 @@ def cf_depth(n):
         c = (2 / sqrt(mp.pi)) if h == 0 else sqrt(2 / mp.pi)
         v = c * exp(-y * y) / (b + t)
         worst = max(worst, abs(v / erfc(y) - 1))
-    print(f"continued fraction at y >= 7, depth 1700/floor|x| + 28: truncation below 2^{float(log(worst, 2)):.1f} "
+    print(f"continued fraction at y >= 7, depth C/xi^2 + D/xi + 26: truncation below 2^{float(log(worst, 2)):.1f} "
           f"over {n} points (the second stage is held to 2^-392)")
     return worst > mpf(2) ** -390
 
