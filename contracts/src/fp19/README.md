@@ -1,16 +1,17 @@
 # FP19 in Yul
 
 256-bit binary floating point for the EVM: 65 ops, every one correctly
-rounded or exact, and the constant `PI`, from one source. Blockulator 2.2
-deployed them as four objects by idea: FP19, the number; FP19E, the
-elementary functions; FP19H, the hyperbolic functions; FP19S, the special
-functions ([below](#five-objects)); 3.0 makes it five, the normal
-distribution (erf, erfc, normCdf) in FP19N. 2.2's four are live on Sepolia since 2026-10-22 as
-FP19 v5, at the addresses in
+rounded or exact, and the constant `PI`, from one source. Blockulator 3.0
+deploys them as five objects by idea: FP19, the number; FP19E, the
+elementary functions; FP19H, the hyperbolic functions; FP19N, the normal
+distribution (erf, erfc, normCdf); FP19S, Lambert W
+([below](#five-objects)). They are live on Sepolia since 2026-10-28 as
+FP19 v6, at the addresses in
 [`contracts/deployments/FP19.md`](../../deployments/FP19.md). They are
-evm osaka builds and need a chain with CLZ. Release four (Blockulator 2.1,
-67 ops in FP19, FP19X, FP19X2 and FP19X3) and releases one to three
-stay deployed.
+evm osaka builds and need a chain with CLZ. v5 (Blockulator 2.2, four
+objects: FP19, FP19E, FP19H and FP19S, with erf, erfc, normCdf and
+factorial in FP19S), release four (Blockulator 2.1, 67 ops in FP19, FP19X,
+FP19X2 and FP19X3) and releases one to three stay deployed.
 
 One `int256` per value, the bit pattern of a float:
 
@@ -108,11 +109,14 @@ salt) is the one list the Makefile, `stdjson.py` and `deploy.py` read.
 
 | object | the idea | ops | runtime | salt |
 |---|---|---|---:|---|
-| FP19 | the number | add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg; neg, abs, sign; cmp, lt, eq, min, max, clamp; floor, ceil, round, frac; avg, dist, zeroFloorSub, lerp; mulDown, mulUp, divDown, divUp; fromUint, fromUintDown, fromUintUp, toUintDown, toUintUp, toIntDown, toIntUp, fromFixed18, toFixed18, toFixed18Down, toFixed18Up, fromFP127, toFP127: 43 | 10,333 | `FP19 v5` |
-| FP19E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 23,621 | `FP19E v5` (a new salt at the next deploy) |
-| FP19H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 13,020 | `FP19H v5` (a new salt at the next deploy: log2m's table walk is its own function, log2lv) |
-| FP19N | the normal distribution, on its own fit | erf, erfc, normCdf: 3 | 17,962 | `FP19N v6` (3.0) |
-| FP19S | the special functions | lambertW0, lambertWm1: 2 | 11,338 | `FP19S v5` (a new salt at the next deploy) |
+| FP19 | the number | add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg; neg, abs, sign; cmp, lt, eq, min, max, clamp; floor, ceil, round, frac; avg, dist, zeroFloorSub, lerp; factorial; mulDown, mulUp, divDown, divUp; fromUint, fromUintDown, fromUintUp, toUintDown, toUintUp, toIntDown, toIntUp, fromFixed18, toFixed18, toFixed18Down, toFixed18Up, fromFP127, toFP127: 44 | 17,221 | `FP19 v6` |
+| FP19E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 23,621 | `FP19E v6` |
+| FP19H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 13,020 | `FP19H v6` |
+| FP19N | the normal distribution, on its own fit | erf, erfc, normCdf: 3 | 17,962 | `FP19N v6` (new in 3.0) |
+| FP19S | Lambert W | lambertW0, lambertWm1: 2 | 11,338 | `FP19S v6` |
+
+v5's salts were `FP256 v5`, `FP256E v5`, `FP256H v5` and `FP256S v5`; 3.0's
+drop the old name.
 
 **Why the hyperbolics have their own object.** They are elementary functions
 on the same kernel and belong with FP19E by idea, but FP19E with them
@@ -130,7 +134,8 @@ holds the three and their kernels at 17,962 bytes; FP19S keeps Lambert W at
 11,338.
 
 **The core's room goes to the basic ops.** Without the kernels FP19 is
-about 10 KB, so its fast paths can spend bytes: `normtop`, where add, sub,
+about 10 KB (17,221 bytes with factorial's table of 169 words), so its
+fast paths can spend bytes: `normtop`, where add, sub,
 mul, div, inv, avg and fromFixed18 end, writes the word itself instead of
 calling `pack` (41 gas less each); `toIntDown`, `toIntUp`, `toFixed18Down`,
 `toFixed18Up` and `toFP127` read the word in place instead of through
@@ -145,12 +150,18 @@ default pipeline; `docs/benchmarks/gas19.md` has the objects).
 object caller can copy. `gcd` is gone; the integers it served are exact in
 FP19, so a caller who needs it runs Euclid on `toUintDown` of each.
 
-`make build-fp19` compiles the four, `make size-fp19` prints their sizes,
-and `predict-fp19e`, `-fp19h`, `-fp19s` with their `deploy-...-sepolia`
-and `verify-...-sepolia` mirror FP19's targets. Deployed 2026-10-22 on
-Sepolia: FP19 `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52`, FP19E
-`0x017F68A57dD53a6dF2043c24B712b287F9549AE2`, FP19H
-`0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5`, FP19S
+`make build-fp19` compiles the five, `make size-fp19` prints their sizes,
+and `predict-fp19e`, `-fp19h`, `-fp19n`, `-fp19s` with their
+`deploy-...-sepolia` and `verify-...-sepolia` mirror FP19's targets.
+Deployed 2026-10-28 on Sepolia (FP19 v6, Blockulator 3.0): FP19
+`0x94d9d43D6202827429a8058959eeCf6d232b8729`, FP19E
+`0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092`, FP19H
+`0xF059611C1c42543DE6EE82353Eb082Fd8999081f`, FP19N
+`0xCe9F09D646B37a9100F05ED1FFD14E9f43180214`, FP19S
+`0xf74ba90535224870830e6e89D2b328d4cc09DE48`. v5 (Blockulator 2.2,
+2026-10-22) stays live at FP19 `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52`,
+FP19E `0x017F68A57dD53a6dF2043c24B712b287F9549AE2`, FP19H
+`0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` and FP19S
 `0x73E8809F163d4358773cc5F25c134997B4b842F4`.
 
 Release four (Blockulator 2.1, still live) split the same ops as FP19 (the arithmetic, exp, ln,

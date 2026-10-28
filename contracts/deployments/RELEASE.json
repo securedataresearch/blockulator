@@ -1,80 +1,177 @@
 {
- "release": "Blockulator 2.2",
- "date": "2026-10-22",
+ "release": "Blockulator 3.0",
+ "date": "2026-10-28",
  "chainId": 11155111,
  "network": "sepolia",
  "note": "The public name for this release. Component versions (salts) name addresses and stay in each record.",
  "requires": "CLZ (EIP-7939, Osaka/Fusaka): every object is an evmVersion osaka build; see contracts/deployments/README.md for the supported and unsupported chains",
  "blocks": [
-  11974968,
-  11974985
+  12015304,
+  12015322
  ],
  "components": {
   "FP127": {
-   "version": "FP127 v6",
-   "address": "0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4",
-   "block": 11974968,
-   "runtimeBytes": 21858,
+   "version": "FP127 v8",
+   "address": "0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B",
+   "block": 12015304,
+   "runtimeBytes": 23797,
    "record": "contracts/deployments/FP127.md"
   },
   "FP19": {
-   "version": "FP19 v5",
-   "address": "0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52",
-   "block": 11974969,
-   "runtimeBytes": 10333,
+   "version": "FP19 v6",
+   "address": "0x94d9d43D6202827429a8058959eeCf6d232b8729",
+   "block": 12015306,
+   "runtimeBytes": 17221,
    "record": "contracts/deployments/FP19.md"
   },
   "FP19E": {
-   "version": "FP19E v5",
-   "address": "0x017F68A57dD53a6dF2043c24B712b287F9549AE2",
-   "block": 11974970,
-   "runtimeBytes": 21598,
+   "version": "FP19E v6",
+   "address": "0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092",
+   "block": 12015308,
+   "runtimeBytes": 23621,
    "record": "contracts/deployments/FP19.md"
   },
   "FP19H": {
-   "version": "FP19H v5",
-   "address": "0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5",
-   "block": 11974971,
-   "runtimeBytes": 13021,
+   "version": "FP19H v6",
+   "address": "0xF059611C1c42543DE6EE82353Eb082Fd8999081f",
+   "block": 12015310,
+   "runtimeBytes": 13020,
+   "record": "contracts/deployments/FP19.md"
+  },
+  "FP19N": {
+   "version": "FP19N v6",
+   "address": "0xCe9F09D646B37a9100F05ED1FFD14E9f43180214",
+   "block": 12015312,
+   "runtimeBytes": 17962,
    "record": "contracts/deployments/FP19.md"
   },
   "FP19S": {
-   "version": "FP19S v5",
-   "address": "0x73E8809F163d4358773cc5F25c134997B4b842F4",
-   "block": 11974972,
-   "runtimeBytes": 24263,
+   "version": "FP19S v6",
+   "address": "0xf74ba90535224870830e6e89D2b328d4cc09DE48",
+   "block": 12015314,
+   "runtimeBytes": 11338,
    "record": "contracts/deployments/FP19.md"
   },
   "LadderRunner": {
-   "version": "FP127 ladder v11",
-   "address": "0x08b06D93620e7B33cD2d600118a75B45EF779Cec",
-   "block": 11974984,
+   "version": "FP127 ladder v13",
+   "address": "0xCbD62BdD4Fdd66EA814198B3B7804Cfab80e170C",
+   "block": 12015321,
    "record": "contracts/deployments/Ladder.md"
   },
   "EdgeRunner": {
-   "version": "FP127 ladder v11",
-   "address": "0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83",
-   "block": 11974985,
+   "version": "FP127 ladder v13",
+   "address": "0x05A77934179b701EE2a093bAd83497765ED20d91",
+   "block": 12015322,
    "record": "contracts/deployments/Ladder.md"
   }
  },
  "live": {
   "ladder": {
-   "liveRunner": "0x08b06D93620e7B33cD2d600118a75B45EF779Cec",
-   "liveChecked": 9411,
+   "liveRunner": "0xCbD62BdD4Fdd66EA814198B3B7804Cfab80e170C",
+   "liveChecked": 1920,
    "liveMismatches": 0,
-   "liveBlock": 11977397,
-   "liveDate": "2026-10-23"
+   "liveBlock": 12015346,
+   "liveDate": "2026-10-28"
   },
   "edges": {
-   "liveRunner": "0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83",
-   "liveChecked": 1511,
+   "liveRunner": "0x05A77934179b701EE2a093bAd83497765ED20d91",
+   "liveChecked": 276,
    "liveMismatches": 0,
-   "liveBlock": 11977550,
-   "liveDate": "2026-10-23"
+   "liveBlock": 12015374,
+   "liveDate": "2026-10-28"
   }
  },
+ "superseded": [
+  {
+   "version": "FP127 v7",
+   "address": "0xb97E0b824d86470BfAA52fe44f09363755d52591",
+   "block": 12008542,
+   "date": "2026-10-27",
+   "status": "still live and verified; sent as Blockulator 3.0's FP127 and superseded by FP127 v8 before mainnet",
+   "record": "contracts/deployments/FP127.md"
+  },
+  {
+   "version": "FP127 ladder v12",
+   "date": "2026-10-27",
+   "status": "still live; its LadderFP127 calls FP127 v7; superseded by ladder v13",
+   "record": "contracts/deployments/Ladder.md"
+  }
+ ],
  "previous": [
+  {
+   "release": "Blockulator 2.2",
+   "date": "2026-10-22",
+   "status": "still live and verified",
+   "blocks": [
+    11974968,
+    11974985
+   ],
+   "components": {
+    "FP127": {
+     "version": "FP127 v6",
+     "address": "0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4",
+     "block": 11974968,
+     "runtimeBytes": 21858,
+     "record": "contracts/deployments/FP127.md"
+    },
+    "FP19": {
+     "version": "FP19 v5",
+     "address": "0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52",
+     "block": 11974969,
+     "runtimeBytes": 10333,
+     "record": "contracts/deployments/FP19.md"
+    },
+    "FP19E": {
+     "version": "FP19E v5",
+     "address": "0x017F68A57dD53a6dF2043c24B712b287F9549AE2",
+     "block": 11974970,
+     "runtimeBytes": 21598,
+     "record": "contracts/deployments/FP19.md"
+    },
+    "FP19H": {
+     "version": "FP19H v5",
+     "address": "0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5",
+     "block": 11974971,
+     "runtimeBytes": 13021,
+     "record": "contracts/deployments/FP19.md"
+    },
+    "FP19S": {
+     "version": "FP19S v5",
+     "address": "0x73E8809F163d4358773cc5F25c134997B4b842F4",
+     "block": 11974972,
+     "runtimeBytes": 24263,
+     "record": "contracts/deployments/FP19.md"
+    },
+    "LadderRunner": {
+     "version": "FP127 ladder v11",
+     "address": "0x08b06D93620e7B33cD2d600118a75B45EF779Cec",
+     "block": 11974984,
+     "record": "contracts/deployments/Ladder.md"
+    },
+    "EdgeRunner": {
+     "version": "FP127 ladder v11",
+     "address": "0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83",
+     "block": 11974985,
+     "record": "contracts/deployments/Ladder.md"
+    }
+   },
+   "live": {
+    "ladder": {
+     "liveRunner": "0x08b06D93620e7B33cD2d600118a75B45EF779Cec",
+     "liveChecked": 9411,
+     "liveMismatches": 0,
+     "liveBlock": 11977397,
+     "liveDate": "2026-10-23"
+    },
+    "edges": {
+     "liveRunner": "0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83",
+     "liveChecked": 1511,
+     "liveMismatches": 0,
+     "liveBlock": 11977550,
+     "liveDate": "2026-10-23"
+    }
+   }
+  },
   {
    "release": "Blockulator 2.1",
    "date": "2026-10-21",

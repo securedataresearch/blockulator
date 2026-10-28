@@ -98,15 +98,16 @@ Each rule comes from replaying a real exploit bit for bit, then running the same
 
 The [integration guide](https://blockulator.com/library/#integrating) has the worked examples and the edge-op table.
 
-## Blockulator 2.2 on Sepolia
+## Blockulator 3.0 on Sepolia
 
 | contract | address |
 |---|---|
-| FP127 v7 | `0xb97E0b824d86470BfAA52fe44f09363755d52591` |
-| FP19 (the number) | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` |
-| FP19E (exp, log, pow) | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` |
-| FP19H (hyperbolic) | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` |
-| FP19S (erf, Lambert W) | `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
+| FP127 v8 | `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B` |
+| FP19 (the number) | `0x94d9d43D6202827429a8058959eeCf6d232b8729` |
+| FP19E (exp, log, pow) | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` |
+| FP19H (hyperbolic) | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` |
+| FP19N (erf, normCdf) | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` |
+| FP19S (Lambert W) | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` |
 
 Every contract is verified on Sourcify and Blockscout. Each library is one Yul source that generates both the deployed object and the inline library, fuzzed to agree bit for bit. More detail: [records](contracts/deployments/RELEASE.md), [FP127](contracts/src/fp127/README.md), [FP19](contracts/src/fp19/README.md), [precision](docs/fp19/precision.md), [the ladder](docs/benchmarks/ladder.md), [the edges](docs/benchmarks/edges.md), [proofs](docs/proofs.md), [changelog](CHANGELOG.md).
 

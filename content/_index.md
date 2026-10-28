@@ -4,7 +4,7 @@ title = "Blockulator: the definitive source for precision"
 template = "home.html"
 
 [extra]
-eyebrow = "Blockulator 2.2 · Secure Data Research"
+eyebrow = "Blockulator 3.0 · Secure Data Research"
 headline = "The definitive source for precision."
 # {fp127}, {fp19} and the other {placeholders} below are filled from static/data/home.json (templates/macros.html fill).
 sub = "Two Solidity math libraries that keep {fp127} and {fp19} correct digits where WAD keeps 18, so interest, prices and payouts stay right to the last wei. Use them when large sums are at stake or the call is free."
