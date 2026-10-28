@@ -1,7 +1,7 @@
 # Blockulator
 
 <!-- badges:begin -->
-[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-508%20forge%20tests-3f6d9c)](test) [![to the last wei](https://img.shields.io/badge/WAD-0%20wrong%20of%20108%2C000-00694e)](docs/benchmarks/wad.md) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
+[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-509%20forge%20tests-3f6d9c)](test) [![to the last wei](https://img.shields.io/badge/WAD-0%20wrong%20of%20108%2C000-00694e)](docs/benchmarks/wad.md) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
 <!-- badges:end -->
 
 **The definitive source for precision.** FP127 and FP19 put precision maths in one `int256`: 38 digits and 71, every op correctly rounded, checked on chain, and now competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)
@@ -31,7 +31,7 @@ Share of results off by at least one wei, against the exact value rounded in eac
 | `powWad` | **0 of 3,461** | 66% | 71% | 85% | 66% | — |
 | `lambertW0Wad` | **0 of 3,999** | 28% | — | — | — | — |
 
-Where they offer them, Solady, PRBMath, Solmate, OpenZeppelin Math, Uniswap FullMath and snekmate are exact on `divWad`, `divWadUp`, `mulWad`, `mulWadUp`, `sDivWad`, `sMulWad`, `sqrtWad`, `sqrtWadUp`. Versions: BlockulatorWad fc19340, Solady v0.1.26, PRBMath SD59x18 v4.2.0, PRBMath UD60x18 v4.2.0, Solmate main@89365b8, OpenZeppelin Math v5.7.0 (vendored), Uniswap FullMath v4-core v4.0.0 (vendored), snekmate v0.1.2 (vyper 0.4.3); counts in [`wad.md`](docs/benchmarks/wad.md).
+Where they offer them, Solady, PRBMath, Solmate, OpenZeppelin Math, Uniswap FullMath and snekmate are exact on `divWad`, `divWadUp`, `mulWad`, `mulWadUp`, `sDivWad`, `sMulWad`, `sqrtWad`, `sqrtWadUp`. Versions: BlockulatorWad 7356be2, Solady v0.1.26, PRBMath SD59x18 v4.2.0, PRBMath UD60x18 v4.2.0, Solmate main@89365b8, OpenZeppelin Math v5.7.0 (vendored), Uniswap FullMath v4-core v4.0.0 (vendored), snekmate v0.1.2 (vyper 0.4.3); counts in [`wad.md`](docs/benchmarks/wad.md).
 <!-- wad:end -->
 
 ## Twice the digits, at the same gas
@@ -40,10 +40,10 @@ Where they offer them, Solady, PRBMath, Solmate, OpenZeppelin Math, Uniswap Full
 | | digits | add | mul | div | exp<sup>t</sup> | ln<sup>t</sup> | pow<sup>t</sup> | sqrt<sup>t</sup> |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | *floating point* | | | | | | | | |
-| **FP19** | **71** | **662** | **530** | **800** | **3,278** | **3,043** | **5,901** | **1,205** |
-| ABDKMathQuad | 34 | 734 | 709 | 818 | 5,668 | 16,356 | 23,467 | 760 |
+| **FP19** | **71** | **662** | **530** | **800** | **3,278** | **3,077** | **5,935** | **1,205** |
+| ABDKMathQuad | 34 | 734 | 709 | 818 | 5,668 | 16,356 | 23,479 | 760 |
 | *fixed point* | | | | | | | | |
-| **FP127** | **38** | **128** | **267** | **412** | **2,716** | **1,944** | **3,317** | **469** |
+| **FP127** | **38** | **128** | **267** | **412** | **2,716** | **1,944** | **3,316** | **469** |
 | ABDKMath64x64 | 19 | 162 | 171 | 221 | 3,380 | 7,080 |  | 828 |
 | PRBMath SD59x18 | 18 | 189 | 485 | 509 | 2,816 | 7,083 | 10,065 | 978 |
 | PRBMath UD60x18 | 18 | 150 | 237 | 261 | 2,720 | 6,474 | 9,544 | 824 |

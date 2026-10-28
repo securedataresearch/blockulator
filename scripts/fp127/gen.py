@@ -57,7 +57,7 @@ LIBS = {
         "iface_notice": "Interface of the deployed FP127 object. Values are signed 127.128\n///         fixed-point: one int256 whose value is raw / 2^128.",
         "lib_notice": "Inlinable FP127: signed 127.128 fixed-point, one int256 per value,\n///         value = raw / 2^128. Every function body is the same Yul that the\n///         deployed FP127 object runs, so the two agree by construction.\n///         It uses the CLZ opcode: compile with evmVersion osaka (solc >= 0.8.31)\n///         and run only on a chain that has CLZ (EIP-7939).",
         "objects": {
-            "FP127": {"iface": "IFP127", "abi": "abi.json", "salt": "FP127 v7"},
+            "FP127": {"iface": "IFP127", "abi": "abi.json", "salt": "FP127 v8"},
         },
     },
     "fp19": {
@@ -74,14 +74,14 @@ LIBS = {
         # 24,576 limit); FP19N the normal distribution (erf, erfc, normCdf),
         # moved out of FP19S for its tables in 3.0; FP19S Lambert W.
         "objects": {
-            "FP19": {"iface": "IFP19", "abi": "abi.json", "salt": "FP256 v5"},
-            "FP19E": {"iface": "IFP19E", "abi": "abiE.json", "salt": "FP256E v5",
+            "FP19": {"iface": "IFP19", "abi": "abi.json", "salt": "FP19 v6"},
+            "FP19E": {"iface": "IFP19E", "abi": "abiE.json", "salt": "FP19E v6",
                        "iface_notice": "Interface of the deployed FP19E object, FP19's elementary\n///         functions on its one exp/log kernel: exp, exp2, exp10, expm1, ln,\n///         log2, log10, log2Up, log1p, pow, powu and compound, on the same\n///         256-bit binary floating point words as IFP19 (sign bit 255, a\n///         19-bit biased exponent, bias 262143, a 236-bit fraction; zero is\n///         the all-zero word)."},
-            "FP19H": {"iface": "IFP19H", "abi": "abiH.json", "salt": "FP256H v5",
+            "FP19H": {"iface": "IFP19H", "abi": "abiH.json", "salt": "FP19H v6",
                        "iface_notice": "Interface of the deployed FP19H object, FP19's hyperbolic\n///         functions: sinh, cosh, tanh and atanh, on the same 256-bit binary\n///         floating point words as IFP19. They run on the exp/log kernel of\n///         FP19E, carried here as their own copy: beside FP19E's ops they\n///         would not fit one object."},
             "FP19N": {"iface": "IFP19N", "abi": "abiN.json", "salt": "FP19N v6",
                        "iface_notice": "Interface of the deployed FP19N object, FP19's normal distribution:\n///         erf, erfc and normCdf, on the same 256-bit binary floating point\n///         words as IFP19."},
-            "FP19S": {"iface": "IFP19S", "abi": "abiS.json", "salt": "FP256S v5",
+            "FP19S": {"iface": "IFP19S", "abi": "abiS.json", "salt": "FP19S v6",
                        "iface_notice": "Interface of the deployed FP19S object, FP19's special functions:\n///         lambertW0 and lambertWm1, the two real branches of Lambert W, on\n///         the same 256-bit binary floating point words as IFP19."},
         },
         "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",
@@ -609,11 +609,11 @@ PROBES = {
               "lwlog", "lwf128", "lnc", "lwq510", "lwsp", "lwy", "powslow", "compslow", "wln1ps",
               # the middle stage of pow, powu and compound
               "powmid", "compmid", "mratio", "mlog2m",
-              "erfser", "erfcxa", "erfcxcf", "erfasym", "expnegsq",
+              "erfser", "erfcxu", "erfasym", "expnegsq",
               # #79's ops: the hyperbolics, the logs' wide step, cbrt, the roots, lerp
               "em1k", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cbrtw", "cubegt",
               "isqrtw", "lerp3"],
-    "fp127": ["expk", "log2m", "erfs", "erfcf", "lwf127", "lnc", "lwqs", "lwsp", "lwfin",
+    "fp127": ["expk", "log2m", "erfs", "erfct", "lwf127", "lnc", "lwqs", "lwsp", "lwfin",
               "l2p", "powus", "einvhalf", "cbrtw", "cube"],
 }
 

@@ -5,7 +5,7 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Four contracts, salt "FP127 ladder v12": the adapters of our two deployed forms (LadderFP127 and
+Four contracts, salt "FP127 ladder v13": the adapters of our two deployed forms (LadderFP127 and
 LadderFP19Deployed) and LadderRunner and EdgeRunner, whose constructor is the eighteen form slots as one array in
 form-id order, the zero address for every library that is not on chain (see ONCHAIN), so their init code depends
 on them. Each transaction is sent with the node's
@@ -28,7 +28,7 @@ from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
 PROXY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
-SALT_ASCII = "FP127 ladder v12"
+SALT_ASCII = "FP127 ladder v13"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
