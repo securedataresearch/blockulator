@@ -80,7 +80,7 @@ contract Equivalence19 is FP19Harness {
     function testFuzz_objEqLib_inv(int256 x) public view { _objLib(abi.encodeCall(IFP19.inv, (x)), "inv"); }
     function testFuzz_objEqLib_frac(int256 x) public view { _objLib(abi.encodeCall(IFP19.frac, (x)), "frac"); }
     function testFuzz_objEqLib_round(int256 x) public view { _objLib(abi.encodeCall(IFP19.round, (x)), "round"); }
-    function testFuzz_objEqLib_factorial(int256 x) public view { _objLib(abi.encodeCall(IFP19S.factorial, (x)), "factorial"); }
+    function testFuzz_objEqLib_factorial(int256 x) public view { _objLib(abi.encodeCall(IFP19.factorial, (x)), "factorial"); }
     function testFuzz_objEqLib_clamp(int256 x, int256 lo, int256 hi) public view { _objLib(abi.encodeCall(IFP19.clamp, (x, lo, hi)), "clamp"); }
     function testFuzz_objEqLib_lerp(int256 a, int256 b, int256 t) public view { _objLib(abi.encodeCall(IFP19.lerp, (a, b, t)), "lerp"); }
     function testFuzz_objEqLib_num1_79(int256 w, uint8 which) public view {

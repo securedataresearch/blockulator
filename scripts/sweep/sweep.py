@@ -298,7 +298,7 @@ def gen79():
         la.append(a), lb.append(b), lt.append(t)
     write("fp19_lerp", la, lb, lt)
     # factorial over its whole domain, and past it
-    write("fp19_factorial", [O.encode(Fraction(n)) for n in range(0, 20370)])
+    write("fp19_factorial", [O.encode(Fraction(n)) for n in range(0, 175)])
 
 
 

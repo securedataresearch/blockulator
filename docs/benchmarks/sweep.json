@@ -927,20 +927,20 @@
   {
    "lib": "fp19",
    "op": "factorial",
-   "n": 20367,
+   "n": 171,
    "status": {
-    "ok": 20367,
-    "bothrev": 3
+    "ok": 171,
+    "bothrev": 4
    },
-   "correctlyRounded": 20367,
+   "correctlyRounded": 171,
    "misrounded": 0,
    "maxUlp": 0,
    "hist": {
-    "0": 20367
+    "0": 171
    },
-   "gasMedian": 1070313,
-   "gasP99": 2118303,
-   "gasMax": 2139255
+   "gasMedian": 714,
+   "gasP99": 752,
+   "gasMax": 762
   },
   {
    "lib": "fp19",

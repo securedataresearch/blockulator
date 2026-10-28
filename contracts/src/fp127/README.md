@@ -409,8 +409,9 @@ taken. Cheaper, and the overflow check falls out of it.
 multiplier. The old README's "~62-bit two-step chunking" described an
 earlier version. Ported verbatim plus the two missing guards.
 
-**`factorial`.** Computed by exact integer multiplication instead of a
-34-entry jump table. Identical values.
+**`factorial`.** A table of the 34 values, two to a word, found by a binary
+search on n/2, as the Huff's jump table was (v6 multiplied them out: 190 to
+1,918 gas; the table is about 400 at every n). Identical values.
 
 **`lambertW0`.** Redesigned. The Huff seeded from a 64-entry interpolation
 table and ran two FSC steps and an IB finisher, documented as quartic.

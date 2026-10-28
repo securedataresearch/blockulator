@@ -665,16 +665,16 @@
       "reverts": "OutOfRange() for x <= 0 or a word that is not a number"
     },
     {
-      "object": "FP19S",
+      "object": "FP19",
       "name": "factorial",
       "signature": "factorial(int256)",
       "selector": "0x5ad78e8a",
       "inputs": [
         "n"
       ],
-      "notice": "floor(n)! rounded once: the exact product while its odd part fits 512 bits (every exact tie), a 512-bit running product within 2^-500 above that; every n in the domain is checked against the exact factorial (make sweep). 0! = 1.",
-      "domain": "0 <= n < 20367 (floor(n)! fits below 2^262145)",
-      "reverts": "OutOfRange() for n < 0 or a word that is not a number; Overflow() from 20367"
+      "notice": "floor(n)! rounded once, from a table of the 169 correctly rounded words for 2 <= n <= 170 (exact to 64!), checked against the exact factorial for every n (make sweep). 0! = 1.",
+      "domain": "0 <= n < 171 (170! is the largest factorial a binary64 holds)",
+      "reverts": "OutOfRange() for n < 0 or a word that is not a number; Overflow() from 171"
     },
     {
       "object": "FP19",

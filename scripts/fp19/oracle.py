@@ -695,7 +695,7 @@ def op_factorial(x):
     if q < 0:
         raise Revert("OutOfRange")
     n = _floorq(q)
-    if n > 30000:
+    if n > 170:
         raise Revert("Overflow")
     return encode(Fraction(math.factorial(n)))
 

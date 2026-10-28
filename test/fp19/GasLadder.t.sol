@@ -600,7 +600,7 @@ contract GasLadder19 is FP19Harness {
         _run1("inv", xs, false);
         _run1("frac", [_v(-60, 0), _v(-1, 0), _nv(1, PI_F >> 20), _v(1, PI_F >> 20), _v(59, 0xf4240 << 216), _v(200, 1)], false);
         _run1("round", [_v(-60, 0), _v(-1, 0), _nv(1, PI_F >> 20), _v(1, PI_F >> 20), _v(59, 0xf4240 << 216), _v(200, 1)], false);
-        _run1("factorial", [ONE, _v(2, 0x4 << 232), _v(4, 0), _v(6, 0x9 << 230), _v(9, 0xf4 << 228), _v(14, 0x3e << 230)], false);
+        _run1("factorial", [ONE, _v(2, 0x4 << 232), _v(4, 0), _v(6, 0x9 << 230), _v(7, 0), _v(7, 0x15 << 230)], false);
         _run3("clamp", xs, [_v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0), _v(-2, 0)], [TWO, TWO, TWO, TWO, TWO, TWO]);
         _run3("lerp", a, b, [HALF, _v(-2, 0), _nv(0, 0), _v(3, 0), _v(-100, 0), _v(100, 0)]);
     }

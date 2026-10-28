@@ -143,7 +143,7 @@ contract ViaIrBench is Test {
     function _obj19(string memory op) internal view returns (address) {
         bytes32 h = keccak256(bytes(op));
         if (h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
-            || h == keccak256("lambertW0") || h == keccak256("lambertWm1") || h == keccak256("factorial")) return fp19s;
+            || h == keccak256("lambertW0") || h == keccak256("lambertWm1")) return fp19s;
         if (h == keccak256("sinh") || h == keccak256("cosh") || h == keccak256("tanh") || h == keccak256("atanh")) return fp19h;
         if (h == keccak256("exp") || h == keccak256("exp2") || h == keccak256("exp10") || h == keccak256("expm1")
             || h == keccak256("ln") || h == keccak256("log2") || h == keccak256("log10") || h == keccak256("log2Up")

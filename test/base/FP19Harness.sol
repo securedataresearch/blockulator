@@ -207,7 +207,7 @@ abstract contract FP19Harness is Test {
     function _isS(string memory op) internal pure returns (bool) {
         bytes32 h = keccak256(bytes(op));
         return h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
-            || h == keccak256("lambertW0") || h == keccak256("lambertWm1") || h == keccak256("factorial");
+            || h == keccak256("lambertW0") || h == keccak256("lambertWm1");
     }
 
     function _objFor(string memory op) internal view returns (address) {
