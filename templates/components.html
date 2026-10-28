@@ -220,7 +220,7 @@
 {%- if d.runnersAhead is defined %}
 <p class="stamp pending"><strong>Live check pending a redeploy.</strong> These numbers come from a newer build than the runner on Sepolia ("{{ d.runnersAhead.deployed }}"); <code>make ladder</code> reproduces them, and <code>uv run scripts/ladder/{{ script }}</code> checks them live once "{{ d.runnersAhead.next }}" is deployed.</p>
 {%- elif d.liveChecked is defined %}
-<p class="stamp{% if d.liveMismatches > 0 %} bad{% endif %}"><strong>{{ d.liveChecked | num_format }} cells checked live on Sepolia at block {{ d.liveBlock | num_format }}, {{ d.liveMismatches }} mismatch{% if d.liveMismatches != 1 %}es{% endif %}.</strong> {{ d.liveDate }}, runner <a href="https://repo.sourcify.dev/11155111/{{ d.liveRunner }}">{{ d.liveRunner | truncate(length=10, end="…") }}</a>. Re-run: <code>uv run scripts/ladder/{{ script }}</code></p>
+<p class="stamp{% if d.liveMismatches > 0 %} bad{% endif %}"><strong>FP127's and FP19's deployed contracts checked live on Sepolia: {{ d.liveChecked | num_format }} results at block {{ d.liveBlock | num_format }}, {{ d.liveMismatches }} mismatch{% if d.liveMismatches != 1 %}es{% endif %}.</strong> The other libraries' results reproduce locally with <code>make ladder</code>. {{ d.liveDate }}, runner <a href="https://repo.sourcify.dev/11155111/{{ d.liveRunner }}">{{ d.liveRunner | truncate(length=10, end="…") }}</a>. Re-run: <code>uv run scripts/ladder/{{ script }}</code></p>
 {%- else %}
 <p class="stamp pending"><strong>Not re-checked on Sepolia since this data was generated ({{ d.generated }}).</strong> Check every cell against the live runner with <code>uv run scripts/ladder/{{ script }}</code></p>
 {%- endif %}

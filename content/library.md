@@ -80,7 +80,7 @@ It has no storage, no owner and no upgrade path: a new version gets a new salt a
 `sqrt(2)` from the command line:
 
 ```sh
-cast call 0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4 "sqrt(int256)(int256)" \
+cast call 0xb97E0b824d86470BfAA52fe44f09363755d52591 "sqrt(int256)(int256)" \
   680564733841876926926749214863536422912 \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com
 # 481231938336009023090067544955250113854
@@ -94,7 +94,7 @@ From Solidity:
 import {IFP127} from "fp127/IFP127.sol";
 
 contract StaticcallExample {
-    IFP127 public constant FP127 = IFP127(0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4);
+    IFP127 public constant FP127 = IFP127(0xb97E0b824d86470BfAA52fe44f09363755d52591);
     int256 internal constant ONE = int256(1) << 128;
 
     function accrue(int256 principalWad, int256 rateWad, uint256 steps)

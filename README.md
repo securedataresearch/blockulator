@@ -102,7 +102,7 @@ The [integration guide](https://blockulator.com/library/#integrating) has the wo
 
 | contract | address |
 |---|---|
-| FP127 v6 | `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4` |
+| FP127 v7 | `0xb97E0b824d86470BfAA52fe44f09363755d52591` |
 | FP19 (the number) | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` |
 | FP19E (exp, log, pow) | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` |
 | FP19H (hyperbolic) | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` |

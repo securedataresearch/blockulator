@@ -363,26 +363,7 @@ deploy-ladder-sepolia: build
 	@$(PY) scripts/ladder/deploy.py record $(SEPOLIA_RPC)
 
 verify-ladder-sepolia: build
-	@set -e; for c in LadderFP127 LadderFP127Lib LadderABDK LadderSolady LadderPRB LadderQuad LadderBalancer LadderAave LadderMorpho LadderMaker LadderFP19 LadderSolmate LadderOZ LadderUniswap LadderPRBUD LadderFraxlend LadderEuler; do \
-		A=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['$$c']['address'])"); \
-		echo "== $$c $$A"; \
-		forge verify-contract --chain sepolia --verifier sourcify --watch $$A contracts/src/ladder/$$c.sol:$$c || true; \
-		test -z "$$ETHERSCAN_API_KEY" || forge verify-contract --chain sepolia --verifier etherscan --watch $$A contracts/src/ladder/$$c.sol:$$c || true; \
-	done; \
-	A=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderRunner']['address'])"); \
-	ARGS=$$($(PY) python -c "import json;d=json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderRunner']['constructorArgs'];print('[' + ','.join(d) + ']')"); \
-	ENC=$$(cast abi-encode "f(address[18])" $$ARGS); \
-	S=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['LadderSnekmate']['address'])"); \
-	M=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['SnekmateMath']['address'])"); \
-	echo "== LadderSnekmate $$S (SnekmateMath $$M is Vyper: verify it on Sourcify from contracts/src/ladder/vyper/SnekmateMath.vy, vyper 0.4.3)"; \
-	forge verify-contract --chain sepolia --verifier sourcify --watch --constructor-args $$(cast abi-encode "f(address)" $$M) $$S contracts/src/ladder/LadderSnekmate.sol:LadderSnekmate || true; \
-	echo "== LadderRunner $$A"; \
-	forge verify-contract --chain sepolia --verifier sourcify --watch --constructor-args $$ENC $$A contracts/src/ladder/LadderRunner.sol:LadderRunner || true; \
-	test -z "$$ETHERSCAN_API_KEY" || forge verify-contract --chain sepolia --verifier etherscan --watch --constructor-args $$ENC $$A contracts/src/ladder/LadderRunner.sol:LadderRunner || true; \
-	E=$$($(PY) python -c "import json;print(json.load(open('contracts/deployments/Ladder.json'))['contracts']['EdgeRunner']['address'])"); \
-	echo "== EdgeRunner $$E"; \
-	forge verify-contract --chain sepolia --verifier sourcify --watch --constructor-args $$ENC $$E contracts/src/ladder/EdgeRunner.sol:EdgeRunner || true; \
-	test -z "$$ETHERSCAN_API_KEY" || forge verify-contract --chain sepolia --verifier etherscan --watch --constructor-args $$ENC $$E contracts/src/ladder/EdgeRunner.sol:EdgeRunner || true
+	@$(PY) scripts/ladder/verify.py 11155111
 
 # ---- site ------------------------------------------------------------------
 
