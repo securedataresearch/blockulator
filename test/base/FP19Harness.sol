@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {IFP19} from "../../contracts/src/fp19/IFP19.sol";
 import {IFP19E} from "../../contracts/src/fp19/IFP19E.sol";
 import {IFP19H} from "../../contracts/src/fp19/IFP19H.sol";
+import {IFP19N} from "../../contracts/src/fp19/IFP19N.sol";
 import {IFP19S} from "../../contracts/src/fp19/IFP19S.sol";
 import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 
@@ -86,7 +87,9 @@ abstract contract FP19Harness is Test {
     IFP19E internal objE;
     /// the hyperbolic functions
     IFP19H internal objH;
-    /// the special functions
+    /// the normal distribution: erf, erfc, normCdf
+    IFP19N internal objN;
+    /// the special functions: Lambert W
     IFP19S internal objS;
     LibUser19 internal lib;
 
@@ -104,6 +107,7 @@ abstract contract FP19Harness is Test {
         obj = IFP19(_deployYulObject("out/FP19.yul/FP19.json"));
         objE = IFP19E(_deployYulObject("out/FP19E.yul/FP19E.json"));
         objH = IFP19H(_deployYulObject("out/FP19H.yul/FP19H.json"));
+        objN = IFP19N(_deployYulObject("out/FP19N.yul/FP19N.json"));
         objS = IFP19S(_deployYulObject("out/FP19S.yul/FP19S.json"));
         lib = new LibUser19();
     }
@@ -190,8 +194,8 @@ abstract contract FP19Harness is Test {
     }
 
     /// The object that serves op (contracts/src/fp19/ops.json): FP19E for
-    /// the elementary functions, FP19H for the hyperbolic ones, FP19S for
-    /// the special ones, FP19 for the rest.
+    /// the elementary functions, FP19H for the hyperbolic ones, FP19N for
+    /// erf, erfc and normCdf, FP19S for Lambert W, FP19 for the rest.
     function _isE(string memory op) internal pure returns (bool) {
         bytes32 h = keccak256(bytes(op));
         return h == keccak256("exp") || h == keccak256("exp2") || h == keccak256("exp10") || h == keccak256("expm1")
@@ -204,15 +208,20 @@ abstract contract FP19Harness is Test {
         return h == keccak256("sinh") || h == keccak256("cosh") || h == keccak256("tanh") || h == keccak256("atanh");
     }
 
+    function _isN(string memory op) internal pure returns (bool) {
+        bytes32 h = keccak256(bytes(op));
+        return h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf");
+    }
+
     function _isS(string memory op) internal pure returns (bool) {
         bytes32 h = keccak256(bytes(op));
-        return h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")
-            || h == keccak256("lambertW0") || h == keccak256("lambertWm1");
+        return h == keccak256("lambertW0") || h == keccak256("lambertWm1");
     }
 
     function _objFor(string memory op) internal view returns (address) {
         if (_isE(op)) return address(objE);
         if (_isH(op)) return address(objH);
+        if (_isN(op)) return address(objN);
         if (_isS(op)) return address(objS);
         return address(obj);
     }

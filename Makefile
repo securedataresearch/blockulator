@@ -67,11 +67,11 @@ help:
 	@echo "  make verify-ladder-sepolia - Verify them on Sourcify (and Etherscan if ETHERSCAN_API_KEY is set)"
 	@echo "  make fetch-baseline   - Re-fetch the legacy Huff runtime bytecode from Sepolia"
 	@echo "  make predict          - Print the CREATE2 address of the current FP127 object"
-	@echo "  make predict-fp19 / predict-fp19e / predict-fp19h / predict-fp19s - CREATE2 addresses of FP19's four objects (the number, elementary, hyperbolic, special)"
-	@echo "  make deploy-fp19-sepolia / deploy-fp19e-sepolia / -fp19h- / -fp19s- - Deploy them (reads DEPLOYER_KEY; DEPLOY_GAS, default 40M)"
-	@echo "  make verify-fp19-sepolia / verify-fp19e-sepolia / -fp19h- / -fp19s- - Prove runtime = artifact, verify on Sourcify + Blockscout"
+	@echo "  make predict-fp19 / predict-fp19e / predict-fp19h / predict-fp19n / predict-fp19s - CREATE2 addresses of FP19's five objects (the number, elementary, hyperbolic, normal, Lambert W)"
+	@echo "  make deploy-fp19-sepolia / deploy-fp19e-sepolia / -fp19h- / -fp19n- / -fp19s- - Deploy them (reads DEPLOYER_KEY; DEPLOY_GAS, default 40M)"
+	@echo "  make verify-fp19-sepolia / verify-fp19e-sepolia / -fp19h- / -fp19n- / -fp19s- - Prove runtime = artifact, verify on Sourcify + Blockscout"
 	@echo "  make smoke-fp19-sepolia - Every committed FP19 vector against the live objects"
-	@echo "  make size-fp19       - FP19, FP19E, FP19H and FP19S runtime sizes"
+	@echo "  make size-fp19       - FP19, FP19E, FP19H, FP19N and FP19S runtime sizes"
 	@echo "  make build-yul        - Compile every deployed Yul object with the pinned solc (stdjson.py) -> out/<Object>.yul/"
 	@echo "  make probe-clz [RPC=] - Does the chain have CLZ (EIP-7939)? Every deploy runs this first"
 	@echo "  make deploy-sepolia   - Deploy via the CREATE2 proxy (reads DEPLOYER_KEY)"
@@ -281,7 +281,7 @@ fetch-baseline:
 # Every deployed object from the one objects table in scripts/fp127/gen.py
 # (LIBS[...]["objects"]: name, library, salt). The targets are static pattern
 # rules over that list, so a re-layout or a new salt edits only the table. For
-# each object stem <o> (fp127 fp19 fp19e fp19h fp19s, `gen.py --objects`):
+# each object stem <o> (fp127 fp19 fp19e fp19h fp19n fp19s, `gen.py --objects`):
 # predict-<o>, deploy-<o>-sepolia, verify-<o>-sepolia; predict, deploy-sepolia
 # and verify-sepolia are FP127's, as before. deploy-* go through Arachnid's
 # CREATE2 proxy and read DEPLOYER_KEY. The objects use CLZ (EIP-7939): every
@@ -347,7 +347,7 @@ smoke-sepolia: build
 	@forge test --match-contract Deployed --fork-url $(SEPOLIA_RPC) -vv
 
 # every object: every committed vector against FP19.json's address and, when
-# they exist, FP19E.json's, FP19H.json's and FP19S.json's
+# they exist, FP19E.json's, FP19H.json's, FP19N.json's and FP19S.json's
 smoke-fp19-sepolia: build
 	@forge test --match-contract Deployed19 --fork-url $(SEPOLIA_RPC) -vv
 

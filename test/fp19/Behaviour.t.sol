@@ -130,25 +130,25 @@ contract Behaviour19 is FP19Harness {
 
     /// The error function family: odd and complementary symmetry, the ends, the deep tail.
     function test_erf_family() public view {
-        assertEq(objS.erf(0), 0);
-        assertEq(objS.erfc(0), ONE);
-        assertEq(objS.normCdf(0), HALF);
+        assertEq(objN.erf(0), 0);
+        assertEq(objN.erfc(0), ONE);
+        assertEq(objN.normCdf(0), HALF);
         int256 x = _mk(false, 0, uint256(0x3) << 233);           // 1.375
-        assertEq(objS.erf(obj.neg(x)), obj.neg(objS.erf(x)), "erf is odd");
-        assertGe(_bits(obj.add(objS.erf(x), objS.erfc(x)), ONE), 236, "erf + erfc = 1");
-        assertGe(_bits(obj.add(objS.normCdf(x), objS.normCdf(obj.neg(x))), ONE), 236, "Phi(x) + Phi(-x) = 1");
-        assertEq(objS.erf(obj.fromUint(13)), ONE, "erf is one from 13");
-        assertEq(objS.erfc(obj.fromUint(1000)), 0, "erfc underflows");
-        assertEq(objS.erfc(obj.neg(obj.fromUint(1000))), TWO, "erfc(-1000) = 2");
-        assertEq(objS.normCdf(obj.fromUint(1000)), ONE);
-        assertEq(objS.normCdf(obj.neg(obj.fromUint(1000))), 0, "Phi underflows");
-        assertGt(objS.erfc(obj.fromUint(426)), 0, "erfc(426) is still a number, about 10^-78,800");
-        assertGt(objS.normCdf(obj.neg(obj.fromUint(602))), 0, "Phi(-602) is still a number");
+        assertEq(objN.erf(obj.neg(x)), obj.neg(objN.erf(x)), "erf is odd");
+        assertGe(_bits(obj.add(objN.erf(x), objN.erfc(x)), ONE), 236, "erf + erfc = 1");
+        assertGe(_bits(obj.add(objN.normCdf(x), objN.normCdf(obj.neg(x))), ONE), 236, "Phi(x) + Phi(-x) = 1");
+        assertEq(objN.erf(obj.fromUint(13)), ONE, "erf is one from 13");
+        assertEq(objN.erfc(obj.fromUint(1000)), 0, "erfc underflows");
+        assertEq(objN.erfc(obj.neg(obj.fromUint(1000))), TWO, "erfc(-1000) = 2");
+        assertEq(objN.normCdf(obj.fromUint(1000)), ONE);
+        assertEq(objN.normCdf(obj.neg(obj.fromUint(1000))), 0, "Phi underflows");
+        assertGt(objN.erfc(obj.fromUint(426)), 0, "erfc(426) is still a number, about 10^-78,800");
+        assertGt(objN.normCdf(obj.neg(obj.fromUint(602))), 0, "Phi(-602) is still a number");
         // erfc(y) = 2 Phi(-y sqrt 2) in the tail; the rounded argument y sqrt 2 costs
         // about 2 y^2 2^-236 relative, eleven bits at y = 30
         int256 y = obj.fromUint(30);
         int256 z = obj.neg(obj.mul(y, obj.sqrt(TWO)));
-        assertGe(_bits(objS.erfc(y), obj.mul(TWO, objS.normCdf(z))), 220, "erfc(30) = 2 Phi(-30 sqrt 2)");
+        assertGe(_bits(objN.erfc(y), obj.mul(TWO, objN.normCdf(z))), 220, "erfc(30) = 2 Phi(-30 sqrt 2)");
     }
 
     /// Lambert W: the defining identity on both branches, the domain ends.

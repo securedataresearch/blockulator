@@ -46,7 +46,7 @@ make ladder              # terminal-precision ladder -> docs/benchmarks/ladder.{
 make edges               # the edges -> docs/benchmarks/edges.{json,md}
 make pi-compare          # docs/benchmarks/pi.md
 make precision-report precision-report-fp19
-make size size-fp19     # runtime bytes against the 24,576 limit (FP127; FP19, FP19E, FP19H, FP19S)
+make size size-fp19     # runtime bytes against the 24,576 limit (FP127; FP19, FP19E, FP19H, FP19N, FP19S)
 make sweep               # random inputs through every op, both stages -> docs/benchmarks/sweep.{json,md}
 make site site-check     # zola build -> public/; zola check, the symlink test, deno task test
 ```
@@ -54,7 +54,7 @@ make site site-check     # zola build -> public/; zola check, the symlink test, 
 `make *-check` targets fail when a committed dataset no longer matches the
 code; CI runs them all. Deploying follows the records: `make predict`,
 `deploy-sepolia`, `verify-sepolia`, `smoke-sepolia` for FP127, the `-fp19`,
-`-fp19e`, `-fp19h` and `-fp19s` variants for FP19's four objects (one
+`-fp19e`, `-fp19h`, `-fp19n` and `-fp19s` variants for FP19's five objects (one
 pattern rule each over the objects table in `scripts/fp127/gen.py`), and `predict-ladder` / `deploy-ladder-sepolia` /
 `verify-ladder-sepolia` then `scripts/ladder/livecap.py` and `liveedges.py`
 for the runners. The deployer key is read from `DEPLOYER_KEY` and never

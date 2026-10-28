@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {FP19_ADDRESS, FP19E_ADDRESS, FP19H_ADDRESS, FP19S_ADDRESS} from "../../contracts/src/ladder/ILadder.sol";
+import {FP19_ADDRESS, FP19E_ADDRESS, FP19H_ADDRESS, FP19N_ADDRESS, FP19S_ADDRESS} from "../../contracts/src/ladder/ILadder.sol";
 import {LadderFP19} from "../../contracts/src/ladder/LadderFP19.sol";
 import {LadderFP19Deployed} from "../../contracts/src/ladder/LadderFP19Deployed.sol";
 
@@ -22,6 +22,7 @@ contract Fp19Deployed is Test {
         _etch(FP19_ADDRESS, "FP19");
         _etch(FP19E_ADDRESS, "FP19E");
         _etch(FP19H_ADDRESS, "FP19H");
+        _etch(FP19N_ADDRESS, "FP19N");
         _etch(FP19S_ADDRESS, "FP19S");
         inl = new LadderFP19();
         deployed = new LadderFP19Deployed();

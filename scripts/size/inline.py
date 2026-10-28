@@ -304,7 +304,7 @@ def markdown(d: dict) -> str:
         "",
         f"Inlining saves the external call: about {g1} gas per call to the deployed FP127 and {g2} to FP19 "
         "([`gas.json`](gas.json), [`gas19.json`](gas19.json): `add`, object median minus inline median). "
-        "`staticcall` the deployed object instead (for FP19, whichever of FP19, FP19E, FP19H and FP19S holds "
+        "`staticcall` the deployed object instead (for FP19, whichever of FP19, FP19E, FP19H, FP19N and FP19S holds "
         f"the op) when inlining would take the contract near the {fmt(d['limit'])}-byte limit (EIP-170), or when "
         "the op is large and called rarely. Deploying code costs at least 200 gas a byte, so inlining an op of N "
         f"bytes pays for itself only after about 200N / {g1} calls: a small op at once, `pow` after thousands. "

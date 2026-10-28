@@ -47,9 +47,10 @@ REQUIRED = [
     "package.json", "README.md", "LICENSE",
     "fp127/FP127Lib.sol", "fp127/IFP127.sol", "fp127/FP127.yul", "fp127/abi.json",
     "fp19/FP19Lib.sol", "fp19/IFP19.sol", "fp19/IFP19E.sol", "fp19/IFP19H.sol",
-    "fp19/IFP19S.sol", "fp19/FP19.yul", "fp19/FP19E.yul", "fp19/FP19H.yul",
-    "fp19/FP19S.yul", "fp19/abi.json", "fp19/abiE.json", "fp19/abiH.json",
-    "fp19/abiS.json", "wad/BlockulatorWad.sol",
+    "fp19/IFP19N.sol", "fp19/IFP19S.sol", "fp19/FP19.yul", "fp19/FP19E.yul",
+    "fp19/FP19H.yul", "fp19/FP19N.yul", "fp19/FP19S.yul", "fp19/abi.json",
+    "fp19/abiE.json", "fp19/abiH.json", "fp19/abiN.json", "fp19/abiS.json",
+    "wad/BlockulatorWad.sol",
     "deployments/FP127.json", "deployments/FP19.json", "deployments/RELEASE.json",
 ]
 

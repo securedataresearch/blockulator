@@ -686,8 +686,8 @@ def plot_close() -> str:
     ax.text(0, 0.62, c["FP127"]["address"], fontsize=17, family="DejaVu Sans Mono", transform=ax.transAxes)
     ax.text(0, 0.40, "FP19", fontsize=30, fontweight="bold", color=SERIES["FP19"], transform=ax.transAxes)
     ax.text(0, 0.24, c["FP19"]["address"], fontsize=17, family="DejaVu Sans Mono", transform=ax.transAxes)
-    # FP19's other objects, smaller: the elementary, hyperbolic and special functions
-    extra = [k for k in ("FP19E", "FP19H", "FP19S") if k in c]
+    # FP19's other objects, smaller: the elementary, hyperbolic, normal and special functions
+    extra = [k for k in ("FP19E", "FP19H", "FP19N", "FP19S") if k in c]
     if extra:
         ax.text(0, 0.135, "  ·  ".join(f'{k} {c[k]["address"][:10]}…{c[k]["address"][-4:]}' for k in extra),
                 fontsize=11.5, family="DejaVu Sans Mono", color=MUTED, transform=ax.transAxes)

@@ -2,9 +2,10 @@
 
 256-bit binary floating point for the EVM: 65 ops, every one correctly
 rounded or exact, and the constant `PI`, from one source. Blockulator 2.2
-deploys them as four objects by idea: FP19, the number; FP19E, the
+deployed them as four objects by idea: FP19, the number; FP19E, the
 elementary functions; FP19H, the hyperbolic functions; FP19S, the special
-functions ([below](#four-objects)), live on Sepolia since 2026-10-22 as
+functions ([below](#five-objects)); 3.0 makes it five, the normal
+distribution (erf, erfc, normCdf) in FP19N. 2.2's four are live on Sepolia since 2026-10-22 as
 FP19 v5, at the addresses in
 [`contracts/deployments/FP19.md`](../../deployments/FP19.md). They are
 evm osaka builds and need a chain with CLZ. Release four (Blockulator 2.1,
@@ -40,7 +41,7 @@ Every leading-bit count goes through one helper, `msb(x) = 255 - clz(x)`,
 on the CLZ opcode (EIP-7939, Fusaka/Osaka, 5 gas), and `ctz` takes CLZ of
 the lowest set bit; both are guarded so f(0) = 0. msb keeps its early
 `leave`, so the optimizer leaves it a function (inlined at its 35 sites it
-costs about 450 bytes). The four objects and
+costs about 450 bytes). The objects and
 `FP19Lib.sol` all need it: compile the library with solc >= 0.8.31 and
 `evm_version = "osaka"` (this repo pins 0.8.38), and use them only on a
 chain that has CLZ. Results are the same words and reverts as release
@@ -83,9 +84,9 @@ to send unless the answer is 255.
 | file | role |
 |---|---|
 | `FP19.yul.src` | the source of truth: Yul function bodies only |
-| `FP19.yul`, `FP19E.yul`, `FP19H.yul`, `FP19S.yul` | the four deployed objects |
+| `FP19.yul`, `FP19E.yul`, `FP19H.yul`, `FP19N.yul`, `FP19S.yul` | the five deployed objects |
 | `FP19Lib.sol` | the inline library: all 65 ops, the same Yul bodies, and `ONE` and `PI` |
-| `IFP19.sol`, `IFP19E.sol`, `IFP19H.sol`, `IFP19S.sol`, `abi.json`, `abiE.json`, `abiH.json`, `abiS.json` | each object's interface and ABI |
+| `IFP19.sol`, `IFP19E.sol`, `IFP19H.sol`, `IFP19N.sol`, `IFP19S.sol`, `abi.json`, `abiE.json`, `abiH.json`, `abiN.json`, `abiS.json` | each object's interface and ABI |
 | `ops.json` | every op with its object, signature, domain and reverts |
 | `FP19Type.sol` | hand-written: the typed API, `type FP19 is int256` with operators over `FP19Lib` |
 
@@ -96,10 +97,10 @@ FP127's; see that README. The helpers `rev`, `absw`, `mulg`, `divu`,
 the same value with an early `leave`, see above), and `log2m`
 is FP127's `log2g` after its normalisation.
 
-## Four objects
+## Five objects
 
 Each deployed object is one idea, and ops that share a kernel live together.
-An export tagged `/// @object FP19E` (or `FP19H`, `FP19S`) goes into that
+An export tagged `/// @object FP19E` (or `FP19H`, `FP19N`, `FP19S`) goes into that
 object, an untagged one into FP19: the generator gives each object only its
 exports and their callees, its own interface and ABI, and the inline library
 holds everything. The objects table in `scripts/fp127/gen.py` (name, library,
@@ -110,16 +111,23 @@ salt) is the one list the Makefile, `stdjson.py` and `deploy.py` read.
 | FP19 | the number | add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg; neg, abs, sign; cmp, lt, eq, min, max, clamp; floor, ceil, round, frac; avg, dist, zeroFloorSub, lerp; mulDown, mulUp, divDown, divUp; fromUint, fromUintDown, fromUintUp, toUintDown, toUintUp, toIntDown, toIntUp, fromFixed18, toFixed18, toFixed18Down, toFixed18Up, fromFP127, toFP127: 43 | 10,333 | `FP19 v5` |
 | FP19E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 23,621 | `FP19E v5` (a new salt at the next deploy) |
 | FP19H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 13,020 | `FP19H v5` (a new salt at the next deploy: log2m's table walk is its own function, log2lv) |
-| FP19S | the special functions | erf, erfc, normCdf, lambertW0, lambertWm1: 5 | 23,985 | `FP19S v5` (a new salt at the next deploy) |
+| FP19N | the normal distribution, on its own fit | erf, erfc, normCdf: 3 | 17,962 | `FP19N v6` (3.0) |
+| FP19S | the special functions | lambertW0, lambertWm1: 2 | 11,338 | `FP19S v5` (a new salt at the next deploy) |
 
 **Why the hyperbolics have their own object.** They are elementary functions
 on the same kernel and belong with FP19E by idea, but FP19E with them
-measured 27,308 bytes, 2,732 over the 24,576 limit, and FP19S has under a
+measured 27,308 bytes, 2,732 over the 24,576 limit, and FP19S then had under a
 thousand bytes to spare. So FP19H carries its own copy of the exp/log kernel
 at its own address. That costs bytes at deployment and nothing per call: a
 call runs one object's code either way. The kernels' rewrite (below) took
 FP19E to 21,598 bytes, 2,978 under the limit: still short of the hyperbolics,
-so the four objects stay.
+so the hyperbolics stay apart.
+
+**Why the normal distribution has its own object (3.0).** erf, erfc and
+normCdf moved from FP19S when their anchors and continued fraction became a
+fitted polynomial (134 coefficients, below): FP19S had 313 bytes free. FP19N
+holds the three and their kernels at 17,962 bytes; FP19S keeps Lambert W at
+11,338.
 
 **The core's room goes to the basic ops.** Without the kernels FP19 is
 about 10 KB, so its fast paths can spend bytes: `normtop`, where add, sub,
@@ -279,13 +287,16 @@ bytecode to speed up the rare path (decided 2026-10-23, #155).
   2^−510, 2^f by `wexpm1`. ln, log2 and log10 hand the second stage the
   kernel's log2m they already have. They run when the middle stage's own
   test fires.
-- The error function: below y = 7 the all-positive series erf(y) =
+- The error function (the fast path's g on [½, 18) is two minimax pieces
+  since 3.0; see the ops table): below y = 7 the all-positive series erf(y) =
   (2/√π) y e^(−y²) Σ (2y²)^k/(2k+1)!! in two words at a scale 2^−σ
   (σ = ⌊1.4434 ⌊y²⌋⌋ + 9), and 1 − erf for erfc (at most 74 bits of
   cancellation); from y = 7 the continued fraction 1/(2y + 2/(2y + 4/(2y +
   …))) (x and k for normCdf), numerator and denominator by two scaled
-  recurrences of depth 1700/⌊|x|⌋ + 28 (2404 for normCdf): truncation below
-  2^−402 from y = 7 to 430 (`bounds.py`).
+  recurrences of depth C/ξ² + D/ξ + 26, ξ = ⌊|x|⌋, (C, D) = (2548, 1276) for
+  erfc and (5000, 1804) for normCdf: at least one step above the depth a
+  truncation below 2^−392 needs at every band edge from y = 7 to 430
+  (`erf19.py --cf-depth`; 12% fewer steps than 2.2's 1700/⌊|x|⌋ + 28).
 - Lambert W, seed → fast → safe, no series. Near −1/e (1 + e·x below 1/8)
   the unknown is q = 1 + W on Φ(q) = (q − 1)e^q + 1 = 1 + e·x, with 1 + e·x
   exact in two words: the seed p·S(p), p = √(2(1 + e·x)) by the integer
@@ -381,8 +392,8 @@ The bounds, and what they give:
 | powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it | as pow | 2^−233 ULP |
 | pow, powu, compound, middle stage | 10 | 8.7: the 2^f kernel 4.7, f's floor 1.39, and 1.39 × t's error, under 1.9 units (log2 within 2^−272.1 relative near one, \|t\| < 2^19; 2^−279.5 absolute off it, \|y\| < 2^26.5) | 3.3 | as pow | 2^−233 ULP |
 | erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 10.6 | 2^−499 rel. | 2^−262 ULP |
-| erf, erfc, Φ, ½ ≤ y < 6 | 192 | 2 × g's 81 + 8 | 11.3 | 2^−444 rel. | 2^−207 ULP |
-| erfc, Φ, 6 ≤ y < 18 | 32n + 64 | A and B gain 2^−251 a step | 186 | 2^−392 rel. | 2^−155 ULP |
+| erf, erfc, Φ, ½ ≤ y < 4.81 (g's piece 1) | 90 | 2 × g's 40.5 (Horner 3 units of 2^−252, w's 3.6 units of 2^−256, h·u's floors, normCdf's floored y 5) + 2 × g × 6.1 + 1 | 34.1 | 2^−444 rel. below 7 | 2^−207 ULP |
+| erfc, Φ, 4.81 ≤ y < 18 (g's piece 0) | 26 | 2 × g's 8.5 (Horner 3 units of 2^−256, the rest as piece 1) + 2 × g × 6.1 + 1 | 3.5 | 2^−444 rel. below 7, 2^−392 above | 2^−155 ULP |
 | erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 76 terms), w's floor 2^−254, Q's 2 units, v's 6.1, two floors: under 49; the remainder below the first omitted term | 6.2 | 2^−392 rel. | 2^−155 ULP |
 | lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.13, 0.18 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
 | exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.66 | 2^−492 rel. | 2^−255 ULP |
@@ -454,9 +465,9 @@ internal call, 36 to 56 gas.
 | `pow` | FP19E | 2^(y log2 x) through the kernels, the exact tie when x^y has at most 238 bits, else the second stage; shortcuts for y ∈ {1, 2, ½, −1}; 0^0 = 1 | `OutOfRange` for x < 0, `DivisionByZero` for 0^negative, `Overflow` |
 | `powu(x, n)` | FP19E | x^n for a plain integer n: below 2^16 binary exponentiation on a 256-bit significand, exact when it fits, tested when not; pow when the test fails and from 2^16; correctly rounded for \|n\| < 2^237 (n is a number above) | `Overflow`, `DivisionByZero` for 0^negative |
 | `compound(rate, n)` | FP19E | (1 + rate)^n without a rounded 1 + rate: log2(1 + rate) as log1p takes it, its product with n, 2^t; ties exact | `OutOfRange` below −1, `DivisionByZero` for −1 with n < 0, `Overflow` |
-| `erf` | FP19S | below ½, x (2/√π) e^(−x²) Σ (2x²)^k/(2k+1)!!; above, 1 − erfc; ±1 from \|x\| ≥ 13 | never |
-| `erfc` | FP19S | e^(−x²)·g(x), g from 45 Taylor anchors on [½, 6] and a continued fraction on [6, 18); the asymptotic series e^(−x²)/(x√π) Σ (−1)^m (½)_m/x^(2m) (DLMF 7.12.1, the remainder below the first omitted term, 76 terms at 18 and 18 at 430) from x = 18, where it is cheaper than the fraction; e^(−x²) from the exact square: 71 digits to the underflow near x = 427 | never |
-| `normCdf` | FP19S | Φ(x) = erfc(−x/√2)/2, the left tail to about x = −603; exactly one from x ≥ 13√2 | never |
+| `erf` | FP19N | below ½, x (2/√π) e^(−x²) Σ (2x²)^k/(2k+1)!!; above, 1 − erfc; ±1 from \|x\| ≥ 13 | never |
+| `erfc` | FP19N | e^(−x²)·g(x), g = h(w)·u on [½, 18): u = 8/(8 + x) by one division, w = (u − u(18))/D′, h = g/u the degree-66 minimax polynomial of one of two pieces, w < ½ and w ≥ ½ (`erf19.py`, `erfcxu.json`; 2.2: 45 Taylor anchors to 6 and a continued fraction to 18); the asymptotic series e^(−x²)/(x√π) Σ (−1)^m (½)_m/x^(2m) (DLMF 7.12.1, the remainder below the first omitted term, 76 terms at 18 and 18 at 430) from x = 18, where it is cheaper than the fraction; e^(−x²) from the exact square: 71 digits to the underflow near x = 427 | never |
+| `normCdf` | FP19N | Φ(x) = erfc(−x/√2)/2, the left tail to about x = −603; exactly one from x ≥ 13√2 | never |
 | `lambertW0` | FP19S | W e^W = x, W ≥ −1: near −1/e a fit seed in q = 1 + W and one sixth-order step on the wide exp kernel with a bound; elsewhere a crude-log seed, fourth-order log-form steps at 2^−126 and one at word precision with a bound; the rounding test, the wide step on a miss | `OutOfRange` below −1/e |
 | `lambertWm1` | FP19S | W ≤ −1 on [−1/e, 0): the same stages and test, the wide step on a miss | `OutOfRange` outside [−1/e, 0) |
 | `neg`, `abs`, `sign` | FP19 | bit operations; −0 is 0 | `OutOfRange` |
@@ -530,7 +541,7 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 | ln, log1p | 2,600–3,600 | 26,000–28,400 | 112,100 |
 | pow, powu (middle stage) | 5,000–5,900 | 14,600–14,900 (second stage 63,200–63,300) | 96,000 |
 | compound (middle stage) | 6,200 | 13,300 (second stage 63,700) | 149,200 |
-| erf, erfc, normCdf | 13,000–13,900 | 92,500–100,200 | 411,700 (the continued fraction in two words) |
+| erf, erfc, normCdf | 10,600–11,300 | 89,000–96,300 | 361,500 (the two-word series just below y = 7) |
 | lambertW0, lambertWm1 | 10,600–13,200 | 40,900–43,100 | 63,600 |
 | the directed ops | 400–1,000 | | 1,000 |
 | exp2, exp10 | 3,100–3,200 | 25,800 | 26,000 |
@@ -547,12 +558,17 @@ inputs, erf's and Lambert W's by a quarter; the second stage, which keeps
 release four's two-word series, by about 4,000. The second stage runs for
 about 2·err/2^w of inputs, w = 17..19 the bits under D's significand: 5 in
 100,000 for exp, 2 in 10,000 for ln (from 3 in 1,000 with release two's
-log2 bound), more in the continued fraction's region, where the rigorous
-bound is thirteen times the largest error measured. pow, powu and compound
+log2 bound). pow, powu and compound
 leave their fast value as often as before (1.2%, 9.8% and 13.5% of the
 sweep's inputs), but to the middle stage at about 9,000 more gas; the second
 stage now runs for 0.005%, 0.017% and 0.067% (compound's, mostly exact ties).
 Their p99 went from 54,500, 59,000 and 106,000 to 15,100, 19,100 and 15,900.
+In 3.0 erf, erfc and normCdf's
+fast path is g's two fitted pieces in place of the anchors and the continued
+fraction (whose rigorous bound was thirteen times the largest error
+measured): on [−6, 6] normCdf 29,937 → 11,330 gas (median, `cdf.md`), erfc
+29,357 → 10,623, and the second stage runs for 4 to 10 in 6,000 random
+inputs (erfc 0.27% → 0.08%, normCdf 0.33% → 0.17%).
 
 ## What changed from FP127's conventions
 

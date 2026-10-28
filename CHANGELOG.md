@@ -19,6 +19,28 @@ next deploy):
 - The FP127 object is 20,776 bytes (2.2: 21,858): one copy of the kernel
   where the optimizer had made three.
 
+FP19's erf, erfc and normCdf move to a fifth object, FP19N (salt "FP19N
+v6", 17,962 bytes; FP19S keeps Lambert W at 11,338), and their fast path is
+a fit (`scripts/fp19/generators/erf19.py`, coefficients in `erfcxu.json`,
+checked in CI):
+
+- g(y) = e^(y²) erfc(y) on [½, 18) is h(w)·u, u = 8/(8 + y) by one
+  division and h = g/u a degree-66 minimax polynomial on each of two pieces
+  of w = (u − u(18))/D′, in place of 45 Taylor anchors to 6 (25k gas a call)
+  and a continued fraction to 18 (35k to 56k). Correctly rounded as before:
+  `make sweep` 0 misrounded in both passes.
+- On [−6, 6] (`cdf.md`): normCdf 29,937 → 11,330 gas median (35,774 →
+  17,262 max), erfc 29,357 → 10,623 (75,472 → 15,806). Sweep: erf 12,990 /
+  66,589 → 10,626 / 15,745 (median / p99), erfc 13,943 / 65,539 → 10,867 /
+  24,493, normCdf 13,562 / 63,021 → 11,343 / 24,221. The bound on the fast
+  value falls from 192 (anchors) and 32n + 64 (the fraction, 5,504 at y = 6)
+  to 26 and 90, so the second stage runs less: erfc 0.27% → 0.08%, normCdf
+  0.33% → 0.17% of the sweep's inputs.
+- The second stage's continued fraction (y ≥ 7) runs C/ξ² + D/ξ + 26 steps
+  in place of 1700/ξ + 28, at least one above what 2^−392 needs at every band
+  edge (`erf19.py --cf-depth`): 12% fewer. Its worst case (about 361k, the
+  two-word series just below y = 7) is unchanged.
+
 FP19's pow, powu and compound gain a middle stage between the fast value and
 the second stage, the same words (`scripts/fp19/generators/mid254.py`,
 checked in CI; `bounds.py` measures it):

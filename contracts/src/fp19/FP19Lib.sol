@@ -4147,8 +4147,8 @@ library FP19Lib {
     }
     /// @notice The error function. Below 1/2, x (2/sqrt pi) e^(-x^2) times the
     ///         all-positive series sum (2x^2)^k / (2k+1)!!; above, 1 - erfc with
-    ///         erfc = e^(-x^2) g(x) from the anchors or the continued fraction
-    ///         (see erfc). e^(-x^2) comes from the exact square. One rounding
+    ///         erfc = e^(-x^2) g(x) from g's two minimax pieces or the
+    ///         asymptotic series (see erfc). e^(-x^2) comes from the exact square. One rounding
     ///         when the fast value's error bound clears the rounding boundary,
     ///         else the series in two words below 7 and 1 - erfc by the
     ///         continued fraction in two words above: correctly rounded. +-1
@@ -4228,141 +4228,162 @@ library FP19Lib {
                 er := 64
             }
 
-            function erfcxcf(Y, uy) -> R, eg, n {
-                let y2 := mulwu(Y, Y)
-                let ey := add(uy, uy)
-                if shr(255, y2) {
-                    y2 := shr(1, y2)
-                    ey := add(ey, 1)
+            function mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function erfcxu(Y, uy) -> g, er {
+                let yf := shr(sub(3, uy), Y)
+                if sgt(uy, 3) { yf := shl(sub(uy, 3), Y) }
+                let U := divh(0x8000000000000000000000000000000000000000000000000000000000000000, add(0x4000000000000000000000000000000000000000000000000000000000000000, yf))
+                let z := sub(U, 0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4)
+                z := add(z, mulhi(z, 0x941d41d41badb6db6db86f8af8af896492492493dd41d41d404000000001941d))
+                let p
+                switch shr(255, z)
+                case 0 {
+                    p := 0xffffffffffffffff0af4bfb3d5e1f8ec75fb0de5808cf6adb0c21c055893adc9
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x107900ed23e299897eb6896e7daeaed091bb2bbe356a5d4e01) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffff7a9cb1b4dcbd4ae8ae2aced0f3063b7da06be7b8b055141ef1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2a696b7c950f103fa9e49e2b22d60631c57f0401fa28702bcaa) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffff669a1b86afdffb25e2294999f444adec35ace48ac4ef481b4b1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1a9283ed605637c2a4e16259f1cc50498876633aacf1208e4538) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffc48c848b81465d2ac54514d797659d294798975f1128f62fd505) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x6f0ec335a96f8e4a049be677af13f37595bd3bb2c83adafd5e4e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffff4f5b9c69b1ddae4faaa57b5e05198907ba316649d59e30631101) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xf3623b17f01d2381d5ff7c9908e0867c984f5087ee131802e7e2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffed81f6dac57c2bfff94da565db826e52feb433c79f1d80993a4f3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x13d83a0b929256b38206a37815aba30ada5d73b4940f67d7cb54c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffed2a8d9e663283f0f64f5cce2891c7fcfce6a5b092425b2bab978) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x10ddeea21a6f29db0ab04d791b3ccd9f6dd4bfcec0969dac40912) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffff312f81984f933f70108e8e10e2fee23fcc97b5f142918fb8b676) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x6df7e0b8b7555d5637b0035fac57f74ed7d99912c88270940af2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffff4d1b38b2ab2f4314b0e2ab1aa2bd5b626fd768f081617dc3005c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1856bcd1a8afaa6df389cbaabdda2f026d2d632cf60696502776) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x14cd310ec2f0db897c76eb7d0aba6f1a512513184c22cad6a0185) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x4a107454ab1607dd94ea791fadccd2e6a3318cca92b5e87b9edf4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x52f5ac2c141eb6be1300ce285d26b70c896b07022a8a880c2795a) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffff5c3af6f3953725987f8226471672bed131a7a1b3ac7fc2a9df3b6) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffc3376b35a8104afac55e8dab093f81706862df1635891bba3abc4f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffff7d12299f0b677ce5fc31a0d31d53d266c6fe2d2c4043afa7117306) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffc032eb55bf2810bafff77f81292328a83c35412d46c34c40e019b2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x242cada83509b8a78a3fb69bc98fd3ad18db5458061c1ba13fbc1c1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x9614c96bc64343aaddd237ce9900ec2a546b46ee026c9d467d7a045) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1361ccd2278d89c02ee8b531952f022493b8e22ba3bcf1804e88ebc2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xb7197fe4b42e2e75bfc6893aa1bf133806099c0604f69a998d16092) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffabebf31c73071d7d6e59e88e3e7734c7b650c170d14bfe23c4fa3b08) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffe628a402a211897fc0f46a602bcc7c4211ac9ac24af972e9c65185162) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffb950dc5f8d786faf2971907e28894ff7732855fc0761389c6859f9c20) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffff878da30db5b4469f7d8a8974ce61a56f3931d27dbfa8a3e571506c083) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffe959069c7a8de5f7d047a9f05a3baeaf39b6bf9974a8179e0963b2aeb) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x31e3a2a3a0058144a52e2209da68c1a983bada338fbccab2d05b3dbbb0) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfc88cfe03437256b4b92e04782378dc67366fd18fb0e87e9b0edc7cf26) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x36e17eacf5d277e1e7e77813caeb653d0e4d8a1e31cfbc5a8f7b1a8e86f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x9faa2894285da8f5b07884597731a4bc14b952037d5c6f1374e0afc4a60) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x19e025fa65baaca4685222a12743bb971c59e36b86b80170c60ce840462b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3d9b001f086ade3c27f98c9e62c0a46fc4536cb0975d1e6e8b4e30c3fb10) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x88f9f8c148983665374faa6b03975c86823d83b71d9ea89bab018d94d6bf) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x11f8a799851155f3ff84ef0fe7cd0dca860968cfa98d220c7e9d3d670d7c2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x23e33f7af06c45c251f2d4768b0a466722b27fdb43dd7f08c1738419739b2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x448e013ab47f1e9bfa3679f673333dfa267499d6a8a0a8837e2e708902424) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x7dce9ed0358d0126b7974fadc100f2e0ef53609130165873e47e55eb411b4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xde8b020c624fec4d362c2fbda7b65995c77ad140a0651590596cbe983c362) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x17c7fb05efd1c8f0f941a714530e2fe944cba852cf8a8496bc07ee27382346) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2763ee22e36652059dd29f171357603e44dfa2b5c5dd9804e7257b593e7a92) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3f53f9d48caf6be4ae07c2ce252486727d8293d46bfcec0dc59d30d2cbf293) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x62fbd5d6d780c3f65a05ca3012f3fc87a6a8258f8bcf178d6ad3953d23ef5e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x96a129cd83d019da2db0adb57829d0bad0b1c9bc7519a43131c2491d7e2725) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xdf727454ec491943e782ef70eebc4319ab4c2b3936831f234cbd1db908a048) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x143784cea7346a0ef8330c91f5da4a19243966bfb75588f52f2a552be6b9979) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1c96a9827981ec613641937d6c72ecc029144cc54c0a6daf6b1aba87d00cace) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x27864eb9afbae3be6e7e3aa50d7fd3357483603014598f67b8a0dddc97c3cb2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x35778444e828efa8cb4a3feed44a548824f11962a56c8dcc2f1783c21cbc439) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x46d1c39245e127085b9f896ab07d2e651ecc25b005c0a20959f6d47f8be935c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x5be869ca064eab92c3c4edaaa8de33fdbd62d0b71675e56ec14dff3cb080fe9) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x74ef57b6df9f889311e39bdcd8eb08b52a8d8d5211f687ac16bc96c2724d127) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x91efbcfe56626b7353320356c65c77c7e5e313a8dc11229086751776d638fe3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xb2be4532591968df4f478fada75fa4106e254c9b5a95828143dc1f3b80e7320) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xd6f3ed3585bba127170c9cc3ddfb6a40b08d42cf757316ce890f4b921ef8085) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfdeaae736cf488a3060a8b6ece2b87408f78826330a7dfac75cea6fc36dd3d4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x126bee939af60d07e60cf0579e2a24992254a8afcdf9689e3545e26dc9a12959) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x150560c52186a5641765591845cc093646db821e6bc48b2e360226211403d7ca) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1796a70b3101ebc175ad0925573b0c63ff17646b462ce399d4c1ca248a47df4b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1a09bcceb4195699e6517a0c4609b514108a3ec16ac6e6850c655ce4ab38e20b) }
+                    g := shr(1, mulhi(p, U))
+                    er := 26
                 }
-                n := add(div(4400, shr(sub(254, ey), y2)), 48)
-                let w := shr(add(ey, 4), div254(0x4000000000000000000000000000000000000000000000000000000000000000, y2))
-                let am := 0x800000000000000000000000000000000000000000000000000000000000000
-                let an := am
-                let bm := 0
-                let bn := am
-                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
-                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
-                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
-                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
-                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
-                // needs no shift of its own; a zero shift would change nothing, so it
-                // is skipped). Written out: no calls in the loop
-                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
-                    let p0 := mul(c, am)
-                    let mm := mulmod(c, am, not(0))
-                    let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    p0 := mul(c, bm)
-                    mm := mulmod(c, bm, not(0))
-                    let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
-                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
-                        let hf := shl(sub(sh, 1), 1)
-                        am := shr(sh, add(am, hf))
-                        an := shr(sh, add(a2, hf))
-                        bm := shr(sh, add(bm, hf))
-                        bn := shr(sh, add(b2, hf))
-                    }
-                }
-                let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
-                let sb := sub(253, msb(bn))
-                let sd := sub(253, msb(dn))
-                R := div254(shl(sb, bn), shl(sd, dn))
-                eg := sub(sub(sd, sb), uy)
-            }
-
-            function erfcfv(Y, uy, v) -> D, eg, er {
-                let R, e2, n := erfcxcf(Y, uy)
-                eg := e2
-                D := mulwu(R, v)
-                er := add(64, shl(5, n))
-            }
-
-            function erfcxg0(j) -> g {
-                switch j
-                case 4 { g := 0x4ecef0f262c3cb2abd4a76f3bf858856efdf32563b95b2841ae0ee1218abe3e2 }
-                case 5 { g := 0x4745ad6027abd9043e5f49b40441648cf81fbcfb1e41c4e68f7e5ead045990d7 }
-                case 6 { g := 0x40e3553a8f60ce13decb27ae99af2fa62b9b3b6c3ac5f0b20a8b423d86476fc6 }
-                case 7 { g := 0x3b6e8fdc813589552fbe29a2b067802778928eeed560ee3d2d5ea2a379930136 }
-                case 8 { g := 0x36bb0f01f2ad64304a88fe4634cddb0ad316b6c1960d9e066c83d07fcb62ca2f }
-                case 9 { g := 0x32a63c13629369cab5d9b942c79109271effdef65a3728ea4098fe330a2205ce }
-                case 10 { g := 0x2f14d24270ecf4014797400f19191d5fe5a48c91cc8925c97c128b85d47d7a84 }
-                case 11 { g := 0x2bf11ea5e78ed592051a17f4bc6271c922d3e5fa99d640b880bdb3421d1d8c96 }
-                case 12 { g := 0x2929b5ff455ad09cdef8786c71079fb58ff496ba7f5357d7e12e4509b568e9a3 }
-                case 13 { g := 0x26b07ecc8864f53b8a38a0119a8c9555e844a67bf1b31850fd92a3483c49b3af }
-                case 14 { g := 0x2479f85e3b8fc04ec4103acc6308fc0e1707ca1010ae9140459e57361ea61222 }
-                case 15 { g := 0x227cae876c0900e50efe52ea998852887f1054300be82faf99439abcb2282156 }
-                case 16 { g := 0x20b0ce36a58eebd88f871fc40eceb0c53b16f184d1ceafceaa5398c293b85fad }
-                case 17 { g := 0x1f0fd28fdc20ab51b6db109f6b424fd64bfe3ae7b339bb9dab40a4f8b0d9e2fb }
-                case 18 { g := 0x1d94446d627931cafcceafbd376e1314b7a46a4db70d4d6f9effe4883f78a5e1 }
-                case 19 { g := 0x1c3987d04d0b9783d791fc876e221ff4867136da59e89c3a59c55af3ab1f88f0 }
-                case 20 { g := 0x1afbb3f3b7343acc17e86bd7b734eb6edd26461dfcfe74ca1f4244b77c61154a }
-                case 21 { g := 0x19d7738e1f4db71e59221b62587628c8673b71caf70f5d32301dd2669b66d68e }
-                case 22 { g := 0x18c9eb68ff27d6912c6270e6d72c1f84a5a269820f0dec4609051952e95dacf8 }
-                case 23 { g := 0x17d0a5e9dd571047a28cf6b91600a33b35735fb2aa199cb46be4f2a39e9679b7 }
-                case 24 { g := 0x16e9827d229d2ccdf158431d94da3421b78167cd1fd99c3d46ce926afe452eec }
-                case 25 { g := 0x1612a8125451bd59f690799da46facbdf6d245ab18ccf1c1020dceaf751939fd }
-                case 26 { g := 0x154a7a08d4bb44fa57c9bb32508dc61313a69c26f6defda0b0b1d8ddd6d8d716 }
-                case 27 { g := 0x148f8f10299b711635e7b3452b78cda8d5e97030653e85e00096d4517719cf20 }
-                case 28 { g := 0x13e0a99a0ee913f37e9a43449cd0c5d4ce820c177e636ac2f7784ac5153065f2 }
-                case 29 { g := 0x133cb19179d7f5febc25c2947e8f89366b66e51ce9f55ab5890ecd3c525bbf22 }
-                case 30 { g := 0x12a2af19c1492f817ed7e573035d2a49a5f40f7da09dc3cb6b8f7d0eb9b51cab }
-                case 31 { g := 0x1211c625924e338c6478346b830147a9bc4c1a77b12d1e24c5cef1438baf221c }
-                case 32 { g := 0x118932bf08e15442606a849d1f39e27976aa3bfab86a842ea754270ee75b2bec }
-                case 33 { g := 0x110845e1dcb19a2698cfc74f5821d77bae20f98163f3cb252838f2e99491984b }
-                case 34 { g := 0x108e62ce8c89ac88db65377816e5960af139732531b4b9cc71dddb019c9ea457 }
-                case 35 { g := 0x101afcc22e71b80ff78f84abc953e5a24f024cb46b1f65a3eb1f58b44bca72bf }
-                case 36 { g := 0xfad95024e7a62c07688809d2d4cfdbc51a1874b7030261f972e1302e3119ad4 }
-                case 37 { g := 0xf45b92f487dc6ad4598692d4159b4cf4de076845f1c20c8a1fe85a7b6fd361a }
-                case 38 { g := 0xee301d1f3bf4d62b163fc84de9ca8a3bbafbe214fa2211238b7ef23be4dfbd2 }
-                case 39 { g := 0xe85111b6a49f4e5ce56b2961e0030d5f6cf48e89899dde542ccb17091682b4c }
-                case 40 { g := 0xe2b91cf4a1e8cef197de6f7a724e96f0a5cf18e054be7d2627c7d45dd61db12 }
-                case 41 { g := 0xdd63652170dfd9409abadf6e0f914c3ec9462102d54d77c2431631c7494dbaf }
-                case 42 { g := 0xd84b7d670a37f197cf1d947d7046a3dec5c7b1f01d27b9a92ad5c7e4055dc49 }
-                case 43 { g := 0xd36d5a4abadb68390992198b6427ead13e0284e54a10d0ca1660434f81e2831 }
-                case 44 { g := 0xcec5479142795d49fb100bc268f63b91bfba3c975835cef3dc38fa45d29d284 }
-                case 45 { g := 0xca4fdf5b1ebb09e8e2b812ca7403fc4215b52007d82fce51cb9986da73a668f }
-                case 46 { g := 0xc60a024e6aa8eef9f5909a889e28ad828d035c71a59602a8765385ee23a888d }
-                case 47 { g := 0xc1f0d0aa2c9eacd8ea70d4c055e1cb3b2adfa66dabd8be92f7eda2c5b4726da }
-                case 48 { g := 0xbe01a4244eb90b9539d773438884970be40151bbfcd27f1db0116ce11993f00 }
-                default { g := 0 }
-            }
-
-            function mulwr(a, b) -> r {
-                let p1, p0 := mul512(a, b)
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := add(or(shl(2, p1), shr(254, p0)), and(shr(253, p0), 1))
-            }
-
-            function rdivs(a, n) -> q {
-                switch slt(a, 0)
-                case 1 { q := sub(0, div(add(sub(0, a), shr(1, n)), n)) }
-                default { q := div(add(a, shr(1, n)), n) }
-            }
-
-            function erfcxa(Y, uy) -> s {
-                let j := add(shr(sub(251, uy), Y), and(shr(sub(250, uy), Y), 1))
-                if lt(j, 4) { j := 4 }
-                if gt(j, 48) { j := 48 }
-                let h := shl(uy, Y)
-                if slt(uy, 0) { h := shr(sub(0, uy), Y) }
-                h := sub(h, shl(251, j))
-                let pm := erfcxg0(j)
-                let y0g0 := add(mul(j, shr(3, pm)), shr(3, mul(j, and(pm, 7))))
-                let p := mulwr(sub(shl(1, y0g0), 0x906eba8214db688d71d48a7f6bfec3441409a0ebac3e751739a15830cce620b0), h)
-                s := add(pm, p)
-                let yh2 := shl(1, add(mul(j, sar(3, h)), shr(3, add(mul(j, and(h, 7)), 4))))
-                let h22 := shl(1, mulwr(h, h))
-                for { let n := 2 } or(p, pm) { n := add(n, 1) } {
-                    let nx := rdivs(add(mulwr(yh2, p), mulwr(h22, pm)), n)
-                    pm := p
-                    p := nx
-                    s := add(s, p)
+                default {
+                    z := sub(z, 0x8000000000000000000000000000000000000000000000000000000000000000)
+                    p := 0xfa93fc3f37a2b355848008f2b77b77c32550bd4965e30e5
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffffffe89891f396dfab1d649952b010f12f691cbb5c8008df845ed) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xf3eea6ca570a79bb5538bfd71d896e4744b9f9deb1a5e280f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffffa1958b81b3053a9476d201a72bc536c07c08007c9c4ff86ac1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1897dc497d1dd7dc78923b184eb8fdba0feb54a2fde17aa8a30) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffffb60f312c2f118321ee404550939bc7750dc948b01997e7926aa) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa9c61aff91c6b2af9630de40d0db8f61dc75713646b08692441) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffec1790ab2de5ab935b2472bb613212468dab326ea8edb1a3e836) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x209f0e5f7908dc58127a97eeae364d33f2a806ee5223e3e09309) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffd163bea9d76ec1c3417a67437662543dd89ab415de5d09c1b12d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3596f5ff7aae5d7d3fdc4cb813b46cfbd04008839c24bdb75541) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffcaa1fb0cf3eaba2bb5288b160f33a8c0c7e3a560c407354fb39b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x464f31026000ea0d99cc4202ea11c960fe8ca7826a9e7c9b73fd) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffbaacc98d4ba1faed7150e981431648c5c52b9284101373e95bd8) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffcb2dba74038fdc3649262a32ae054db5419515cde7dcaee05f9f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffef7bb4ca9c45bf165f8cda4e989fcb96d3cabfa6f2111ec57c39) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x21854558872b584c69a09ef3227a23bb65e4cde19a8b41e4f145d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x233ae82a2f737c4f0d287091f08e8c4a493e7dd1f771cf0761926) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffff77cc4fcad4221e56c21e216c00bab408cec4f75cc093c1a98e19e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffe75033e168260cc1297b693f385a7eebd18d064ceec9f418673b6e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xd06253e48de7c719096defdb15367ce55db95a6edc9b1ba808c1e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa4ed99766939d1c03aa0d20c2d45a7eb59e21bfc8c4d5ceb426ac7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xc491c9ceda09de299542dfdf680695ce40bd62ad3174c5c22ace5a) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffd7b35a6865aacb46b6579e759754d98a0be12c8be54df05d7057752) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffff6a2c3f0f8f86072ad56da7f3619fdf40eb3527d984aaad8d85e3532) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffd11a76d1ce192a3eef7f00b080998ffb56ecf7be09059c89740469c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x346fc67bec51db7db4bdddc98d5e914b5105b9a56319754ab81caba3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x864194b0ee7e1a9c7f34cf8750b79a75a91bd68a7bf319b3b5d0cba2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffe796dde47a6a688828995a12e38b0fcf25e91c1d75b0216704be9637) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffc567c7231fa4e26cff6f796b88ea58949ba158db0024fa2c2230264e5) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffff717c397f4f34f3aae9cc7a53dca34d0e8c411a3a991a7a752581e29c3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2fd45eedb6af8976461ea2580140bc1f8efc0977c62eb3452fe5cc1b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3da96729ee75a6fa1e1fc5e67b4bfd60fbc3e085b4ec48f9e155f073f3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xbc5660fe003ff3a94e6e5d3fc26d0287d4302801636d58329bcff077eb) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xadf6c0d29fc4d35b8e91511989dccb02604904a940077de477daa426f4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffd01a99476e001ee60c66dae41477bfc6ff22a232ae9407d0649fbd40f64) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffff016c94fcd4fad377371405ced043b9d6d5bb13dadcb66b2817a15fdf1f0) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffd94e0b8af5b259943217e0cfd068978a3770255619fecfdbf0f1797c6f0b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffdcbfe7fb52e4017829df4aca3fb32234220e9e7f6c8663f5e0bb3c1954e1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x9861e0a1af702d3161ad2004688743a811f5674437da616d537506fb4959) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3d6a6de3baf837fb2494e9ef9db3489d541a60e102b1684f0f524b40b4e9d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xdc39493abb0ddb301291ba03bc8acb29d5cffc3059b54312d4be5407954cc) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x26a9c3bb3cbde3538add04bc51e99c96cf6afbb113bf228ee31f2a0407039a) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x5cf7599121a8802f15f573c975a83cd3df7b35b3acca5c00aa76aad77daaa7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xc6e73d9f45d34164634a9402d3927acc1e52ee2077a5d6ecfb728268fab4a6) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x182ca12b4c57d0c3b2e4eb64646d6bf28eb04bc2966e30c11e60831eb360f3d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2b4c593b2170ec9d497961aa7e42d63dde17606dff64d5598b18657d2b50d67) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x48133c53c891c0eff597f04c12f0f281b66aa0ef68f8f063d8fb498414cc7e5) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x703b2772cc9c202f07dc5d423cf61ce6ba096a5593ff50b0d5acd8abd4a1d22) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa444a9c34388217fc9d2a1660d6ba2a037229ba9deac81e2b2add5810b962ec) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xe2d6ef660364a0f65b763210abe4b20167416a6170fa08e2fc670ec7f415d1f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x12864deaf50512ca34636faceea8df010fae5b2ceba8edcc30084651e44cab81) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x16f48aeb518fb5a1adef1fe95d27c5a126b49060f9873918580e3fc7949adb00) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1b06c0da4743b971aac31d7fee7f986a3d13e823b377a41e63779c33ced3dd26) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1e46953c35d6c1dad71922915f1ea43019104d38bbec37633b38ab2785c60b78) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x204e837f15ff457d704abddf9464ea3ec56d4b607fb203acba31438d352963a3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x20dde6b333187cb2a65539535d03d1348733db3b52315cfe78c820a337bbab46) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1fe5e0eeefbd63287ac0cc6c04f42cf58144d85417aa10e8dbcc31a7d1688dd7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1d8ba63f6a1602bc21b6ba921630da3411d9eb8ebb078ea968717feb26b2dcc8) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1a1fc147f2778250bb401e966645641eea1101498088331d33ae7d5d6cda9c53) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x160d07eb09846b417003dd0a16426dd03e059302a222a356fe4b4f079206dc12) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x11c40f11efbed2a7f69014fad37c361b212cc6dc4285d546603880b8407bfbe7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xda85b0501f7c478f7bbbdfe8b96dc6467ec5a1aacdc520a0933e14f12b74a6d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa0357938a63934b243a318bab288aaec8f8228ab45172d44e15583f26286825) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x6feefdc5ba8e181428d8ef7e3d13345f4423808a3c827fd526f12f610998343) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x4a74ad2caafbc16060551f46ddb3601f80a85c72826327ccaaf611e2c66495b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2f182a72446965555b92ff06921d8fcebf6a8f1c22086c55551424c7b93ee16) }
+                    g := shl(3, mulhi(p, U))
+                    er := 90
                 }
             }
 
@@ -4613,19 +4634,16 @@ library FP19Lib {
             function erfcbig(Y, uy, u, m, h) -> D, ee, er {
                 let kk, v := expnegsq(u, m, h)
                 if slt(kk, sub(0, 0x80000)) { leave }
-                switch or(slt(uy, 2), and(eq(uy, 2), lt(Y, 0x6000000000000000000000000000000000000000000000000000000000000000)))
-                case 1 {
-                    D := mulwu(erfcxa(Y, uy), v)
+                // the asymptotic series from y = 18, the two pieces of g below
+                switch or(sgt(uy, 4), and(eq(uy, 4), iszero(lt(Y, 0x4800000000000000000000000000000000000000000000000000000000000000))))
+                case 0 {
+                    let g, eg := erfcxu(Y, uy)
+                    D := mulwu(g, v)
                     ee := sub(kk, 1)
-                    // g within 1.6 units of 2^-255 per Taylor term (at most 50) and the
-                    // anchor's half unit, v within 6.1 units of 2^-254: 2 x 81.1 + 8
-                    er := 192
+                    er := eg
                 }
                 default {
-                    // the series from y = 18, where it is cheaper than the fraction (measured)
-                    switch or(sgt(uy, 4), and(eq(uy, 4), iszero(lt(Y, 0x4800000000000000000000000000000000000000000000000000000000000000))))
-                    case 0 { D, ee, er := erfcfv(Y, uy, v) }
-                    default { D, ee, er := erfasym(Y, uy, v) }
+                    D, ee, er := erfasym(Y, uy, v)
                     ee := add(ee, kk)
                 }
             }
@@ -4783,12 +4801,6 @@ library FP19Lib {
                 r := sub(xor(x, m), m)
             }
 
-            function mulhi(a, b) -> h {
-                let mm := mulmod(a, b, not(0))
-                let lo := mul(a, b)
-                h := sub(sub(mm, lo), lt(mm, lo))
-            }
-
             function kln2(a) -> ph, pl {
                 let y1, y0 := mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
                 pl := add(y0, mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
@@ -4884,7 +4896,9 @@ library FP19Lib {
             }
 
             function erfccf2(u, m, h) -> vh, vl, ve {
-                let qh, ql, t := cfratio(m, sub(add(shl(1, u), 3), h), add(div(add(1700, mul(h, 704)), shr(sub(236, u), m)), 28))
+                let xi := shr(sub(236, u), m)
+                let n := add(add(div(add(2548, mul(h, 2452)), mul(xi, xi)), div(add(1276, mul(h, 528)), xi)), 26)
+                let qh, ql, t := cfratio(m, sub(add(shl(1, u), 3), h), n)
                 let k2, eh, el := wexpnsq(u, m, h)
                 qh, ql := wmul(qh, ql, add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el)
                 switch h
@@ -5092,8 +5106,8 @@ library FP19Lib {
     }
     /// @notice The complementary error function as a product, never a
     ///         difference, for x >= 1/2: erfc(x) = e^(-x^2) g(x), g = e^(x^2) erfc
-    ///         from a Taylor series around 45 anchors on [1/2, 6] and the
-    ///         continued fraction above, e^(-x^2) from the exact 474-bit square,
+    ///         from two degree-66 minimax pieces on [1/2, 18) and the
+    ///         asymptotic series above, e^(-x^2) from the exact 474-bit square,
     ///         so the tail keeps 71 digits until it underflows 2^-262142 near
     ///         x = 427. 1 - erf below 1/2, 2 - erfc(-x) below zero. One rounding,
     ///         or the wide second stage (the series and 1 - erf below 7, the
@@ -5174,141 +5188,162 @@ library FP19Lib {
                 er := 64
             }
 
-            function erfcxcf(Y, uy) -> R, eg, n {
-                let y2 := mulwu(Y, Y)
-                let ey := add(uy, uy)
-                if shr(255, y2) {
-                    y2 := shr(1, y2)
-                    ey := add(ey, 1)
+            function mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function erfcxu(Y, uy) -> g, er {
+                let yf := shr(sub(3, uy), Y)
+                if sgt(uy, 3) { yf := shl(sub(uy, 3), Y) }
+                let U := divh(0x8000000000000000000000000000000000000000000000000000000000000000, add(0x4000000000000000000000000000000000000000000000000000000000000000, yf))
+                let z := sub(U, 0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4)
+                z := add(z, mulhi(z, 0x941d41d41badb6db6db86f8af8af896492492493dd41d41d404000000001941d))
+                let p
+                switch shr(255, z)
+                case 0 {
+                    p := 0xffffffffffffffff0af4bfb3d5e1f8ec75fb0de5808cf6adb0c21c055893adc9
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x107900ed23e299897eb6896e7daeaed091bb2bbe356a5d4e01) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffff7a9cb1b4dcbd4ae8ae2aced0f3063b7da06be7b8b055141ef1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2a696b7c950f103fa9e49e2b22d60631c57f0401fa28702bcaa) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffff669a1b86afdffb25e2294999f444adec35ace48ac4ef481b4b1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1a9283ed605637c2a4e16259f1cc50498876633aacf1208e4538) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffc48c848b81465d2ac54514d797659d294798975f1128f62fd505) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x6f0ec335a96f8e4a049be677af13f37595bd3bb2c83adafd5e4e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffff4f5b9c69b1ddae4faaa57b5e05198907ba316649d59e30631101) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xf3623b17f01d2381d5ff7c9908e0867c984f5087ee131802e7e2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffed81f6dac57c2bfff94da565db826e52feb433c79f1d80993a4f3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x13d83a0b929256b38206a37815aba30ada5d73b4940f67d7cb54c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffed2a8d9e663283f0f64f5cce2891c7fcfce6a5b092425b2bab978) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x10ddeea21a6f29db0ab04d791b3ccd9f6dd4bfcec0969dac40912) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffff312f81984f933f70108e8e10e2fee23fcc97b5f142918fb8b676) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x6df7e0b8b7555d5637b0035fac57f74ed7d99912c88270940af2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffff4d1b38b2ab2f4314b0e2ab1aa2bd5b626fd768f081617dc3005c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1856bcd1a8afaa6df389cbaabdda2f026d2d632cf60696502776) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x14cd310ec2f0db897c76eb7d0aba6f1a512513184c22cad6a0185) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x4a107454ab1607dd94ea791fadccd2e6a3318cca92b5e87b9edf4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x52f5ac2c141eb6be1300ce285d26b70c896b07022a8a880c2795a) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffff5c3af6f3953725987f8226471672bed131a7a1b3ac7fc2a9df3b6) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffc3376b35a8104afac55e8dab093f81706862df1635891bba3abc4f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffff7d12299f0b677ce5fc31a0d31d53d266c6fe2d2c4043afa7117306) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffc032eb55bf2810bafff77f81292328a83c35412d46c34c40e019b2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x242cada83509b8a78a3fb69bc98fd3ad18db5458061c1ba13fbc1c1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x9614c96bc64343aaddd237ce9900ec2a546b46ee026c9d467d7a045) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1361ccd2278d89c02ee8b531952f022493b8e22ba3bcf1804e88ebc2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xb7197fe4b42e2e75bfc6893aa1bf133806099c0604f69a998d16092) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffabebf31c73071d7d6e59e88e3e7734c7b650c170d14bfe23c4fa3b08) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffe628a402a211897fc0f46a602bcc7c4211ac9ac24af972e9c65185162) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffb950dc5f8d786faf2971907e28894ff7732855fc0761389c6859f9c20) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffff878da30db5b4469f7d8a8974ce61a56f3931d27dbfa8a3e571506c083) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffe959069c7a8de5f7d047a9f05a3baeaf39b6bf9974a8179e0963b2aeb) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x31e3a2a3a0058144a52e2209da68c1a983bada338fbccab2d05b3dbbb0) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfc88cfe03437256b4b92e04782378dc67366fd18fb0e87e9b0edc7cf26) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x36e17eacf5d277e1e7e77813caeb653d0e4d8a1e31cfbc5a8f7b1a8e86f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x9faa2894285da8f5b07884597731a4bc14b952037d5c6f1374e0afc4a60) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x19e025fa65baaca4685222a12743bb971c59e36b86b80170c60ce840462b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3d9b001f086ade3c27f98c9e62c0a46fc4536cb0975d1e6e8b4e30c3fb10) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x88f9f8c148983665374faa6b03975c86823d83b71d9ea89bab018d94d6bf) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x11f8a799851155f3ff84ef0fe7cd0dca860968cfa98d220c7e9d3d670d7c2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x23e33f7af06c45c251f2d4768b0a466722b27fdb43dd7f08c1738419739b2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x448e013ab47f1e9bfa3679f673333dfa267499d6a8a0a8837e2e708902424) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x7dce9ed0358d0126b7974fadc100f2e0ef53609130165873e47e55eb411b4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xde8b020c624fec4d362c2fbda7b65995c77ad140a0651590596cbe983c362) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x17c7fb05efd1c8f0f941a714530e2fe944cba852cf8a8496bc07ee27382346) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2763ee22e36652059dd29f171357603e44dfa2b5c5dd9804e7257b593e7a92) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3f53f9d48caf6be4ae07c2ce252486727d8293d46bfcec0dc59d30d2cbf293) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x62fbd5d6d780c3f65a05ca3012f3fc87a6a8258f8bcf178d6ad3953d23ef5e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x96a129cd83d019da2db0adb57829d0bad0b1c9bc7519a43131c2491d7e2725) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xdf727454ec491943e782ef70eebc4319ab4c2b3936831f234cbd1db908a048) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x143784cea7346a0ef8330c91f5da4a19243966bfb75588f52f2a552be6b9979) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1c96a9827981ec613641937d6c72ecc029144cc54c0a6daf6b1aba87d00cace) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x27864eb9afbae3be6e7e3aa50d7fd3357483603014598f67b8a0dddc97c3cb2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x35778444e828efa8cb4a3feed44a548824f11962a56c8dcc2f1783c21cbc439) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x46d1c39245e127085b9f896ab07d2e651ecc25b005c0a20959f6d47f8be935c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x5be869ca064eab92c3c4edaaa8de33fdbd62d0b71675e56ec14dff3cb080fe9) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x74ef57b6df9f889311e39bdcd8eb08b52a8d8d5211f687ac16bc96c2724d127) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x91efbcfe56626b7353320356c65c77c7e5e313a8dc11229086751776d638fe3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xb2be4532591968df4f478fada75fa4106e254c9b5a95828143dc1f3b80e7320) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xd6f3ed3585bba127170c9cc3ddfb6a40b08d42cf757316ce890f4b921ef8085) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfdeaae736cf488a3060a8b6ece2b87408f78826330a7dfac75cea6fc36dd3d4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x126bee939af60d07e60cf0579e2a24992254a8afcdf9689e3545e26dc9a12959) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x150560c52186a5641765591845cc093646db821e6bc48b2e360226211403d7ca) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1796a70b3101ebc175ad0925573b0c63ff17646b462ce399d4c1ca248a47df4b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1a09bcceb4195699e6517a0c4609b514108a3ec16ac6e6850c655ce4ab38e20b) }
+                    g := shr(1, mulhi(p, U))
+                    er := 26
                 }
-                n := add(div(4400, shr(sub(254, ey), y2)), 48)
-                let w := shr(add(ey, 4), div254(0x4000000000000000000000000000000000000000000000000000000000000000, y2))
-                let am := 0x800000000000000000000000000000000000000000000000000000000000000
-                let an := am
-                let bm := 0
-                let bn := am
-                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
-                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
-                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
-                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
-                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
-                // needs no shift of its own; a zero shift would change nothing, so it
-                // is skipped). Written out: no calls in the loop
-                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
-                    let p0 := mul(c, am)
-                    let mm := mulmod(c, am, not(0))
-                    let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    p0 := mul(c, bm)
-                    mm := mulmod(c, bm, not(0))
-                    let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
-                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
-                        let hf := shl(sub(sh, 1), 1)
-                        am := shr(sh, add(am, hf))
-                        an := shr(sh, add(a2, hf))
-                        bm := shr(sh, add(bm, hf))
-                        bn := shr(sh, add(b2, hf))
-                    }
-                }
-                let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
-                let sb := sub(253, msb(bn))
-                let sd := sub(253, msb(dn))
-                R := div254(shl(sb, bn), shl(sd, dn))
-                eg := sub(sub(sd, sb), uy)
-            }
-
-            function erfcfv(Y, uy, v) -> D, eg, er {
-                let R, e2, n := erfcxcf(Y, uy)
-                eg := e2
-                D := mulwu(R, v)
-                er := add(64, shl(5, n))
-            }
-
-            function erfcxg0(j) -> g {
-                switch j
-                case 4 { g := 0x4ecef0f262c3cb2abd4a76f3bf858856efdf32563b95b2841ae0ee1218abe3e2 }
-                case 5 { g := 0x4745ad6027abd9043e5f49b40441648cf81fbcfb1e41c4e68f7e5ead045990d7 }
-                case 6 { g := 0x40e3553a8f60ce13decb27ae99af2fa62b9b3b6c3ac5f0b20a8b423d86476fc6 }
-                case 7 { g := 0x3b6e8fdc813589552fbe29a2b067802778928eeed560ee3d2d5ea2a379930136 }
-                case 8 { g := 0x36bb0f01f2ad64304a88fe4634cddb0ad316b6c1960d9e066c83d07fcb62ca2f }
-                case 9 { g := 0x32a63c13629369cab5d9b942c79109271effdef65a3728ea4098fe330a2205ce }
-                case 10 { g := 0x2f14d24270ecf4014797400f19191d5fe5a48c91cc8925c97c128b85d47d7a84 }
-                case 11 { g := 0x2bf11ea5e78ed592051a17f4bc6271c922d3e5fa99d640b880bdb3421d1d8c96 }
-                case 12 { g := 0x2929b5ff455ad09cdef8786c71079fb58ff496ba7f5357d7e12e4509b568e9a3 }
-                case 13 { g := 0x26b07ecc8864f53b8a38a0119a8c9555e844a67bf1b31850fd92a3483c49b3af }
-                case 14 { g := 0x2479f85e3b8fc04ec4103acc6308fc0e1707ca1010ae9140459e57361ea61222 }
-                case 15 { g := 0x227cae876c0900e50efe52ea998852887f1054300be82faf99439abcb2282156 }
-                case 16 { g := 0x20b0ce36a58eebd88f871fc40eceb0c53b16f184d1ceafceaa5398c293b85fad }
-                case 17 { g := 0x1f0fd28fdc20ab51b6db109f6b424fd64bfe3ae7b339bb9dab40a4f8b0d9e2fb }
-                case 18 { g := 0x1d94446d627931cafcceafbd376e1314b7a46a4db70d4d6f9effe4883f78a5e1 }
-                case 19 { g := 0x1c3987d04d0b9783d791fc876e221ff4867136da59e89c3a59c55af3ab1f88f0 }
-                case 20 { g := 0x1afbb3f3b7343acc17e86bd7b734eb6edd26461dfcfe74ca1f4244b77c61154a }
-                case 21 { g := 0x19d7738e1f4db71e59221b62587628c8673b71caf70f5d32301dd2669b66d68e }
-                case 22 { g := 0x18c9eb68ff27d6912c6270e6d72c1f84a5a269820f0dec4609051952e95dacf8 }
-                case 23 { g := 0x17d0a5e9dd571047a28cf6b91600a33b35735fb2aa199cb46be4f2a39e9679b7 }
-                case 24 { g := 0x16e9827d229d2ccdf158431d94da3421b78167cd1fd99c3d46ce926afe452eec }
-                case 25 { g := 0x1612a8125451bd59f690799da46facbdf6d245ab18ccf1c1020dceaf751939fd }
-                case 26 { g := 0x154a7a08d4bb44fa57c9bb32508dc61313a69c26f6defda0b0b1d8ddd6d8d716 }
-                case 27 { g := 0x148f8f10299b711635e7b3452b78cda8d5e97030653e85e00096d4517719cf20 }
-                case 28 { g := 0x13e0a99a0ee913f37e9a43449cd0c5d4ce820c177e636ac2f7784ac5153065f2 }
-                case 29 { g := 0x133cb19179d7f5febc25c2947e8f89366b66e51ce9f55ab5890ecd3c525bbf22 }
-                case 30 { g := 0x12a2af19c1492f817ed7e573035d2a49a5f40f7da09dc3cb6b8f7d0eb9b51cab }
-                case 31 { g := 0x1211c625924e338c6478346b830147a9bc4c1a77b12d1e24c5cef1438baf221c }
-                case 32 { g := 0x118932bf08e15442606a849d1f39e27976aa3bfab86a842ea754270ee75b2bec }
-                case 33 { g := 0x110845e1dcb19a2698cfc74f5821d77bae20f98163f3cb252838f2e99491984b }
-                case 34 { g := 0x108e62ce8c89ac88db65377816e5960af139732531b4b9cc71dddb019c9ea457 }
-                case 35 { g := 0x101afcc22e71b80ff78f84abc953e5a24f024cb46b1f65a3eb1f58b44bca72bf }
-                case 36 { g := 0xfad95024e7a62c07688809d2d4cfdbc51a1874b7030261f972e1302e3119ad4 }
-                case 37 { g := 0xf45b92f487dc6ad4598692d4159b4cf4de076845f1c20c8a1fe85a7b6fd361a }
-                case 38 { g := 0xee301d1f3bf4d62b163fc84de9ca8a3bbafbe214fa2211238b7ef23be4dfbd2 }
-                case 39 { g := 0xe85111b6a49f4e5ce56b2961e0030d5f6cf48e89899dde542ccb17091682b4c }
-                case 40 { g := 0xe2b91cf4a1e8cef197de6f7a724e96f0a5cf18e054be7d2627c7d45dd61db12 }
-                case 41 { g := 0xdd63652170dfd9409abadf6e0f914c3ec9462102d54d77c2431631c7494dbaf }
-                case 42 { g := 0xd84b7d670a37f197cf1d947d7046a3dec5c7b1f01d27b9a92ad5c7e4055dc49 }
-                case 43 { g := 0xd36d5a4abadb68390992198b6427ead13e0284e54a10d0ca1660434f81e2831 }
-                case 44 { g := 0xcec5479142795d49fb100bc268f63b91bfba3c975835cef3dc38fa45d29d284 }
-                case 45 { g := 0xca4fdf5b1ebb09e8e2b812ca7403fc4215b52007d82fce51cb9986da73a668f }
-                case 46 { g := 0xc60a024e6aa8eef9f5909a889e28ad828d035c71a59602a8765385ee23a888d }
-                case 47 { g := 0xc1f0d0aa2c9eacd8ea70d4c055e1cb3b2adfa66dabd8be92f7eda2c5b4726da }
-                case 48 { g := 0xbe01a4244eb90b9539d773438884970be40151bbfcd27f1db0116ce11993f00 }
-                default { g := 0 }
-            }
-
-            function mulwr(a, b) -> r {
-                let p1, p0 := mul512(a, b)
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := add(or(shl(2, p1), shr(254, p0)), and(shr(253, p0), 1))
-            }
-
-            function rdivs(a, n) -> q {
-                switch slt(a, 0)
-                case 1 { q := sub(0, div(add(sub(0, a), shr(1, n)), n)) }
-                default { q := div(add(a, shr(1, n)), n) }
-            }
-
-            function erfcxa(Y, uy) -> s {
-                let j := add(shr(sub(251, uy), Y), and(shr(sub(250, uy), Y), 1))
-                if lt(j, 4) { j := 4 }
-                if gt(j, 48) { j := 48 }
-                let h := shl(uy, Y)
-                if slt(uy, 0) { h := shr(sub(0, uy), Y) }
-                h := sub(h, shl(251, j))
-                let pm := erfcxg0(j)
-                let y0g0 := add(mul(j, shr(3, pm)), shr(3, mul(j, and(pm, 7))))
-                let p := mulwr(sub(shl(1, y0g0), 0x906eba8214db688d71d48a7f6bfec3441409a0ebac3e751739a15830cce620b0), h)
-                s := add(pm, p)
-                let yh2 := shl(1, add(mul(j, sar(3, h)), shr(3, add(mul(j, and(h, 7)), 4))))
-                let h22 := shl(1, mulwr(h, h))
-                for { let n := 2 } or(p, pm) { n := add(n, 1) } {
-                    let nx := rdivs(add(mulwr(yh2, p), mulwr(h22, pm)), n)
-                    pm := p
-                    p := nx
-                    s := add(s, p)
+                default {
+                    z := sub(z, 0x8000000000000000000000000000000000000000000000000000000000000000)
+                    p := 0xfa93fc3f37a2b355848008f2b77b77c32550bd4965e30e5
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffffffe89891f396dfab1d649952b010f12f691cbb5c8008df845ed) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xf3eea6ca570a79bb5538bfd71d896e4744b9f9deb1a5e280f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffffa1958b81b3053a9476d201a72bc536c07c08007c9c4ff86ac1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1897dc497d1dd7dc78923b184eb8fdba0feb54a2fde17aa8a30) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffffb60f312c2f118321ee404550939bc7750dc948b01997e7926aa) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa9c61aff91c6b2af9630de40d0db8f61dc75713646b08692441) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffec1790ab2de5ab935b2472bb613212468dab326ea8edb1a3e836) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x209f0e5f7908dc58127a97eeae364d33f2a806ee5223e3e09309) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffd163bea9d76ec1c3417a67437662543dd89ab415de5d09c1b12d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3596f5ff7aae5d7d3fdc4cb813b46cfbd04008839c24bdb75541) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffcaa1fb0cf3eaba2bb5288b160f33a8c0c7e3a560c407354fb39b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x464f31026000ea0d99cc4202ea11c960fe8ca7826a9e7c9b73fd) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffbaacc98d4ba1faed7150e981431648c5c52b9284101373e95bd8) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffcb2dba74038fdc3649262a32ae054db5419515cde7dcaee05f9f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffef7bb4ca9c45bf165f8cda4e989fcb96d3cabfa6f2111ec57c39) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x21854558872b584c69a09ef3227a23bb65e4cde19a8b41e4f145d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x233ae82a2f737c4f0d287091f08e8c4a493e7dd1f771cf0761926) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffff77cc4fcad4221e56c21e216c00bab408cec4f75cc093c1a98e19e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffe75033e168260cc1297b693f385a7eebd18d064ceec9f418673b6e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xd06253e48de7c719096defdb15367ce55db95a6edc9b1ba808c1e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa4ed99766939d1c03aa0d20c2d45a7eb59e21bfc8c4d5ceb426ac7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xc491c9ceda09de299542dfdf680695ce40bd62ad3174c5c22ace5a) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffd7b35a6865aacb46b6579e759754d98a0be12c8be54df05d7057752) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffff6a2c3f0f8f86072ad56da7f3619fdf40eb3527d984aaad8d85e3532) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffd11a76d1ce192a3eef7f00b080998ffb56ecf7be09059c89740469c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x346fc67bec51db7db4bdddc98d5e914b5105b9a56319754ab81caba3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x864194b0ee7e1a9c7f34cf8750b79a75a91bd68a7bf319b3b5d0cba2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffe796dde47a6a688828995a12e38b0fcf25e91c1d75b0216704be9637) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffc567c7231fa4e26cff6f796b88ea58949ba158db0024fa2c2230264e5) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffff717c397f4f34f3aae9cc7a53dca34d0e8c411a3a991a7a752581e29c3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2fd45eedb6af8976461ea2580140bc1f8efc0977c62eb3452fe5cc1b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3da96729ee75a6fa1e1fc5e67b4bfd60fbc3e085b4ec48f9e155f073f3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xbc5660fe003ff3a94e6e5d3fc26d0287d4302801636d58329bcff077eb) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xadf6c0d29fc4d35b8e91511989dccb02604904a940077de477daa426f4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffd01a99476e001ee60c66dae41477bfc6ff22a232ae9407d0649fbd40f64) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffff016c94fcd4fad377371405ced043b9d6d5bb13dadcb66b2817a15fdf1f0) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffd94e0b8af5b259943217e0cfd068978a3770255619fecfdbf0f1797c6f0b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffdcbfe7fb52e4017829df4aca3fb32234220e9e7f6c8663f5e0bb3c1954e1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x9861e0a1af702d3161ad2004688743a811f5674437da616d537506fb4959) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3d6a6de3baf837fb2494e9ef9db3489d541a60e102b1684f0f524b40b4e9d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xdc39493abb0ddb301291ba03bc8acb29d5cffc3059b54312d4be5407954cc) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x26a9c3bb3cbde3538add04bc51e99c96cf6afbb113bf228ee31f2a0407039a) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x5cf7599121a8802f15f573c975a83cd3df7b35b3acca5c00aa76aad77daaa7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xc6e73d9f45d34164634a9402d3927acc1e52ee2077a5d6ecfb728268fab4a6) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x182ca12b4c57d0c3b2e4eb64646d6bf28eb04bc2966e30c11e60831eb360f3d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2b4c593b2170ec9d497961aa7e42d63dde17606dff64d5598b18657d2b50d67) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x48133c53c891c0eff597f04c12f0f281b66aa0ef68f8f063d8fb498414cc7e5) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x703b2772cc9c202f07dc5d423cf61ce6ba096a5593ff50b0d5acd8abd4a1d22) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa444a9c34388217fc9d2a1660d6ba2a037229ba9deac81e2b2add5810b962ec) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xe2d6ef660364a0f65b763210abe4b20167416a6170fa08e2fc670ec7f415d1f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x12864deaf50512ca34636faceea8df010fae5b2ceba8edcc30084651e44cab81) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x16f48aeb518fb5a1adef1fe95d27c5a126b49060f9873918580e3fc7949adb00) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1b06c0da4743b971aac31d7fee7f986a3d13e823b377a41e63779c33ced3dd26) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1e46953c35d6c1dad71922915f1ea43019104d38bbec37633b38ab2785c60b78) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x204e837f15ff457d704abddf9464ea3ec56d4b607fb203acba31438d352963a3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x20dde6b333187cb2a65539535d03d1348733db3b52315cfe78c820a337bbab46) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1fe5e0eeefbd63287ac0cc6c04f42cf58144d85417aa10e8dbcc31a7d1688dd7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1d8ba63f6a1602bc21b6ba921630da3411d9eb8ebb078ea968717feb26b2dcc8) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1a1fc147f2778250bb401e966645641eea1101498088331d33ae7d5d6cda9c53) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x160d07eb09846b417003dd0a16426dd03e059302a222a356fe4b4f079206dc12) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x11c40f11efbed2a7f69014fad37c361b212cc6dc4285d546603880b8407bfbe7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xda85b0501f7c478f7bbbdfe8b96dc6467ec5a1aacdc520a0933e14f12b74a6d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa0357938a63934b243a318bab288aaec8f8228ab45172d44e15583f26286825) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x6feefdc5ba8e181428d8ef7e3d13345f4423808a3c827fd526f12f610998343) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x4a74ad2caafbc16060551f46ddb3601f80a85c72826327ccaaf611e2c66495b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2f182a72446965555b92ff06921d8fcebf6a8f1c22086c55551424c7b93ee16) }
+                    g := shl(3, mulhi(p, U))
+                    er := 90
                 }
             }
 
@@ -5559,19 +5594,16 @@ library FP19Lib {
             function erfcbig(Y, uy, u, m, h) -> D, ee, er {
                 let kk, v := expnegsq(u, m, h)
                 if slt(kk, sub(0, 0x80000)) { leave }
-                switch or(slt(uy, 2), and(eq(uy, 2), lt(Y, 0x6000000000000000000000000000000000000000000000000000000000000000)))
-                case 1 {
-                    D := mulwu(erfcxa(Y, uy), v)
+                // the asymptotic series from y = 18, the two pieces of g below
+                switch or(sgt(uy, 4), and(eq(uy, 4), iszero(lt(Y, 0x4800000000000000000000000000000000000000000000000000000000000000))))
+                case 0 {
+                    let g, eg := erfcxu(Y, uy)
+                    D := mulwu(g, v)
                     ee := sub(kk, 1)
-                    // g within 1.6 units of 2^-255 per Taylor term (at most 50) and the
-                    // anchor's half unit, v within 6.1 units of 2^-254: 2 x 81.1 + 8
-                    er := 192
+                    er := eg
                 }
                 default {
-                    // the series from y = 18, where it is cheaper than the fraction (measured)
-                    switch or(sgt(uy, 4), and(eq(uy, 4), iszero(lt(Y, 0x4800000000000000000000000000000000000000000000000000000000000000))))
-                    case 0 { D, ee, er := erfcfv(Y, uy, v) }
-                    default { D, ee, er := erfasym(Y, uy, v) }
+                    D, ee, er := erfasym(Y, uy, v)
                     ee := add(ee, kk)
                 }
             }
@@ -5754,12 +5786,6 @@ library FP19Lib {
                 r := sub(xor(x, m), m)
             }
 
-            function mulhi(a, b) -> h {
-                let mm := mulmod(a, b, not(0))
-                let lo := mul(a, b)
-                h := sub(sub(mm, lo), lt(mm, lo))
-            }
-
             function kln2(a) -> ph, pl {
                 let y1, y0 := mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
                 pl := add(y0, mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
@@ -5855,7 +5881,9 @@ library FP19Lib {
             }
 
             function erfccf2(u, m, h) -> vh, vl, ve {
-                let qh, ql, t := cfratio(m, sub(add(shl(1, u), 3), h), add(div(add(1700, mul(h, 704)), shr(sub(236, u), m)), 28))
+                let xi := shr(sub(236, u), m)
+                let n := add(add(div(add(2548, mul(h, 2452)), mul(xi, xi)), div(add(1276, mul(h, 528)), xi)), 26)
+                let qh, ql, t := cfratio(m, sub(add(shl(1, u), 3), h), n)
                 let k2, eh, el := wexpnsq(u, m, h)
                 qh, ql := wmul(qh, ql, add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el)
                 switch h
@@ -6123,141 +6151,162 @@ library FP19Lib {
                 er := 64
             }
 
-            function erfcxcf(Y, uy) -> R, eg, n {
-                let y2 := mulwu(Y, Y)
-                let ey := add(uy, uy)
-                if shr(255, y2) {
-                    y2 := shr(1, y2)
-                    ey := add(ey, 1)
+            function mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function erfcxu(Y, uy) -> g, er {
+                let yf := shr(sub(3, uy), Y)
+                if sgt(uy, 3) { yf := shl(sub(uy, 3), Y) }
+                let U := divh(0x8000000000000000000000000000000000000000000000000000000000000000, add(0x4000000000000000000000000000000000000000000000000000000000000000, yf))
+                let z := sub(U, 0x4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4ec4)
+                z := add(z, mulhi(z, 0x941d41d41badb6db6db86f8af8af896492492493dd41d41d404000000001941d))
+                let p
+                switch shr(255, z)
+                case 0 {
+                    p := 0xffffffffffffffff0af4bfb3d5e1f8ec75fb0de5808cf6adb0c21c055893adc9
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x107900ed23e299897eb6896e7daeaed091bb2bbe356a5d4e01) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffff7a9cb1b4dcbd4ae8ae2aced0f3063b7da06be7b8b055141ef1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2a696b7c950f103fa9e49e2b22d60631c57f0401fa28702bcaa) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffff669a1b86afdffb25e2294999f444adec35ace48ac4ef481b4b1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1a9283ed605637c2a4e16259f1cc50498876633aacf1208e4538) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffc48c848b81465d2ac54514d797659d294798975f1128f62fd505) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x6f0ec335a96f8e4a049be677af13f37595bd3bb2c83adafd5e4e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffff4f5b9c69b1ddae4faaa57b5e05198907ba316649d59e30631101) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xf3623b17f01d2381d5ff7c9908e0867c984f5087ee131802e7e2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffed81f6dac57c2bfff94da565db826e52feb433c79f1d80993a4f3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x13d83a0b929256b38206a37815aba30ada5d73b4940f67d7cb54c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffed2a8d9e663283f0f64f5cce2891c7fcfce6a5b092425b2bab978) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x10ddeea21a6f29db0ab04d791b3ccd9f6dd4bfcec0969dac40912) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffff312f81984f933f70108e8e10e2fee23fcc97b5f142918fb8b676) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x6df7e0b8b7555d5637b0035fac57f74ed7d99912c88270940af2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffff4d1b38b2ab2f4314b0e2ab1aa2bd5b626fd768f081617dc3005c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1856bcd1a8afaa6df389cbaabdda2f026d2d632cf60696502776) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x14cd310ec2f0db897c76eb7d0aba6f1a512513184c22cad6a0185) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x4a107454ab1607dd94ea791fadccd2e6a3318cca92b5e87b9edf4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x52f5ac2c141eb6be1300ce285d26b70c896b07022a8a880c2795a) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffff5c3af6f3953725987f8226471672bed131a7a1b3ac7fc2a9df3b6) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffc3376b35a8104afac55e8dab093f81706862df1635891bba3abc4f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffff7d12299f0b677ce5fc31a0d31d53d266c6fe2d2c4043afa7117306) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffc032eb55bf2810bafff77f81292328a83c35412d46c34c40e019b2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x242cada83509b8a78a3fb69bc98fd3ad18db5458061c1ba13fbc1c1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x9614c96bc64343aaddd237ce9900ec2a546b46ee026c9d467d7a045) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1361ccd2278d89c02ee8b531952f022493b8e22ba3bcf1804e88ebc2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xb7197fe4b42e2e75bfc6893aa1bf133806099c0604f69a998d16092) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffabebf31c73071d7d6e59e88e3e7734c7b650c170d14bfe23c4fa3b08) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffe628a402a211897fc0f46a602bcc7c4211ac9ac24af972e9c65185162) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffb950dc5f8d786faf2971907e28894ff7732855fc0761389c6859f9c20) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffff878da30db5b4469f7d8a8974ce61a56f3931d27dbfa8a3e571506c083) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffe959069c7a8de5f7d047a9f05a3baeaf39b6bf9974a8179e0963b2aeb) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x31e3a2a3a0058144a52e2209da68c1a983bada338fbccab2d05b3dbbb0) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfc88cfe03437256b4b92e04782378dc67366fd18fb0e87e9b0edc7cf26) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x36e17eacf5d277e1e7e77813caeb653d0e4d8a1e31cfbc5a8f7b1a8e86f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x9faa2894285da8f5b07884597731a4bc14b952037d5c6f1374e0afc4a60) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x19e025fa65baaca4685222a12743bb971c59e36b86b80170c60ce840462b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3d9b001f086ade3c27f98c9e62c0a46fc4536cb0975d1e6e8b4e30c3fb10) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x88f9f8c148983665374faa6b03975c86823d83b71d9ea89bab018d94d6bf) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x11f8a799851155f3ff84ef0fe7cd0dca860968cfa98d220c7e9d3d670d7c2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x23e33f7af06c45c251f2d4768b0a466722b27fdb43dd7f08c1738419739b2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x448e013ab47f1e9bfa3679f673333dfa267499d6a8a0a8837e2e708902424) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x7dce9ed0358d0126b7974fadc100f2e0ef53609130165873e47e55eb411b4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xde8b020c624fec4d362c2fbda7b65995c77ad140a0651590596cbe983c362) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x17c7fb05efd1c8f0f941a714530e2fe944cba852cf8a8496bc07ee27382346) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2763ee22e36652059dd29f171357603e44dfa2b5c5dd9804e7257b593e7a92) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3f53f9d48caf6be4ae07c2ce252486727d8293d46bfcec0dc59d30d2cbf293) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x62fbd5d6d780c3f65a05ca3012f3fc87a6a8258f8bcf178d6ad3953d23ef5e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x96a129cd83d019da2db0adb57829d0bad0b1c9bc7519a43131c2491d7e2725) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xdf727454ec491943e782ef70eebc4319ab4c2b3936831f234cbd1db908a048) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x143784cea7346a0ef8330c91f5da4a19243966bfb75588f52f2a552be6b9979) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1c96a9827981ec613641937d6c72ecc029144cc54c0a6daf6b1aba87d00cace) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x27864eb9afbae3be6e7e3aa50d7fd3357483603014598f67b8a0dddc97c3cb2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x35778444e828efa8cb4a3feed44a548824f11962a56c8dcc2f1783c21cbc439) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x46d1c39245e127085b9f896ab07d2e651ecc25b005c0a20959f6d47f8be935c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x5be869ca064eab92c3c4edaaa8de33fdbd62d0b71675e56ec14dff3cb080fe9) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x74ef57b6df9f889311e39bdcd8eb08b52a8d8d5211f687ac16bc96c2724d127) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x91efbcfe56626b7353320356c65c77c7e5e313a8dc11229086751776d638fe3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xb2be4532591968df4f478fada75fa4106e254c9b5a95828143dc1f3b80e7320) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xd6f3ed3585bba127170c9cc3ddfb6a40b08d42cf757316ce890f4b921ef8085) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfdeaae736cf488a3060a8b6ece2b87408f78826330a7dfac75cea6fc36dd3d4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x126bee939af60d07e60cf0579e2a24992254a8afcdf9689e3545e26dc9a12959) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x150560c52186a5641765591845cc093646db821e6bc48b2e360226211403d7ca) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1796a70b3101ebc175ad0925573b0c63ff17646b462ce399d4c1ca248a47df4b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1a09bcceb4195699e6517a0c4609b514108a3ec16ac6e6850c655ce4ab38e20b) }
+                    g := shr(1, mulhi(p, U))
+                    er := 26
                 }
-                n := add(div(4400, shr(sub(254, ey), y2)), 48)
-                let w := shr(add(ey, 4), div254(0x4000000000000000000000000000000000000000000000000000000000000000, y2))
-                let am := 0x800000000000000000000000000000000000000000000000000000000000000
-                let an := am
-                let bm := 0
-                let bn := am
-                // X_k = X_(k-1) + round(c X_(k-2) / 2^251) for both pairs, c = k w (w =
-                // 1/(2y^2) at 2^-251, so c runs from w to n w by addition); then, when
-                // a2 passes 2^252, one rounded shift of 1 or 2 bits set by A brings all
-                // four back under 2^252: k / (2y^2) <= n / (2 floor(y^2)) < 2.4 at every
-                // y >= 6, so a2 < 3.4 2^252 (B'/A'' = y/K stays just under one, so B
-                // needs no shift of its own; a zero shift would change nothing, so it
-                // is skipped). Written out: no calls in the loop
-                for { let c := w } iszero(gt(c, mul(n, w))) { c := add(c, w) } {
-                    let p0 := mul(c, am)
-                    let mm := mulmod(c, am, not(0))
-                    let a2 := add(an, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    p0 := mul(c, bm)
-                    mm := mulmod(c, bm, not(0))
-                    let b2 := add(bn, add(or(shl(5, sub(sub(mm, p0), lt(mm, p0))), shr(251, p0)), and(shr(250, p0), 1)))
-                    am := an
-                    an := a2
-                    bm := bn
-                    bn := b2
-                    if gt(a2, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) {
-                        let sh := add(1, gt(a2, 0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff))
-                        let hf := shl(sub(sh, 1), 1)
-                        am := shr(sh, add(am, hf))
-                        an := shr(sh, add(a2, hf))
-                        bm := shr(sh, add(bm, hf))
-                        bn := shr(sh, add(b2, hf))
-                    }
-                }
-                let dn := mulwu(an, mulwu(Y, 0x716fe246d3bdaa9e70ec1483576e4e0ff8e48551bd8ec94b728402f4fa851d1b))
-                let sb := sub(253, msb(bn))
-                let sd := sub(253, msb(dn))
-                R := div254(shl(sb, bn), shl(sd, dn))
-                eg := sub(sub(sd, sb), uy)
-            }
-
-            function erfcfv(Y, uy, v) -> D, eg, er {
-                let R, e2, n := erfcxcf(Y, uy)
-                eg := e2
-                D := mulwu(R, v)
-                er := add(64, shl(5, n))
-            }
-
-            function erfcxg0(j) -> g {
-                switch j
-                case 4 { g := 0x4ecef0f262c3cb2abd4a76f3bf858856efdf32563b95b2841ae0ee1218abe3e2 }
-                case 5 { g := 0x4745ad6027abd9043e5f49b40441648cf81fbcfb1e41c4e68f7e5ead045990d7 }
-                case 6 { g := 0x40e3553a8f60ce13decb27ae99af2fa62b9b3b6c3ac5f0b20a8b423d86476fc6 }
-                case 7 { g := 0x3b6e8fdc813589552fbe29a2b067802778928eeed560ee3d2d5ea2a379930136 }
-                case 8 { g := 0x36bb0f01f2ad64304a88fe4634cddb0ad316b6c1960d9e066c83d07fcb62ca2f }
-                case 9 { g := 0x32a63c13629369cab5d9b942c79109271effdef65a3728ea4098fe330a2205ce }
-                case 10 { g := 0x2f14d24270ecf4014797400f19191d5fe5a48c91cc8925c97c128b85d47d7a84 }
-                case 11 { g := 0x2bf11ea5e78ed592051a17f4bc6271c922d3e5fa99d640b880bdb3421d1d8c96 }
-                case 12 { g := 0x2929b5ff455ad09cdef8786c71079fb58ff496ba7f5357d7e12e4509b568e9a3 }
-                case 13 { g := 0x26b07ecc8864f53b8a38a0119a8c9555e844a67bf1b31850fd92a3483c49b3af }
-                case 14 { g := 0x2479f85e3b8fc04ec4103acc6308fc0e1707ca1010ae9140459e57361ea61222 }
-                case 15 { g := 0x227cae876c0900e50efe52ea998852887f1054300be82faf99439abcb2282156 }
-                case 16 { g := 0x20b0ce36a58eebd88f871fc40eceb0c53b16f184d1ceafceaa5398c293b85fad }
-                case 17 { g := 0x1f0fd28fdc20ab51b6db109f6b424fd64bfe3ae7b339bb9dab40a4f8b0d9e2fb }
-                case 18 { g := 0x1d94446d627931cafcceafbd376e1314b7a46a4db70d4d6f9effe4883f78a5e1 }
-                case 19 { g := 0x1c3987d04d0b9783d791fc876e221ff4867136da59e89c3a59c55af3ab1f88f0 }
-                case 20 { g := 0x1afbb3f3b7343acc17e86bd7b734eb6edd26461dfcfe74ca1f4244b77c61154a }
-                case 21 { g := 0x19d7738e1f4db71e59221b62587628c8673b71caf70f5d32301dd2669b66d68e }
-                case 22 { g := 0x18c9eb68ff27d6912c6270e6d72c1f84a5a269820f0dec4609051952e95dacf8 }
-                case 23 { g := 0x17d0a5e9dd571047a28cf6b91600a33b35735fb2aa199cb46be4f2a39e9679b7 }
-                case 24 { g := 0x16e9827d229d2ccdf158431d94da3421b78167cd1fd99c3d46ce926afe452eec }
-                case 25 { g := 0x1612a8125451bd59f690799da46facbdf6d245ab18ccf1c1020dceaf751939fd }
-                case 26 { g := 0x154a7a08d4bb44fa57c9bb32508dc61313a69c26f6defda0b0b1d8ddd6d8d716 }
-                case 27 { g := 0x148f8f10299b711635e7b3452b78cda8d5e97030653e85e00096d4517719cf20 }
-                case 28 { g := 0x13e0a99a0ee913f37e9a43449cd0c5d4ce820c177e636ac2f7784ac5153065f2 }
-                case 29 { g := 0x133cb19179d7f5febc25c2947e8f89366b66e51ce9f55ab5890ecd3c525bbf22 }
-                case 30 { g := 0x12a2af19c1492f817ed7e573035d2a49a5f40f7da09dc3cb6b8f7d0eb9b51cab }
-                case 31 { g := 0x1211c625924e338c6478346b830147a9bc4c1a77b12d1e24c5cef1438baf221c }
-                case 32 { g := 0x118932bf08e15442606a849d1f39e27976aa3bfab86a842ea754270ee75b2bec }
-                case 33 { g := 0x110845e1dcb19a2698cfc74f5821d77bae20f98163f3cb252838f2e99491984b }
-                case 34 { g := 0x108e62ce8c89ac88db65377816e5960af139732531b4b9cc71dddb019c9ea457 }
-                case 35 { g := 0x101afcc22e71b80ff78f84abc953e5a24f024cb46b1f65a3eb1f58b44bca72bf }
-                case 36 { g := 0xfad95024e7a62c07688809d2d4cfdbc51a1874b7030261f972e1302e3119ad4 }
-                case 37 { g := 0xf45b92f487dc6ad4598692d4159b4cf4de076845f1c20c8a1fe85a7b6fd361a }
-                case 38 { g := 0xee301d1f3bf4d62b163fc84de9ca8a3bbafbe214fa2211238b7ef23be4dfbd2 }
-                case 39 { g := 0xe85111b6a49f4e5ce56b2961e0030d5f6cf48e89899dde542ccb17091682b4c }
-                case 40 { g := 0xe2b91cf4a1e8cef197de6f7a724e96f0a5cf18e054be7d2627c7d45dd61db12 }
-                case 41 { g := 0xdd63652170dfd9409abadf6e0f914c3ec9462102d54d77c2431631c7494dbaf }
-                case 42 { g := 0xd84b7d670a37f197cf1d947d7046a3dec5c7b1f01d27b9a92ad5c7e4055dc49 }
-                case 43 { g := 0xd36d5a4abadb68390992198b6427ead13e0284e54a10d0ca1660434f81e2831 }
-                case 44 { g := 0xcec5479142795d49fb100bc268f63b91bfba3c975835cef3dc38fa45d29d284 }
-                case 45 { g := 0xca4fdf5b1ebb09e8e2b812ca7403fc4215b52007d82fce51cb9986da73a668f }
-                case 46 { g := 0xc60a024e6aa8eef9f5909a889e28ad828d035c71a59602a8765385ee23a888d }
-                case 47 { g := 0xc1f0d0aa2c9eacd8ea70d4c055e1cb3b2adfa66dabd8be92f7eda2c5b4726da }
-                case 48 { g := 0xbe01a4244eb90b9539d773438884970be40151bbfcd27f1db0116ce11993f00 }
-                default { g := 0 }
-            }
-
-            function mulwr(a, b) -> r {
-                let p1, p0 := mul512(a, b)
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                r := add(or(shl(2, p1), shr(254, p0)), and(shr(253, p0), 1))
-            }
-
-            function rdivs(a, n) -> q {
-                switch slt(a, 0)
-                case 1 { q := sub(0, div(add(sub(0, a), shr(1, n)), n)) }
-                default { q := div(add(a, shr(1, n)), n) }
-            }
-
-            function erfcxa(Y, uy) -> s {
-                let j := add(shr(sub(251, uy), Y), and(shr(sub(250, uy), Y), 1))
-                if lt(j, 4) { j := 4 }
-                if gt(j, 48) { j := 48 }
-                let h := shl(uy, Y)
-                if slt(uy, 0) { h := shr(sub(0, uy), Y) }
-                h := sub(h, shl(251, j))
-                let pm := erfcxg0(j)
-                let y0g0 := add(mul(j, shr(3, pm)), shr(3, mul(j, and(pm, 7))))
-                let p := mulwr(sub(shl(1, y0g0), 0x906eba8214db688d71d48a7f6bfec3441409a0ebac3e751739a15830cce620b0), h)
-                s := add(pm, p)
-                let yh2 := shl(1, add(mul(j, sar(3, h)), shr(3, add(mul(j, and(h, 7)), 4))))
-                let h22 := shl(1, mulwr(h, h))
-                for { let n := 2 } or(p, pm) { n := add(n, 1) } {
-                    let nx := rdivs(add(mulwr(yh2, p), mulwr(h22, pm)), n)
-                    pm := p
-                    p := nx
-                    s := add(s, p)
+                default {
+                    z := sub(z, 0x8000000000000000000000000000000000000000000000000000000000000000)
+                    p := 0xfa93fc3f37a2b355848008f2b77b77c32550bd4965e30e5
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffffffe89891f396dfab1d649952b010f12f691cbb5c8008df845ed) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xf3eea6ca570a79bb5538bfd71d896e4744b9f9deb1a5e280f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffffa1958b81b3053a9476d201a72bc536c07c08007c9c4ff86ac1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1897dc497d1dd7dc78923b184eb8fdba0feb54a2fde17aa8a30) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffffffb60f312c2f118321ee404550939bc7750dc948b01997e7926aa) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa9c61aff91c6b2af9630de40d0db8f61dc75713646b08692441) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffec1790ab2de5ab935b2472bb613212468dab326ea8edb1a3e836) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x209f0e5f7908dc58127a97eeae364d33f2a806ee5223e3e09309) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffd163bea9d76ec1c3417a67437662543dd89ab415de5d09c1b12d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3596f5ff7aae5d7d3fdc4cb813b46cfbd04008839c24bdb75541) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffcaa1fb0cf3eaba2bb5288b160f33a8c0c7e3a560c407354fb39b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x464f31026000ea0d99cc4202ea11c960fe8ca7826a9e7c9b73fd) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffbaacc98d4ba1faed7150e981431648c5c52b9284101373e95bd8) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffcb2dba74038fdc3649262a32ae054db5419515cde7dcaee05f9f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffffef7bb4ca9c45bf165f8cda4e989fcb96d3cabfa6f2111ec57c39) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x21854558872b584c69a09ef3227a23bb65e4cde19a8b41e4f145d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x233ae82a2f737c4f0d287091f08e8c4a493e7dd1f771cf0761926) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffff77cc4fcad4221e56c21e216c00bab408cec4f75cc093c1a98e19e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffffe75033e168260cc1297b693f385a7eebd18d064ceec9f418673b6e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xd06253e48de7c719096defdb15367ce55db95a6edc9b1ba808c1e) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa4ed99766939d1c03aa0d20c2d45a7eb59e21bfc8c4d5ceb426ac7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xc491c9ceda09de299542dfdf680695ce40bd62ad3174c5c22ace5a) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffd7b35a6865aacb46b6579e759754d98a0be12c8be54df05d7057752) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffff6a2c3f0f8f86072ad56da7f3619fdf40eb3527d984aaad8d85e3532) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffffd11a76d1ce192a3eef7f00b080998ffb56ecf7be09059c89740469c) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x346fc67bec51db7db4bdddc98d5e914b5105b9a56319754ab81caba3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x864194b0ee7e1a9c7f34cf8750b79a75a91bd68a7bf319b3b5d0cba2) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffffffe796dde47a6a688828995a12e38b0fcf25e91c1d75b0216704be9637) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffffc567c7231fa4e26cff6f796b88ea58949ba158db0024fa2c2230264e5) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffff717c397f4f34f3aae9cc7a53dca34d0e8c411a3a991a7a752581e29c3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2fd45eedb6af8976461ea2580140bc1f8efc0977c62eb3452fe5cc1b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3da96729ee75a6fa1e1fc5e67b4bfd60fbc3e085b4ec48f9e155f073f3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xbc5660fe003ff3a94e6e5d3fc26d0287d4302801636d58329bcff077eb) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xadf6c0d29fc4d35b8e91511989dccb02604904a940077de477daa426f4) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffffd01a99476e001ee60c66dae41477bfc6ff22a232ae9407d0649fbd40f64) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xfffff016c94fcd4fad377371405ced043b9d6d5bb13dadcb66b2817a15fdf1f0) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffd94e0b8af5b259943217e0cfd068978a3770255619fecfdbf0f1797c6f0b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xffffdcbfe7fb52e4017829df4aca3fb32234220e9e7f6c8663f5e0bb3c1954e1) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x9861e0a1af702d3161ad2004688743a811f5674437da616d537506fb4959) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x3d6a6de3baf837fb2494e9ef9db3489d541a60e102b1684f0f524b40b4e9d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xdc39493abb0ddb301291ba03bc8acb29d5cffc3059b54312d4be5407954cc) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x26a9c3bb3cbde3538add04bc51e99c96cf6afbb113bf228ee31f2a0407039a) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x5cf7599121a8802f15f573c975a83cd3df7b35b3acca5c00aa76aad77daaa7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xc6e73d9f45d34164634a9402d3927acc1e52ee2077a5d6ecfb728268fab4a6) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x182ca12b4c57d0c3b2e4eb64646d6bf28eb04bc2966e30c11e60831eb360f3d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2b4c593b2170ec9d497961aa7e42d63dde17606dff64d5598b18657d2b50d67) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x48133c53c891c0eff597f04c12f0f281b66aa0ef68f8f063d8fb498414cc7e5) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x703b2772cc9c202f07dc5d423cf61ce6ba096a5593ff50b0d5acd8abd4a1d22) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa444a9c34388217fc9d2a1660d6ba2a037229ba9deac81e2b2add5810b962ec) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xe2d6ef660364a0f65b763210abe4b20167416a6170fa08e2fc670ec7f415d1f) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x12864deaf50512ca34636faceea8df010fae5b2ceba8edcc30084651e44cab81) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x16f48aeb518fb5a1adef1fe95d27c5a126b49060f9873918580e3fc7949adb00) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1b06c0da4743b971aac31d7fee7f986a3d13e823b377a41e63779c33ced3dd26) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1e46953c35d6c1dad71922915f1ea43019104d38bbec37633b38ab2785c60b78) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x204e837f15ff457d704abddf9464ea3ec56d4b607fb203acba31438d352963a3) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x20dde6b333187cb2a65539535d03d1348733db3b52315cfe78c820a337bbab46) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1fe5e0eeefbd63287ac0cc6c04f42cf58144d85417aa10e8dbcc31a7d1688dd7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1d8ba63f6a1602bc21b6ba921630da3411d9eb8ebb078ea968717feb26b2dcc8) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x1a1fc147f2778250bb401e966645641eea1101498088331d33ae7d5d6cda9c53) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x160d07eb09846b417003dd0a16426dd03e059302a222a356fe4b4f079206dc12) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x11c40f11efbed2a7f69014fad37c361b212cc6dc4285d546603880b8407bfbe7) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xda85b0501f7c478f7bbbdfe8b96dc6467ec5a1aacdc520a0933e14f12b74a6d) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0xa0357938a63934b243a318bab288aaec8f8228ab45172d44e15583f26286825) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x6feefdc5ba8e181428d8ef7e3d13345f4423808a3c827fd526f12f610998343) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x4a74ad2caafbc16060551f46ddb3601f80a85c72826327ccaaf611e2c66495b) }
+                    { let pl := mul(p, z) let ph := mulmod(p, z, not(0)) p := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(p, 0), z)), 0x2f182a72446965555b92ff06921d8fcebf6a8f1c22086c55551424c7b93ee16) }
+                    g := shl(3, mulhi(p, U))
+                    er := 90
                 }
             }
 
@@ -6508,19 +6557,16 @@ library FP19Lib {
             function erfcbig(Y, uy, u, m, h) -> D, ee, er {
                 let kk, v := expnegsq(u, m, h)
                 if slt(kk, sub(0, 0x80000)) { leave }
-                switch or(slt(uy, 2), and(eq(uy, 2), lt(Y, 0x6000000000000000000000000000000000000000000000000000000000000000)))
-                case 1 {
-                    D := mulwu(erfcxa(Y, uy), v)
+                // the asymptotic series from y = 18, the two pieces of g below
+                switch or(sgt(uy, 4), and(eq(uy, 4), iszero(lt(Y, 0x4800000000000000000000000000000000000000000000000000000000000000))))
+                case 0 {
+                    let g, eg := erfcxu(Y, uy)
+                    D := mulwu(g, v)
                     ee := sub(kk, 1)
-                    // g within 1.6 units of 2^-255 per Taylor term (at most 50) and the
-                    // anchor's half unit, v within 6.1 units of 2^-254: 2 x 81.1 + 8
-                    er := 192
+                    er := eg
                 }
                 default {
-                    // the series from y = 18, where it is cheaper than the fraction (measured)
-                    switch or(sgt(uy, 4), and(eq(uy, 4), iszero(lt(Y, 0x4800000000000000000000000000000000000000000000000000000000000000))))
-                    case 0 { D, ee, er := erfcfv(Y, uy, v) }
-                    default { D, ee, er := erfasym(Y, uy, v) }
+                    D, ee, er := erfasym(Y, uy, v)
                     ee := add(ee, kk)
                 }
             }
@@ -6703,12 +6749,6 @@ library FP19Lib {
                 r := sub(xor(x, m), m)
             }
 
-            function mulhi(a, b) -> h {
-                let mm := mulmod(a, b, not(0))
-                let lo := mul(a, b)
-                h := sub(sub(mm, lo), lt(mm, lo))
-            }
-
             function kln2(a) -> ph, pl {
                 let y1, y0 := mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
                 pl := add(y0, mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
@@ -6804,7 +6844,9 @@ library FP19Lib {
             }
 
             function erfccf2(u, m, h) -> vh, vl, ve {
-                let qh, ql, t := cfratio(m, sub(add(shl(1, u), 3), h), add(div(add(1700, mul(h, 704)), shr(sub(236, u), m)), 28))
+                let xi := shr(sub(236, u), m)
+                let n := add(add(div(add(2548, mul(h, 2452)), mul(xi, xi)), div(add(1276, mul(h, 528)), xi)), 26)
+                let qh, ql, t := cfratio(m, sub(add(shl(1, u), 3), h), n)
                 let k2, eh, el := wexpnsq(u, m, h)
                 qh, ql := wmul(qh, ql, add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el)
                 switch h

@@ -2,20 +2,22 @@
 pragma solidity ^0.8.24;
 
 import {LadderBase} from "./LadderBase.sol";
-import {FP19_ADDRESS, FP19E_ADDRESS, FP19S_ADDRESS} from "./ILadder.sol";
+import {FP19_ADDRESS, FP19E_ADDRESS, FP19N_ADDRESS, FP19S_ADDRESS} from "./ILadder.sol";
 import {IFP19} from "../fp19/IFP19.sol";
 import {IFP19E} from "../fp19/IFP19E.sol";
+import {IFP19N} from "../fp19/IFP19N.sol";
 import {IFP19S} from "../fp19/IFP19S.sol";
 import {FP19Lib} from "../fp19/FP19Lib.sol";
 
 /// @title LadderFP19Deployed
-/// @notice LadderFP19's ops as staticcalls to FP19's deployed objects (the number, the elementary and the special
-///         functions; add, sub and fromUint inline, see below), so the on-chain runners check the bytecode at FP19's addresses, as LadderFP127 checks FP127's.
+/// @notice LadderFP19's ops as staticcalls to FP19's deployed objects (the number, the elementary functions, the normal
+///         distribution and Lambert W; add, sub and fromUint inline, see below), so the on-chain runners check the bytecode at FP19's addresses, as LadderFP127 checks FP127's.
 ///         The objects return the same words as FP19Lib (fuzzed equal), so every cell equals LadderFP19's; the
 ///         Fp19Deployed test checks that on every scenario. Reverts bubble.
 contract LadderFP19Deployed is LadderBase {
     IFP19 constant N = IFP19(FP19_ADDRESS);
     IFP19E constant E = IFP19E(FP19E_ADDRESS);
+    IFP19N constant D = IFP19N(FP19N_ADDRESS);
     IFP19S constant S = IFP19S(FP19S_ADDRESS);
 
     function _isNeg(int256 x) internal pure override returns (bool) { return x < 0; }
@@ -37,9 +39,9 @@ contract LadderFP19Deployed is LadderBase {
     function _compoundOp(int256 rate, int256 n) internal view override returns (int256) { return E.compound(rate, n); }
     /// compound: (1 + rs)^steps correctly rounded, as LadderFP19 does it.
     function _accrue(int256 b, int256 rs, uint256 steps) internal view override returns (int256) { return _mul(b, E.compound(rs, int256(steps))); }
-    function _erf(int256 x) internal view override returns (int256) { return S.erf(x); }
-    function _erfc(int256 x) internal view override returns (int256) { return S.erfc(x); }
-    function _normCdf(int256 x) internal view override returns (int256) { return S.normCdf(x); }
+    function _erf(int256 x) internal view override returns (int256) { return D.erf(x); }
+    function _erfc(int256 x) internal view override returns (int256) { return D.erfc(x); }
+    function _normCdf(int256 x) internal view override returns (int256) { return D.normCdf(x); }
     function _lambertW0(int256 x) internal view override returns (int256) { return S.lambertW0(x); }
     function _lambertWm1(int256 x) internal view override returns (int256) { return S.lambertWm1(x); }
 }
