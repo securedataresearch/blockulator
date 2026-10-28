@@ -2,7 +2,7 @@
  "_doc": "BlockulatorWad against the exact value, and every established library's\nWAD functions beside it (Solady, PRBMath SD59x18 and UD60x18, Solmate,\nOpenZeppelin Math, Uniswap FullMath, snekmate), on the same seeded inputs.\n\n    uv run scripts/sweep/wad.py            # make wad: inputs -> forge (test/wad/WadBench.t.sol) -> wad.{json,md}\n    uv run scripts/sweep/wad.py score      # re-score the last forge outputs only\n\nThe inputs (seed 20261023) cover each function's domain: log-uniform\nmagnitudes from one wei to the top of the range, both signs where the\nfunction takes them, the inputs whose exact value sits near a wei boundary\n(an output near an integer number of wei: x = ln(k) for exp, perfect squares\nand cubes for the roots, products one wei either side of a multiple of\n10^18), the exact cases (exp(0), ln(1), powers of two and ten for the logs,\nperfect powers for pow) and the ends of each domain. make sweep runs the same\ninputs through BlockulatorWad as its WAD rows (scripts/sweep/sweep.py), with\na forced second-stage pass.\n\nTruth is the exact real value: integer arithmetic for mul, div, sqrt and\ncbrt; mpmath at 300 digits for the rest, rounded in the stated direction. A\nvalue within 10^-250 of an integer is an exact case, and is accepted only\nwhere it is one (exp(0), ln(1), log2 at 10^18 2^k, log10 at 10^(18 + k), a\npow whose rational power is exactly that integer, W(0)); any other would stop\nthe run.\n\nEach library is scored in its own rounding direction (DIRS): BlockulatorWad\nin the direction each function states; Solady floor for the unsigned and\nexp/ln/pow results, toward zero for sMulWad, sDivWad and lambertW0Wad (its\nsdiv); PRBMath floor for UD60x18 and exp/pow, toward zero for SD59x18's mul,\ndiv and logs (log2 of x < 1 is minus log2(1/x) truncated). *Wrong* counts a\nresult that is not that integer, or a revert where the value fits, or a value\nwhere the exact one does not. A function defined on part of the domain only\n(PRBMath UD60x18's exp, logs and pow take x >= 0, its logs x >= 1) is scored\non that part: the other inputs count as outside its domain, not as wrong.\nThe other libraries' rounding: Solmate as Solady (floor; wadMul and wadDiv\ntruncate toward zero), OpenZeppelin and Uniswap in the direction their\nrounding argument names, snekmate floor; the roots Solmate and OpenZeppelin\nhave are integer roots, called on x 10^18 as a WAD user does.\n\nGas is each library's internal call alone (WadBench.t.sol reads gasleft() on\neither side of the call, net of the same window around an assignment; for\nsnekmate, a Vyper library, its own contract reads msg.gas around the module\ncall, net of its own window around an assignment), on\nthe swept inputs and on a typical set: 200 random inputs per function in its\neveryday range (exp of -10..10, ln of 0.001..1000, pow of 0.5..2 to -3..3,\nproducts and quotients of amounts up to 10^9 tokens), which take no shortcut.\nWrites docs/benchmarks/wad.{json,md}.",
  "seed": 20261023,
  "versions": {
-  "blockulator": "fc19340",
+  "blockulator": "7356be2",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
   "solmate": "main@89365b8",
@@ -1744,11 +1744,11 @@
    "hist": {
     "0": 3998
    },
-   "gasMedian": 2434,
-   "gasP99": 2458,
-   "gasMax": 28004,
-   "gasTypical": 2415,
-   "bytes": 4554
+   "gasMedian": 2468,
+   "gasP99": 2492,
+   "gasMax": 28072,
+   "gasTypical": 2449,
+   "bytes": 4568
   },
   {
    "lib": "solady",
@@ -1943,11 +1943,11 @@
    "hist": {
     "0": 3998
    },
-   "gasMedian": 2435,
-   "gasP99": 2459,
-   "gasMax": 28005,
-   "gasTypical": 2416,
-   "bytes": 4555
+   "gasMedian": 2469,
+   "gasP99": 2493,
+   "gasMax": 28073,
+   "gasTypical": 2450,
+   "bytes": 4569
   },
   {
    "lib": "blockulator",
@@ -1972,11 +1972,11 @@
    "hist": {
     "0": 3998
    },
-   "gasMedian": 2190,
-   "gasP99": 2299,
-   "gasMax": 2344,
-   "gasTypical": 2160,
-   "bytes": 4478
+   "gasMedian": 2224,
+   "gasP99": 2333,
+   "gasMax": 2378,
+   "gasTypical": 2194,
+   "bytes": 4492
   },
   {
    "lib": "prb",
@@ -2080,11 +2080,11 @@
    "hist": {
     "0": 3998
    },
-   "gasMedian": 2191,
-   "gasP99": 2300,
-   "gasMax": 2336,
-   "gasTypical": 2161,
-   "bytes": 4479
+   "gasMedian": 2225,
+   "gasP99": 2334,
+   "gasMax": 2370,
+   "gasTypical": 2195,
+   "bytes": 4493
   },
   {
    "lib": "blockulator",
@@ -2109,11 +2109,11 @@
    "hist": {
     "0": 3998
    },
-   "gasMedian": 2398,
-   "gasP99": 2572,
-   "gasMax": 2606,
-   "gasTypical": 2368,
-   "bytes": 4561
+   "gasMedian": 2432,
+   "gasP99": 2606,
+   "gasMax": 2640,
+   "gasTypical": 2402,
+   "bytes": 4575
   },
   {
    "lib": "prb",
@@ -2217,11 +2217,11 @@
    "hist": {
     "0": 3998
    },
-   "gasMedian": 2399,
-   "gasP99": 2573,
-   "gasMax": 2607,
-   "gasTypical": 2369,
-   "bytes": 4562
+   "gasMedian": 2433,
+   "gasP99": 2607,
+   "gasMax": 2641,
+   "gasTypical": 2403,
+   "bytes": 4576
   },
   {
    "lib": "blockulator",
@@ -2246,11 +2246,11 @@
    "hist": {
     "0": 3461
    },
-   "gasMedian": 4750,
-   "gasP99": 53846,
-   "gasMax": 54194,
-   "gasTypical": 4762,
-   "bytes": 11085
+   "gasMedian": 4784,
+   "gasP99": 53767,
+   "gasMax": 53863,
+   "gasTypical": 4796,
+   "bytes": 11642
   },
   {
    "lib": "solady",
@@ -2441,11 +2441,11 @@
    "hist": {
     "0": 3461
    },
-   "gasMedian": 4751,
-   "gasP99": 53847,
-   "gasMax": 54195,
-   "gasTypical": 4763,
-   "bytes": 11086
+   "gasMedian": 4785,
+   "gasP99": 53768,
+   "gasMax": 53864,
+   "gasTypical": 4797,
+   "bytes": 11643
   },
   {
    "lib": "blockulator",
@@ -2470,11 +2470,11 @@
    "hist": {
     "0": 3999
    },
-   "gasMedian": 12118,
+   "gasMedian": 12151,
    "gasP99": 34382,
-   "gasMax": 43032,
-   "gasTypical": 12097,
-   "bytes": 12537
+   "gasMax": 43099,
+   "gasTypical": 12130,
+   "bytes": 12551
   },
   {
    "lib": "solady",
@@ -2539,11 +2539,11 @@
    "hist": {
     "0": 3999
    },
-   "gasMedian": 12117,
+   "gasMedian": 12150,
    "gasP99": 34381,
-   "gasMax": 43031,
-   "gasTypical": 12096,
-   "bytes": 12536
+   "gasMax": 43098,
+   "gasTypical": 12129,
+   "bytes": 12550
   },
   {
    "lib": "blockulator",
@@ -2568,11 +2568,11 @@
    "hist": {
     "0": 3999
    },
-   "gasMedian": 12118,
+   "gasMedian": 12151,
    "gasP99": 34382,
-   "gasMax": 43032,
-   "gasTypical": 12097,
-   "bytes": 12537
+   "gasMax": 43099,
+   "gasTypical": 12130,
+   "bytes": 12551
   }
  ]
 }

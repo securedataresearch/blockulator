@@ -1,8 +1,8 @@
 {
- "generated": "2026-10-23",
+ "generated": "2026-10-28",
  "description": "Gas per op across an input ladder. First four forms are FP127; the first two and the third include the external call. FP127Lib and the competitors are the internal library call alone, timed inside the harness's entry point net of its dispatch. null = no measurement on that input; reverts counts, per form, the inputs where the form offers the op but reverted or the input is outside its domain or format; a form with neither gas nor reverts does not offer the op (the Huff and FP127Caller columns record any failure as not offered). calls says what each competitor cell calls. summary holds min/median/max per form, null where there is no measurement. typical (where present) is the same over random inputs that take no shortcut.",
  "versions": {
-  "fp127": "fc19340",
+  "fp127": "7356be2",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -10,6 +10,8 @@
   "balancer": "balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored)",
   "aave": "aave-v3-origin@8305565ae342 (MathUtils, transcribed)",
   "morpho": "morpho-blue@8e26ca6a8dbc (MathLib, transcribed)",
+  "fraxlend": "fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed)",
+  "euler": "evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed)",
   "maker": "dss pot.sol rpow via solady v0.1.26",
   "solmate": "solmate@89365b8 (no tag: v6 predates SignedWadMath)",
   "openzeppelin": "openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored)",
@@ -1844,11 +1846,11 @@
      null
     ],
     "yul": [
-     2613,
-     4695,
-     9509,
-     3483,
-     4439,
+     2724,
+     3611,
+     3620,
+     8055,
+     3655,
      null
     ],
     "caller": [
@@ -1860,11 +1862,11 @@
      null
     ],
     "lib": [
-     2127,
-     4311,
-     9439,
-     3061,
-     4077,
+     2200,
+     3154,
+     3154,
+     8406,
+     3345,
      null
     ],
     "abdk": [
@@ -1951,15 +1953,15 @@
    "summary": {
     "huff": null,
     "yul": {
-     "min": 2613,
-     "median": 4439,
-     "max": 9509
+     "min": 2724,
+     "median": 3620,
+     "max": 8055
     },
     "caller": null,
     "lib": {
-     "min": 2127,
-     "median": 4077,
-     "max": 9439
+     "min": 2200,
+     "median": 3154,
+     "max": 8406
     },
     "abdk": null,
     "solady": null,
@@ -1999,14 +2001,14 @@
       null
      ],
      "yul": [
-      4560,
-      3824,
-      7397,
-      3156,
-      8529,
-      8399,
-      3457,
-      3473
+      4090,
+      4107,
+      4123,
+      3267,
+      4156,
+      4173,
+      3568,
+      3811
      ],
      "caller": [
       null,
@@ -2019,14 +2021,14 @@
       null
      ],
      "lib": [
-      3637,
-      2827,
-      6605,
-      2085,
-      7751,
-      7617,
-      2355,
-      2355
+      3080,
+      3080,
+      3080,
+      2158,
+      3080,
+      3080,
+      2428,
+      2428
      ],
      "abdk": [
       null,
@@ -2132,15 +2134,15 @@
     "summary": {
      "huff": null,
      "yul": {
-      "min": 3156,
-      "median": 4192,
-      "max": 8529
+      "min": 3267,
+      "median": 4098,
+      "max": 4173
      },
      "caller": null,
      "lib": {
-      "min": 2085,
-      "median": 3232,
-      "max": 7751
+      "min": 2158,
+      "median": 3080,
+      "max": 3080
      },
      "abdk": null,
      "solady": null,
@@ -3211,8 +3213,8 @@
      9072,
      12475,
      20006,
-     18342,
-     11189
+     7544,
+     7538
     ],
     "caller": [
      null,
@@ -3226,11 +3228,11 @@
     "lib": [
      4300,
      7367,
-     9121,
-     12657,
+     9119,
+     12658,
      20460,
-     18767,
-     11351
+     7588,
+     7588
     ],
     "abdk": [
      null,
@@ -3327,13 +3329,13 @@
     "huff": null,
     "yul": {
      "min": 4382,
-     "median": 11189,
+     "median": 7544,
      "max": 20006
     },
     "caller": null,
     "lib": {
      "min": 4300,
-     "median": 11351,
+     "median": 7588,
      "max": 20460
     },
     "abdk": null,
@@ -3370,13 +3372,13 @@
       null
      ],
      "yul": [
-      14684,
+      7811,
       7224,
-      7495,
+      7354,
       11901,
       11471,
-      21585,
-      7513,
+      7820,
+      7656,
       5808
      ],
      "caller": [
@@ -3390,12 +3392,12 @@
       null
      ],
      "lib": [
-      14676,
-      6930,
+      7588,
+      6929,
       7083,
-      11767,
-      11324,
-      21866,
+      11765,
+      11325,
+      7602,
       7224,
       5480
      ],
@@ -3504,14 +3506,14 @@
      "huff": null,
      "yul": {
       "min": 5808,
-      "median": 9492,
-      "max": 21585
+      "median": 7733,
+      "max": 11901
      },
      "caller": null,
      "lib": {
       "min": 5480,
-      "median": 9274,
-      "max": 21866
+      "median": 7406,
+      "max": 11765
      },
      "abdk": null,
      "solady": null,
@@ -3547,13 +3549,13 @@
      null
     ],
     "yul": [
-     4407,
-     7393,
+     4414,
+     7399,
      9098,
      12501,
-     20039,
-     18333,
-     11180
+     20031,
+     7535,
+     7529
     ],
     "caller": [
      null,
@@ -3567,11 +3569,11 @@
     "lib": [
      4309,
      7376,
-     9130,
-     12666,
+     9128,
+     12667,
      20469,
-     18752,
-     11336
+     7573,
+     7573
     ],
     "abdk": [
      null,
@@ -3667,14 +3669,14 @@
    "summary": {
     "huff": null,
     "yul": {
-     "min": 4407,
-     "median": 11180,
-     "max": 20039
+     "min": 4414,
+     "median": 7535,
+     "max": 20031
     },
     "caller": null,
     "lib": {
      "min": 4309,
-     "median": 11336,
+     "median": 7573,
      "max": 20469
     },
     "abdk": null,
@@ -3713,12 +3715,12 @@
      "yul": [
       6386,
       8092,
-      6956,
+      6957,
       7124,
       7551,
       8543,
       5824,
-      15215
+      7828
      ],
      "caller": [
       null,
@@ -3733,12 +3735,12 @@
      "lib": [
       6073,
       7816,
-      6651,
-      6810,
+      6650,
+      6809,
       7241,
-      8258,
+      8259,
       5485,
-      15241
+      7595
      ],
      "abdk": [
       null,
@@ -3846,13 +3848,13 @@
      "yul": {
       "min": 5824,
       "median": 7337,
-      "max": 15215
+      "max": 8543
      },
      "caller": null,
      "lib": {
       "min": 5485,
       "median": 7025,
-      "max": 15241
+      "max": 8259
      },
      "abdk": null,
      "solady": null,
@@ -3942,8 +3944,8 @@
      2816
     ],
     "quad": [
-     6031,
-     5961,
+     6043,
+     5973,
      5864,
      5850,
      5640,
@@ -4040,7 +4042,7 @@
     "quad": {
      "min": 5640,
      "median": 5850,
-     "max": 6031
+     "max": 6043
     },
     "balancer": {
      "min": 1020,
@@ -4155,8 +4157,8 @@
      "quad": [
       5948,
       5794,
-      6045,
-      5933,
+      6057,
+      5945,
       5696,
       5752,
       5822,
@@ -4258,7 +4260,7 @@
      "quad": {
       "min": 5696,
       "median": 5808,
-      "max": 6045
+      "max": 6057
      },
      "balancer": {
       "min": 978,
@@ -4908,11 +4910,11 @@
      "quad": [
       5038,
       5066,
-      5303,
+      5315,
       4926,
-      5275,
+      5287,
       4982,
-      5261,
+      5273,
       5080
      ],
      "balancer": [
@@ -5007,7 +5009,7 @@
      "quad": {
       "min": 4926,
       "median": 5073,
-      "max": 5303
+      "max": 5315
      },
      "balancer": null,
      "solmate": null,
@@ -5381,19 +5383,19 @@
      2093,
      2116,
      2206,
-     2317,
-     2540,
+     2318,
+     2539,
      2761,
      2829
     ],
     "yul": [
-     802,
-     806,
-     1065,
-     1388,
-     2032,
-     2676,
-     2871
+     903,
+     907,
+     922,
+     927,
+     930,
+     961,
+     1003
     ],
     "caller": [
      null,
@@ -5405,13 +5407,13 @@
      null
     ],
     "lib": [
-     190,
-     190,
-     406,
-     676,
-     1216,
-     1756,
-     1918
+     422,
+     422,
+     400,
+     389,
+     389,
+     410,
+     400
     ],
     "abdk": [
      null,
@@ -5507,19 +5509,19 @@
    "summary": {
     "huff": {
      "min": 2093,
-     "median": 2317,
+     "median": 2318,
      "max": 2829
     },
     "yul": {
-     "min": 802,
-     "median": 1388,
-     "max": 2871
+     "min": 903,
+     "median": 927,
+     "max": 1003
     },
     "caller": null,
     "lib": {
-     "min": 190,
-     "median": 676,
-     "max": 1918
+     "min": 389,
+     "median": 400,
+     "max": 422
     },
     "abdk": null,
     "solady": {
@@ -6760,20 +6762,20 @@
     "gas": {
      "huff": [
       20773,
-      20776,
+      20775,
       2047586767,
       null,
       60686,
-      21302,
+      21303,
       21150,
       null
      ],
      "yul": [
       6761,
-      6586,
-      8107,
+      6739,
+      7952,
       7948,
-      7872,
+      8032,
       7894,
       8096,
       8017
@@ -6906,9 +6908,9 @@
       "max": 2047586767
      },
      "yul": {
-      "min": 6586,
-      "median": 7921,
-      "max": 8107
+      "min": 6739,
+      "median": 7950,
+      "max": 8096
      },
      "caller": null,
      "lib": {
@@ -7121,11 +7123,11 @@
       7893,
       7822,
       7900,
-      7904,
+      8077,
       7898,
       8079,
       7916,
-      7938
+      8119
      ],
      "caller": [
       null,
@@ -7252,8 +7254,8 @@
      "huff": null,
      "yul": {
       "min": 7822,
-      "median": 7902,
-      "max": 8079
+      "median": 7908,
+      "max": 8119
      },
      "caller": null,
      "lib": {
@@ -10211,11 +10213,11 @@
      null
     ],
     "yul": [
-     11317,
-     17155,
+     7666,
+     7664,
      18319,
-     8251,
-     695,
+     8241,
+     696,
      8253,
      18333
     ],
@@ -10229,12 +10231,12 @@
      null
     ],
     "lib": [
-     11512,
-     17606,
+     7760,
+     7769,
      18755,
-     8287,
+     8286,
      112,
-     8309,
+     8308,
      18777
     ],
     "abdk": [
@@ -10331,14 +10333,14 @@
    "summary": {
     "huff": null,
     "yul": {
-     "min": 695,
-     "median": 11317,
+     "min": 696,
+     "median": 8241,
      "max": 18333
     },
     "caller": null,
     "lib": {
      "min": 112,
-     "median": 11512,
+     "median": 8286,
      "max": 18777
     },
     "abdk": null,
@@ -10377,7 +10379,7 @@
      "yul": [
       1063,
       14917,
-      5390,
+      5538,
       6101,
       6955,
       6825,
@@ -10396,10 +10398,10 @@
      ],
      "lib": [
       245,
-      14925,
+      14923,
       5084,
       5819,
-      6691,
+      6690,
       6566,
       5988,
       5400
@@ -10516,7 +10518,7 @@
      "lib": {
       "min": 245,
       "median": 5903,
-      "max": 14925
+      "max": 14923
      },
      "abdk": null,
      "solady": null,
@@ -10550,7 +10552,7 @@
      9370
     ],
     "yul": [
-     8034,
+     8073,
      3689,
      3141,
      3421,
@@ -10570,7 +10572,7 @@
      3244,
      2812,
      3245,
-     1826,
+     1827,
      502
     ],
     "abdk": [
@@ -10663,7 +10665,7 @@
     "yul": {
      "min": 1117,
      "median": 3281,
-     "max": 8034
+     "max": 8073
     },
     "caller": null,
     "lib": {
@@ -10735,7 +10737,7 @@
      "yul": [
       4256,
       4276,
-      4484,
+      4290,
       4311,
       4285,
       4310,
@@ -10754,13 +10756,13 @@
      ],
      "lib": [
       3327,
-      3299,
-      3307,
-      3342,
+      3300,
+      3305,
+      3341,
       3220,
-      3212,
-      3352,
-      3352
+      3224,
+      3351,
+      3351
      ],
      "abdk": [
       null,
@@ -10793,14 +10795,14 @@
       9947
      ],
      "quad": [
-      23618,
-      23453,
-      24125,
-      23576,
+      23630,
+      23465,
+      24137,
+      23588,
       23566,
       23384,
-      23649,
-      23663
+      23661,
+      23675
      ],
      "balancer": [
       null,
@@ -10871,14 +10873,14 @@
      },
      "yul": {
       "min": 4256,
-      "median": 4310,
-      "max": 4484
+      "median": 4300,
+      "max": 4377
      },
      "caller": null,
      "lib": {
-      "min": 3212,
-      "median": 3317,
-      "max": 3352
+      "min": 3220,
+      "median": 3316,
+      "max": 3351
      },
      "abdk": null,
      "solady": {
@@ -10893,8 +10895,8 @@
      },
      "quad": {
       "min": 23384,
-      "median": 23597,
-      "max": 24125
+      "median": 23609,
+      "max": 24137
      },
      "balancer": {
       "min": 2185,
@@ -11125,7 +11127,7 @@
       7378,
       5240,
       7256,
-      7349
+      7125
      ],
      "caller": [
       null,

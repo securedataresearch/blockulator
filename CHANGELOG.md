@@ -6,6 +6,26 @@ keeps its own version in its CREATE2 salt, because the salt names the address;
 
 ## Unreleased
 
+Blockulator 3.0's bytecode is frozen at this entry. Every object changed, so
+every object takes a new salt; FP127 v7, deployed on Sepolia on 2026-10-27,
+is superseded before mainnet. The CREATE2 addresses (the same on every chain):
+
+| object | salt | runtime bytes | address |
+|---|---|---:|---|
+| FP127 | `FP127 v8` | 23,797 | `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B` |
+| FP19 | `FP19 v6` | 17,221 | `0x94d9d43D6202827429a8058959eeCf6d232b8729` |
+| FP19E | `FP19E v6` | 23,621 | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` |
+| FP19H | `FP19H v6` | 13,020 | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` |
+| FP19N | `FP19N v6` | 17,962 | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` |
+| FP19S | `FP19S v6` | 11,338 | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` |
+
+The FP19 salts drop the old name (2.2's were `FP256 v5`, `FP256E v5`, …,
+kept as bytes because they fix 2.2's addresses). The ladder's adapters name
+these addresses, so the runners take `FP127 ladder v13`. The full release
+gate on this tree: FP19 76 sweep rows misrounded 0, FP127 27 rows nearest
+everywhere, BlockulatorWad 160,000 results wrong 0; 292 tests; every object
+under 24,576 bytes (FP127 tightest, 779 free).
+
 FP127's exp kernel and division, same words (FP127 takes a new salt at the
 next deploy):
 
