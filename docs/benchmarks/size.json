@@ -24,8 +24,8 @@
      },
      "median": 457,
      "max": {
-      "op": "compound",
-      "bytes": 10996
+      "op": "atanh",
+      "bytes": 11158
      }
     },
     "viaIr": {
@@ -35,14 +35,14 @@
      },
      "median": 321,
      "max": {
-      "op": "compound",
-      "bytes": 10326
+      "op": "atanh",
+      "bytes": 12219
      }
     }
    },
    "sum": {
-    "legacy": 127384,
-    "viaIr": 117196
+    "legacy": 140095,
+    "viaIr": 131506
    },
    "ops": {
     "fromFixed18": {
@@ -230,20 +230,20 @@
      "viaIr": 4651
     },
     "sinh": {
-     "legacy": 4898,
-     "viaIr": 4400
+     "legacy": 6392,
+     "viaIr": 5709
     },
     "cosh": {
-     "legacy": 4888,
-     "viaIr": 4394
+     "legacy": 6382,
+     "viaIr": 5694
     },
     "tanh": {
-     "legacy": 5183,
-     "viaIr": 4769
+     "legacy": 6715,
+     "viaIr": 6962
     },
     "atanh": {
-     "legacy": 2967,
-     "viaIr": 2711
+     "legacy": 11158,
+     "viaIr": 12219
     },
     "erf": {
      "legacy": 5456,
