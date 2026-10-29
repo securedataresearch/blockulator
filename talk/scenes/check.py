@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import importlib
 import sys
-from decimal import ROUND_FLOOR, Decimal, localcontext
+from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal, localcontext
 from math import log10
 from pathlib import Path
 
@@ -30,6 +30,13 @@ def expect_s02_exp40(mod) -> dict:
     lib = vocab.libs()
     int_len = len(p["truth"].partition(".")[0])
     word_digits = int_len + mod.WORD_DECIMALS
+    # the first row, e^40 to 18 decimals, by integer arithmetic: round half-up at the 18th
+    ti, _, tf = p["truth"].partition(".")
+    assert len(tf) > mod.WORD_DECIMALS, tf
+    q = 10 ** (len(tf) - mod.WORD_DECIMALS)
+    scaled = (int(ti + tf) * 2 + q) // (2 * q)
+    exact_row = f"{scaled // 10**mod.WORD_DECIMALS}.{scaled % 10**mod.WORD_DECIMALS:0{mod.WORD_DECIMALS}d}"
+    assert exact_row == vocab.correctly_rounded_18(p["truth"]), exact_row
     rows = []
     for lid in mod.LIBS:
         v = p["cells"][lid]["value"]
@@ -55,6 +62,19 @@ def expect_s02_exp40(mod) -> dict:
         assert fw is not None and fw - (1 if fw > int_len else 0) == rows[-1]["matching"], (lid, fw, rows[-1]["matching"])
         # an 18-decimal value cannot match more than 18 decimals
         assert len(v.partition(".")[2]) == mod.WORD_DECIMALS and rows[-1]["decimals"] <= mod.WORD_DECIMALS, (lid, v)
+        # the first wrong decimal's position by the other route: the decimal after the last right one,
+        # or 0 (before the point) when the integer parts differ
+        wd = rows[-1]["decimals"] + 1 if v.partition(".")[0] == p["truth"].partition(".")[0] else 0
+        rows[-1]["wrong_decimal"] = wd
+        rows[-1]["right_label"] = (
+            f"{rows[-1]['decimals']} right · wrong at the {mod.ordinal(wd)} decimal" if wd else f"{rows[-1]['decimals']} right · wrong before the point"
+        )
+    # the story the slide tells, checked against the cells: 3rd, 4th, and one wrong before the point
+    by_id = {r["id"]: r for r in rows}
+    assert by_id["solady"]["wrong_decimal"] == 3 and by_id["solady"]["right_label"] == "2 right · wrong at the 3rd decimal", by_id["solady"]
+    assert by_id["balancer"]["wrong_decimal"] == 4 and by_id["balancer"]["right_label"] == "3 right · wrong at the 4th decimal", by_id["balancer"]
+    assert by_id["prb"]["wrong_decimal"] == 0 and by_id["prb"]["decimals"] == 0 and by_id["prb"]["right_label"] == "0 right · wrong before the point", by_id["prb"]
+    assert mod.ordinal(1) == "1st" and mod.ordinal(2) == "2nd" and mod.ordinal(11) == "11th" and mod.ordinal(13) == "13th" and mod.ordinal(21) == "21st" and mod.ordinal(22) == "22nd"
     ours = []
     with localcontext() as ctx:
         ctx.prec = 60
@@ -69,13 +89,26 @@ def expect_s02_exp40(mod) -> dict:
             # the scene's count (a floor of a floor) never exceeds it
             exact = int((-(abs(Decimal(c["relErr"])) * truth).log10()).to_integral_value(rounding=ROUND_FLOOR))
             assert dec <= exact <= dec + 1, (lid, dec, exact)
-            ours.append({"id": lid, "label": lib[lid]["label"], "value": v, "matching": m, "digits": int(c["digits"]), "decimals": dec, "beyond": dec - mod.WORD_DECIMALS})
+            measure = f"the word holds {dec} decimals" if lid == "fp127" else f"the word holds {int(c['digits'])} digits"
+            # the word to 18 decimals by integer arithmetic: floor(v · 10^18 + 1/2) (half-up), and it is the closest 18-decimal value
+            vi, _, vf = v.partition(".")
+            scaled = (int(vi + vf) * 2 * 10 ** (mod.WORD_DECIMALS - len(vf)) + 10 ** mod.WORD_DECIMALS) // (2 * 10 ** mod.WORD_DECIMALS) if len(vf) <= mod.WORD_DECIMALS else (int(vi + vf) * 2 + 10 ** (len(vf) - mod.WORD_DECIMALS)) // (2 * 10 ** (len(vf) - mod.WORD_DECIMALS))
+            word18 = f"{scaled // 10**mod.WORD_DECIMALS}.{scaled % 10**mod.WORD_DECIMALS:0{mod.WORD_DECIMALS}d}"
+            assert word18 == exact_row, (lid, word18, exact_row)
+            ours.append({"id": lid, "label": lib[lid]["label"], "value": v, "word18": word18, "matching": m, "digits": int(c["digits"]), "decimals": dec, "beyond": dec - mod.WORD_DECIMALS, "right_label": f"{mod.WORD_DECIMALS} right of {mod.WORD_DECIMALS} · {measure}"})
+    # no row says "every decimal": the reveal rows carry the plain count like the others
+    assert [o["right_label"] for o in ours] == ["18 right of 18 · the word holds 72 digits", "18 right of 18 · the word holds 39 decimals"], [o["right_label"] for o in ours]
+    # no number on the slide is cut short: every row is exactly 18 decimals, no ellipsis
+    for s in [exact_row] + [r["value"] for r in rows] + [o["word18"] for o in ours]:
+        assert "…" not in s and len(s.partition(".")[2]) == mod.WORD_DECIMALS, s
+    assert "…" not in mod.EXACT_LABEL and "…" not in mod.EXACT_RIGHT
     return {
         "truth": p["truth"],
         "word_digits": word_digits,
+        "exact_row": exact_row,
         "rows": rows,
         "ours": ours,
-        "correctly_rounded": vocab.correctly_rounded_18(p["truth"]),
+        "correctly_rounded": exact_row,
     }
 
 
@@ -95,15 +128,21 @@ def expect_s04_grid(mod) -> dict:
         fb = float(t * scale - lob)
         ub = Decimal(1) / scale
 
-        def expansion(w: int) -> str:
-            return str((Decimal(w) * ub).quantize(Decimal(1).scaleb(-mod.EXPANSION_DECIMALS), rounding=ROUND_FLOOR))
+        def reading(w: int, places: int) -> str:  # the word's value to `places` decimals, nearest
+            return str((Decimal(w) * ub).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP))
 
         nearest = hib if fb >= 0.5 else lob
         tick = f"{float(ub):.1e}"
-        neighbours_128 = [expansion(lob), expansion(hib)]
-        nearest_128 = expansion(nearest)
+        neighbours_128 = [reading(lob, mod.EXPANSION_DECIMALS), reading(hib, mod.EXPANSION_DECIMALS)]
+        nearest_128 = reading(nearest, mod.EXPANSION_DECIMALS)
+        word18 = reading(nearest, mod.WORD_DECIMALS)
+        # the readings go exactly as far as the truth does, and FP127's word to 18 decimals is the closest 18-decimal value
+        assert mod.EXPANSION_DECIMALS == len(truth.partition(".")[2]) and word18 == vocab.correctly_rounded_18(truth), (mod.EXPANSION_DECIMALS, word18)
+        # the two words differ by one in the last place of their 32-hex-digit fractions, shown complete
+        hexes = [f"0x{w % (1 << mod.FRACTION_BITS):032x}" for w in (lob, hib)]
+        assert all(len(h) == 2 + mod.HEX_DIGITS and "…" not in h for h in hexes) and int(hexes[1], 16) - int(hexes[0], 16) == 1, hexes
     bits = list(range(mod.BIT_START, mod.FRACTION_BITS + 1, mod.BIT_STEP))
-    assert bits[-1] == mod.FRACTION_BITS
+    assert bits[-1] == mod.FRACTION_BITS and all(b % 4 == 0 for b in bits)  # every binary level's fraction is whole hex digits
     return {
         "truth": truth,
         "levels_decimal": mod.WORD_DECIMALS,
@@ -111,10 +150,12 @@ def expect_s04_grid(mod) -> dict:
         "fraction_18": f18,
         "correctly_rounded": vocab.correctly_rounded_18(truth),
         "bits": bits,
-        "neighbours_bits": [format(lob, "b")[-mod.SHOW_BITS :], format(hib, "b")[-mod.SHOW_BITS :]],
+        "neighbours_hex": hexes,
         "neighbours_128": neighbours_128,
         "fraction_128": fb,
+        "nearest_hex": hexes[1] if nearest == hib else hexes[0],
         "nearest_128": nearest_128,
+        "word18": word18,
         "tick_128": tick,
         "fp127": p["cells"]["fp127"]["value"],
     }
