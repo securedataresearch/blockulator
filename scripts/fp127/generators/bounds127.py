@@ -33,6 +33,13 @@ the script exits 1; scripts/gates.py and CI run it beside FP19's bounds.py.
   cbrt, word steps           cbrtw's Y                   exactly floor(cbrt z) (err 1: no error)
   cbrt, Newton step          y, one added (2^-128)       in [floor R, floor R + 3], R the root
                                                          (|y - (R + 1)| < 2)
+  erf, erfc, erfs            erfs (2^-192)               ERR_S = 3 2^44 (2^45.58): derived in
+                                                         erf_model.py, 2^45.29 (exp2frac's 2^-146.7
+                                                         times erf, the floors)
+  erf, erfc, erfct           erfct (2^-192)              ERR_T = 2^20: derived 2^19.41 (e^(-x^2)'s
+                                                         error times erfc(4), the certified fit)
+  normCdf, erfs and erfct    erfc(y)/2 or 1 - it         ERR_S, ERR_T (y = x/sqrt 2 at 2^-192
+                             (2^-192)                    and the halving: err/2 + 3.2 and + 1)
 
 Later phases add the regions of the tests they introduce (rbad127's err per
 op). The models' agreement with the Yul is checked by the sweep (make sweep)
@@ -44,10 +51,11 @@ import random
 import sys
 from pathlib import Path
 
-from mpmath import mp, mpf, log, power, cbrt as mcbrt
+from mpmath import mp, mpf, log, power, cbrt as mcbrt, erf as merf, erfc as merfc, ncdf
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import precise_model as P  # noqa: E402
+import erf_model as EM  # noqa: E402
 
 mp.dps = 120
 ONE = P.ONE
@@ -262,6 +270,39 @@ def cbrt_(M: Meter, rng, n):
         M.add("cbrt, Newton step", 2, y, mcbrt(mpf(N)) + 1)
 
 
+# ---------------------------------------------------------------------------
+# erf, erfc, normCdf: the value round64 rounds, against ERR_S and ERR_T
+# ---------------------------------------------------------------------------
+
+INV_SQRT2_192 = 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d   # fp127_normCdf's mulg constant
+G192 = 1 << 192
+
+
+def erf_(M: Meter, rng, n):
+    C = EM.source_tail()
+    for i in range(n):
+        # erfs: |x| <= 4 at every scale, half of them uniform on (0, 4]
+        X = rand_pos(rng, 1, 129) if i % 2 else rng.randint(1, 4 * ONE)
+        X = min(X, 4 * ONE)
+        x = mpf(X) / ONE
+        v, _ = EM.erf_series(X << 64)
+        M.add("erf, erfc, erfs", EM.ERR_S, v, merf(x) * G192)
+        # erfct: 4 < x < 9.375
+        X = rng.randint(4 * ONE + 1, 0x960000000000000000000000000000000 - 1)
+        x = mpf(X) / ONE
+        M.add("erf, erfc, erfct", EM.ERR_T, EM.erfc_tail(X << 64, C), merfc(x) * G192)
+        # normCdf: y <= 4 (|x| <= 5.66) by erfs, y > 4 (to |x| = 13.3125) by erfct
+        X = rand_pos(rng, 1, 130) if i % 2 else rng.randint(1, 0x5a827999fcef32422cbec4d9baa55f4f9)
+        yg = P.mulg(X << 64, INV_SQRT2_192)
+        if yg <= 4 * G192:
+            v = (G192 - EM.erf_series(yg)[0]) >> 1
+            M.add("normCdf, erfs", EM.ERR_S, v, ncdf(-mpf(X) / ONE) * G192)
+        X = rng.randint(0x5a827999fcef32422cbec4d9baa55f4fa, 0xd50000000000000000000000000000000 - 1)
+        yg = P.mulg(X << 64, INV_SQRT2_192)
+        if yg > 4 * G192:
+            M.add("normCdf, erfct", EM.ERR_T, EM.erfc_tail(yg, C) >> 1, ncdf(-mpf(X) / ONE) * G192)
+
+
 def run(n: int) -> bool:
     rng = random.Random(127)
     M = Meter()
@@ -270,6 +311,7 @@ def run(n: int) -> bool:
     compound(M, rng, n)
     powu(M, rng, n)
     cbrt_(M, rng, n)
+    erf_(M, rng, n)
     bad = M.report()
     print(f"{sum(1 for r in M.rows.values() if r[3] >= 1)} regions over their bound")
     return bad

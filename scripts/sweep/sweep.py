@@ -122,7 +122,7 @@ OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "er
 # (every test forced: their last stage) and, those with a middle stage,
 # FP127LibMid (the fast path's test forced). The phases that give the other
 # ops a test and a second stage add them here.
-WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound"]
+WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound", "erf", "erfc", "normCdf"]
 MID127 = ["pow", "compound"]
 WIDE = {"fp19": WIDE19, "fp127": WIDE127}
 MID = {"fp19": MID19, "fp127": MID127}
