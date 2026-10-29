@@ -43,6 +43,7 @@ from manim import (
     Line,
     MarkupText,
     NumberLine,
+    Rectangle,
     RoundedRectangle,
     Scene,
     Succession,
@@ -249,15 +250,16 @@ def snap(dot: Dot, line: GridLine, to_tick: float, colour: str, run_time: float 
     )
 
 
-def measure(line: GridLine, a: float, b: float, label: str, scale: float = 1.0, drop: float = 0.45, colour: str = Palette.MUTED) -> VGroup:
+def measure(line: GridLine, a: float, b: float, label: str, scale: float = 1.0, drop: float = 0.45, colour: str = Palette.MUTED, use_markup: bool = False) -> VGroup:
     """A thin bracket |——| under the line from tick a to b with a label
-    beneath: the vocabulary's way of naming a distance on the grid."""
+    beneath: the vocabulary's way of naming a distance on the grid.
+    use_markup sets the label through markup() (a power in <sup>)."""
     y = DOWN * drop * scale
     cap = UP * 0.07 * scale
     pa, pb = line.n2p(a) + y, line.n2p(b) + y
     bar = Line(pa, pb, color=colour, stroke_width=1.5)
     caps = VGroup(Line(pa - cap, pa + cap, color=colour, stroke_width=1.5), Line(pb - cap, pb + cap, color=colour, stroke_width=1.5))
-    text = words(label, SIZE_BODY, colour).scale(scale).next_to(bar, DOWN, buff=0.1 * scale)
+    text = (markup if use_markup else words)(label, SIZE_BODY, colour).scale(scale).next_to(bar, DOWN, buff=0.1 * scale)
     return VGroup(bar, caps, text)
 
 
@@ -327,6 +329,74 @@ def error_bar(dot: Dot, half_width: float, colour: str, cap: float = 0.2, stroke
     bar = Line(pa, pb, color=colour, stroke_width=stroke_width)
     caps = VGroup(Line(pa - up, pa + up, color=colour, stroke_width=stroke_width), Line(pb - up, pb + up, color=colour, stroke_width=stroke_width))
     return VGroup(bar, caps)
+
+
+# ----------------------------------------------------------------- the word --
+class BitBar(VGroup):
+    """A word drawn bit by bit: n thin cells in a row (RULE until named),
+    partitioned by colouring spans of cells and bracketing them with a
+    label, as a word's fields are. .cells[i] is bit i from the left (the
+    most significant first, as a layout diagram reads); x_of(i) is the left
+    edge of cell i, x_of(n) the bar's right edge, so a bracket from a to b
+    covers cells a..b-1."""
+
+    def __init__(self, n: int = 256, width: float = 12.6, height: float = 0.3, colour: str = Palette.RULE, gap: float = 0.5 * 14.222 / 1920):
+        super().__init__()
+        self.n, self.gap = n, gap
+        self.cell_w = (width - (n - 1) * gap) / n
+        self.cells = VGroup(
+            *[
+                Rectangle(width=self.cell_w, height=height, color=colour, fill_color=colour, fill_opacity=1.0, stroke_width=0).move_to([-width / 2 + self.cell_w / 2 + i * (self.cell_w + gap), 0, 0])
+                for i in range(n)
+            ]
+        )
+        self.add(self.cells)
+
+    def x_of(self, i: int) -> float:
+        """The left edge of cell i; i == n is the right edge of the bar."""
+        if i >= self.n:
+            return self.cells[self.n - 1].get_right()[0]
+        return self.cells[i].get_left()[0]
+
+    def span(self, a: int, b: int, colour: str) -> VGroup:
+        """Cells a..b-1 as a field of the word, in its colour (set at once;
+        animate the cells of the returned group for a sweep)."""
+        g = self.cells[a:b]
+        g.set_color(colour)
+        return g
+
+    def bracket(self, a: int, b: int, label: str, colour: str = Palette.MUTED, size: float = SIZE_BODY, drop: float = 0.3, mono: bool = True, above: bool = False, buff: float = 0.1, align: int = 0) -> VGroup:
+        """A thin |——| bracket under (or above) cells a..b-1 with a label
+        beneath (or over) it: centred (align 0), its left at the bracket's
+        left (−1) or its right at the bracket's right (+1), so the labels of
+        two narrow fields side by side can face away from each other; in
+        every case kept inside the bar's extent so a one-cell field at the
+        edge still reads. Returns VGroup(bar, caps, text); .text names the
+        label."""
+        edge = self.cells[0].get_top()[1] + drop if above else self.cells[0].get_bottom()[1] - drop
+        pa, pb = np.array([self.x_of(a), edge, 0]), np.array([self.x_of(b), edge, 0])
+        cap = UP * 0.07
+        bar = Line(pa, pb, color=colour, stroke_width=1.5)
+        caps = VGroup(Line(pa - cap, pa + cap, color=colour, stroke_width=1.5), Line(pb - cap, pb + cap, color=colour, stroke_width=1.5))
+        text = (digits if mono else words)(label, size, colour).next_to(bar, UP if above else DOWN, buff=buff)
+        if align < 0:
+            text.shift(RIGHT * (pa[0] - text.get_left()[0]))
+        elif align > 0:
+            text.shift(RIGHT * (pb[0] - text.get_right()[0]))
+        lo, hi = self.x_of(0), self.x_of(self.n)
+        if text.get_left()[0] < lo:
+            text.shift(RIGHT * (lo - text.get_left()[0]))
+        if text.get_right()[0] > hi:
+            text.shift(LEFT * (text.get_right()[0] - hi))
+        g = VGroup(bar, caps, text)
+        g.text = text
+        return g
+
+
+def bit_bar(n: int = 256, width: float = 12.6, height: float = 0.3, colour: str = Palette.RULE) -> BitBar:
+    """n thin cells in a row, RULE, centred on the origin: a word to be
+    partitioned with span() and bracket()."""
+    return BitBar(n, width, height, colour)
 
 
 # --------------------------------------------------------------- the chart --

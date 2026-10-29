@@ -669,6 +669,76 @@ def expect_s12_reference(mod) -> dict:
     }
 
 
+def expect_s15_formats(mod) -> dict:
+    lib = vocab.libs()
+    # the fields by the other route: the word and the registry's layouts, summed
+    sign, integer, fraction = 1, 127, 128
+    exponent, stored = 19, 236
+    assert sign + integer + fraction == 256 == sign + exponent + stored
+    assert integer == mod.FP127_INTEGER_BITS and fraction == vocab.FP127_FRACTION_BITS and exponent == vocab.FP19_EXPONENT_BITS and stored == vocab.FP19_FRACTION_BITS
+    significand = stored + 1
+    with localcontext() as ctx:
+        ctx.prec = 80
+        log10_2 = Decimal(2).log10()
+        d127 = int((log10_2 * fraction).to_integral_value(rounding=ROUND_FLOOR))
+        d19 = int((log10_2 * significand).to_integral_value(rounding=ROUND_FLOOR))
+        assert d127 == 38 and d19 == 71, (d127, d19)  # K1 (38.53), K3 (71.34)
+        # FP127's range: 2^127 as a Decimal, its leading power of ten and its mantissa to one decimal
+        top = Decimal(2) ** 127
+        range_exp = top.adjusted()
+        mantissa = str(top.scaleb(-range_exp).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
+        assert range_exp == 38 and mantissa == "1.7", (range_exp, mantissa)  # K1: ±1.7014 × 10^38
+        # the grid's end, 2^-128, is a positive Decimal with 128 binary places; its power of ten is -39 (K2), not drawn
+        assert (Decimal(2) ** -128).adjusted() == -39
+        # FP19's extremes (K3): 2^-262142 and (2 - 2^-236) · 2^262144, as powers of ten
+        smallest = Decimal(2) ** -262142
+        largest = (2 - Decimal(2) ** -stored) * Decimal(2) ** 262144
+        min_exp, max_exp = smallest.adjusted(), largest.adjusted()
+        assert min_exp == -78913 and max_exp == 78913, (min_exp, max_exp)
+        # the ledger's mantissas, K3: 2.48 and 3.22
+        assert str(smallest.scaleb(-min_exp).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) == "2.48"
+        assert str(largest.scaleb(-max_exp).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) == "3.22"
+    assert mod.FP19_MIN_EXP == -262142 and mod.FP19_MAX_EXP == 262144
+
+    def power(e: int) -> str:
+        return f"10<sup>{'−' if e < 0 else ''}{abs(e):,}</sup>"
+
+    strings = {
+        "bits": "256 bits",
+        "fp127_fields": f"{sign} · {integer} · {fraction}",
+        "fp127_names": "sign · integer · fraction",
+        "fp127_digits": f"about {d127} digits of fraction",
+        "fp127_range": f"about ±{mantissa} × {power(range_exp)}",
+        "fp127_grid_end": f"the grid ends at 2<sup>−{fraction}</sup>",
+        "fp127_label": f"{lib['fp127']['label']} · fixed point",
+        "fp19_fields": f"{sign} · {exponent} · {stored}",
+        "fp19_names": f"sign · exponent · fraction ({stored} stored)",
+        "fp19_significand": f"significand {significand} bits with the hidden bit",
+        "fp19_digits": f"about {d19} digits at every magnitude",
+        "fp19_min": f"about {power(min_exp)}",
+        "fp19_max": f"about {power(max_exp)}",
+        "fp19_label": f"{lib['fp19']['label']} · floating point",
+    }
+    # the flags: "236 stored" and the 237-bit significand both on screen; never "237 stored" or "236-bit significand"
+    joined = " | ".join(strings.values())
+    assert "236 stored" in joined and "significand 237 bits" in joined and "237 stored" not in joined and "236-bit" not in joined, joined
+    # every digit count and range is prefixed "about"; the minus is U+2212; the slide says "laid out as", not "is"
+    for k in ("fp127_digits", "fp127_range", "fp19_digits", "fp19_min", "fp19_max"):
+        assert strings[k].startswith("about "), strings[k]
+    assert "-" not in strings["fp19_min"] and "−" in strings["fp19_min"] and "−" in strings["fp127_grid_end"]
+    assert mod.IEEE == "laid out as IEEE 754 binary256" and mod.LITERALS[mod.IEEE] == "E9" and " is " not in mod.IEEE
+    assert mod.CLOSE == "known range: fixed point · many orders of magnitude: floating point"  # essay §8, verbatim
+    assert mod.REVERT == "no NaN, no infinity: overflow reverts"  # K4
+    return {
+        "word_bits": 256,
+        "radix": 2,
+        "base": 10,
+        "fp127": {"label": lib["fp127"]["label"], "sign": sign, "integer": integer, "fraction": fraction, "digits": d127, "range_mantissa": mantissa, "range_exp": range_exp, "grid_end_exp": fraction},
+        "fp19": {"label": lib["fp19"]["label"], "sign": sign, "exponent": exponent, "fraction": stored, "significand": significand, "digits": d19, "min_exp": min_exp, "max_exp": max_exp},
+        "strings": strings,
+    }
+
+
 EXPECT = {
     "s02_exp40": expect_s02_exp40,
     "s04_grid": expect_s04_grid,
@@ -679,6 +749,7 @@ EXPECT = {
     "s10_live": expect_s10_live,
     "s16_ziv": expect_s16_ziv,
     "s12_reference": expect_s12_reference,
+    "s15_formats": expect_s15_formats,
 }
 
 
