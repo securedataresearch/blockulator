@@ -99,7 +99,8 @@ FAST_2, BOUND_2 = 2.58, 0.2  # the second: its bound straddles the boundary
 BOUNDS_WIDER = (0.1, 0.04)  # the wider stage's bounds, in ticks of the original grid: the first still crosses, the second clears
 COIN_R = 1.5  # the division's coin, scene units; MUL's follows by area
 CORNER_R = 0.34
-Y_TITLE = 3.35
+Y_CORNER = 3.2  # the coins once in the corner: their centre line
+X_CORNER = 5.9  # their right edge, clear of the right mark
 Y_STEPS = (2.25, 1.65)
 Y_VERDICT = -1.55
 Y_COUNTER = 1.05
@@ -167,7 +168,7 @@ class Ziv(DeckScene):
         n = numbers()
         self.section(0)
         self.wait(0.3)
-        title = words(TITLE, SIZE_BODY, Palette.TEXT).move_to([0, Y_TITLE, 0]).align_to([-6.4, 0, 0], LEFT)
+        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5), self.caption(CAPTION_PRICES))
 
         # the two prices, area for area: the speck, then the weight
@@ -194,7 +195,7 @@ class Ziv(DeckScene):
         c_big_lbl = words(DIVH_LABEL, 22, Palette.MUTED)
         row2 = VGroup(c_big, c_big_lbl).arrange(RIGHT, buff=0.22)
         row1 = VGroup(c_small, c_small_lbl).arrange(RIGHT, buff=0.22)
-        corner = VGroup(row1, row2).arrange(DOWN, buff=0.12, aligned_edge=RIGHT).move_to([0, Y_TITLE - 0.15, 0]).align_to([6.4, 0, 0], RIGHT)
+        corner = VGroup(row1, row2).arrange(DOWN, buff=0.12, aligned_edge=RIGHT).move_to([0, Y_CORNER, 0]).align_to([X_CORNER, 0, 0], RIGHT)
         c_small.align_to(c_big, RIGHT).shift(LEFT * (c_big.width - c_small.width) / 2)
         self.play(
             Transform(small, c_small),

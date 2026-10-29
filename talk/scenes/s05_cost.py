@@ -28,8 +28,8 @@ from vocab import SIZE_CAPTION, DeckScene, Palette, digits, incidents, typograph
 
 X_LEFT = -6.5
 X_RIGHT = 6.5
-Y_TOP = 3.4
-PITCH = 1.3  # row to row
+Y_TOP = 2.8  # the first row, under the marks (was 3.4)
+PITCH = 1.18  # row to row
 WRAP = 92  # characters per line of the rounding text
 HEAD = 22
 BODY = SIZE_CAPTION

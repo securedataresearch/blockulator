@@ -81,7 +81,6 @@ CLOSE = "one call to check · deployed today: Sepolia"
 
 X_LEFT = -6.5  # the safe area's edges (5% of 1920 x 1080)
 X_RIGHT = 6.5
-Y_TITLE = 3.3
 # the address: 42 mono characters are 16.7 units wide at SIZE_HERO, wider than the
 # frame; SIZE_ADDRESS is the largest size at which the whole address fits the safe area
 SIZE_ADDRESS = 37
@@ -205,8 +204,7 @@ class Reference(DeckScene):
         # 0 · the address, the hero: typed in on a glowing panel, the version under it
         self.section(0)
         self.wait(0.3)
-        title = words(TITLE, SIZE_BODY, Palette.TEXT)
-        title.move_to([X_LEFT + title.width / 2, Y_TITLE, 0])
+        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5))
         addr = digits(n["address"], SIZE_ADDRESS, Palette.CORRECT).move_to([0, Y_ADDRESS_HERO, 0])
         assert addr.width <= X_RIGHT - X_LEFT, addr.width  # the whole address, inside the safe area

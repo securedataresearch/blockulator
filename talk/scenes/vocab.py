@@ -40,6 +40,8 @@ from manim import (
     Dot,
     FadeIn,
     FadeOut,
+    Group,
+    ImageMobject,
     Line,
     MarkupText,
     NumberLine,
@@ -58,6 +60,7 @@ from manim.utils.rate_functions import ease_in_out_cubic, ease_out_cubic
 
 ROOT = Path(__file__).resolve().parents[2]
 FONT_DIR = ROOT / "talk" / "fonts"
+LOGO_DIR = ROOT / "talk" / "logos"
 
 
 # ---------------------------------------------------------------- palette --
@@ -148,12 +151,14 @@ def markup(s: str, size: float = 36, colour: str = Palette.TEXT, **kw) -> Markup
     return MarkupText(s, font=SANS, font_size=size, color=colour, **kw)
 
 
-def digits(s: str, size: float = 36, colour: str = Palette.TEXT, **kw) -> Text:
+def digits(s: str, size: float = 36, colour: str = Palette.TEXT, ligatures: bool = False, **kw) -> Text:
     """Text in JetBrains Mono, ligatures off so every glyph is one character
-    (the scenes index into digit strings)."""
+    (the scenes index into digit strings). ligatures=True leaves the font's
+    own on, for a string no scene indexes into whose glyphs the font fuses
+    (the "//" of a URL; manim rejects it with them off)."""
     setup_fonts()
     DRAWN.append(s)
-    return Text(s, font=MONO, font_size=size, color=colour, disable_ligatures=True, **kw)
+    return Text(s, font=MONO, font_size=size, color=colour, disable_ligatures=not ligatures, **kw)
 
 
 # ------------------------------------------------------------- the scene --
@@ -167,9 +172,17 @@ config.save_sections = True
 
 END_HOLD = 3.0  # the last section's hold: its last frame is the slide's poster
 
+# the chrome: the two marks at the top corners of every frame (talk/logos/README.md)
+LOGO_HEIGHT = 0.55  # scene units
+LOGO_OPACITY = 0.92
+LOGO_CORNER = (6.75, 3.6)  # the marks' outer corners: 0.36 in from the frame's sides, 0.4 (5%) from its top
+TITLE_GAP = 0.3  # the left mark to the slide's title
+
 
 class DeckScene(Scene):
-    """Dark background, the fonts registered, a caption slot bottom-left
+    """Dark background, the fonts registered, the two marks at the top
+    corners (self.chrome: never animated, never dimmed; scenes leave it
+    alone), a title slot beside the left mark, a caption slot bottom-left
     for the source of the numbers on screen, and the clicker's sections.
 
     A scene declares SECTIONS = ("price", "division", …) and calls
@@ -187,6 +200,25 @@ class DeckScene(Scene):
         self.camera.background_color = Palette.BG
         self._caption = None
         self.sections_called: list[str] = []
+        # the chrome goes in first, so every frame carries it; it is a Group of
+        # ImageMobjects, not a VMobject, so a scene's "dim everything" over
+        # VMobjects leaves it alone
+        x, y = LOGO_CORNER
+        self.logo_left = ImageMobject(str(LOGO_DIR / "blockulator.png")).scale_to_fit_height(LOGO_HEIGHT).set_opacity(LOGO_OPACITY)
+        self.logo_left.move_to([-x, y, 0], aligned_edge=UP + LEFT)
+        self.logo_right = ImageMobject(str(LOGO_DIR / "sdr.png")).scale_to_fit_height(LOGO_HEIGHT).set_opacity(LOGO_OPACITY)
+        self.logo_right.move_to([x, y, 0], aligned_edge=UP + RIGHT)
+        self.chrome = Group(self.logo_left, self.logo_right)
+        self.add(self.chrome)
+
+    def title(self, text: str, size: float = SIZE_BODY, colour: str = Palette.MUTED, use_markup: bool = False):
+        """The slide's title: words() (markup() with use_markup) to the right
+        of the left mark, TITLE_GAP away, centred on its height. Registers in
+        DRAWN as any words() does; the caller plays it in."""
+        t = (markup if use_markup else words)(text, size, colour)
+        t.next_to(self.logo_left, RIGHT, buff=TITLE_GAP)
+        t.set_y(self.logo_left.get_y())
+        return t
 
     def section(self, i: int, hold: float = 1.0) -> None:
         """Start SECTIONS[i]; i must be the next index. The previous section
@@ -564,6 +596,48 @@ def box(label: str, *content, colour: str = Palette.RULE, size: float = SIZE_BOD
     ).move_to(inner)
     g = VGroup(rect, inner)
     g.rect, g.label, g.content = rect, inner[0], VGroup(*content)
+    return g
+
+
+# ------------------------------------------------------------------ the qr --
+QR_BORDER = 4  # quiet zone, in modules (the standard's minimum)
+
+
+def qr_matrix(url: str) -> list[list[bool]]:
+    """The QR code of a URL as rows of booleans (True = a dark module),
+    the quiet zone included: error correction M, border QR_BORDER
+    modules, the smallest version that fits. check.py regenerates it to
+    compare with what a scene drew."""
+    import qrcode
+
+    q = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=QR_BORDER)
+    q.add_data(url)
+    q.make(fit=True)
+    return [[bool(c) for c in row] for row in q.get_matrix()]
+
+
+def qr(url: str, size: float, colour: str = Palette.TEXT, module_colour: str = Palette.BG, label_colour: str = Palette.MUTED, label_size: float = SIZE_CAPTION, label_buff: float = 0.2) -> VGroup:
+    """A QR code the deck can show: a white rounded panel (the quiet zone
+    is part of it) with the dark modules as one VGroup of squares, drawn,
+    not an image, so it stays crisp at any size; `size` is the panel's
+    side in scene units. The URL is drawn under it with digits() at
+    CAPTION (the font's ligatures left on: "//"), so check.py sees it (a
+    URL with a digit needs a LITERALS entry). The group's .panel, .modules, .label and .matrix name the
+    parts; the whole is centred on the origin."""
+    matrix = qr_matrix(url)
+    n = len(matrix)
+    cell = size / n
+    grow = cell * 0.02  # each square a hair over its cell, so no seam shows between neighbours
+    panel = RoundedRectangle(width=size, height=size, corner_radius=cell * 1.5, color=colour, fill_color=colour, fill_opacity=1.0, stroke_width=0)
+    modules = VGroup()
+    for i, row in enumerate(matrix):
+        for j, dark in enumerate(row):
+            if dark:
+                modules.add(Rectangle(width=cell + grow, height=cell + grow, color=module_colour, fill_color=module_colour, fill_opacity=1.0, stroke_width=0).move_to([-size / 2 + (j + 0.5) * cell, size / 2 - (i + 0.5) * cell, 0]))
+    label = digits(url, label_size, label_colour, ligatures=True).next_to(panel, DOWN, buff=label_buff)
+    g = VGroup(panel, modules, label)
+    g.panel, g.modules, g.label, g.matrix = panel, modules, label, matrix
+    g.move_to([0, 0, 0])
     return g
 
 

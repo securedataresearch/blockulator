@@ -69,7 +69,7 @@ GUIDE_DROP = 5.0  # digits below the 18-decimal line the slope guide is drawn
 BRACKET_X = {"fp19": 5.2, "fp127": 5.5}  # where each margin bracket stands
 CLUSTER_XY = (0.35, 1.1)  # the 18-decimal names: chart x in log10 N, scene y
 CLUSTER_WIDTH = 60  # characters per line of the 18-decimal names
-TITLE_Y, LEGEND_Y = 3.5, 3.1  # the top strip: the scenario, then who has no line
+LEGEND_Y = 2.88  # the top strip: the scenario (the title, beside the left mark), then who has no line
 CLOSE_XY = (6.9, -3.0)  # the closing lines, right-aligned, bottom right, under the x labels
 CLOSE_PITCH = 0.33
 Y_STEP = 20
@@ -199,7 +199,7 @@ class Ladder(DeckScene):
             lo[0] = hi[0] = BRACKET_X[lid]
             out["brackets"][lid] = measure_up(lo, hi, f"+{s['margin_digits'][lid]} digits", colour_of(lib[lid]), size=20)
         title = s["title"] + (f" · {SUBTITLES[s['id']]}" if s["id"] in SUBTITLES else "")
-        out["title"] = words(title, 21, Palette.BODY).move_to([0, TITLE_Y, 0]).align_to([-6.3, 0, 0], LEFT)
+        out["title"] = self.title(title, 21, Palette.BODY)
         out["legend"] = words(legend_text(lib, s["absent"]), 16, Palette.FAINT).move_to([0, LEGEND_Y, 0]).align_to([-6.3, 0, 0], LEFT)
         return out
 

@@ -146,8 +146,7 @@ class Resupply(DeckScene):
 
         # the formula, from the verified source, and the price the oracle returned
         y0 = 3.3
-        formula = markup(f"exchange rate  =  10<sup>{n['rate_exp']}</sup> ÷ price", SANS, Palette.TEXT)
-        formula.move_to([-6.3 + formula.width / 2, y0, 0])
+        formula = self.title(f"exchange rate  =  10<sup>{n['rate_exp']}</sup> ÷ price", SANS, Palette.TEXT, use_markup=True)
         src = digits(n["rate_line"], SMALL, Palette.FAINT)
         src.move_to([-6.3 + src.width / 2, y0 - 0.45, 0])
         self.play(FadeIn(formula, shift=RIGHT * 0.1, run_time=0.6))

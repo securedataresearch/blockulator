@@ -88,7 +88,6 @@ LIBS = ("fp19", "fp127")
 
 X_LEFT = -6.4
 X_RIGHT = 6.4
-Y_TITLE = 3.38
 Y_ROWS = 2.78  # the first row's first line
 PITCH = 0.46  # line to line at BODY
 ROW_GAP = 0.1  # extra between rows
@@ -99,7 +98,7 @@ PIECE_BUFF = 0.16  # between the pieces of a line (words · digits · words)
 PLANE_SEED = 17
 PLANE_DOTS = 48
 PLANE_SMALL = 0.25  # the plane's scale once the table begins
-PLANE_CORNER = (5.75, 3.12, 0)
+PLANE_CORNER = (5.6, 2.45, 0)  # under the right mark (was 5.75, 3.12)
 
 # the digit-bearing fixed strings, each with its claim id (research_notes/talk/claims.md)
 LITERALS = {
@@ -195,7 +194,7 @@ class Proofs(DeckScene):
         # 0 · a test, a proof: the two lines and the plane of inputs
         self.section(0)
         self.wait(0.3)
-        title = words(TITLE, SIZE_BODY, Palette.TEXT).move_to([0, Y_TITLE, 0]).align_to([X_LEFT, 0, 0], LEFT)
+        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5), self.caption(CAPTION))
         plane = Chart((0, 8, 1), (0, 6, 1), width=4.6, height=3.5, origin=(1.3, -1.5, 0))
         grid = plane.grid()
