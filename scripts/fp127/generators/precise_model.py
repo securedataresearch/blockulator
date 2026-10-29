@@ -40,7 +40,14 @@ The v5 kernels work on a double word (DW): a pair (hi, lo) read as
             bound of 3: the two floors and the dropped bits of s.
   op_atanh  log1p(2x / (1 - x)) / 2: the quotient at 2^-192 by one divg, one
             log2g of 2^192 + it (a 127.128 word worth 2^64 (1 + q)) less 64,
-            times ln2 / 2. Measured against the stated 2^-146 + 2 units.
+            times ln2 / 2. Measured against 2^-146 + 2 units (the Yul's
+            rbad127 err is 2^47, which also covers the two-log form near 1).
+            atanh_mid is the middle stage behind that test: l2p of 1 + x
+            and 1 - x, times ln 2 / 2 at 2^-256 (bounds127.py, err 2^137 at
+            2^-384).
+  op_tanh   u / (u + 2) below 1/4, u = e^2x - 1 from the kernel (from
+            2^-5) or expm1s; (1 - w) / (1 + w), w = e^-2x, from 1/4: one
+            divg at 2^-192 (tanh_pre gives the value and its rbad127 err).
 
   lambertw  Lambert W's one-word stages in integers, as the Yul runs them:
             the seeds (a crude logarithm), the fourth-order log-form steps
@@ -312,23 +319,35 @@ def divg(a: int, b: int) -> int:
     return (a << 192) // b
 
 
-def ehalf(X: int):
-    """e^x / 2 at 2^-192 as the Yul's expx then sc192(n - 1) give it, with
-    the kernel's n and s for einvhalf."""
-    n, s = exp_parts(X)
-    return scaled192(n - 1, s), n, s
-
-
 def einvhalf(n: int, s: int) -> int:
     """e^-x / 2 at 2^-192 from e^x = 2^n (1 + s): floor(2^(254-n) 2^192 /
     (2^255 + floor(s_hi / 2))), one divg."""
     return divg(1 << (254 - n), H255 | ((s >> 256) >> 1))
 
 
+def sc192(n: int, s: int) -> int:
+    """The Yul's sc192 as one integer: floor(2^(n + 192) (1 + s 2^-512)),
+    except below e = n + 192 = 256, where it reads only s's high word."""
+    e = n + 192
+    if e < 256:
+        return (1 << e) + ((s >> 256) >> (256 - e))
+    return scaled192(n, s)
+
+
 def hyp_pre(ax: int, sign: int) -> int:
     """cosh (sign 1) or sinh (sign -1) at 2^-192 before the rounding."""
-    v, n, s = ehalf(ax)
-    return v + sign * einvhalf(n, s)
+    n, s = exp_parts(ax)
+    return sc192(n - 1, s) + sign * einvhalf(n, s)
+
+
+HYP_ERR = 1 << 20      # sinh's and cosh's rbad127 err in the Yul
+
+
+def hyp_err(V: int) -> int:
+    """The derived bound on |V - exact| for sinh's and cosh's V = (vh, vl):
+    4 + vh / 2^43 (3 units and 2^-299 of e^|x| / 2), under HYP_ERR, which
+    the Yul passes (a constant lets solc inline rbad127), on |x| <= 88."""
+    return 4 + (V >> 299)
 
 
 def op_cosh(X: int):
@@ -348,6 +367,52 @@ def op_sinh(X: int):
     return -r if X < 0 else r
 
 
+def expm1s(x: int, ax: int) -> int:
+    """The Yul's expm1s: e^x - 1 at 2^-192 for x at 2^-128, |x| <= 1/16, by
+    the Horner series (each step floors the product, truncates the quotient)."""
+    xs = x << 64
+    k = 27
+    if ax < 1 << 122:
+        k = 22
+        for lim, kk in ((1 << 120, 18), (1 << 116, 14), (1 << 112, 11), (1 << 104, 8), (1 << 96, 6), (1 << 80, 5)):
+            if ax < lim:
+                k = kk
+    v = G
+    while k > 1:
+        v = G + sdiv((xs * v) >> 192, k)
+        k -= 1
+    return mulg(xs, v)
+
+
+def tanh_pre(ax: int):
+    """tanh(x) at 2^-192 before the rounding for 2^-65 <= |x| < 46 and its
+    rbad127 err: u / (u + 2) below 1/4 (u = e^2|x| - 1 from the kernel from
+    2^-5, else expm1s), (1 - w) / (1 + w) with w = e^-2|x| beyond. Returns
+    (V, err, region)."""
+    if ax < 1 << 126:
+        if ax > 1 << 123:
+            n, s = exp_parts(2 * ax)
+            u, reg = sc192(n, s) - G, "kernel"
+        else:
+            u, reg = expm1s(2 * ax, 2 * ax), "expm1s"
+        return divg(u, u + 2 * G), 2, reg
+    n, s = exp_parts(-2 * ax)
+    w = sc192(n, s)
+    return divg(G - w, G + w), 3, "w"
+
+
+def op_tanh(X: int):
+    """tanh's fast path, rounded (the Yul's second stage decides where V's
+    err reaches the boundary; this model does not run it)."""
+    ax = abs(X)
+    if ax == 0:
+        return 0
+    if ax < 1 << 63:
+        return X
+    r = ONE if ax >= 46 * ONE else rnd64(tanh_pre(ax)[0])
+    return -r if X < 0 else r
+
+
 def atanh_pre(ax: int) -> int:
     """atanh(x) at 2^-192 before the rounding, 0 < x < 1 (ax in 127.128)."""
     if ax < ONE - (1 << 66):
@@ -356,6 +421,17 @@ def atanh_pre(ax: int) -> int:
     else:
         l2 = log2g(ONE + ax) - log2g(ONE - ax)
     return (l2 * LN2_HALF_192) >> 192
+
+
+LN2_HALF_256 = 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b16c5068badc5d57d15   # ln 2 / 2, floored
+
+
+def atanh_mid(ax: int) -> int:
+    """atanh's middle stage at 2^-384 (atanhmid): (l2p(1 + x) - l2p(1 - x))
+    times ln 2 / 2 at 2^-256, the low word's product through its high word."""
+    L = l2p(ONE + ax) - l2p(ONE - ax)
+    lh, ll = L >> 256, L & M256
+    return lh * LN2_HALF_256 + ((ll * LN2_HALF_256) >> 256)
 
 
 def op_atanh(X: int):

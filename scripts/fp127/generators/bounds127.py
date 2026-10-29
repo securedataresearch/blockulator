@@ -34,6 +34,18 @@ the script exits 1; scripts/gates.py and CI run it beside FP19's bounds.py.
   cbrt, Newton step          y, one added (2^-128)       in [floor R, floor R + 3], R the root
                                                          (|y - (R + 1)| < 2)
 
+  sinh, cosh, one exp        V = (vh, vl) (2^-192)       2^20, the most over |x| <= 88 of 4 + vh / 2^43
+                                                         (measured against the latter): two floors
+                                                         and einvhalf's dropped bits (3), the
+                                                         kernel's 2^-299 relative of e^|x| / 2
+  tanh, kernel / expm1s      u / (u + 2) by divg         2: u within 1.1 below, slope <= 1/2, the
+                                                         quotient's floor
+  tanh, w                    (1 - w) / (1 + w) (2^-192)  3: w's floor through a slope <= 2, the
+                                                         quotient's floor
+  atanh, one word            log2g, times ln 2 / 2       2^47 (one log within 2^-145 scaled, or two)
+  atanh, l2p                 atanhmid (2^-384)           2^137: ln 2 / 2 floored at 2^-256 under a
+                                                         log2 of at most 129, two l2p (2^-299)
+
 3.0, FP127E (rbadw, the fast paths' test, and rbadm127, the middle stages'):
   exp, exp2, exp10           2^n (1 + s) (2^-384)        2^(n + 73) + 1 (expk 2^-311.2, the
                                                          reduction 2^-376, v's floor; the Yul
@@ -59,7 +71,7 @@ import random
 import sys
 from pathlib import Path
 
-from mpmath import mp, mpf, log, power, cbrt as mcbrt
+from mpmath import mp, mpf, log, power, cbrt as mcbrt, sinh as msinh, cosh as mcosh, tanh as mtanh, atanh as matanh
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import precise_model as P  # noqa: E402
@@ -280,6 +292,46 @@ def cbrt_(M: Meter, rng, n):
 
 
 # ---------------------------------------------------------------------------
+# the hyperbolics (FP127H): rbad127's err on each fast value, rbadm127's on
+# atanh's l2p stage
+# ---------------------------------------------------------------------------
+
+def hyperbolics(M: Meter, rng, n):
+    for i in range(n):
+        # sinh and cosh: |x| log-uniform on [2^-65, 88], an eighth next to
+        # m ln 2 (where expr's n is corrected)
+        b = rng.randint(63, 134)
+        ax = (rng.getrandbits(b) | (1 << b)) % (88 * ONE) + (1 << 63)
+        if i % 8 == 0:
+            ax = max(((rng.randint(1, 126) * P.LN2_512) >> 384) + rng.randint(-3, 3), 1 << 64)
+        x = mpf(ax) / ONE
+        for name, sign, fn in (("cosh", 1, mcosh), ("sinh", -1, msinh)):
+            if name == "cosh" and ax < 1 << 64:
+                continue
+            V = P.hyp_pre(ax, sign)
+            # against the derived 4 + vh / 2^43; the Yul's err is its maximum, 2^20
+            assert P.hyp_err(V) <= P.HYP_ERR
+            M.add(f"{name}, one exp (2^-192)", P.hyp_err(V), V, fn(x) * G)
+        # tanh: |x| log-uniform in each region, [2^-65, 2^-5], (2^-5, 1/4)
+        # and [1/4, 46)
+        lo, hi = ((63, 123), (123, 126), (126, 134))[i % 3]
+        ax = rng.getrandbits(rng.randint(lo, hi - 1)) | (1 << lo)
+        ax = min(ax, 46 * ONE - 1)
+        V, err, reg = P.tanh_pre(ax)
+        M.add(f"tanh, {reg} (2^-192)", err, V, mtanh(mpf(ax) / ONE) * G)
+        # atanh: |x| from 2^-68 to 1, a quarter within 2^-1..2^-127 of 1
+        if i % 4 == 3:
+            ax = ONE - (rng.getrandbits(rng.randint(1, 127)) | 1)
+        else:
+            b = rng.randint(60, 127)
+            ax = rng.getrandbits(b) | (1 << b)
+        t = matanh(mpf(ax) / ONE)
+        M.add("atanh, one word (2^-192)", mpf(2) ** 47, P.atanh_pre(ax), t * G)
+        if i % 4 == 0 or i % 4 == 3:
+            M.add("atanh, l2p (2^-384)", mpf(2) ** 137, P.atanh_mid(ax), t * mpf(2) ** 384)
+
+
+# ---------------------------------------------------------------------------
 # 3.0, FP127E: the exponentials' fast value, expm1's series, the logs' and
 # pow's middle values, powu's last stage
 # ---------------------------------------------------------------------------
@@ -454,6 +506,7 @@ def run(n: int) -> bool:
     compound(M, rng, n)
     powu(M, rng, n)
     cbrt_(M, rng, n)
+    hyperbolics(M, rng, n)
     exps(M, rng, n)
     expm1(M, rng, n)
     logs_mid(M, rng, n)

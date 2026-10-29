@@ -587,7 +587,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "sinh(x), rounded to nearest: (u + u/(1+u)) / 2 with u = e^|x| - 1 from one double-word exp at 2^-192, u/(1+u) = 1 - e^-|x| by one division, the difference taken before the one rounding. The value before rounding is within 3 units of 2^-192 plus 2^-299 relative of sinh, so the result is nearest unless sinh is within 3 2^-64 ULP (2^-44 ULP at the top of the range) of a midpoint.",
+      "notice": "sinh(x), correctly rounded (to nearest, ties away from zero): (u + u/(1+u)) / 2 with u = e^|x| - 1 from one double-word exp at 2^-192, u/(1+u) = 1 - e^-|x| by one division, the difference taken before the one rounding; when that value's bound reaches the rounding boundary, e^|x| and e^-|x| in two words.",
       "domain": "|x| <= 88",
       "reverts": "Overflow() beyond that"
     },
@@ -599,7 +599,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "cosh(x), rounded to nearest: 1 + u (u/(1+u)) / 2 with u = e^|x| - 1 from one double-word exp at 2^-192 and u/(1+u) = 1 - e^-|x| by one division, which is (e^|x| + e^-|x|) / 2 summed before the one rounding. The value before rounding is within 3 units of 2^-192 plus 2^-299 relative of cosh, so the result is nearest unless cosh is within 3 2^-64 ULP (2^-44 ULP at the top of the range) of a midpoint. cosh(0) is exactly one.",
+      "notice": "cosh(x), correctly rounded (to nearest, ties up): 1 + u (u/(1+u)) / 2 with u = e^|x| - 1 from one double-word exp at 2^-192 and u/(1+u) = 1 - e^-|x| by one division, which is (e^|x| + e^-|x|) / 2 summed before the one rounding; when that value's bound reaches the rounding boundary, e^|x| and e^-|x| in two words. cosh(0) is exactly one.",
       "domain": "|x| <= 88",
       "reverts": "Overflow() beyond that"
     },
@@ -611,7 +611,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "tanh(x), rounded to nearest. For |x| < 1/4, u / (u + 2) with u = e^(2|x|) - 1 at 2^-192; up to |x| < 46, (1 - w) / (1 + w) with w = e^(-2|x|) at 2^-192; beyond, exactly +-1, the nearest word.",
+      "notice": "tanh(x), correctly rounded (to nearest, ties away from zero). For |x| < 1/4, u / (u + 2) with u = e^(2|x|) - 1 at 2^-192; up to |x| < 46, (1 - w) / (1 + w) with w = e^(-2|x|) at 2^-192; one division and one rounding, or, when the value's bound reaches the rounding boundary, (1 - w) / (1 + w) in two words. Beyond, exactly +-1, the nearest word.",
       "domain": "any x",
       "reverts": "never"
     },
@@ -623,7 +623,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "atanh(x) = log1p(2|x| / (1 - |x|)) / 2: the quotient at 2^-192 by one division, one unrounded logarithm of 1 + it, scaled by ln2/2 and rounded once. The value before rounding is within 2^-146 (the one-word log's 2^-145, scaled) plus 2 units of 2^-192 of atanh, so the result is nearest unless atanh is within 2^-18 ULP of a midpoint.",
+      "notice": "atanh(x) = log1p(2|x| / (1 - |x|)) / 2, correctly rounded (to nearest, ties away from zero): the quotient at 2^-192 by one division, one unrounded logarithm of 1 + it, scaled by ln2/2; when that value's bound reaches the rounding boundary, the double-word l2p of 1 + |x| and 1 - |x|, and when that one's does, their logarithms in two words.",
       "domain": "|x| < 1",
       "reverts": "OutOfRange() at or beyond +-1"
     },

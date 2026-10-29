@@ -958,14 +958,7 @@ object "FP127E" {
 
             function rbad127(v, g, err) -> b {
                 let half := shl(sub(g, 1), 1)
-                if iszero(lt(err, half)) {
-                    b := 1
-                    leave
-                }
-                let low := and(v, sub(shl(g, 1), 1))
-                switch lt(low, half)
-                case 1 { b := iszero(gt(sub(half, low), err)) }
-                default { b := lt(sub(low, half), err) }
+                b := or(iszero(lt(err, half)), lt(and(sub(v, sub(half, err)), sub(shl(g, 1), 1)), shl(1, err)))
             }
 
             function rbadw(v, err) -> b {
@@ -974,14 +967,7 @@ object "FP127E" {
 
             function rbadm127(v, g, err) -> b {
                 let half := shl(sub(g, 1), 1)
-                if iszero(lt(err, half)) {
-                    b := 1
-                    leave
-                }
-                let low := and(v, sub(shl(g, 1), 1))
-                switch lt(low, half)
-                case 1 { b := iszero(gt(sub(half, low), err)) }
-                default { b := lt(sub(low, half), err) }
+                b := or(iszero(lt(err, half)), lt(and(sub(v, sub(half, err)), sub(shl(g, 1), 1)), shl(1, err)))
             }
 
             function l2p(x, ms, y0) -> lh, ll {
