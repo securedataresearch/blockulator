@@ -11,16 +11,16 @@ straddles the boundary: RED, a cross, "yes → recompute at higher
 precision". The grid stretches eightfold about the boundary (the grid
 stretching, never the camera), the bound shrinks in two steps (the wider
 stage), clears, turns EMERALD, and the value snaps. Then the counts: how
-often the last stage ran in the sweeps, two counters ticking up, FP127's
-under a halo; and the gas the test costs on FP127's exp.
+often the last stage ran in the sweeps, two counters ticking up, BL127's
+under a halo; and the gas the test costs on BL127's exp.
 
 Six sections, one per click: prices; fast; crosses; recompute; counters;
 closing. The last frame holds as the slide.
 
-Numbers from docs/benchmarks/sweep.json (rows lib=fp19 op=exp and
-lib=fp127 op=exp: n, fallback, inputs) and docs/benchmarks/gas.json
+Numbers from docs/benchmarks/sweep.json (rows lib=bl19 op=exp and
+lib=bl127 op=exp: n, fallback, inputs) and docs/benchmarks/gas.json
 (.ops.exp.typical.gas.lib, its median, through vocab.gas). The pre-test
-figure 2,716 is in no JSON (contracts/deployments/FP127.md, "typical
+figure 2,716 is in no JSON (contracts/deployments/BL127.md, "typical
 inline gas exp 5,360 → 2,716"): a module constant, claim V19. The opcode
 prices are LITERALS (V32). The grid in the middle sections carries no
 numbers: the positions and bounds on it are illustrative, not claims.
@@ -73,9 +73,9 @@ from vocab import (
 
 OP = "exp"
 MUL_GAS = 5  # the EVM fee schedule (V32); drawn only through LITERALS, used for the coins' areas
-DIVH_GAS = 393  # contracts/src/fp19/README.md:181, divh (V32)
-GAS_BEFORE_TEST = 2716  # contracts/deployments/FP127.md: typical inline exp before the rounding test (V19)
-GAS_FORM = "lib"  # gas.json's FP127Lib (inline) column: the "typical inline" measure of V19
+DIVH_GAS = 393  # contracts/src/bl19/README.md:181, divh (V32)
+GAS_BEFORE_TEST = 2716  # contracts/deployments/BL127.md: typical inline exp before the rounding test (V19)
+GAS_FORM = "lib"  # gas.json's BL127Lib (inline) column: the "typical inline" measure of V19
 
 TITLE = "What correct costs"
 STEP_1 = "a fast value, with a bound derived in the source"
@@ -86,7 +86,7 @@ WIDER = "a wider stage"
 REACHED = "inputs reached the last stage"
 MUL_LABEL = f"MUL · {MUL_GAS} gas"
 DIVH_LABEL = f"512-by-256-bit division · {DIVH_GAS} gas"
-CAPTION_PRICES = "the EVM fee schedule · the FP19 kernels' README, divh"
+CAPTION_PRICES = "the EVM fee schedule · the BL19 kernels' README, divh"
 CAPTION_SWEEP = "docs/benchmarks/sweep.json · gas.json · exp"
 
 # the grid of sections 1–3: six ticks, the story between ticks LO and HI; nothing on it is a number
@@ -118,23 +118,23 @@ LITERALS = {
 
 def numbers() -> dict:
     lib = libs()
-    rows = {lid: sweep(lid, OP) for lid in ("fp19", "fp127")}
+    rows = {lid: sweep(lid, OP) for lid in ("bl19", "bl127")}
     g = gas(OP)
     with_test = g["inlineMedian"][GAS_FORM]
     pct = round((with_test - GAS_BEFORE_TEST) / GAS_BEFORE_TEST * 100, 1)
     out = {
         "op": OP,
-        "fp19": {"label": lib["fp19"]["label"], "n": rows["fp19"]["n"], "fallback": rows["fp19"]["fallback"]},
-        "fp127": {"label": lib["fp127"]["label"], "n": rows["fp127"]["n"], "fallback": rows["fp127"]["fallback"], "inputs": rows["fp127"]["inputs"]},
+        "bl19": {"label": lib["bl19"]["label"], "n": rows["bl19"]["n"], "fallback": rows["bl19"]["fallback"]},
+        "bl127": {"label": lib["bl127"]["label"], "n": rows["bl127"]["n"], "fallback": rows["bl127"]["fallback"], "inputs": rows["bl127"]["inputs"]},
         "gas_before": GAS_BEFORE_TEST,
         "gas_with_test": with_test,
         "gas_form": g["formLabels"][GAS_FORM],
         "pct": pct,
     }
-    out["gas_line"] = f"{out['fp127']['label']} {OP}: {thousands(GAS_BEFORE_TEST)} → {thousands(round(with_test))} gas with the test"
+    out["gas_line"] = f"{out['bl127']['label']} {OP}: {thousands(GAS_BEFORE_TEST)} → {thousands(round(with_test))} gas with the test"
     out["pct_line"] = f"+{pct}%"
-    out["counters"] = {lid: f"{out[lid]['fallback']} of {thousands(out[lid]['n'])}" for lid in ("fp19", "fp127")}
-    out["close_line"] = f"the last stage: {out['counters']['fp127']} inputs"
+    out["counters"] = {lid: f"{out[lid]['fallback']} of {thousands(out[lid]['n'])}" for lid in ("bl19", "bl127")}
+    out["close_line"] = f"the last stage: {out['counters']['bl127']} inputs"
     return out
 
 
@@ -280,8 +280,8 @@ class Ziv(DeckScene):
         grid_stuff = VGroup(line, mid, dot1, mark1, dot2, mark2, glow, yes, cross, step1, step2)
         self.play(grid_stuff.animate.set_opacity(0.1), run_time=0.5)
         self.remove(step1, step2, yes, cross)
-        cols = {"fp19": -3.3, "fp127": 3.3}
-        colours = {"fp19": Palette.TEXT, "fp127": Palette.EMERALD}  # the libraries' family colours
+        cols = {"bl19": -3.3, "bl127": 3.3}
+        colours = {"bl19": Palette.TEXT, "bl127": Palette.EMERALD}  # the libraries' family colours
         names = {lid: words(f"{n[lid]['label']} {OP}", SIZE_BODY, Palette.MUTED).move_to([cols[lid], Y_COUNTER + 0.95, 0]) for lid in cols}
         reached = {lid: words(REACHED, SIZE_BODY, Palette.MUTED).move_to([cols[lid], Y_COUNTER - 0.8, 0]) for lid in cols}
         self.play(LaggedStart(*[FadeIn(names[lid], shift=UP * 0.06) for lid in cols], lag_ratio=0.3, run_time=0.6))
@@ -292,7 +292,7 @@ class Ziv(DeckScene):
         finals = {lid: digits(n["counters"][lid], SIZE_HERO, colours[lid]).move_to([cols[lid], Y_COUNTER, 0]) for lid in cols}
         self.remove(*tickers.values())
         self.add(*finals.values())
-        hero = glow_bar(finals["fp127"], Palette.EMERALD, pad=0.3, opacity=0.14)
+        hero = glow_bar(finals["bl127"], Palette.EMERALD, pad=0.3, opacity=0.14)
         self.add(hero)
         self.bring_to_back(hero)
         self.play(FadeIn(hero, run_time=0.5), LaggedStart(*[FadeIn(reached[lid], shift=UP * 0.06) for lid in cols], lag_ratio=0.3, run_time=0.6))

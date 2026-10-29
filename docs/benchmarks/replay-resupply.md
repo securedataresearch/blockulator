@@ -22,13 +22,13 @@ Same integers, same formula (`ResupplyPairCore.sol:573` then `:282`), different 
 | WAD as deployed: `1e36 / price` (floor) | 0 | 0 | 0 | solvent: borrow passes | unbounded (rate 0) | matches chain: UpdateExchangeRate(0), borrow succeeded |
 | divUp on the rate (ceil) | 1 | 0 | 1,000,000,000,000 | **insolvent: reverts** | 0.95 |  |
 | divide by the price at the end (LTV ceil) | — | — | 500,000,000,000 | **insolvent: reverts** | 1.9 | floor would give 499,999,999,999, same verdict |
-| FP127 (inline lib), same formula | 0.4999999999999999999995004995 | 38.58 | 499999999999.9999999995004995 | **insolvent: reverts** | 1.9 | LTV ceil to the 1e5 grid: 500,000,000,000 |
-| FP19, same formula | 0.4999999999999999999995004995 | 71.90 | 499999999999.9999999995004995 | **insolvent: reverts** | 1.9 | LTV ceil to the 1e5 grid: 500,000,000,000 |
+| BL127 (inline lib), same formula | 0.4999999999999999999995004995 | 38.58 | 499999999999.9999999995004995 | **insolvent: reverts** | 1.9 | LTV ceil to the 1e5 grid: 500,000,000,000 |
+| BL19, same formula | 0.4999999999999999999995004995 | 71.90 | 499999999999.9999999995004995 | **insolvent: reverts** | 1.9 | LTV ceil to the 1e5 grid: 500,000,000,000 |
 | exact (rational) | 0.4999999999999999999995004995 | exact | 499999999999.9999999995004995 | **insolvent: reverts** | 1.9 |  |
 
-Reading the table: the deployed rate has 0 correct digits (it is 0 where the truth is one half). `divUp` blocks the attack but is a one-mark ruler too: it reads one half as 1, doubling the LTV and halving what an honest borrower could take (0.95 reUSD instead of 1.9). Dividing by the price at the end needs no new library and gets the verdict and the LTV right to the integer. FP127 and FP19 carry the half and give the exact verdict and the exact cap.
+Reading the table: the deployed rate has 0 correct digits (it is 0 where the truth is one half). `divUp` blocks the attack but is a one-mark ruler too: it reads one half as 1, doubling the LTV and halving what an honest borrower could take (0.95 reUSD instead of 1.9). Dividing by the price at the end needs no new library and gets the verdict and the LTV right to the integer. BL127 and BL19 carry the half and give the exact verdict and the exact cap.
 
-Range: FP127 holds integers below 2^127 ≈ 1.7e38, so its port of this line takes the price as an exact integer only while totalAssets stays under 170311.325 crvUSD with one share outstanding (85 times the attack's); above that the port reverts (`_q` in the test) rather than floors. FP19 has no such wall.
+Range: BL127 holds integers below 2^127 ≈ 1.7e38, so its port of this line takes the price as an exact integer only while totalAssets stays under 170311.325 crvUSD with one share outstanding (85 times the attack's); above that the port reverts (`_q` in the test) rather than floors. BL19 has no such wall.
 
 ## The cliff before the cliff (derived, not on chain)
 
@@ -112,7 +112,7 @@ cvcrvUSD (`0x01144442fba7adccb5c9dc9cf33dd009d50a9e1d`) is an EIP-1167 proxy to 
 
 ## Caveat
 
-This replays one division: divUp, dividing last, FP127 and FP19 each reject this borrow, but none of them stops a market from going live against an empty vault whose share price a donation sets, so the floor was the last check that failed, not the only one.
+This replays one division: divUp, dividing last, BL127 and BL19 each reject this borrow, but none of them stops a market from going live against an empty vault whose share price a donation sets, so the floor was the last check that failed, not the only one.
 
 ## Reproduce
 

@@ -3,10 +3,10 @@ for agents, the two links.
 
 The adoption slide: everything a person or an agent needs to use
 Blockulator in the next minute. The title is chrome. Section 0: the two
-main addresses type in, FP19 v6 (TEXT, its family colour) then FP127 v9
+main addresses type in, BL19 v6 (TEXT, its family colour) then BL127 v9
 (EMERALD), each on a glow_bar() in its colour, each pulsed once when it
 lands; "every op is a free eth_call" under them. Section 1: the eight
-other objects (FP127E/H/N/S, FP19E/H/N/S) at CAPTION in one column,
+other objects (BL127E/H/N/S, BL19E/H/N/S) at CAPTION in one column,
 name in the family colour, address in mono. Section 2: the two ways in,
 the "engineers:" row (GOLD) with the two install commands from README.md
 and the "agents:" row (SAPPHIRE) with blockulator.com/llms.txt, each on a
@@ -56,8 +56,8 @@ from vocab import (
 HUES = ROW_COLOUR["s19"]
 
 TITLE = "The reference"
-MAIN = ("FP19", "FP127")  # the two main objects, in the order they type in
-OTHERS = ("FP127E", "FP127H", "FP127N", "FP127S", "FP19E", "FP19H", "FP19N", "FP19S")
+MAIN = ("BL19", "BL127")  # the two main objects, in the order they type in
+OTHERS = ("BL127E", "BL127H", "BL127N", "BL127S", "BL19E", "BL19H", "BL19N", "BL19S")
 ETH_CALL = "every op is a free eth_call"
 ENGINEERS = "engineers:"
 AGENTS = "agents:"
@@ -102,7 +102,7 @@ LABEL_PITCH = 0.26  # the tile labels' rows: the site's, then the repository's t
 
 
 def family(name: str) -> str:
-    return FAMILY_COLOUR["fp127" if name.startswith("FP127") else "fp19"]
+    return FAMILY_COLOUR["bl127" if name.startswith("BL127") else "bl19"]
 
 
 def repo_url() -> str:
@@ -229,7 +229,7 @@ class Address(TextScene):
         assert site_tile.label.get_bottom()[1] > repo_tile.label.get_top()[1], "the labels' rows must not touch"
         assert min(site_tile.label.get_left()[0], repo_tile.label.get_left()[0]) > rows.get_right()[0], "the labels stay clear of the object rows"
         assert repo_tile.label.get_bottom()[1] > Y_USE[0] + 0.32, (repo_tile.label.get_bottom()[1], "clear of the use rows")
-        assert site_tile.panel.get_top()[1] <= Y_MAIN[1] - 0.27, "under the FP127 row's panel"
+        assert site_tile.panel.get_top()[1] <= Y_MAIN[1] - 0.27, "under the BL127 row's panel"
         self.play(FadeIn(site_tile, shift=UP * 0.1, run_time=0.6))
         self.play(FadeIn(repo_tile, shift=UP * 0.1, run_time=0.6))
         self.typed(CLOSE, SIZE_HERO, Palette.CORRECT, run_time=1.2, place=lambda t: t.move_to([X_LEFT + t.width / 2, Y_CLOSE, 0]))

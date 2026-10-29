@@ -40,7 +40,7 @@ Dates come from `incidents()`; never typed. Row 2's "28 → 4" and "44", row 3's
 | 8 | `box` | the box line (HERO size for the two sentences, split over two lines, inside a `glow_bar()`), everything else dims to FAINT; hold 3 s | all, dimmed | "Inside a calculation, precision shrinks error. At a unit, direction decides who pays." | the box line | 6 |
 
 ## 5. Vocabulary
-`GridLine`, `snap()`, `direction()`, `measure()` (row 5's half unit), `check_mark()`, `cross_mark()` (optional, after a red snap), `glow_bar()`, `digits()` for numbers, `words()` for labels. White = EXACT on this slide; FP19's family colour is not used.
+`GridLine`, `snap()`, `direction()`, `measure()` (row 5's half unit), `check_mark()`, `cross_mark()` (optional, after a red snap), `glow_bar()`, `digits()` for numbers, `words()` for labels. White = EXACT on this slide; BL19's family colour is not used.
 
 ## 6. Hero
 The box line (section 8). In section 7 the EMERALD direction results in band 2 are the drawn-last elements, with `check_mark()`s.

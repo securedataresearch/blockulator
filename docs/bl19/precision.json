@@ -167,7 +167,7 @@
     "reverts": 0,
     "worstInput": ""
   },
-  "fromFP127": {
+  "fromBL127": {
     "meanBits": 256,
     "minBits": 256,
     "n": 11,
@@ -391,7 +391,7 @@
     "reverts": 3,
     "worstInput": ""
   },
-  "toFP127": {
+  "toBL127": {
     "meanBits": 256,
     "minBits": 256,
     "n": 969,

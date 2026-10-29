@@ -1,10 +1,10 @@
-# FP19 gas ladder
+# BL19 gas ladder
 
-Generated 2026-10-28 by `make bench`. Versions: fp127 6c2eeaf, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), fraxlend fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed), euler evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, solmate solmate@89365b8 (no tag: v6 predates SignedWadMath), openzeppelin openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored), uniswap v4-core v4.0.0 (FullMath, vendored), snekmate v0.1.2 (math module, vyper 0.4.3), forge forge Version: 1.7.1.
+Generated 2026-10-28 by `make bench`. Versions: bl127 6c2eeaf, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), fraxlend fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed), euler evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, solmate solmate@89365b8 (no tag: v6 predates SignedWadMath), openzeppelin openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored), uniswap v4-core v4.0.0 (FullMath, vendored), snekmate v0.1.2 (math module, vyper 0.4.3), forge forge Version: 1.7.1.
 
 Each cell is min / median / max gas over the op's input ladder. The object column includes the `staticcall` (and the object's own selector dispatch); the inline columns are the internal library call alone, timed inside the harness's entry point with the dispatch outside the window (the same cost for every op, whatever its place in the harness's list). An empty cell means the library does not offer the op; `rev` means it does, but reverted (or the input was outside its domain or format) on every ladder input. What each library cell calls is listed at the end; [coverage.md](coverage.md) maps every function of every comparison library.
 
-| op | Yul object (staticcall) | FP19Lib (inline) | FP127Lib (inline), the same op | ABDKMathQuad |
+| op | Yul object (staticcall) | BL19Lib (inline) | BL127Lib (inline), the same op | ABDKMathQuad |
 |---|---:|---:|---:|---:|
 | abs | 724 / 727 / 743 | 133 / 133 / 133 | 152 / 152 / 152 | 21 / 21 / 21 |
 | add | 1,119 / 1,126 / 1,167 | 662 / 662 / 681 | 128 / 128 / 128 | 460 / 734 / 765 |
@@ -30,7 +30,7 @@ Each cell is min / median / max gas over the op's input ladder. The object colum
 | factorial | 1,013 / 1,217 / 1,223 | 392 / 719 / 762 | 399 / 400 / 422 |  |
 | floor | 928 / 1,130 / 1,134 | 309 / 522 / 522 | 72 / 72 / 72 |  |
 | frac | 834 / 1,050 / 1,960 | 187 / 428 / 1,419 | 69 / 69 / 69 |  |
-| fromFP127 | 946 / 949 / 962 | 440 / 440 / 440 |  | 495 / 539 / 623 |
+| fromBL127 | 946 / 949 / 962 | 440 / 440 / 440 |  | 495 / 539 / 623 |
 | fromFixed18 | 1,145 / 1,148 / 1,151 | 554 / 554 / 554 | 140 / 140 / 140 |  |
 | fromUint | 934 / 937 / 940 | 413 / 413 / 413 |  |  |
 | fromUintDown | 910 / 912 / 939 | 487 / 487 / 487 |  | 435 / 500 / 558 |
@@ -62,7 +62,7 @@ Each cell is min / median / max gas over the op's input ladder. The object colum
 | sqrt | 1,665 / 1,684 / 1,705 | 1,201 / 1,205 / 1,209 | 469 / 816 / 816 | 760 / 760 / 760 |
 | sub | 1,017 / 1,190 / 1,298 | 533 / 745 / 854 | 128 / 128 / 128 | 726 / 1,230 / 1,325 |
 | tanh | 1,297 / 3,571 / 3,598 | 1,027 / 3,709 / 3,723 | 247 / 3,945 / 3,976 |  |
-| toFP127 | 911 / 914 / 918 | 343 / 343 / 343 |  | 278 / 292 / 292 |
+| toBL127 | 911 / 914 / 918 | 343 / 343 / 343 |  | 278 / 292 / 292 |
 | toFixed18 | 974 / 1,030 / 1,033 | 440 / 480 / 480 | 121 / 121 / 121 |  |
 | toFixed18Down | 1,278 / 1,309 / 1,313 | 718 / 723 / 723 | 160 / 160 / 160 |  |
 | toFixed18Up | 1,321 / 1,335 / 1,388 | 724 / 724 / 738 | 185 / 185 / 190 |  |
@@ -76,7 +76,7 @@ Each cell is min / median / max gas over the op's input ladder. The object colum
 
 The ladder sits mostly on integers, powers of two and one, where several ops take a shortcut. These rows are the same forms on random inputs drawn per op from `keccak256("typical", op, i)`: non-integer, not a power of two, across the op's usual range (`test_ladder_typical`). Min / median / max over the inputs.
 
-| op | Yul object (staticcall) | FP19Lib (inline) | FP127Lib (inline), the same op | ABDKMathQuad |
+| op | Yul object (staticcall) | BL19Lib (inline) | BL127Lib (inline), the same op | ABDKMathQuad |
 |---|---:|---:|---:|---:|
 | atanh | 3,588 / 4,016 / 5,203 | 3,411 / 3,882 / 5,227 | 2,904 / 2,941 / 2,969 |  |
 | cbrt | 3,165 / 3,196 / 3,319 | 2,734 / 2,734 / 2,773 | 101 / 1,022 / 1,948 |  |
@@ -117,7 +117,7 @@ The competitor function behind each cell, on the inputs converted once to its re
 | eq | `eq(a, b)` |
 | exp | `exp(x)` |
 | exp2 | `pow_2(x)` |
-| fromFP127 | `from128x128(x) (truncates; fromFP127 rounds to nearest)` |
+| fromBL127 | `from128x128(x) (truncates; fromBL127 rounds to nearest)` |
 | fromUintDown | `fromUInt(x) (truncates the significand)` |
 | inv | `div(fromUInt(1), x) (composed)` |
 | ln | `ln(x)` |
@@ -129,6 +129,6 @@ The competitor function behind each cell, on the inputs converted once to its re
 | sign | `sign(x)` |
 | sqrt | `sqrt(x)` |
 | sub | `sub(a, b)` |
-| toFP127 | `to128x128(x) (truncates; toFP127 rounds to nearest)` |
+| toBL127 | `to128x128(x) (truncates; toBL127 rounds to nearest)` |
 | toIntDown | `toInt(x) (truncates: floor for x >= 0, the rows kept)` |
 | toUintDown | `toUInt(x) (truncates: floor for x >= 0)` |

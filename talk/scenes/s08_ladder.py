@@ -6,11 +6,11 @@ the other; one line per library, a dot at every N where the ladder
 measured it, colour by family (static/data/libraries.json). No single
 scenario runs every library, so the chart MORPHS: it opens on "compound"
 (daily compounding, one mul per step: Maker's rpow runs here), the lines
-drawing in from the 18-decimal libraries up to FP127 and FP19, last and
+drawing in from the 18-decimal libraries up to BL127 and BL19, last and
 under a glow; then every line slides to its "accrual-continuous" values
 (the accrual Aave and Morpho run), Maker fading out and Aave and Morpho
 drawing in; then to "adaptive-rate" (the rate FraxLend and Euler run).
-At every stop the margin is bracketed at N = 10,000: FP19 and FP127 over
+At every stop the margin is bracketed at N = 10,000: BL19 and BL127 over
 the best 18-decimal line, in digits. A legend names the libraries that
 have no line in the scenario and why ("not offered": the scenario's
 .ops[lib] is ["unsupported"]); none of the talk's 17 is dropped silently.
@@ -26,8 +26,8 @@ lines (claims V13, V14).
 
 Numbers from docs/benchmarks/ladder.json: .ladder (the N), .ladderLog10,
 .axisMax and, per scenario, .summary[lib][N].digits.median (a bare value
-in older files; both are read) and .ops[lib]; fp127lib is skipped as a
-duplicate of fp127 and BlockulatorWad is not in the talk. Libraries whose
+in older files; both are read) and .ops[lib]; bl127lib is skipped as a
+duplicate of bl127 and BlockulatorWad is not in the talk. Libraries whose
 lines coincide (the 18-decimal ones) share one label listing their names.
 Labels from static/data/libraries.json.
 """
@@ -60,13 +60,13 @@ SCENARIOS = ("compound", "accrual-continuous", "adaptive-rate")
 SUBTITLES = {"accrual-continuous": "the accrual Aave and Morpho run", "adaptive-rate": "the rate FraxLend and Euler run"}
 SKIP = DUPLICATES
 GOLD = "wad"  # the family the margins are measured against
-HEROES = ("fp127", "fp19")  # drawn last, in this order: the king last
+HEROES = ("bl127", "bl19")  # drawn last, in this order: the king last
 X_RANGE = (0, 4, 1)  # log10 N
 WIDTH, HEIGHT = 7.8, 4.4  # the chart stops at y = 2.1: the key's two lines and the scenario's note sit above it
 ORIGIN_XY = (-5.6, -2.3)
 LABEL_GAP = 0.3  # minimum spacing between end labels, scene units
 GUIDE_DROP = 5.0  # digits below the 18-decimal line the slope guide is drawn
-BRACKET_X = {"fp19": 5.2, "fp127": 5.5}  # where each margin bracket stands
+BRACKET_X = {"bl19": 5.2, "bl127": 5.5}  # where each margin bracket stands
 CLUSTER_XY = (0.35, 1.1)  # the 18-decimal names: chart x in log10 N, scene y
 CLUSTER_WIDTH = 60  # characters per line of the 18-decimal names
 KEY_Y = (2.92, 2.64)  # the static key, two lines under the title: every series of the three scenarios, then the 18-decimal names
@@ -126,9 +126,9 @@ def numbers() -> dict:
     scenarios = [scenario_numbers(sid, lib, N) for sid in SCENARIOS]
     for s in scenarios:
         assert set(s["series"]) | set(s["absent"]) == set(lib) - set(SKIP), s["id"]
-        # FP19 tops every scenario; FP127 beats every 18-decimal line (ABDKMathQuad, a
-        # binary128 float, sits above FP127 in adaptive-rate: the chart shows it)
-        assert s["end"]["fp19"] == max(s["end"].values()) and s["margins"]["fp127"] > 0, s["id"]
+        # BL19 tops every scenario; BL127 beats every 18-decimal line (ABDKMathQuad, a
+        # binary128 float, sits above BL127 in adaptive-rate: the chart shows it)
+        assert s["end"]["bl19"] == max(s["end"].values()) and s["margins"]["bl127"] > 0, s["id"]
     return {"N": N, "log10": [d["log10"][str(n)] for n in N], "axisMax": d["axisMax"], "y_ticks": list(range(0, int(d["axisMax"]) + 1, Y_STEP)), "wad_decimals": WAD_DECIMALS, "scenarios": scenarios}
 
 
@@ -308,7 +308,7 @@ class Ladder(DeckScene):
             self.play(Create(it["glow"], run_time=2.0), Create(it["line"], run_time=2.0), LaggedStart(*[FadeIn(d, scale=0.5) for d in it["dots"]], lag_ratio=0.1, run_time=2.0))
             self.play(FadeIn(it["halo"], run_time=0.5), FadeIn(it["label"], shift=RIGHT * 0.05, run_time=0.5))
             self.wait(1.0)
-        # the margins, FP127 then FP19, the king last
+        # the margins, BL127 then BL19, the king last
         for lid in HEROES:
             br = cur["brackets"][lid]
             self.play(Create(br[0], run_time=0.5), FadeIn(br[1], run_time=0.5))
@@ -357,12 +357,12 @@ class Ladder(DeckScene):
 
         # the close: the gap, in the chart's units, across the three (V14: higher, and kept)
         self.section(len(self.SECTIONS) - 1, hold=2.5)
-        f19 = [s["margin_digits"]["fp19"] for s in scenarios]
-        f127 = [s["margin_digits"]["fp127"] for s in scenarios]
+        f19 = [s["margin_digits"]["bl19"] for s in scenarios]
+        f127 = [s["margin_digits"]["bl127"] for s in scenarios]
         close = VGroup(
             words(CLOSE_FIRST, SIZE_CAPTION, Palette.TEXT),
-            words(f"at N = {thousands(n['N'][-1])}: FP19 +{min(f19)} to +{max(f19)} digits,", 19, Palette.BODY),
-            words(f"FP127 +{min(f127)} to +{max(f127)}, over the best {n['wad_decimals']}-decimal line", 19, Palette.BODY),
+            words(f"at N = {thousands(n['N'][-1])}: BL19 +{min(f19)} to +{max(f19)} digits,", 19, Palette.BODY),
+            words(f"BL127 +{min(f127)} to +{max(f127)}, over the best {n['wad_decimals']}-decimal line", 19, Palette.BODY),
         )
         for k, line in enumerate(close):
             line.move_to([0, CLOSE_XY[1] - k * CLOSE_PITCH, 0]).align_to([CLOSE_XY[0], 0, 0], RIGHT)

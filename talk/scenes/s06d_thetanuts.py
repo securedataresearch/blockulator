@@ -15,7 +15,7 @@ minted repay the loan and its fee. Take: $105,000 (incidents.json),
 105,471.499078 USDC realised plus three component-vault tokens. Exact:
 the same 37 amounts with the charge rounded up (computed off-chain, C8):
 1 raw unit on every mint, 76,596.174855 tokens per component, more than
-the claim took of any one; FP127 and FP19 keep the two thirds, and the
+the claim took of any one; BL127 and BL19 keep the two thirds, and the
 direction decides: floor 0, ceil 1.
 
 Six sections, one per click: before, step, round, repeat, take, exact.
@@ -401,7 +401,7 @@ class Thetanuts(DeckScene):
         self.play(FadeIn(rest, run_time=0.6))
         self.wait(1.2)
 
-        # --- exact: the same 37 amounts, the charge rounded up; FP127 / FP19 keep the two thirds, the direction decides
+        # --- exact: the same 37 amounts, the charge rounded up; BL127 / BL19 keep the two thirds, the direction decides
         self.section(5, hold=1.5)
         y_e = -2.25
         r1 = markup(
@@ -414,7 +414,7 @@ class Thetanuts(DeckScene):
         r2.move_to([LEFT_X + r2.width / 2, y_e - 0.35, 0])
         r2_note = words("computed off-chain, not observed", SIZE_CAPTION, Palette.FAINT).next_to(r2, RIGHT, buff=0.4).set_y(y_e - 0.35)
         r3 = markup(
-            f"<span foreground='{Palette.EMERALD}'>FP127</span> / FP19 keep {n['charge0']}  ·  direction decides:  "
+            f"<span foreground='{Palette.EMERALD}'>BL127</span> / BL19 keep {n['charge0']}  ·  direction decides:  "
             f"<span foreground='{Palette.WRONG}'>floor {n['floor0']}</span>   <span foreground='{Palette.CORRECT}'>ceil {n['ceil0']}</span>",
             ROW,
             Palette.TEXT,

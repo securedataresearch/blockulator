@@ -1,29 +1,29 @@
 """Slide 10, "Real markets, today": every live Aave reserve and Morpho
 market, its pending interest as deployed, then the same interest in
-FP127, then in FP19.
+BL127, then in BL19.
 
 A faceted strip plot in the grammar of graphics: one row of data per
 market; protocol is the facet (Aave left, Morpho right, equal panels on
 the same 0–80 scale), method is the y row ("as deployed" on top, "in
-FP127", "in FP19" beneath, so the eye travels down to the heroes),
+BL127", "in BL19" beneath, so the eye travels down to the heroes),
 correct digits of the pending interest is x. Each market is one small
 dot, jittered within its row band on a fixed seed so the density shows;
-colour is the method (SLATE, EMERALD, TEXT: white is FP19's family
+colour is the method (SLATE, EMERALD, TEXT: white is BL19's family
 colour on this slide, EXACT is not used). The summary layer is one
 median tick per row per panel with its value labelled beside it; the
 margin between consecutive medians is a bracket in the gap between the
 rows. Faint gridlines at the axis ticks, nothing else: no trails, no
-bands, no halos on dots. The hero mark is the glow under the FP19
+bands, no halos on dots. The hero mark is the glow under the BL19
 row's median tick.
 
 The dots move as themselves: every dot drops to the next row and slides
 to its new x in one Transform, so a viewer who watches one market sees
 it travel; the strip it left stays, so the held frame shows every row. Four sections, one per click: the deployed row; the move to
-FP127; the move to FP19; the closing line.
+BL127; the move to BL19; the closing line.
 
 Numbers from docs/benchmarks/accrual-deployed.json: .cases[] with .group
 == "live" (.protocol, .primaryTruth, .truth[primaryTruth].deployed
-.digitsInterest, .fp127.digitsInterest and .fp19.digitsInterest); the
+.digitsInterest, .bl127.digitsInterest and .bl19.digitsInterest); the
 medians (overall and per protocol) and the margins between them are
 computed here; .survey.block and .date for the caption.
 """
@@ -51,7 +51,7 @@ from manim.utils.rate_functions import ease_in_out_cubic
 from vocab import ROW_COLOUR, SIZE_BODY, SIZE_CAPTION, Chart, DeckScene, Palette, _load, glow_bar, glow_line, live, thousands, words
 
 TITLE = "Real markets, today"
-ROWS = tuple((key, name, ROW_COLOUR["s10"][key]) for key, name in (("deployed", "as deployed"), ("fp127", "in FP127"), ("fp19", "in FP19")))
+ROWS = tuple((key, name, ROW_COLOUR["s10"][key]) for key, name in (("deployed", "as deployed"), ("bl127", "in BL127"), ("bl19", "in BL19")))
 PROTOCOLS = ("aave", "morpho")  # the facets, left to right
 PROTOCOL_LABEL = {"aave": "Aave", "morpho": "Morpho"}
 AXIS = (0, 80, 20)  # correct digits; a gridline and a label at every tick
@@ -62,7 +62,7 @@ X_LEFT = -6.3  # the title and the row labels start here
 LABEL_RIGHT = -3.92  # the row labels end here
 PANEL_X0, PANEL_W, PANEL_GAP = -3.6, 4.8, 0.4  # two equal panels fill the safe width
 AXIS_Y, PANEL_TOP = -1.9, 2.05  # the shared x scale sits here; the gridlines rise to the top
-ROW_Y = {"deployed": 1.8, "fp127": 0.2, "fp19": -1.4}  # the row centres, equal pitch
+ROW_Y = {"deployed": 1.8, "bl127": 0.2, "bl19": -1.4}  # the row centres, equal pitch
 BAND = 0.2  # a row band's half-height; the jitter stays inside it
 DOT = 0.045  # the brief's radius
 TICK_HALF = 0.3  # the median tick: 1.5x the band height
@@ -81,7 +81,7 @@ def numbers() -> dict:
     pts = []
     for c in cases:
         t = c["truth"][c["primaryTruth"]]
-        pts.append({"id": c["id"], "protocol": c["protocol"], "deployed": float(t["deployed"]["digitsInterest"]), "fp127": float(t["fp127"]["digitsInterest"]), "fp19": float(t["fp19"]["digitsInterest"])})
+        pts.append({"id": c["id"], "protocol": c["protocol"], "deployed": float(t["deployed"]["digitsInterest"]), "bl127": float(t["bl127"]["digitsInterest"]), "bl19": float(t["bl19"]["digitsInterest"])})
     survey = _load("docs/benchmarks/accrual-deployed.json")["survey"]
     counts = {p: sum(1 for x in pts if x["protocol"] == p) for p in PROTOCOLS}
     assert sum(counts.values()) == len(pts)
@@ -89,8 +89,8 @@ def numbers() -> dict:
 
     def summary(sub: list[dict]) -> dict:
         med = {k: round(statistics.median(x[k] for x in sub), 1) for k, _, _ in ROWS}
-        assert med["deployed"] < med["fp127"] < med["fp19"]
-        return {"medians": med, "margins": {"fp127": round(med["fp127"] - med["deployed"], 1), "fp19": round(med["fp19"] - med["fp127"], 1)}}
+        assert med["deployed"] < med["bl127"] < med["bl19"]
+        return {"medians": med, "margins": {"bl127": round(med["bl127"] - med["deployed"], 1), "bl19": round(med["bl19"] - med["bl127"], 1)}}
 
     whole = summary(pts)
     per = {p: {"count": counts[p], **summary([x for x in pts if x["protocol"] == p])} for p in PROTOCOLS}
@@ -101,8 +101,8 @@ def numbers() -> dict:
         "block": thousands(survey["block"]),
         "date": survey["date"],
         "axis_ticks": list(range(AXIS[0], AXIS[1] + 1, AXIS[2])),
-        "above": sum(1 for x in pts if x["fp127"] > x["deployed"]),
-        "above_fp19": sum(1 for x in pts if x["fp19"] > x["deployed"]),
+        "above": sum(1 for x in pts if x["bl127"] > x["deployed"]),
+        "above_bl19": sum(1 for x in pts if x["bl19"] > x["deployed"]),
         "medians": whole["medians"],
         "medians_rounded": {k: round(v) for k, v in whole["medians"].items()},
         "margins": whole["margins"],
@@ -111,7 +111,7 @@ def numbers() -> dict:
 
 
 class Live(DeckScene):
-    SECTIONS = ("deployed", "fp127", "fp19", "closing")
+    SECTIONS = ("deployed", "bl127", "bl19", "closing")
 
     def construct(self):
         n = numbers()
@@ -210,8 +210,8 @@ class Live(DeckScene):
                 dots = mover
             self.wait(0.4)
             marks = [median_mark(p, key, colour) for p in PROTOCOLS]
-            if key == "fp19":
-                # the hero: a glow under each FP19 median tick, drawn with it
+            if key == "bl19":
+                # the hero: a glow under each BL19 median tick, drawn with it
                 glows = VGroup(*[glow_line([t[1].get_start(), t[1].get_end()], colour) for t, _ in marks])
                 self.add(glows)
                 self.bring_to_back(glows)
@@ -227,7 +227,7 @@ class Live(DeckScene):
         # ---- the closing line, in the rounded medians of all 326
         self.section(len(ROWS), hold=1.5)
         mr = n["medians_rounded"]
-        close = words(f"the same {n['count']} markets: {mr['deployed']} digits as deployed, {mr['fp127']} in FP127, {mr['fp19']} in FP19", SIZE_CLOSE, Palette.TEXT).move_to([0, Y_CLOSE, 0])
+        close = words(f"the same {n['count']} markets: {mr['deployed']} digits as deployed, {mr['bl127']} in BL127, {mr['bl19']} in BL19", SIZE_CLOSE, Palette.TEXT).move_to([0, Y_CLOSE, 0])
         bar = glow_bar(close, pad=0.12)
         self.play(FadeIn(bar, run_time=0.8), FadeIn(close, shift=UP * 0.08, run_time=0.8))
         self.close()

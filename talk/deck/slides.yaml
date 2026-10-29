@@ -199,7 +199,7 @@
     - name: compound
       cue: "We measure gas on every change. Almost nobody measures digits. Ten thousand dollars at ten percent, compounded daily: every library loses a digit each time the steps grow tenfold."
     - name: blockulator
-      cue: "FP127 and FP19 start nineteen and fifty-two digits higher and keep the gap."
+      cue: "BL127 and BL19 start nineteen and fifty-two digits higher and keep the gap."
     - name: accrual
       cue: ""
     - name: adaptive
@@ -216,8 +216,8 @@
       cue: "Then the cliffs."
     - name: zeros
       cue: "exp of minus forty-two is zero on an 18-decimal grid. Every probability below ten to the minus eighteen is gone."
-    - name: fp19
-      cue: "FP19 never falls off."
+    - name: bl19
+      cue: "BL19 never falls off."
     - name: legend
       cue: ""
     - name: closing
@@ -230,10 +230,10 @@
   sections:
     - name: deployed
       cue: "Three hundred and twenty-six live Aave and Morpho markets. The same interest, measured three times: seven correct digits as deployed,"
-    - name: fp127
-      cue: "thirty in FP127,"
-    - name: fp19
-      cue: "sixty-seven in FP19."
+    - name: bl127
+      cue: "thirty in BL127,"
+    - name: bl19
+      cue: "sixty-seven in BL19."
     - name: closing
       cue: ""
 

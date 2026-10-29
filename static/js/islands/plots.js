@@ -9,7 +9,7 @@ import "/vendor/@observablehq/plot@0.6.16/plot.umd.min.js";
 const Plot = globalThis.Plot;
 
 const KINDS = [["float", "Floating point"], ["fixed", "Fixed point"]];
-const FAMILIES = [["fp19", "FP19"], ["fp127", "FP127 · BlockulatorWad"], ["quad", "binary128 (ABDKMathQuad)"], ["6464", "ABDK 64.64"], ["wad", "WAD libraries"], ["protocol", "Maker, Aave, Morpho, FraxLend, Euler"]];
+const FAMILIES = [["bl19", "BL19"], ["bl127", "BL127 · BlockulatorWad"], ["quad", "binary128 (ABDKMathQuad)"], ["6464", "ABDK 64.64"], ["wad", "WAD libraries"], ["protocol", "Maker, Aave, Morpho, FraxLend, Euler"]];
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
 let data, pages, lib;
@@ -67,11 +67,11 @@ function key(el, t, ids, symbols = true) {
 }
 
 const charts = {
-  // the trade-off in one picture: digits against gas, each library's gas as a multiple of FP127's on the same ops
+  // the trade-off in one picture: digits against gas, each library's gas as a multiple of BL127's on the same ops
   // (the geometric mean over the ops both offer; the range over them is in the tip)
   gas(el, t, width) {
     const g = data.gas;
-    const ref = new Map(g.rows.filter((r) => r.lib === "fp127").map((r) => [r.op, r.gas]));
+    const ref = new Map(g.rows.filter((r) => r.lib === "bl127").map((r) => [r.op, r.gas]));
     const per = g.rows.filter((r) => ref.has(r.op)).map((r) => ({ ...r, ratio: r.gas / ref.get(r.op) }));
     const pts = [...new Set(per.map((r) => r.lib))].map((id) => {
       const rs = per.filter((r) => r.lib === id);
@@ -107,16 +107,16 @@ const charts = {
     const ticks = [0.1, 0.2, 0.3, 0.5, 1, 2, 3, 5, 10].filter((v) => v >= lo && v <= hi);
     el.append(Plot.plot(base(t, width, {
       height: H, marginLeft: M.l, marginRight: M.r, marginBottom: M.b, marginTop: M.t,
-      x: { type: "log", domain: [lo, hi], label: narrow ? "gas, × FP127's on the same ops (log) →" : "gas per call, as a multiple of FP127's on the same ops (log scale) →", tickFormat: (v) => v + "×", ticks },
+      x: { type: "log", domain: [lo, hi], label: narrow ? "gas, × BL127's on the same ops (log) →" : "gas per call, as a multiple of BL127's on the same ops (log scale) →", tickFormat: (v) => v + "×", ticks },
       y: { domain: [0, 76], label: "↑ decimal digits at 1", grid: true },
       marks: [
         Plot.ruleX([1], { stroke: t.faint, strokeDasharray: "3 3" }),
-        Plot.text([{ x: 1, y: 75 }], { x: "x", y: "y", text: () => "FP127's gas", dx: 5, textAnchor: "start", fill: t.faint }),
+        Plot.text([{ x: 1, y: 75 }], { x: "x", y: "y", text: () => "BL127's gas", dx: 5, textAnchor: "start", fill: t.faint }),
         Plot.link(placed.filter((d) => d.lead), { x1: "ox", y1: "oy", x2: "lx", y2: "ly", stroke: t.faint, strokeWidth: 0.8 }),
         Plot.dot(pts.filter((d) => !ours(d)), { x: "ratio", y: "digits", fill: colour(t), r: 8, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
         Plot.dot(pts.filter(ours), { x: "ratio", y: "digits", fill: colour(t), r: 10.5, stroke: "var(--surface-solid)", strokeWidth: 1.5, symbol }),
         Plot.text(placed, { x: "x", y: "y", text: "text", textAnchor: "start", lineAnchor: "middle", fill: t.text, fontWeight: (d) => (ours(d) ? 700 : 500) }),
-        Plot.tip(pts, Plot.pointer({ x: "ratio", y: "digits", title: (d) => `${lib[d.lib].long}\n${d.digits} digits at 1\ngas ${d.ratio.toFixed(2)}× FP127's (geometric mean over ${d.ops} ops; ${d.lo.toFixed(2)}–${d.hi.toFixed(2)}×)` })),
+        Plot.tip(pts, Plot.pointer({ x: "ratio", y: "digits", title: (d) => `${lib[d.lib].long}\n${d.digits} digits at 1\ngas ${d.ratio.toFixed(2)}× BL127's (geometric mean over ${d.ops} ops; ${d.lo.toFixed(2)}–${d.hi.toFixed(2)}×)` })),
       ],
     })));
     key(el, t, pts.map((p) => p.lib));
@@ -327,10 +327,10 @@ const charts = {
     el.append(p);
   },
 
-  // /results/deployed/: each stylised case's correct digits of the interest, as deployed and in FP127 and FP19
+  // /results/deployed/: each stylised case's correct digits of the interest, as deployed and in BL127 and BL19
   deployed(el, t, width) {
     const cs = pages.deployed.cases;
-    const pts = cs.flatMap((c) => [[c.protocol, c.deployed, "as deployed"], ["fp127", c.fp127, "in FP127"], ["fp19", c.fp19, "in FP19"]]
+    const pts = cs.flatMap((c) => [[c.protocol, c.deployed, "as deployed"], ["bl127", c.bl127, "in BL127"], ["bl19", c.bl19, "in BL19"]]
       .map(([l, v, how]) => ({ lib: l, digits: v, how, label: c.label })));
     const rw = rowAxis(t, width, cs.map((c) => c.label), { step: 22 });
     el.append(Plot.plot(base(t, width, {
@@ -340,7 +340,7 @@ const charts = {
       marks: [
         ...band(t, cs.map((c) => c.label), rw.step),
         ...rw.marks,
-        Plot.link(cs, { x1: "deployed", x2: "fp19", y1: "label", y2: "label", stroke: t.line, strokeOpacity: 0.6 }),
+        Plot.link(cs, { x1: "deployed", x2: "bl19", y1: "label", y2: "label", stroke: t.line, strokeOpacity: 0.6 }),
         // the token grid's limit: a dashed tick, or on a phone (names above the rows) the legend's ┆, which stays on its row
         rw.above
           ? Plot.text(cs.filter((c) => c.grid != null), { x: "grid", y: "label", text: () => "┆", fill: t.faint, fontSize: 12, fontWeight: 700 })
@@ -349,7 +349,7 @@ const charts = {
         Plot.tip(pts, Plot.pointer({ x: "digits", y: "label", title: (d) => `${d.label}\n${d.how}: ${d.digits.toFixed(2)} digits of the interest` })),
       ],
     })));
-    key(el, t, ["aave", "fp127", "fp19"]);
+    key(el, t, ["aave", "bl127", "bl19"]);
     el.lastChild.insertAdjacentHTML("beforeend", `<span class="sym">┆ the most digits any answer in whole token units could show</span>`);
   },
 
@@ -395,7 +395,7 @@ const charts = {
       x: { domain: [-6, 6], label: "x →", ticks: narrow ? [-6, -3, 0, 3, 6] : undefined },
       y: { domain: [0, 76], label: "↑ correct digits of the result", grid: true },
       marks: [
-        Plot.line(rows, { x: "x", y: "d", z: "id", stroke: (d) => t.family(d.family), strokeWidth: (d) => (d.id === "fp19" || d.id === "fp127" ? 2.6 : 1.8) }),
+        Plot.line(rows, { x: "x", y: "d", z: "id", stroke: (d) => t.family(d.family), strokeWidth: (d) => (d.id === "bl19" || d.id === "bl127" ? 2.6 : 1.8) }),
         Plot.text(ends, { x: 6, y: "ly", text: (d) => `${d.label}: ${d.med}`, dx: 8, textAnchor: "start", fill: (d) => t.family(d.family), fontWeight: 600 }),
         Plot.tip(rows, Plot.pointer({ x: "x", y: "d", title: (d) => `${d.label}\n${op}(${d.x}): ${d.d >= 75 ? "75 or more" : d.d} correct digits` })),
       ],

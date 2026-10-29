@@ -20,15 +20,15 @@ floor(−log10(|value − truth| / truth)), the measure edges.json reports as
 .digits, so the ledger keeps both counts.
 
 Then the reveal: Blockulator's two words in full. Each cell's .raw is
-decoded exactly (vocab.decode_fp127: raw / 2^128; vocab.decode_fp19: the
-binary256 fields, contracts/src/fp19/README.md lines 21–24) to a Fraction
+decoded exactly (vocab.decode_bl127: raw / 2^128; vocab.decode_bl19: the
+binary256 fields, contracts/src/bl19/README.md lines 21–24) to a Fraction
 with a power-of-two denominator, whose decimal expansion therefore
-terminates: FP127's at the 127th decimal, FP19's at the 179th (the
+terminates: BL127's at the 127th decimal, BL19's at the 179th (the
 exponent is negative). Every one of those decimals is drawn, in blocks
 of ten with a ruler underneath marking each tenth decimal, so a reader
 can count. The digits that match e^40 to 80 decimals (vocab.truth80,
-mpmath; matching_digits counts the prefix) are lit, EMERALD for FP127,
-TEXT under a glow for FP19; from the first digit past the matching
+mpmath; matching_digits counts the prefix) are lit, EMERALD for BL127,
+TEXT under a glow for BL19; from the first digit past the matching
 prefix the digits are MUTED, never red: they are the word's own exact
 expansion, the bits below its precision, not errors, and a bracket under
 that point says so ("the word's precision ends here · 39 decimals"). The
@@ -86,7 +86,7 @@ from vocab import (
 
 OP, ARG = "exp", "40"
 LIBS = ("solady", "balancer", "prb")  # the three answers the talk names
-OURS = ("fp127", "fp19")  # Blockulator's, from the same probe, in the order they unfold
+OURS = ("bl127", "bl19")  # Blockulator's, from the same probe, in the order they unfold
 WORD_DECIMALS = 18
 RULER_EVERY = 10  # the ruler marks every tenth decimal; a block of ten is typed as one beat
 
@@ -212,7 +212,7 @@ def numbers() -> dict:
     ours = []
     for lid in OURS:
         cell = p["cells"][lid]
-        q = word_value(lid, cell["raw"])  # the word, exactly (decode_fp127 / decode_fp19)
+        q = word_value(lid, cell["raw"])  # the word, exactly (decode_bl127 / decode_bl19)
         word = exact_decimals(q)  # its complete decimal expansion: every digit the word holds
         value = to_decimals(q, TRUTH_DECIMALS)  # the same word to 80 decimals, nearest
         assert value.startswith(cell["value"][:-1]), (lid, value, cell["value"])  # the cell prints the same word
@@ -249,12 +249,12 @@ def numbers() -> dict:
         "rows": rows,
         "ours": ours,
         "correctly_rounded": exact_row,
-        "fp127_word": by_id["fp127"]["word"],
-        "fp19_word": by_id["fp19"]["word"],
-        "fp127_match": by_id["fp127"]["matching"],
-        "fp19_match": by_id["fp19"]["matching"],
-        "fp127_decimals": by_id["fp127"]["decimals_right"],
-        "fp19_decimals": by_id["fp19"]["decimals_right"],
+        "bl127_word": by_id["bl127"]["word"],
+        "bl19_word": by_id["bl19"]["word"],
+        "bl127_match": by_id["bl127"]["matching"],
+        "bl19_match": by_id["bl19"]["matching"],
+        "bl127_decimals": by_id["bl127"]["decimals_right"],
+        "bl19_decimals": by_id["bl19"]["decimals_right"],
         "ruler_marks": list(range(RULER_EVERY, longest + 1, RULER_EVERY)),
         "context": context_text(rows),
         "close2": close2_text(ours),
@@ -386,10 +386,10 @@ class Exp40(DeckScene):
         self.play(FadeOut(row_mobjects, shift=UP * 0.3, run_time=0.7), FadeIn(context, shift=UP * 0.3, run_time=0.7))
         by_id = {r["id"]: r for r in n["ours"]}
         name_y = WORD_TOP
-        # FP127: EMERALD digits; FP19: its family colour, white, under a glow (EXACT's white is the row at the top)
-        bottom = self.unfold_word(by_id["fp127"], name_y, Palette.EMERALD, Palette.EMERALD, glow=False, point=point)
+        # BL127: EMERALD digits; BL19: its family colour, white, under a glow (EXACT's white is the row at the top)
+        bottom = self.unfold_word(by_id["bl127"], name_y, Palette.EMERALD, Palette.EMERALD, glow=False, point=point)
         name_y = bottom - NAME_GAP
-        self.unfold_word(by_id["fp19"], name_y, Palette.TEXT, Palette.TEXT, glow=True, point=point)
+        self.unfold_word(by_id["bl19"], name_y, Palette.TEXT, Palette.TEXT, glow=True, point=point)
         self.wait(2.0)
 
         # the closing lines take the context line's place: the verdict on the three, then on the two

@@ -17,7 +17,7 @@ pool 1's DPI drains 546.83609422 → 0.57099095 (−99.90%), the balances
 walked op by op on the logged amounts (vocab.balancer_v1_balances).
 The take is $1.39M (incidents.json). Last, the same join rounded toward
 the pool: the new balance 5, the join costs 2 against maxAmountIn = 1 and
-reverts; FP127 and FP19 with one ceil to the unit give 2 on every join
+reverts; BL127 and BL19 with one ceil to the unit give 2 on every join
 (the generated table, docs/benchmarks/replay-balancer-v1.md, cross-checked
 against the exact ceil by Fraction); the exact cost per join over all 438
 is 1.50079 to 1.52749 units (CORRECT, emerald; Blockulator's row is the
@@ -26,7 +26,7 @@ hero).
 Numbers from scripts/replays/balancer_v1.json (.pools[0].state, .tx,
 .block, .time, .source.lines) through balancer_v1_replay() (the joins
 with BNum's intermediate integers), balancer_v1_balances() (the per-op
-balances), replay_table() (the FP127 / FP19 column, forge's: the table
+balances), replay_table() (the BL127 / BL19 column, forge's: the table
 alone carries it) and incidents.json (the loss, the date). Every derived
 value is computed here with Fraction; check.py recomputes by Decimal.
 """
@@ -182,10 +182,10 @@ def numbers() -> dict:
     # the generated table says the same (docs/benchmarks/replay-balancer-v1.md, through replay_table)
     table = [r for r in replay_table("balancer-v1", TABLE_HEADING) if r["call"].startswith("join")]
     assert [int(r["n"]) for r in table] == [sum(1 for r in p if r["kind"] == 2) for p in replay], table
-    assert all(r["FP127"] == r["FP19"] == r["exact, rounded"] == "2" and r["deployed"] == "1" and r["pays?"] == "no" for r in table), table
+    assert all(r["BL127"] == r["BL19"] == r["exact, rounded"] == "2" and r["deployed"] == "1" and r["pays?"] == "no" for r in table), table
     happened = replay_table("balancer-v1", HAPPENED_HEADING)[POOL]
     assert happened["its balance before → in the loop"] == f"{wbtc0} → {loop} units" and happened["joins / exits"].startswith(f"{len(joins)} /"), happened
-    fp_join = table[POOL]["FP127"]  # forge's figure: the table alone carries it (cross-checked against the exact ceil above)
+    fp_join = table[POOL]["BL127"]  # forge's figure: the table alone carries it (cross-checked against the exact ceil above)
 
     def pct(q: Fraction, places: int) -> str:
         return to_decimals(q * 100, places).replace("-", "−") + "%"
@@ -415,7 +415,7 @@ class BalancerV1(DeckScene):
         row1_lbl = self.left(words("toward the pool", SANS, Palette.CORRECT), X_LEFT, Y_EXACT[1])
         row1_val = digits(str(n["toward"]), SIZE_BODY, Palette.CORRECT).next_to(row1_lbl, RIGHT, buff=0.4).set_y(Y_EXACT[1])
         row1_tail = words(f"· costs {n['cost_toward']} against maxAmountIn = {n['limit']} · reverts", SMALL, Palette.TEXT).next_to(row1_val, RIGHT, buff=0.3).set_y(Y_EXACT[1])
-        row2_lbl = self.left(words("FP127 / FP19, one ceil", SANS, Palette.CORRECT), X_LEFT, Y_EXACT[2])
+        row2_lbl = self.left(words("BL127 / BL19, one ceil", SANS, Palette.CORRECT), X_LEFT, Y_EXACT[2])
         row2_val = digits(n["fp_join"], SIZE_BODY, Palette.CORRECT).next_to(row2_lbl, RIGHT, buff=0.4).set_y(Y_EXACT[2])
         row2_tail = words(f"on all {n['joins']} joins · exact cost {n['cost_min']} to {n['cost_max']} units", SMALL, Palette.TEXT).next_to(row2_val, RIGHT, buff=0.3).set_y(Y_EXACT[2])
         hero = VGroup(row1_lbl, row1_val, row1_tail, row2_lbl, row2_val, row2_tail)

@@ -1,6 +1,6 @@
 # Comparison coverage
 
-Every function of every comparison library, from the source in `lib/` and `contracts/src/ladder/vendor/`, mapped to the FP127 or FP19 op it computes, or listed as not compared with the reason. The gas harnesses are `test/fp127/GasLadder.t.sol` (`make bench` → [gas.md](gas.md), gas.json) and `test/fp19/GasLadder.t.sol` (`make bench-fp19` → [gas19.md](gas19.md), gas19.json). The exact call behind each cell is `CALLS` in `scripts/fp127/gas_to_json.py`, written to gas.json as `calls`. The bench fails if a measured cell has no `CALLS` entry, or an entry has no cell.
+Every function of every comparison library, from the source in `lib/` and `contracts/src/ladder/vendor/`, mapped to the BL127 or BL19 op it computes, or listed as not compared with the reason. The gas harnesses are `test/bl127/GasLadder.t.sol` (`make bench` → [gas.md](gas.md), gas.json) and `test/bl19/GasLadder.t.sol` (`make bench-bl19` → [gas19.md](gas19.md), gas19.json). The exact call behind each cell is `CALLS` in `scripts/bl127/gas_to_json.py`, written to gas.json as `calls`. The bench fails if a measured cell has no `CALLS` entry, or an entry has no cell.
 
 Versions: Solady v0.1.26, PRBMath v4.2.0 (SD59x18 and UD60x18), ABDK v3.2, Balancer LogExpMath from balancer-v3-monorepo@2b9ce4b1b8ad (vendored), Solmate main@89365b8, OpenZeppelin Contracts v5.7.0 (vendored), Uniswap v4-core v4.0.0 FullMath (vendored), snekmate v0.1.2 (Vyper 0.4.3).
 
@@ -28,7 +28,7 @@ The bar is an established library: published, with tagged releases, maintained, 
 
 **What a cell means.** A number is the median gas over the op's input ladder. An empty cell means the library does not offer the op, and only that. `rev` means the library offers the op but reverted on every ladder input, or every input was outside the function's domain or format. In gas.json, `ops[op].reverts[form]` counts such inputs per form; the medians leave them out. After this audit no `rev` cell remains: every function benched computes on at least part of its op's ladder.
 
-**Which table.** FP127's table compares the WAD libraries (Solady, PRBMath SD59x18 and UD60x18, Balancer, Solmate, OpenZeppelin, Uniswap FullMath, snekmate), 64.64 and binary128. The five added with issue #166 have their entry points in `test/fp127/GasLibs.sol`. FP19's table compares binary128, the other float, and FP127Lib on the same value. The WAD and 64.64 libraries are not repeated on FP19's table: every op they share with FP19 is also an FP127 op, so it is compared there.
+**Which table.** BL127's table compares the WAD libraries (Solady, PRBMath SD59x18 and UD60x18, Balancer, Solmate, OpenZeppelin, Uniswap FullMath, snekmate), 64.64 and binary128. The five added with issue #166 have their entry points in `test/bl127/GasLibs.sol`. BL19's table compares binary128, the other float, and BL127Lib on the same value. The WAD and 64.64 libraries are not repeated on BL19's table: every op they share with BL19 is also an BL127 op, so it is compared there.
 
 **Statuses.**
 - compared: benched before this audit, on the same function.
@@ -38,13 +38,13 @@ The bar is an established library: published, with tagged releases, maintained, 
 - variant: the same function as a benched one (an unchecked twin, an unsigned overload, an alias), not benched again.
 - none: no FP op computes the same function; see "Not compared" below.
 
-Conversions into each library's representation happen once, outside the timed window. They are: WAD = `FP127Lib.toFixed18`; 64.64 = `x >> 64` (REV where it does not fit int128); binary128 = `ABDKMathQuad.from128x128` on FP127's table, and on FP19's a direct repacking of the FP19 word (sign, rebiased exponent, fraction truncated to 112 bits).
+Conversions into each library's representation happen once, outside the timed window. They are: WAD = `BL127Lib.toFixed18`; 64.64 = `x >> 64` (REV where it does not fit int128); binary128 = `ABDKMathQuad.from128x128` on BL127's table, and on BL19's a direct repacking of the BL19 word (sign, rebiased exponent, fraction truncated to 112 bits).
 
 ## Solady FixedPointMathLib (78 functions, counting overloads)
 
 | function | op | benched | status |
 |---|---|---|---|
-| `sMulWad(int256, int256)` | mul | yes | compared (rounds toward zero; FP127's `mul` floors) |
+| `sMulWad(int256, int256)` | mul | yes | compared (rounds toward zero; BL127's `mul` floors) |
 | `sDivWad(int256, int256)` | div | yes | compared; also `inv` as `sDivWad(1e18, x)`, composed |
 | `mulWad(uint256, uint256)` | mulDown | yes | compared, domain a, b ≥ 0 |
 | `mulWadUp(uint256, uint256)` | mulUp | yes | compared, domain a, b ≥ 0 |
@@ -55,23 +55,23 @@ Conversions into each library's representation happen once, outside the timed wi
 | `lnWad(int256)` | ln | yes | compared |
 | `lambertW0Wad(int256)` | lambertW0 | yes | compared |
 | `sqrtWad(uint256)` | sqrt | yes | compared, domain x ≥ 0 (was given negative words as uint256) |
-| `cbrtWad(uint256)` | cbrt | yes | compared, domain x ≥ 0 (as above; FP127's cbrt takes negatives) |
+| `cbrtWad(uint256)` | cbrt | yes | compared, domain x ≥ 0 (as above; BL127's cbrt takes negatives) |
 | `abs(int256)` | abs | yes | new |
-| `avg(int256, int256)` | avg | yes | new (floors, as FP127's) |
+| `avg(int256, int256)` | avg | yes | new (floors, as BL127's) |
 | `dist(int256, int256)` | dist | yes | new |
 | `min(int256, int256)` | min | yes | new |
 | `max(int256, int256)` | max | yes | new |
-| `clamp(int256, int256, int256)` | clamp | yes | new (clamp joined FP127's gas ladder in this audit) |
-| `lerp(int256 a, b, t, begin, end)` | lerp | yes | new, domain t ∈ [0, 1]: called as `lerp(a, b, t, 0, 1e18)`; Solady clamps t to [begin, end], FP127 does not |
+| `clamp(int256, int256, int256)` | clamp | yes | new (clamp joined BL127's gas ladder in this audit) |
+| `lerp(int256 a, b, t, begin, end)` | lerp | yes | new, domain t ∈ [0, 1]: called as `lerp(a, b, t, 0, 1e18)`; Solady clamps t to [begin, end], BL127 does not |
 | `zeroFloorSub(uint256, uint256)` | zeroFloorSub | yes | new, domain a, b ≥ 0 |
 | `mulSqrt(uint256, uint256)` | gavg | yes | new, domain a, b ≥ 0: sqrt(x y) of two WADs is the WAD geometric mean |
 | `rpow(uint256 x, uint256 y, uint256 b)` | powu | yes | new, domain x ≥ 0, integer n ≥ 0: `rpow(x, n, 1e18)` |
 | `factorial(uint256)` | factorial | yes | new, domain integral x: given the plain integer, returns the plain integer n! |
-| `log2Up(uint256)` | log2Up | yes | new, domain integral x ≥ 1: ceil(log2 n) of the plain integer, which FP127's `log2Up` is on integers |
+| `log2Up(uint256)` | log2Up | yes | new, domain integral x ≥ 1: ceil(log2 n) of the plain integer, which BL127's `log2Up` is on integers |
 | `rawAdd(int256, int256)` | add | yes | fixed: the cell was Solidity's checked `a + b`, which is not a Solady function; it is now Solady's unchecked `rawAdd` |
 | `rawSub(int256, int256)` | sub | yes | fixed, as `rawAdd` |
 | `rawMulWad`, `rawSMulWad`, `rawMulWadUp`, `rawDivWad`, `rawSDivWad`, `rawDivWadUp` | mul, mulDown, … | no | variant: the unchecked twins of the six above |
-| `avg`, `dist`, `min`, `max`, `clamp`, `lerp` (uint256 overloads) | | no | variant: FP127 is signed; the int256 overloads are benched |
+| `avg`, `dist`, `min`, `max`, `clamp`, `lerp` (uint256 overloads) | | no | variant: BL127 is signed; the int256 overloads are benched |
 | `saturatingSub(uint256, uint256)` | zeroFloorSub | no | variant: `zeroFloorSub` is its alias |
 | `fullMulEq`, `fullMulDiv`, `fullMulDivUnchecked`, `fullMulDivUp`, `fullMulDivN`, `mulDiv`, `mulDivUp` | | no | none |
 | `invMod`, `divUp`, `saturatingAdd`, `saturatingMul`, `gcd`, `isEven` | | no | none |
@@ -95,8 +95,8 @@ Conversions into each library's representation happen once, outside the timed wi
 | `uncheckedAdd`, `uncheckedSub`, `uncheckedUnary` | add, sub, neg | no | variant: the unchecked twins |
 | `and`, `and2`, `or`, `xor`, `not`, `lshift`, `rshift` | | no | none |
 | `mod` | | no | none |
-| `eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `isZero` | | no | none (FP127 table); not compared on the FP19 table |
-| `convert(int256)`, `convert(SD59x18)` | | no | none (FP127 table); not compared on the FP19 table |
+| `eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `isZero` | | no | none (BL127 table); not compared on the BL19 table |
+| `convert(int256)`, `convert(SD59x18)` | | no | none (BL127 table); not compared on the BL19 table |
 | `intoInt256`, `intoSD1x18`, `intoSD21x18`, `intoUD2x18`, `intoUD21x18`, `intoUD60x18`, `intoUint256`, `intoUint128`, `intoUint40`, `sd`, `sd59x18`, `unwrap`, `wrap` | | no | none |
 
 17 compared, 4 new (2 of them fixed), 3 variants, 30 none; `powu` is domain-limited.
@@ -122,16 +122,16 @@ Conversions into each library's representation happen once, outside the timed wi
 | `add`, `sub`, `mul`, `div`, `neg`, `abs`, `sqrt`, `ln`, `exp` | the same names | yes, both tables | compared |
 | `log_2` | log2 | yes, both tables | compared |
 | `pow_2` | exp2 | yes, both tables | compared |
-| (`div(fromUInt(1), x)`) | inv | yes, both tables | composed; new on FP19's table |
+| (`div(fromUInt(1), x)`) | inv | yes, both tables | composed; new on BL19's table |
 | (`exp(mul(y, ln(x)))`) | pow | yes, both tables | composed |
 | `sign` | sign | yes, both tables | new |
-| `cmp` | cmp (FP19); also `lt` as `cmp(a, b) < 0`, composed | yes, FP19 | new |
-| `eq` | eq (FP19) | yes, FP19 | new |
-| `toUInt` | toUintDown (FP19) | yes, FP19 | new: truncates, which is floor on the ladder's non-negative inputs |
-| `toInt` | toIntDown (FP19) | yes, FP19 | new, domain x ≥ 0: truncation is floor only there |
-| `fromUInt` | fromUintDown (FP19) | yes, FP19 | new: truncates the significand, which is FP19's `fromUintDown`, not its rounding `fromUint` |
-| `from128x128` | fromFP127 (FP19) | yes, FP19 | new: truncates where FP19 rounds to nearest; on FP127's table it is the input conversion |
-| `to128x128` | toFP127 (FP19) | yes, FP19 | new: truncates where FP19 rounds to nearest |
+| `cmp` | cmp (BL19); also `lt` as `cmp(a, b) < 0`, composed | yes, BL19 | new |
+| `eq` | eq (BL19) | yes, BL19 | new |
+| `toUInt` | toUintDown (BL19) | yes, BL19 | new: truncates, which is floor on the ladder's non-negative inputs |
+| `toInt` | toIntDown (BL19) | yes, BL19 | new, domain x ≥ 0: truncation is floor only there |
+| `fromUInt` | fromUintDown (BL19) | yes, BL19 | new: truncates the significand, which is BL19's `fromUintDown`, not its rounding `fromUint` |
+| `from128x128` | fromBL127 (BL19) | yes, BL19 | new: truncates where BL19 rounds to nearest; on BL127's table it is the input conversion |
+| `to128x128` | toBL127 (BL19) | yes, BL19 | new: truncates where BL19 rounds to nearest |
 | `fromInt`, `from64x64`, `to64x64`, `fromOctuple`, `toOctuple`, `fromDouble`, `toDouble`, `isNaN`, `isInfinity` | | no | none |
 | `mostSignificantBit` | | | private |
 
@@ -192,7 +192,7 @@ The `mul` and `div` cells are removed. They measured Solidity's `a * b / 1e18` a
 | `log2(uint256, Rounding)` | log2Up | yes | new, domain integral x ≥ 1, `Rounding.Ceil` |
 | `saturatingSub(uint256, uint256)` | zeroFloorSub | yes | new, domain a, b ≥ 0 |
 | SignedMath `abs`, `min`, `max` | abs, min, max | yes | new |
-| SignedMath `average` | avg | yes | new (rounds toward zero; FP127's avg floors) |
+| SignedMath `average` | avg | yes | new (rounds toward zero; BL127's avg floors) |
 | `max`, `min`, `average` (uint256), SignedMath `ternary`, Math `ternary` | | no | variant / none |
 | `ceilDiv`, `tryAdd`, `trySub`, `tryMul`, `tryDiv`, `tryMod`, `saturatingAdd`, `saturatingMul`, `add512`, `mul512`, `mulShr` ×2, `invMod`, `invModPrime`, `modExp` ×2, `tryModExp` ×2, `log2(uint256)`, `log10` ×2, `log256` ×2, `unsignedRoundsUp`, `clz` | | no | none: integer arithmetic, number theory and floor logs (as Solady's) |
 
@@ -214,13 +214,13 @@ The `mul` and `div` cells are removed. They measured Solidity's `a * b / 1e18` a
 | `_wad_exp`, `_wad_ln` | exp, ln | yes | new (`_wad_ln(0)` returns 0) |
 | `_wad_cbrt(uint256)` | cbrt | yes | new, domain x ≥ 0 |
 | `_mul_div(x, y, d, roundup)` | mulDown, mulUp, divDown, divUp | yes | new, domain a, b ≥ 0 |
-| `_int256_average` | avg | yes | new (floors, as FP127's) |
+| `_int256_average` | avg | yes | new (floors, as BL127's) |
 | `_signum` | sign | yes | new |
 | `_log2(uint256, roundup)` | log2Up | yes | new, domain integral x ≥ 1, `roundup = True` |
 | `_uint256_average` | avg | no | variant |
 | `_ceil_div`, `_log10`, `_log256`, `_cbrt` (the integer root) | | no | none (as Solady's) |
 
-10 new, 1 variant, 4 none. snekmate is Vyper: `contracts/src/ladder/vyper/SnekmateMath.vy` exports the module, built by `scripts/ladder/vyper.py` with the compiler snekmate pins (0.4.3). Its gas cells are the module call as that contract times it with `msg.gas`, net of the same window around an assignment, so no external call is in them; on the ladder the adapter makes one staticcall per op, as FP127's deployed form does. snekmate has no square root and no real power: the ladder takes the root with Vyper's built-in `isqrt(x * 10**18)` and pow as `wad_exp(wad_ln(x) * y / 1e18)`, as Solmate composes it; neither is on the gas or WAD tables.
+10 new, 1 variant, 4 none. snekmate is Vyper: `contracts/src/ladder/vyper/SnekmateMath.vy` exports the module, built by `scripts/ladder/vyper.py` with the compiler snekmate pins (0.4.3). Its gas cells are the module call as that contract times it with `msg.gas`, net of the same window around an assignment, so no external call is in them; on the ladder the adapter makes one staticcall per op, as BL127's deployed form does. snekmate has no square root and no real power: the ladder takes the root with Vyper's built-in `isqrt(x * 10**18)` and pow as `wad_exp(wad_ln(x) * y / 1e18)`, as Solmate composes it; neither is on the gas or WAD tables.
 
 ## Protocols: Aave, Morpho, Maker, FraxLend, Euler v2
 
@@ -251,11 +251,11 @@ Which protocols' deployed maths the ladder measures was decided by a pass over a
 | C | Spark SSR oracle | `getConversionRate*` | rpow, the Aave binomial or linear; about 1e-11 over a week. | Exact enough. |
 | – | gTrade | borrowing fee per block | Not verified: no public source could be read. | |
 
-## FP127Lib on FP19's table
+## BL127Lib on BL19's table
 
-FP19's table shows the same op in FP127Lib on the same value. These ops were missing from that column, though FP127 has them, and are now benched: `floor`, `ceil`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `divDown`, `divUp`, `powu` and `compound` (FP127 takes n << 128 where FP19 takes the plain integer), and `fromFixed18` (the raw WAD had been routed through `toFP127`).
+BL19's table shows the same op in BL127Lib on the same value. These ops were missing from that column, though BL127 has them, and are now benched: `floor`, `ceil`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `divDown`, `divUp`, `powu` and `compound` (BL127 takes n << 128 where BL19 takes the plain integer), and `fromFixed18` (the raw WAD had been routed through `toBL127`).
 
-The 12 cells still empty there are ops FP127 does not have: `cmp`, `lt`, `eq` (a 127.128 word compares as an int256), `fromUint`, `fromUintDown`, `fromUintUp`, `toUintDown`, `toUintUp`, `toIntDown`, `toIntUp`, `fromFP127`, `toFP127`.
+The 12 cells still empty there are ops BL127 does not have: `cmp`, `lt`, `eq` (a 127.128 word compares as an int256), `fromUint`, `fromUintDown`, `fromUintUp`, `toUintDown`, `toUintUp`, `toIntDown`, `toIntUp`, `fromBL127`, `toBL127`.
 
 ## Not compared
 
@@ -264,37 +264,37 @@ One line per function or group, on why no FP op computes the same function.
 - **Solady `fullMulDiv`, `fullMulDivUp`, `fullMulDivUnchecked`, `fullMulDivN`, `mulDiv`, `mulDivUp`, `fullMulEq`:** integer x·y/d (and x·y = a·b) with a free denominator. No op takes a denominator; the WAD case d = 1e18 is `mulWad`, which is compared.
 - **Solady `rpow` with a base other than 1e18:** the 1e18 case is compared as `powu`. Other bases are other fixed-point formats.
 - **Solady `invMod`, `gcd`, `isEven`, `divUp`:** integer number theory and integer ceil division; no fixed-point op.
-- **Solady `saturatingAdd`, `saturatingMul`:** unsigned saturation; FP127's arithmetic reverts on overflow instead.
+- **Solady `saturatingAdd`, `saturatingMul`:** unsigned saturation; BL127's arithmetic reverts on overflow instead.
 - **Solady `ternary`, `coalesce`:** selection helpers, no arithmetic.
-- **Solady `sqrt`, `cbrt` (uint256):** floor roots of an integer. FP127's `sqrt` and `cbrt` are roots of a real; the fixed-point roots `sqrtWad` and `cbrtWad` are compared.
-- **Solady `log2`, `log10`, `log10Up`, `log256`, `log256Up` (uint256):** integer floor and ceil logarithms. FP127's `log2` and `log10` are real-valued, and it has no floor log. Only `log2Up` has an FP127 equivalent, and it is compared.
+- **Solady `sqrt`, `cbrt` (uint256):** floor roots of an integer. BL127's `sqrt` and `cbrt` are roots of a real; the fixed-point roots `sqrtWad` and `cbrtWad` are compared.
+- **Solady `log2`, `log10`, `log10Up`, `log256`, `log256Up` (uint256):** integer floor and ceil logarithms. BL127's `log2` and `log10` are real-valued, and it has no floor log. Only `log2Up` has an BL127 equivalent, and it is compared.
 - **Solady `sci`, `packSci`, `unpackSci`:** decimal mantissa and exponent packing; no op.
 - **Solady unsigned `rawAdd`, `rawSub`, `rawMul`, `rawDiv`, `rawSDiv`, `rawMod`, `rawSMod`, `rawAddMod`, `rawMulMod`:** raw EVM opcodes on integers. The signed `rawAdd` and `rawSub` stand in for add and sub; a raw product is not a fixed-point product.
 - **PRBMath `and`, `and2`, `or`, `xor`, `not`, `lshift`, `rshift`, `mod`:** bitwise and remainder operations on the raw word; no op.
 - **PRBMath `eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `isZero`:**
-  - FP127 table: FP127 has no comparison ops, because a 127.128 word compares as an int256, exactly as an SD59x18 does.
-  - FP19 table: FP19's `cmp`, `lt` and `eq` are not compared against PRBMath. That table compares only binary128, the other float, and FP127Lib. FP19's comparisons are measured against Quad's `cmp` and `eq` there.
+  - BL127 table: BL127 has no comparison ops, because a 127.128 word compares as an int256, exactly as an SD59x18 does.
+  - BL19 table: BL19's `cmp`, `lt` and `eq` are not compared against PRBMath. That table compares only binary128, the other float, and BL127Lib. BL19's comparisons are measured against Quad's `cmp` and `eq` there.
 - **PRBMath `convert(int256)`, `convert(SD59x18)`:** integer ↔ SD59x18, ×1e18 and ÷1e18 toward zero.
-  - FP127 table: FP127 has no integer conversions (a shift does it).
-  - FP19 table: not compared, for the same reason as the comparisons. FP19's `fromUint` and `toInt*` are compared against Quad there.
+  - BL127 table: BL127 has no integer conversions (a shift does it).
+  - BL19 table: not compared, for the same reason as the comparisons. BL19's `fromUint` and `toInt*` are compared against Quad there.
 - **PRBMath casts (`intoInt256` … `wrap`):** type conversions with range checks, no arithmetic.
-- **ABDK 64.64 `fromInt`, `toInt`, `fromUInt`, `toUInt`, `from128x128`, `to128x128`:** conversions into and out of 64.64 itself. FP127 has none of these (its integer conversions are shifts), and 64.64 is not on FP19's table.
+- **ABDK 64.64 `fromInt`, `toInt`, `fromUInt`, `toUInt`, `from128x128`, `to128x128`:** conversions into and out of 64.64 itself. BL127 has none of these (its integer conversions are shifts), and 64.64 is not on BL19's table.
 - **ABDK 64.64 `muli`, `mulu`, `divi`, `divu`:** 64.64 × integer → integer, and integer ÷ integer → 64.64; no op mixes the two representations.
-- **ABDKMathQuad `fromInt`:** signed integer → binary128. FP19 has only `fromUint` (and its Down/Up), and Quad's `fromUInt` is compared against `fromUintDown`.
+- **ABDKMathQuad `fromInt`:** signed integer → binary128. BL19 has only `fromUint` (and its Down/Up), and Quad's `fromUInt` is compared against `fromUintDown`.
 - **ABDKMathQuad `from64x64`, `to64x64`, `fromOctuple`, `toOctuple`, `fromDouble`, `toDouble`:** conversions to formats no FP library has.
-- **ABDKMathQuad `isNaN`, `isInfinity`:** FP127 and FP19 have no NaN or infinity; they revert instead.
+- **ABDKMathQuad `isNaN`, `isInfinity`:** BL127 and BL19 have no NaN or infinity; they revert instead.
 
 ## Ops no library offers
 
 These are empty on every competitor column, and correctly so:
 
 - Both tables: `exp10`, `hypot`, `round`, `compound`, `lambertWm1` (Solady has W₀ only), `log1p`, `expm1`, `sinh`, `cosh`, `tanh`, `atanh`, `erf`, `erfc`, `normCdf`.
-- FP127 table: the conversions `fromFixed18`, `toFixed18`, `toFixed18Down`, `toFixed18Up`. A WAD library is natively 18-decimal.
-- FP19 table, Quad column: all of the above (the fixed-18 conversions included), plus `lambertW0`, `cbrt`, `log10`, `log2Up`, `gavg`, `avg`, `min`, `max`, `clamp`, `dist`, `zeroFloorSub`, `lerp`, `floor`, `ceil`, `frac`, `factorial`, the directed `mulDown`, `mulUp`, `divDown`, `divUp`, `powu`, `fromUint`, `fromUintUp`, `toUintUp`, `toIntUp`.
+- BL127 table: the conversions `fromFixed18`, `toFixed18`, `toFixed18Down`, `toFixed18Up`. A WAD library is natively 18-decimal.
+- BL19 table, Quad column: all of the above (the fixed-18 conversions included), plus `lambertW0`, `cbrt`, `log10`, `log2Up`, `gavg`, `avg`, `min`, `max`, `clamp`, `dist`, `zeroFloorSub`, `lerp`, `floor`, `ceil`, `frac`, `factorial`, the directed `mulDown`, `mulUp`, `divDown`, `divUp`, `powu`, `fromUint`, `fromUintUp`, `toUintUp`, `toIntUp`.
 
 ## Precision comparisons
 
-- The precision table on the site (`precisiontable`, from `docs/fp127/precision.json`) is FP127's alone; no other library appears in it.
+- The precision table on the site (`precisiontable`, from `docs/bl127/precision.json`) is BL127's alone; no other library appears in it.
 - Competitor precision per op is in the edges dataset ([edges.md](edges.md), `make edges`): 15 ops, probed for every library. Its "n/a" cells were checked and are correct:
   - Aave, Morpho, Maker, FraxLend and Euler have no general functions.
   - OpenZeppelin and Uniswap FullMath have mul and div (and OpenZeppelin a root) only; PRBMath UD60x18 takes no negative argument, so its negative probes are `ParamOutOfRange`.
@@ -305,9 +305,9 @@ These are empty on every competitor column, and correctly so:
 
 | table | cells | empty before | empty after | rev |
 |---|---:|---:|---:|---:|
-| FP127 (site columns: Yul, FP127Lib and the five libraries) | 357 → 371 (`clamp`, `lerp` added) | 186 | 181 | 0 |
-| FP19 (object, FP19Lib, FP127Lib, Quad) | 260 | 76 | 55 | 0 |
+| BL127 (site columns: Yul, BL127Lib and the five libraries) | 357 → 371 (`clamp`, `lerp` added) | 186 | 181 | 0 |
+| BL19 (object, BL19Lib, BL127Lib, Quad) | 260 | 76 | 55 | 0 |
 
-Issue #166 added five columns to FP127's table (53 ops each): Solmate 11 cells, OpenZeppelin 11, Uniswap FullMath 4, PRBMath UD60x18 18, snekmate 10. None is `rev`.
+Issue #166 added five columns to BL127's table (53 ops each): Solmate 11 cells, OpenZeppelin 11, Uniswap FullMath 4, PRBMath UD60x18 18, snekmate 10. None is `rev`.
 
 Before, an empty cell meant either not offered or reverted on every input. Now every empty cell is an op the library does not offer, and the bench enforces it.

@@ -1,4 +1,4 @@
-# FP127 at EthCC[9]: transcript
+# BL127 at EthCC[9]: transcript
 
 Auto-generated captions of https://www.youtube.com/watch?v=a_tL99NY-yc, fetched 2026-10-07 and grouped into paragraphs with the timestamp of their first line. Unedited; expect caption errors in names and numbers.
 

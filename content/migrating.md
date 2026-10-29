@@ -42,11 +42,11 @@ int256 r = BlockulatorWad.pow(x.unwrap(), y.unwrap());   // was x.pow(y)
 
 Each of ABDK's two formats has a Blockulator counterpart of the same kind, and both use one `int256` per value:
 
-- ABDKMath64x64 moves to FP127: 127.128 fixed point, with 64 more fractional bits. `x << 64` converts.
-- ABDKMathQuad's binary128 moves to FP19: a 256-bit binary float, with 237 bits of significand against 113.
+- ABDKMath64x64 moves to BL127: 127.128 fixed point, with 64 more fractional bits. `x << 64` converts.
+- ABDKMathQuad's binary128 moves to BL19: a 256-bit binary float, with 237 bits of significand against 113.
 
 {{ <table name="migrate.abdk.ops" first="ABDKMath64x64" /> }}
 
 {{ <table name="migrate.abdk.quad" first="ABDKMathQuad" /> }}
 
-Gas is the inline library on both sides. FP127 and FP19 are also deployed as contracts you can `staticcall`; [the library pages](/library/) have the addresses.
+Gas is the inline library on both sides. BL127 and BL19 are also deployed as contracts you can `staticcall`; [the library pages](/library/) have the addresses.

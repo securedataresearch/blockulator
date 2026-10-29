@@ -12,12 +12,12 @@ One address, one word per input, nothing to trust but the code; today on Sepolia
 Closing line (verbatim): **one call to check · deployed today: Sepolia**
 
 ## 3. Data and strings
-Loaders: `release()` (contracts/deployments/RELEASE.json → components.FP127.address and .version), `chains()` (talk/scenes/data/chains.json: chain, clz_since, status, probed, deployed, proxy), `edges("exp")` for the exp(40) FP127 cell and `correctly_rounded_18(truth80())` for the 18-decimal word (the same string s02 shows as its exact row).
+Loaders: `release()` (contracts/deployments/RELEASE.json → components.BL127.address and .version), `chains()` (talk/scenes/data/chains.json: chain, clz_since, status, probed, deployed, proxy), `edges("exp")` for the exp(40) BL127 cell and `correctly_rounded_18(truth80())` for the 18-decimal word (the same string s02 shows as its exact row).
 
 | string | where | claim id | source |
 |---|---|---|---|
-| the FP127 address, all 42 characters | centre, HERO, MONO | V15 | release() |
-| `FP127 v9` | under the address, CAPTION | V15 | release() |
+| the BL127 address, all 42 characters | centre, HERO, MONO | V15 | release() |
+| `BL127 v9` | under the address, CAPTION | V15 | release() |
 | each chain name | rows | V5 | chains() |
 | `CLZ since <date>` per supported chain | row, MUTED | V5 | chains().clz_since |
 | `deployed` (Sepolia only) | row, EMERALD | V6 | chains().deployed |
@@ -36,7 +36,7 @@ Not drawn: "ready" or "live"; any mainnet address claim. The word "every chain" 
 ## 4. Sections
 | i | name | what appears | persists | spoken over it | held frame | s |
 |---|---|---|---|---|---|---|
-| 0 | `address` | title; the address types in character by character (MONO, HERO) with `glow_bar()`; `FP127 v9` under it | — | "No standard says what exp should return on chain. A correctly rounded library can be that reference:" | the address | 6 |
+| 0 | `address` | title; the address types in character by character (MONO, HERO) with `glow_bar()`; `BL127 v9` under it | — | "No standard says what exp should return on chain. A correctly rounded library can be that reference:" | the address | 6 |
 | 1 | `chains` | the address shrinks to BODY and moves up; chain rows appear one per 0.3 s in the README's order: name, `CLZ since`, status word; Sepolia's row lands last with EMERALD `deployed` and a `halo()`; unsupported rows in RED with `cross_mark()`; the `probed <date>` caption | address | "one right word for every input, the same address on every chain," | the chain table | 10 |
 | 2 | `call` | the table dims; two boxes: `your contract` (left) and `the reference` (right, carrying the address); an arrow `eth_call exp(40)` left to right; the reference's word types in (MONO, BODY); your contract's word types in beneath; an EMERALD `check_mark()` and `equal`; the CAPTION line | address | (pause) | the two equal words | 10 |
 | 3 | `properties` | four phrases land under the reference box: `no storage · no owner · no upgrade path · source verified`, one per 0.5 s, with small tick glyphs | boxes | "no owner, no upgrade path," | boxes + properties | 5 |

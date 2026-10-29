@@ -1,10 +1,10 @@
 {
  "_doc": "Every library the site compares, in display order: floating point first, then fixed point. kind = float | fixed; family picks the colour (static/css/blockulator.css, --c-<family>); short = the label in dense table heads (the full name is on hover); digits = decimal digits at 1; ours marks Blockulator's own. Read by scripts/site/home.py; every table and chart takes its rows, order and groups from here.",
  "libraries": [
-  {"id": "fp19", "label": "FP19", "short": "FP19", "long": "FP19, 256-bit float", "kind": "float", "family": "fp19", "digits": 71, "ours": true},
+  {"id": "bl19", "label": "BL19", "short": "BL19", "long": "BL19, 256-bit float", "kind": "float", "family": "bl19", "digits": 71, "ours": true},
   {"id": "quad", "label": "ABDKMathQuad", "short": "Quad", "long": "ABDKMathQuad, IEEE binary128", "kind": "float", "family": "quad", "digits": 34},
-  {"id": "fp127", "label": "FP127", "short": "FP127", "long": "FP127, 127.128 fixed point", "kind": "fixed", "family": "fp127", "digits": 38, "ours": true},
-  {"id": "blockulator", "label": "BlockulatorWad", "short": "BWad", "long": "BlockulatorWad, WAD computed in FP19", "kind": "fixed", "family": "fp127", "digits": 18, "ours": true},
+  {"id": "bl127", "label": "BL127", "short": "BL127", "long": "BL127, 127.128 fixed point", "kind": "fixed", "family": "bl127", "digits": 38, "ours": true},
+  {"id": "blockulator", "label": "BlockulatorWad", "short": "BWad", "long": "BlockulatorWad, WAD computed in BL19", "kind": "fixed", "family": "bl127", "digits": 18, "ours": true},
   {"id": "abdk", "label": "ABDK 64.64", "short": "64.64", "long": "ABDKMath64x64, 64.64 fixed point", "kind": "fixed", "family": "6464", "digits": 19},
   {"id": "solady", "label": "Solady", "short": "Solady", "long": "Solady FixedPointMathLib, WAD", "kind": "fixed", "family": "wad", "digits": 18},
   {"id": "solmate", "label": "Solmate", "short": "Solmate", "long": "Solmate SignedWadMath and FixedPointMathLib, WAD", "kind": "fixed", "family": "wad", "digits": 18},

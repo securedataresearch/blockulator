@@ -9,10 +9,10 @@
  "truth": "mpmath 150 digits: ncdf(x) and erfc(x) at the exact x",
  "implementations": [
   {
-   "id": "fp19",
-   "label": "FP19",
-   "representation": "FP19, 256-bit float",
-   "source": "contracts/src/fp19 (FP19Lib)",
+   "id": "bl19",
+   "label": "BL19",
+   "representation": "BL19, 256-bit float",
+   "source": "contracts/src/bl19 (BL19Lib)",
    "ops": {
     "normCdf": {
      "points": 385,
@@ -3119,10 +3119,10 @@
    }
   },
   {
-   "id": "fp127",
-   "label": "FP127",
-   "representation": "FP127, 127.128 fixed point",
-   "source": "contracts/src/fp127 (FP127Lib)",
+   "id": "bl127",
+   "label": "BL127",
+   "representation": "BL127, 127.128 fixed point",
+   "source": "contracts/src/bl127 (BL127Lib)",
    "ops": {
     "normCdf": {
      "points": 385,

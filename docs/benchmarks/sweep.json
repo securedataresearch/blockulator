@@ -1,10 +1,10 @@
 {
- "_doc": "Random-input accuracy sweep of the inline FP127 and FP19 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n    uv run scripts/sweep/sweep.py --ops cosh,sinh   # only those ops (both libraries, both passes);\n                                           # their rows replace the ones in sweep.json, the rest stay\n                                           # (the second-stage gas can differ by a unit: the generated\n                                           # runner is a smaller contract; the re-baseline runs everything)\n    uv run scripts/sweep/sweep.py --lib fp127 --ops exp,ln   # one library's rows only (fp19, fp127, wad)\n\nRelease four adds the directed ops, powu and lambertWm1, and a second pass: the\nsame inputs (the first 4,000 of each) through a test-only copy of FP19Lib whose\nrounding test always fails (scripts/fp127/gen.py --wide-lib), so every correctly\nrounded op returns its wide second stage. That pass is generated into\ntest/sweep/wide/ (not committed) and removed after the run.\n\nA third pass runs every op on all its inputs through test-only copies of FP19Lib\nand FP127Lib that count each rounding-test fallback (scripts/fp127/gen.py --count-lib:\nFP19's rbad firing, FP127's double-word l2p and powu's 512-bit powus), generated into\ntest/sweep/count/ and removed after the run: the *fallback* column is the share of\ninputs that left the fast path. Its results must equal the plain pass's word for word.\n\nGas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of\nthe one call, after its dispatch, and subtracts the same window around an assignment.\n\nFP127 has the same two passes for the ops whose rounding tests exist today\n(WIDE127, MID127): FP127LibWide with every test forced to fail (gen.py's fp127\n\"forced\" map: rbad127, rbadw, rbadm127, nearmid, pow2t, pow2rt), so every result\ncomes from the op's last stage (the exponentials' and logs' two-word stages, pow's\nexact tie or two-word stage, powu's 512-bit mantissa or pow, compound through powu),\nand FP127LibMid with only the fast paths' tests forced (the logs, pow, compound and\natanh return their double-word middle stage, its own test kept). Their outputs are\nwide127_* and mid127_*.\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. FP19 results are compared with the word the oracle (scripts/fp19/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. FP127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128, and with the correctly rounded word: the word\nscripts/fp127/oracle.py returns, the rounding the op promises (to nearest under\nFP127's tie rule, ties up, the magnitude for powu, compound, cbrt, sinh, tanh and\nerf; the directed ops in their direction). The oracle works at 200 digits; where\nthe truth there lies within 10^-100 of a rounding boundary (an integer or a half\nof the grid, beyond which 200 digits could not decide), the word is recomputed at\n300 digits and the row counts it (crClose, and crChanged when 300 digits gave\nanother word). Writes docs/benchmarks/sweep.{json,md}.",
+ "_doc": "Random-input accuracy sweep of the inline BL127 and BL19 libraries against\ncorrectly rounded truth.\n\n    uv run scripts/sweep/sweep.py          # gen -> forge (test/sweep/Sweep.t.sol) -> score\n    uv run scripts/sweep/sweep.py score    # re-score the last forge outputs only\n    uv run scripts/sweep/sweep.py --ops cosh,sinh   # only those ops (both libraries, both passes);\n                                           # their rows replace the ones in sweep.json, the rest stay\n                                           # (the second-stage gas can differ by a unit: the generated\n                                           # runner is a smaller contract; the re-baseline runs everything)\n    uv run scripts/sweep/sweep.py --lib bl127 --ops exp,ln   # one library's rows only (bl19, bl127, wad)\n\nRelease four adds the directed ops, powu and lambertWm1, and a second pass: the\nsame inputs (the first 4,000 of each) through a test-only copy of BL19Lib whose\nrounding test always fails (scripts/bl127/gen.py --wide-lib), so every correctly\nrounded op returns its wide second stage. That pass is generated into\ntest/sweep/wide/ (not committed) and removed after the run.\n\nA third pass runs every op on all its inputs through test-only copies of BL19Lib\nand BL127Lib that count each rounding-test fallback (scripts/bl127/gen.py --count-lib:\nBL19's rbad firing, BL127's double-word l2p and powu's 512-bit powus), generated into\ntest/sweep/count/ and removed after the run: the *fallback* column is the share of\ninputs that left the fast path. Its results must equal the plain pass's word for word.\n\nGas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of\nthe one call, after its dispatch, and subtracts the same window around an assignment.\n\nBL127 has the same two passes for the ops whose rounding tests exist today\n(WIDE127, MID127): BL127LibWide with every test forced to fail (gen.py's bl127\n\"forced\" map: rbad127, rbadw, rbadm127, nearmid, pow2t, pow2rt), so every result\ncomes from the op's last stage (the exponentials' and logs' two-word stages, pow's\nexact tie or two-word stage, powu's 512-bit mantissa or pow, compound through powu),\nand BL127LibMid with only the fast paths' tests forced (the logs, pow, compound and\natanh return their double-word middle stage, its own test kept). Their outputs are\nwide127_* and mid127_*.\n\nInputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not\ncommitted. BL19 results are compared with the word the oracle (scripts/bl19/oracle.py:\nexact rationals and mpmath at 300 digits, half away from zero) returns, as a signed\ndistance in ULPs. BL127 results are compared with the real truth at 200 digits, as\n|got - truth| in units of 2^-128, and with the correctly rounded word: the word\nscripts/bl127/oracle.py returns, the rounding the op promises (to nearest under\nBL127's tie rule, ties up, the magnitude for powu, compound, cbrt, sinh, tanh and\nerf; the directed ops in their direction). The oracle works at 200 digits; where\nthe truth there lies within 10^-100 of a rounding boundary (an integer or a half\nof the grid, beyond which 200 digits could not decide), the word is recomputed at\n300 digits and the row counts it (crClose, and crChanged when 300 digits gave\nanother word). Writes docs/benchmarks/sweep.{json,md}.",
  "seed": 20261020,
  "seedLambert": 7,
  "rows": [
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "add",
    "n": 4000,
    "status": {
@@ -21,7 +21,7 @@
    "gasMax": 876
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "mul",
    "n": 4000,
    "status": {
@@ -38,7 +38,7 @@
    "gasMax": 530
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "div",
    "n": 4000,
    "status": {
@@ -55,7 +55,7 @@
    "gasMax": 808
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "sqrt",
    "n": 4000,
    "status": {
@@ -72,7 +72,7 @@
    "gasMax": 1217
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp",
    "n": 21913,
    "status": {
@@ -93,7 +93,7 @@
    "fallbackPct": 0.005
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "ln",
    "n": 20000,
    "status": {
@@ -113,7 +113,7 @@
    "fallbackPct": 0.02
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log1p",
    "n": 21573,
    "status": {
@@ -134,7 +134,7 @@
    "fallbackPct": 0.023
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "expm1",
    "n": 21957,
    "status": {
@@ -155,7 +155,7 @@
    "fallbackPct": 0.059
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "pow",
    "n": 21985,
    "status": {
@@ -178,7 +178,7 @@
    "secondPct": 0.005
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "erf",
    "n": 4000,
    "status": {
@@ -198,7 +198,7 @@
    "fallbackPct": 0.1
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "erfc",
    "n": 6000,
    "status": {
@@ -218,7 +218,7 @@
    "fallbackPct": 0.083
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "normCdf",
    "n": 6000,
    "status": {
@@ -238,7 +238,7 @@
    "fallbackPct": 0.167
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "compound",
    "n": 5644,
    "status": {
@@ -261,7 +261,7 @@
    "secondPct": 0.067
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertW0",
    "n": 6000,
    "status": {
@@ -281,7 +281,7 @@
    "fallbackPct": 0.067
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertWm1",
    "n": 4000,
    "status": {
@@ -301,7 +301,7 @@
    "fallbackPct": 0.2
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "powu",
    "n": 5853,
    "status": {
@@ -324,7 +324,7 @@
    "secondPct": 0.017
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "mulDown",
    "n": 4000,
    "status": {
@@ -341,7 +341,7 @@
    "gasMax": 765
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "mulUp",
    "n": 4000,
    "status": {
@@ -358,7 +358,7 @@
    "gasMax": 766
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "divDown",
    "n": 4000,
    "status": {
@@ -375,7 +375,7 @@
    "gasMax": 1025
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "divUp",
    "n": 4000,
    "status": {
@@ -392,7 +392,7 @@
    "gasMax": 1026
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toUintDown",
    "n": 3805,
    "status": {
@@ -410,7 +410,7 @@
    "gasMax": 405
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toUintUp",
    "n": 3818,
    "status": {
@@ -428,7 +428,7 @@
    "gasMax": 420
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toIntDown",
    "n": 4000,
    "status": {
@@ -445,7 +445,7 @@
    "gasMax": 493
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toIntUp",
    "n": 4000,
    "status": {
@@ -462,7 +462,7 @@
    "gasMax": 481
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "floor",
    "n": 4000,
    "status": {
@@ -479,7 +479,7 @@
    "gasMax": 570
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "ceil",
    "n": 4000,
    "status": {
@@ -496,7 +496,7 @@
    "gasMax": 571
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "fromUintDown",
    "n": 4000,
    "status": {
@@ -513,7 +513,7 @@
    "gasMax": 487
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "fromUintUp",
    "n": 4000,
    "status": {
@@ -530,7 +530,7 @@
    "gasMax": 534
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toFixed18Down",
    "n": 4000,
    "status": {
@@ -547,7 +547,7 @@
    "gasMax": 750
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toFixed18Up",
    "n": 4000,
    "status": {
@@ -564,7 +564,7 @@
    "gasMax": 738
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp2",
    "n": 7937,
    "status": {
@@ -585,7 +585,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp10",
    "n": 7938,
    "status": {
@@ -606,7 +606,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log2",
    "n": 8000,
    "status": {
@@ -626,7 +626,7 @@
    "fallbackPct": 0.013
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log10",
    "n": 8000,
    "status": {
@@ -646,7 +646,7 @@
    "fallbackPct": 0.062
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log2Up",
    "n": 3800,
    "status": {
@@ -664,7 +664,7 @@
    "gasMax": 693
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "cbrt",
    "n": 4000,
    "status": {
@@ -681,7 +681,7 @@
    "gasMax": 2773
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "sinh",
    "n": 8000,
    "status": {
@@ -701,7 +701,7 @@
    "fallbackPct": 0.013
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "cosh",
    "n": 8000,
    "status": {
@@ -721,7 +721,7 @@
    "fallbackPct": 0.013
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "tanh",
    "n": 8000,
    "status": {
@@ -741,7 +741,7 @@
    "fallbackPct": 0.013
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "atanh",
    "n": 8000,
    "status": {
@@ -761,7 +761,7 @@
    "fallbackPct": 0.025
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "min",
    "n": 4000,
    "status": {
@@ -778,7 +778,7 @@
    "gasMax": 247
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "max",
    "n": 4000,
    "status": {
@@ -795,7 +795,7 @@
    "gasMax": 247
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "clamp",
    "n": 4000,
    "status": {
@@ -812,7 +812,7 @@
    "gasMax": 492
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "avg",
    "n": 4000,
    "status": {
@@ -829,7 +829,7 @@
    "gasMax": 877
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "dist",
    "n": 4000,
    "status": {
@@ -846,7 +846,7 @@
    "gasMax": 939
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "zeroFloorSub",
    "n": 4000,
    "status": {
@@ -863,7 +863,7 @@
    "gasMax": 952
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "inv",
    "n": 4000,
    "status": {
@@ -880,7 +880,7 @@
    "gasMax": 747
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lerp",
    "n": 8000,
    "status": {
@@ -897,7 +897,7 @@
    "gasMax": 6877
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "frac",
    "n": 4000,
    "status": {
@@ -914,7 +914,7 @@
    "gasMax": 1415
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "round",
    "n": 4000,
    "status": {
@@ -931,7 +931,7 @@
    "gasMax": 522
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "factorial",
    "n": 171,
    "status": {
@@ -949,7 +949,7 @@
    "gasMax": 762
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "gavg",
    "n": 4000,
    "status": {
@@ -966,7 +966,7 @@
    "gasMax": 2352
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "hypot",
    "n": 4000,
    "status": {
@@ -983,7 +983,7 @@
    "gasMax": 3866
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp",
    "n": 5913,
    "status": {
@@ -1002,7 +1002,7 @@
    "gasMax": 25132
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "ln",
    "n": 4000,
    "status": {
@@ -1020,7 +1020,7 @@
    "gasMax": 27166
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log1p",
    "n": 5921,
    "status": {
@@ -1039,7 +1039,7 @@
    "gasMax": 112148
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "expm1",
    "n": 5957,
    "status": {
@@ -1058,7 +1058,7 @@
    "gasMax": 40784
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "pow",
    "n": 5985,
    "status": {
@@ -1077,7 +1077,7 @@
    "gasMax": 94992
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "erf",
    "n": 4000,
    "status": {
@@ -1095,7 +1095,7 @@
    "gasMax": 361182
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "erfc",
    "n": 6000,
    "status": {
@@ -1113,7 +1113,7 @@
    "gasMax": 361478
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "normCdf",
    "n": 6000,
    "status": {
@@ -1131,7 +1131,7 @@
    "gasMax": 362246
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "compound",
    "n": 5644,
    "status": {
@@ -1150,7 +1150,7 @@
    "gasMax": 149198
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertW0",
    "n": 6000,
    "status": {
@@ -1168,7 +1168,7 @@
    "gasMax": 62714
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertWm1",
    "n": 4000,
    "status": {
@@ -1186,7 +1186,7 @@
    "gasMax": 63607
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "powu",
    "n": 5853,
    "status": {
@@ -1205,7 +1205,7 @@
    "gasMax": 95849
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp2",
    "n": 3965,
    "status": {
@@ -1224,7 +1224,7 @@
    "gasMax": 25947
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp10",
    "n": 3968,
    "status": {
@@ -1243,7 +1243,7 @@
    "gasMax": 26039
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log2",
    "n": 4000,
    "status": {
@@ -1261,7 +1261,7 @@
    "gasMax": 28527
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log10",
    "n": 4000,
    "status": {
@@ -1279,7 +1279,7 @@
    "gasMax": 27641
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "sinh",
    "n": 4000,
    "status": {
@@ -1297,7 +1297,7 @@
    "gasMax": 38655
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "cosh",
    "n": 4000,
    "status": {
@@ -1315,7 +1315,7 @@
    "gasMax": 27497
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "tanh",
    "n": 4000,
    "status": {
@@ -1333,7 +1333,7 @@
    "gasMax": 75407
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "atanh",
    "n": 4000,
    "status": {
@@ -1351,7 +1351,7 @@
    "gasMax": 53897
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "pow",
    "n": 5985,
    "status": {
@@ -1370,7 +1370,7 @@
    "gasMax": 16095
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "powu",
    "n": 5853,
    "status": {
@@ -1389,7 +1389,7 @@
    "gasMax": 65999
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "compound",
    "n": 5644,
    "status": {
@@ -1408,7 +1408,7 @@
    "gasMax": 59586
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "mul",
    "n": 4000,
    "status": {
@@ -1432,7 +1432,7 @@
    "gasMax": 263
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "div",
    "n": 4000,
    "status": {
@@ -1456,7 +1456,7 @@
    "gasMax": 828
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "sqrt",
    "n": 4000,
    "status": {
@@ -1480,7 +1480,7 @@
    "gasMax": 816
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp",
    "n": 3963,
    "status": {
@@ -1508,7 +1508,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "ln",
    "n": 4000,
    "status": {
@@ -1537,7 +1537,7 @@
    "secondPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log2",
    "n": 4000,
    "status": {
@@ -1566,7 +1566,7 @@
    "secondPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "pow",
    "n": 3979,
    "status": {
@@ -1596,7 +1596,7 @@
    "secondPct": 0.975
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "cbrt",
    "n": 4000,
    "status": {
@@ -1620,7 +1620,7 @@
    "gasMax": 2670
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "expm1",
    "n": 3987,
    "status": {
@@ -1648,7 +1648,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "erf",
    "n": 2000,
    "status": {
@@ -1675,7 +1675,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "erfc",
    "n": 2000,
    "status": {
@@ -1702,7 +1702,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "normCdf",
    "n": 2000,
    "status": {
@@ -1729,7 +1729,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "compound",
    "n": 3367,
    "status": {
@@ -1759,7 +1759,7 @@
    "secondPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp2",
    "n": 4000,
    "status": {
@@ -1786,7 +1786,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp10",
    "n": 3963,
    "status": {
@@ -1814,7 +1814,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log10",
    "n": 4000,
    "status": {
@@ -1843,7 +1843,7 @@
    "secondPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "sinh",
    "n": 3929,
    "status": {
@@ -1871,7 +1871,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "cosh",
    "n": 3924,
    "status": {
@@ -1899,7 +1899,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "tanh",
    "n": 4000,
    "status": {
@@ -1926,7 +1926,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "atanh",
    "n": 4000,
    "status": {
@@ -1955,7 +1955,7 @@
    "secondPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "powu",
    "n": 2775,
    "status": {
@@ -1985,7 +1985,7 @@
    "secondPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "mulUp",
    "n": 4000,
    "status": {
@@ -2009,7 +2009,7 @@
    "gasMax": 382
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "divUp",
    "n": 4000,
    "status": {
@@ -2033,7 +2033,7 @@
    "gasMax": 882
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "divDown",
    "n": 4000,
    "status": {
@@ -2057,7 +2057,7 @@
    "gasMax": 879
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "toFixed18Up",
    "n": 4000,
    "status": {
@@ -2081,7 +2081,7 @@
    "gasMax": 190
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log1p",
    "n": 4000,
    "status": {
@@ -2110,7 +2110,7 @@
    "secondPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "gavg",
    "n": 4000,
    "status": {
@@ -2134,7 +2134,7 @@
    "gasMax": 999
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "hypot",
    "n": 4000,
    "status": {
@@ -2158,7 +2158,7 @@
    "gasMax": 1388
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "inv",
    "n": 3999,
    "status": {
@@ -2183,7 +2183,7 @@
    "gasMax": 242
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "mulDown",
    "n": 4000,
    "status": {
@@ -2207,7 +2207,7 @@
    "gasMax": 307
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "lambertW0",
    "n": 2500,
    "status": {
@@ -2235,7 +2235,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "lambertWm1",
    "n": 2000,
    "status": {
@@ -2263,7 +2263,7 @@
    "fallbackPct": 0.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "ln",
    "n": 4000,
    "status": {
@@ -2288,7 +2288,7 @@
    "gasMax": 29478
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log2",
    "n": 4000,
    "status": {
@@ -2313,7 +2313,7 @@
    "gasMax": 28898
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log10",
    "n": 4000,
    "status": {
@@ -2338,7 +2338,7 @@
    "gasMax": 29420
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log1p",
    "n": 4000,
    "status": {
@@ -2363,7 +2363,7 @@
    "gasMax": 29613
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "pow",
    "n": 3979,
    "status": {
@@ -2389,7 +2389,7 @@
    "gasMax": 89395
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "compound",
    "n": 3367,
    "status": {
@@ -2415,7 +2415,7 @@
    "gasMax": 81167
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "sinh",
    "n": 3929,
    "status": {
@@ -2441,7 +2441,7 @@
    "gasMax": 27919
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "cosh",
    "n": 3924,
    "status": {
@@ -2467,7 +2467,7 @@
    "gasMax": 27879
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "tanh",
    "n": 4000,
    "status": {
@@ -2492,7 +2492,7 @@
    "gasMax": 30375
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "atanh",
    "n": 4000,
    "status": {
@@ -2517,7 +2517,7 @@
    "gasMax": 61826
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "lambertW0",
    "n": 2500,
    "status": {
@@ -2543,7 +2543,7 @@
    "gasMax": 39085
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "lambertWm1",
    "n": 2000,
    "status": {
@@ -2569,7 +2569,7 @@
    "gasMax": 39207
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp",
    "n": 3963,
    "status": {
@@ -2595,7 +2595,7 @@
    "gasMax": 25289
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp2",
    "n": 4000,
    "status": {
@@ -2620,7 +2620,7 @@
    "gasMax": 25192
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp10",
    "n": 3963,
    "status": {
@@ -2646,7 +2646,7 @@
    "gasMax": 25574
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "expm1",
    "n": 3987,
    "status": {
@@ -2672,7 +2672,7 @@
    "gasMax": 27658
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "powu",
    "n": 2775,
    "status": {
@@ -2698,7 +2698,7 @@
    "gasMax": 53233
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "erf",
    "n": 2000,
    "status": {
@@ -2723,7 +2723,7 @@
    "gasMax": 359416
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "erfc",
    "n": 2000,
    "status": {
@@ -2748,7 +2748,7 @@
    "gasMax": 355449
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "normCdf",
    "n": 2000,
    "status": {
@@ -2773,7 +2773,7 @@
    "gasMax": 357656
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "pow",
    "n": 3979,
    "status": {
@@ -2799,7 +2799,7 @@
    "gasMax": 24340
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "compound",
    "n": 3367,
    "status": {
@@ -2825,7 +2825,7 @@
    "gasMax": 18285
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "atanh",
    "n": 4000,
    "status": {
@@ -2850,7 +2850,7 @@
    "gasMax": 13282
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "ln",
    "n": 4000,
    "status": {
@@ -2875,7 +2875,7 @@
    "gasMax": 5521
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log2",
    "n": 4000,
    "status": {
@@ -2900,7 +2900,7 @@
    "gasMax": 5000
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log10",
    "n": 4000,
    "status": {
@@ -2925,7 +2925,7 @@
    "gasMax": 5521
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log1p",
    "n": 4000,
    "status": {

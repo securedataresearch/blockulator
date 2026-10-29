@@ -16,9 +16,9 @@ the slide.
 Numbers from docs/benchmarks/proofs.json (.ops[] per lib with status and
 tool: the proven and fuzzed ops per library, the Halmos count, sqrt by
 exact integers; .fuzz[] runs) and docs/benchmarks/sweep.json (.rows[] for
-fp19 and fp127: n and misrounded summed per library, over every row and
+bl19 and bl127: n and misrounded summed per library, over every row and
 over the rows whose op is one of the 21 transcendentals; ._doc for the
-oracles' digit counts). The transcendental list is the FP127 README's
+oracles' digit counts). The transcendental list is the BL127 README's
 "The transcendentals round to nearest" sentence (claim V34). Six sections.
 """
 
@@ -72,21 +72,21 @@ TEST_LINE = "A test checks the inputs it was given."
 PROOF_LINE = "A proof covers every input."
 CLOSING = "State your own guarantees this specifically."
 FOOTNOTE = "the proofs found two bugs on the way: fixed, now proven"
-CAPTION = "docs/benchmarks/proofs.json · sweep.json"  # the transcendental list: contracts/src/fp127/README.md (V34)
+CAPTION = "docs/benchmarks/proofs.json · sweep.json"  # the transcendental list: contracts/src/bl127/README.md (V34)
 LABELS = ("proven for every input", "fuzzed against the spec", "tested against an oracle", "known limits")
 NONE_KNOWN = "none is known"
 # the two limits, wrapped by hand so each digit-bearing line is a LITERAL (V38); the first
 # line of each sits beside the row's label, the rest below it at the margin
-LIMIT_BOUND = ("a derived bound could be wrong beyond its", "sampled margin: the measured error reaches 0.92 of FP127's\nbound and 0.79 of FP19's")
+LIMIT_BOUND = ("a derived bound could be wrong beyond its", "sampled margin: the measured error reaches 0.92 of BL127's\nbound and 0.79 of BL19's")
 LIMIT_STAGE = ("the last stage has no test of its own: a true", "value within its error of a midpoint would misround")
 NUMBER_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine"}
-# the 21 transcendentals, contracts/src/fp127/README.md "Rounding (3.0)": "The transcendentals
-# round to nearest under the tie rule above: …" (claim V34; the same list for FP19)
+# the 21 transcendentals, contracts/src/bl127/README.md "Rounding (3.0)": "The transcendentals
+# round to nearest under the tie rule above: …" (claim V34; the same list for BL19)
 TRANSCENDENTAL = (
     "exp", "exp2", "exp10", "expm1", "sinh", "cosh", "tanh", "atanh", "pow", "cbrt", "ln",
     "log2", "log10", "log1p", "powu", "compound", "lambertW0", "lambertWm1", "erf", "erfc", "normCdf",
 )
-LIBS = ("fp19", "fp127")
+LIBS = ("bl19", "bl127")
 
 X_LEFT = -6.4
 X_RIGHT = 6.4
@@ -124,19 +124,19 @@ def numbers() -> dict:
     lib = libs()
     p = proofs()
     full = _load("docs/benchmarks/proofs.json")
-    by = {name: [o for o in p["ops"] if o["lib"] == name] for name in ("FP127", "FP19")}
+    by = {name: [o for o in p["ops"] if o["lib"] == name] for name in ("BL127", "BL19")}
     proven = {name: [o["op"] for o in ops if o["status"] == "proven"] for name, ops in by.items()}
     fuzzed = {name: [o["op"] for o in ops if o["status"] == "fuzzed"] for name, ops in by.items()}
     for name, ops in by.items():
         assert len(proven[name]) + len(fuzzed[name]) == len(ops), (name, [o["status"] for o in ops])
-    halmos = [o["op"] for o in by["FP127"] if o["status"] == "proven" and o["tool"].startswith("Halmos")]
-    exact = [o["op"] for o in by["FP127"] if o["status"] == "proven" and not o["tool"].startswith("Halmos")]
-    assert exact == ["sqrt"] and "exact integer" in next(o["tool"] for o in by["FP127"] if o["op"] == "sqrt"), exact
+    halmos = [o["op"] for o in by["BL127"] if o["status"] == "proven" and o["tool"].startswith("Halmos")]
+    exact = [o["op"] for o in by["BL127"] if o["status"] == "proven" and not o["tool"].startswith("Halmos")]
+    assert exact == ["sqrt"] and "exact integer" in next(o["tool"] for o in by["BL127"] if o["op"] == "sqrt"), exact
     # every fuzz test's runs (the regression pins run once; they are not fuzz runs)
     runs = {f["runs"] for f in full["fuzz"] if f["test"].startswith("testFuzz_")}
     assert len(runs) == 1 and all(f["result"] == "pass" for f in full["fuzz"]), runs
     runs = runs.pop()
-    # the sweep: every fp19 and fp127 row, plain and forced passes alike
+    # the sweep: every bl19 and bl127 row, plain and forced passes alike
     sw = _load("docs/benchmarks/sweep.json")
     rows = {lid: [r for r in sw["rows"] if r["lib"] == lid] for lid in LIBS}
     total = {lid: sum(r["n"] for r in rows[lid]) for lid in LIBS}
@@ -144,17 +144,17 @@ def numbers() -> dict:
     transcendental = {lid: sum(r["n"] for r in rows[lid] if r["op"] in TRANSCENDENTAL) for lid in LIBS}
     assert all(set(TRANSCENDENTAL) <= {r["op"] for r in rows[lid]} for lid in LIBS)
     doc = sw["_doc"]
-    ref = {"fp19": int(re.search(r"mpmath at (\d+) digits", doc).group(1)), "fp127": int(re.search(r"truth at (\d+) digits", doc).group(1))}
-    assert misrounded == {"fp19": 0, "fp127": 0}, misrounded
+    ref = {"bl19": int(re.search(r"mpmath at (\d+) digits", doc).group(1)), "bl127": int(re.search(r"truth at (\d+) digits", doc).group(1))}
+    assert misrounded == {"bl19": 0, "bl127": 0}, misrounded
     return {
-        "labels": {"fp19": lib["fp19"]["label"], "fp127": lib["fp127"]["label"]},
+        "labels": {"bl19": lib["bl19"]["label"], "bl127": lib["bl127"]["label"]},
         "proven": proven,
         "fuzzed": fuzzed,
         "ops": {name: len(ops) for name, ops in by.items()},
         "proven_count": {name: len(v) for name, v in proven.items()},
         "halmos_count": len(halmos),
         "exact_integer": exact,
-        "fp19_fuzzed_word": NUMBER_WORDS[len(fuzzed["FP19"])],
+        "bl19_fuzzed_word": NUMBER_WORDS[len(fuzzed["BL19"])],
         "runs": runs,
         "rows": {lid: len(rows[lid]) for lid in LIBS},
         "total": total,
@@ -202,7 +202,7 @@ class Proofs(DeckScene):
     # ------------------------------------------------------------- the slide --
     def construct(self):
         n = numbers()
-        fp19, fp127 = n["labels"]["fp19"], n["labels"]["fp127"]
+        bl19, bl127 = n["labels"]["bl19"], n["labels"]["bl127"]
 
         # 0 · a test, a proof: the two lines and the plane of inputs
         self.section(0)
@@ -249,9 +249,9 @@ class Proofs(DeckScene):
         y = Y_ROWS
         lab1 = labs[0]
         assert abs(y - ROW_Y[0]) < 1e-9
-        r1a = self.line([words(f"{fp127}: {n['proven_count']['FP127']} core operations", SIZE_BODY, Palette.TEXT)], y, x=lab1.get_right()[0] + LABEL_BUFF)
+        r1a = self.line([words(f"{bl127}: {n['proven_count']['BL127']} core operations", SIZE_BODY, Palette.TEXT)], y, x=lab1.get_right()[0] + LABEL_BUFF)
         y -= PITCH
-        r1b = self.block(f"({n['halmos_count']} by Halmos, {n['exact_integer'][0]} in exact integers) · {fp19}: {n['proven_count']['FP19']} of {n['ops']['FP19']}", y)
+        r1b = self.block(f"({n['halmos_count']} by Halmos, {n['exact_integer'][0]} in exact integers) · {bl19}: {n['proven_count']['BL19']} of {n['ops']['BL19']}", y)
         self.land(r1a)
         self.land(r1b)
         self.wait(0.5)
@@ -261,7 +261,7 @@ class Proofs(DeckScene):
         y -= PITCH + ROW_GAP
         lab2 = labs[1]
         assert abs(y - ROW_Y[1]) < 1e-9
-        r2a = self.line([words(f"{fp127}: {', '.join(n['fuzzed']['FP127'])} · {fp19}: {n['fp19_fuzzed_word']} ·", SIZE_BODY, Palette.TEXT)], y, x=lab2.get_right()[0] + LABEL_BUFF)
+        r2a = self.line([words(f"{bl127}: {', '.join(n['fuzzed']['BL127'])} · {bl19}: {n['bl19_fuzzed_word']} ·", SIZE_BODY, Palette.TEXT)], y, x=lab2.get_right()[0] + LABEL_BUFF)
         y -= PITCH
         r2b = self.line([digits(thousands(n["runs"]), SIZE_BODY, Palette.TEXT), words("runs a test", SIZE_BODY, Palette.TEXT)], y)
         self.land(r2a)
@@ -274,20 +274,20 @@ class Proofs(DeckScene):
         lab3 = labs[2]
         assert abs(y - ROW_Y[2]) < 1e-9
         trackers = {lid: ValueTracker(0) for lid in LIBS}
-        tick19 = self.ticking(trackers["fp19"], SIZE_BODY, Palette.TEXT)
-        r3a_words = [words(f"{fp19}:", SIZE_BODY, Palette.TEXT), words("transcendental", SIZE_BODY, Palette.TEXT)]
+        tick19 = self.ticking(trackers["bl19"], SIZE_BODY, Palette.TEXT)
+        r3a_words = [words(f"{bl19}:", SIZE_BODY, Palette.TEXT), words("transcendental", SIZE_BODY, Palette.TEXT)]
         y3a = y
         y -= PITCH
         y3b = y
-        tick127 = self.ticking(trackers["fp127"], SIZE_BODY, Palette.TEXT)
-        r3b_words = [words(f"results at {n['reference_digits']['fp19']} digits · {fp127}:", SIZE_BODY, Palette.TEXT), words(f"at {n['reference_digits']['fp127']} ·", SIZE_BODY, Palette.TEXT)]
+        tick127 = self.ticking(trackers["bl127"], SIZE_BODY, Palette.TEXT)
+        r3b_words = [words(f"results at {n['reference_digits']['bl19']} digits · {bl127}:", SIZE_BODY, Palette.TEXT), words(f"at {n['reference_digits']['bl127']} ·", SIZE_BODY, Palette.TEXT)]
         x3a = lab3.get_right()[0] + LABEL_BUFF
 
         def place(y_line, x_line, count_text, pieces):
             return self.line([pieces[0], count_text, pieces[1]], y_line, x=x_line)
 
-        final19 = digits(thousands(n["transcendental"]["fp19"]), SIZE_BODY, Palette.TEXT)
-        final127 = digits(thousands(n["transcendental"]["fp127"]), SIZE_BODY, Palette.TEXT)
+        final19 = digits(thousands(n["transcendental"]["bl19"]), SIZE_BODY, Palette.TEXT)
+        final127 = digits(thousands(n["transcendental"]["bl127"]), SIZE_BODY, Palette.TEXT)
         # lay the lines out with the final digits (the widest), then let the tickers take their place
         r3a = place(y3a, x3a, final19, r3a_words)
         r3b = place(y3b, X_LEFT, final127, r3b_words)
@@ -295,17 +295,17 @@ class Proofs(DeckScene):
         tick127.add_updater(lambda m: m.move_to(final127, aligned_edge=LEFT))
         self.land(r3a_words[0], r3a_words[1])
         self.add(tick19)
-        self.play(trackers["fp19"].animate(rate_func=linear).set_value(n["transcendental"]["fp19"]), run_time=1.4)
+        self.play(trackers["bl19"].animate(rate_func=linear).set_value(n["transcendental"]["bl19"]), run_time=1.4)
         self.remove(tick19)
         self.add(final19)
         self.land(r3b_words[0], r3b_words[1])
         self.add(tick127)
-        self.play(trackers["fp127"].animate(rate_func=linear).set_value(n["transcendental"]["fp127"]), run_time=1.2)
+        self.play(trackers["bl127"].animate(rate_func=linear).set_value(n["transcendental"]["bl127"]), run_time=1.2)
         self.remove(tick127)
         self.add(final127)
         self.wait(0.3)
         y -= HERO_PITCH
-        hero = digits(f"{n['misrounded']['fp19']} misrounded", SIZE_HERO, Palette.CORRECT).move_to([0, y, 0]).align_to([X_LEFT + 0.1, 0, 0], LEFT)
+        hero = digits(f"{n['misrounded']['bl19']} misrounded", SIZE_HERO, Palette.CORRECT).move_to([0, y, 0]).align_to([X_LEFT + 0.1, 0, 0], LEFT)
         glow = halo(hero.get_center(), Palette.EMERALD, radius=0.3, layers=5, spread=1.5, opacity=0.22)
         glow.stretch_to_fit_width(hero.width + 1.4)
         self.add(glow)
@@ -313,7 +313,7 @@ class Proofs(DeckScene):
         self.play(FadeIn(glow, run_time=0.6), FadeIn(hero, shift=UP * 0.12, scale=0.9, run_time=0.6))
         self.wait(0.5)
         y -= HERO_PITCH - 0.06
-        totals = words(f"({thousands(n['total']['fp19'])} and {thousands(n['total']['fp127'])} over every operation)", SIZE_BODY, Palette.MUTED).move_to([0, y, 0]).align_to([X_LEFT, 0, 0], LEFT)
+        totals = words(f"({thousands(n['total']['bl19'])} and {thousands(n['total']['bl127'])} over every operation)", SIZE_BODY, Palette.MUTED).move_to([0, y, 0]).align_to([X_LEFT, 0, 0], LEFT)
         self.land(totals)
 
         # 4 · known limits: a hollow marker, two sub-beats, "none is known" last

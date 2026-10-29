@@ -1,15 +1,15 @@
 """Slide 15, "Two formats": two ways to spend 256 bits.
 
 A word of 256 bits draws across the slide, cell by cell (bit_bar). It is
-partitioned twice. First as FP127, fixed point: sign 1, integer 127,
+partitioned twice. First as BL127, fixed point: sign 1, integer 127,
 fraction 128 (emerald, the hero of the section), each field bracketed
 and counted; under it the grid of representable values with uniform
 ticks, emerald, its last unit bracketed "the grid ends at 2^−128";
 about 38 digits of fraction in a known range, about ±1.7 × 10^38. Then
-the same bits as FP19, floating point: sign 1, exponent 19 (sapphire),
+the same bits as BL19, floating point: sign 1, exponent 19 (sapphire),
 fraction 236 stored, the significand 237 bits with the hidden bit; the
 grid becomes the magnitude axis, from about 10^−78,913 to about
-10^78,913 with 1 in the middle, and a 71-digit window (white, FP19's
+10^78,913 with 1 in the middle, and a 71-digit window (white, BL19's
 family colour on this slide, with a glow) slides along it: the left
 end, the middle, the right end. A value slides past the last tick and
 becomes a red cross: no NaN, no infinity, overflow reverts. The closing
@@ -20,8 +20,8 @@ last frame holds as the slide.
 
 No benchmark JSON carries these: they are format constants (claims K1–K4,
 E9). numbers() derives every drawn figure from the bit widths: the field
-sizes and their sum, the digit counts floor(bits · log10 2), FP127's range
-2^127 to two significant digits (Fraction/Decimal), FP19's extremes
+sizes and their sum, the digit counts floor(bits · log10 2), BL127's range
+2^127 to two significant digits (Fraction/Decimal), BL19's extremes
 2^−262142 and (2 − 2^−236) · 2^262144 (mpmath) as powers of ten; check.py
 recomputes each by a second route (Decimal). The window's stops are
 illustrative positions on a log axis; no digits at the stops.
@@ -51,9 +51,9 @@ from manim.utils.rate_functions import ease_in_cubic, ease_in_out_cubic, ease_ou
 
 from vocab import (
     ROW_COLOUR,
-    FP19_EXPONENT_BITS,
-    FP19_FRACTION_BITS,
-    FP127_FRACTION_BITS,
+    BL19_EXPONENT_BITS,
+    BL19_FRACTION_BITS,
+    BL127_FRACTION_BITS,
     SIZE_BODY,
     SIZE_CAPTION,
     DeckScene,
@@ -73,13 +73,13 @@ from vocab import (
 WORD_BITS = 256
 SIGN_BITS = 1
 RADIX, BASE = 2, 10
-FP127_INTEGER_BITS = WORD_BITS - SIGN_BITS - FP127_FRACTION_BITS  # 127
-FP19_MIN_EXP = -(2 ** (FP19_EXPONENT_BITS - 1) - 2)  # E = 1: 2^(1 − bias) = 2^−262142 (K3)
-FP19_MAX_EXP = 2 ** (FP19_EXPONENT_BITS - 1)  # E = all ones is finite (K4): (2 − 2^−236) · 2^262144
+BL127_INTEGER_BITS = WORD_BITS - SIGN_BITS - BL127_FRACTION_BITS  # 127
+BL19_MIN_EXP = -(2 ** (BL19_EXPONENT_BITS - 1) - 2)  # E = 1: 2^(1 − bias) = 2^−262142 (K3)
+BL19_MAX_EXP = 2 ** (BL19_EXPONENT_BITS - 1)  # E = all ones is finite (K4): (2 − 2^−236) · 2^262144
 RANGE_DIGITS = 1  # "about ±1.7 × 10^38": the mantissa to one decimal
 
 TITLE = f"Two ways to spend {WORD_BITS} bits"
-CAPTION = "contracts/src/fp127/README.md · contracts/src/fp19/README.md"
+CAPTION = "contracts/src/bl127/README.md · contracts/src/bl19/README.md"
 IEEE = "laid out as IEEE 754 binary256"
 REVERT = "no NaN, no infinity: overflow reverts"
 CLOSE = "known range: fixed point · many orders of magnitude: floating point"
@@ -102,11 +102,11 @@ BRACKET_DROP, BRACKET_BUFF = 0.2, 0.06  # the field brackets under the bar and t
 X_SAFE = 6.4
 AXIS_TICKS = (0, 8, 1)
 AXIS_LENGTH = 11.8
-GRID_TICKS = (0, 24, 1)  # FP127's uniform grid: 24 units across the same width
+GRID_TICKS = (0, 24, 1)  # BL127's uniform grid: 24 units across the same width
 WINDOW = 1.2  # the 71-digit window, in axis ticks (illustrative)
 STOPS = (0.0, 0.5, 1.0)  # the window's stops: the left end, the middle, the right end of the axis
 CLOSE_SIZE = 30  # the closing line is 13.4 units wide at SIZE_BODY, wider than the safe area; 30 fits
-HUES = ROW_COLOUR["s15"]  # the fields: sign TEXT; FP127's integer SAPPHIRE, fraction EMERALD; FP19's exponent VIOLET, fraction TEXT
+HUES = ROW_COLOUR["s15"]  # the fields: sign TEXT; BL127's integer SAPPHIRE, fraction EMERALD; BL19's exponent VIOLET, fraction TEXT
 
 
 def _power_of_ten(x: Decimal) -> int:
@@ -116,24 +116,24 @@ def _power_of_ten(x: Decimal) -> int:
 
 def numbers() -> dict:
     lib = libs()
-    assert SIGN_BITS + FP127_INTEGER_BITS + FP127_FRACTION_BITS == WORD_BITS
-    assert SIGN_BITS + FP19_EXPONENT_BITS + FP19_FRACTION_BITS == WORD_BITS
-    significand = FP19_FRACTION_BITS + 1  # the hidden bit
-    fp127_digits = floor(FP127_FRACTION_BITS * log10(RADIX))
-    fp19_digits = floor(significand * log10(RADIX))
-    # FP127's range: ±2^127 (less one unit at the top), to one decimal of its leading power of ten
-    top = Fraction(RADIX) ** FP127_INTEGER_BITS
+    assert SIGN_BITS + BL127_INTEGER_BITS + BL127_FRACTION_BITS == WORD_BITS
+    assert SIGN_BITS + BL19_EXPONENT_BITS + BL19_FRACTION_BITS == WORD_BITS
+    significand = BL19_FRACTION_BITS + 1  # the hidden bit
+    bl127_digits = floor(BL127_FRACTION_BITS * log10(RADIX))
+    bl19_digits = floor(significand * log10(RADIX))
+    # BL127's range: ±2^127 (less one unit at the top), to one decimal of its leading power of ten
+    top = Fraction(RADIX) ** BL127_INTEGER_BITS
     with localcontext() as ctx:
         ctx.prec = 60
         d = Decimal(top.numerator) / Decimal(top.denominator)
         range_exp = _power_of_ten(d)
         mantissa = str((d.scaleb(-range_exp)).quantize(Decimal(1).scaleb(-RANGE_DIGITS), rounding=ROUND_HALF_UP))
-    # FP19's extremes, as powers of ten: the smallest normal 2^−262142, the largest finite (2 − 2^−236) · 2^262144
+    # BL19's extremes, as powers of ten: the smallest normal 2^−262142, the largest finite (2 − 2^−236) · 2^262144
     import mpmath
 
     mpmath.mp.dps = 40
-    smallest = mpmath.mpf(RADIX) ** FP19_MIN_EXP
-    largest = (RADIX - mpmath.mpf(RADIX) ** -FP19_FRACTION_BITS) * mpmath.mpf(RADIX) ** FP19_MAX_EXP
+    smallest = mpmath.mpf(RADIX) ** BL19_MIN_EXP
+    largest = (RADIX - mpmath.mpf(RADIX) ** -BL19_FRACTION_BITS) * mpmath.mpf(RADIX) ** BL19_MAX_EXP
     min_exp = int(mpmath.floor(mpmath.log10(smallest)))
     max_exp = int(mpmath.floor(mpmath.log10(largest)))
     assert min_exp == -max_exp, (min_exp, max_exp)  # the axis is symmetric about 1
@@ -145,41 +145,41 @@ def numbers() -> dict:
         "word_bits": WORD_BITS,
         "radix": RADIX,
         "base": BASE,
-        "fp127": {
-            "label": lib["fp127"]["label"],
+        "bl127": {
+            "label": lib["bl127"]["label"],
             "sign": SIGN_BITS,
-            "integer": FP127_INTEGER_BITS,
-            "fraction": FP127_FRACTION_BITS,
-            "digits": fp127_digits,
+            "integer": BL127_INTEGER_BITS,
+            "fraction": BL127_FRACTION_BITS,
+            "digits": bl127_digits,
             "range_mantissa": mantissa,
             "range_exp": range_exp,
-            "grid_end_exp": FP127_FRACTION_BITS,
+            "grid_end_exp": BL127_FRACTION_BITS,
         },
-        "fp19": {
-            "label": lib["fp19"]["label"],
+        "bl19": {
+            "label": lib["bl19"]["label"],
             "sign": SIGN_BITS,
-            "exponent": FP19_EXPONENT_BITS,
-            "fraction": FP19_FRACTION_BITS,
+            "exponent": BL19_EXPONENT_BITS,
+            "fraction": BL19_FRACTION_BITS,
             "significand": significand,
-            "digits": fp19_digits,
+            "digits": bl19_digits,
             "min_exp": min_exp,
             "max_exp": max_exp,
         },
         "strings": {
             "bits": f"{WORD_BITS} bits",
-            "fp127_fields": f"{SIGN_BITS} · {FP127_INTEGER_BITS} · {FP127_FRACTION_BITS}",
-            "fp127_names": "sign · integer · fraction",
-            "fp127_digits": f"about {fp127_digits} digits of fraction",
-            "fp127_range": f"about ±{mantissa} × {power(range_exp)}",
-            "fp127_grid_end": f"the grid ends at {RADIX}<sup>−{FP127_FRACTION_BITS}</sup>",
-            "fp127_label": f"{lib['fp127']['label']} · fixed point",
-            "fp19_fields": f"{SIGN_BITS} · {FP19_EXPONENT_BITS} · {FP19_FRACTION_BITS}",
-            "fp19_names": f"sign · exponent · fraction ({FP19_FRACTION_BITS} stored)",
-            "fp19_significand": f"significand {significand} bits with the hidden bit",
-            "fp19_digits": f"about {fp19_digits} digits at every magnitude",
-            "fp19_min": f"about {power(min_exp)}",
-            "fp19_max": f"about {power(max_exp)}",
-            "fp19_label": f"{lib['fp19']['label']} · floating point",
+            "bl127_fields": f"{SIGN_BITS} · {BL127_INTEGER_BITS} · {BL127_FRACTION_BITS}",
+            "bl127_names": "sign · integer · fraction",
+            "bl127_digits": f"about {bl127_digits} digits of fraction",
+            "bl127_range": f"about ±{mantissa} × {power(range_exp)}",
+            "bl127_grid_end": f"the grid ends at {RADIX}<sup>−{BL127_FRACTION_BITS}</sup>",
+            "bl127_label": f"{lib['bl127']['label']} · fixed point",
+            "bl19_fields": f"{SIGN_BITS} · {BL19_EXPONENT_BITS} · {BL19_FRACTION_BITS}",
+            "bl19_names": f"sign · exponent · fraction ({BL19_FRACTION_BITS} stored)",
+            "bl19_significand": f"significand {significand} bits with the hidden bit",
+            "bl19_digits": f"about {bl19_digits} digits at every magnitude",
+            "bl19_min": f"about {power(min_exp)}",
+            "bl19_max": f"about {power(max_exp)}",
+            "bl19_label": f"{lib['bl19']['label']} · floating point",
         },
     }
 
@@ -216,7 +216,7 @@ class Formats(DeckScene):
         bar = Line(pa, pb, color=Palette.TEXT, stroke_width=2)
         caps = VGroup(Line(pa - cap, pa + cap, color=Palette.TEXT, stroke_width=2), Line(pb - cap, pb + cap, color=Palette.TEXT, stroke_width=2))
         pane = Rectangle(width=(pb - pa)[0], height=lift + 0.14, color=Palette.TEXT, fill_color=Palette.TEXT, fill_opacity=0.1, stroke_width=0).move_to((pa + pb) / 2 + DOWN * (lift / 2))
-        label = words(self.n["strings"]["fp19_digits"], SIZE_BODY, Palette.TEXT).next_to(bar, UP, buff=0.1)
+        label = words(self.n["strings"]["bl19_digits"], SIZE_BODY, Palette.TEXT).next_to(bar, UP, buff=0.1)
         clamp_x(label)
         glow = glow_line([axis.n2p(lo), axis.n2p(hi)], Palette.TEXT, width=22, opacity=0.35)
         g = VGroup(glow, pane, bar, caps, label)
@@ -241,12 +241,12 @@ class Formats(DeckScene):
 
         # fixed point: sign, integer, fraction; the uniform grid; 38 digits in a known range
         self.section(1, hold=1.0)
-        f = n["fp127"]
+        f = n["bl127"]
         edges127 = (0, f["sign"], f["sign"] + f["integer"], WORD_BITS)
-        colours127 = (HUES["sign"], HUES["fp127_integer"], HUES["fp127_fraction"])
-        label127 = words(s["fp127_label"], SIZE_BODY, Palette.EMERALD)
-        fields127 = digits(s["fp127_fields"], SIZE_BODY, Palette.TEXT)
-        names127 = words(s["fp127_names"], SIZE_BODY, Palette.MUTED)
+        colours127 = (HUES["sign"], HUES["bl127_integer"], HUES["bl127_fraction"])
+        label127 = words(s["bl127_label"], SIZE_BODY, Palette.EMERALD)
+        fields127 = digits(s["bl127_fields"], SIZE_BODY, Palette.TEXT)
+        names127 = words(s["bl127_names"], SIZE_BODY, Palette.MUTED)
         row_a = self.row(0, label127, fields127, names127)
         self.play(FadeIn(label127, shift=RIGHT * 0.1, run_time=0.5))
         brackets127 = VGroup()
@@ -263,13 +263,13 @@ class Formats(DeckScene):
         grid_glow = glow_line([grid.get_left(), grid.get_right()], Palette.EMERALD)
         self.add(grid_glow)
         self.play(Create(grid, run_time=1.0), FadeIn(grid_glow, run_time=1.0))
-        end = measure(grid, GRID_TICKS[1] - 1, GRID_TICKS[1], s["fp127_grid_end"], drop=0.3, colour=Palette.EMERALD, use_markup=True)
+        end = measure(grid, GRID_TICKS[1] - 1, GRID_TICKS[1], s["bl127_grid_end"], drop=0.3, colour=Palette.EMERALD, use_markup=True)
         clamp_x(end[2], hi=grid.get_right()[0])
         self.play(Create(end[0], run_time=0.3), Create(end[1], run_time=0.3))
         self.play(FadeIn(end[2], shift=UP * 0.06, run_time=0.4))
         self.wait(0.6)
-        digits127 = words(s["fp127_digits"], SIZE_BODY, Palette.EMERALD)
-        range127 = markup(s["fp127_range"], SIZE_BODY, Palette.TEXT)
+        digits127 = words(s["bl127_digits"], SIZE_BODY, Palette.EMERALD)
+        range127 = markup(s["bl127_range"], SIZE_BODY, Palette.TEXT)
         row_b = self.row(1, digits127, range127, buff=0.8)
         self.play(FadeIn(digits127, shift=RIGHT * 0.1, run_time=0.5))
         self.wait(0.4)
@@ -277,12 +277,12 @@ class Formats(DeckScene):
 
         # floating point: the same bits as sign, exponent, fraction; the magnitude axis and the window
         self.section(2, hold=1.0)
-        g = n["fp19"]
+        g = n["bl19"]
         self.play(FadeOut(VGroup(row_a, row_b, grid, grid_glow, end), run_time=0.5))
         edges19 = (0, g["sign"], g["sign"] + g["exponent"], WORD_BITS)
-        colours19 = (HUES["sign"], HUES["fp19_exponent"], HUES["fp19_fraction"])
-        label19 = words(s["fp19_label"], SIZE_BODY, Palette.TEXT)
-        fields19 = digits(s["fp19_fields"], SIZE_BODY, Palette.TEXT)
+        colours19 = (HUES["sign"], HUES["bl19_exponent"], HUES["bl19_fraction"])
+        label19 = words(s["bl19_label"], SIZE_BODY, Palette.TEXT)
+        fields19 = digits(s["bl19_fields"], SIZE_BODY, Palette.TEXT)
         row_a2 = self.row(0, label19, fields19)
         ieee = words(IEEE, SIZE_CAPTION, Palette.FAINT).move_to([0, Y_ROWS[0], 0]).align_to([X_SAFE, 0, 0], RIGHT)
         self.play(FadeIn(label19, shift=RIGHT * 0.1, run_time=0.5))
@@ -294,16 +294,16 @@ class Formats(DeckScene):
                 self.sweep(bar.cells[a:b], colours19[i], run_time=0.25 + 0.45 * (b - a) / WORD_BITS),
                 Transform(brackets127[i], br, run_time=0.4),
             )
-        names19 = words(s["fp19_names"], SIZE_BODY, Palette.MUTED)
-        signif19 = words(s["fp19_significand"], SIZE_BODY, Palette.MUTED)
+        names19 = words(s["bl19_names"], SIZE_BODY, Palette.MUTED)
+        signif19 = words(s["bl19_significand"], SIZE_BODY, Palette.MUTED)
         self.row(1, names19)
         self.row(2, signif19)
         self.play(FadeIn(fields19, shift=RIGHT * 0.1, run_time=0.4), FadeIn(ieee, run_time=0.4))
         self.play(FadeIn(names19, shift=RIGHT * 0.1, run_time=0.4))
         self.play(FadeIn(signif19, shift=RIGHT * 0.1, run_time=0.4))
         axis = GridLine(AXIS_TICKS, length=AXIS_LENGTH, colour=Palette.FAINT).move_to([0, Y_AXIS, 0])
-        lo_lbl = clamp_x(markup(s["fp19_min"], SIZE_BODY, Palette.MUTED).move_to([axis.get_left()[0], Y_ENDS, 0]))
-        hi_lbl = clamp_x(markup(s["fp19_max"], SIZE_BODY, Palette.MUTED).move_to([axis.get_right()[0], Y_ENDS, 0]))
+        lo_lbl = clamp_x(markup(s["bl19_min"], SIZE_BODY, Palette.MUTED).move_to([axis.get_left()[0], Y_ENDS, 0]))
+        hi_lbl = clamp_x(markup(s["bl19_max"], SIZE_BODY, Palette.MUTED).move_to([axis.get_right()[0], Y_ENDS, 0]))
         mid = (AXIS_TICKS[0] + AXIS_TICKS[1]) / 2
         one = digits(str(1), SIZE_BODY, Palette.MUTED).move_to([axis.n2p(mid)[0], Y_ENDS, 0])
         self.play(Create(axis, run_time=1.0))

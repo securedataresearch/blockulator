@@ -9,7 +9,7 @@
 {%- set d = load_data(path="static/data/proofs.json") -%}
 {%- set s = d.summary -%}
 {%- set labels = {"proven": "proven", "proven-except": "proven outside one window", "proven-given-lemma": "proven, given a lemma", "fuzzed": "fuzzed", "counterexample": "counterexample", "unproven": "not proven", "in-progress": "in progress"} -%}
-{%- for lib in ["FP127", "FP19"] %}
+{%- for lib in ["BL127", "BL19"] %}
 <h2 id="{{ lib | lower }}">{{ lib }}</h2>
 <div class="scroll">
 <table class="proofs">

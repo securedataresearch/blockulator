@@ -14,7 +14,7 @@ in the wstETH pool while the pool's true invariant D* falls from
 137,894.598 to 2,446.080 (×0.017739). The loss line is incidents.json's;
 the net to the attacker is the replay's batchSwapNetEth. The counterfactual
 is the replay's own table (docs/benchmarks/replay-balancer.md, through
-vocab.replay_table, cross-checked against the JSON): FP127 and FP19 inside
+vocab.replay_table, cross-checked against the JSON): BL127 and BL19 inside
 with one ceil to wei charge the exact amount on every call, 0 calls below
 exact, and the plan would lose the attacker 127.677 ETH.
 
@@ -125,7 +125,7 @@ def numbers() -> dict:
     charged = int(raw["amountIn"])
     exact = int(micro["models"]["exact"]["in"])
     assert charged == int(micro["models"]["deployed"]["in"]) == int(test["amountIn"][MICRO_INDEX]), charged
-    assert exact == int(test["expectExact"][MICRO_INDEX]) == int(micro["models"]["fp127"]["in"]) == int(micro["models"]["fp19"]["in"]), exact
+    assert exact == int(test["expectExact"][MICRO_INDEX]) == int(micro["models"]["bl127"]["in"]) == int(micro["models"]["bl19"]["in"]), exact
     under = Fraction(exact - charged, exact)
     cycles = score["kinds"]["micro"]
     assert cycles == sum(1 for s in steps if s["what"] == "micro") and all(int(s["out"]) == out for s in steps if s["what"] == "micro"), cycles
@@ -140,8 +140,8 @@ def numbers() -> dict:
     levels = [float(x / d_start) for x in after]  # the bar's fill after each cycle, a fraction of the start (not drawn)
     ratio = Decimal(score["onchainInvariantRatio"])
     models = score["models"]
-    fp = models["fp127"]
-    assert fp == models["fp19"] and fp["stepsUnderExact"] == 0 and fp["amountIn"] == models["exact"]["amountIn"], fp
+    fp = models["bl127"]
+    assert fp == models["bl19"] and fp["stepsUnderExact"] == 0 and fp["amountIn"] == models["exact"]["amountIn"], fp
     would_lose = -Decimal(fp["projectedExtractionEth"])
     assert would_lose > 0
     inc = next(i for i in incidents()["incidents"] if i["protocol"] == PROTOCOL)
@@ -153,13 +153,13 @@ def numbers() -> dict:
     # the generated table says the same (docs/benchmarks/replay-balancer.md, through replay_table)
     rulers = {r["model"]: r for r in replay_table("balancer", "The same calls on five rulers")}
     dep_row = next(r for m, r in rulers.items() if m.startswith("deployed"))
-    fp127_row = next(r for m, r in rulers.items() if m.startswith("FP127"))
-    fp19_row = next(r for m, r in rulers.items() if m.startswith("FP19"))
+    bl127_row = next(r for m, r in rulers.items() if m.startswith("BL127"))
+    bl19_row = next(r for m, r in rulers.items() if m.startswith("BL19"))
     charged_col = "charged in (WETH-wei / rate-token-wei)"
     assert dep_row[charged_col] == f"{thousands(models['deployed']['amountIn']['WETH'])} / {thousands(models['deployed']['amountIn'][POOL])}", dep_row
-    assert fp127_row[charged_col] == fp19_row[charged_col] == f"{thousands(fp['amountIn']['WETH'])} / {thousands(fp['amountIn'][POOL])}", fp127_row
-    assert int(dep_row["calls below exact"]) == models["deployed"]["stepsUnderExact"] and int(fp127_row["calls below exact"]) == int(fp19_row["calls below exact"]) == 0
-    assert Decimal(fp127_row["projected take (ETH)"]) == Decimal(fp19_row["projected take (ETH)"]) == -would_lose, fp127_row
+    assert bl127_row[charged_col] == bl19_row[charged_col] == f"{thousands(fp['amountIn']['WETH'])} / {thousands(fp['amountIn'][POOL])}", bl127_row
+    assert int(dep_row["calls below exact"]) == models["deployed"]["stepsUnderExact"] and int(bl127_row["calls below exact"]) == int(bl19_row["calls below exact"]) == 0
+    assert Decimal(bl127_row["projected take (ETH)"]) == Decimal(bl19_row["projected take (ETH)"]) == -would_lose, bl127_row
     assert Decimal(dep_row["projected take (ETH)"]) == Decimal(models["deployed"]["projectedExtractionEth"])
     happened = replay_table("balancer", "What happened")
     assert f"{cycles} cycles" in happened[0]["phase replayed"] and f"{other_cycles} cycles" in happened[1]["phase replayed"], happened
@@ -341,9 +341,9 @@ class BalancerV2(DeckScene):
         self.wait(1.5)
         self.play(FadeIn(net, run_time=0.6))
 
-        # exact: the same calls carried inside FP127 / FP19, rounded up to wei once
+        # exact: the same calls carried inside BL127 / BL19, rounded up to wei once
         self.section(5, hold=1.5)
-        head = self.left(words("FP127 / FP19 inside, ceil to wei once", SIZE_BODY, Palette.CORRECT), self.Y_E1)
+        head = self.left(words("BL127 / BL19 inside, ceil to wei once", SIZE_BODY, Palette.CORRECT), self.Y_E1)
         replayed = words("· replayed, not observed", SIZE_BODY, Palette.MUTED).next_to(head, RIGHT, buff=0.3).set_y(self.Y_E1)
         zero = self.left(digits(str(n["fp_below"]), SIZE_HERO, Palette.CORRECT), self.Y_E2)
         tail = words(f"calls below exact · the attacker would lose {n['would_lose']} ETH", SIZE_BODY, Palette.TEXT).next_to(zero, RIGHT, buff=0.25).set_y(self.Y_E2)

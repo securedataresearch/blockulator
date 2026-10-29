@@ -7,9 +7,9 @@ section 0. Then one habit per click: its sub-line types in at BODY,
 MUTED, wrapped to its column, and the box ticks in EMERALD (the hero: the
 three ticks). Last a contract outline (a RoundedRectangle, right) and
 the declaration block that slides in and attaches to it: "declares",
-tagged "example" in AMBER (the op names are FP127Lib's, chosen as
+tagged "example" in AMBER (the op names are BL127Lib's, chosen as
 examples: toFixed18Down down, divUp up, exp nearest), and "reference:"
-with FP127 v9's address, the one number on the slide, from release()
+with BL127 v9's address, the one number on the slide, from release()
 (V15). Nothing says any protocol does this today.
 
 Five sections: title, decide, measure, declare, block. The address is
@@ -34,8 +34,8 @@ from vocab import (
 )
 
 HUES = ROW_COLOUR["s18"]
-COMPONENT = "FP127"
-OPS = (("toFixed18Down", "down"), ("divUp", "up"), ("exp", "nearest"))  # examples: FP127Lib's names (check.py finds each in the source)
+COMPONENT = "BL127"
+OPS = (("toFixed18Down", "down"), ("divUp", "up"), ("exp", "nearest"))  # examples: BL127Lib's names (check.py finds each in the source)
 
 TITLE = "Rounding is a design decision, like access control."
 HABITS = (

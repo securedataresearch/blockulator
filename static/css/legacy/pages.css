@@ -85,8 +85,8 @@
     font-weight: 500;
 }
 
-/* FP127 Advantages */
-.fp127-advantages { display: flex; flex-direction: column; gap: var(--sdr-space-3); max-width: 40rem; }
+/* BL127 Advantages */
+.bl127-advantages { display: flex; flex-direction: column; gap: var(--sdr-space-3); max-width: 40rem; }
 .advantage-item { background: none; border: none; padding: 0; }
 .advantage-item h3 { color: var(--sdr-text-white); font-size: var(--sdr-space-2); font-weight: 600; margin: 0 0 0.4rem 0; letter-spacing: -0.01em; }
 .advantage-item p { color: var(--sdr-link); font-size: var(--sdr-text-ui-md); line-height: 1.7; margin: 0; max-width: none; }
@@ -143,7 +143,7 @@
 .about-chart-label { font-size: var(--sdr-text-ui-md); font-weight: 500; color: var(--sdr-text-dark); text-align: right; }
 .about-chart-track { height: 10px; background: var(--sdr-chart-track); overflow: hidden; }
 .about-chart-fill { display: block; height: 100%; min-width: 3px; transition: width var(--sdr-duration-long) var(--sdr-ease-emphasized); }
-.about-chart-fill--fp127 { width: 100%; background-color: var(--sdr-particle-emerald); }
+.about-chart-fill--bl127 { width: 100%; background-color: var(--sdr-particle-emerald); }
 .about-chart-fill--abdk { width: calc(100% * 19 / 38); background-color: var(--sdr-particle-sapphire); }
 .about-chart-fill--solady { width: calc(100% * 18 / 38); background-color: var(--sdr-particle-gold); }
 .about-chart-fill--prbmath { width: calc(100% * 18 / 38); background-color: var(--sdr-particle-red); }

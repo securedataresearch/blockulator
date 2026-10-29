@@ -129,7 +129,7 @@ export function particleHexAt(index) {
  * Library trace colors — identical mapping to About precision chart.
  */
 export const LIBRARY_TRACE_COLORS = {
-    fp127: SDR_PALETTE.particleEmerald,
+    bl127: SDR_PALETTE.particleEmerald,
     abdk: SDR_PALETTE.particleSapphire,
     solady: SDR_PALETTE.particleGold,
     prb: SDR_PALETTE.particleRed,

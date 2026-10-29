@@ -17,7 +17,7 @@ answer.
 
 Layer 2, binary: the dive goes on, now by powers of two (one tick =
 2^-60, 2^-64, …, sixteen-fold each step, the ticks labelled with their
-fraction words in hex) to 2^-128 ≈ 2.9 × 10^-39: FP127's grid. The header
+fraction words in hex) to 2^-128 ≈ 2.9 × 10^-39: BL127's grid. The header
 now shows e^40 to 80 decimals (vocab.truth80: mpmath, its first 24
 decimals asserted against edges.json's truth), labelled so, on two
 lines, lighting to the end as the grid resolves it. The exact e^40 sits
@@ -26,7 +26,7 @@ digits each, with their decimal readings beneath to 80 decimals: the
 two readings part at the 39th decimal, so the grid's fineness is on
 screen. On this grid the three snaps play: to the nearer tick (white,
 rounding itself), the far way (WRONG, red, its direction drawn), the
-right way (CORRECT, emerald, with a halo), labelled "FP127's word" with
+right way (CORRECT, emerald, with a halo), labelled "BL127's word" with
 the word's hex fraction complete and its value to 18 decimals. A bracket
 measures half a unit. Footer: a 256-bit word holds 2^256 numbers; e^40
 is not one of them. The dives are quick (each power of ten about 0.3 s,
@@ -43,10 +43,10 @@ position is computed with Fraction from the truth and converted to a
 screen offset only at the end.
 
 Numbers from docs/benchmarks/edges.json: op exp, probe ["40"]: .truth
-(extended to 80 decimals by vocab.truth80) and .cells.fp127.value; the
+(extended to 80 decimals by vocab.truth80) and .cells.bl127.value; the
 neighbours at every decimal level and every binary level, the correctly
 rounded 18-decimal value, the binary neighbours floor(t · 2^128) and + 1,
-their hex fractions and decimal readings, FP127's word to 18 decimals
+their hex fractions and decimal readings, BL127's word to 18 decimals
 (asserted equal to the correctly rounded value), and the fraction of a
 unit the exact value sits at on each grid are computed here (vocab
 helpers, Fraction) and exposed in numbers().
@@ -80,7 +80,7 @@ from vocab import SIZE_CAPTION, TRUTH_DECIMALS, DeckScene, GridLine, Palette, ch
 
 OP, ARG = "exp", "40"
 WORD_DECIMALS = 18  # layer 1 ends here: one tick = 10^-18
-FRACTION_BITS = 128  # layer 2 ends here: one tick = 2^-128 (FP127)
+FRACTION_BITS = 128  # layer 2 ends here: one tick = 2^-128 (BL127)
 BIT_START, BIT_STEP = 60, 4  # layer 2 dives 2^-60, 2^-64, … (2^-60 ≈ 0.87e-18, next to the wei grid)
 HEX_DIGITS = FRACTION_BITS // 4  # a 128-bit fraction word is 32 hex digits
 EXPANSION_DECIMALS = TRUTH_DECIMALS  # the neighbours' decimal readings: as far as the truth goes (80)
@@ -156,11 +156,11 @@ def numbers() -> dict:
     nearest_b = hib if fb >= Fraction(1, 2) else lob
     readings = {w: _frac_round(Fraction(w) * ub, EXPANSION_DECIMALS) for w in (lob, hib)}
     assert readings[lob] != readings[hib], readings  # the two words' readings part on screen
-    fp127 = p["cells"]["fp127"]["value"]
-    # FP127's word, rounded to the probe's decimals as the cell prints it, is the nearer neighbour
-    assert _frac_round(Fraction(nearest_b) * ub, len(fp127.partition(".")[2])) == fp127, (fp127, nearest_b)
+    bl127 = p["cells"]["bl127"]["value"]
+    # BL127's word, rounded to the probe's decimals as the cell prints it, is the nearer neighbour
+    assert _frac_round(Fraction(nearest_b) * ub, len(bl127.partition(".")[2])) == bl127, (bl127, nearest_b)
     word18 = _frac_round(Fraction(nearest_b) * ub, WORD_DECIMALS)
-    assert word18 == correctly_rounded_18(truth), word18  # FP127's word to 18 decimals is the closest 18-decimal value
+    assert word18 == correctly_rounded_18(truth), word18  # BL127's word to 18 decimals is the closest 18-decimal value
     with localcontext() as ctx:
         ctx.prec = 30
         tick_b = Decimal(ub.numerator) / Decimal(ub.denominator)
@@ -184,7 +184,7 @@ def numbers() -> dict:
         "nearest_128": readings[nearest_b],
         "word18": word18,
         "tick_128": f"{tick_b:.1e}",
-        "fp127": fp127,
+        "bl127": bl127,
     }
 
 
@@ -344,7 +344,7 @@ class Grid(DeckScene):
         wad_lbl = markup(f"the WAD answer: {n['correctly_rounded']}", 22, Palette.GOLD).next_to(wad, UP, buff=0.7)
         self.play(FadeIn(wad_lbl, run_time=0.3))
 
-        # layer 2: by powers of two, down to FP127's grid; the header goes as far as the truth does
+        # layer 2: by powers of two, down to BL127's grid; the header goes as far as the truth does
         self.section(2, hold=2.0)
         self.play(FadeOut(wad, run_time=0.4), FadeOut(wad_lbl, run_time=0.4), FadeOut(layer1, run_time=0.4))
         bits = n["bits"]
@@ -380,7 +380,7 @@ class Grid(DeckScene):
             pause=0.0,
             settle=0.07,
         )
-        layer2 = markup(f"FP127's grid: one tick = 2<sup>−{FRACTION_BITS}</sup> ≈ {n['tick_128'].split('e')[0]} × 10<sup>−{abs(int(n['tick_128'].split('e')[1]))}</sup>", 24, Palette.EMERALD)
+        layer2 = markup(f"BL127's grid: one tick = 2<sup>−{FRACTION_BITS}</sup> ≈ {n['tick_128'].split('e')[0]} × 10<sup>−{abs(int(n['tick_128'].split('e')[1]))}</sup>", 24, Palette.EMERALD)
         layer2.move_to([-6.4 + layer2.width / 2, LABEL_Y, 0])
         self.play(FadeIn(layer2, shift=RIGHT * 0.1, run_time=0.5))
         # the two words' decimal readings, to as many decimals as the truth has: they part at the 39th
@@ -421,9 +421,9 @@ class Grid(DeckScene):
         glow = halo(line_b.n2p(near), Palette.CORRECT)
         self.play(snap(d3, line_b, near, Palette.CORRECT, run_time=0.6), FadeIn(glow, run_time=0.6))
         self.bring_to_front(d1, d3)
-        # FP127's word: its hex fraction complete, and what it is to 18 decimals
+        # BL127's word: its hex fraction complete, and what it is to 18 decimals
         word_lbl = VGroup(
-            VGroup(words("FP127's word", 22, Palette.EMERALD), digits(n["nearest_hex"], 20, Palette.TEXT)).arrange(RIGHT, buff=0.25),
+            VGroup(words("BL127's word", 22, Palette.EMERALD), digits(n["nearest_hex"], 20, Palette.TEXT)).arrange(RIGHT, buff=0.25),
             VGroup(words(f"to {WORD_DECIMALS} decimals", 20, Palette.MUTED), digits(n["word18"], 20, Palette.TEXT)).arrange(RIGHT, buff=0.25),
         ).arrange(DOWN, buff=0.1, aligned_edge=LEFT)
         word_lbl.next_to(d3, UP, buff=0.95)

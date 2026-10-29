@@ -91,7 +91,7 @@ def leaves(x, out: list) -> list:
 
 def known_tokens(numbers: dict) -> set[str]:
     """The numbers in numbers()'s leaves, plus the digits in the libraries'
-    names (static/data/libraries.json: "FP127", "PRBMath SD59x18", …)."""
+    names (static/data/libraries.json: "BL127", "PRBMath SD59x18", …)."""
     toks = set()
     for leaf in leaves(numbers, []):
         for f in formatted(leaf):
@@ -207,12 +207,12 @@ def expect_s02_exp40(mod) -> dict:
     assert by_id["prb"]["wrong_decimal"] == 0 and by_id["prb"]["decimals"] == 0 and by_id["prb"]["right_label"] == "0 right · wrong before the point", by_id["prb"]
     assert mod.ordinal(1) == "1st" and mod.ordinal(2) == "2nd" and mod.ordinal(11) == "11th" and mod.ordinal(13) == "13th" and mod.ordinal(21) == "21st" and mod.ordinal(22) == "22nd"
     # the words by the other route: each raw word's fields read with masks and shifts written here
-    # (contracts/src/fp19/README.md lines 21-24: sign bit 255, E bits 254..236 bias 262143, F bits 235..0,
-    # value = (2^236 + F) * 2^(E - 262143 - 236); FP127: an int256, value = raw / 2^128), the expansion
+    # (contracts/src/bl19/README.md lines 21-24: sign bit 255, E bits 254..236 bias 262143, F bits 235..0,
+    # value = (2^236 + F) * 2^(E - 262143 - 236); BL127: an int256, value = raw / 2^128), the expansion
     # by Decimal at a precision wide enough that a division by a power of two is exact
     def decode(lid: str, raw: int) -> tuple[int, int]:
         """(numerator, k): value = numerator / 2^k, k >= 0."""
-        if lid == "fp127":
+        if lid == "bl127":
             assert raw < 2**255, raw  # positive
             return raw, 128
         assert raw >> 255 == 0 and raw != 0, raw  # positive, not zero
@@ -275,10 +275,10 @@ def expect_s02_exp40(mod) -> dict:
                 }
             )
     by = {o["id"]: o for o in ours}
-    # the story: FP127 matches 57 digits (18 + 39 decimals), FP19 73 (18 + 55); the counts the user named
-    assert (by["fp127"]["matching"], by["fp127"]["decimals_right"]) == (57, 39), by["fp127"]
-    assert (by["fp19"]["matching"], by["fp19"]["decimals_right"]) == (73, 55), by["fp19"]
-    assert by["fp127"]["word_decimals"] == 127 and by["fp19"]["word_decimals"] == 179, (by["fp127"]["word_decimals"], by["fp19"]["word_decimals"])
+    # the story: BL127 matches 57 digits (18 + 39 decimals), BL19 73 (18 + 55); the counts the user named
+    assert (by["bl127"]["matching"], by["bl127"]["decimals_right"]) == (57, 39), by["bl127"]
+    assert (by["bl19"]["matching"], by["bl19"]["decimals_right"]) == (73, 55), by["bl19"]
+    assert by["bl127"]["word_decimals"] == 127 and by["bl19"]["word_decimals"] == 179, (by["bl127"]["word_decimals"], by["bl19"]["word_decimals"])
     # the reveal rows carry the plain count like the others, and never what the format holds
     for o in ours:
         assert "holds" not in o["right_label"] and "holds" not in o["end_label"], o
@@ -296,12 +296,12 @@ def expect_s02_exp40(mod) -> dict:
         "rows": rows,
         "ours": ours,
         "correctly_rounded": exact_row,
-        "fp127_word": by["fp127"]["word"],
-        "fp19_word": by["fp19"]["word"],
-        "fp127_match": by["fp127"]["matching"],
-        "fp19_match": by["fp19"]["matching"],
-        "fp127_decimals": by["fp127"]["decimals_right"],
-        "fp19_decimals": by["fp19"]["decimals_right"],
+        "bl127_word": by["bl127"]["word"],
+        "bl19_word": by["bl19"]["word"],
+        "bl127_match": by["bl127"]["matching"],
+        "bl19_match": by["bl19"]["matching"],
+        "bl127_decimals": by["bl127"]["decimals_right"],
+        "bl19_decimals": by["bl19"]["decimals_right"],
         "ruler_marks": [t for t in range(10, longest + 1, 10)],
         "context": " · ".join(r["label"] for r in rows) + ": " + " · ".join(str(r["decimals"]) for r in rows) + " decimals right",
         "close2": " · ".join(f"{o['label']}: {o['decimals_right']} decimals" for o in ours) + " · every one of them right",
@@ -333,7 +333,7 @@ def expect_s04_grid(mod) -> dict:
         neighbours_128 = [reading(lob, mod.EXPANSION_DECIMALS), reading(hib, mod.EXPANSION_DECIMALS)]
         nearest_128 = reading(nearest, mod.EXPANSION_DECIMALS)
         word18 = reading(nearest, mod.WORD_DECIMALS)
-        # the readings go exactly as far as the truth does, part from each other, and FP127's word to 18 decimals is the closest 18-decimal value
+        # the readings go exactly as far as the truth does, part from each other, and BL127's word to 18 decimals is the closest 18-decimal value
         assert neighbours_128[0] != neighbours_128[1] and word18 == vocab.correctly_rounded_18(truth), (neighbours_128, word18)
         # the two words differ by one in the last place of their 32-hex-digit fractions, shown complete
         hexes = [f"0x{w % (1 << mod.FRACTION_BITS):032x}" for w in (lob, hib)]
@@ -371,7 +371,7 @@ def expect_s04_grid(mod) -> dict:
         "nearest_128": nearest_128,
         "word18": word18,
         "tick_128": tick,
-        "fp127": p["cells"]["fp127"]["value"],
+        "bl127": p["cells"]["bl127"]["value"],
     }
 
 
@@ -493,14 +493,14 @@ def expect_s06b_bunni(mod) -> dict:
     assert int(dep["active USDC after 44 (wei)"]) == active_end and int(dep["total liquidity after"]) == L1 == lq["forms"]["deployed"]
     fix = next(v for k, v in table.items() if "mulDivUp" in k)
     assert int(fix["active USDC after 44 (wei)"]) == r["seq"]["mulDivUp"][-1] == 48 and int(fix["total liquidity after"]) == lq["forms"]["mulDivUp"]
-    fp127 = table["FP127 idle balance"]
-    assert fp127["active USDC after 44 (wei)"] == vocab.to_decimals(r["seq"]["fp127"][-1], mod.WORD_DECIMALS) and int(fp127["total liquidity after"]) == lq["forms"]["fp127"]
+    bl127 = table["BL127 idle balance"]
+    assert bl127["active USDC after 44 (wei)"] == vocab.to_decimals(r["seq"]["bl127"][-1], mod.WORD_DECIMALS) and int(bl127["total liquidity after"]) == lq["forms"]["bl127"]
     with localcontext() as ctx:
         ctx.prec = 60
         fix_pct = dec((Decimal(lq["forms"]["mulDivUp"]) / Decimal(lq["start"]) - 1) * 100, mod.PCT_FIX_DECIMALS).replace("-", "−") + "%"
-        assert fix_pct == fix["change"].replace("-", "−") == fp127["change"].replace("-", "−"), (fix_pct, fix["change"])
+        assert fix_pct == fix["change"].replace("-", "−") == bl127["change"].replace("-", "−"), (fix_pct, fix["change"])
         assert dec((Decimal(L1) / Decimal(lq["start"]) - 1) * 100, 7).replace("-", "−") + "%" == dep["change"].replace("-", "−")
-    fp19 = table["FP19 idle balance"]["active USDC after 44 (wei)"]  # the forge run's; the table alone carries it (REPORT)
+    bl19 = table["BL19 idle balance"]["active USDC after 44 (wei)"]  # the forge run's; the table alone carries it (REPORT)
     cite = next(c for c in d["cites"] if c["id"] == "idle")
     assert cite["file"] == "src/lib/BunniHubLogic.sol" and cite["line"] == 478
     for k, v in mod.numbers().items():
@@ -536,8 +536,8 @@ def expect_s06b_bunni(mod) -> dict:
         "liq_pct": pct,
         "loss": inc["loss"],
         "up": "48",
-        "fp127": fp127["active USDC after 44 (wei)"],
-        "fp19": fp19,
+        "bl127": bl127["active USDC after 44 (wei)"],
+        "bl19": bl19,
         "word_label": f"(to {mod.WORD_DECIMALS} decimals)",
         "fix_pct": fix_pct,
     }
@@ -590,7 +590,7 @@ def expect_s06c_balancer_v2(mod) -> dict:
     # the counterfactual from the generated table (the scene cross-checks it against the JSON)
     rulers = {r["model"]: r for r in vocab.replay_table("balancer", "The same calls on five rulers")}
     dep = next(r for m, r in rulers.items() if m.startswith("deployed"))
-    fp = next(r for m, r in rulers.items() if m.startswith("FP127"))
+    fp = next(r for m, r in rulers.items() if m.startswith("BL127"))
     would_lose = str(-Decimal(fp["projected take (ETH)"]))
     inc = next(i for i in vocab.incidents()["incidents"] if i["protocol"] == mod.PROTOCOL)
     cites = pool["source"]["cites"]
@@ -786,8 +786,8 @@ def expect_s08_ladder(mod) -> dict:
         end = {lid: vals[-1] for lid, vals in series.items()}
         # the margin is over the BEST 18-decimal line at N = 10,000 (the smallest honest claim)
         gold_end = max(end[lid] for lid in end if lib[lid]["family"] == "wad")
-        margins = {lid: round(end[lid] - gold_end, 1) for lid in ("fp127", "fp19")}
-        assert {"fp127", "fp19"} <= set(series) and len(series) + len(absent) == 17, sid
+        margins = {lid: round(end[lid] - gold_end, 1) for lid in ("bl127", "bl19")}
+        assert {"bl127", "bl19"} <= set(series) and len(series) + len(absent) == 17, sid
         scenarios.append(
             {
                 "id": sid,
@@ -804,7 +804,7 @@ def expect_s08_ladder(mod) -> dict:
     # the story the slide tells, checked against the cells
     by_id = {s["id"]: s for s in scenarios}
     assert "maker" in by_id["compound"]["series"] and {"aave", "morpho"} <= set(by_id["accrual-continuous"]["series"]) and {"fraxlend", "euler"} <= set(by_id["adaptive-rate"]["series"])
-    assert all(s["margins"]["fp19"] > s["margins"]["fp127"] > 0 for s in scenarios)
+    assert all(s["margins"]["bl19"] > s["margins"]["bl127"] > 0 for s in scenarios)
     assert mod.CLOSE_FIRST == "Blockulator's lines start higher and keep the gap" and "flat" not in mod.CLOSE_FIRST  # V14
     return {"N": N, "log10": [first["log10"][str(n)] for n in N], "axisMax": first["axisMax"], "y_ticks": list(range(0, int(first["axisMax"]) + 1, 20)), "wad_decimals": 18, "scenarios": scenarios}
 
@@ -854,14 +854,14 @@ def expect_s09_cliff(mod) -> dict:
     axis_max = int(mod.Y_STEP * -(-y_max // mod.Y_STEP))
     # the story the slide tells, checked against the cells
     by_arg = {c["arg"]: c["cells"] for c in columns}
-    assert by_arg["-42"]["solady"]["kind"] == "zero" and by_arg["-60"]["abdk"]["kind"] == "zero" and by_arg["-100"]["fp127"]["kind"] == "zero"
-    # V28: FP127 has 0 digits at −89 (a value, 2^-128) and a digit still at −88
-    assert by_arg["-89"]["fp127"] == {"kind": "value", "digits": 0.0} and by_arg["-88"]["fp127"]["digits"] >= 1, (by_arg["-89"]["fp127"], by_arg["-88"]["fp127"])
-    assert all(c["cells"]["fp19"]["kind"] == "value" and c["cells"]["fp19"]["digits"] > 60 for c in columns)
-    fp19_min = min(c["cells"]["fp19"]["digits"] for c in columns)
-    # FP127's last standing point: the last probe where its value still had a digit (by the raw cells)
-    standing = [p for p in probes if not p["cells"]["fp127"].get("zero") and not p["cells"]["fp127"].get("reverted") and float(p["cells"]["fp127"]["digits"]) >= 1]
-    assert standing[-1]["args"][0] == "-88", standing[-1]["args"]  # the closing line: "FP127 has digits to exp(−88)" (V28)
+    assert by_arg["-42"]["solady"]["kind"] == "zero" and by_arg["-60"]["abdk"]["kind"] == "zero" and by_arg["-100"]["bl127"]["kind"] == "zero"
+    # V28: BL127 has 0 digits at −89 (a value, 2^-128) and a digit still at −88
+    assert by_arg["-89"]["bl127"] == {"kind": "value", "digits": 0.0} and by_arg["-88"]["bl127"]["digits"] >= 1, (by_arg["-89"]["bl127"], by_arg["-88"]["bl127"])
+    assert all(c["cells"]["bl19"]["kind"] == "value" and c["cells"]["bl19"]["digits"] > 60 for c in columns)
+    bl19_min = min(c["cells"]["bl19"]["digits"] for c in columns)
+    # BL127's last standing point: the last probe where its value still had a digit (by the raw cells)
+    standing = [p for p in probes if not p["cells"]["bl127"].get("zero") and not p["cells"]["bl127"].get("reverted") and float(p["cells"]["bl127"]["digits"]) >= 1]
+    assert standing[-1]["args"][0] == "-88", standing[-1]["args"]  # the closing line: "BL127 has digits to exp(−88)" (V28)
     wad = [lid for lid in lids if lib[lid]["family"] == "wad"]
     first_zero = next(p["args"][0] for p in probes if any(p["cells"][lid].get("zero") for lid in wad))
     return {
@@ -871,8 +871,8 @@ def expect_s09_cliff(mod) -> dict:
         "axisMax": axis_max,
         "y_ticks": list(range(0, axis_max + 1, mod.Y_STEP)),
         "wad_decimals": 18,
-        "fp19_min": fp19_min,
-        "fp127_last": {"arg": standing[-1]["args"][0], "digits": float(standing[-1]["cells"]["fp127"]["digits"])},
+        "bl19_min": bl19_min,
+        "bl127_last": {"arg": standing[-1]["args"][0], "digits": float(standing[-1]["cells"]["bl127"]["digits"])},
         "wad_first_zero": first_zero,
     }
 
@@ -885,8 +885,8 @@ def expect_s10_live(mod) -> dict:
             "id": c["id"],
             "protocol": c["protocol"],
             "deployed": float(c["truth"][c["primaryTruth"]]["deployed"]["digitsInterest"]),
-            "fp127": float(c["truth"][c["primaryTruth"]]["fp127"]["digitsInterest"]),
-            "fp19": float(c["truth"][c["primaryTruth"]]["fp19"]["digitsInterest"]),
+            "bl127": float(c["truth"][c["primaryTruth"]]["bl127"]["digitsInterest"]),
+            "bl19": float(c["truth"][c["primaryTruth"]]["bl19"]["digitsInterest"]),
         }
         for c in cases
     ]
@@ -903,20 +903,20 @@ def expect_s10_live(mod) -> dict:
         return round((v[k - 1] + v[k]) / 2 if len(v) % 2 == 0 else v[k], 1)
 
     def summary(sub: list[dict]) -> dict:
-        medians = {k: median(sub, k) for k in ("deployed", "fp127", "fp19")}
-        margins = {"fp127": round(medians["fp127"] - medians["deployed"], 1), "fp19": round(medians["fp19"] - medians["fp127"], 1)}
-        assert margins["fp127"] > 0 and margins["fp19"] > 0
+        medians = {k: median(sub, k) for k in ("deployed", "bl127", "bl19")}
+        margins = {"bl127": round(medians["bl127"] - medians["deployed"], 1), "bl19": round(medians["bl19"] - medians["bl127"], 1)}
+        assert margins["bl127"] > 0 and margins["bl19"] > 0
         return {"medians": medians, "margins": margins}
 
     whole = summary(pts)
     medians = whole["medians"]
-    above, above_fp19 = sum(1 for x in pts if x["fp127"] > x["deployed"]), sum(1 for x in pts if x["fp19"] > x["deployed"])
-    assert above == above_fp19 == len(pts), (above, above_fp19)
+    above, above_bl19 = sum(1 for x in pts if x["bl127"] > x["deployed"]), sum(1 for x in pts if x["bl19"] > x["deployed"])
+    assert above == above_bl19 == len(pts), (above, above_bl19)
     by_protocol = {p: {"count": counts[p], **summary([x for x in pts if x["protocol"] == p])} for p in ("aave", "morpho")}
-    # every facet's rows climb like the whole: deployed < FP127 < FP19
+    # every facet's rows climb like the whole: deployed < BL127 < BL19
     for p, s in by_protocol.items():
-        assert s["medians"]["deployed"] < s["medians"]["fp127"] < s["medians"]["fp19"], (p, s)
-    assert medians["deployed"] < medians["fp127"] < medians["fp19"], medians
+        assert s["medians"]["deployed"] < s["medians"]["bl127"] < s["medians"]["bl19"], (p, s)
+    assert medians["deployed"] < medians["bl127"] < medians["bl19"], medians
     return {
         "points": pts,
         "count": len(pts),
@@ -925,7 +925,7 @@ def expect_s10_live(mod) -> dict:
         "date": survey["date"],
         "axis_ticks": [0, 20, 40, 60, 80],
         "above": above,
-        "above_fp19": above_fp19,
+        "above_bl19": above_bl19,
         "medians": medians,
         "medians_rounded": {k: int(Decimal(str(v)).quantize(Decimal(1), rounding="ROUND_HALF_EVEN")) for k, v in medians.items()},
         "margins": whole["margins"],
@@ -937,16 +937,16 @@ def expect_s16_ziv(mod) -> dict:
     # the sweep rows by hand: the plain pass (no .stage) for each library
     rows = {}
     for r in vocab._load("docs/benchmarks/sweep.json")["rows"]:
-        if r["op"] == mod.OP and "stage" not in r and r["lib"] in ("fp19", "fp127"):
+        if r["op"] == mod.OP and "stage" not in r and r["lib"] in ("bl19", "bl127"):
             assert r["lib"] not in rows, r["lib"]
             rows[r["lib"]] = r
     lib = vocab.libs()
-    fp19, fp127 = rows["fp19"], rows["fp127"]
-    # the story (V18): FP19's last stage ran once in its sweep, FP127's never; FP127's n is the scored
+    bl19, bl127 = rows["bl19"], rows["bl127"]
+    # the story (V18): BL19's last stage ran once in its sweep, BL127's never; BL127's n is the scored
     # inputs, the unscored both-revert inputs make up the generated count
-    assert fp19["fallback"] == 1 and fp19["fallbackRuns"] == 1 and fp127["fallback"] == 0, (fp19["fallback"], fp127["fallback"])
-    assert fp127["n"] + fp127["status"]["gotrev"] == fp127["inputs"] and fp127["status"]["ok"] == fp127["n"], fp127["status"]
-    assert fp19["status"]["ok"] == fp19["n"], fp19["status"]
+    assert bl19["fallback"] == 1 and bl19["fallbackRuns"] == 1 and bl127["fallback"] == 0, (bl19["fallback"], bl127["fallback"])
+    assert bl127["n"] + bl127["status"]["gotrev"] == bl127["inputs"] and bl127["status"]["ok"] == bl127["n"], bl127["status"]
+    assert bl19["status"]["ok"] == bl19["n"], bl19["status"]
     # the gas median by hand: the middle of the sorted typical inline cells (V19: 2,835)
     g = vocab._load("docs/benchmarks/gas.json")
     cells = sorted(c for c in g["ops"][mod.OP]["typical"]["gas"][mod.GAS_FORM] if c is not None)
@@ -958,14 +958,14 @@ def expect_s16_ziv(mod) -> dict:
         ctx.prec = 30
         pct = float(((Decimal(median) - mod.GAS_BEFORE_TEST) / mod.GAS_BEFORE_TEST * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
     assert 0 < pct < 10, pct  # "a few percent"
-    counters = {lid: f"{rows[lid]['fallback']} of {rows[lid]['n']:,}" for lid in ("fp19", "fp127")}
-    # every figure carries its library: the fallback counters FP19's and FP127's, the gas line FP127's
-    gas_line = f"{lib['fp127']['label']} {mod.OP}: {mod.GAS_BEFORE_TEST:,} → {int(median):,} gas with the test"
-    assert gas_line.startswith("FP127") and "FP19" not in gas_line
+    counters = {lid: f"{rows[lid]['fallback']} of {rows[lid]['n']:,}" for lid in ("bl19", "bl127")}
+    # every figure carries its library: the fallback counters BL19's and BL127's, the gas line BL127's
+    gas_line = f"{lib['bl127']['label']} {mod.OP}: {mod.GAS_BEFORE_TEST:,} → {int(median):,} gas with the test"
+    assert gas_line.startswith("BL127") and "BL19" not in gas_line
     return {
         "op": mod.OP,
-        "fp19": {"label": lib["fp19"]["label"], "n": fp19["n"], "fallback": fp19["fallback"]},
-        "fp127": {"label": lib["fp127"]["label"], "n": fp127["n"], "fallback": fp127["fallback"], "inputs": fp127["inputs"]},
+        "bl19": {"label": lib["bl19"]["label"], "n": bl19["n"], "fallback": bl19["fallback"]},
+        "bl127": {"label": lib["bl127"]["label"], "n": bl127["n"], "fallback": bl127["fallback"], "inputs": bl127["inputs"]},
         "gas_before": mod.GAS_BEFORE_TEST,
         "gas_with_test": median,
         "gas_form": g["formLabels"][mod.GAS_FORM],
@@ -973,7 +973,7 @@ def expect_s16_ziv(mod) -> dict:
         "gas_line": gas_line,
         "pct_line": f"+{pct}%",
         "counters": counters,
-        "close_line": f"the last stage: {counters['fp127']} inputs",
+        "close_line": f"the last stage: {counters['bl127']} inputs",
     }
 
 
@@ -984,7 +984,7 @@ def expect_s12_reference(mod) -> dict:
     address, version = comp["address"], comp["version"]
     assert len(address) == 42 and address[:2] == "0x" and int(address[2:], 16) > 0, address
     assert version.startswith(mod.COMPONENT + " v"), version  # the version names the component (V15)
-    # the record's markdown names the same address (V15, contracts/deployments/FP127.md)
+    # the record's markdown names the same address (V15, contracts/deployments/BL127.md)
     assert address in (vocab.ROOT / comp["record"]).read_text(encoding="utf-8"), (address, comp["record"])
     # the word by the other route: the probe's own 24-decimal truth, rounded half-up at the 18th by integer arithmetic
     truth = vocab.probe(mod.OP, mod.ARG)["truth"]
@@ -1211,7 +1211,7 @@ def expect_s15_formats(mod) -> dict:
     sign, integer, fraction = 1, 127, 128
     exponent, stored = 19, 236
     assert sign + integer + fraction == 256 == sign + exponent + stored
-    assert integer == mod.FP127_INTEGER_BITS and fraction == vocab.FP127_FRACTION_BITS and exponent == vocab.FP19_EXPONENT_BITS and stored == vocab.FP19_FRACTION_BITS
+    assert integer == mod.BL127_INTEGER_BITS and fraction == vocab.BL127_FRACTION_BITS and exponent == vocab.BL19_EXPONENT_BITS and stored == vocab.BL19_FRACTION_BITS
     significand = stored + 1
     with localcontext() as ctx:
         ctx.prec = 80
@@ -1219,14 +1219,14 @@ def expect_s15_formats(mod) -> dict:
         d127 = int((log10_2 * fraction).to_integral_value(rounding=ROUND_FLOOR))
         d19 = int((log10_2 * significand).to_integral_value(rounding=ROUND_FLOOR))
         assert d127 == 38 and d19 == 71, (d127, d19)  # K1 (38.53), K3 (71.34)
-        # FP127's range: 2^127 as a Decimal, its leading power of ten and its mantissa to one decimal
+        # BL127's range: 2^127 as a Decimal, its leading power of ten and its mantissa to one decimal
         top = Decimal(2) ** 127
         range_exp = top.adjusted()
         mantissa = str(top.scaleb(-range_exp).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
         assert range_exp == 38 and mantissa == "1.7", (range_exp, mantissa)  # K1: ±1.7014 × 10^38
         # the grid's end, 2^-128, is a positive Decimal with 128 binary places; its power of ten is -39 (K2), not drawn
         assert (Decimal(2) ** -128).adjusted() == -39
-        # FP19's extremes (K3): 2^-262142 and (2 - 2^-236) · 2^262144, as powers of ten
+        # BL19's extremes (K3): 2^-262142 and (2 - 2^-236) · 2^262144, as powers of ten
         smallest = Decimal(2) ** -262142
         largest = (2 - Decimal(2) ** -stored) * Decimal(2) ** 262144
         min_exp, max_exp = smallest.adjusted(), largest.adjusted()
@@ -1234,34 +1234,34 @@ def expect_s15_formats(mod) -> dict:
         # the ledger's mantissas, K3: 2.48 and 3.22
         assert str(smallest.scaleb(-min_exp).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) == "2.48"
         assert str(largest.scaleb(-max_exp).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) == "3.22"
-    assert mod.FP19_MIN_EXP == -262142 and mod.FP19_MAX_EXP == 262144
+    assert mod.BL19_MIN_EXP == -262142 and mod.BL19_MAX_EXP == 262144
 
     def power(e: int) -> str:
         return f"10<sup>{'−' if e < 0 else ''}{abs(e):,}</sup>"
 
     strings = {
         "bits": "256 bits",
-        "fp127_fields": f"{sign} · {integer} · {fraction}",
-        "fp127_names": "sign · integer · fraction",
-        "fp127_digits": f"about {d127} digits of fraction",
-        "fp127_range": f"about ±{mantissa} × {power(range_exp)}",
-        "fp127_grid_end": f"the grid ends at 2<sup>−{fraction}</sup>",
-        "fp127_label": f"{lib['fp127']['label']} · fixed point",
-        "fp19_fields": f"{sign} · {exponent} · {stored}",
-        "fp19_names": f"sign · exponent · fraction ({stored} stored)",
-        "fp19_significand": f"significand {significand} bits with the hidden bit",
-        "fp19_digits": f"about {d19} digits at every magnitude",
-        "fp19_min": f"about {power(min_exp)}",
-        "fp19_max": f"about {power(max_exp)}",
-        "fp19_label": f"{lib['fp19']['label']} · floating point",
+        "bl127_fields": f"{sign} · {integer} · {fraction}",
+        "bl127_names": "sign · integer · fraction",
+        "bl127_digits": f"about {d127} digits of fraction",
+        "bl127_range": f"about ±{mantissa} × {power(range_exp)}",
+        "bl127_grid_end": f"the grid ends at 2<sup>−{fraction}</sup>",
+        "bl127_label": f"{lib['bl127']['label']} · fixed point",
+        "bl19_fields": f"{sign} · {exponent} · {stored}",
+        "bl19_names": f"sign · exponent · fraction ({stored} stored)",
+        "bl19_significand": f"significand {significand} bits with the hidden bit",
+        "bl19_digits": f"about {d19} digits at every magnitude",
+        "bl19_min": f"about {power(min_exp)}",
+        "bl19_max": f"about {power(max_exp)}",
+        "bl19_label": f"{lib['bl19']['label']} · floating point",
     }
     # the flags: "236 stored" and the 237-bit significand both on screen; never "237 stored" or "236-bit significand"
     joined = " | ".join(strings.values())
     assert "236 stored" in joined and "significand 237 bits" in joined and "237 stored" not in joined and "236-bit" not in joined, joined
     # every digit count and range is prefixed "about"; the minus is U+2212; the slide says "laid out as", not "is"
-    for k in ("fp127_digits", "fp127_range", "fp19_digits", "fp19_min", "fp19_max"):
+    for k in ("bl127_digits", "bl127_range", "bl19_digits", "bl19_min", "bl19_max"):
         assert strings[k].startswith("about "), strings[k]
-    assert "-" not in strings["fp19_min"] and "−" in strings["fp19_min"] and "−" in strings["fp127_grid_end"]
+    assert "-" not in strings["bl19_min"] and "−" in strings["bl19_min"] and "−" in strings["bl127_grid_end"]
     assert mod.IEEE == "laid out as IEEE 754 binary256" and mod.LITERALS[mod.IEEE] == "E9" and " is " not in mod.IEEE
     assert mod.CLOSE == "known range: fixed point · many orders of magnitude: floating point"  # essay §8, verbatim
     assert mod.REVERT == "no NaN, no infinity: overflow reverts"  # K4
@@ -1269,8 +1269,8 @@ def expect_s15_formats(mod) -> dict:
         "word_bits": 256,
         "radix": 2,
         "base": 10,
-        "fp127": {"label": lib["fp127"]["label"], "sign": sign, "integer": integer, "fraction": fraction, "digits": d127, "range_mantissa": mantissa, "range_exp": range_exp, "grid_end_exp": fraction},
-        "fp19": {"label": lib["fp19"]["label"], "sign": sign, "exponent": exponent, "fraction": stored, "significand": significand, "digits": d19, "min_exp": min_exp, "max_exp": max_exp},
+        "bl127": {"label": lib["bl127"]["label"], "sign": sign, "integer": integer, "fraction": fraction, "digits": d127, "range_mantissa": mantissa, "range_exp": range_exp, "grid_end_exp": fraction},
+        "bl19": {"label": lib["bl19"]["label"], "sign": sign, "exponent": exponent, "fraction": stored, "significand": significand, "digits": d19, "min_exp": min_exp, "max_exp": max_exp},
         "strings": strings,
     }
 
@@ -1278,7 +1278,7 @@ def expect_s15_formats(mod) -> dict:
 def expect_s17_proofs(mod) -> dict:
     """The counts straight from proofs.json by op, the sums from sweep.json by
     a loop over every row with running totals, the transcendental list from
-    the FP127 README's own sentence (V34) and from the sweep's forced pass."""
+    the BL127 README's own sentence (V34) and from the sweep's forced pass."""
     pj = vocab._load("docs/benchmarks/proofs.json")
     lib = vocab.libs()
     counts = {}
@@ -1292,33 +1292,33 @@ def expect_s17_proofs(mod) -> dict:
                 c["halmos"] += 1
             else:
                 c["exact"].append(o["op"])
-    assert set(counts) == {"FP127", "FP19"}
+    assert set(counts) == {"BL127", "BL19"}
     # the summary agrees with the rows, and the story: 17 = 16 + sqrt; 18 of 24; gavg, hypot; six (V22, V23)
     assert sum(c["ops"] for c in counts.values()) == pj["summary"]["ops"] == 43
     assert sum(len(c["proven"]) for c in counts.values()) == pj["summary"]["proven"] == 35
     assert sum(len(c["fuzzed"]) for c in counts.values()) == pj["summary"]["fuzzed"] == 8
     assert pj["summary"]["counterexamples"] == 0 and pj["summary"]["in_progress"] == 0
-    f127, f19 = counts["FP127"], counts["FP19"]
+    f127, f19 = counts["BL127"], counts["BL19"]
     assert len(f127["proven"]) == 17 and f127["halmos"] == 16 and f127["exact"] == ["sqrt"] and f127["fuzzed"] == ["gavg", "hypot"]
     assert len(f19["proven"]) == 18 and f19["ops"] == 24 and len(f19["fuzzed"]) == 6 and f19["halmos"] == 18 and f19["exact"] == []
     assert set(f19["fuzzed"]) == {"add", "sub", "sqrt", "toFixed18", "toFixed18Down", "toFixed18Up"}, f19["fuzzed"]
     # the fuzz runs: every testFuzz_ entry ran 50,000 times and passed; the two regression pins once
     fuzz = {f["test"]: f for f in pj["fuzz"]}
     for op in f127["fuzzed"]:
-        assert fuzz[f"testFuzz_fp127_{op}"]["runs"] == 50000 and fuzz[f"testFuzz_fp127_{op}"]["result"] == "pass", op
-    for t in ("testFuzz_fp19_add", "testFuzz_fp19_sub", "testFuzz_fp19_sqrt", "testFuzz_fp19_toFixed18"):
+        assert fuzz[f"testFuzz_bl127_{op}"]["runs"] == 50000 and fuzz[f"testFuzz_bl127_{op}"]["result"] == "pass", op
+    for t in ("testFuzz_bl19_add", "testFuzz_bl19_sub", "testFuzz_bl19_sqrt", "testFuzz_bl19_toFixed18"):
         assert fuzz[t]["runs"] == 50000 and fuzz[t]["result"] == "pass", t
     assert all(f["runs"] == 50000 for t, f in fuzz.items() if t.startswith("testFuzz_")) and all(f["result"] == "pass" for f in fuzz.values())
     assert mod.NUMBER_WORDS[len(f19["fuzzed"])] == "six"
     # the transcendentals by two routes: the README's sentence, and the sweep's forced pass plus cbrt (V34: 20 + cbrt)
-    readme = (vocab.ROOT / "contracts/src/fp127/README.md").read_text(encoding="utf-8")
+    readme = (vocab.ROOT / "contracts/src/bl127/README.md").read_text(encoding="utf-8")
     sentence = readme.split("The transcendentals round to nearest under the tie rule above:", 1)[1].split(". ", 1)[0]
     from_readme = re.findall(r"`(\w+)`", sentence)
     assert from_readme == list(mod.TRANSCENDENTAL) and len(from_readme) == 21, from_readme
     sw = vocab._load("docs/benchmarks/sweep.json")
     forced = {lid: sorted({r["op"] for r in sw["rows"] if r["lib"] == lid and r.get("stage") == "second"}) for lid in mod.LIBS}
-    assert forced["fp19"] == forced["fp127"] and len(forced["fp19"]) == 20 and sorted(set(mod.TRANSCENDENTAL) - set(forced["fp19"])) == ["cbrt"], forced
-    # the sums by a running loop; every row of both libraries counted once, every fp19/fp127 row correctly rounded in full
+    assert forced["bl19"] == forced["bl127"] and len(forced["bl19"]) == 20 and sorted(set(mod.TRANSCENDENTAL) - set(forced["bl19"])) == ["cbrt"], forced
+    # the sums by a running loop; every row of both libraries counted once, every bl19/bl127 row correctly rounded in full
     total, mis, trans, nrows, seen = {}, {}, {}, {}, set()
     for r in sw["rows"]:
         lid = r["lib"]
@@ -1327,21 +1327,21 @@ def expect_s17_proofs(mod) -> dict:
         key = (lid, r["op"], r.get("stage"))
         assert key not in seen, key
         seen.add(key)
-        # n is the results that returned; FP127 counts a revert where the oracle reverts as correct over its inputs (sweep.md)
+        # n is the results that returned; BL127 counts a revert where the oracle reverts as correct over its inputs (sweep.md)
         assert r["correctlyRounded"] + r["misrounded"] == r.get("inputs", r["n"]) and r["status"].get("ok", r["n"]) == r["n"], key
         nrows[lid] = nrows.get(lid, 0) + 1
         total[lid] = total.get(lid, 0) + r["n"]
         mis[lid] = mis.get(lid, 0) + r["misrounded"]
         if r["op"] in mod.TRANSCENDENTAL:
             trans[lid] = trans.get(lid, 0) + r["n"]
-    assert mis == {"fp19": 0, "fp127": 0}, mis
-    assert total == {"fp19": 455082, "fp127": 212119} and nrows == {"fp19": 76, "fp127": 59}, (total, nrows)  # V25
-    assert trans == {"fp19": 327488, "fp127": 168120}, trans  # V34
+    assert mis == {"bl19": 0, "bl127": 0}, mis
+    assert total == {"bl19": 455082, "bl127": 212119} and nrows == {"bl19": 76, "bl127": 59}, (total, nrows)  # V25
+    assert trans == {"bl19": 327488, "bl127": 168120}, trans  # V34
     assert all(trans[lid] < total[lid] for lid in mod.LIBS)
     # the oracles' digits by the other route: sweep.md's header (V17)
     header = (vocab.ROOT / "docs/benchmarks/sweep.md").read_text(encoding="utf-8").split("\n## ", 1)[0]
-    ref = {"fp19": int(re.search(r"oracle\.py, (\d+) digits", header).group(1)), "fp127": int(re.search(r"real truth at (\d+) digits", header).group(1))}
-    assert ref == {"fp19": 300, "fp127": 200}, ref
+    ref = {"bl19": int(re.search(r"oracle\.py, (\d+) digits", header).group(1)), "bl127": int(re.search(r"real truth at (\d+) digits", header).group(1))}
+    assert ref == {"bl19": 300, "bl127": 200}, ref
     # the flags: the oracle row says tested, row 4 is never a bug list, the footnote's bugs are history
     assert mod.LABELS[2].startswith("tested") and "proven" not in mod.LABELS[2] and mod.LABELS[3] == "known limits"
     assert "bug" not in " ".join(mod.LIMIT_BOUND + mod.LIMIT_STAGE).lower() and "fixed, now proven" in mod.FOOTNOTE
@@ -1349,14 +1349,14 @@ def expect_s17_proofs(mod) -> dict:
     assert mod.CLOSING == "State your own guarantees this specifically."
     assert not any(ch in s for s in (*mod.LIMIT_BOUND, *mod.LIMIT_STAGE, mod.FOOTNOTE, mod.CLOSING) for ch in "²→½√…")
     return {
-        "labels": {"fp19": lib["fp19"]["label"], "fp127": lib["fp127"]["label"]},
-        "proven": {"FP127": f127["proven"], "FP19": f19["proven"]},
-        "fuzzed": {"FP127": f127["fuzzed"], "FP19": f19["fuzzed"]},
-        "ops": {"FP127": f127["ops"], "FP19": f19["ops"]},
-        "proven_count": {"FP127": len(f127["proven"]), "FP19": len(f19["proven"])},
+        "labels": {"bl19": lib["bl19"]["label"], "bl127": lib["bl127"]["label"]},
+        "proven": {"BL127": f127["proven"], "BL19": f19["proven"]},
+        "fuzzed": {"BL127": f127["fuzzed"], "BL19": f19["fuzzed"]},
+        "ops": {"BL127": f127["ops"], "BL19": f19["ops"]},
+        "proven_count": {"BL127": len(f127["proven"]), "BL19": len(f19["proven"])},
         "halmos_count": f127["halmos"],
         "exact_integer": f127["exact"],
-        "fp19_fuzzed_word": "six",
+        "bl19_fuzzed_word": "six",
         "runs": 50000,
         "rows": nrows,
         "total": total,
@@ -1447,7 +1447,7 @@ def expect_s06e_balancer_v1(mod) -> dict:
     # the generated table against the JSON and the arithmetic above
     table = [r for r in vocab.replay_table("balancer-v1", mod.TABLE_HEADING) if r["call"].startswith("join")]
     assert [int(r["n"]) for r in table] == [100, 56, 80, 102, 100] and sum(int(r["n"]) for r in table) == 438
-    assert all(r["FP127"] == r["FP19"] == r["exact, rounded"] == str(cost_toward) and r["pays?"] == "no" for r in table), table
+    assert all(r["BL127"] == r["BL19"] == r["exact, rounded"] == str(cost_toward) and r["pays?"] == "no" for r in table), table
     lo, hi = table[mod.POOL]["exact (range)"].split(" – ")
     assert Decimal(lo) == Decimal(hi) == Decimal(cost_str), (lo, hi, cost_str)
     lines = d["source"]["lines"]
@@ -1496,7 +1496,7 @@ def expect_s06e_balancer_v1(mod) -> dict:
         "cost_min": cost_min,
         "cost_max": cost_max,
         "cost_toward": cost_toward,
-        "fp_join": table[mod.POOL]["FP127"],  # forge's; the table alone carries it (REPORT)
+        "fp_join": table[mod.POOL]["BL127"],  # forge's; the table alone carries it (REPORT)
     }
 
 
@@ -1563,18 +1563,18 @@ def expect_s14_institutions(mod) -> dict:
 
 
 def expect_s18_habits(mod) -> dict:
-    """The address straight from RELEASE.json; the op names in the example block are FP127Lib's own (found in the source);
+    """The address straight from RELEASE.json; the op names in the example block are BL127Lib's own (found in the source);
     the three habits in three hues, the ticks EMERALD."""
     rel = vocab._load("contracts/deployments/RELEASE.json")
-    comp = rel["components"]["FP127"]
+    comp = rel["components"]["BL127"]
     address, version = comp["address"], comp["version"]
     assert len(address) == 42 and address[:2] == "0x" and int(address[2:], 16) > 0, address
-    assert version.startswith("FP127 v"), version
+    assert version.startswith("BL127 v"), version
     assert address in (vocab.ROOT / comp["record"]).read_text(encoding="utf-8"), (address, comp["record"])
-    src = (vocab.ROOT / "contracts/src/fp127/FP127Lib.sol").read_text(encoding="utf-8")
+    src = (vocab.ROOT / "contracts/src/bl127/BL127Lib.sol").read_text(encoding="utf-8")
     ops = [op for op, _ in mod.OPS]
     for op in ops:
-        assert re.search(rf"function {re.escape(op)}\(", src), f"{op} is not an FP127Lib function"
+        assert re.search(rf"function {re.escape(op)}\(", src), f"{op} is not an BL127Lib function"
     assert [way for _, way in mod.OPS] == ["down", "up", "nearest"]
     assert mod.ROUNDING == "rounding: " + " · ".join(f"{op} {way}" for op, way in mod.OPS)
     habits = [h for h, _ in mod.HABITS]
@@ -1634,13 +1634,13 @@ def expect_s19_address(mod) -> dict:
     comps = rel["components"]
     assert rel["network"] == "sepolia"
     out = {"network": rel["network"], "release": rel["release"], "main": {}, "others": {}}
-    names = ("FP19", "FP127", "FP127E", "FP127H", "FP127N", "FP127S", "FP19E", "FP19H", "FP19N", "FP19S")
+    names = ("BL19", "BL127", "BL127E", "BL127H", "BL127N", "BL127S", "BL19E", "BL19H", "BL19N", "BL19S")
     for name in names:
         c = comps[name]
         assert len(c["address"]) == 42 and c["address"][:2] == "0x" and int(c["address"][2:], 16) > 0, c
         assert c["version"].startswith(name + " v"), c["version"]
         assert c["address"] in (vocab.ROOT / c["record"]).read_text(encoding="utf-8"), (name, c["record"])
-        (out["main"] if name in ("FP19", "FP127") else out["others"])[name] = {"version": c["version"], "address": c["address"]}
+        (out["main"] if name in ("BL19", "BL127") else out["others"])[name] = {"version": c["version"], "address": c["address"]}
     assert len({c["address"] for c in comps.values()}) == len(comps), "every object has its own address"
     assert not any(name.lower().startswith("ladder") for name in names)  # the ladder objects are not shown
     # the commands, verbatim from README.md's Install section (K12)

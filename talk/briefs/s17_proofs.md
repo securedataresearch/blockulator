@@ -3,7 +3,7 @@
 ## 1. Slide and line
 Slide 17 of 19. Title on the slide: **Knowing it's right**.
 Script (verbatim, script-v2 §17): "A test checks the inputs it was given. A proof covers every input. The core arithmetic of both libraries is proven. Every transcendental is swept against a 300-digit reference with every fallback forced: zero misrounded. Two things no check covers, and they are on the slide. State your own guarantees this specifically."
-Claims: V22 (FP127 17 core ops proven: 16 Halmos + sqrt by exact integers; gavg and hypot fuzzed at 50,000 runs), V23 (FP19 18 of 24 proven; six fuzzed at 50,000 runs and held to vectors), V17 (FP19 tested against 300 digits, FP127 against 200), V25 (FP19 455,082 results in 76 rows, FP127 212,119 in 59 rows, 0 misrounded; transcendentals 327,488 and 168,120), V24 (bounds gate in CI), V26 (last-stage midpoint limits), V38 (measured error reaches 0.92 of FP127's exponential bound and 0.79 of FP19's pow bound), V7 (FP19 correctly rounded in every op: tested, not proven).
+Claims: V22 (BL127 17 core ops proven: 16 Halmos + sqrt by exact integers; gavg and hypot fuzzed at 50,000 runs), V23 (BL19 18 of 24 proven; six fuzzed at 50,000 runs and held to vectors), V17 (BL19 tested against 300 digits, BL127 against 200), V25 (BL19 455,082 results in 76 rows, BL127 212,119 in 59 rows, 0 misrounded; transcendentals 327,488 and 168,120), V24 (bounds gate in CI), V26 (last-stage midpoint limits), V38 (measured error reaches 0.92 of BL127's exponential bound and 0.79 of BL19's pow bound), V7 (BL19 correctly rounded in every op: tested, not proven).
 
 ## 2. Takeaway
 Four rows: what is proven, what is fuzzed, what is tested, and what no check covers; stated this specifically.
@@ -14,10 +14,10 @@ Loaders: `proofs()` (docs/benchmarks/proofs.json: `summary`, `ops[]` with lib/op
 
 | row | string (derived from JSON unless marked LITERAL) | claim id |
 |---|---|---|
-| proven for every input | `FP127: 17 core operations (16 by Halmos, sqrt in exact integers) · FP19: 18 of 24` | V22, V23; counts from proofs.json ops (status proven, per lib) |
-| fuzzed against the spec | `FP127: gavg, hypot · FP19: six · 50,000 runs a test` | V22, V23; names and runs from proofs.json fuzz[] |
-| tested against an oracle | `FP19: 327,488 transcendental results at 300 digits · FP127: 168,120 at 200 · 0 misrounded` and small `(455,082 and 212,119 over every operation)` | V25, V17; sums from sweep.json; the digit counts 300/200 are LITERALS V17 |
-| known limits | `a derived bound could be wrong beyond its sampled margin: the measured error reaches 0.92 of FP127's bound and 0.79 of FP19's` and `the last stage has no test of its own: a true value within its error of a midpoint would misround` and `none is known` | V38 (0.92, 0.79 are LITERALS: from the READMEs, not JSON), V26 |
+| proven for every input | `BL127: 17 core operations (16 by Halmos, sqrt in exact integers) · BL19: 18 of 24` | V22, V23; counts from proofs.json ops (status proven, per lib) |
+| fuzzed against the spec | `BL127: gavg, hypot · BL19: six · 50,000 runs a test` | V22, V23; names and runs from proofs.json fuzz[] |
+| tested against an oracle | `BL19: 327,488 transcendental results at 300 digits · BL127: 168,120 at 200 · 0 misrounded` and small `(455,082 and 212,119 over every operation)` | V25, V17; sums from sweep.json; the digit counts 300/200 are LITERALS V17 |
+| known limits | `a derived bound could be wrong beyond its sampled margin: the measured error reaches 0.92 of BL127's bound and 0.79 of BL19's` and `the last stage has no test of its own: a true value within its error of a midpoint would misround` and `none is known` | V38 (0.92, 0.79 are LITERALS: from the READMEs, not JSON), V26 |
 | footnote | `the proofs found two bugs on the way: fixed, now proven` | V52 (VERIFIED: issue #159, fix PR #163 2026-10-23, proofs PR #187 2026-10-27, docs/proofs.md:84–87). LITERAL |
 | title lines | `A test checks the inputs it was given.` / `A proof covers every input.` | script §17 |
 | closing | `State your own guarantees this specifically.` | script §17 |
@@ -44,7 +44,7 @@ Four rows at BODY: each right cell wraps to at most two lines of ≤ 70 SANS cha
 ## 8. Flags
 - Row 3's label is `tested against an oracle`: tested, not proven (V7).
 - Row 4 is never styled as a bug list: no red, no crosses. The footnote's two bugs are history ("fixed, now proven"); they never appear as open items.
-- 0.79 is the figure (V38; the FP19 README table says 0.78 in one cell and 0.79 in its text; the ledger uses 0.79).
+- 0.79 is the figure (V38; the BL19 README table says 0.78 in one cell and 0.79 in its text; the ledger uses 0.79).
 - "every fallback forced" is in the script; on screen the row says what the sweep did, in the ledger's words.
 
 ## 9. Acceptance

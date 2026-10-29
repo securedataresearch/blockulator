@@ -1,8 +1,8 @@
 """Slide 12, "There is no reference": one address, one word per input,
 nothing to trust but the code; today on Sepolia.
 
-The address is the hero: FP127 v9's (contracts/deployments/RELEASE.json
-.components.FP127.address, claim V15) types in on a glowing panel at
+The address is the hero: BL127 v9's (contracts/deployments/RELEASE.json
+.components.BL127.address, claim V15) types in on a glowing panel at
 the largest size its 42 characters fit the frame (SIZE_ADDRESS, 37:
 at SIZE_HERO the address is 16.7 units wide, the safe area 13.5), then
 shrinks to BODY on its own line under the title and stays there. Under it the
@@ -64,7 +64,7 @@ from vocab import (
 )
 
 OP, ARG = "exp", "40"
-COMPONENT = "FP127"
+COMPONENT = "BL127"
 WORD_DECIMALS = 18
 
 TITLE = "There is no reference"

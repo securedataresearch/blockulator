@@ -39,8 +39,8 @@ Each model prices every call of the phase on that call's own on-chain balances a
 |---|---|---|---|---|---|---|
 | deployed (V2, `_upscale` = mulDown) | 3,529,606 / 199,735 | 60 | 60 | -135448.5 | 0.01773877 | 11956.3 |
 | mulUp on the given-out amount (V3's direction) | 5,150,267 / 199,735 | 30 | 30 | 40559.19 | 8.153544 | -87074.6 |
-| FP127 inside, ceil to wei once | 4,793,847 / 207,634 | 0 | 0 | 131.117 | 1.010489 | -127.677 |
-| FP19 inside, ceil to wei once | 4,793,847 / 207,634 | 0 | 0 | 131.117 | 1.010489 | -127.677 |
+| BL127 inside, ceil to wei once | 4,793,847 / 207,634 | 0 | 0 | 131.117 | 1.010489 | -127.677 |
+| BL19 inside, ceil to wei once | 4,793,847 / 207,634 | 0 | 0 | 131.117 | 1.010489 | -127.677 |
 | exact rationals, ceil to wei once | 4,793,847 / 207,634 | 0 | 0 | 131.117 | 1.010489 | -127.677 |
 | exact, but round-to-nearest at the wei boundary (sensitivity) | 4,793,810 / 207,618 | 53 | 14 | 97.06195 | 1.003503 | -42.6405 |
 
@@ -50,8 +50,8 @@ Each model prices every call of the phase on that call's own on-chain balances a
 |---|---|---|---|
 | deployed | 5640.19 | -132480.0 | -8609.12 |
 | mulUp | 16764.5 | 32403.8 | -8609.12 |
-| fp127 | 51.6613 | 41.1886 | 38.2671 |
-| fp19 | 51.6613 | 41.1886 | 38.2671 |
+| bl127 | 51.6613 | 41.1886 | 38.2671 |
+| bl19 | 51.6613 | 41.1886 | 38.2671 |
 | exact | 51.6613 | 41.1886 | 38.2671 |
 | nearest | 38.8083 | 36.8999 | 21.3538 |
 
@@ -61,8 +61,8 @@ Each model prices every call of the phase on that call's own on-chain balances a
 |---|---|---|---|---|---|---|
 | deployed (V2, `_upscale` = mulDown) | 1,312,086,551,708,809 / 624,203,250 | 51 | 51 | -2.209935e+11 | 0.0036877 | 7152.96 |
 | mulUp on the given-out amount (V3's direction) | 1,929,334,036,622,810 / 624,203,250 | 25 | 25 | 9.135633e+10 | 5.227482 | -30350.9 |
-| FP127 inside, ceil to wei once | 1,685,616,985,666,464 / 734,455,370 | 0 | 0 | 2.512774e+8 | 1.008329 | -59.7954 |
-| FP19 inside, ceil to wei once | 1,685,616,985,666,464 / 734,455,370 | 0 | 0 | 2.512774e+8 | 1.008329 | -59.7954 |
+| BL127 inside, ceil to wei once | 1,685,616,985,666,464 / 734,455,370 | 0 | 0 | 2.512774e+8 | 1.008329 | -59.7954 |
+| BL19 inside, ceil to wei once | 1,685,616,985,666,464 / 734,455,370 | 0 | 0 | 2.512774e+8 | 1.008329 | -59.7954 |
 | exact rationals, ceil to wei once | 1,685,616,985,666,464 / 734,455,370 | 0 | 0 | 2.512774e+8 | 1.008329 | -59.7954 |
 | exact, but round-to-nearest at the wei boundary (sensitivity) | 1,685,616,985,666,441 / 734,455,356 | 37 | 5 | 1.643468e+8 | 1.002502 | -17.9639 |
 
@@ -72,14 +72,14 @@ Each model prices every call of the phase on that call's own on-chain balances a
 |---|---|---|---|
 | deployed | 1.20743e+10 | -1.76733e+11 | -5.6335e+10 |
 | mulUp | 7.6825e+10 | 7.08664e+10 | -5.6335e+10 |
-| fp127 | 7.17865e+7 | 4.16169e+7 | 1.37874e+8 |
-| fp19 | 7.17865e+7 | 4.16169e+7 | 1.37874e+8 |
+| bl127 | 7.17865e+7 | 4.16169e+7 | 1.37874e+8 |
+| bl19 | 7.17865e+7 | 4.16169e+7 | 1.37874e+8 |
 | exact | 7.17865e+7 | 4.16169e+7 | 1.37874e+8 |
 | nearest | 7.17865e+7 | 4.16169e+7 | 5.09433e+7 |
 
 First cycle, per call (osETH/WETH): amount charged and ΔD* (wei-eq).
 
-| swap | kind | out | deployed | mulUp | fp127 | fp19 | exact | nearest |
+| swap | kind | out | deployed | mulUp | bl127 | bl19 | exact | nearest |
 |---|---|---|---|---|---|---|---|---|
 | osETH 22 | drain: WETH in, osETH out | 66,982 | 307,353 (1156.0) | 315,795 (3410.0) | 303,078 (8.408) | 303,078 (8.408) | 303,078 (8.408) | 303,077 (8.139) |
 | osETH 23 | micro: WETH in, osETH out | 17 | 625,492 (-24600.0) | 1,041,412 (5921.0) | 957,169 (6.841) | 957,169 (6.841) | 957,169 (6.841) | 957,168 (6.77) |
@@ -90,9 +90,9 @@ First cycle, per call (osETH/WETH): amount charged and ΔD* (wei-eq).
 
 ### Which alternative alone suffices
 
-- **FP127 and FP19** charge exactly the exact-rational amount on all 90 + 75 calls. That is asserted call by call in the test, and no call lowers D*. Inside the format the upscaled 17 osETH-wei stays 17.988250947729518883 to within 2^-128. The only rounding to the wei grid is the final ceil, which favours the pool.
+- **BL127 and BL19** charge exactly the exact-rational amount on all 90 + 75 calls. That is asserted call by call in the test, and no call lowers D*. Inside the format the upscaled 17 osETH-wei stays 17.988250947729518883 to within 2^-128. The only rounding to the wei grid is the final ceil, which favours the pool.
 - **mulUp alone** defeats the attack as executed: every micro call now over-charges, and the per-call ratio is 8.154 (osETH) and 5.227 (wstETH) instead of 0.01774 and 0.003688. It does not make every call safe. All 30 + 25 restore calls still lower D*, by exactly the deployed amount (-8609.12 and -5.6335e+10 wei-eq). Their given-out token is WETH, whose scaling factor is exactly 1, so mulUp changes nothing there. Their loss comes from the token-in balance: 1 wei of the rate token upscales by mulDown to 1, against a true 1.058 or 1.218. mulUp also over-charges a trader heavily at these balances: 1,041,412 against the exact 957,169 on swap 23.
-- **Round-to-nearest at the boundary** instead of ceil, with exact maths inside: 14 + 5 calls lower D* by under half a wei of the token in each. The 0.01% fee keeps the phase net positive, with ratios 1.0035 and 1.0025. FP127's claim therefore depends on keeping the boundary's direction.
+- **Round-to-nearest at the boundary** instead of ceil, with exact maths inside: 14 + 5 calls lower D* by under half a wei of the token in each. The 0.01% fee keeps the phase net positive, with ratios 1.0035 and 1.0025. BL127's claim therefore depends on keeping the boundary's direction.
 - The attacker's plan itself cannot be executed under the alternatives. Replayed adaptively (drain to 18, take 17, restore with the recorded WETH amount) on each model's own balances, it reaches swap 25 under mulUp and swap 25 under exact pricing with less of the rate token left than it means to leave behind (13 wei against 18). In the wstETH pool it fails at swaps 28 and 31. Under deployed pricing it reproduces the on-chain sequence exactly.
 
 ### Where the deployed undercharge comes from
@@ -112,19 +112,19 @@ The micro calls' undercharge is the given-out amount's truncation. The balance t
 
 ## Newton convergence: where each ruler stops
 
-StableMath's `_calculateInvariant` and `_getTokenBalanceGivenInvariantAndAllOtherBalances` are Newton iterations that stop when two iterates differ by ≤ 1 on the wei grid. The same two maps run in FP127 and in FP19 with the same algebra, reordered only so that FP127 does not overflow. Their stop is ≤ 1 unit of the format's own grid, or a stall: the step has stopped shrinking and is already below 2^-64 (FP127) or 2^-128 (FP19) of the iterate. Residuals are measured against the exact root (200 digits) of the same inputs each solver received.
+StableMath's `_calculateInvariant` and `_getTokenBalanceGivenInvariantAndAllOtherBalances` are Newton iterations that stop when two iterates differ by ≤ 1 on the wei grid. The same two maps run in BL127 and in BL19 with the same algebra, reordered only so that BL127 does not overflow. Their stop is ≤ 1 unit of the format's own grid, or a stall: the step has stopped shrinking and is already below 2^-64 (BL127) or 2^-128 (BL19) of the iterate. Residuals are measured against the exact root (200 digits) of the same inputs each solver received.
 
 | pool | ruler | invariant: iterations (median / max) | invariant: worst residual | balance: iterations (median / max) | balance: worst residual |
 |---|---|---|---|---|---|
 | osETH | wei grid (deployed) | 4 / 10 | 2.255 wei (rel 0.00026, 3.59 digits) | 4 / 7 | rel 0.127 (0.9 digits), always above the root; the stop alone leaves ≤ 0.9989 wei |
-| osETH | FP127 | 7 / 13 | rel 1.11e-38 (37.95 digits) | 7 / 11 | rel 2.1e-40 (39.68 digits) |
-| osETH | FP19 | 8 / 13 | rel 1.15e-71 (70.94 digits) | 8 / 12 | rel 3.25e-71 (70.49 digits) |
+| osETH | BL127 | 7 / 13 | rel 1.11e-38 (37.95 digits) | 7 / 11 | rel 2.1e-40 (39.68 digits) |
+| osETH | BL19 | 8 / 13 | rel 1.15e-71 (70.94 digits) | 8 / 12 | rel 3.25e-71 (70.49 digits) |
 | wstETH | wei grid (deployed) | 18 / 24 | 0.998 wei (rel 1.23e-9, 8.91 digits) | 13 / 16 | rel 0.219 (0.66 digits), always above the root; the stop alone leaves ≤ 0.9911 wei |
-| wstETH | FP127 | 22 / 32 | rel 2.56e-36 (35.59 digits) | 15 / 19 | rel 3.08e-40 (39.51 digits) |
-| wstETH | FP19 | 21 / 27 | rel 9.08e-72 (71.04 digits) | 15 / 19 | rel 1.84e-71 (70.74 digits) |
+| wstETH | BL127 | 22 / 32 | rel 2.56e-36 (35.59 digits) | 15 / 19 | rel 3.08e-40 (39.51 digits) |
+| wstETH | BL19 | 21 / 27 | rel 9.08e-72 (71.04 digits) | 15 / 19 | rel 1.84e-71 (70.74 digits) |
 
-- The same iteration reaches whatever ruler it runs on. On the wei grid the invariant stops within 2.25 wei of its own root (worst relative 0.00026, 3.59 digits, osETH; 8.91 in the larger wstETH pool). On FP127 it reaches 35.59–37.95 digits, and on FP19 70.94–71.04. It costs a few more iterations: median 4 → 7 → 8 (osETH) and 18 → 22 → 21 (wstETH, where one balance is 1 wei against 10^14).
-- The literal "≤ 1 unit" stop does not carry over to a fine grid. The map evaluated in FP127 is noisier than one unit near the root (D times a ratio carries D·2^-128), so the literal rule never stopped within 255 iterations on 11 of 90 (osETH) and 27 of 75 (wstETH) invariant solves. In FP19 the counts are 5 and 4. StableMath's cap would revert there (`STABLE_INVARIANT_DIDNT_CONVERGE`). The stall test ends them, and their residuals are in the table. The balance solver's literal rule always stopped.
+- The same iteration reaches whatever ruler it runs on. On the wei grid the invariant stops within 2.25 wei of its own root (worst relative 0.00026, 3.59 digits, osETH; 8.91 in the larger wstETH pool). On BL127 it reaches 35.59–37.95 digits, and on BL19 70.94–71.04. It costs a few more iterations: median 4 → 7 → 8 (osETH) and 18 → 22 → 21 (wstETH, where one balance is 1 wei against 10^14).
+- The literal "≤ 1 unit" stop does not carry over to a fine grid. The map evaluated in BL127 is noisier than one unit near the root (D times a ratio carries D·2^-128), so the literal rule never stopped within 255 iterations on 11 of 90 (osETH) and 27 of 75 (wstETH) invariant solves. In BL19 the counts are 5 and 4. StableMath's cap would revert there (`STABLE_INVARIANT_DIDNT_CONVERGE`). The stall test ends them, and their residuals are in the table. The balance solver's literal rule always stopped.
 - The deployed solvers are not what the attacker exploited. Their result is the root of their own rounded quadratic to within ≤ 1 wei, and is always above the exact root (90/90 and 75/75). So it charges more, by up to 0.127 and 0.219 of the solved balance, because its coefficients are rounded to whole units before it starts. b = sum + ⌊D / (amp·n)⌋·1000 loses D / (amp·n) entirely in the osETH pool, where D < amp·n = 400,000 throughout the phase. P_D = ⌊2·b0·2·b1 / D⌋ is floored and c is rounded up; each of these raises the solved balance. The invariant's ≤ 1 stop lands on either side of the root (56 below / 34 above in osETH; 75 / 0 in wstETH). The wei ruler decided these answers too, but in the pool's favour. The 1-wei quantum that hurt was the one applied to the *inputs* of the solve: the given-out amount and the token-in balance.
 
 ## Against the published write-ups
@@ -169,12 +169,12 @@ Not done: recompiling the verified source and comparing bytecode with `eth_getCo
 - `test_deployed_*`: every call's return, bit for bit.
 - `test_deployed_plan_*`: the plan replayed from the first balances reproduces every amount and every Vault balance.
 - `test_mulUp_*`: the mulUp variant equals this script's port.
-- `test_fp127_*` and `test_fp19_*`: the formats equal the exact-rational charge on every call.
+- `test_bl127_*` and `test_bl19_*`: the formats equal the exact-rational charge on every call.
 - `test_upscale_headline`: the products by hand.
 
 `balancer.py` also asserts three things: that its Python port equals the Solidity transcription in amount, D, y and iteration counts on every call; that the Vault's balances chain from call to call; and that the per-call invariant ratios telescope to the on-chain one.
 
 ## Caveat
 
-The alternatives are priced call by call on the balances that actually occurred, not along a path an attacker would re-optimise for each ruler. They show that these calls stop paying under FP127, FP19 or exact pricing; they do not show that no other sequence could find what remains, such as the token-in balance truncation that mulUp leaves.
+The alternatives are priced call by call on the balances that actually occurred, not along a path an attacker would re-optimise for each ruler. They show that these calls stop paying under BL127, BL19 or exact pricing; they do not show that no other sequence could find what remains, such as the token-in balance truncation that mulUp leaves.
 

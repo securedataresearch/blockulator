@@ -6,8 +6,8 @@ Each library's own code at x = k/32 for k = -192 to 192 (385 points on [-6, 6], 
 
 | implementation | representation | max abs error | digits (min) | digits (median) | gas (median) | gas (max) |
 |---|---|---:|---:|---:|---:|---:|
-| FP19 | FP19, 256-bit float | 2.26e-72 | 71 | 71 | 11,330 | 17,262 |
-| FP127 | FP127, 127.128 fixed point | 1.47e-39 | 30 | 38 | 12,466 | 20,718 |
+| BL19 | BL19, 256-bit float | 2.26e-72 | 71 | 71 | 11,330 | 17,262 |
+| BL127 | BL127, 127.128 fixed point | 1.47e-39 | 30 | 38 | 12,466 | 20,718 |
 | solstat | WAD (10^18) | 4.11e-8 | 7 | 7 | 4,879 | 4,985 |
 | Lyra v1 | 10^27 | 3.99e-17 | 9 | 16 | 7,426 | 9,855 |
 | Primitive RMM-01 | ABDK 64.64 | 0.0036 | 2 | 2 | 7,018 | 7,158 |
@@ -16,6 +16,6 @@ Each library's own code at x = k/32 for k = -192 to 192 (385 points on [-6, 6], 
 
 | implementation | representation | max abs error | digits (min) | digits (median) | gas (median) | gas (max) |
 |---|---|---:|---:|---:|---:|---:|
-| FP19 | FP19, 256-bit float | 4.53e-72 | 71 | 71 | 10,623 | 15,806 |
-| FP127 | FP127, 127.128 fixed point | 1.45e-39 | 22 | 39 | 9,211 | 20,550 |
+| BL19 | BL19, 256-bit float | 4.53e-72 | 71 | 71 | 10,623 | 15,806 |
+| BL127 | BL127, 127.128 fixed point | 1.45e-39 | 22 | 39 | 9,211 | 20,550 |
 | solstat | WAD (10^18) | 7.97e-8 | 1 | 7 | 4,260 | 4,366 |

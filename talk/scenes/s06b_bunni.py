@@ -12,14 +12,14 @@ ticks through the 44 withdrawals while two bars drain: active USDC 28 to
 4 wei and Bunni's total liquidity, 58,303,185,165,681,209 to
 9,114,083,388,149,667 (−84.37%, both observed on chain). The take is
 $8.4M (incidents.json). Last, the same 44 withdrawals replayed with the
-idle balance held in mulDivUp (48 wei), FP127 and FP19 (35.6278…, to
+idle balance held in mulDivUp (48 wei), BL127 and BL19 (35.6278…, to
 40 decimals): total liquidity moves −0.0000009% and the attack stops
 (CORRECT, emerald; Blockulator's rows are the hero).
 
 Numbers from scripts/replays/bunni.json (.start, .steps, .snapshots,
 .observed, .tx, .cites) through bunni_replay() (the deployed per-step
 active balance), bunni_liquidity() (the module's queryLDF at every
-step) and replay_table() (the FP19 row, which only the forge run
+step) and replay_table() (the BL19 row, which only the forge run
 produces); the loss and date from talk/scenes/data/incidents.json.
 Every derived value is computed here with Fraction.
 """
@@ -71,7 +71,7 @@ from vocab import (
 )
 
 SUB_DECIMALS = 3  # the first withdrawal's subtrahend, complete to this many decimals
-WORD_DECIMALS = 40  # the FP127 / FP19 active balance, as the replay table states it
+WORD_DECIMALS = 40  # the BL127 / BL19 active balance, as the replay table states it
 PCT_DECIMALS = 2  # the liquidity change as deployed
 PCT_FIX_DECIMALS = 7  # the liquidity change with the idle balance held exact
 TX_SHORT = 8  # hex digits of the transaction hash in the caption
@@ -124,16 +124,16 @@ def numbers() -> dict:
     L_end = int(d["observed"]["afterWithdrawals"]["totalLiquidity"])
     assert lq["steps"][-1] == L_end == lq["forms"]["deployed"]
     cite = {c["id"]: c for c in d["cites"]}
-    fp127 = r["seq"]["fp127"][-1]
+    bl127 = r["seq"]["bl127"][-1]
     exact = r["seq"]["exact"][-1]
-    assert abs(fp127 - exact) < Fraction(n, 1 << 128)
+    assert abs(bl127 - exact) < Fraction(n, 1 << 128)
     up = r["seq"]["mulDivUp"][-1]
-    # the FP19 row is the forge run's; only the table carries it (REPORT)
+    # the BL19 row is the forge run's; only the table carries it (REPORT)
     table = {row["idle balance"]: row for row in replay_table("bunni", TABLE_HEADING)}
-    fp19 = table["FP19 idle balance"]["active USDC after 44 (wei)"]
-    assert len(fp19.partition(".")[2]) == WORD_DECIMALS and fp19[: len(fp19) - 3] == to_decimals(exact, WORD_DECIMALS)[: len(fp19) - 3]
+    bl19 = table["BL19 idle balance"]["active USDC after 44 (wei)"]
+    assert len(bl19.partition(".")[2]) == WORD_DECIMALS and bl19[: len(bl19) - 3] == to_decimals(exact, WORD_DECIMALS)[: len(bl19) - 3]
     pct_fix = Fraction(lq["forms"]["mulDivUp"], lq["start"]) - 1
-    assert lq["forms"]["fp127"] == lq["forms"]["mulDivUp"] == lq["forms"]["exact"]
+    assert lq["forms"]["bl127"] == lq["forms"]["mulDivUp"] == lq["forms"]["exact"]
 
     def pct(q: Fraction, places: int) -> str:
         return to_decimals(q * 100, places).replace("-", "−") + "%"
@@ -169,8 +169,8 @@ def numbers() -> dict:
         "liq_pct": pct(Fraction(L_end, L_start) - 1, PCT_DECIMALS),
         "loss": inc["loss"],
         "up": str(up),
-        "fp127": to_decimals(fp127, WORD_DECIMALS),
-        "fp19": fp19,
+        "bl127": to_decimals(bl127, WORD_DECIMALS),
+        "bl19": bl19,
         "word_label": f"(to {WORD_DECIMALS} decimals)",
         "fix_pct": pct(pct_fix, PCT_FIX_DECIMALS),
     }
@@ -332,7 +332,7 @@ class Bunni(DeckScene):
         self.play(FadeIn(up_lbl, run_time=0.4), FadeIn(up_val, shift=RIGHT * 0.1, run_time=0.5))
         self.play(FadeIn(up_liq, run_time=0.4))
         rows = []
-        for (lib, key), y in zip((("FP127", "fp127"), ("FP19", "fp19")), Y_EXACT[1:]):
+        for (lib, key), y in zip((("BL127", "bl127"), ("BL19", "bl19")), Y_EXACT[1:]):
             lbl = self.left(words(lib, SANS, Palette.CORRECT), X_LEFT, y)
             val = digits(n[key], SMALL, Palette.CORRECT).next_to(lbl, RIGHT, buff=0.4).set_y(y)
             fmt = words(n["word_label"], LABEL, Palette.FAINT).next_to(val, RIGHT, buff=0.25).set_y(y)

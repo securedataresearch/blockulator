@@ -1,14 +1,14 @@
 # Edges: where each library's domain ends
 
-Generated 2026-10-28 by `make edges`. Versions: fp127 6c2eeaf, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), fraxlend fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed), euler evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, solmate solmate@89365b8 (no tag: v6 predates SignedWadMath), openzeppelin openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored), uniswap v4-core v4.0.0 (FullMath, vendored), snekmate v0.1.2 (math module, vyper 0.4.3), forge forge Version: 1.7.1.
+Generated 2026-10-28 by `make edges`. Versions: bl127 6c2eeaf, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), fraxlend fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed), euler evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, solmate solmate@89365b8 (no tag: v6 predates SignedWadMath), openzeppelin openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored), uniswap v4-core v4.0.0 (FullMath, vendored), snekmate v0.1.2 (math module, vyper 0.4.3), forge forge Version: 1.7.1.
 
-Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 200 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. FP127Lib coincides with FP127 and is omitted. The method is in the Methodology section at the end.
+Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 200 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. BL127Lib coincides with BL127 and is omitted. The method is in the Methodology section at the end.
 
 ## ln(x)
 
 The logarithm near one is where a per-second rate lives: ln(1 + r) for r = 1e-9 has eight digits on an 18-decimal grid.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `ln(1+1e-6)` | `1.0e-6` | 65 | 34 | 13 | 12 | 11 | 28 | 12 | n/a | n/a | n/a | 12 | n/a | n/a | 11 | 12 | n/a | n/a |
 | `ln(1+1e-9)` a per-second rate | `1.0e-9` | 62 | 30 | 10 | 9 | 8 | 25 | 9 | n/a | n/a | n/a | 9 | n/a | n/a | 8 | 9 | n/a | n/a |
@@ -25,7 +25,7 @@ The logarithm near one is where a per-second rate lives: ln(1 + r) for r = 1e-9 
 
 exp below -42 is zero on an 18-decimal grid and has one digit at -40: every probability, discount or decay smaller than 1e-18 is gone.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `exp(-1e-12)` | `1.0` | 71 | 39 | 18 | 24 | 18 | 34 | 24 | n/a | n/a | n/a | 24 | n/a | n/a | REVERT ParamOutOfRange | 24 | n/a | n/a |
 | `exp(-20)` | `2.061e-9` | 72 | 31 | 10 | 9 | 9 | 32 | 9 | n/a | n/a | n/a | 9 | n/a | n/a | REVERT ParamOutOfRange | 9 | n/a | n/a |
@@ -35,15 +35,15 @@ exp below -42 is zero on an 18-decimal grid and has one digit at -40: every prob
 | `exp(-42)` zero on an 18-decimal grid | `5.75e-19` | 71 | 21 | 1 | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
 | `exp(-43)` | `2.115e-19` | 71 | 21 | 0 | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
 | `exp(-60)` | `8.757e-27` | 71 | 13 | ZERO | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
-| `exp(-88)` two ULPs on FP127's grid | `6.055e-39` | 71 | 1 | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
-| `exp(-89)` 0.76 ULP on FP127's grid, which rounds to one | `2.227e-39` | 71 | 0 | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
+| `exp(-88)` two ULPs on BL127's grid | `6.055e-39` | 71 | 1 | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
+| `exp(-89)` 0.76 ULP on BL127's grid, which rounds to one | `2.227e-39` | 71 | 0 | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
 | `exp(-100)` | `3.72e-44` | 71 | ZERO | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
 | `exp(40)` | `2.354e+17` | 72 | 57 | 19 | 20 | 16 | 32 | 21 | n/a | n/a | n/a | 20 | n/a | n/a | 16 | 20 | n/a | n/a |
 | `exp(43)` | `4.728e+18` | 71 | 58 | 21 | 21 | 16 | 32 | 20 | n/a | n/a | n/a | 21 | n/a | n/a | 16 | 21 | n/a | n/a |
 | `exp(44)` beyond ABDK 64.64's range | `1.285e+19` | 72 | 57 | REVERT bare revert | 20 | 16 | 32 | 20 | n/a | n/a | n/a | 20 | n/a | n/a | 16 | 20 | n/a | n/a |
 | `exp(60)` | `1.142e+26` | 71 | 65 | REVERT bare revert | 20 | 16 | 32 | 20 | n/a | n/a | n/a | 20 | n/a | n/a | 16 | 20 | n/a | n/a |
-| `exp(88)` the largest FP127 holds | `1.652e+38` | 71 | 77 | REVERT bare revert | 20 | 16 | 31 | 20 | n/a | n/a | n/a | 20 | n/a | n/a | 16 | 20 | n/a | n/a |
-| `exp(89)` FP127 reverts; the WAD word still has room | `4.49e+38` | 72 | REVERT Overflow | REVERT bare revert | 20 | 16 | 31 | 20 | n/a | n/a | n/a | 20 | n/a | n/a | 16 | 20 | n/a | n/a |
+| `exp(88)` the largest BL127 holds | `1.652e+38` | 71 | 77 | REVERT bare revert | 20 | 16 | 31 | 20 | n/a | n/a | n/a | 20 | n/a | n/a | 16 | 20 | n/a | n/a |
+| `exp(89)` BL127 reverts; the WAD word still has room | `4.49e+38` | 72 | REVERT Overflow | REVERT bare revert | 20 | 16 | 31 | 20 | n/a | n/a | n/a | 20 | n/a | n/a | 16 | 20 | n/a | n/a |
 | `exp(100)` | `2.688e+43` | 71 | REVERT Overflow | REVERT bare revert | 21 | 16 | 31 | 21 | n/a | n/a | n/a | 21 | n/a | n/a | 16 | 21 | n/a | n/a |
 | `exp(130)` | `2.873e+56` | 72 | REVERT Overflow | REVERT bare revert | 20 | 16 | 31 | 21 | n/a | n/a | n/a | 20 | n/a | n/a | 16 | 20 | n/a | n/a |
 | `exp(135)` | `4.263e+58` | 72 | REVERT Overflow | REVERT bare revert | 20 | REVERT PRBMath_SD59x18_Exp_InputTooBig | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | 20 | n/a | n/a | REVERT PRBMath_UD60x18_Exp_InputTooBig | 20 | n/a | n/a |
@@ -53,7 +53,7 @@ exp below -42 is zero on an 18-decimal grid and has one digit at -40: every prob
 
 The root of a tiny number: sqrt(1e-20) is 1e-10, which the grid holds, but 1e-20 itself is zero on it.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `sqrt(1e-6)` | `0.001` | 71 | 33 | 13 | exact | exact | 34 | exact | n/a | n/a | n/a | exact | exact | n/a | exact | exact | n/a | n/a |
 | `sqrt(1e-12)` | `1.0e-6` | 71 | 27 | 8 | exact | exact | 34 | exact | n/a | n/a | n/a | exact | exact | n/a | exact | exact | n/a | n/a |
@@ -63,21 +63,21 @@ The root of a tiny number: sqrt(1e-20) is 1e-10, which the grid holds, but 1e-20
 | `sqrt(1e30)` | `1.0e+15` | exact | exact | RANGE | exact | exact | exact | 18 | n/a | n/a | n/a | exact | exact | n/a | exact | exact | n/a | n/a |
 | `sqrt(1e36)` | `1.0e+18` | exact | exact | RANGE | exact | exact | exact | 18 | n/a | n/a | n/a | exact | exact | n/a | exact | exact | n/a | n/a |
 | `sqrt(1e38)` | `1.0e+19` | exact | exact | RANGE | exact | exact | exact | 17 | n/a | n/a | n/a | exact | exact | n/a | exact | exact | n/a | n/a |
-| `sqrt(1e40)` beyond FP127's word | `1.0e+20` | exact | RANGE | RANGE | exact | exact | exact | 18 | n/a | n/a | n/a | exact | exact | n/a | exact | exact | n/a | n/a |
+| `sqrt(1e40)` beyond BL127's word | `1.0e+20` | exact | RANGE | RANGE | exact | exact | exact | 18 | n/a | n/a | n/a | exact | exact | n/a | exact | exact | n/a | n/a |
 | `sqrt(1e50)` | `1.0e+25` | exact | RANGE | RANGE | exact | REVERT PRBMath_SD59x18_Sqrt_Overflow | exact | 18 | RANGE | n/a | RANGE | REVERT Panic | REVERT Panic | n/a | REVERT PRBMath_UD60x18_Sqrt_Overflow | REVERT bare revert | n/a | n/a |
 
 ## pow(x, y)
 
 A base near one to a large power: per-second rates over years, and Uniswap's tick range 1.0001^(+-887272).
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `pow(1+0.05/31536000,31536000)` 5% APR per second, one year | `1.0512711` | 63 | 31 | 11 | 10 | 9 | 27 | 11 | n/a | n/a | n/a | 10 | n/a | n/a | 9 | 10 | n/a | n/a |
 | `pow(1+0.001/31536000,31536000)` 0.1% APR per second, one year | `1.0010005` | 63 | 31 | 11 | 10 | 9 | 26 | 10 | n/a | n/a | n/a | 10 | n/a | n/a | 9 | 10 | n/a | n/a |
 | `pow(1+0.05/31536000,315360000)` ten years | `1.6487213` | 62 | 30 | 10 | 9 | 8 | 26 | 10 | n/a | n/a | n/a | 9 | n/a | n/a | 8 | 9 | n/a | n/a |
 | `pow(1+0.05/31536000/12,31536000*12)` twelve times a second | `1.0512711` | 62 | 30 | 10 | 10 | 8 | 25 | 9 | n/a | n/a | n/a | 10 | n/a | n/a | 8 | 10 | n/a | n/a |
-| `pow(1.0001,887272)` Uniswap's top tick, 3.4e38: one bit past FP127's word | `3.403e+38` | 65 | REVERT Overflow | REVERT bare revert | 12 | 11 | 29 | 17 | n/a | n/a | n/a | 12 | n/a | n/a | 11 | 12 | n/a | n/a |
-| `pow(1.0001,-887272)` Uniswap's bottom tick, 2.9e-39: one ULP of FP127 | `2.939e-39` | 65 | 4 | ZERO | ZERO | ZERO | 29 | REVERT Negative | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
+| `pow(1.0001,887272)` Uniswap's top tick, 3.4e38: one bit past BL127's word | `3.403e+38` | 65 | REVERT Overflow | REVERT bare revert | 12 | 11 | 29 | 17 | n/a | n/a | n/a | 12 | n/a | n/a | 11 | 12 | n/a | n/a |
+| `pow(1.0001,-887272)` Uniswap's bottom tick, 2.9e-39: one ULP of BL127 | `2.939e-39` | 65 | 4 | ZERO | ZERO | ZERO | 29 | REVERT Negative | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
 | `pow(0.999999,1000000)` | `0.36787926` | 65 | 32 | 13 | 12 | 11 | 28 | 18 | n/a | n/a | n/a | 12 | n/a | n/a | 11 | 12 | n/a | n/a |
 | `pow(2,0.5)` | `1.4142136` | 71 | 39 | 18 | 17 | 18 | 33 | 17 | n/a | n/a | n/a | 17 | n/a | n/a | 18 | 17 | n/a | n/a |
 | `pow(10,-18)` | `1.0e-18` | 71 | 20 | 1 | exact | exact | 31 | REVERT Negative | n/a | n/a | n/a | exact | n/a | n/a | REVERT ParamOutOfRange | exact | n/a | n/a |
@@ -88,19 +88,19 @@ A base near one to a large power: per-second rates over years, and Uniswap's tic
 
 Tiny times tiny: a fee on a fee, a unit price times a unit size, below 1e-18 is zero.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `mul(1e-9,1e-9)` the last digit of an 18-decimal grid | `1.0e-18` | 71 | 20 | 1 | ZERO | ZERO | 33 | ZERO | n/a | n/a | n/a | ZERO | ZERO | ZERO | ZERO | ZERO | n/a | n/a |
 | `mul(1e-10,1e-10)` zero on it | `1.0e-20` | 71 | 18 | ZERO | ZERO | ZERO | 34 | ZERO | n/a | n/a | n/a | ZERO | ZERO | ZERO | ZERO | ZERO | n/a | n/a |
 | `mul(1e-12,1e-8)` | `1.0e-20` | 72 | 18 | ZERO | ZERO | ZERO | 34 | ZERO | n/a | n/a | n/a | ZERO | ZERO | ZERO | ZERO | ZERO | n/a | n/a |
 | `mul(1e19,1e19)` | `1.0e+38` | exact | exact | RANGE | exact | exact | exact | exact | n/a | n/a | n/a | exact | exact | exact | exact | exact | n/a | n/a |
-| `mul(1e20,1e20)` beyond FP127's word | `1.0e+40` | exact | REVERT Overflow | RANGE | exact | exact | exact | exact | n/a | n/a | n/a | exact | exact | exact | exact | exact | n/a | n/a |
+| `mul(1e20,1e20)` beyond BL127's word | `1.0e+40` | exact | REVERT Overflow | RANGE | exact | exact | exact | exact | n/a | n/a | n/a | exact | exact | exact | exact | exact | n/a | n/a |
 
 ## div(a, b)
 
 Small over large, and one over tiny.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `div(1,3)` | `0.33333333` | 71 | 38 | 19 | 17 | 17 | 34 | 17 | n/a | n/a | n/a | 17 | 17 | 17 | 17 | 17 | n/a | n/a |
 | `div(1e-12,1e9)` | `1.0e-21` | 71 | 17 | ZERO | ZERO | ZERO | 34 | ZERO | n/a | n/a | n/a | ZERO | ZERO | ZERO | ZERO | ZERO | n/a | n/a |
@@ -112,7 +112,7 @@ Small over large, and one over tiny.
 
 The principal Lambert branch near its branch point -1/e, where the slope is infinite; only Solady has it among the others.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `lambertW0(-1/e+1e-6)` | `-0.99767017` | 69 | 35 | n/a | 15 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | REVERT ParamOutOfRange | n/a | n/a | n/a |
 | `lambertW0(-1/e+1e-9)` | `-0.99992627` | 67 | 34 | n/a | 13 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | REVERT ParamOutOfRange | n/a | n/a | n/a |
@@ -126,9 +126,9 @@ The principal Lambert branch near its branch point -1/e, where the slope is infi
 
 ## W-1(x)
 
-The secondary branch, toward zero from below; FP127 only.
+The secondary branch, toward zero from below; BL127 only.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `lambertWm1(-1/e+1e-9)` | `-1.0000737` | 67 | 34 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | REVERT ParamOutOfRange | n/a | n/a | n/a |
 | `lambertWm1(-1e-10)` | `-26.295239` | 71 | 30 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | REVERT ParamOutOfRange | n/a | n/a | n/a |
@@ -138,7 +138,7 @@ The secondary branch, toward zero from below; FP127 only.
 
 ln(1 + x) as an op: the libraries without it compute ln(1 + x), and 1 + x is where x loses its digits.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `log1p(1e-6)` | `1.0e-6` | 71 | 34 | 13 | 12 | 11 | 28 | 12 | n/a | n/a | n/a | 12 | n/a | n/a | 11 | 12 | n/a | n/a |
 | `log1p(1e-9)` a per-second rate | `1.0e-9` | 71 | 30 | 10 | 8 | 8 | 25 | 8 | n/a | n/a | n/a | 8 | n/a | n/a | 8 | 8 | n/a | n/a |
@@ -154,7 +154,7 @@ ln(1 + x) as an op: the libraries without it compute ln(1 + x), and 1 + x is whe
 
 e^x - 1 as an op: the libraries without it compute exp(x) - 1 and the one cancels the digits.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `expm1(1e-6)` | `1.0e-6` | 71 | 33 | 13 | 12 | 11 | 27 | 12 | n/a | n/a | n/a | 12 | n/a | n/a | 11 | 12 | n/a | n/a |
 | `expm1(1e-9)` | `1.0e-9` | 71 | 29 | 9 | 8 | 8 | 24 | 8 | n/a | n/a | n/a | 8 | n/a | n/a | 8 | 8 | n/a | n/a |
@@ -169,9 +169,9 @@ e^x - 1 as an op: the libraries without it compute exp(x) - 1 and the one cancel
 
 ## compound(r, n)
 
-(1 + r)^n for an integer n: per-second rates over years. FP127 and Maker take an exact integer power; the rest exp(n ln(1 + r)).
+(1 + r)^n for an integer n: per-second rates over years. BL127 and Maker take an exact integer power; the rest exp(n ln(1 + r)).
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `compound(0.05/31536000,31536000)` 5% APR per second, one year | `1.0512711` | 71 | 31 | 11 | 12 | 10 | 26 | 11 | n/a | n/a | 19 | 12 | n/a | n/a | 10 | 10 | n/a | n/a |
 | `compound(0.05/31536000,315360000)` ten years | `1.6487213` | 71 | 30 | 10 | 11 | 9 | 25 | 10 | n/a | n/a | 18 | 11 | n/a | n/a | 9 | 9 | n/a | n/a |
@@ -183,9 +183,9 @@ e^x - 1 as an op: the libraries without it compute exp(x) - 1 and the one cancel
 
 ## powu(x, n)
 
-An integer power. Solady's rpow, PRBMath's powu, ABDK's pow and Maker's rpow square at the format's precision; FP127 on a 256-bit mantissa.
+An integer power. Solady's rpow, PRBMath's powu, ABDK's pow and Maker's rpow square at the format's precision; BL127 on a 256-bit mantissa.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `powu(2,10)` | `1024.0` | exact | exact | exact | exact | exact | 32 | 17 | n/a | n/a | exact | exact | n/a | n/a | exact | 17 | n/a | n/a |
 | `powu(1.0001,887272)` Uniswap's top tick | `3.403e+38` | 65 | REVERT Overflow | REVERT bare revert | 13 | 12 | 29 | 17 | n/a | n/a | REVERT Solady RPowOverflow | 13 | n/a | n/a | 12 | 12 | n/a | n/a |
@@ -200,7 +200,7 @@ An integer power. Solady's rpow, PRBMath's powu, ABDK's pow and Maker's rpow squ
 
 The error function; the libraries without it run the same series and continued fraction through their own ops.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `erf(1e-10)` | `1.128e-10` | 71 | 28 | 9 | 8 | 8 | 33 | 8 | n/a | n/a | n/a | 8 | n/a | n/a | 8 | 8 | n/a | n/a |
 | `erf(0.5)` | `0.52049988` | 71 | 39 | 17 | 16 | 16 | 32 | 16 | n/a | n/a | n/a | 16 | n/a | n/a | REVERT Negative | 16 | n/a | n/a |
@@ -214,9 +214,9 @@ The error function; the libraries without it run the same series and continued f
 
 ## erfc(x)
 
-The tail of the normal distribution: erfc(6) is 2e-17, erfc(9.3) one ULP of FP127, zero on an 18-decimal grid from about 6.4.
+The tail of the normal distribution: erfc(6) is 2e-17, erfc(9.3) one ULP of BL127, zero on an 18-decimal grid from about 6.4.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `erfc(1)` | `0.15729921` | 71 | 38 | 17 | 16 | 16 | 31 | 15 | n/a | n/a | n/a | 16 | n/a | n/a | REVERT Negative | 16 | n/a | n/a |
 | `erfc(3)` | `2.209e-5` | 72 | 34 | 10 | 9 | 9 | 27 | 9 | n/a | n/a | n/a | 9 | n/a | n/a | REVERT Negative | 9 | n/a | n/a |
@@ -226,14 +226,14 @@ The tail of the normal distribution: erfc(6) is 2e-17, erfc(9.3) one ULP of FP12
 | `erfc(7)` | `4.184e-23` | 72 | 16 | ZERO | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT Negative | ZERO | n/a | n/a |
 | `erfc(8)` | `1.122e-29` | 71 | 10 | ZERO | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT Negative | ZERO | n/a | n/a |
 | `erfc(9)` | `4.137e-37` | 72 | 2 | ZERO | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT Negative | ZERO | n/a | n/a |
-| `erfc(9.3)` one ULP of FP127 | `1.653e-39` | 69 | 0 | ZERO | ZERO | ZERO | 34 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT Negative | ZERO | n/a | n/a |
+| `erfc(9.3)` one ULP of BL127 | `1.653e-39` | 69 | 0 | ZERO | ZERO | ZERO | 34 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT Negative | ZERO | n/a | n/a |
 | `erfc(10)` | `2.088e-45` | 71 | ZERO | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT Negative | ZERO | n/a | n/a |
 
 ## normCdf(x)
 
-N(d) of Black-Scholes: zero on an 18-decimal grid from d = -8.3, two ULPs of FP127 at -13.
+N(d) of Black-Scholes: zero on an 18-decimal grid from d = -8.3, two ULPs of BL127 at -13.
 
-| probe | truth | fp19 | fp127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| probe | truth | bl19 | bl127 | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `normCdf(1e-12)` | `0.5` | 72 | 38 | 19 | 18 | 18 | 34 | 18 | n/a | n/a | n/a | 18 | n/a | n/a | 18 | 18 | n/a | n/a |
 | `normCdf(-1)` | `0.15865525` | 72 | 38 | 17 | 16 | 16 | 32 | 16 | n/a | n/a | n/a | 16 | n/a | n/a | REVERT ParamOutOfRange | 16 | n/a | n/a |
@@ -244,7 +244,7 @@ N(d) of Black-Scholes: zero on an 18-decimal grid from d = -8.3, two ULPs of FP1
 | `normCdf(-8.3)` the last value above an 18-decimal grid | `5.206e-17` | 69 | 23 | 3 | 2 | 2 | 32 | 2 | n/a | n/a | n/a | 2 | n/a | n/a | REVERT ParamOutOfRange | 2 | n/a | n/a |
 | `normCdf(-9)` | `1.129e-19` | 71 | 21 | 1 | ZERO | ZERO | 31 | ZERO | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
 | `normCdf(-10)` | `7.62e-24` | 72 | 15 | ZERO | ZERO | ZERO | 32 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
-| `normCdf(-13)` two ULPs of FP127 | `6.117e-39` | 71 | 1 | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
+| `normCdf(-13)` two ULPs of BL127 | `6.117e-39` | 71 | 1 | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
 | `normCdf(-14)` | `7.794e-45` | 71 | ZERO | ZERO | ZERO | ZERO | 31 | REVERT Balancer InvalidExponent | n/a | n/a | n/a | ZERO | n/a | n/a | REVERT ParamOutOfRange | ZERO | n/a | n/a |
 | `normCdf(5)` | `0.99999971` | 72 | 39 | 14 | 12 | 12 | 32 | 12 | n/a | n/a | n/a | 12 | n/a | n/a | REVERT Negative | 12 | n/a | n/a |
 
@@ -254,13 +254,13 @@ N(d) of Black-Scholes: zero on an 18-decimal grid from d = -8.3, two ULPs of FP1
 
 **digits.** digits = floor(-log10 |v - t| / |t|), capped at 100 (reported as exact); errUlps is the signed error in units of the representation's last place (none for the floats).
 
-**zero.** A cell is marked zero when the library returned 0 and the truth is not 0: the result fell below the representation's floor. On an 18-decimal grid that is anything below 1e-18; on FP127's, below 2^-128.
+**zero.** A cell is marked zero when the library returned 0 and the truth is not 0: the result fell below the representation's floor. On an 18-decimal grid that is anything below 1e-18; on BL127's, below 2^-128.
 
-**reverted.** A revert is recorded with its selector and name. Unsupported means the library has no way to compute the op (the accrual libraries have no general ops; only FP127 and FP19 have the secondary Lambert branch; the libraries without erf, erfc or normCdf run the same series and continued fraction through their own ops instead, so those cells are not Unsupported).
+**reverted.** A revert is recorded with its selector and name. Unsupported means the library has no way to compute the op (the accrual libraries have no general ops; only BL127 and BL19 have the secondary Lambert branch; the libraries without erf, erfc or normCdf run the same series and continued fraction through their own ops instead, so those cells are not Unsupported).
 
-**range.** RANGE means the argument does not fit the representation at all (above 2^127 for FP127, 2^63 for 64.64, 2^128 as a bit pattern for binary128; FP19 holds every probe) and nothing was called.
+**range.** RANGE means the argument does not fit the representation at all (above 2^127 for BL127, 2^63 for 64.64, 2^128 as a bit pattern for binary128; BL19 holds every probe) and nothing was called.
 
-**gas.** gas is measured inside the adapter around the op, after the adapter and the FP127 object are warm. The FP127 (deployed) form includes the staticcall; the others are internal calls.
+**gas.** gas is measured inside the adapter around the op, after the adapter and the BL127 object are warm. The BL127 (deployed) form includes the staticcall; the others are internal calls.
 
 **live.** EdgeRunner.run(op, form, args) on Sepolia evaluates any cell with one eth_call and returns (ok, raw, reason, gas); scripts/ladder/liveedges.py sends every probe's encoded arguments and compares the raw word bit for bit.
 

@@ -75,7 +75,7 @@ class Palette:
     MUTED = "#b3b5b0"
     FAINT = "#9a9d97"
     RULE = "#5a5e62"
-    EMERALD = "#43b592"  # FP127, "ours"
+    EMERALD = "#43b592"  # BL127, "ours"
     GOLD = "#d3c68a"  # the 18-decimal (WAD) libraries
     SAPPHIRE = "#86b4e2"  # ABDK 64.64
     RED = "#ff6079"  # wrong, zero, revert
@@ -90,8 +90,8 @@ class Palette:
 
 
 FAMILY_COLOUR = {
-    "fp127": Palette.EMERALD,
-    "fp19": Palette.TEXT,
+    "bl127": Palette.EMERALD,
+    "bl19": Palette.TEXT,
     "wad": Palette.GOLD,
     "quad": Palette.VIOLET,
     "6464": Palette.SAPPHIRE,
@@ -112,11 +112,11 @@ PROTOCOL_COLOUR = {
 
 # The rows, steps and categories of the slides that are not library charts,
 # per scene, so the replay builders and the text slides reuse them. The fixed
-# meanings keep theirs: RED wrong, EMERALD FP127/correct, TEXT FP19/exact.
+# meanings keep theirs: RED wrong, EMERALD BL127/correct, TEXT BL19/exact.
 ROW_COLOUR = {
     "s03": {"compounding rate": Palette.GOLD, "discount factor": Palette.SAPPHIRE, "option price": Palette.VIOLET, "growth curve": Palette.SLATE, "hero": Palette.EMERALD},
-    "s10": {"deployed": Palette.SLATE, "fp127": Palette.EMERALD, "fp19": Palette.TEXT},
-    "s15": {"sign": Palette.TEXT, "fp127_integer": Palette.SAPPHIRE, "fp127_fraction": Palette.EMERALD, "fp19_exponent": Palette.VIOLET, "fp19_fraction": Palette.TEXT},
+    "s10": {"deployed": Palette.SLATE, "bl127": Palette.EMERALD, "bl19": Palette.TEXT},
+    "s15": {"sign": Palette.TEXT, "bl127_integer": Palette.SAPPHIRE, "bl127_fraction": Palette.EMERALD, "bl19_exponent": Palette.VIOLET, "bl19_fraction": Palette.TEXT},
     "s16": {"mul": Palette.GOLD, "divh": Palette.VIOLET},
     "s17": {"proven": Palette.EMERALD, "fuzzed": Palette.GOLD, "tested": Palette.SAPPHIRE, "limits": Palette.MUTED},
     # the text slides (talk/briefs/text_slides.md): four budget bullets, two curves, three habits, two audiences
@@ -845,7 +845,7 @@ def incidents() -> dict:
     lossUsd, source) and the slide's .total phrase."""
     return _load("talk/scenes/data/incidents.json")
 NOT_IN_TALK = ("blockulator",)  # BlockulatorWad: in the registry, not in the talk
-DUPLICATES = ("fp127lib",)  # the benchmarks' inline copy of fp127, not a registry entry
+DUPLICATES = ("bl127lib",)  # the benchmarks' inline copy of bl127, not a registry entry
 
 
 def libs() -> dict[str, dict]:
@@ -1047,7 +1047,7 @@ def bunni_replay() -> dict:
     withdrawals replayed from the pinned start state, every on-chain
     observation asserted on the way. Returns its dict: .seq[form][] the
     active balance (balance − idle) after each step for the forms
-    "deployed", "mulDivUp", "fp127" (Fractions) and "exact" (Fractions),
+    "deployed", "mulDivUp", "bl127" (Fractions) and "exact" (Fractions),
     .bal0[] / .bal1[] the balances, .idle{form}, .exactIdle, .T, .final."""
     mod = _import_script("scripts/replays/bunni.py")
     return mod.replay(_load("scripts/replays/bunni.json"))
@@ -1060,7 +1060,7 @@ def bunni_liquidity() -> dict:
     state (computed: no swap ran there), "steps"[k] the value after k of the
     44 withdrawals as deployed (k = 0 is the start; 44 equals the chain's
     observed .observed.afterWithdrawals.totalLiquidity), "forms"{deployed,
-    mulDivUp, fp127, exact} the value after 44 with the idle balance held
+    mulDivUp, bl127, exact} the value after 44 with the idle balance held
     each way (the replay table's "total liquidity after" column)."""
     d = _load("scripts/replays/bunni.json")
     mod = _import_script("scripts/replays/bunni.py")
@@ -1070,7 +1070,7 @@ def bunni_liquidity() -> dict:
     args = (int(lq["tick"]), int(d["pool"]["tickSpacing"]), int(lq["sqrtPriceX96"]), [int(x) for x in lq["out"]])
     steps = [mod.query_ldf(*args, r["bal0"][k], r["bal1"][k], r["bal0"][k] - r["seq"]["deployed"][k], True)["L"] for k in range(len(r["bal0"]))]
     assert steps[0] == table["start"]["L"] and steps[-1] == table["deployed"]["L"]
-    return {"start": table["start"]["L"], "steps": steps, "forms": {f: table[f]["L"] for f in ("deployed", "mulDivUp", "fp127", "exact")}}
+    return {"start": table["start"]["L"], "steps": steps, "forms": {f: table[f]["L"] for f in ("deployed", "mulDivUp", "bl127", "exact")}}
 
 
 def balancer_v1_replay() -> list[list[dict]]:
@@ -1154,30 +1154,30 @@ def truth80() -> str:
 
 
 # ----------------------------------------------------------- the words --
-# FP127: a signed 256-bit word, 128 fraction bits (contracts/src/fp127/README.md; claims K1, K2)
-FP127_FRACTION_BITS = 128
-# FP19: IEEE 754 binary256's layout: sign, 19-bit exponent (bias 262143), 236-bit fraction
-# (contracts/src/fp19/README.md; claims K3, E9); subnormals are not produced (K4)
-FP19_EXPONENT_BITS, FP19_FRACTION_BITS = 19, 236
-FP19_BIAS = (1 << (FP19_EXPONENT_BITS - 1)) - 1
+# BL127: a signed 256-bit word, 128 fraction bits (contracts/src/bl127/README.md; claims K1, K2)
+BL127_FRACTION_BITS = 128
+# BL19: IEEE 754 binary256's layout: sign, 19-bit exponent (bias 262143), 236-bit fraction
+# (contracts/src/bl19/README.md; claims K3, E9); subnormals are not produced (K4)
+BL19_EXPONENT_BITS, BL19_FRACTION_BITS = 19, 236
+BL19_BIAS = (1 << (BL19_EXPONENT_BITS - 1)) - 1
 WAD_DECIMALS = 18  # the 18-decimal libraries' unit, 10^-18 (claims R6, K7)
 
 
-def decode_fp127(raw: int | str) -> Fraction:
-    """The exact value of an FP127 word from its raw word (edges.json
+def decode_bl127(raw: int | str) -> Fraction:
+    """The exact value of an BL127 word from its raw word (edges.json
     .cells[lib].raw, the int256 as an unsigned integer): value = raw / 2^128,
     the raw read as two's complement (research_notes/talk/verify-K.md K1:
     one int256, 1 sign bit, 127 integer bits, 128 fraction bits). Exact: a
     Fraction with a power-of-two denominator, so its decimal expansion
     terminates (exact_decimals)."""
     w = int(raw)
-    return Fraction(w - (1 << 256) if w >> 255 else w, 1 << FP127_FRACTION_BITS)
+    return Fraction(w - (1 << 256) if w >> 255 else w, 1 << BL127_FRACTION_BITS)
 
 
-def decode_fp19(raw: int | str) -> Fraction:
-    """The exact value of an FP19 word from its raw word (edges.json
+def decode_bl19(raw: int | str) -> Fraction:
+    """The exact value of an BL19 word from its raw word (edges.json
     .cells[lib].raw as an unsigned integer). The layout is
-    contracts/src/fp19/README.md lines 21–24 (verify-K.md K3, binary256's
+    contracts/src/bl19/README.md lines 21–24 (verify-K.md K3, binary256's
     fields): bit 255 the sign, bits 254..236 the biased exponent E (19 bits,
     bias 262,143), bits 235..0 the fraction F; the significand is 2^236 + F
     and value = (−1)^s · (2^236 + F) · 2^(E − 262,143 − 236). The all-zero
@@ -1187,19 +1187,19 @@ def decode_fp19(raw: int | str) -> Fraction:
     if w == 0:
         return Fraction(0)
     sign = w >> 255
-    e = (w >> FP19_FRACTION_BITS) & ((1 << FP19_EXPONENT_BITS) - 1)
+    e = (w >> BL19_FRACTION_BITS) & ((1 << BL19_EXPONENT_BITS) - 1)
     assert e, "E = 0 with a non-zero word is not a number (OutOfRange)"
-    f = w & ((1 << FP19_FRACTION_BITS) - 1)
-    v = Fraction((1 << FP19_FRACTION_BITS) + f) * Fraction(2) ** (e - FP19_BIAS - FP19_FRACTION_BITS)
+    f = w & ((1 << BL19_FRACTION_BITS) - 1)
+    v = Fraction((1 << BL19_FRACTION_BITS) + f) * Fraction(2) ** (e - BL19_BIAS - BL19_FRACTION_BITS)
     return -v if sign else v
 
 
-fp127_value = decode_fp127  # the older names, kept for the scenes that use them
-fp19_value = decode_fp19
+bl127_value = decode_bl127  # the older names, kept for the scenes that use them
+bl19_value = decode_bl19
 
 
 def word_value(lid: str, raw: int | str) -> Fraction:
-    return {"fp19": decode_fp19, "fp127": decode_fp127}[lid](raw)
+    return {"bl19": decode_bl19, "bl127": decode_bl127}[lid](raw)
 
 
 def exact_decimals(q: Fraction) -> str:
