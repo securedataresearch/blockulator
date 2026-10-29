@@ -24,8 +24,8 @@
      },
      "median": 480,
      "max": {
-      "op": "atanh",
-      "bytes": 11158
+      "op": "lambertW0",
+      "bytes": 12374
      }
     },
     "viaIr": {
@@ -41,8 +41,8 @@
     }
    },
    "sum": {
-    "legacy": 140245,
-    "viaIr": 131725
+    "legacy": 148130,
+    "viaIr": 139488
    },
    "ops": {
     "fromFixed18": {
@@ -214,12 +214,12 @@
      "viaIr": 690
     },
     "lambertW0": {
-     "legacy": 8427,
-     "viaIr": 7807
+     "legacy": 12374,
+     "viaIr": 11698
     },
     "lambertWm1": {
-     "legacy": 8112,
-     "viaIr": 7527
+     "legacy": 12050,
+     "viaIr": 11399
     },
     "log1p": {
      "legacy": 7422,
