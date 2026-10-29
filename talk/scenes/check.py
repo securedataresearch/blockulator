@@ -1497,6 +1497,175 @@ def expect_s06e_balancer_v1(mod) -> dict:
     }
 
 
+def _text_only(mod, strings: set[str], ids: set[str] | None = None) -> None:
+    """A text slide's second route: the strings the brief gives, verbatim,
+    are exactly the module's LITERALS; none carries the glyphs the font
+    lacks; no claim id is empty."""
+    assert set(mod.LITERALS) == strings, (sorted(set(mod.LITERALS) ^ strings))
+    assert all(v for v in mod.LITERALS.values()), mod.LITERALS
+    if ids is not None:
+        assert set(mod.LITERALS.values()) <= ids, set(mod.LITERALS.values()) - ids
+    assert not any(ch in k for k in mod.LITERALS for ch in "²→½√…"), sorted(mod.LITERALS)
+
+
+def expect_s01_title(mod) -> dict:
+    """No JSON; the title is the user's, the speaker line a placeholder
+    (REPORT), the only loop in the deck (slides.yaml says so)."""
+    _text_only(mod, {"THE END OF ROUNDING ERRORS", "blockulator.com", "[speaker]"})
+    assert mod.LITERALS["[speaker]"] == "REPORT" and mod.SPEAKER == "[speaker]"
+    assert mod.Title.SECTIONS == ("title",) and mod.Title.LOOP is True
+    deck = (vocab.ROOT / "talk/deck/slides.yaml").read_text(encoding="utf-8")
+    assert deck.count("loop: true") == 1 and "scene: s01_title.Title\n  loop: true" in deck, "the title is the only looping scene"
+    assert not any(ch.isdigit() for ch in "".join(mod.LITERALS))
+    return {}
+
+
+def expect_s11_budget(mod) -> dict:
+    """No JSON: the essay's list (essay-v7 §5) and the script's fifth line (§11); "every" in the fifth line only; no digits."""
+    bullets = ("long horizons", "cancellation", "extreme ranges and tails", "iteration")
+    assert mod.BULLETS == bullets
+    fifth = mod.DIRECTION.replace("\n", " ")
+    assert fifth == "and decide the direction of every rounding at a unit", fifth
+    _text_only(mod, {"Precision is a budget", "spend precision where it pays:", *bullets, mod.DIRECTION})
+    assert [k for k in mod.LITERALS if "every" in k] == [mod.DIRECTION]
+    assert not any(ch.isdigit() for ch in "".join(mod.LITERALS))
+    assert set(vocab.ROW_COLOUR["s11"]) == {*bullets, "direction"} and len(set(vocab.ROW_COLOUR["s11"].values())) == 5, "four hues for four bullets, EMERALD for the direction"
+    assert vocab.ROW_COLOUR["s11"]["direction"] == vocab.Palette.EMERALD
+    return {}
+
+
+def expect_s13_not_switch(mod) -> dict:
+    """No JSON: the script's two lines (§13), straight quotes, nothing else; the struck words are inside the first."""
+    _text_only(mod, {'Not "switch libraries".', "Measure yourself against the reference."})
+    assert mod.STRUCK == "switch libraries" and mod.NOT.count(mod.STRUCK) == 1
+    assert not any(ch in k for k in mod.LITERALS for ch in "“”‘’")
+    assert not any(ch.isdigit() for ch in "".join(mod.LITERALS))
+    assert mod.NotSwitch.SECTIONS == ("not", "measure")
+    return {}
+
+
+def expect_s14_institutions(mod) -> dict:
+    """No JSON: the essay's words (§7) and the ERC-4626 line (V1); the chart carries no number; the words in a row."""
+    words_ = ("reproducible", "declared", "checked")
+    assert mod.WORDS == words_
+    _text_only(mod, {"What institutions buy", "amount", "fees · scale with the computation", "errors · scale with the amount", "not fewer cents", *words_, "ERC-4626 fixes the rounding direction of each vault conversion"})
+    assert mod.LITERALS["ERC-4626 fixes the rounding direction of each vault conversion"] == "V1"
+    toks = set()
+    for k in mod.LITERALS:
+        toks |= number_tokens(k)
+    assert toks == {"4626"}, toks  # the standard's number is the only digit on the slide
+    assert all("$" not in k and "digit" not in k for k in mod.LITERALS)  # the "15 digits on $10 million" line stays in the essay
+    assert vocab.ROW_COLOUR["s14"]["errors"] == vocab.Palette.RED and vocab.ROW_COLOUR["s14"]["words"] == vocab.Palette.EMERALD
+    return {}
+
+
+def expect_s18_habits(mod) -> dict:
+    """The address straight from RELEASE.json; the op names in the example block are FP127Lib's own (found in the source);
+    the three habits in three hues, the ticks EMERALD."""
+    rel = vocab._load("contracts/deployments/RELEASE.json")
+    comp = rel["components"]["FP127"]
+    address, version = comp["address"], comp["version"]
+    assert len(address) == 42 and address[:2] == "0x" and int(address[2:], 16) > 0, address
+    assert version.startswith("FP127 v"), version
+    assert address in (vocab.ROOT / comp["record"]).read_text(encoding="utf-8"), (address, comp["record"])
+    src = (vocab.ROOT / "contracts/src/fp127/FP127Lib.sol").read_text(encoding="utf-8")
+    ops = [op for op, _ in mod.OPS]
+    for op in ops:
+        assert re.search(rf"function {re.escape(op)}\(", src), f"{op} is not an FP127Lib function"
+    assert [way for _, way in mod.OPS] == ["down", "up", "nearest"]
+    assert mod.ROUNDING == "rounding: " + " · ".join(f"{op} {way}" for op, way in mod.OPS)
+    habits = [h for h, _ in mod.HABITS]
+    assert habits == ["Decide", "Measure", "Declare"]
+    assert mod.TITLE == "Rounding is a design decision, like access control."
+    assert mod.EXAMPLE == "example" and mod.REFERENCE == "reference:"
+    assert not any("today" in line or "protocol" in line for _, line in mod.HABITS)  # nothing says a protocol does this today
+    hues = vocab.ROW_COLOUR["s18"]
+    assert len({hues[h] for h in habits}) == 3 and hues["tick"] == vocab.Palette.EMERALD
+    assert not any(ch in k for k in mod.LITERALS for ch in "²→½√…")
+    return {"address": address, "version": version, "ops": ops, "rounding": mod.ROUNDING}
+
+
+def _readme_install() -> str:
+    """README.md's Install section (the lines the commands are copied from), backticks dropped."""
+    text = (vocab.ROOT / "README.md").read_text(encoding="utf-8")
+    start = text.index("## Install")
+    end = text.index("## ", start + 3)
+    return text[start:end].replace("`", "")
+
+
+def _repo_from_git() -> str:
+    """The origin remote by the other route: parsed from .git's config text, not `git remote`."""
+    import configparser
+
+    git = vocab.ROOT / ".git"
+    if git.is_file():  # a worktree: "gitdir: <path>/.git/worktrees/<name>"
+        gitdir = Path(git.read_text(encoding="utf-8").split("gitdir:", 1)[1].strip())
+        cfg = gitdir.parent.parent / "config"
+    else:
+        cfg = git / "config"
+    parser = configparser.ConfigParser()
+    parser.read(cfg, encoding="utf-8")
+    url = parser['remote "origin"']["url"].strip()
+    m = re.match(r"(?:https://github\.com/|git@github\.com:|ssh://git@github\.com/)([^/]+)/([^/]+?)(?:\.git)?$", url)
+    assert m, f"REPORT: origin is not a GitHub remote: {url}"
+    return f"https://github.com/{m.group(1)}/{m.group(2)}"
+
+
+def _qr_round_trip(mod, scene_numbers: dict) -> None:
+    """Regenerate each tile's matrix from its URL and compare with what the scene drew (the tiles' .matrix)."""
+    scene = dry_run(mod)
+    tiles = [m for m in scene.mobjects if hasattr(m, "matrix") and hasattr(m, "url")]
+    assert len(tiles) == 2, len(tiles)
+    by_url = {t.url: t for t in tiles}
+    assert set(by_url) == {scene_numbers["site_url"], scene_numbers["repo_url"]}, set(by_url)
+    for url, tile in by_url.items():
+        assert tile.matrix == vocab.qr_matrix(url), url
+        dark = sum(1 for row in tile.matrix for c in row if c)
+        assert len(tile.modules) == dark, (url, len(tile.modules), dark)
+        drawn_label = "".join(t.text for t in tile.label).replace("\n", "")
+        assert drawn_label == url.split("://", 1)[1].replace("\n", ""), (drawn_label, url)
+
+
+def expect_s19_address(mod) -> dict:
+    rel = vocab._load("contracts/deployments/RELEASE.json")
+    comps = rel["components"]
+    assert rel["network"] == "sepolia"
+    out = {"network": rel["network"], "release": rel["release"], "main": {}, "others": {}}
+    names = ("FP19", "FP127", "FP127E", "FP127H", "FP127N", "FP127S", "FP19E", "FP19H", "FP19N", "FP19S")
+    for name in names:
+        c = comps[name]
+        assert len(c["address"]) == 42 and c["address"][:2] == "0x" and int(c["address"][2:], 16) > 0, c
+        assert c["version"].startswith(name + " v"), c["version"]
+        assert c["address"] in (vocab.ROOT / c["record"]).read_text(encoding="utf-8"), (name, c["record"])
+        (out["main"] if name in ("FP19", "FP127") else out["others"])[name] = {"version": c["version"], "address": c["address"]}
+    assert len({c["address"] for c in comps.values()}) == len(comps), "every object has its own address"
+    assert not any(name.lower().startswith("ladder") for name in names)  # the ladder objects are not shown
+    # the commands, verbatim from README.md's Install section (K12)
+    readme = _readme_install()
+    for cmd in (mod.FORGE, mod.NPM, mod.LLMS, mod.ETH_CALL):
+        assert cmd in readme, cmd
+    assert mod.LLMS == "blockulator.com/llms.txt" and "https://" + mod.LLMS in readme
+    assert mod.TODAY == "today: Sepolia" and mod.CLOSE == "Measure yourself against it."
+    assert "mainnet" not in " ".join(mod.LITERALS).lower()
+    out["repo_url"] = _repo_from_git()
+    out["site_url"] = "https://blockulator.com"
+    out["repo_label"] = "github.com/\nsecuredataresearch/\nblockulator"
+    assert out["repo_label"].replace("\n", "") == out["repo_url"].split("://", 1)[1]
+    _qr_round_trip(mod, out)
+    return out
+
+
+def expect_s20_thanks(mod) -> dict:
+    assert mod.THANKS == "Special thanks to Austin Griffith (Ethereum Foundation) and Hadrien Croubois (OpenZeppelin) for extremely helpful feedback."
+    assert " ".join(mod.THANKS_LINES) == mod.THANKS and mod.THANK_YOU == "Thank you"
+    assert set(mod.LITERALS) == {mod.THANK_YOU, *mod.THANKS_LINES, "blockulator.com", "agents:", "blockulator.com/llms.txt"}, sorted(mod.LITERALS)
+    assert "blockulator.com/llms.txt" in _readme_install()
+    out = {"site_url": "https://blockulator.com", "repo_url": _repo_from_git()}
+    out["repo_label"] = out["repo_url"].split("://", 1)[1]
+    _qr_round_trip(mod, out)
+    return out
+
+
 EXPECT = {
     "s02_exp40": expect_s02_exp40,
     "s03_under": expect_s03_under,
@@ -1515,6 +1684,13 @@ EXPECT = {
     "s15_formats": expect_s15_formats,
     "s17_proofs": expect_s17_proofs,
     "s06e_balancer_v1": expect_s06e_balancer_v1,
+    "s01_title": expect_s01_title,
+    "s11_budget": expect_s11_budget,
+    "s13_not_switch": expect_s13_not_switch,
+    "s14_institutions": expect_s14_institutions,
+    "s18_habits": expect_s18_habits,
+    "s19_address": expect_s19_address,
+    "s20_thanks": expect_s20_thanks,
 }
 
 
