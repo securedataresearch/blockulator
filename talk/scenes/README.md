@@ -68,6 +68,10 @@ Pango per process; every text helper calls it.
   (faint, ticks, no numbers). `dot_at(x, colour)`, `nearest_tick(x)`.
 - `snap(dot, line, to_tick, colour)`: the one verb. The dot slides to the
   tick, swells and settles in the colour of what it became.
+- `midpoint(line, a, b)`: the rounding boundary, a dashed line through the
+  middle of the gap between two ticks; `error_bar(dot, half_width, colour)`:
+  the bound a fast value carries, a `|——|` bracket centred on the dot,
+  CORRECT when it clears the boundary, WRONG when it crosses it.
 - `measure(line, a, b, label)`: a thin `|——|` bracket under the line naming
   a distance; `measure_up(p_lo, p_hi, label)` is the same stood on end, how
   a chart names the margin between two line ends in its own units.
@@ -123,6 +127,7 @@ chart's own units.
 | `s08_ladder.py` | Measure it | ladder.json `.ladder`, `.ladderLog10`, `.axisMax`; one chart morphing across scenarios `compound`, `accrual-continuous`, `adaptive-rate`: `.summary[lib][N].digits.median` per library (one line each; those without a median at every N listed with `.ops[lib]`'s reason), the margins FP19 − best 18-decimal and FP127 − best 18-decimal at N = 10,000; fp127lib skipped |
 | `s09_cliff.py` | The cliff | edges.json op `exp`, the probes with one argument in [−100, −40]: `.cells[lib].digits/zero/reverted/reasonName/unsupported` (every library with a value drawn; unsupported on every probe listed as "no exp", ParamOutOfRange on every probe as "rejects negative inputs"; fp127lib skipped); FP19's least digits, FP127's last probe with a digit |
 | `s10_live.py` | Real markets, today | accrual-deployed.json `.cases[group == "live"]` `.truth[primaryTruth].deployed.digitsInterest`, `.fp127.digitsInterest` and `.fp19.digitsInterest`; the three medians and the margins between them computed; `.survey.block/.date` |
+| `s16_ziv.py` | What correct costs | sweep.json rows `lib=fp19 op=exp` and `lib=fp127 op=exp` (plain pass): `.n`, `.fallback`, FP127's `.inputs`; gas.json `.ops.exp.typical.gas.lib`'s median through `gas("exp")` (2,835); the pre-test figure 2,716 is a module constant (contracts/deployments/FP127.md, claim V19) and the percentage is computed; the opcode prices (MUL 5, divh 393) are `LITERALS` (V32); the grid of the middle sections carries no numbers |
 
 Each scene module exposes `numbers()`, the values it draws, and
 `LITERALS`, the digit-bearing fixed strings (captions, "to 18 decimals",

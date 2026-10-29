@@ -36,6 +36,7 @@ from manim import (
     AnimationGroup,
     Arrow,
     Circle,
+    DashedLine,
     Dot,
     FadeIn,
     FadeOut,
@@ -302,6 +303,30 @@ def cross_mark(colour: str = Palette.WRONG, size: float = 0.32, stroke_width: fl
         Line([-s, -s, 0], [s, s, 0], color=colour, stroke_width=stroke_width),
         Line([-s, s, 0], [s, -s, 0], color=colour, stroke_width=stroke_width),
     )
+
+
+def midpoint(line: GridLine, a: float, b: float, colour: str = Palette.FAINT, height: float = 0.9, stroke_width: float = 1.5, dash_length: float = 0.05) -> DashedLine:
+    """The rounding boundary: a dashed line stood through the middle of the
+    gap between ticks a and b, half a unit from each. A value on one side
+    rounds to a, on the other to b; a bound that reaches it could change
+    the rounding. It moves with the grid under a stretch (it is a line in
+    the scene, so stretch it with the grid)."""
+    p = line.n2p((a + b) / 2)
+    return DashedLine(p + DOWN * height / 2, p + UP * height / 2, color=colour, stroke_width=stroke_width, dash_length=dash_length)
+
+
+def error_bar(dot: Dot, half_width: float, colour: str, cap: float = 0.2, stroke_width: float = 3.0) -> VGroup:
+    """The bound a fast value carries: a horizontal bracket |——|, centred
+    on the dot, half_width scene units either side (the true value lies
+    within it). CORRECT (emerald) when it clears the midpoint, WRONG (red)
+    when it crosses it. The bar is drawn through the dot's centre; keep
+    the dot in front of it."""
+    c = dot.get_center()
+    pa, pb = c + LEFT * half_width, c + RIGHT * half_width
+    up = UP * cap / 2
+    bar = Line(pa, pb, color=colour, stroke_width=stroke_width)
+    caps = VGroup(Line(pa - up, pa + up, color=colour, stroke_width=stroke_width), Line(pb - up, pb + up, color=colour, stroke_width=stroke_width))
+    return VGroup(bar, caps)
 
 
 # --------------------------------------------------------------- the chart --
