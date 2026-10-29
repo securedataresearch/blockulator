@@ -462,6 +462,42 @@ sweep input reached one. `FP127H` is 13,234 bytes (7,560 before); inline, `sinh`
 take about 6.4 KB, `tanh` 6.7 KB and `atanh`, with three stages, 11.2 KB
 ([`size.md`](../../../docs/benchmarks/size.md)).
 
+**The error function, correctly rounded (3.0).** `erf`, `erfc` and
+`normCdf` (`FP127N`) test their value at 2^-192 with `rbad127` before the
+one rounding, each branch's err a constant. Both bounds are derived, not
+only measured (`erf_model.py --bounds`, run by `--check` in CI). `erfs`
+(|x| ≤ 4): e^(−x²) carries `exp2frac`'s 2^-146.7 relative (plus 2^-187 at most
+from its exponent's floors), which times erf is at most 2^45.29 units of
+2^-192; the series' floors (each term's error bounded by the recurrence
+ε_k ≤ ε_(k−1)·2x²/(2k + 1) + 1, the stop no later than the first term
+under a unit, the true tail from the earliest stop) and the three floored
+products add under 2^23.5: err 3·2^44 (2^45.58). `erfct` (4 < x < 9.375):
+the fit is certified on all of [−1, 1], not only at points: on 20,000 steps
+the error is at most the larger end value plus h²/8 max |e″|, and |e″| on
+each of 1,000 blocks is bounded by its Taylor series at the block's centre
+(g's derivatives by g^(n+1) = 2x g^(n) + 2n g^(n−1)) with the Lagrange
+remainder from |g^(n)(x)| ≤ n!/(√π x^(n+1)), which follows from g(x) =
+(2/√π) ∫ e^(−s² − 2xs) ds: 0.2438 of the tolerance 2^-175 e^(x²) (0.2404
+the largest sampled). With e^(−x²)'s 2^-146.7 times erfc(4), t's rounding
+(|g′| ≤ 1/(√π x²)) and the Horner's 43 floors (under 43 units of g, times
+e^(−x²)): 2^19.41 units, err 2^20. `normCdf`'s y = |x|/√2 at 2^-192 and
+the halving add under 4 units, inside the same errs. Past the test,
+`erfw127` hands x to FP19's wide second stage as its exact (u, m) (y =
+|x|/√2 stays exact, as in `fp19_normCdf`): below y = 7 the series in two
+words (`w19_erfser2`), from 7 one minus the continued fraction
+(`w19_erfccf2`), 2^-444 or better, rounded once to the grid 2^-128
+(2^-127 for `normCdf`, which is ½ ± that). erf(y) is never a midpoint for
+x ≠ 0, so `erfc` = 1 ∓ that word and Φ = ½ ± it exactly. `bounds127.py`
+measures both errs (ratios 0.41 and 0.30). The fast path skips the second
+stage unless within 2^-18.4 ULP of a midpoint (series) or 2^-44 (tail);
+the vectors carry 13 random inputs found that close, decided by it (v8 had
+each right). Inline A/B on the sweep's inputs: `erf` median 3,630 → 3,689,
+`erfc` 3,510 → 3,592, `normCdf` 3,715 → 3,750; `make cdf` on [−6, 6]:
+`normCdf` 12,435 → 12,466, `erfc` 9,140 → 9,211; the second stage costs
+about 48,000 at the median and 355,000 at most (the two-word series just
+below y = 7). `FP127N` is 9,013 bytes (5,005 before); inline, each op
+about 8.9 KB (5.5 before).
+
 ## Precision
 
 `make test` runs every op over the committed mpmath vectors in

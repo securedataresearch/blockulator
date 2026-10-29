@@ -3130,8 +3130,8 @@
      "maxAbsErr": "1.47e-39",
      "digitsMin": 30,
      "digitsMedian": 38,
-     "gasMedian": 12435,
-     "gasMax": 20694,
+     "gasMedian": 12466,
+     "gasMax": 20718,
      "series": [
       [
        -192,
@@ -4681,8 +4681,8 @@
      "maxAbsErr": "1.45e-39",
      "digitsMin": 22,
      "digitsMedian": 39,
-     "gasMedian": 9140,
-     "gasMax": 20479,
+     "gasMedian": 9211,
+     "gasMax": 20550,
      "series": [
       [
        -192,

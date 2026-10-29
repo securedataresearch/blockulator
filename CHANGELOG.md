@@ -138,6 +138,31 @@ kernels (`/// @import fp19 as w19`):
   13,234 bytes; inline (legacy) sinh 4,898 → 6,392, tanh 5,183 → 6,715,
   atanh 2,967 → 11,158 (its three stages).
 
+FP127's error function (`FP127N`) correctly rounded: `erf`, `erfc` and
+`normCdf` test their value at 2^-192 against a derived bound, with FP19's
+wide series and continued fraction behind it:
+
+- Bounds derived in `erf_model.py --bounds` (in `--check`, CI): `erfs`
+  within 2^45.29 units of 2^-192 (exp2frac's 2^-146.7 times erf, the
+  series' floors by their recurrence), err 3·2^44; `erfct` within 2^19.41,
+  err 2^20, its degree-43 fit now certified on all of [4, 9.5] (0.2438 of
+  2^-175 e^(x²): a 20,000-step grid and a Taylor bound on the error's
+  second derivative, g's derivatives bounded by n!/(√π x^(n+1))), where
+  2.2 sampled 6,002 points. `bounds127.py` measures both (ratios 0.41,
+  0.30) and normCdf's.
+- `erfw127`: x as FP19's exact (u, m), `w19_erfser2` below y = 7,
+  `w19_erfccf2` from 7 (2^-444 or better), one rounding; `erfc` and
+  `normCdf` are 1 ∓ and ½ ± its word, exact since erf(y) is never a
+  midpoint. 13 vectors whose fast value lies within the bound of a
+  midpoint (none misrounded by v8); `make sweep` plain and second-stage
+  passes 0 misrounded (no middle stage).
+- Inline, on the sweep's inputs: `erf` 3,630 → 3,689, `erfc` 3,510 →
+  3,592, `normCdf` 3,715 → 3,750 (median); `make cdf`: `normCdf` 12,435 →
+  12,466, `erfc` 9,140 → 9,211. The second stage about 48,000 gas at the
+  median, 355,000 at most. FP127N 5,005 → 9,013 bytes.
+- `test/fp127/Imports.t.sol`'s rbad127 fuzz no longer underflows building
+  v for g = 1 or 2.
+
 BlockulatorWad, a third library (`contracts/src/wad/`, inline, no deployed
 object): Solady's `FixedPointMathLib` WAD names, signatures and error
 selectors (mulWad, divWad, sMulWad, sDivWad, sqrtWad, cbrtWad, expWad, lnWad,
