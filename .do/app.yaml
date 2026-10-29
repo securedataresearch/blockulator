@@ -33,7 +33,9 @@ static_sites:
     build_command: ./build.sh
     output_dir: public
     environment_slug: html
-    catchall_document: 404.html
+    # a missing path is answered with 404.html and a real 404 status (catchall_document answered 200, a soft 404);
+    # the legacy #/ routes run on / (base.html), so nothing needs a catch-all
+    error_document: 404.html
 ingress:
   rules:
     - component:

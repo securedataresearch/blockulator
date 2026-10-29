@@ -31,7 +31,7 @@
 {%- set_global proven = "," %}{% for q in proofs.ops %}{% if q.lib | lower == lib and q.status == "proven" %}{% set_global proven = proven ~ q.op ~ "," %}{% endif %}{% endfor -%}
 {#- FP19 ops whose result is always the exact value; every other FP19 op is correctly rounded (CR) -#}
 {%- set exact19 = ["neg", "abs", "sign", "cmp", "lt", "eq", "min", "max", "clamp", "floor", "ceil", "round", "toUintDown", "toUintUp", "toIntDown", "toIntUp", "log2Up"] -%}
-<div class="scroll">
+<div class="scroll long">
 <table class="optable">
 <thead><tr><th>op</th><th>what</th><th>domain</th><th>reverts</th><th class="num">bits (min/mean)</th><th class="num">gas, object</th><th class="num">gas, inline</th><th class="num">bytes inline</th></tr></thead>
 <tbody>
@@ -42,7 +42,7 @@
 <td class="mono"><a href="#{{ o.name }}" id="{{ o.name }}">{{ o.signature }}</a>{% if ("," ~ o.name ~ ",") in proven %}<a class="proven" href="/proofs/#{{ lib }}-{{ o.name }}" title="proven for every input against a reference spec">proven</a>{% endif %}<br><span class="sel">{{ o.selector }}</span></td>
 <td>{% if what == o.notice or o.notice | length <= 110 %}{{ o.notice }}{% else %}<details class="what"><summary>{{ what }}</summary>{{ o.notice }}</details>{% endif %}</td>
 <td>{{ o.domain }}</td>
-<td{% if o.reverts != "never" %} title="{{ o.reverts }}"{% endif %}>{% for r in o.reverts | split(pat="; ") %}{{ r | split(pat=" ") | first | replace(from="()", to="") }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+<td{% if o.reverts != "never" %} title="{{ o.reverts }}"{% endif %}>{% if o.reverts != "never" %}<details class="what"><summary>{% endif %}{% for r in o.reverts | split(pat="; ") %}{{ r | split(pat=" ") | first | replace(from="()", to="") }}{% if not loop.last %}, {% endif %}{% endfor %}{% if o.reverts != "never" %}</summary>{{ o.reverts }}</details>{% endif %}</td>
 <td class="num">{% if lib == "fp19" %}{% if o.name in exact19 %}exact{% elif p.minBits >= 256 %}CR{% else %}{{ p.minBits }}/{{ p.meanBits }}{% endif %}{% elif p.minBits >= 256 %}exact{% else %}{{ p.minBits }}/{{ p.meanBits }}{% endif %}</td>
 {%- if o.name in gas.ops %}
 {%- set g = gas.ops[o.name] %}{% if g.typical is defined %}{% set s = g.typical.summary %}{% else %}{% set s = g.summary %}{% endif %}
@@ -75,7 +75,7 @@
 {%- set a = load_data(path="static/data/gas.json") %}{% set b = load_data(path="static/data/fp19/gas.json") -%}
 {%- set cols = [["FP19", "b", "lib"], ["FP127", "a", "lib"], ["ABDKMathQuad", "b", "quad"], ["PRBMath", "a", "prb"], ["Solady", "a", "solady"], ["ABDK 64.64", "a", "abdk"], ["Balancer", "a", "balancer"], ["Solmate", "a", "solmate"], ["PRB UD60x18", "a", "prbud"], ["snekmate", "a", "snekmate"], ["OpenZeppelin", "a", "oz"], ["Uniswap", "a", "uniswap"]] -%}
 {%- set_global names = "" %}{% for n, o in b.ops %}{% set_global names = names ~ n ~ "," %}{% endfor %}{% for n, o in a.ops %}{% if not ("," ~ n ~ ",") in ("," ~ names) %}{% set_global names = names ~ n ~ "," %}{% endif %}{% endfor -%}
-<div class="scroll">
+<div class="scroll long">
 <table class="gasall">
 <thead><tr><th>op</th>{% for c in cols %}<th class="num{% if loop.index <= 2 %} ours{% endif %}">{{ c[0] }}</th>{% endfor %}</tr></thead>
 <tbody>
@@ -91,13 +91,20 @@
 </tbody>
 </table>
 </div>
+<details class="calls"><summary>The function each cell measures</summary>
+<dl>
+{%- for c in cols %}{% if c[1] == "a" %}{% set g = a %}{% else %}{% set g = b %}{% endif %}{% if g.calls is defined %}{% if g.calls[c[2]] is defined %}
+<dt>{{ c[0] }}</dt><dd>{% for n, call in g.calls[c[2]] %}<code>{{ n }}</code> {{ call }}{% if not loop.last %}; {% endif %}{% endfor %}</dd>
+{%- endif %}{% endif %}{% endfor %}
+</dl>
+</details>
 <p class="note">Median gas per inline call: over random inputs that take no shortcut for the ops marked <sup class="t">t</sup>, else over the op's input ladder. FP19 and ABDKMathQuad are measured on the same values (<a href="/data/fp19/gas.json">fp19/gas.json</a>), the others on FP127's inputs (<a href="/data/gas.json">gas.json</a>). Empty: the library does not offer the op; <span class="rev">rev</span>: it offers it and reverted on every input. Hover a cell for the function it calls. Calling the deployed contract instead adds the <code>staticcall</code>: about {{ (a.ops.add.summary.yul.median - a.ops.add.summary.lib.median) | num_format }} gas on FP127's <code>add</code> ({{ <gas lib="fp127" op="add" form="yul" /> }} against {{ <gas lib="fp127" op="add" /> }}); every op's object figure is on the <a href="/library/#the-ops">FP127</a> and <a href="/library/fp19/#the-ops">FP19</a> pages.</p>
 {%- endcomponent %}
 
 {% component gastable(repo: string, lib: string = "fp127") -%}
 {%- if lib == "fp19" %}{% set gas = load_data(path="static/data/fp19/gas.json") %}{% set forms = ["yul", "lib", "fp127lib", "quad"] %}{% set src = "/data/fp19/gas.json" %}{% set md = "gas19.md" -%}
 {%- else %}{% set gas = load_data(path="static/data/gas.json") %}{% set forms = ["yul", "lib", "abdk", "solady", "prb", "quad", "balancer", "solmate", "prbud", "snekmate", "oz", "uniswap"] %}{% set src = "/data/gas.json" %}{% set md = "gas.md" %}{% endif -%}
-<div class="scroll">
+<div class="scroll long">
 <table>
 <thead><tr><th>op</th>{% for f in forms %}<th class="num">{% if f == "yul" %}{% if lib == "fp19" %}FP19{% else %}FP127{% endif %} deployed (staticcall){% else %}{{ gas.formLabels[f] }}{% endif %}</th>{% endfor %}</tr></thead>
 <tbody>
@@ -111,6 +118,13 @@
 </tbody>
 </table>
 </div>
+<details class="calls"><summary>The function each cell measures</summary>
+<dl>
+{%- for f in forms %}{% if gas.calls[f] is defined %}
+<dt>{{ gas.formLabels[f] }}</dt><dd>{% for n, call in gas.calls[f] %}<code>{{ n }}</code> {{ call }}{% if not loop.last %}; {% endif %}{% endfor %}</dd>
+{%- endif %}{% endfor %}
+</dl>
+</details>
 {%- if lib == "fp19" %}
 <p class="note">Median gas per call, {{ gas.generated }}: over random inputs that take no shortcut for the ops marked <sup class="t">t</sup>, else over the op's input ladder. The object column includes the <code>staticcall</code>; the other three are internal library calls: <code>FP19Lib</code>, the same op in <code>FP127Lib</code> on the same value where 127.128 holds it, and ABDKMathQuad, the other float. An empty cell is an op the library does not offer; <span class="rev">rev</span> would be one it offers that reverted, or whose inputs were outside its domain or format, on every input. Hover a Quad cell for the call it measures: <code>lt</code>, <code>inv</code> and <code>pow</code> are composed from Quad's own functions, and its conversions truncate where FP19's round. The WAD libraries and 64.64 are compared on <a href="/results/ops/">FP127's table</a>. Min and max per cell, and the ladder medians, are in <a href="{{ src }}">gas.json</a> and <a href="{{ repo }}/blob/master/docs/benchmarks/{{ md }}">{{ md }}</a>; every function of every comparison library is mapped in <a href="{{ repo }}/blob/master/docs/benchmarks/coverage.md">coverage.md</a>.</p>
 {%- else %}
@@ -181,14 +195,14 @@
 
 {% component precisiontable() -%}
 {%- set prec = load_data(path="static/data/precision.json") -%}
-<div class="scroll">
+<div class="scroll long">
 <table>
 <thead><tr><th>op</th><th class="num">vectors</th><th class="num">reverts</th><th class="num">min bits</th><th class="num">mean bits</th><th>worst input</th></tr></thead>
 <tbody>
 {%- for name, p in prec %}
 <tr><td class="mono">{{ name }}</td><td class="num">{{ p.n | num_format }}</td><td class="num">{{ p.reverts | num_format }}</td>
 {%- if p.minBits >= 256 %}<td class="num">exact</td><td class="num">exact</td>{% else %}<td class="num">{{ p.minBits }}</td><td class="num">{{ p.meanBits }}</td>{% endif %}
-<td class="mono small"{% if p.worstInput | length > 20 %} title="{{ p.worstInput }}"{% endif %}>{% if p.worstInput | length > 20 %}{{ p.worstInput | truncate(length=14, end="…") }}{% else %}{{ p.worstInput }}{% endif %}</td></tr>
+<td class="mono small"{% if p.worstInput | length > 20 %} title="{{ p.worstInput }}"{% endif %}>{% if p.worstInput | length > 20 %}<details class="what"><summary>{{ p.worstInput | truncate(length=14, end="…") }}</summary>{{ p.worstInput }}</details>{% else %}{{ p.worstInput }}{% endif %}</td></tr>
 {%- endfor %}
 </tbody>
 </table>
@@ -286,7 +300,7 @@
     cls (exact, rev, meta), h (heat shade), why (hover), sub (a k/n or rev after it, subwhy its hover); no v and no
     sub is "—". -#}
 {%- set ncols = t.cols | length -%}
-<div class="tablewrap"><table class="datatable{% if heat %} heat{% endif %}{% if cls %} {{ cls }}{% endif %}">
+<div class="tablewrap{% if t.rows | length > 14 %} long{% endif %}"><table class="datatable{% if heat %} heat{% endif %}{% if cls %} {{ cls }}{% endif %}">
   <thead>
     <tr><th></th>{% if t.aside %}<th></th>{% endif %}{% for g in t.colgroups %}<th scope="colgroup" colspan="{{ g.span }}" class="group">{{ g.name }}</th>{% endfor %}</tr>
     <tr><th scope="col">{{ first }}</th>{% if t.aside %}<th scope="col">{{ t.aside }}</th>{% endif %}{% for c in t.cols %}<th scope="col" class="num f-{{ c.family }}{% if c.ours %} ours{% endif %}" title="{{ c.long }}">{{ c.short }}</th>{% endfor %}</tr>
@@ -303,6 +317,15 @@
   </{{ part }}>
   {%- endfor %}
 </table></div>
+{#- the reasons behind the red words, once per library and reason, for screens with no hover -#}
+{%- set_global revs = "" %}{% set_global seen = "|" -%}
+{%- for r in t.rows %}{% for c in r.cells %}{% if c.cls and c.why %}{% if c.cls == "rev" and c.v != "zero" and c.v != "range" -%}
+{%- set col = t.cols[loop.index0].short | escape %}{% set why = c.why | replace(from="reverts: ", to="") | escape %}{% set k = col ~ ": " ~ why -%}
+{%- if not ("|" ~ k ~ "|") in seen %}{% set_global seen = seen ~ k ~ "|" %}{% set_global revs = revs ~ "<li><strong>" ~ col ~ "</strong>: " ~ why ~ "</li>" %}{% endif -%}
+{%- endif %}{% endif %}{% endfor %}{% endfor -%}
+{%- if revs %}
+<details class="calls"><summary>Revert reasons</summary><ul>{{ revs | safe }}</ul></details>
+{%- endif %}
 {%- endcomponent %}
 
 

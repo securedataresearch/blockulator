@@ -22,8 +22,8 @@ html { background: #f3f4f0; color: #1b1c1c; }
 <link rel="icon" type="image/png" href="/blockulator_favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-{%- if page %}{% set og_title = page.title %}{% set og_desc = page.description | default(value=config.description) %}{% elif section %}{% set og_title = section.title %}{% set og_desc = section.description | default(value=config.description) %}{% else %}{% set og_title = config.title %}{% set og_desc = config.description %}{% endif %}
-<link rel="canonical" href="{{ current_url | default(value=config.base_url) }}">
+{%- if page %}{% set og_title = page.title %}{% set og_desc = page.description | default(value=config.description, boolean=true) %}{% elif section %}{% set og_title = section.title %}{% set og_desc = section.description | default(value=config.description, boolean=true) %}{% else %}{% set og_title = config.title %}{% set og_desc = config.description %}{% endif %}
+{% if current_url %}<link rel="canonical" href="{{ current_url }}">{% endif %}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Blockulator by Secure Data Research">
 <meta property="og:title" content="{{ og_title }}">
@@ -35,21 +35,30 @@ html { background: #f3f4f0; color: #1b1c1c; }
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="/fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/instrument-sans-italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/site.css">
 <link rel="stylesheet" href="/css/blockulator.css">
-{% if page and page.extra.math %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
-{% endif %}{% block head %}{% endblock head %}</head>
+{% if page and page.extra.math %}<link rel="stylesheet" href="/vendor/katex@0.16.11/katex.min.css">
+<script defer src="/vendor/katex@0.16.11/katex.min.js"></script>
+<script defer src="/vendor/katex@0.16.11/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
+{% endif %}<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+{"@type":"Organization","@id":"https://securedataresearch.net/#org","name":"Secure Data Research, LLC","url":"https://securedataresearch.net","sameAs":[{{ config.extra.repo | json_encode | safe }}]},
+{"@type":"SoftwareSourceCode","name":"Blockulator","url":{{ config.base_url | json_encode | safe }},"codeRepository":{{ config.extra.repo | json_encode | safe }},"license":"https://opensource.org/licenses/MIT","programmingLanguage":["Yul","Solidity"],"version":"3.0","author":{"@id":"https://securedataresearch.net/#org"}}
+]}
+</script>
+{% block head %}{% endblock head %}</head>
 <body class="{% block bodyclass %}inner{% endblock bodyclass %}">
 {%- set here = current_path | default(value="/") %}
+{#- the top-level item a page belongs to: its group (pagehead.html), else its path -#}
+{%- if page %}{% set grp = page.extra.group | default(value="") %}{% elif section %}{% set grp = section.extra.group | default(value="") %}{% else %}{% set grp = "" %}{% endif %}
 <div class="topbar">
 <header class="top">
-  <a class="brand" href="/"><img src="/blockulator_favicon.png" alt="" width="36" height="36"><span>blockulator</span></a>
+  <a class="brand" href="/" aria-label="Blockulator home"><img src="/blockulator_favicon.png" alt="" width="36" height="36"><span>blockulator</span></a>
   <nav class="links" aria-label="Main">
-    <a href="/results/"{% if "/results/" in here %} aria-current="page"{% endif %}>Results</a>
-    <a href="/library/"{% if "/library/" in here %} aria-current="page"{% endif %}>Library</a>
-    <a href="/writeup/"{% if "/writeup/" in here %} aria-current="page"{% endif %}>Write-up</a>
+    <a href="/results/"{% if grp == "results" or "/results/" in here %} aria-current="page"{% endif %}>Results</a>
+    <a href="/library/"{% if grp == "library" or "/library/" in here %} aria-current="page"{% endif %}>Library</a>
+    <a href="/writeup/"{% if grp == "writeup" or "/writeup/" in here %} aria-current="page"{% endif %}>Write-up</a>
     <a class="cta" href="{{ config.extra.repo }}">Source</a>
   </nav>
 </header>
@@ -69,12 +78,13 @@ html { background: #f3f4f0; color: #1b1c1c; }
     <a href="/llms.txt">llms.txt</a>
     <a href="https://www.youtube.com/watch?v=a_tL99NY-yc">EthCC talk (video)</a>
     <a href="{{ config.extra.repo }}">GitHub</a>
-    <a href="mailto:sam@securedataresearch.net?subject=Blockulator">Contact</a>
+    <!--email_off--><a href="mailto:sam@securedataresearch.net?subject=Blockulator">Contact</a><!--/email_off-->
   </nav>
   <p>Blockulator, FP127 and FP19 are made by Secure Data Research LLC and released under the <a href="{{ config.extra.repo }}/blob/master/LICENSE">MIT licence</a>.</p>
 </footer>
 </div>
 <script src="/js/hero.js" defer></script>
+<script type="module" src="/js/islands/notes.js"></script>
 {% block scripts %}{% endblock scripts %}
 <script>(function(){var h=document.documentElement;if(!h.classList.contains('nvt')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
 document.addEventListener('click',function(e){var a=e.target.closest('a[href]');if(!a||e.defaultPrevented||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||a.target||a.hasAttribute('download'))return;

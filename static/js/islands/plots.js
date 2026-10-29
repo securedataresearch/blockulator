@@ -2,8 +2,11 @@
 // tables under them are rendered from (scripts/site/home.py). Observable Plot, pinned.
 // Colour is the library's family (blockulator.css --c-<family>); identity is the label, on the
 // axis or on hover. Floating point is ◆, fixed point ●, or above and below a rule. Every chart has
-// axis titles with units and a key.
-import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.16/+esm";
+// axis titles with units and a key. Plot and d3 are the self-hosted UMD builds (static/vendor/README.md): imported for
+// their side effect, in this order, they set globalThis.d3 and then globalThis.Plot.
+import "/vendor/d3@7.9.0/d3.min.js";
+import "/vendor/@observablehq/plot@0.6.16/plot.umd.min.js";
+const Plot = globalThis.Plot;
 
 const KINDS = [["float", "Floating point"], ["fixed", "Fixed point"]];
 const FAMILIES = [["fp19", "FP19"], ["fp127", "FP127 · BlockulatorWad"], ["quad", "binary128 (ABDKMathQuad)"], ["6464", "ABDK 64.64"], ["wad", "WAD libraries"], ["protocol", "Maker, Aave, Morpho, FraxLend, Euler"]];

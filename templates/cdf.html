@@ -16,5 +16,6 @@
 </tbody></table></div>
 </section>
 {%- endfor %}
+<p class="small">Code measured: {% for i in d.implementations %}<strong>{{ i.label }}</strong> {{ i.source }}{% if not loop.last %}; {% endif %}{% endfor %}.</p>
 <p class="small">Each library's own code at the {{ d.grid.points }} points x = k/32 from −6 to 6, exact in every representation here, against {{ d.truth }}. Digits are correct significant digits; gas is the median of a call over the points. Data: <a href="/data/cdf.json">cdf.json</a>; reproduce with <code>make cdf</code>.</p>
 {% endblock body %}
