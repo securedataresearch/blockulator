@@ -1655,9 +1655,12 @@
    "minBits": null,
    "below": 1037,
    "above": 963,
-   "gasMedian": 3623,
-   "gasP99": 17125,
-   "gasMax": 20532
+   "gasMedian": 3775,
+   "gasP99": 17277,
+   "gasMax": 20684,
+   "fallback": 0,
+   "fallbackRuns": 0,
+   "fallbackPct": 0.0
   },
   {
    "lib": "fp127",
@@ -1679,9 +1682,12 @@
    "minBits": 129.0,
    "below": 1014,
    "above": 937,
-   "gasMedian": 3497,
-   "gasP99": 17430,
-   "gasMax": 20538
+   "gasMedian": 3654,
+   "gasP99": 17579,
+   "gasMax": 20695,
+   "fallback": 0,
+   "fallbackRuns": 0,
+   "fallbackPct": 0.0
   },
   {
    "lib": "fp127",
@@ -1703,9 +1709,12 @@
    "minBits": null,
    "below": 1001,
    "above": 989,
-   "gasMedian": 3694,
-   "gasP99": 15884,
-   "gasMax": 20746
+   "gasMedian": 3823,
+   "gasP99": 16013,
+   "gasMax": 20875,
+   "fallback": 0,
+   "fallbackRuns": 0,
+   "fallbackPct": 0.0
   },
   {
    "lib": "fp127",
@@ -3697,6 +3706,81 @@
    "gasMedian": 35833,
    "gasP99": 38700,
    "gasMax": 38700
+  },
+  {
+   "lib": "fp127",
+   "op": "erf",
+   "n": 2000,
+   "status": {
+    "ok": 2000
+   },
+   "inputs": 2000,
+   "correctlyRounded": 2000,
+   "misrounded": 0,
+   "crClose": 0,
+   "crChanged": 0,
+   "nearest": 2000,
+   "faithful": 2000,
+   "maxUlp": 0.499926216832844,
+   "p99Ulp": 0.49417119189871767,
+   "medianUlp": 0.23933422119925662,
+   "minBits": null,
+   "below": 1037,
+   "above": 963,
+   "stage": "second",
+   "gasMedian": 49291,
+   "gasP99": 334556,
+   "gasMax": 355383
+  },
+  {
+   "lib": "fp127",
+   "op": "erfc",
+   "n": 2000,
+   "status": {
+    "ok": 2000
+   },
+   "inputs": 2000,
+   "correctlyRounded": 2000,
+   "misrounded": 0,
+   "crClose": 0,
+   "crChanged": 0,
+   "nearest": 2000,
+   "faithful": 2000,
+   "maxUlp": 0.49996960528410705,
+   "p99Ulp": 0.4956670764548165,
+   "medianUlp": 0.24747889113312907,
+   "minBits": 129.0,
+   "below": 1014,
+   "above": 937,
+   "stage": "second",
+   "gasMedian": 48138,
+   "gasP99": 333846,
+   "gasMax": 351472
+  },
+  {
+   "lib": "fp127",
+   "op": "normCdf",
+   "n": 2000,
+   "status": {
+    "ok": 2000
+   },
+   "inputs": 2000,
+   "correctlyRounded": 2000,
+   "misrounded": 0,
+   "crClose": 0,
+   "crChanged": 0,
+   "nearest": 2000,
+   "faithful": 2000,
+   "maxUlp": 0.499667169395256,
+   "p99Ulp": 0.4953584381973559,
+   "medianUlp": 0.23982588651212366,
+   "minBits": null,
+   "below": 1001,
+   "above": 989,
+   "stage": "second",
+   "gasMedian": 48347,
+   "gasP99": 310512,
+   "gasMax": 353659
   }
  ]
 }

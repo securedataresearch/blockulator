@@ -501,7 +501,7 @@ measures both errs (ratios 0.41 and 0.30). The fast path skips the second
 stage unless within 2^-18.4 ULP of a midpoint (series) or 2^-44 (tail);
 the vectors carry 13 random inputs found that close, decided by it (v8 had
 each right). Inline A/B on the sweep's inputs: `erf` median 3,630 → 3,689,
-`erfc` 3,510 → 3,592, `normCdf` 3,715 → 3,750; `make cdf` on [−6, 6]:
+`erfc` 3,510 → 3,592, `normCdf` 3,715 → 3,750 (the same old and new calls side by side; the sweep table, its runner recompiled around the new library, reads 3,623 → 3,775, 3,497 → 3,654 and 3,694 → 3,823); `make cdf` on [−6, 6]:
 `normCdf` 12,435 → 12,466, `erfc` 9,140 → 9,211; the second stage costs
 about 48,000 at the median and 355,000 at most (the two-word series just
 below y = 7). `FP127N` is 9,013 bytes (5,005 before); inline, each op

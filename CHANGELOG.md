@@ -176,7 +176,7 @@ wide series and continued fraction behind it:
   midpoint (none misrounded by v8); `make sweep` plain and second-stage
   passes 0 misrounded (no middle stage).
 - Inline, on the sweep's inputs: `erf` 3,630 → 3,689, `erfc` 3,510 →
-  3,592, `normCdf` 3,715 → 3,750 (median); `make cdf`: `normCdf` 12,435 →
+  3,592, `normCdf` 3,715 → 3,750 (median, old and new side by side; the sweep table reads 3,623 → 3,775, 3,497 → 3,654, 3,694 → 3,823); `make cdf`: `normCdf` 12,435 →
   12,466, `erfc` 9,140 → 9,211. The second stage about 48,000 gas at the
   median, 355,000 at most. FP127N 5,005 → 9,013 bytes.
 - `test/fp127/Imports.t.sol`'s rbad127 fuzz no longer underflows building
