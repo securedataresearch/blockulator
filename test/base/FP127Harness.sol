@@ -3,6 +3,10 @@ pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
 import {IFP127} from "../../contracts/src/fp127/IFP127.sol";
+import {IFP127E} from "../../contracts/src/fp127/IFP127E.sol";
+import {IFP127H} from "../../contracts/src/fp127/IFP127H.sol";
+import {IFP127N} from "../../contracts/src/fp127/IFP127N.sol";
+import {IFP127S} from "../../contracts/src/fp127/IFP127S.sol";
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
 import {FP127Caller} from "../../contracts/src/fp127/FP127Caller.sol";
 import {FixedPointMathLib} from "../../lib/solady/src/utils/FixedPointMathLib.sol";
@@ -139,7 +143,23 @@ contract Ref {
 
 abstract contract FP127Harness is Test {
     IHuffFP127 internal huff;
+    /// the number: arithmetic and its directed forms, conversions, roots,
+    /// comparison, rounding
     IFP127 internal obj;
+    /// the elementary functions on the exp/log kernels
+    IFP127E internal objE;
+    /// the hyperbolic functions
+    IFP127H internal objH;
+    /// the normal distribution: erf, erfc, normCdf
+    IFP127N internal objN;
+    /// the special functions: Lambert W
+    IFP127S internal objS;
+    /// Each export's object, from contracts/src/fp127/ops.json, by name hash
+    /// and by selector: the letter after "FP127" ("E", "H", "N", "S"), zero for
+    /// FP127 itself. Read once in setUp, so a re-layout of the objects edits
+    /// only the object tags in FP127.yul.src.
+    mapping(bytes32 => bytes1) internal objOfName;
+    mapping(bytes4 => bytes1) internal objOfSel;
     LibUser internal lib;
     FP127Caller internal caller;
     Ref internal ref;
@@ -157,6 +177,11 @@ abstract contract FP127Harness is Test {
         huff = IHuffFP127(h);
 
         obj = IFP127(_deployYulObject("out/FP127.yul/FP127.json"));
+        objE = IFP127E(_deployYulObject("out/FP127E.yul/FP127E.json"));
+        objH = IFP127H(_deployYulObject("out/FP127H.yul/FP127H.json"));
+        objN = IFP127N(_deployYulObject("out/FP127N.yul/FP127N.json"));
+        objS = IFP127S(_deployYulObject("out/FP127S.yul/FP127S.json"));
+        _loadObjects();
         lib = new LibUser();
         caller = new FP127Caller(address(obj));
         ref = new Ref();
@@ -170,6 +195,39 @@ abstract contract FP127Harness is Test {
             deployed := create(0, add(initCode, 0x20), mload(initCode))
         }
         require(deployed != address(0), "yul deploy failed");
+    }
+
+    function _loadObjects() internal {
+        string memory json = vm.readFile("contracts/src/fp127/ops.json");
+        for (uint256 i; ; i++) {
+            string memory op = string.concat(".ops[", vm.toString(i), "]");
+            if (!vm.keyExistsJson(json, op)) break;
+            bytes memory o = bytes(vm.parseJsonString(json, string.concat(op, ".object")));
+            bytes1 letter = o.length > 5 ? o[5] : bytes1(0);
+            objOfName[keccak256(bytes(vm.parseJsonString(json, string.concat(op, ".name"))))] = letter;
+            objOfSel[bytes4(keccak256(bytes(vm.parseJsonString(json, string.concat(op, ".signature")))))] = letter;
+        }
+    }
+
+    function _objAt(bytes1 letter) internal view returns (address) {
+        if (letter == "E") return address(objE);
+        if (letter == "H") return address(objH);
+        if (letter == "N") return address(objN);
+        if (letter == "S") return address(objS);
+        return address(obj);
+    }
+
+    /// The object that serves op (contracts/src/fp127/ops.json): FP127E for
+    /// the elementary functions, FP127H for the hyperbolic ones, FP127N for
+    /// erf, erfc and normCdf, FP127S for Lambert W, FP127 for the rest.
+    function _objFor(string memory op) internal view returns (address) {
+        return _objAt(objOfName[keccak256(bytes(op))]);
+    }
+
+    /// The object that serves the call's selector; FP127 for a selector no
+    /// object has, so a bad-selector test still reaches an object.
+    function _objOf(bytes memory call) internal view returns (address) {
+        return _objAt(call.length < 4 ? bytes1(0) : objOfSel[bytes4(call)]);
     }
 
     // ---- result capture -------------------------------------------------
@@ -189,9 +247,10 @@ abstract contract FP127Harness is Test {
         else assertEq(keccak256(x.err), keccak256(y.err), string.concat(what, ": revert data"));
     }
 
-    /// Asserts that the Yul object reverts on `call` with the custom error `err`.
+    /// Asserts that the Yul object serving `call` reverts on it with the
+    /// custom error `err`.
     function _expectRevert(bytes memory call, bytes4 err, string memory what) internal view {
-        Res memory o = _try(address(obj), call);
+        Res memory o = _try(_objOf(call), call);
         assertFalse(o.ok, string.concat(what, ": expected revert"));
         assertEq(_sel(o.err), err, string.concat(what, ": wrong error"));
     }

@@ -5,7 +5,7 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Four contracts, salt "FP127 ladder v13": the adapters of our two deployed forms (LadderFP127 and
+Four contracts, salt "FP127 ladder v14": the adapters of our two deployed forms (LadderFP127 and
 LadderFP19Deployed) and LadderRunner and EdgeRunner, whose constructor is the eighteen form slots as one array in
 form-id order, the zero address for every library that is not on chain (see ONCHAIN), so their init code depends
 on them. Each transaction is sent with the node's
@@ -17,6 +17,7 @@ is never printed or written.
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -27,8 +28,12 @@ from pathlib import Path
 from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
+# scripts/fp127/deploy.py, the library objects' table and CREATE2 prediction (by path: this file is deploy.py too)
+_spec = importlib.util.spec_from_file_location("fp127_deploy", ROOT / "scripts" / "fp127" / "deploy.py")
+objects = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(objects)
 PROXY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
-SALT_ASCII = "FP127 ladder v13"
+SALT_ASCII = "FP127 ladder v14"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
@@ -140,9 +145,20 @@ def cmd_deploy(rpc: str) -> int:
     return 0
 
 
+def fp127_objects() -> dict[str, str]:
+    """The addresses LadderFP127 calls (ILadder.sol's FP127*_ADDRESS): each FP127 object's CREATE2 address from
+    its built artifact and its salt in gen.py's objects table. From 3.0 FP127 is five objects."""
+    out = {}
+    for key, (name, lib, _) in objects.DEPLOYED.items():
+        if lib == "fp127":
+            o = objects.obj(key)
+            out[name] = objects.predicted(o, objects.artifact(o)[0])
+    return out
+
+
 def cmd_record(rpc: str) -> int:
     rec = {"chainId": 11155111, "network": "sepolia", "proxy": PROXY, "salt": SALT, "saltAscii": SALT_ASCII,
-           "fp127": json.loads((RECORD.parent / "FP127.json").read_text())["address"], "contracts": {}}
+           "fp127": fp127_objects(), "contracts": {}}
     for c in plan():
         code = cast("code", c["address"], "--rpc-url", rpc)
         rec["contracts"][c["name"]] = {

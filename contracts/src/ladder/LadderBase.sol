@@ -32,8 +32,9 @@ abstract contract LadderBase is ILadderAdapter {
 
     /// Touch, outside the timed window, any contract the ops call, so the
     /// measurement does not include a cold-account surcharge. The Vyper
-    /// adapter (LadderSnekmate) touches its library; the inline adapters
-    /// call nothing, and the runner warms the FP127 object itself.
+    /// adapter (LadderSnekmate) touches its library and LadderFP127 FP127's
+    /// other objects; the inline adapters call nothing, and the runner warms
+    /// the FP127 object itself.
     function _warm() internal view virtual {}
 
     // ---- composite ops a library may have natively -------------------------

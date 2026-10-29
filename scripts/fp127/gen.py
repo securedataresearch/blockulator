@@ -4,10 +4,13 @@ from its single Yul source (contracts/src/fp127/FP127.yul.src or
 contracts/src/fp19/FP19.yul.src).
 
 Usage:
-    uv run scripts/fp127/gen.py [--lib fp127|fp19]            # write outputs next to the source
-    uv run scripts/fp127/gen.py [--lib fp127|fp19] --check    # regenerate and diff
+    uv run scripts/fp127/gen.py [--lib fp127|fp19|wad|import-demo]  # write outputs next to the source
+    uv run scripts/fp127/gen.py [--lib ...] --check           # regenerate and diff
     uv run scripts/fp127/gen.py --lib fp19 --wide-lib <path>  # the test-only library whose
-                                                               # rounding test always fails
+                                                               # rounding tests always fail
+    uv run scripts/fp127/gen.py --lib fp19 --mid-lib <path>   # ... whose fast paths' tests fail
+                                                               # (the libraries with a forced /
+                                                               # mid_forced map: fp19, fp127, wad)
     uv run scripts/fp127/gen.py [--lib ...] --count-lib <path>  # test only: counts each
                                                                # rounding-test fallback
     uv run scripts/fp127/gen.py [--lib ...] --probe-lib <path>  # test only: gas probes on
@@ -18,9 +21,16 @@ Usage:
                                                                # Makefile loops over this list
 
 An export may carry `/// @object <Name>` to go into another deployed object
-(FP19 deploys as FP19, FP19E, FP19H, FP19N and FP19S). Each object then holds only
-its exports and their callees and gets its own interface and ABI; the
-inline library holds every export.
+(FP19 deploys as FP19, FP19E, FP19H, FP19N and FP19S; FP127, from 3.0, as
+FP127, FP127E, FP127H, FP127N and FP127S). Each object holds only its exports
+and their callees and gets its own interface and ABI; the inline library holds
+every export.
+
+A source may take functions from another library's source with
+`/// @import <lib> as <alias>: f, g, ...`: the named functions and their
+closure, each renamed <alias>_<name> (see "Imports" below). FP127.yul.src
+takes FP19's wide kernels as w19_wexpm1 and so on; an import enters the
+bytes only when an export calls it.
 
 The generator is deterministic. CI runs --check so the committed outputs can
 never drift from the source.
@@ -56,9 +66,38 @@ LIBS = {
         "consts": "/// @notice pi as the 127.128 word nearest it, pi * 2^128 rounded to the\n    ///         nearest integer: 38 digits, the format's best. A constant, not\n    ///         an op: an object caller can copy the literal.\n    int256 internal constant PI = 0x3243f6a8885a308d313198a2e03707345;",
         "iface_notice": "Interface of the deployed FP127 object. Values are signed 127.128\n///         fixed-point: one int256 whose value is raw / 2^128.",
         "lib_notice": "Inlinable FP127: signed 127.128 fixed-point, one int256 per value,\n///         value = raw / 2^128. Every function body is the same Yul that the\n///         deployed FP127 object runs, so the two agree by construction.\n///         It uses the CLZ opcode: compile with evmVersion osaka (solc >= 0.8.31)\n///         and run only on a chain that has CLZ (EIP-7939).",
+        # Blockulator 3.0: five deployed objects by idea from the one source,
+        # as FP19's. FP127 is the number; FP127E the elementary functions on
+        # the exp/log kernels; FP127H the hyperbolic functions; FP127N the
+        # normal distribution; FP127S Lambert W. v8 was one object with 779
+        # bytes free, no room for a second stage behind each rounding test.
         "objects": {
-            "FP127": {"iface": "IFP127", "abi": "abi.json", "salt": "FP127 v8"},
+            "FP127": {"iface": "IFP127", "abi": "abi.json", "salt": "FP127 v9",
+                      "iface_notice": "Interface of the deployed FP127 object, the number: arithmetic and\n///         its directed forms, conversions, roots, comparison and rounding.\n///         Values are signed 127.128 fixed-point: one int256 whose value is\n///         raw / 2^128."},
+            "FP127E": {"iface": "IFP127E", "abi": "abiE.json", "salt": "FP127E v9",
+                       "iface_notice": "Interface of the deployed FP127E object, FP127's elementary\n///         functions on its exp/log kernels: exp, exp2, exp10, expm1, ln,\n///         log2, log10, log2Up, log1p, pow, powu and compound, on the same\n///         signed 127.128 fixed-point words as IFP127 (value = raw / 2^128)."},
+            "FP127H": {"iface": "IFP127H", "abi": "abiH.json", "salt": "FP127H v9",
+                       "iface_notice": "Interface of the deployed FP127H object, FP127's hyperbolic\n///         functions: sinh, cosh, tanh and atanh, on the same signed 127.128\n///         fixed-point words as IFP127. They carry their own copy of the exp\n///         and log kernels."},
+            "FP127N": {"iface": "IFP127N", "abi": "abiN.json", "salt": "FP127N v9",
+                       "iface_notice": "Interface of the deployed FP127N object, FP127's normal\n///         distribution: erf, erfc and normCdf, on the same signed 127.128\n///         fixed-point words as IFP127."},
+            "FP127S": {"iface": "IFP127S", "abi": "abiS.json", "salt": "FP127S v9",
+                       "iface_notice": "Interface of the deployed FP127S object, FP127's special\n///         functions: lambertW0 and lambertWm1, the two real branches of\n///         Lambert W, on the same signed 127.128 fixed-point words as IFP127."},
         },
+        # --wide-lib: every rounding test forced to fail, so every result comes
+        # from the op's last stage: rbad127 and rbadm127 (the tests the
+        # correctly rounded ops call), nearmid (ln, log2, log10 and log1p take
+        # the double-word l2p), pow2t (pow's and compound's one-word try) and
+        # pow2rt (compound's double-word try: powu decides). --mid-lib: only
+        # the fast paths' tests (rbad127, pow2t), so pow and compound return
+        # their middle stage, the double word, its own test kept. powu's test
+        # is inline today; it moves onto rbad127 with its second stage.
+        "forced": {"rbad127": "function rbad127(v, g, err) -> b {\n    b := 1\n}",
+                   "rbadm127": "function rbadm127(v, g, err) -> b {\n    b := 1\n}",
+                   "nearmid": "function nearmid(v) -> b {\n    b := 1\n}",
+                   "pow2t": "function pow2t(t, ay) -> r, ok {\n}",
+                   "pow2rt": "function pow2rt(y, lh, ll, eb) -> r, ok {\n}"},
+        "mid_forced": {"rbad127": "function rbad127(v, g, err) -> b {\n    b := 1\n}",
+                       "pow2t": "function pow2t(t, ay) -> r, ok {\n}"},
     },
     "fp19": {
         "src": ROOT / "contracts" / "src" / "fp19" / "FP19.yul.src",
@@ -110,6 +149,20 @@ LIBS = {
         # --wide-lib: the test-only library whose fast-path test always fails,
         # so every result comes from the second stage
         "forced": {"wadbad": "function wadbad(F, errF) -> b {\n    b := 1\n}"},
+    },
+    # TEST ONLY: the demonstration of `@import` (below, "Imports"): a source
+    # that calls FP19.yul.src's wexpm1 and expm1 under the prefix w19_ and
+    # FP127.yul.src's rbad127 under f127_. Its
+    # library goes beside it in test/ (no ops.json); test/fp127/Imports.t.sol
+    # checks it against FP19Lib, mpmath and the rounding rbad127 describes.
+    "import-demo": {
+        "src": ROOT / "test" / "fp127" / "imports" / "ImportDemo.yul.src",
+        "library_only": True, "test_only": True,
+        "object": "ImportDemo", "lib": "ImportDemoLib", "iface": "IImportDemo",
+        "one": "int256 internal constant ONE = int256(1) << 128;",
+        "consts": "/// @notice one in FP19's word, for the expm1 export's inputs.\n    int256 internal constant ONE19 = int256(0x3ffff) << 236;",
+        "lib_notice": "TEST ONLY. FP19.yul.src's wexpm1 and expm1 and FP127.yul.src's\n///         rbad127 called from another source through gen.py's import lines,\n///         every function of their closures renamed <alias>_<name>. Never\n///         deploy or import it.",
+        "objects": {},
     },
 }
 LIB = LIBS["fp127"]
@@ -381,18 +434,124 @@ def validate(src: Source, raw: str) -> None:
         sys.exit(1)
 
 
-def with_base(src: Source, raw: str) -> Source:
-    """A library on a base source (LIB["base"]): the base's functions join its
-    own, its exports and errors stay its own. Validated as one source, so every
-    rule and every name check covers the functions it can call."""
-    base_raw = LIB["base"].read_text()
-    base = parse(base_raw)
-    dup = sorted(set(src.funcs) & set(base.funcs))
-    if dup:
-        sys.stderr.write(f"{SRC.name} redefines {LIB['base'].name} functions: {', '.join(dup)}\n")
+# ---------------------------------------------------------------------------
+# Imports: functions from another library's source
+# ---------------------------------------------------------------------------
+#
+# A source can call functions of another library's source in two ways.
+#
+#   * A base (LIB["base"], BlockulatorWad on FP19.yul.src): every function of
+#     the base joins the source under its own name, and its errors with them;
+#     a name both define is an error.
+#   * An import line in the source (FP127.yul.src takes FP19's wide kernels):
+#
+#         /// @import fp19 as w19: wexpm1, wexp, wlnw
+#
+#     The named functions of LIBS["fp19"]'s source and every function they
+#     call, transitively, join the source renamed <alias>_<name>: wexpm1 is
+#     called as w19_wexpm1, and inside the imported text every definition of
+#     and call to a function of that closure is renamed the same way, so the
+#     helpers both sources define (msb, rev, mul512, log2m, ...) never meet.
+#     Several lines may name the same library and alias; their lists join.
+#     The importer declares (`@error`) every error the imported code reverts
+#     with, since its interfaces and ABI carry only its own.
+#
+# Either way an import costs nothing until it is called: an object carries
+# only its exports' closures and the inline library each export's, so an
+# imported function enters the bytes only when an export calls it. The
+# source and its imports are validated as one, so every rule and every name
+# check covers the functions it can call; an imported function's parameter or
+# local that a function of the importer is named after is an error (Yul
+# forbids the shadowing), as is an import that collides with the importer's
+# own names.
+
+_IMPORT_RE = re.compile(r"^///\s*@import\s+(\w+)\s+as\s+([A-Za-z][A-Za-z0-9]*)\s*:\s*(.*?)\s*$", re.M)
+# the source files whose functions the current library takes, for the banner
+IMPORTED: list[str] = []
+
+
+def _idents(f: Func) -> set[str]:
+    """The names f declares: itself, its parameters, returns and locals."""
+    body = strip_comments(f.text)
+    return {f.name, *f.params, *f.rets, *re.findall(r"\blet\s+([A-Za-z_][A-Za-z0-9_]*)", body)}
+
+
+def import_prefixed(raw: str, own: Source) -> tuple[dict[str, Func], str, list[str]]:
+    """The functions the source's import lines name, with their closures, each
+    renamed <alias>_<name>: (functions by new name, their text, problems)."""
+    want: dict[tuple[str, str], list[str]] = {}
+    for m in _IMPORT_RE.finditer(raw):
+        names = [n.strip() for n in m.group(3).split(",") if n.strip()]
+        want.setdefault((m.group(1), m.group(2)), []).extend(names)
+    funcs: dict[str, Func] = {}
+    texts: list[str] = []
+    problems: list[str] = []
+    for (lib, alias), names in want.items():
+        if lib not in LIBS:
+            problems.append(f"@import {lib}: no such library (one of {', '.join(sorted(LIBS))})")
+            continue
+        other = parse(LIBS[lib]["src"].read_text())
+        missing = [n for n in names if n not in other.funcs]
+        if missing:
+            problems.append(f"@import {lib}: no function {', '.join(missing)} in {LIBS[lib]['src'].name}")
+            continue
+        need = {f.name for n in names for f in closure(other, n)}
+        prefix = f"{alias}_"
+        call = re.compile(r"\b(" + "|".join(sorted(need, key=len, reverse=True)) + r")(?=\s*\()")
+        declared = {v.lower() for v in own.errors.values()}
+        group = []
+        for f in other.funcs.values():          # the other source's order
+            if f.name not in need:
+                continue
+            for sel in re.findall(r"\brev\(\s*(0x[0-9a-fA-F]{8})\s*\)", f.text):
+                if sel.lower() not in declared:
+                    problems.append(f"@import {lib}: {f.name} reverts with {sel}, which {SRC.name} does not declare")
+            group.append(call.sub(lambda m: prefix + m.group(1), f.text))
+        for g in parse("\n\n".join(group)).funcs.values():
+            funcs.setdefault(g.name, g)
+        texts += group
+    return funcs, "\n\n".join(texts), problems
+
+
+def with_imports(src: Source, raw: str) -> Source:
+    """The source with the functions it takes from other sources (above):
+    its exports and errors stay its own (a base's errors join them).
+    Validated as one source."""
+    IMPORTED.clear()
+    funcs = dict(src.funcs)
+    errors = dict(src.errors)
+    full = raw
+    problems: list[str] = []
+    if LIB.get("base"):
+        base_raw = LIB["base"].read_text()
+        base = parse(base_raw)
+        dup = sorted(set(src.funcs) & set(base.funcs))
+        if dup:
+            problems.append(f"{SRC.name} redefines {LIB['base'].name} functions: {', '.join(dup)}")
+        funcs = {**base.funcs, **src.funcs}
+        errors = {**base.errors, **src.errors}
+        full = base_raw + "\n" + raw
+        IMPORTED.append(LIB["base"].name)
+    if _IMPORT_RE.search(raw):
+        imp, text, problems_imp = import_prefixed(raw, src)
+        problems += problems_imp
+        dup = sorted(set(imp) & set(funcs))
+        if dup:
+            problems.append(f"imported names collide with {SRC.name}'s functions: {', '.join(dup)}")
+        own = set(funcs)
+        for f in imp.values():
+            for ident in sorted((_idents(f) - {f.name}) & own):
+                problems.append(f"imported {f.name}: identifier {ident!r} shadows {SRC.name}'s function")
+        for f in funcs.values():
+            for ident in sorted(_idents(f) & set(imp)):
+                problems.append(f"{f.name}: identifier {ident!r} shadows an imported function")
+        funcs.update(imp)
+        full = full + "\n" + text
+        IMPORTED.extend(sorted({LIBS[m.group(1)]["src"].name for m in _IMPORT_RE.finditer(raw) if m.group(1) in LIBS}))
+    if problems:
+        sys.stderr.write(f"{SRC.name} failed validation:\n" + "".join(f"  - {p}\n" for p in problems))
         sys.exit(1)
-    funcs = {**base.funcs, **src.funcs}
-    validate(Source(src.header, {**base.errors, **src.errors}, funcs, src.exports), base_raw + "\n" + raw)
+    validate(Source(src.header, errors, funcs, src.exports), full)
     return Source(src.header, src.errors, funcs, src.exports)
 
 
@@ -406,11 +565,9 @@ def object_of(e: Export) -> str:
 
 
 def object_funcs(src: Source, name: str) -> list[Func]:
-    """The functions an object carries. A one-object library keeps every
-    function in source order (FP127's deployed bytes depend on it); a split
-    library keeps each object's exports and their callees, in source order."""
-    if len(objects()) == 1:
-        return list(src.funcs.values())
+    """The functions an object carries: its exports and their callees, in
+    source order (imported functions after the source's own). Up to FP127
+    v8, a one-object library kept every function, called or not."""
     need: set[str] = set()
     for e in src.exports:
         if object_of(e) == name:
@@ -438,7 +595,7 @@ def closure(src: Source, root: str) -> list[Func]:
 # ---------------------------------------------------------------------------
 
 def banner() -> str:
-    base = f" and {LIB['base'].name}" if LIB.get("base") else ""
+    base = "".join(f" and {n}" for n in IMPORTED)
     return f"// GENERATED by scripts/fp127/gen.py from {SRC.name}{base}. Do not edit.\n"
 
 
@@ -681,11 +838,12 @@ def instrumented(lib: str, kind: str) -> dict[str, str]:
 
 def emit_library(src: Source, lib_name: str | None = None, wide: bool | str = False,
                  count: dict | None = None, probe: dict | None = None) -> str:
-    """The inline library. wide=True is the test-only variant: rbad (the
-    rounding test of every correctly rounded op) always says the fast result
-    is too close to a tie, and so does the middle stage's rbadm, so every
-    call takes the wide second stage. wide="mid" forces rbad only, so pow,
-    powu and compound return their middle stage.
+    """The inline library. wide=True is the test-only variant: every function
+    in LIB["forced"] is replaced by its forced body, a rounding test that
+    always says the value is too close to a tie (FP19: rbad and the middle
+    stage's rbadm), so every call takes the op's last stage. wide="mid" takes
+    LIB["mid_forced"], the fast paths' tests only (FP19: rbad), so the ops
+    with a middle stage (FP19's pow, powu and compound) return it.
     count / probe (test only, never committed) wrap the named helpers to
     record fallbacks or gas in memory; see count_wrap and probe_wrap."""
     lib_name = lib_name or LIB_NAME
@@ -698,11 +856,11 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool | str = Fa
         ret_names = ", ".join(f"_{p.name}" for p in e.outputs)
         funcs = closure(src, e.yul_name)
         texts = []
+        forced = LIB["mid_forced" if wide == "mid" else "forced"] if wide else {}
         for f in funcs:
             t = f.text
-            forced = LIB.get("mid_forced" if wide == "mid" else "forced", {"rbad": ""})
-            if wide and f.name in forced:
-                t = forced.get(f.name) or "function rbad(D, err) -> b {\n    b := 1\n}"
+            if f.name in forced:
+                t = forced[f.name]
             elif count and f.name in count:
                 t = count_wrap(f, count[f.name])
             elif probe and f.name in probe:
@@ -750,9 +908,14 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool | str = Fa
         notice = (f"TEST ONLY. {LIB_NAME} instrumented: {what}.\n///         "
                   "Results are unchanged. Generated for make sweep / make profile; never\n///         deploy or import it.")
     elif wide == "mid":
-        notice = "TEST ONLY. " + LIB_NAME + " with the fast path's rounding test forced to fail, so\n///         pow, powu and compound return their middle stage (and the other\n///         correctly rounded ops their second stage). Generated for make sweep's\n///         middle-stage pass; never deploy or import it."
+        notice = ("TEST ONLY. " + LIB_NAME + " with the fast paths' rounding tests forced to fail\n///         ("
+                  + ", ".join(LIB["mid_forced"]) + "), so the ops with a middle stage return\n///         it (and the other "
+                  "correctly rounded ops their last stage). Generated for\n///         make sweep's middle-stage pass; "
+                  "never deploy or import it.")
     elif wide:
-        notice = "TEST ONLY. " + LIB_NAME + " with the rounding test forced to fail, so every\n///         correctly rounded op returns its wide second stage. Generated for\n///         make sweep's second-stage pass; never deploy or import it."
+        notice = ("TEST ONLY. " + LIB_NAME + " with every rounding test forced to fail\n///         ("
+                  + ", ".join(LIB["forced"]) + "), so every correctly rounded op returns\n///         its last stage. "
+                  "Generated for make sweep's second-stage pass; never deploy\n///         or import it.")
     else:
         notice = LIB["lib_notice"]
     dev = LIB.get("lib_dev", "Blocks are memory-safe: the only memory touched is scratch space\n"
@@ -828,7 +991,7 @@ def emit_ops(src: Source) -> str:
 
 
 def emit_all(src: Source) -> dict[str, str]:
-    out = {"ops.json": emit_ops(src)}
+    out = {} if LIB.get("test_only") else {"ops.json": emit_ops(src)}
     if LIB.get("library_only"):
         out[f"{LIB_NAME}.sol"] = emit_library(src)
         return out
@@ -870,17 +1033,19 @@ def main() -> int:
     args.src, args.out = SRC, OUT_DIR
 
     raw = args.src.read_text()
-    src = parse(raw)
-    if LIB.get("base"):
-        src = with_base(src, raw)
-    else:
-        validate(src, raw)
+    src = with_imports(parse(raw), raw)
+    # a library without the map would come out unforced, every result its fast path's
+    for path, key in ((args.wide_lib, "forced"), (args.mid_lib, "mid_forced"),
+                      (args.forced and (args.count_lib or args.probe_lib), "forced")):
+        if path and key not in LIB:
+            sys.stderr.write(f"--lib {args.lib} has no {key} map: nothing to force\n")
+            return 1
     for path, mode, key in ((args.wide_lib, True, "forced"), (args.mid_lib, "mid", "mid_forced")):
         if path:
             name = path.stem
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(emit_library(src, name, wide=mode))
-            print(f"wrote {path} ({name}: {', '.join(LIB.get(key, {'rbad': ''}))} forced to 1)")
+            print(f"wrote {path} ({name}: {', '.join(LIB[key])} forced to fail)")
             return 0
     for path, kind in ((args.count_lib, "count"), (args.probe_lib, "probe")):
         if path:
@@ -891,7 +1056,8 @@ def main() -> int:
                 return 1
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(emit_library(src, path.stem, wide=args.forced, **{kind: names}))
-            print(f"wrote {path} ({path.stem}: {kind} on {', '.join(names)}{', rbad forced to 1' if args.forced else ''})")
+            print(f"wrote {path} ({path.stem}: {kind} on {', '.join(names)}"
+                  f"{', ' + ', '.join(LIB['forced']) + ' forced to fail' if args.forced else ''})")
     if args.count_lib or args.probe_lib:
         return 0
     outputs = emit_all(src)

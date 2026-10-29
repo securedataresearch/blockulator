@@ -3,6 +3,9 @@ pragma solidity ^0.8.24;
 
 import {FP127Harness} from "../base/FP127Harness.sol";
 import {IFP127} from "../../contracts/src/fp127/IFP127.sol";
+import {IFP127E} from "../../contracts/src/fp127/IFP127E.sol";
+import {IFP127H} from "../../contracts/src/fp127/IFP127H.sol";
+import {IFP127S} from "../../contracts/src/fp127/IFP127S.sol";
 import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
 
 /// @title Behaviour
@@ -47,19 +50,19 @@ contract Behaviour is FP127Harness {
     }
 
     function test_transcendental_known() public view {
-        int256 e = obj.exp(ONE);
+        int256 e = objE.exp(ONE);
         assertLe(_absd(e, E_RAW), 4, "e");
-        assertEq(obj.exp(0), ONE);
-        assertEq(obj.exp2(10 * ONE), 1024 * ONE);
-        assertEq(obj.exp2(-ONE), ONE / 2);
-        assertEq(obj.exp2(0), ONE);
-        assertLe(_absd(obj.exp10(2 * ONE), 100 * ONE), 256, "exp10(2) via log2(10) is not exact");
-        assertEq(obj.log2(1024 * ONE), 10 * ONE);
-        assertEq(obj.log2(ONE / 4), -2 * ONE);
-        assertEq(obj.log2(ONE), 0);
-        assertEq(obj.ln(ONE), 0);
-        assertLe(_absd(obj.ln(e), ONE), 8, "ln e");
-        assertLe(_absd(obj.log10(1000 * ONE), 3 * ONE), 8, "log10 1000");
+        assertEq(objE.exp(0), ONE);
+        assertEq(objE.exp2(10 * ONE), 1024 * ONE);
+        assertEq(objE.exp2(-ONE), ONE / 2);
+        assertEq(objE.exp2(0), ONE);
+        assertLe(_absd(objE.exp10(2 * ONE), 100 * ONE), 256, "exp10(2) via log2(10) is not exact");
+        assertEq(objE.log2(1024 * ONE), 10 * ONE);
+        assertEq(objE.log2(ONE / 4), -2 * ONE);
+        assertEq(objE.log2(ONE), 0);
+        assertEq(objE.ln(ONE), 0);
+        assertLe(_absd(objE.ln(e), ONE), 8, "ln e");
+        assertLe(_absd(objE.log10(1000 * ONE), 3 * ONE), 8, "log10 1000");
         assertEq(obj.sqrt(4 * ONE), 2 * ONE);
         assertEq(obj.sqrt(ONE / 4), ONE / 2);
         assertEq(obj.sqrt(0), 0);
@@ -81,9 +84,9 @@ contract Behaviour is FP127Harness {
         assertEq(obj.factorial(0), ONE);
         assertEq(FP127Lib.PI, 1069028584064966747859680373161870783301, "PI is pi * 2^128 to the nearest integer");
         assertEq(obj.factorial(33 * ONE), int256(8683317618811886495518194401280000000) * ONE);
-        assertEq(obj.log2Up(5 * ONE), 3 * ONE);
-        assertEq(obj.log2Up(8 * ONE), 3 * ONE);
-        assertEq(obj.log2Up(ONE / 3), -1 * ONE);
+        assertEq(objE.log2Up(5 * ONE), 3 * ONE);
+        assertEq(objE.log2Up(8 * ONE), 3 * ONE);
+        assertEq(objE.log2Up(ONE / 3), -1 * ONE);
     }
 
     function test_selection_known() public view {
@@ -106,13 +109,13 @@ contract Behaviour is FP127Harness {
     }
 
     function test_lambert_known() public view {
-        assertEq(obj.lambertW0(0), 0);
-        assertEq(obj.lambertW0(ONE), 0x91304d7c74b2ba5eafddaa6286dc28e1);
-        assertEq(obj.lambertW0(2 * ONE), 0xda445aab89e28ccbe8ac8e1abd5cd1db);
+        assertEq(objS.lambertW0(0), 0);
+        assertEq(objS.lambertW0(ONE), 0x91304d7c74b2ba5eafddaa6286dc28e1);
+        assertEq(objS.lambertW0(2 * ONE), 0xda445aab89e28ccbe8ac8e1abd5cd1db);
         // W(-1/4) = -0.35740295618138890306881110405590475...
-        assertLe(_absd(obj.lambertW0(-ONE / 4), -121617923873943470405355803408166885968), 16);
+        assertLe(_absd(objS.lambertW0(-ONE / 4), -121617923873943470405355803408166885968), 16);
         // W(e) = 1 exactly
-        assertLe(_absd(obj.lambertW0(E_RAW), ONE), 16);
+        assertLe(_absd(objS.lambertW0(E_RAW), ONE), 16);
     }
 
     int256 constant NEG_INV_E = -int256(0x5e2d58d8b3bcdf1abadec7829054f90d);
@@ -121,24 +124,24 @@ contract Behaviour is FP127Harness {
         // -INV_E_RAW is floor(2^128 / e) negated, a fraction of an ULP inside
         // the domain, where W = -1 - sqrt(2 e d) is about -1 - 2^-63. Both
         // branches carry ~63 bits there (infinite slope), so compare loosely.
-        assertLe(_absd(obj.lambertWm1(NEG_INV_E), -ONE), ONE >> 60);
+        assertLe(_absd(objS.lambertWm1(NEG_INV_E), -ONE), ONE >> 60);
         // W_{-1}(-2 e^-2) = -2, W_{-1}(-3 e^-3) = -3
-        int256 x2 = obj.mul(-2 * ONE, obj.exp(-2 * ONE));
-        assertLe(_absd(obj.lambertWm1(x2), -2 * ONE), 16);
-        int256 x3 = obj.mul(-3 * ONE, obj.exp(-3 * ONE));
-        assertLe(_absd(obj.lambertWm1(x3), -3 * ONE), 16);
+        int256 x2 = obj.mul(-2 * ONE, objE.exp(-2 * ONE));
+        assertLe(_absd(objS.lambertWm1(x2), -2 * ONE), 16);
+        int256 x3 = obj.mul(-3 * ONE, objE.exp(-3 * ONE));
+        assertLe(_absd(objS.lambertWm1(x3), -3 * ONE), 16);
         // the smallest negative input is still in the domain
-        int256 wmin = obj.lambertWm1(-1);
+        int256 wmin = objS.lambertWm1(-1);
         assertLt(wmin, -93 * ONE);
         assertGt(wmin, -94 * ONE);
     }
 
     function test_lambertm1_domain() public view {
-        _expectRevert(abi.encodeCall(IFP127.lambertWm1, (0)), IFP127.OutOfRange.selector, "lambertWm1(0)");
-        _expectRevert(abi.encodeCall(IFP127.lambertWm1, (ONE)), IFP127.OutOfRange.selector, "lambertWm1(1)");
-        _expectRevert(abi.encodeCall(IFP127.lambertWm1, (MAX)), IFP127.OutOfRange.selector, "lambertWm1(MAX)");
-        _expectRevert(abi.encodeCall(IFP127.lambertWm1, (NEG_INV_E - 1)), IFP127.OutOfRange.selector, "lambertWm1(-1/e - 1)");
-        _expectRevert(abi.encodeCall(IFP127.lambertWm1, (MIN)), IFP127.OutOfRange.selector, "lambertWm1(MIN)");
+        _expectRevert(abi.encodeCall(IFP127S.lambertWm1, (0)), IFP127.OutOfRange.selector, "lambertWm1(0)");
+        _expectRevert(abi.encodeCall(IFP127S.lambertWm1, (ONE)), IFP127.OutOfRange.selector, "lambertWm1(1)");
+        _expectRevert(abi.encodeCall(IFP127S.lambertWm1, (MAX)), IFP127.OutOfRange.selector, "lambertWm1(MAX)");
+        _expectRevert(abi.encodeCall(IFP127S.lambertWm1, (NEG_INV_E - 1)), IFP127.OutOfRange.selector, "lambertWm1(-1/e - 1)");
+        _expectRevert(abi.encodeCall(IFP127S.lambertWm1, (MIN)), IFP127.OutOfRange.selector, "lambertWm1(MIN)");
     }
 
     // ------------------------------------------------------------------
@@ -154,9 +157,9 @@ contract Behaviour is FP127Harness {
         x = bound(x, ONE / 1000, 1000 * ONE);
         uint8 k = which % 7;
         int256 got;
-        if (k == 0) { assertEq(obj.pow(x, ONE), x, "y = 1"); }
+        if (k == 0) { assertEq(objE.pow(x, ONE), x, "y = 1"); }
         else if (k == 1) {
-            got = obj.pow(x, 2 * ONE);
+            got = objE.pow(x, 2 * ONE);
             uint256 lo;
             unchecked { lo = uint256(x) * uint256(x); }
             assertEq(got, obj.mul(x, x) + int256((lo >> 127) & 1), "y = 2 is the rounded square");
@@ -167,24 +170,24 @@ contract Behaviour is FP127Harness {
             else if (k == 4) { y = ONE / 2; direct = obj.sqrt(x); }
             else if (k == 5) { y = ONE / 4; direct = obj.sqrt(obj.sqrt(x)); }
             else { y = -ONE; direct = obj.inv(x); }
-            got = obj.pow(x, y);
+            got = objE.pow(x, y);
             assertLe(_absd(got, direct), (_absd(direct, 0) >> 100) + 4, "general path within the composite's error");
         }
         int256 ysm = bound(int256(uint256(which)), -30 * ONE, 30 * ONE);
-        assertEq(obj.pow(2 * ONE, ysm), obj.exp2(ysm), "x=2 shortcut");
-        assertEq(obj.pow(10 * ONE, ysm), obj.exp10(ysm), "x=10 shortcut");
+        assertEq(objE.pow(2 * ONE, ysm), objE.exp2(ysm), "x=2 shortcut");
+        assertEq(objE.pow(10 * ONE, ysm), objE.exp10(ysm), "x=10 shortcut");
     }
 
     function test_pow_edge_cases() public view {
-        assertEq(obj.pow(0, 0), ONE);
-        assertEq(obj.pow(0, 5 * ONE), 0);
-        assertEq(obj.pow(ONE, 123 * ONE), ONE);
-        assertEq(obj.pow(3 * ONE, 2 * ONE), 9 * ONE);
-        assertEq(obj.pow(2 * ONE, 10 * ONE), 1024 * ONE);
-        assertEq(obj.pow(10 * ONE, 2 * ONE), 100 * ONE);
-        assertLe(_absd(obj.pow(27 * ONE, ONE / 2), obj.sqrt(27 * ONE)), 1);
-        assertEq(obj.pow(4 * ONE, ONE / 2), 2 * ONE, "exact square root");
-        assertEq(obj.pow(9 * ONE, ONE / 2), 3 * ONE, "exact square root through the general path");
+        assertEq(objE.pow(0, 0), ONE);
+        assertEq(objE.pow(0, 5 * ONE), 0);
+        assertEq(objE.pow(ONE, 123 * ONE), ONE);
+        assertEq(objE.pow(3 * ONE, 2 * ONE), 9 * ONE);
+        assertEq(objE.pow(2 * ONE, 10 * ONE), 1024 * ONE);
+        assertEq(objE.pow(10 * ONE, 2 * ONE), 100 * ONE);
+        assertLe(_absd(objE.pow(27 * ONE, ONE / 2), obj.sqrt(27 * ONE)), 1);
+        assertEq(objE.pow(4 * ONE, ONE / 2), 2 * ONE, "exact square root");
+        assertEq(objE.pow(9 * ONE, ONE / 2), 3 * ONE, "exact square root through the general path");
     }
 
     function test_cbrt_shortcuts() public view {
@@ -201,8 +204,8 @@ contract Behaviour is FP127Harness {
     function test_log2_powers_of_two() public view {
         for (int256 k = -120; k <= 126; k += 3) {
             int256 x = k >= 0 ? ONE << uint256(k) : ONE >> uint256(-k);
-            assertEq(obj.log2(x), k * ONE);
-            assertEq(obj.log2Up(x), k * ONE);
+            assertEq(objE.log2(x), k * ONE);
+            assertEq(objE.log2Up(x), k * ONE);
         }
     }
 
@@ -238,7 +241,7 @@ contract Behaviour is FP127Harness {
 
     function testFuzz_prop_exp_ln(int256 x) public view {
         x = bound(x, ONE / 1000, 1000 * ONE);
-        int256 back = obj.exp(obj.ln(x));
+        int256 back = objE.exp(objE.ln(x));
         assertLe(_absd(back, x), (x >> 110) + 8);
     }
 
@@ -251,8 +254,8 @@ contract Behaviour is FP127Harness {
 
     function testFuzz_prop_lambertW0_inverse(int256 x) public view {
         x = bound(x, -int256(0x5e2d58d8b3bcdf1abadec7829054f90d) / 2, int256(1) << 160);
-        int256 w = obj.lambertW0(x);
-        int256 back = obj.mul(w, obj.exp(w));
+        int256 w = objS.lambertW0(x);
+        int256 back = obj.mul(w, objE.exp(w));
         int256 tol = (x < 0 ? -x : x) >> 112;
         assertLe(_absd(back, x), tol + 8);
     }
@@ -260,11 +263,11 @@ contract Behaviour is FP127Harness {
     /// On the secondary branch w + ln(-w) = ln(-x), w <= -1, and W_{-1} <= W_0.
     function testFuzz_prop_lambertWm1_inverse(int256 x) public view {
         x = bound(x, NEG_INV_E, -1);
-        int256 w = obj.lambertWm1(x);
+        int256 w = objS.lambertWm1(x);
         assertLe(w, -ONE + (ONE >> 60));
-        assertLe(w, obj.lambertW0(x) + (ONE >> 60));
-        int256 lhs = w + obj.ln(-w);
-        int256 rhs = obj.ln(-x);
+        assertLe(w, objS.lambertW0(x) + (ONE >> 60));
+        int256 lhs = w + objE.ln(-w);
+        int256 rhs = objE.ln(-x);
         int256 tol = (w < 0 ? -w : w) >> 100;
         assertLe(_absd(lhs, rhs), tol + 8);
     }
@@ -340,26 +343,26 @@ contract Behaviour is FP127Harness {
     // ------------------------------------------------------------------
 
     function test_powu_known() public view {
-        assertEq(obj.powu(2 * ONE, 10 * ONE), 1024 * ONE, "2^10 exact");
-        assertEq(obj.powu(2 * ONE, -3 * ONE), ONE / 8, "2^-3 exact");
-        assertEq(obj.powu(-3 * ONE, 3 * ONE), -27 * ONE, "(-3)^3 exact");
-        assertEq(obj.powu(-3 * ONE, 2 * ONE), 9 * ONE, "(-3)^2 exact");
-        assertEq(obj.powu(ONE + ONE / 2, 2 * ONE), 2 * ONE + ONE / 4, "1.5^2 exact");
-        assertEq(obj.powu(ONE / 2, 200 * ONE), 0, "2^-200 is below the grid");
-        assertEq(obj.powu(2 * ONE, 126 * ONE), ONE << 126, "2^126 is the largest power of two");
-        assertEq(obj.powu(7 * ONE, 0), ONE, "n = 0");
-        assertEq(obj.powu(0, 0), ONE, "0^0 = 1");
-        assertEq(obj.powu(0, 5 * ONE), 0, "0^5");
-        assertEq(obj.powu(ONE, 1000000 * ONE), ONE, "1^n");
-        assertEq(obj.powu(-ONE, 1000001 * ONE), -ONE, "(-1)^odd");
-        assertEq(obj.powu(3 * ONE, 2 * ONE + ONE / 2), 9 * ONE, "the exponent is floored");
+        assertEq(objE.powu(2 * ONE, 10 * ONE), 1024 * ONE, "2^10 exact");
+        assertEq(objE.powu(2 * ONE, -3 * ONE), ONE / 8, "2^-3 exact");
+        assertEq(objE.powu(-3 * ONE, 3 * ONE), -27 * ONE, "(-3)^3 exact");
+        assertEq(objE.powu(-3 * ONE, 2 * ONE), 9 * ONE, "(-3)^2 exact");
+        assertEq(objE.powu(ONE + ONE / 2, 2 * ONE), 2 * ONE + ONE / 4, "1.5^2 exact");
+        assertEq(objE.powu(ONE / 2, 200 * ONE), 0, "2^-200 is below the grid");
+        assertEq(objE.powu(2 * ONE, 126 * ONE), ONE << 126, "2^126 is the largest power of two");
+        assertEq(objE.powu(7 * ONE, 0), ONE, "n = 0");
+        assertEq(objE.powu(0, 0), ONE, "0^0 = 1");
+        assertEq(objE.powu(0, 5 * ONE), 0, "0^5");
+        assertEq(objE.powu(ONE, 1000000 * ONE), ONE, "1^n");
+        assertEq(objE.powu(-ONE, 1000001 * ONE), -ONE, "(-1)^odd");
+        assertEq(objE.powu(3 * ONE, 2 * ONE + ONE / 2), 9 * ONE, "the exponent is floored");
         // 1.1^10 = 2.5937424601, a decimal that is not on the grid: within one ULP
         int256 b = ONE + ONE / 10;
         int256 ten = obj.mul(obj.mul(obj.mul(b, b), obj.mul(b, b)), obj.mul(obj.mul(b, b), obj.mul(obj.mul(b, b), obj.mul(b, b))));
-        assertLe(_absd(obj.powu(b, 10 * ONE), ten), 12, "1.1^10 against the mul chain");
-        _expectRevert(abi.encodeCall(IFP127.powu, (2 * ONE, 127 * ONE)), IFP127.Overflow.selector, "2^127");
-        _expectRevert(abi.encodeCall(IFP127.powu, (10 * ONE, 39 * ONE)), IFP127.Overflow.selector, "10^39");
-        _expectRevert(abi.encodeCall(IFP127.powu, (0, -ONE)), IFP127.DivisionByZero.selector, "0^-1");
+        assertLe(_absd(objE.powu(b, 10 * ONE), ten), 12, "1.1^10 against the mul chain");
+        _expectRevert(abi.encodeCall(IFP127E.powu, (2 * ONE, 127 * ONE)), IFP127.Overflow.selector, "2^127");
+        _expectRevert(abi.encodeCall(IFP127E.powu, (10 * ONE, 39 * ONE)), IFP127.Overflow.selector, "10^39");
+        _expectRevert(abi.encodeCall(IFP127E.powu, (0, -ONE)), IFP127.DivisionByZero.selector, "0^-1");
     }
 
     /// (1 + r)^n through the mantissa path against the daily compounding
@@ -370,101 +373,101 @@ contract Behaviour is FP127Harness {
         int256 b = ONE;
         for (uint256 i; i < 365; i++) b = obj.mul(b, g);
         // the loop floors 365 times; compound rounds once
-        assertLe(_absd(obj.compound(r, 365 * ONE), b), 400, "a year of daily compounding");
-        assertGe(obj.compound(r, 365 * ONE), b, "the floored loop sits below");
-        assertEq(obj.compound(0, 1000 * ONE), ONE, "zero rate");
-        assertEq(obj.compound(-ONE, 3 * ONE), 0, "rate -1 empties the balance");
-        _expectRevert(abi.encodeCall(IFP127.compound, (-ONE, -ONE)), IFP127.DivisionByZero.selector, "compound(-1, -1)");
-        _expectRevert(abi.encodeCall(IFP127.compound, (MAX, ONE)), IFP127.Overflow.selector, "1 + MAX");
+        assertLe(_absd(objE.compound(r, 365 * ONE), b), 400, "a year of daily compounding");
+        assertGe(objE.compound(r, 365 * ONE), b, "the floored loop sits below");
+        assertEq(objE.compound(0, 1000 * ONE), ONE, "zero rate");
+        assertEq(objE.compound(-ONE, 3 * ONE), 0, "rate -1 empties the balance");
+        _expectRevert(abi.encodeCall(IFP127E.compound, (-ONE, -ONE)), IFP127.DivisionByZero.selector, "compound(-1, -1)");
+        _expectRevert(abi.encodeCall(IFP127E.compound, (MAX, ONE)), IFP127.Overflow.selector, "1 + MAX");
     }
 
     function test_near_one_known() public view {
-        assertEq(obj.log1p(0), 0);
-        assertEq(obj.expm1(0), 0);
+        assertEq(objE.log1p(0), 0);
+        assertEq(objE.expm1(0), 0);
         // below 2^-64 the curvature is below the grid: log1p(x) = expm1(x) = x
-        assertEq(obj.expm1(1 << 60), 1 << 60, "expm1 of 2^-68");
-        assertLe(_absd(obj.log1p(1 << 60), 1 << 60), 1, "log1p of 2^-68");
-        assertEq(obj.log1p(ONE), obj.ln(2 * ONE), "log1p(1) = ln 2");
-        assertEq(obj.expm1(ONE), obj.exp(ONE) - ONE, "expm1(1) = e - 1");
-        assertEq(obj.expm1(-100 * ONE), -ONE, "expm1 far below");
-        _expectRevert(abi.encodeCall(IFP127.log1p, (-ONE)), IFP127.OutOfRange.selector, "log1p(-1)");
-        _expectRevert(abi.encodeCall(IFP127.log1p, (MIN)), IFP127.OutOfRange.selector, "log1p(MIN)");
-        _expectRevert(abi.encodeCall(IFP127.log1p, (MAX)), IFP127.Overflow.selector, "log1p(MAX)");
-        _expectRevert(abi.encodeCall(IFP127.expm1, (89 * ONE)), IFP127.Overflow.selector, "expm1(89)");
+        assertEq(objE.expm1(1 << 60), 1 << 60, "expm1 of 2^-68");
+        assertLe(_absd(objE.log1p(1 << 60), 1 << 60), 1, "log1p of 2^-68");
+        assertEq(objE.log1p(ONE), objE.ln(2 * ONE), "log1p(1) = ln 2");
+        assertEq(objE.expm1(ONE), objE.exp(ONE) - ONE, "expm1(1) = e - 1");
+        assertEq(objE.expm1(-100 * ONE), -ONE, "expm1 far below");
+        _expectRevert(abi.encodeCall(IFP127E.log1p, (-ONE)), IFP127.OutOfRange.selector, "log1p(-1)");
+        _expectRevert(abi.encodeCall(IFP127E.log1p, (MIN)), IFP127.OutOfRange.selector, "log1p(MIN)");
+        _expectRevert(abi.encodeCall(IFP127E.log1p, (MAX)), IFP127.Overflow.selector, "log1p(MAX)");
+        _expectRevert(abi.encodeCall(IFP127E.expm1, (89 * ONE)), IFP127.Overflow.selector, "expm1(89)");
     }
 
     function test_hyperbolic_known() public view {
-        assertEq(obj.sinh(0), 0);
-        assertEq(obj.cosh(0), ONE);
-        assertEq(obj.tanh(0), 0);
-        assertEq(obj.atanh(0), 0);
-        assertEq(obj.tanh(50 * ONE), ONE, "tanh saturates");
-        assertEq(obj.tanh(-50 * ONE), -ONE);
-        assertEq(obj.tanh(-ONE / 10), -obj.tanh(ONE / 10), "tanh is odd");
-        assertEq(obj.sinh(-3 * ONE), -obj.sinh(3 * ONE), "sinh is odd");
-        assertEq(obj.cosh(-3 * ONE), obj.cosh(3 * ONE), "cosh is even");
+        assertEq(objH.sinh(0), 0);
+        assertEq(objH.cosh(0), ONE);
+        assertEq(objH.tanh(0), 0);
+        assertEq(objH.atanh(0), 0);
+        assertEq(objH.tanh(50 * ONE), ONE, "tanh saturates");
+        assertEq(objH.tanh(-50 * ONE), -ONE);
+        assertEq(objH.tanh(-ONE / 10), -objH.tanh(ONE / 10), "tanh is odd");
+        assertEq(objH.sinh(-3 * ONE), -objH.sinh(3 * ONE), "sinh is odd");
+        assertEq(objH.cosh(-3 * ONE), objH.cosh(3 * ONE), "cosh is even");
         // atanh(1/2) = ln(3) / 2
-        assertLe(_absd(obj.atanh(ONE / 2), obj.ln(3 * ONE) / 2), 2);
+        assertLe(_absd(objH.atanh(ONE / 2), objE.ln(3 * ONE) / 2), 2);
         // cosh(88) is the largest the format holds
-        assertGt(obj.cosh(88 * ONE), 0);
-        _expectRevert(abi.encodeCall(IFP127.sinh, (89 * ONE)), IFP127.Overflow.selector, "sinh(89)");
-        _expectRevert(abi.encodeCall(IFP127.cosh, (-89 * ONE)), IFP127.Overflow.selector, "cosh(-89)");
-        _expectRevert(abi.encodeCall(IFP127.atanh, (ONE)), IFP127.OutOfRange.selector, "atanh(1)");
-        _expectRevert(abi.encodeCall(IFP127.atanh, (-ONE)), IFP127.OutOfRange.selector, "atanh(-1)");
-        _expectRevert(abi.encodeCall(IFP127.atanh, (MAX)), IFP127.OutOfRange.selector, "atanh(MAX)");
+        assertGt(objH.cosh(88 * ONE), 0);
+        _expectRevert(abi.encodeCall(IFP127H.sinh, (89 * ONE)), IFP127.Overflow.selector, "sinh(89)");
+        _expectRevert(abi.encodeCall(IFP127H.cosh, (-89 * ONE)), IFP127.Overflow.selector, "cosh(-89)");
+        _expectRevert(abi.encodeCall(IFP127H.atanh, (ONE)), IFP127.OutOfRange.selector, "atanh(1)");
+        _expectRevert(abi.encodeCall(IFP127H.atanh, (-ONE)), IFP127.OutOfRange.selector, "atanh(-1)");
+        _expectRevert(abi.encodeCall(IFP127H.atanh, (MAX)), IFP127.OutOfRange.selector, "atanh(MAX)");
     }
 
     function test_erf_known() public view {
-        assertEq(obj.erf(0), 0);
-        assertEq(obj.erfc(0), ONE);
-        assertEq(obj.normCdf(0), ONE / 2);
+        assertEq(objN.erf(0), 0);
+        assertEq(objN.erfc(0), ONE);
+        assertEq(objN.normCdf(0), ONE / 2);
         // erf(1) = 0.84270079294971486934122063508260925...
-        assertLe(_absd(obj.erf(ONE), 286756220431080668183289216208796350931), 2);
-        assertEq(obj.erf(-ONE), -obj.erf(ONE), "erf is odd");
-        assertEq(obj.erf(10 * ONE), ONE, "erf saturates at 10");
-        assertEq(obj.erf(-10 * ONE), -ONE);
-        assertEq(obj.erfc(10 * ONE), 0, "erfc(10) is below the grid");
-        assertEq(obj.erfc(-10 * ONE), 2 * ONE);
-        assertEq(obj.erfc(93 * ONE / 10), 1, "erfc(9.3) = 1.65e-39 is one ULP");
-        assertEq(obj.erfc(94 * ONE / 10), 0, "erfc(9.4) rounds to zero");
+        assertLe(_absd(objN.erf(ONE), 286756220431080668183289216208796350931), 2);
+        assertEq(objN.erf(-ONE), -objN.erf(ONE), "erf is odd");
+        assertEq(objN.erf(10 * ONE), ONE, "erf saturates at 10");
+        assertEq(objN.erf(-10 * ONE), -ONE);
+        assertEq(objN.erfc(10 * ONE), 0, "erfc(10) is below the grid");
+        assertEq(objN.erfc(-10 * ONE), 2 * ONE);
+        assertEq(objN.erfc(93 * ONE / 10), 1, "erfc(9.3) = 1.65e-39 is one ULP");
+        assertEq(objN.erfc(94 * ONE / 10), 0, "erfc(9.4) rounds to zero");
         // the tails of the normal distribution, where an 18-decimal N(d) is zero
-        assertEq(obj.normCdf(-13 * ONE), 2, "Phi(-13) = 6.1e-39 is two ULPs");
-        assertEq(obj.normCdf(-14 * ONE), 0, "Phi(-14) rounds to zero");
-        assertEq(obj.normCdf(14 * ONE), ONE);
+        assertEq(objN.normCdf(-13 * ONE), 2, "Phi(-13) = 6.1e-39 is two ULPs");
+        assertEq(objN.normCdf(-14 * ONE), 0, "Phi(-14) rounds to zero");
+        assertEq(objN.normCdf(14 * ONE), ONE);
         // Phi(-9) = 1.1285884059538405e-19
-        assertLe(_absd(obj.normCdf(-9 * ONE), 38403873405750185486), 2);
+        assertLe(_absd(objN.normCdf(-9 * ONE), 38403873405750185486), 2);
         // the series/fraction seam at 4 and the scaled seam of normCdf
-        assertLe(_absd(obj.erf(4 * ONE + 1), obj.erf(4 * ONE)), 2, "continuous across x = 4");
-        assertLe(_absd(obj.erfc(4 * ONE + 1), obj.erfc(4 * ONE)), 2);
+        assertLe(_absd(objN.erf(4 * ONE + 1), objN.erf(4 * ONE)), 2, "continuous across x = 4");
+        assertLe(_absd(objN.erfc(4 * ONE + 1), objN.erfc(4 * ONE)), 2);
     }
 
     function testFuzz_prop_erf_complement(int256 x) public view {
         x = bound(x, -12 * ONE, 12 * ONE);
-        assertLe(_absd(obj.erf(x) + obj.erfc(x), ONE), 2, "erf + erfc = 1");
-        assertLe(_absd(obj.normCdf(x) + obj.normCdf(-x), ONE), 2, "Phi(x) + Phi(-x) = 1");
-        assertGe(obj.erfc(x), 0);
-        assertLe(obj.normCdf(x), ONE);
+        assertLe(_absd(objN.erf(x) + objN.erfc(x), ONE), 2, "erf + erfc = 1");
+        assertLe(_absd(objN.normCdf(x) + objN.normCdf(-x), ONE), 2, "Phi(x) + Phi(-x) = 1");
+        assertGe(objN.erfc(x), 0);
+        assertLe(objN.normCdf(x), ONE);
     }
 
     function testFuzz_prop_near_one(int256 x) public view {
         x = bound(x, -ONE, ONE);
-        assertLe(_absd(obj.expm1(x), obj.exp(x) - ONE), 2, "expm1 against exp");
-        if (x > -ONE) assertEq(obj.log1p(x), obj.ln(ONE + x), "log1p is ln(1 + x)");
+        assertLe(_absd(objE.expm1(x), objE.exp(x) - ONE), 2, "expm1 against exp");
+        if (x > -ONE) assertEq(objE.log1p(x), objE.ln(ONE + x), "log1p is ln(1 + x)");
         // the round trip holds to the grid
-        assertLe(_absd(obj.log1p(obj.expm1(x)), x), 2, "log1p(expm1(x)) = x");
+        assertLe(_absd(objE.log1p(objE.expm1(x)), x), 2, "log1p(expm1(x)) = x");
     }
 
     function testFuzz_prop_hyperbolic(int256 x) public view {
         x = bound(x, -40 * ONE, 40 * ONE);
-        int256 s = obj.sinh(x);
-        int256 c = obj.cosh(x);
+        int256 s = objH.sinh(x);
+        int256 c = objH.cosh(x);
         // cosh^2 - sinh^2 = 1, with the products' own rounding allowed for
         int256 tol = (c >> 120) + 8;
         assertLe(_absd(obj.mul(c, c) - obj.mul(s, s), ONE), tol, "cosh^2 - sinh^2");
-        assertLe(_absd(obj.tanh(x), obj.div(s, c)), 4, "tanh = sinh / cosh");
-        int256 t = obj.tanh(x);
+        assertLe(_absd(objH.tanh(x), obj.div(s, c)), 4, "tanh = sinh / cosh");
+        int256 t = objH.tanh(x);
         if (t > -ONE && t < ONE) {
-            int256 back = obj.atanh(t);
+            int256 back = objH.atanh(t);
             // atanh amplifies one ULP of tanh by 1 / (1 - tanh^2) = cosh^2
             int256 tol2 = obj.mul(c, c) >> 120;
             assertLe(_absd(back, x), tol2 + 4, "atanh(tanh(x)) = x");
@@ -474,7 +477,7 @@ contract Behaviour is FP127Harness {
     function testFuzz_prop_powu_squaring(int256 x, uint8 n) public view {
         x = bound(x, -4 * ONE, 4 * ONE);
         uint256 k = uint256(n) % 12;
-        int256 p = obj.powu(x, int256(k) * ONE);
+        int256 p = objE.powu(x, int256(k) * ONE);
         int256 q = ONE;
         for (uint256 i; i < k; i++) q = obj.mul(q, x);
         // k - 1 floors in the chain against one rounding;

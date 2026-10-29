@@ -2,10 +2,11 @@
 //
 // This file is the single source of truth. It contains only Yul function
 // definitions. scripts/fp127/gen.py reads it and emits:
-//   FP127.yul      a deployable object with a selector dispatcher
+//   FP127.yul      a deployable object with a selector dispatcher, and one
+//                  more per `@object` (FP127E.yul, FP127H.yul, ...)
 //   FP127Lib.sol   a Solidity library with one assembly block per export
-//   IFP127.sol     the interface of the deployed object
-//   abi.json       the ABI of the deployed object
+//   IFP127.sol     the interface of each deployed object (IFP127E.sol, ...)
+//   abi.json       the ABI of each deployed object (abiE.json, ...)
 //
 // Rules (enforced by the generator):
 //   * Top level holds only comments and `function` definitions.
@@ -43,13 +44,40 @@
 //                bound straddles a rounding midpoint; powu and compound do
 //                the same with a two-word mantissa
 //
+// The tie rule. To nearest is floor(v + 1/2) on the grid, ties toward +inf
+// (round64, rnd192, pow2r): ties up. powu and compound, cbrt and the odd
+// sinh, tanh and erf round the magnitude and apply the sign, so their ties
+// go away from zero (scripts/fp127/oracle.py rounds each op the same way).
+// rbad127 is the rounding test under this rule.
+//
 // Guard policy: every op reverts where the Huff wrapped, returned a sentinel
 // (MAX_UINT256 / 0) or read garbage. Underflow of exp/exp2 to 0 is kept,
 // because 0 is the correct rounded answer there.
+//
+// Deployed objects (Blockulator 3.0), one idea each, as FP19's; the inline
+// library holds every export. An untagged export is in FP127, the number:
+// arithmetic and its directed forms, conversions, sqrt, cbrt, gavg, hypot,
+// inv, factorial and the small ops. `@object FP127E` is the elementary
+// functions on the exp/log kernels (exp, exp2, exp10, expm1, ln, log2,
+// log10, log2Up, log1p, pow, powu, compound); `@object FP127H` the
+// hyperbolic functions (sinh, cosh, tanh, atanh); `@object FP127N` the
+// normal distribution (erf, erfc, normCdf); `@object FP127S` Lambert W
+// (lambertW0, lambertWm1). Each object carries only its exports and their
+// callees, so a kernel two objects share (expk, log2m) is copied into each:
+// bytes, not gas. Up to v8 everything was one object; the split leaves room
+// in each for the wide second stage of its rounding tests.
 
 /// @error Overflow() 0x35278d12
 /// @error DivisionByZero() 0x23d359a3
 /// @error OutOfRange() 0x7db3aba7
+
+// FP19's wide kernels, two words at 2^-497 to 2^-510 and already tested by
+// FP19's forced sweeps, for the second stage behind each rounding test. The
+// generator takes each named function of FP19.yul.src and every function it
+// calls, renamed w19_<name> (w19_wexpm1, w19_msb, ...), so nothing collides
+// with this file's own helpers; an import enters an object's bytes only when
+// one of its exports calls it (scripts/fp127/gen.py, "Imports").
+/// @import fp19 as w19: wexp, wexpm1, wlnw, wmul, wrecip, wln1ps, em1w, erfw, lwfix
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1051,6 +1079,7 @@ function pow2t(t, ay) -> r, ok {
     r := shr(64, add(v, 0x8000000000000000))
 }
 
+/// @object FP127E
 /// @export exp2(int256 x) returns (int256 r)
 /// @domain x < 127; returns 0 below -129
 /// @reverts Overflow() for x >= 127
@@ -1073,6 +1102,7 @@ function fp127_exp2(x) -> r {
     r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
 }
 
+/// @object FP127E
 /// @export exp(int256 x) returns (int256 r)
 /// @domain x <= 88; returns 0 below -90
 /// @reverts Overflow() for x > 88
@@ -1096,6 +1126,7 @@ function fp127_exp(x) -> r {
     r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
 }
 
+/// @object FP127E
 /// @export exp10(int256 x) returns (int256 r)
 /// @domain 10^x < 2^127 (x below about 38.23)
 /// @reverts Overflow() above that
@@ -1345,6 +1376,48 @@ function nearmid(v) -> b {
     b := lt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), 0x800000000000)
 }
 
+/// The rounding test of a correctly rounded op: 1 when a value V within err
+/// of v may round to another word than v does. v carries g guard bits below
+/// the 2^-128 grid (1 <= g <= 256): its low g bits are V's offset above the
+/// grid point floor(v) in units of 2^-(128 + g), v may be two's complement
+/// (a signed one-word value at 2^-192 is g = 64), and for a two-word value
+/// (lh, ll) at 2^-384 v is ll and g = 256. err is in units of v's last bit.
+/// The rounding is FP127's: to nearest, ties up, floor(v 2^-g + 1/2) (an op
+/// that rounds the magnitude passes the magnitude, and its ties go away from
+/// zero). With half = 2^(g - 1), the low bits at or above half round up, so
+/// the word can change when they are within err below half (v rounds up and
+/// V may be under the midpoint: low - half < err) or at most err above it
+/// (v rounds down and V may reach the midpoint, which rounds up:
+/// half - low <= err); always when err reaches half, as V may then cross the
+/// next midpoint. A v exactly on the midpoint with err = 0 is not bad: it is
+/// the tie, and rounds up.
+function rbad127(v, g, err) -> b {
+    let half := shl(sub(g, 1), 1)
+    if iszero(lt(err, half)) {
+        b := 1
+        leave
+    }
+    let low := and(v, sub(shl(g, 1), 1))
+    switch lt(low, half)
+    case 1 { b := iszero(gt(sub(half, low), err)) }
+    default { b := lt(sub(low, half), err) }
+}
+
+/// A middle stage's rounding test: rbad127's body under its own name, so
+/// make sweep can force a fast path's test and keep this one (gen.py's
+/// mid_forced), and count the two apart.
+function rbadm127(v, g, err) -> b {
+    let half := shl(sub(g, 1), 1)
+    if iszero(lt(err, half)) {
+        b := 1
+        leave
+    }
+    let low := and(v, sub(shl(g, 1), 1))
+    switch lt(low, half)
+    case 1 { b := iszero(gt(sub(half, low), err)) }
+    default { b := lt(sub(low, half), err) }
+}
+
 /// log2(x) for x > 0 as a signed 512-bit value at 2^-384, (lh, ll): lh is
 /// the 127.128 word, ll the 256 bits below it. One Newton step from the
 /// one-word kernel: m in [1, 2) the mantissa, y0 = log2m(m) (2^-150) and
@@ -1388,6 +1461,7 @@ function x384mul(lh, ll, c) -> r {
     r := add(ph, shr(255, pl))
 }
 
+/// @object FP127E
 /// @export log2(int256 x) returns (int256 r)
 /// @domain x > 0
 /// @reverts OutOfRange() for x <= 0
@@ -1416,6 +1490,7 @@ function fp127_log2(x) -> r {
     r := round64(v)
 }
 
+/// @object FP127E
 /// @export ln(int256 x) returns (int256 r)
 /// @domain x > 0
 /// @reverts OutOfRange() for x <= 0
@@ -1445,6 +1520,7 @@ function fp127_ln(x) -> r {
     r := round64(v)
 }
 
+/// @object FP127E
 /// @export log10(int256 x) returns (int256 r)
 /// @domain x > 0
 /// @reverts OutOfRange() for x <= 0
@@ -1479,6 +1555,7 @@ function lnf(x) -> r {
     r := round64(mulg(log2g(x), 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e))
 }
 
+/// @object FP127E
 /// @export log2Up(int256 x) returns (int256 r)
 /// @domain x > 0
 /// @reverts OutOfRange() for x <= 0
@@ -1557,6 +1634,7 @@ function sqrn(x) -> r {
     if slt(r, 0) { rev(0x35278d12) }
 }
 
+/// @object FP127E
 /// @export pow(int256 x, int256 y) returns (int256 r)
 /// @domain x >= 0
 /// @reverts OutOfRange() for x < 0; Overflow() when the result does not fit
@@ -1612,6 +1690,7 @@ function fp127_pow(x, y) -> r {
     }
 }
 
+/// @object FP127E
 /// @export powu(int256 x, int256 n) returns (int256 r)
 /// @domain any x, any integer n = floor(n); the result must fit
 /// @reverts Overflow() when x^n does not fit; DivisionByZero() for 0^n with n < 0
@@ -1776,6 +1855,7 @@ function mant(a, b) -> m, c {
     if iszero(c) { m := or(shl(1, p1), shr(255, p0)) }
 }
 
+/// @object FP127E
 /// @export compound(int256 rate, int256 n) returns (int256 r)
 /// @domain rate > -1 and 1 + rate fits; any integer n = floor(n)
 /// @reverts Overflow() when 1 + rate or the result does not fit; DivisionByZero() for rate == -1 with n < 0
@@ -2516,6 +2596,7 @@ function lwq(x) -> q {
     q := or(shl(130, ph), shr(126, pl))
 }
 
+/// @object FP127S
 /// @export lambertW0(int256 x) returns (int256 r)
 /// @domain x >= -1/e
 /// @reverts OutOfRange() below -1/e
@@ -2573,6 +2654,7 @@ function fp127_lambertW0(x) -> r {
     r := lwfin(x, lwfast(x, w))
 }
 
+/// @object FP127S
 /// @export lambertWm1(int256 x) returns (int256 r)
 /// @domain -1/e <= x < 0
 /// @reverts OutOfRange() outside that
@@ -2678,6 +2760,7 @@ function einvhalf(n, sh) -> v {
 // Near one: log1p and expm1
 // ---------------------------------------------------------------------------
 
+/// @object FP127E
 /// @export log1p(int256 x) returns (int256 r)
 /// @domain x > -1
 /// @reverts OutOfRange() at or below -1; Overflow() if 1 + x does not fit
@@ -2690,6 +2773,7 @@ function fp127_log1p(x) -> r {
     r := fp127_ln(fp127_add(0x100000000000000000000000000000000, x))
 }
 
+/// @object FP127E
 /// @export expm1(int256 x) returns (int256 r)
 /// @domain x <= 88; returns -1 below -90
 /// @reverts Overflow() for x > 88
@@ -2722,6 +2806,7 @@ function fp127_expm1(x) -> r {
 // Hyperbolic
 // ---------------------------------------------------------------------------
 
+/// @object FP127H
 /// @export sinh(int256 x) returns (int256 r)
 /// @domain |x| <= 88
 /// @reverts Overflow() beyond that
@@ -2748,6 +2833,7 @@ function fp127_sinh(x) -> r {
     if slt(x, 0) { r := sub(0, r) }
 }
 
+/// @object FP127H
 /// @export cosh(int256 x) returns (int256 r)
 /// @domain |x| <= 88
 /// @reverts Overflow() beyond that
@@ -2773,6 +2859,7 @@ function fp127_cosh(x) -> r {
     r := rnd192(add(vh, lt(l, vl)), l)
 }
 
+/// @object FP127H
 /// @export tanh(int256 x) returns (int256 r)
 /// @domain any x
 /// @reverts never
@@ -2815,6 +2902,7 @@ function fp127_tanh(x) -> r {
     if slt(x, 0) { r := sub(0, r) }
 }
 
+/// @object FP127H
 /// @export atanh(int256 x) returns (int256 r)
 /// @domain |x| < 1
 /// @reverts OutOfRange() at or beyond +-1
@@ -3020,6 +3108,7 @@ function erfct(xg) -> v {
     v := mulg(expg(sub(0, mulg(xg, xg))), p)
 }
 
+/// @object FP127N
 /// @export erf(int256 x) returns (int256 r)
 /// @domain any x
 /// @reverts never
@@ -3042,6 +3131,7 @@ function fp127_erf(x) -> r {
     if slt(x, 0) { r := sub(0, r) }
 }
 
+/// @object FP127N
 /// @export erfc(int256 x) returns (int256 r)
 /// @domain any x
 /// @reverts never
@@ -3064,6 +3154,7 @@ function fp127_erfc(x) -> r {
     r := round64(v)
 }
 
+/// @object FP127N
 /// @export normCdf(int256 x) returns (int256 r)
 /// @domain any x
 /// @reverts never

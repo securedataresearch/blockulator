@@ -21,6 +21,10 @@ import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
 ///         the object's own call and dispatch cost per selector position.
 contract ViaIrBench is Test {
     address internal fp127;
+    address internal fp127e;
+    address internal fp127h;
+    address internal fp127n;
+    address internal fp127s;
     address internal fp19;
     address internal fp19e;
     address internal fp19h;
@@ -30,6 +34,10 @@ contract ViaIrBench is Test {
 
     function setUp() public {
         fp127 = _deploy("out/FP127.yul/FP127.json");
+        fp127e = _deploy("out/FP127E.yul/FP127E.json");
+        fp127h = _deploy("out/FP127H.yul/FP127H.json");
+        fp127n = _deploy("out/FP127N.yul/FP127N.json");
+        fp127s = _deploy("out/FP127S.yul/FP127S.json");
         fp19 = _deploy("out/FP19.yul/FP19.json");
         fp19e = _deploy("out/FP19E.yul/FP19E.json");
         fp19h = _deploy("out/FP19H.yul/FP19H.json");
@@ -134,12 +142,23 @@ contract ViaIrBench is Test {
     }
 
     function _one(bool is127, string memory op, uint256 i, int256 x, int256 y, bool two) internal view {
-        address t = is127 ? fp127 : _obj19(op);
+        address t = is127 ? _obj127(op) : _obj19(op);
         bytes memory data = two ? abi.encodeWithSignature(string.concat(op, "(int256,int256)"), x, y)
                                 : abi.encodeWithSignature(string.concat(op, "(int256)"), x);
         string memory lib = is127 ? "fp127" : "fp19";
         _emit(lib, op, i, "inline", _inline(is127, bytes32(bytes(op)), x, y));
         _emit(lib, op, i, "object", _object(t, data));
+    }
+
+    function _obj127(string memory op) internal view returns (address) {
+        bytes32 h = keccak256(bytes(op));
+        if (h == keccak256("erf") || h == keccak256("erfc") || h == keccak256("normCdf")) return fp127n;
+        if (h == keccak256("lambertW0") || h == keccak256("lambertWm1")) return fp127s;
+        if (h == keccak256("sinh") || h == keccak256("cosh") || h == keccak256("tanh") || h == keccak256("atanh")) return fp127h;
+        if (h == keccak256("exp") || h == keccak256("exp2") || h == keccak256("exp10") || h == keccak256("expm1")
+            || h == keccak256("ln") || h == keccak256("log2") || h == keccak256("log10") || h == keccak256("log2Up")
+            || h == keccak256("log1p") || h == keccak256("pow") || h == keccak256("powu") || h == keccak256("compound")) return fp127e;
+        return fp127;
     }
 
     function _obj19(string memory op) internal view returns (address) {

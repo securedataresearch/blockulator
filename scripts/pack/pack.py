@@ -45,7 +45,10 @@ LAYOUT = {
 
 REQUIRED = [
     "package.json", "README.md", "LICENSE",
-    "fp127/FP127Lib.sol", "fp127/IFP127.sol", "fp127/FP127.yul", "fp127/abi.json",
+    "fp127/FP127Lib.sol", "fp127/IFP127.sol", "fp127/IFP127E.sol", "fp127/IFP127H.sol",
+    "fp127/IFP127N.sol", "fp127/IFP127S.sol", "fp127/FP127.yul", "fp127/FP127E.yul",
+    "fp127/FP127H.yul", "fp127/FP127N.yul", "fp127/FP127S.yul", "fp127/abi.json",
+    "fp127/abiE.json", "fp127/abiH.json", "fp127/abiN.json", "fp127/abiS.json",
     "fp19/FP19Lib.sol", "fp19/IFP19.sol", "fp19/IFP19E.sol", "fp19/IFP19H.sol",
     "fp19/IFP19N.sol", "fp19/IFP19S.sol", "fp19/FP19.yul", "fp19/FP19E.yul",
     "fp19/FP19H.yul", "fp19/FP19N.yul", "fp19/FP19S.yul", "fp19/abi.json",

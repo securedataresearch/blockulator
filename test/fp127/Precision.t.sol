@@ -142,7 +142,7 @@ contract Precision is FP127Harness {
     }
 
     function _one(string memory op, string[] memory inp, string memory expected, int256 t, Stats memory st) internal view {
-        (bool ok, bytes memory out) = address(obj).staticcall(_encode(op, inp));
+        (bool ok, bytes memory out) = _objFor(op).staticcall(_encode(op, inp));
         if (_isRevert(expected)) {
             assertFalse(ok, string.concat(op, " should revert for ", _label(inp)));
             assertEq(_sel(out), _errSel(_after7(expected)), string.concat(op, " wrong error for ", _label(inp)));

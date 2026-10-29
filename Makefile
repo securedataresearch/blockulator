@@ -17,7 +17,7 @@ help:
 	@echo "  make proofs           - Halmos proofs of the core arithmetic and directed rounding, lemmas, fuzz (CI subset; PROOFS_FULL=1 runs all and rewrites docs/benchmarks/proofs.json); docs/proofs.md"
 	@echo "Blockulator / FP127"
 	@echo ""
-	@echo "  make gen              - generate FP127.yul, FP127Lib.sol, IFP127.sol, abi.json, ops.json from FP127.yul.src"
+	@echo "  make gen              - generate FP127's five objects (FP127*.yul), FP127Lib.sol, their interfaces and ABIs, ops.json from FP127.yul.src"
 	@echo "  make gen-check        - Fail if the generated files are stale"
 	@echo "  make vectors          - Regenerate test/fp127/vectors/*.json from the mpmath oracle"
 	@echo "  make vectors-check    - Fail if the vectors are stale"
@@ -28,7 +28,7 @@ help:
 	@echo "  make bench            - Gas ladder for every op and form -> docs/benchmarks/gas.json + gas.md"
 	@echo "  make talk             - The talk deck, one plot per slide from the data -> docs/talks/dust-is-over.pdf"
 	@echo "  make pi-compare       - Ramanujan's series through each library's primitives -> docs/benchmarks/pi.md"
-	@echo "  make size             - Print the deployed FP127 runtime size in bytes"
+	@echo "  make size             - Print the runtime size of FP127's five objects (FP127, FP127E, FP127H, FP127N, FP127S) in bytes"
 	@echo "  make size-inline      - Bytecode each op adds inlined through FP127Lib / FP19Lib, legacy and via_ir -> docs/benchmarks/size.{json,md}"
 	@echo "  make size-inline-check - Fail if size.json / size.md are stale"
 	@echo "  make gen-inputs       - Generate scripts/ladder/inputs.json (every input floored into each representation) from scenarios.json"
@@ -45,6 +45,7 @@ help:
 	@echo "  make rates-verify     - (network) LadderFraxlend / LadderEuler against the deployed rate models, on a mainnet fork"
 	@echo "  make sweep            - random-input accuracy of every FP127/FP19 op vs correctly rounded truth -> docs/benchmarks/sweep.{json,md}"
 	@echo "  make sweep OPS=a,b    - only those ops (both libraries, both passes); their rows replace the recorded ones"
+	@echo "  make sweep LIB=fp127  - only that library's rows (fp19, fp127 or wad; with OPS, those ops of it)"
 	@echo "  make wad              - BlockulatorWad beside Solady and PRBMath on the same inputs: wei error, gas, bytes -> docs/benchmarks/wad.{json,md}"
 	@echo "  make gen-wad          - generate contracts/src/wad/BlockulatorWad.sol and ops.json from BlockulatorWad.yul.src (on FP19.yul.src)"
 	@echo "  make profile          - where the gas goes: per op gas, fallback rate and per-helper share on the sweep inputs, and the via_ir bench -> docs/benchmarks/profile.{json,md}"
@@ -86,6 +87,7 @@ gen-check:
 	@$(PY) scripts/fp127/gen.py --check
 	@test ! -f contracts/src/fp19/FP19.yul.src || $(PY) scripts/fp127/gen.py --lib fp19 --check
 	@test ! -f contracts/src/wad/BlockulatorWad.yul.src || $(PY) scripts/fp127/gen.py --lib wad --check
+	@$(PY) scripts/fp127/gen.py --lib import-demo --check
 
 gen-fp19:
 	@$(PY) scripts/fp127/gen.py --lib fp19
@@ -266,7 +268,7 @@ proofs:
 	@HALMOS_ALLOW_DOWNLOAD=1 python3 test/proofs/run.py $(if $(ONLY),--only $(ONLY))
 
 sweep: build
-	@$(PY) scripts/sweep/sweep.py $(if $(OPS),--ops $(OPS))
+	@$(PY) scripts/sweep/sweep.py $(if $(LIB),--lib $(LIB)) $(if $(OPS),--ops $(OPS))
 profile: build
 	@$(PY) scripts/sweep/gasprofile.py
 talk:

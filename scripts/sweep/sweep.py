@@ -8,6 +8,7 @@ correctly rounded truth.
                                            # their rows replace the ones in sweep.json, the rest stay
                                            # (the second-stage gas can differ by a unit: the generated
                                            # runner is a smaller contract; the re-baseline runs everything)
+    uv run scripts/sweep/sweep.py --lib fp127 --ops exp,ln   # one library's rows only (fp19, fp127, wad)
 
 Release four adds the directed ops, powu and lambertWm1, and a second pass: the
 same inputs (the first 4,000 of each) through a test-only copy of FP19Lib whose
@@ -24,11 +25,25 @@ inputs that left the fast path. Its results must equal the plain pass's word for
 Gas is the inline library call alone: Sweep.t.sol reads gasleft() on either side of
 the one call, after its dispatch, and subtracts the same window around an assignment.
 
+FP127 has the same two passes for the ops whose rounding tests exist today
+(WIDE127, MID127): FP127LibWide with every test forced to fail (gen.py's fp127
+"forced" map: ln, log2, log10 and log1p take the double-word l2p; pow and compound
+skip the one-word pow2t; compound's pow2rt fails, so powu decides) and FP127LibMid
+with only the fast paths' tests forced (pow and compound return the double word).
+Their outputs are wide127_* and mid127_*.
+
 Inputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not
 committed. FP19 results are compared with the word the oracle (scripts/fp19/oracle.py:
 exact rationals and mpmath at 300 digits, half away from zero) returns, as a signed
 distance in ULPs. FP127 results are compared with the real truth at 200 digits, as
-|got - truth| in units of 2^-128. Writes docs/benchmarks/sweep.{json,md}.
+|got - truth| in units of 2^-128, and with the correctly rounded word: the word
+scripts/fp127/oracle.py returns, the rounding the op promises (to nearest under
+FP127's tie rule, ties up, the magnitude for powu, compound, cbrt, sinh, tanh and
+erf; the directed ops in their direction). The oracle works at 200 digits; where
+the truth there lies within 10^-100 of a rounding boundary (an integer or a half
+of the grid, beyond which 200 digits could not decide), the word is recomputed at
+300 digits and the row counts it (crClose, and crChanged when 300 digits gave
+another word). Writes docs/benchmarks/sweep.{json,md}.
 """
 import importlib.util
 import json
@@ -53,6 +68,10 @@ sys.modules["fpgen"] = G
 _spec.loader.exec_module(G)
 sys.path.insert(0, str(ROOT / "scripts" / "sweep"))
 import wad as WD  # noqa: E402  BlockulatorWad's inputs, truth and rows
+# FP127's oracle (by path: FP19's is `oracle` above), the correctly rounded word
+_spec127 = importlib.util.spec_from_file_location("oracle127", ROOT / "scripts" / "fp127" / "oracle.py")
+O127 = importlib.util.module_from_spec(_spec127)
+_spec127.loader.exec_module(O127)
 
 D = ROOT / "cache" / "sweep"
 OUT = ROOT / "docs" / "benchmarks"
@@ -77,22 +96,36 @@ WIDE_N = 4000
 MID19 = ["pow", "powu", "compound"]
 PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp", "toFixed18Down", "toFixed18Up"}
 SEL: set[str] | None = None   # --ops: the ops to run and re-score; None is all of them
+LIBSEL: set[str] | None = None   # --lib: the libraries to run and re-score; None is all three
+LIBS = ("fp19", "fp127", "wad")
 
 
-def selected(op: str) -> bool:
-    return SEL is None or op in SEL
+def selected(op: str, lib: str | None = None) -> bool:
+    return (SEL is None or op in SEL) and (LIBSEL is None or lib is None or lib in LIBSEL)
 
 
 def match_tests() -> list[str]:
     """forge's --match-test for the selected ops (every test when all are selected)."""
-    if SEL is None:
+    if SEL is None and LIBSEL is None:
         return []
+    ops = "|".join(sorted(SEL)) if SEL is not None else "\\w+"
+    libs = "|".join(l for l in LIBS if LIBSEL is None or l in LIBSEL)
     # forge 1.7 matches the signature, test_x(), so the end allows the parentheses
-    return ["--match-test", "^test_(noop|(fp19|fp127|wad)_(" + "|".join(sorted(SEL)) + ")x?)(\\(\\))?$"]
+    return ["--match-test", "^test_(noop|(" + libs + ")_(" + ops + ")x?)(\\(\\))?$"]
 
 
 OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "erf", "erfc", "normCdf", "compound",
-          "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "atanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up"]
+          "exp2", "exp10", "log10", "sinh", "cosh", "tanh", "atanh", "powu", "mulUp", "divUp", "divDown", "toFixed18Up",
+          # 3.0: the rest of the ops a correctly rounded FP127 must show
+          "log1p", "gavg", "hypot", "inv", "mulDown"]
+# FP127's ops with a rounding test today, swept again through FP127LibWide
+# (every test forced: their last stage) and, those with a middle stage,
+# FP127LibMid (the fast path's test forced). The phases that give the other
+# ops a test and a second stage add them here.
+WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound"]
+MID127 = ["pow", "compound"]
+WIDE = {"fp19": WIDE19, "fp127": WIDE127}
+MID = {"fp19": MID19, "fp127": MID127}
 TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
        "min", "max", "avg", "dist", "zeroFloorSub", "gavg", "hypot"}
 THREE = {"clamp", "lerp"}
@@ -191,8 +224,22 @@ def gen():
         wm1.append(-d if -d >= nie else nie + (1 << 108) + rl.getrandbits(100))
     write("fp127_lambertW0", w0)
     write("fp127_lambertWm1", [x for x in wm1 if x < 0])
+    gen127()
     gen4()
     WD.gen()
+
+
+def gen127():
+    """3.0's FP127 ops, from their own seed so every earlier op keeps its inputs."""
+    rng = random.Random(SEED + 127)
+    S = 4000
+    # log1p: |x| < 1 at every scale down to 2^-127, both signs, then x from 1 to 2^126
+    write("fp127_log1p", [f127(rng, 1, 127) for _ in range(S // 2)] + [f127(rng, 128, 254, 0) for _ in range(S // 2)])
+    # gavg: a b fits the word; hypot: both squares fit
+    write("fp127_gavg", [f127(rng, 1, 190, 0) for _ in range(S)], [f127(rng, 1, 190, 0) for _ in range(S)])
+    write("fp127_hypot", [f127(rng, 1, 190) for _ in range(S)], [f127(rng, 1, 190) for _ in range(S)])
+    write("fp127_inv", [f127(rng, 1, 254) for _ in range(S)])
+    write("fp127_mulDown", [f127(rng, 100, 200) for _ in range(S)], [f127(rng, 60, 160) for _ in range(S)])
 
 
 def near_branch(rng, n):
@@ -327,8 +374,13 @@ def load(name):
     return load1(name)
 
 
+# the forced passes' output prefix -> their inputs' (wide127_exp.out ran fp127_exp.json)
+STAGED = {"wide_": "fp19_", "mid_": "fp19_", "wide127_": "fp127_", "mid127_": "fp127_"}
+
+
 def load1(name):
-    src = name.replace("wide_", "fp19_").replace("mid_", "fp19_")
+    pre = next((p for p in STAGED if name.startswith(p)), None)
+    src = STAGED[pre] + name[len(pre):] if pre else name
     j = json.loads((D / f"{src}.json").read_text())
     a = [int(x, 16) for x in j["a"]]
     b = [int(x, 16) for x in j.get("b", [])] or [0] * len(a)
@@ -336,7 +388,7 @@ def load1(name):
     lines = (D / f"{name}.out").read_text().splitlines()
     outs = [ln.split()[0] for ln in lines]
     gas = [int(ln.split()[1]) if len(ln.split()) > 1 else 0 for ln in lines]
-    if name.startswith(("wide_", "mid_")):
+    if pre:
         a, b, c = a[:len(outs)], b[:len(outs)], c[:len(outs)]
     assert len(outs) == len(a), name
     return list(zip(a, b, c, outs, gas))
@@ -388,22 +440,62 @@ def truth127(op, a, b):
         "toFixed18Up": lambda: mpf(A) * 10**18 / ONE,
         "lambertW0": lambda: lambertw(x, 0).real * ONE,
         "lambertWm1": lambda: lambertw(x, -1).real * ONE,
+        "log1p": lambda: mp.log1p(x) * ONE,
+        "gavg": lambda: mp.sqrt(mpf(A) * B),
+        "hypot": lambda: mp.sqrt(mpf(A) * A + mpf(B) * B),
+        "inv": lambda: mpf(ONE) * ONE / A,
+        "mulDown": lambda: mpf(A) * B / ONE,
     }[op]()
+
+
+# a truth within this of an integer or a half (in the result's units) is
+# within reach of a rounding boundary for 200 digits: at most 2^255 (77
+# digits) leaves them good to 10^-123, so 10^-100 is a wide margin
+CR_REACH = mpf(10) ** -100
+
+
+def crword(op, a, b):
+    """(the correctly rounded word or "R" for a revert, close, changed):
+    scripts/fp127/oracle.py's word at its 200 digits; close when its truth
+    lies within CR_REACH of a rounding boundary, and then recomputed at 300
+    digits, changed when that gives another word."""
+    A, B = s256(a), s256(b)
+    args = [A, B] if op in TWO else [A]
+
+    def one():
+        try:
+            v = O127.OPS[op](*args)
+        except O127.Revert:
+            return "R", None
+        return (v[0], v[1]) if isinstance(v, tuple) else (v, None)
+
+    mp.dps = 200
+    w, t = one()
+    if t is None:
+        return w, False, False
+    t2 = 2 * mpf(t)
+    if abs(t2 - mp.nint(t2)) >= CR_REACH:
+        return w, False, False
+    with mp.workdps(300):
+        w3, _ = one()
+    return w3, True, w3 != w
 
 
 def job127(args):
     op, a, b, out = args
     mp.dps = 200
+    cr, close, changed = crword(op, a, b)
+    mp.dps = 200
     if out.startswith("R"):
-        return ("gotrev", None, None, None, None)
+        return ("gotrev", None, None, None, None, cr == "R", close, changed)
     got = s256(int(out, 16))
     t = truth127(op, a, b)
-    if abs(t) >= 2**255:
-        return ("refover", None, None, None, None)
+    if not -2**255 <= t < 2**255:
+        return ("refover", None, None, None, None, False, close, changed)
     err = got - t
     bits = float(log(abs(t), 2) - log(abs(err), 2)) if err != 0 and t != 0 else 999.0
     near = op.startswith("lambert") and s256(a) < 0 and mpf(s256(a)) / ONE + 1 / E < mpf(2) ** -20
-    return ("ok", float(err), bits, near, abs(t) >= ONE)
+    return ("ok", float(err), bits, near, abs(t) >= ONE, cr != "R" and got == cr, close, changed)
 
 
 def summarize19(op, res):
@@ -431,7 +523,11 @@ def summarize127(op, res):
     n = len(ae)
     far = [r[2] for r in ok if not r[3] and r[4]]
     near = [r[2] for r in ok if r[3]]
+    # the correctly rounded word, with reverts where the oracle reverts
+    cr = sum(1 for r in res if r[5])
     s = {"lib": "fp127", "op": op, "n": n, "status": dict(st),
+         "inputs": len(res), "correctlyRounded": cr, "misrounded": len(res) - cr,
+         "crClose": sum(1 for r in res if r[6]), "crChanged": sum(1 for r in res if r[7]),
          "nearest": sum(1 for x in ae if x <= 0.5000001), "faithful": sum(1 for x in ae if x < 1.0000001),
          "maxUlp": ae[-1] if n else 0, "p99Ulp": ae[int(0.99 * (n - 1))] if n else 0,
          "medianUlp": ae[n // 2] if n else 0, "minBits": round(min(far), 1) if far else None,
@@ -445,35 +541,43 @@ def score():
     rows = []
     with mpc.Pool() as pool:
         for op in OPS19:
-            if not selected(op):
+            if not selected(op, "fp19"):
                 continue
             data = load(f"fp19_{op}")
             res = pool.map(job19, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=64)
             rows.append(dict(summarize19(op, res), **gasstats([g for *_, g in data]), **fallback("fp19", op, data)))
             print(json.dumps(rows[-1]), flush=True)
         for op in WIDE19:
-            if not selected(op) or not (D / f"wide_{op}.out").exists():
+            if not selected(op, "fp19") or not (D / f"wide_{op}.out").exists():
                 continue
             data = load(f"wide_{op}")
             res = pool.map(job19, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=16)
             rows.append(dict(summarize19(op, res), stage="second", **gasstats([g for *_, g in data])))
             print(json.dumps(rows[-1]), flush=True)
         for op in MID19:
-            if not selected(op) or not (D / f"mid_{op}.out").exists():
+            if not selected(op, "fp19") or not (D / f"mid_{op}.out").exists():
                 continue
             data = load(f"mid_{op}")
             res = pool.map(job19, [(op, a, b, c, o) for a, b, c, o, g in data], chunksize=16)
             rows.append(dict(summarize19(op, res), stage="middle", **gasstats([g for *_, g in data])))
             print(json.dumps(rows[-1]), flush=True)
         for op in OPS127 + ["lambertW0", "lambertWm1"]:
-            if not selected(op):
+            if not selected(op, "fp127"):
                 continue
             data = load(f"fp127_{op}")
             res = pool.map(job127, [(op, a, b, o) for a, b, c, o, g in data], chunksize=64)
             rows.append(dict(summarize127(op, res), **gasstats([g for *_, g in data]), **fallback("fp127", op, data)))
             print(json.dumps(rows[-1]), flush=True)
-        rows += WD.sweep_rows(pool, selected, fallback)
-    if SEL is not None:
+        for tag, stage, ops in (("wide127", "second", WIDE127), ("mid127", "middle", MID127)):
+            for op in ops:
+                if not selected(op, "fp127") or not (D / f"{tag}_{op}.out").exists():
+                    continue
+                data = load(f"{tag}_{op}")
+                res = pool.map(job127, [(op, a, b, o) for a, b, c, o, g in data], chunksize=16)
+                rows.append(dict(summarize127(op, res), stage=stage, **gasstats([g for *_, g in data])))
+                print(json.dumps(rows[-1]), flush=True)
+        rows += WD.sweep_rows(pool, lambda op: selected(op, "wad"), fallback)
+    if SEL is not None or LIBSEL is not None:
         # a partial run: the selected ops' rows replace their old ones, every other row stays
         key = lambda r: (r["lib"], r["op"], r.get("stage"))  # noqa: E731
         new = {key(r): r for r in rows}
@@ -485,8 +589,8 @@ def score():
           "",
           "Generated by `make sweep` (`scripts/sweep/sweep.py`, `test/sweep/Sweep.t.sol`) from seeded random "
           "inputs. FP19 is compared with the correctly rounded word (scripts/fp19/oracle.py, 300 digits, "
-          "ties away from zero); FP127 with the real truth at 200 digits, in units of 2^-128. "
-          "Data: `sweep.json`.",
+          "ties away from zero); FP127 with the real truth at 200 digits, in units of 2^-128, and with "
+          "its correctly rounded word (scripts/fp127/oracle.py). Data: `sweep.json`.",
           "",
           "## FP19",
           "",
@@ -540,6 +644,11 @@ def score():
     md += ["",
            "## FP127",
            "",
+           "*correctly rounded*: the word scripts/fp127/oracle.py gives, the rounding the op promises: to nearest "
+           "with FP127's tie rule (ties up; powu, compound, cbrt, sinh, tanh and erf round the magnitude, so their "
+           "ties go away from zero), the directed ops in their direction, gavg and hypot their v4 composition; a "
+           "revert where the oracle reverts counts as correct, so *inputs* includes the reverts; the ULP columns "
+           "are over the results that returned. "
            "*nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the "
            "result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; "
            "for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, "
@@ -548,15 +657,36 @@ def score():
            "median / p99 / largest; *fallback* is the share of inputs that took the double-word decider "
            "(ln, log2, log10 and pow near a midpoint or, for pow, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).",
            "",
-           "| op | inputs | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |",
-           "|---|---:|---:|---:|---:|---:|---:|---|---:|---:|"]
+           "| op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |",
+           "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|"]
+
+    def row127(r, fallback=True):
+        near = r.get("minBitsWithin2^-20OfMinus1/e")
+        mb = "—" if r["minBits"] is None else f"{r['minBits']}" + (f" ({near} near −1/e)" if near is not None else "")
+        return (f"| {r['op']} | {r.get('inputs', r['n']):,} | {r.get('correctlyRounded', 0):,} | {r.get('misrounded', 0):,} | "
+                f"{r['nearest']:,} | {r['faithful']:,} | {r['maxUlp']:.3g} | "
+                f"{r['medianUlp']:.3g} | {mb} | {r['below']:,} / {r['above']:,} | "
+                f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,}"
+                + (f" | {pct(r)} |" if fallback else " |"))
+
     for r in rows:
-        if r["lib"] == "fp127":
-            near = r.get("minBitsWithin2^-20OfMinus1/e")
-            mb = "—" if r["minBits"] is None else f"{r['minBits']}" + (f" ({near} near −1/e)" if near is not None else "")
-            md.append(f"| {r['op']} | {r['n']:,} | {r['nearest']:,} | {r['faithful']:,} | {r['maxUlp']:.3g} | "
-                      f"{r['medianUlp']:.3g} | {mb} | {r['below']:,} / {r['above']:,} | "
-                      f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} | {pct(r)} |")
+        if r["lib"] == "fp127" and "stage" not in r:
+            md.append(row127(r))
+    for stage, title, text in (
+            ("middle", "The middle stage alone",
+             "The first 4,000 inputs of pow and compound again, through a test-only copy of FP127Lib whose "
+             "fast paths' rounding tests always fail (pow2t, rbad127): log2 x to 2^-299 (l2p), the double-word "
+             "2^t, its own test kept (compound's pow2rt, with powu behind it)."),
+            ("second", "The last stage alone",
+             "The first 4,000 inputs of each op with a rounding test again, through a test-only copy of FP127Lib "
+             "whose tests (nearmid, pow2t, pow2rt, rbad127, rbadm127) always fail, so every result comes from "
+             "the stage that runs when the fast value is too close to a tie: the double-word l2p for the logs, "
+             "l2p and the double-word 2^t for pow, powu's 512-bit mantissa for compound.")):
+        if any(r.get("stage") == stage and r["lib"] == "fp127" for r in rows):
+            md += ["", f"### {title}", "", text, "",
+                   "| op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max |",
+                   "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|"]
+            md += [row127(r, False) for r in rows if r.get("stage") == stage and r["lib"] == "fp127"]
     md += WD.sweep_md(rows, pct)
     (OUT / "sweep.md").write_text("\n".join(md) + "\n")
     print("wrote docs/benchmarks/sweep.{json,md}")
@@ -564,12 +694,12 @@ def score():
 
 WIDE_TEST = """// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
-// GENERATED by scripts/sweep/sweep.py for the second-stage pass; removed after the run.
+// GENERATED by scripts/sweep/sweep.py for a forced pass; removed after the run.
 
 import {Test} from "forge-std/Test.sol";
-import {FP19LibWIDE} from "./FP19LibWIDE.sol";
+import {LIBNAME} from "./LIBNAME.sol";
 
-contract SweepWIDE is Test {
+contract SweepPFX is Test {
     string constant DIR = "cache/sweep/";
 
     function f(bytes32 op, int256 a, int256 b) external view returns (int256 r, uint256 g) {
@@ -589,7 +719,7 @@ contract SweepWIDE is Test {
     }
 
     function _run(string memory op, bool two) internal {
-        string memory path = string.concat(DIR, "fp19_", op, ".json");
+        string memory path = string.concat(DIR, "SRCLIB_", op, ".json");
         if (!vm.exists(path)) return;
         string memory j = vm.readFile(path);
         bytes32[] memory a = vm.parseJsonBytes32Array(j, ".a");
@@ -613,26 +743,35 @@ contract SweepWIDE is Test {
 """
 
 
-def run_wide(tag="wide"):
-    """Generate FP19LibWide (tag "mid": FP19LibMid, the fast path's test
-    forced and the middle stage's kept, for the ops with a middle stage) and
-    its runner, run them, remove them."""
+def run_wide(tag="wide", lib="fp19"):
+    """Generate <Lib>LibWide (every rounding test forced; tag "mid":
+    <Lib>LibMid, the fast path's test forced and the middle stage's kept, for
+    the ops with a middle stage) and its runner, run them on the first WIDE_N
+    inputs, remove them. The outputs are wide_* and mid_* for FP19, wide127_*
+    and mid127_* for FP127."""
+    if LIBSEL is not None and lib not in LIBSEL:
+        return
     Tag = tag.capitalize()
-    wd = ROOT / "test" / "sweep" / tag
-    ops = WIDE19 if tag == "wide" else MID19
-    names = [op for op in ops if selected(op)] + [f"{op}x" for op in EXTRA if selected(op) and op in ops]
+    pfx = tag if lib == "fp19" else f"{tag}127"
+    Lib = f"{lib.upper()}Lib{Tag}"
+    wd = ROOT / "test" / "sweep" / pfx
+    ops = (WIDE if tag == "wide" else MID)[lib]
+    names = [op for op in ops if selected(op)]
+    if lib == "fp19":
+        names += [f"{op}x" for op in EXTRA if selected(op) and op in ops]
     if not names:
         return
-    subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", "fp19", f"--{tag}-lib",
-                    str(wd / f"FP19Lib{Tag}.sol")], cwd=ROOT, check=True)
+    subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", lib, f"--{tag}-lib",
+                    str(wd / f"{Lib}.sol")], cwd=ROOT, check=True)
     fn = {f"{op}x": op for op in EXTRA}
-    disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = FP19Lib{Tag}.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
+    disp = "\n".join(f'        if (op == "{n}") {{ g0 = gasleft(); r = {Lib}.{fn.get(n, n)}(a{", b" if fn.get(n, n) in TWO else ""}); g = gasleft(); }}'
                       for n in names)
     runs = "\n".join(f'    function test_{n}() public {{ this.runOne("{n}", {"true" if fn.get(n, n) in TWO else "false"}); }}' for n in names)
-    test = WIDE_TEST.replace("WIDE", Tag).replace("PREFIX", tag)
-    (wd / f"Sweep{Tag}.t.sol").write_text(test % (disp, WIDE_N, WIDE_N, runs))
+    test = (WIDE_TEST.replace("LIBNAME", Lib).replace("PFX", pfx.capitalize())
+            .replace("SRCLIB", lib).replace("PREFIX", pfx))
+    (wd / f"Sweep{pfx.capitalize()}.t.sol").write_text(test % (disp, WIDE_N, WIDE_N, runs))
     try:
-        subprocess.run(["forge", "test", "--match-path", f"test/sweep/{tag}/Sweep{Tag}.t.sol", "-q"], cwd=ROOT, check=True)
+        subprocess.run(["forge", "test", "--match-path", f"test/sweep/{pfx}/Sweep{pfx.capitalize()}.t.sol", "-q"], cwd=ROOT, check=True)
     finally:
         for f in wd.glob("*"):
             f.unlink()
@@ -747,6 +886,9 @@ def run_instrumented(kind: str, forced: bool = False):
     libs = ("fp19",) if forced else ("fp19", "fp127")
     if kind == "count" and not forced:
         libs += ("wad",)   # BlockulatorWad's fallback share; make profile's probes stay FP19's and FP127's
+    libs = tuple(l for l in libs if LIBSEL is None or l in LIBSEL)
+    if not libs:
+        return
     for lib in libs:
         subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", lib, f"--{kind}-lib",
                         str(wd / f"{lib.upper()}Lib{Tag}.sol")] + (["--forced"] if forced else []), cwd=ROOT, check=True)
@@ -755,7 +897,7 @@ def run_instrumented(kind: str, forced: bool = False):
     for name, expr in sweep_dispatch():
         if forced and name != "noop" and name not in want:
             continue
-        if name != "noop" and not selected(base_op(name)):
+        if name != "noop" and not selected(base_op(name), name.split("_", 1)[0]):
             continue
         if name.startswith("wad_") and "wad" not in libs:
             continue
@@ -829,11 +971,17 @@ def pct(r) -> str:
 
 
 def main():
-    global SEL
+    global SEL, LIBSEL
     args = sys.argv[1:]
-    if args[:1] == ["--ops"]:
-        SEL = set(args[1].split(","))
+    while args[:1] in (["--ops"], ["--lib"]):
+        if args[0] == "--ops":
+            SEL = set(args[1].split(","))
+        else:
+            LIBSEL = set(args[1].split(","))
+            if LIBSEL - set(LIBS):
+                sys.exit(f"--lib: one or more of {', '.join(LIBS)}")
         args = args[2:]
+    if SEL is not None:
         unknown = SEL - set(OPS19) - set(OPS127) - {"lambertW0", "lambertWm1"} - set(WD.FUNCS)
         if unknown:
             sys.exit(f"--ops: not swept: {', '.join(sorted(unknown))}")
@@ -842,7 +990,10 @@ def main():
         subprocess.run(["forge", "test", "--match-path", "test/sweep/Sweep*.t.sol", "-q"] + match_tests(), cwd=ROOT, check=True)
         run_wide()
         run_wide("mid")
-        WD.run_wide(SEL)
+        run_wide("wide", "fp127")
+        run_wide("mid", "fp127")
+        if LIBSEL is None or "wad" in LIBSEL:
+            WD.run_wide(SEL)
         run_instrumented("count")
     score()
 
