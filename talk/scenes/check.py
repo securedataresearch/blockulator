@@ -203,34 +203,87 @@ def expect_s02_exp40(mod) -> dict:
     assert by_id["balancer"]["wrong_decimal"] == 4 and by_id["balancer"]["right_label"] == "3 right · wrong at the 4th decimal", by_id["balancer"]
     assert by_id["prb"]["wrong_decimal"] == 0 and by_id["prb"]["decimals"] == 0 and by_id["prb"]["right_label"] == "0 right · wrong before the point", by_id["prb"]
     assert mod.ordinal(1) == "1st" and mod.ordinal(2) == "2nd" and mod.ordinal(11) == "11th" and mod.ordinal(13) == "13th" and mod.ordinal(21) == "21st" and mod.ordinal(22) == "22nd"
-    # the words by the other route: scripts/replays/bunni.py's decoders, Decimal for the expansion
-    bunni = vocab._import_script("scripts/replays/bunni.py")
-    decode = {"fp19": bunni.fp19_value, "fp127": bunni.fp127_value}
+    # the words by the other route: each raw word's fields read with masks and shifts written here
+    # (contracts/src/fp19/README.md lines 21-24: sign bit 255, E bits 254..236 bias 262143, F bits 235..0,
+    # value = (2^236 + F) * 2^(E - 262143 - 236); FP127: an int256, value = raw / 2^128), the expansion
+    # by Decimal at a precision wide enough that a division by a power of two is exact
+    def decode(lid: str, raw: int) -> tuple[int, int]:
+        """(numerator, k): value = numerator / 2^k, k >= 0."""
+        if lid == "fp127":
+            assert raw < 2**255, raw  # positive
+            return raw, 128
+        assert raw >> 255 == 0 and raw != 0, raw  # positive, not zero
+        e = (raw >> 236) & 0x7FFFF
+        f = raw & ((1 << 236) - 1)
+        assert 1 <= e <= 0x7FFFF, e
+        shift = e - 262143 - 236
+        sig = (1 << 236) | f
+        return (sig << shift, 0) if shift >= 0 else (sig, -shift)
+
     ours = []
     with localcontext() as ctx:
-        ctx.prec = 200
+        ctx.prec = 600
         for lid in mod.OURS:
             c = p["cells"][lid]
-            q = decode[lid](int(c["raw"]))
-            v = str((Decimal(q.numerator) / Decimal(q.denominator)).quantize(Decimal(1).scaleb(-mod.TRUTH_DECIMALS), rounding=ROUND_HALF_UP))
+            num, k = decode(lid, int(c["raw"]))
+            # lose the trailing zero bits so k is the number of decimals the expansion needs (2^-k ends at the k-th)
+            while k and num % 2 == 0:
+                num //= 2
+                k -= 1
+            d = Decimal(num) / (Decimal(2) ** k)
+            assert d * Decimal(2) ** k == Decimal(num), lid  # the division was exact
+            word = format(d, "f")
+            assert len(word.partition(".")[2]) == k, (lid, k, word)
+            assert not word.endswith("0") and "…" not in word, word  # complete and not padded
+            # the words agree with vocab's Fraction decoders
+            assert Fraction(num, 2**k) == vocab.word_value(lid, c["raw"]), lid
+            v = str(d.quantize(Decimal(1).scaleb(-mod.TRUTH_DECIMALS), rounding=ROUND_HALF_UP))
             m = 0
-            for a, b in zip(v.replace(".", ""), truth.replace(".", "")):
+            for a, b in zip(word.replace(".", ""), truth.replace(".", "")):
                 if a != b:
                     break
                 m += 1
             assert m >= word_digits, (lid, m)  # every one of the 18 decimals is right
             # the cell's log measure never exceeds the prefix count by more than one (a floor of a floor)
             assert int(c["digits"]) <= m <= int(c["digits"]) + 1, (lid, c["digits"], m)
-            word18 = str(Decimal(v).quantize(Decimal(1).scaleb(-mod.WORD_DECIMALS), rounding=ROUND_HALF_UP))
+            word18 = str(d.quantize(Decimal(1).scaleb(-mod.WORD_DECIMALS), rounding=ROUND_HALF_UP))
             assert word18 == exact_row, (lid, word18, exact_row)
-            ours.append({"id": lid, "label": lib[lid]["label"], "value": v, "word18": word18, "matching": m, "digits": int(c["digits"]), "right_label": f"{mod.WORD_DECIMALS} right of {mod.WORD_DECIMALS} · {m} digits right"})
+            dec = m - int_len
+            assert mod.WORD_DECIMALS <= dec < k, (lid, dec, k)
+            # the lines the slide draws hold every decimal once, in order, none longer than the first
+            lines = [word.partition(".")[0] + "." + word.partition(".")[2][: mod.LINE1]]
+            rest = word.partition(".")[2][mod.LINE1 :]
+            lines += [rest[i : i + mod.LINE] for i in range(0, len(rest), mod.LINE)]
+            assert "".join(lines) == word and len(lines[0]) == int_len + 1 + mod.LINE1 and all(len(ln) <= mod.LINE for ln in lines[1:]), (lid, lines)
+            ours.append(
+                {
+                    "id": lid,
+                    "label": lib[lid]["label"],
+                    "value": v,
+                    "word": word,
+                    "word_decimals": k,
+                    "lines": lines,
+                    "word18": word18,
+                    "matching": m,
+                    "decimals_right": dec,
+                    "digits": int(c["digits"]),
+                    "right_label": f"{m} digits right · {dec} decimals",
+                    "end_label": f"the word's precision ends here · {dec} decimals",
+                }
+            )
+    by = {o["id"]: o for o in ours}
+    # the story: FP127 matches 57 digits (18 + 39 decimals), FP19 73 (18 + 55); the counts the user named
+    assert (by["fp127"]["matching"], by["fp127"]["decimals_right"]) == (57, 39), by["fp127"]
+    assert (by["fp19"]["matching"], by["fp19"]["decimals_right"]) == (73, 55), by["fp19"]
+    assert by["fp127"]["word_decimals"] == 127 and by["fp19"]["word_decimals"] == 179, (by["fp127"]["word_decimals"], by["fp19"]["word_decimals"])
     # the reveal rows carry the plain count like the others, and never what the format holds
     for o in ours:
-        assert "holds" not in o["right_label"], o["right_label"]
-    # no number on the slide is cut short: every row is exactly 18 decimals, no ellipsis
+        assert "holds" not in o["right_label"] and "holds" not in o["end_label"], o
+    # no number on the slide is cut short: every 18-decimal row is exactly 18 decimals, no ellipsis anywhere
     for s in [exact_row] + [r["value"] for r in rows] + [o["word18"] for o in ours]:
         assert "…" not in s and len(s.partition(".")[2]) == mod.WORD_DECIMALS, s
-    assert "…" not in mod.EXACT_LABEL and "…" not in mod.EXACT_RIGHT
+    assert "…" not in mod.EXACT_LABEL and "…" not in mod.EXACT_RIGHT and "…" not in mod.CLOSE and "…" not in mod.END_TEXT
+    longest = max(o["word_decimals"] for o in ours)
     return {
         "truth": truth,
         "truth_decimals": mod.TRUTH_DECIMALS,
@@ -240,6 +293,15 @@ def expect_s02_exp40(mod) -> dict:
         "rows": rows,
         "ours": ours,
         "correctly_rounded": exact_row,
+        "fp127_word": by["fp127"]["word"],
+        "fp19_word": by["fp19"]["word"],
+        "fp127_match": by["fp127"]["matching"],
+        "fp19_match": by["fp19"]["matching"],
+        "fp127_decimals": by["fp127"]["decimals_right"],
+        "fp19_decimals": by["fp19"]["decimals_right"],
+        "ruler_marks": [t for t in range(10, longest + 1, 10)],
+        "context": " · ".join(r["label"] for r in rows) + ": " + " · ".join(str(r["decimals"]) for r in rows) + " decimals right",
+        "close2": " · ".join(f"{o['label']}: {o['decimals_right']} decimals" for o in ours) + " · every one of them right",
     }
 
 

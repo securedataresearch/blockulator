@@ -492,6 +492,61 @@ def glow_bar(mobj, colour: str = Palette.EMERALD, pad: float = 0.18, opacity: fl
     ).move_to(mobj)
 
 
+DIGIT_HEIGHT_PER_SIZE = 0.0105  # a JetBrains Mono digit's height in scene units per font-size point (0.209 at 20, 0.334 at 32)
+RULER_DROP = 0.03  # the ruler's hairline sits this far under the digits
+RULER_TICK = 0.04  # a tick's length below the hairline
+RULER_GAP = 0.025  # tick to the top of its number
+
+
+def ruler_depth(size: float = SIZE_CAPTION) -> float:
+    """How far below a row's bottom a ruler's numbers reach."""
+    return RULER_DROP + RULER_TICK + RULER_GAP + DIGIT_HEIGHT_PER_SIZE * size
+
+
+def ruler(txt, marks: list[tuple[int, int]], colour: str = Palette.RULE, size: float = SIZE_CAPTION, avoid: tuple[float, float] | None = None) -> VGroup:
+    """A thin ruler under a row of digits so they can be counted: a hairline
+    along the row, a tick under each marked glyph (txt[i]) and its count
+    beneath, "10 20 30 …". marks = [(glyph index, count)]; a count whose
+    label would fall inside avoid = (x0, x1) keeps its tick and drops its
+    number (the bracket that names the precision's end sits there)."""
+    from manim import Line
+
+    y = txt.get_bottom()[1] - RULER_DROP
+    level = y - RULER_TICK - RULER_GAP - DIGIT_HEIGHT_PER_SIZE * size / 2  # the numbers' centre line
+    g = VGroup(Line([txt.get_left()[0], y, 0], [txt.get_right()[0], y, 0], color=colour, stroke_width=1.0, stroke_opacity=0.6))
+    for i, count in marks:
+        x = txt[i].get_x()
+        g.add(Line([x, y, 0], [x, y - RULER_TICK, 0], color=colour, stroke_width=1.5))
+        label = digits(str(count), size, colour).move_to([x, level, 0])
+        if avoid and label.get_right()[0] > avoid[0] and label.get_left()[0] < avoid[1]:
+            continue
+        g.add(label)
+    return g
+
+
+def precision_end(txt, k: int, text: str, colour: str, size: float = SIZE_CAPTION) -> VGroup:
+    """The bracket under the point where a word's precision ends: a tall
+    tick between glyph k-1 (the last digit that matches) and glyph k (the
+    first that is the word's own), a short foot along the bottom to the
+    right, and the text beside it on the ruler's number line. The text's
+    x extent is on .avoid for ruler()."""
+    from manim import Line
+
+    y = txt.get_bottom()[1] - RULER_DROP
+    depth = ruler_depth(size) - RULER_DROP
+    level = y - RULER_TICK - RULER_GAP - DIGIT_HEIGHT_PER_SIZE * size / 2
+    x = (txt[k - 1].get_right()[0] + txt[k].get_left()[0]) / 2
+    label = words(text, size, colour)
+    label.move_to([x + 0.16 + label.width / 2, level, 0])
+    g = VGroup(
+        Line([x, y + RULER_DROP, 0], [x, y - depth, 0], color=colour, stroke_width=2.5),
+        Line([x, y - depth, 0], [x + 0.1, y - depth, 0], color=colour, stroke_width=2.5),
+        label,
+    )
+    g.avoid = (label.get_left()[0] - 0.08, label.get_right()[0] + 0.08)
+    return g
+
+
 def box(label: str, *content, colour: str = Palette.RULE, size: float = SIZE_BODY, label_colour: str = Palette.TEXT, pad: float = 0.3, gap: float = 0.18, min_width: float = 0.0, fill: str = Palette.BG) -> VGroup:
     """A named thing (a contract, a caller): a rounded box with its label
     inside and any further mobjects stacked beneath the label. The fill is
@@ -761,26 +816,54 @@ FP19_BIAS = (1 << (FP19_EXPONENT_BITS - 1)) - 1
 WAD_DECIMALS = 18  # the 18-decimal libraries' unit, 10^-18 (claims R6, K7)
 
 
-def fp127_value(raw: int | str) -> Fraction:
-    """The value of an FP127 word from its raw uint256 (edges.json .cells[lib].raw)."""
+def decode_fp127(raw: int | str) -> Fraction:
+    """The exact value of an FP127 word from its raw word (edges.json
+    .cells[lib].raw, the int256 as an unsigned integer): value = raw / 2^128,
+    the raw read as two's complement (research_notes/talk/verify-K.md K1:
+    one int256, 1 sign bit, 127 integer bits, 128 fraction bits). Exact: a
+    Fraction with a power-of-two denominator, so its decimal expansion
+    terminates (exact_decimals)."""
     w = int(raw)
     return Fraction(w - (1 << 256) if w >> 255 else w, 1 << FP127_FRACTION_BITS)
 
 
-def fp19_value(raw: int | str) -> Fraction:
-    """The value of an FP19 word from its raw uint256."""
+def decode_fp19(raw: int | str) -> Fraction:
+    """The exact value of an FP19 word from its raw word (edges.json
+    .cells[lib].raw as an unsigned integer). The layout is
+    contracts/src/fp19/README.md lines 21–24 (verify-K.md K3, binary256's
+    fields): bit 255 the sign, bits 254..236 the biased exponent E (19 bits,
+    bias 262,143), bits 235..0 the fraction F; the significand is 2^236 + F
+    and value = (−1)^s · (2^236 + F) · 2^(E − 262,143 − 236). The all-zero
+    word is zero; no other word has E = 0 (no subnormals, K4). Exact: a
+    Fraction whose denominator is a power of two (or 1)."""
     w = int(raw)
     if w == 0:
         return Fraction(0)
     sign = w >> 255
     e = (w >> FP19_FRACTION_BITS) & ((1 << FP19_EXPONENT_BITS) - 1)
+    assert e, "E = 0 with a non-zero word is not a number (OutOfRange)"
     f = w & ((1 << FP19_FRACTION_BITS) - 1)
     v = Fraction((1 << FP19_FRACTION_BITS) + f) * Fraction(2) ** (e - FP19_BIAS - FP19_FRACTION_BITS)
     return -v if sign else v
 
 
+fp127_value = decode_fp127  # the older names, kept for the scenes that use them
+fp19_value = decode_fp19
+
+
 def word_value(lid: str, raw: int | str) -> Fraction:
-    return {"fp19": fp19_value, "fp127": fp127_value}[lid](raw)
+    return {"fp19": decode_fp19, "fp127": decode_fp127}[lid](raw)
+
+
+def exact_decimals(q: Fraction) -> str:
+    """The complete decimal expansion of a Fraction whose denominator is a
+    power of two: 2^-k has exactly k decimals, so the expansion terminates
+    at the k-th place and every digit shown is the word's own (nothing is
+    rounded, nothing is cut). An integer (k = 0) prints with no point."""
+    d = q.denominator
+    k = d.bit_length() - 1
+    assert d == 1 << k, f"denominator {d} is not a power of two: the expansion does not terminate"
+    return to_decimals(q, k)  # exact: the division is by 2^k, which 10^k absorbs
 
 
 def to_decimals(q: Fraction, places: int) -> str:

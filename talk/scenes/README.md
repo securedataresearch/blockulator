@@ -100,9 +100,12 @@ Pango per process; every text helper calls it.
   on each pool: the joins and exits with BNum's intermediate integers), and
   `truth80()`: e^40 to 80 decimals by mpmath, its first 24
   decimals asserted against edges.json's truth.
-- The words: `fp127_value(raw)` and `fp19_value(raw)` decode a cell's
-  `.raw` word (FP127: 128 fraction bits; FP19: binary256's layout) to a
-  Fraction; `to_decimals(q, places)` writes it, nearest, half-up.
+- The words: `decode_fp127(raw)` and `decode_fp19(raw)` (the older names
+  `fp127_value`, `fp19_value` still work) decode a cell's `.raw` word
+  (FP127: raw / 2^128; FP19: binary256's fields, contracts/src/fp19/README.md
+  lines 21–24) to an exact Fraction; `to_decimals(q, places)` writes it,
+  nearest, half-up; `exact_decimals(q)` writes its complete expansion (the
+  denominator is a power of two, so it terminates: every digit is the word's).
 - `correctly_rounded_18(truth)`: the nearest 18-decimal value, ties away
   from zero (no probe in edges.json is a tie). `correct_digits(value, truth)`
   = floor(−log10(|value − truth| / truth)), the measure edges.json reports as
@@ -122,7 +125,7 @@ chart's own units.
 
 | file | slide | numbers from |
 |---|---|---|
-| `s02_exp40.py` | What is e^40? | edges.json op `exp`, probe `["40"]`: `.truth` (extended to 80 decimals by `truth80()`), `.cells[solady|balancer|prb].value` (counted in decimals of 18), `.cells[fp19|fp127].raw` decoded and written to 80 decimals, their matching digits against the truth counted by eye; labels from libraries.json |
+| `s02_exp40.py` | What is e^40? | edges.json op `exp`, probe `["40"]`: `.truth` (extended to 80 decimals by `truth80()`), `.cells[solady|balancer|prb].value` (counted in decimals of 18), `.cells[fp127|fp19].raw` decoded exactly (`decode_fp127`, `decode_fp19`: Fractions with power-of-two denominators) and drawn as their complete expansions (`exact_decimals`: 127 and 179 decimals, in lines of 50 under a `ruler()` marking every tenth decimal), the matching prefix against the truth lit and counted by eye (`matching_digits`: 57 and 73 digits, 39 and 55 decimals), the tail MUTED with a `precision_end()` bracket; labels from libraries.json |
 | `s03_under.py` | exp is under everything | no JSON: `numbers()` is empty and every string is a `LITERALS` entry (the title, four row labels, their formulas with the exp term last, the hero `e^x`: V11; the closing line: V10, V11); the `→` between a formula's stages is a drawn arrow and the `²` a `<sup>2</sup>`, since Instrument Sans has neither glyph; `check.py` compares the strings, markup stripped, with the brief's table |
 | `s04_grid.py` | Computers round | edges.json op `exp`, probe `["40"]`: `.truth` to 80 decimals (`truth80()`), `.cells.fp127.value`; the neighbours at every decimal and binary level, the 2^-128 words' readings to 80 decimals (they part at the 39th), computed from the truth with Fraction |
 | `s05_cost.py` | $130 million | `talk/scenes/data/incidents.json` (`.incidents[]`, `.total`, `.since`; the rounding lines are essay-v6 §2's, listed, not summed) |
@@ -151,7 +154,10 @@ also asserts the scene called every one of its `SECTIONS`, in order.
 
 The hero of every comparison is Blockulator's own answer: `halo()` behind
 a hero dot, `glow_line()` under a hero line, `glow_bar()` behind a hero
-row of text; `box(label, *content)` a named thing (a contract, a caller):
+row of text; `ruler(txt, marks)` a hairline under a row of digits with a
+tick and a count under every marked glyph, so decimals can be counted, and
+`precision_end(txt, k, text)` the bracket at the glyph where a word's
+precision ends (the digits past it are the word's own, MUTED, never red); `box(label, *content)` a named thing (a contract, a caller):
 a rounded rectangle, filled with the background, around a label and
 whatever is stacked beneath it; `Chart` (two GridLines at right angles, `grid()` for the
 faint rules behind the data) is the deck's plot.
