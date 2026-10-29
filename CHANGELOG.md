@@ -26,6 +26,26 @@ gate on this tree: FP19 76 sweep rows misrounded 0, FP127 27 rows nearest
 everywhere, BlockulatorWad 160,000 results wrong 0; 292 tests; every object
 under 24,576 bytes (FP127 tightest, 779 free).
 
+FP127S: lambertW0 and lambertWm1 correctly rounded (v8 rounded their last
+value with no test):
+
+- lwfin's double-word Newton value V (2^-300) carries a derived bound,
+  err = 2^(2·msb|y| + msb|w| − 421) + |y|·2^-124 + 16 units (Newton's own
+  error twice over, B's top word, the floors), tested by `lwbad` (rbad127 at
+  172 guard bits in four operations); near −1/e lwbr's W at 2^-192 is
+  within 6 units and tested by `rbad127`. `bounds127.py` checks both
+  (largest ratios 0.20 and 0.58); `precise_model.py`'s `lw_fin` models lwfin.
+- On a miss `lwwide`, FP19's `lwfix` in 127.128: one log-form Newton step at
+  2^-510 from that value on FP19's wide kernels (`w19_wrecip`, `w19_wmul`,
+  `w19_wlnw`, `w19_kln2`), within 2^-290, rounded once. W is transcendental
+  for every word but 0, so no ties; W(0) = 0.
+- Sweep (now 2,500 and 2,000 inputs, with 1,000 within 2^-20 of −1/e down
+  to the smallest input and 500 small negative x): 0 misrounded plain and
+  with the tests forced; fallback 0 of 4,500. Typical gas on v8's 1,500
+  inputs: lambertW0 8,152 → 8,311, lambertWm1 7,968 → 8,127 (+2.0%);
+  through the second stage about 36,000. FP127S 7,994 → 11,844 bytes;
+  inline `FP127Lib.lambertW0` 8,427 → 12,424.
+
 FP127's exp kernel and division, same words (FP127 takes a new salt at the
 next deploy):
 

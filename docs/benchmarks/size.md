@@ -8,8 +8,8 @@ The runtime bytecode one op adds to a contract that calls it through `FP127Lib` 
 
 | library | ops | smallest | median | largest | all ops, sum of singles |
 |---|---:|---|---:|---|---:|
-| FP127 legacy | 53 | `sign` 8 | 457 | `compound` 10,996 | 127,384 |
-| FP127 via_ir | 53 | `sign` 10 | 321 | `compound` 10,326 | 117,196 |
+| FP127 legacy | 53 | `sign` 8 | 457 | `lambertW0` 12,424 | 135,376 |
+| FP127 via_ir | 53 | `sign` 10 | 321 | `lambertW0` 11,714 | 124,987 |
 | FP19 legacy | 65 | `abs` 108 | 544 | `normCdf` 17,159 | 225,807 |
 | FP19 via_ir | 65 | `abs` 55 | 443 | `normCdf` 17,344 | 209,090 |
 
@@ -82,8 +82,8 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `frac` | 16 | 18 |
 | `round` | 103 | 48 |
 | `factorial` | 864 | 690 |
-| `lambertW0` | 8,427 | 7,807 |
-| `lambertWm1` | 8,112 | 7,527 |
+| `lambertW0` | 12,424 | 11,714 |
+| `lambertWm1` | 12,107 | 11,411 |
 | `log1p` | 7,422 | 6,878 |
 | `expm1` | 5,090 | 4,651 |
 | `sinh` | 4,898 | 4,400 |

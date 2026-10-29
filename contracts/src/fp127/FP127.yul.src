@@ -77,7 +77,7 @@
 // calls, renamed w19_<name> (w19_wexpm1, w19_msb, ...), so nothing collides
 // with this file's own helpers; an import enters an object's bytes only when
 // one of its exports calls it (scripts/fp127/gen.py, "Imports").
-/// @import fp19 as w19: wexp, wexpm1, wlnw, wmul, wrecip, wln1ps, em1w, erfw, lwfix
+/// @import fp19 as w19: wexp, wexpm1, wlnw, wmul, wrecip, wln1ps, em1w, erfw, lwfix, kln2
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -97,8 +97,9 @@ function absw(x) -> r {
 
 /// Index of the most significant set bit of x > 0, 0..255; msb(0) = 0. On
 /// the CLZ opcode (EIP-7939, Osaka): 255 - clz(x), guarded because
-/// 255 - clz(0) wraps. Every leading-bit count in this file goes through it;
-/// none of its 20 call sites passes zero. v1 to v5 ran the Huff's binary
+/// 255 - clz(0) wraps. Every leading-bit count in this file goes through it
+/// but lwfin's rounding bound, which takes clz itself (about 110 gas less there);
+/// none of its call sites passes zero. v1 to v5 ran the Huff's binary
 /// search here, 250 to 300 gas more.
 function msb(x) -> r {
     if x { r := sub(255, clz(x)) }
@@ -2522,13 +2523,16 @@ function lwqs(q192, sg, q256) -> qn, at {
     at := absw(tau)
 }
 
-/// W near -1/e, both branches (sg = 1 for W-1), from q256 = 1 + e x at
-/// 2^-256 (0 < q256 < 2^253, y < 1/8; y = Y 2^ey, Y in [2^254, 2^255)): the
-/// seed p S(+-p), p = sqrt(2y) by isqrt, S the fit lwsp (within 2^-44.8);
-/// one lwqs step (a second only if the first started outside 2^-44); then
-/// w = -1 +- q, q rounded to 2^-128 from 2^-192: nearest unless q is within
-/// 5 2^-64 ULP of a midpoint.
-function lwbr(q256, sg) -> w {
+/// W near -1/e, both branches (sg = 1 for W-1), for -1/e <= x with 1 + e x
+/// = q256 at 2^-256 (lwq; 0 < q256 < 2^253, y < 1/8; y = Y 2^ey, Y in
+/// [2^254, 2^255)): the seed p S(+-p), p = sqrt(2y) by isqrt, S the fit
+/// lwsp (within 2^-44.8); one lwqs step (a second only if the first started
+/// outside 2^-44); then W = -1 +- q at 2^-192, within 6 units (lwqs's 5,
+/// bounds127.py measures it), rounded to the nearest word when rbad127 says
+/// 6 units cannot cross a midpoint, else from lwwide's Newton step at
+/// 2^-510 (3.0; v8 rounded blind).
+function lwbr(x, sg) -> w {
+    let q256 := lwq(x)
     let nb := msb(q256)
     let Y := shl(sub(254, nb), q256)
     let ey := sub(nb, 510)
@@ -2544,10 +2548,11 @@ function lwbr(q256, sg) -> w {
         q, at := lwqs(q, sg, q256)
         if lt(at, 0x10000000000000000000000000000000000000) { break }
     }
-    q := sar(64, add(q, 0x8000000000000000))
-    switch sg
-    case 0 { w := sub(q, 0x100000000000000000000000000000000) }
-    default { w := sub(sub(0, 0x100000000000000000000000000000000), q) }
+    // W at 2^-192: q - 1 on W0, -1 - q on W-1
+    q := sub(q, 0x1000000000000000000000000000000000000000000000000)
+    if sg { q := sub(sub(0, q), 0x2000000000000000000000000000000000000000000000000) }
+    w := sar(64, add(q, 0x8000000000000000))
+    if rbad127(q, 64, 6) { w := lwwide(x, w, shl(108, sub(q, shl(64, w)))) }
 }
 
 /// The final step of both branches, in the double word: Newton on
@@ -2555,11 +2560,23 @@ function lwbr(q256, sg) -> w {
 ///   w' = w - F w / (w + 1),
 /// with e^w = 2^n (1 + s) from the double-word kernel: A = |w| (1 + s) and
 /// B = |x| 2^-n at 2^-384, y = (A - B) / B and F = y - y^2/2 to about
-/// 2^-300, and the correction rounded once. The one-word stages leave w
-/// within about 2^-124 of W (relative, or times |1 + W| near -1/e); this
-/// step takes that to the nearest word, where v4 was 1,153 ULPs off near
-/// -1/e (the residual is now exact enough that the amplification 1 / (1 + w)
-/// no longer reaches the grid) and 2 ULPs off elsewhere.
+/// 2^-300, and the correction d at 2^-300, so the step's value is
+/// V = w + v 2^-300, v = -d. The one-word stages leave w within about 2^-88
+/// of W (relative, precise_model.py's lambertw; within 2^-120 or so typically),
+/// so V is within (3.0, bounds127.py checks it)
+///   err = 2^(2 msb|y| + msb|w| - 421) + |y| 2^-124 + 16
+/// units of 2^-300: Newton's own error, y^2 |w| / (2 |1 + w|^3) to first
+/// order, under 6.5 y^2 |w| (|1 + w| >= 0.43 away from -1/e, so |w| /
+/// |1 + w|^3 <= 13 |w|), the first term with room for twice that; B's top
+/// word, which y divides by, within 2^-128 of B, |y| 2^-128 / |1 + w| in
+/// d, the second; and the floors (the residual's, y's, F's, F w's, d's, each
+/// times at most |w| / |1 + w| <= 2.64 or 1 / |1 + w| <= 2.32) and the
+/// kernel's 2^-311 relative, under 14 units, the 16 (the exponent from clz:
+/// 2 msb|y| + msb|w| - 421 = 344 - 2 clz|y| - clz|w|, and 0 when negative,
+/// as shl gives). When the rounding test (lwbad, rbad127's at 172 guard
+/// bits) says err cannot cross a midpoint, V rounds to the nearest word,
+/// ties up; else lwwide's Newton step at 2^-510 decides (3.0; v8 rounded V
+/// blind). v4 was 1,153 ULPs off near -1/e and 2 ULPs elsewhere.
 function lwfin(x, w) -> r {
     let n, sh, sl := expx(w)
     let aw := absw(w)
@@ -2585,8 +2602,90 @@ function lwfin(x, w) -> r {
     let y := fp127_div(p, bh)
     let ay := absw(y)
     let f := sub(y, shr(45, hmul(ay, ay)))
-    let d := fp127_div(mulraw(f, w), add(w, 0x100000000000000000000000000000000))
-    r := add(w, sar(172, add(sub(0, d), 0x8000000000000000000000000000000000000000000)))
+    let v := sub(0, fp127_div(mulraw(f, w), add(w, 0x100000000000000000000000000000000)))
+    r := add(w, sar(172, add(v, 0x8000000000000000000000000000000000000000000)))
+    if lwbad(v, add(add(shl(sub(344, add(shl(1, clz(ay)), clz(aw))), 1), shr(124, ay)), 16)) {
+        r := lwwide(x, r, sub(v, shl(172, sub(r, w))))
+    }
+}
+
+/// rbad127(v, 172, err) for lwfin, in four operations: the low 172 bits
+/// less half a step, plus err, modulo 2^172, fall below 2 err exactly when
+/// they were in [half - err, half + err), rbad127's set (and always once err
+/// reaches half). rbad127's general body cost lwfin about 80 gas more; this
+/// is its own name so make sweep can force it (gen.py's forced and
+/// mid_forced maps).
+function lwbad(v, err) -> b {
+    b := lt(and(add(sub(v, 0x8000000000000000000000000000000000000000000), err), 0xfffffffffffffffffffffffffffffffffffffffffff), shl(1, err))
+}
+
+/// Lambert W's second stage (3.0), FP19's lwfix in 127.128: one log-form
+/// Newton step at 2^-510 from W0 = r + e 2^-300 (r a word, |e| <= 2^171),
+///   W1 = W0 - (W0 + ln(|W0| / |x|)) W0 / (1 + W0),
+/// rounded once to the nearest word, ties up. The ratio of the two
+/// significands in two words (w19_wrecip, w19_wmul: within 2^-503), its log
+/// by w19_wlnw (within 2^-497) plus its exponent times ln 2 (w19_kln2), and
+/// W0 at 2^-510, all modulo 2^512, which holds the residual R (under
+/// 2^-105: W0 is within 2^-120 of W relative) whole; R at 2^-360 times
+/// W0 / (1 + W0) (at 2^-128 from W0 at 2^-192) is the correction. W1's
+/// error: Newton's (W0 - W)^2 / (2 |W| |1 + W|), with W0 within lwfin's err
+/// (or lwbr's 6 units of 2^-192: 2^-315 near -1/e, where |1 + W| >=
+/// 2^-64), R's floor times |W0 / (1 + W0)| <= 2^64 (2^-296), the log's
+/// 2^-497 likewise, and the floors at 2^-330: within 2^-290 (2^-162 ULP)
+/// whatever x. W is transcendental for every word x but 0, so it is never a
+/// midpoint; the sweep's forced pass runs every input through here (make
+/// sweep, gen.py's forced rbad127 and lwbad).
+function lwwide(x, r, e) -> rr {
+    // |W0| 2^300 = |r| 2^172 +- e in two words (W0 has r's sign: |r| >= 2^63)
+    let ar := absw(r)
+    let es := e
+    if slt(r, 0) { es := sub(0, e) }
+    let lo := shl(172, ar)
+    let hi := add(shr(84, ar), sar(255, es))
+    let l2 := add(lo, es)
+    hi := add(hi, lt(l2, lo))
+    // as a wide significand in [1, 2) (top bit 510): |W0| = m 2^(210 - t)
+    let nb := 0
+    switch hi
+    case 0 { nb := msb(l2) }
+    default { nb := add(msb(hi), 256) }
+    let t := sub(510, nb)
+    let mh := shl(sub(t, 256), l2)
+    let ml := 0
+    if lt(t, 256) {
+        mh := or(shl(t, hi), shr(sub(256, t), l2))
+        ml := shl(t, l2)
+    }
+    // |x| = mx 2^(nx - 128 - 254), Q = |W0| / |x| = (m / mx) 2^kq
+    let ax := absw(x)
+    let nx := msb(ax)
+    let qh, ql := w19_wrecip(shl(sub(254, nx), ax), 0)
+    qh, ql := w19_wmul(mh, ml, qh, ql)
+    let kq := sub(sub(338, t), nx)
+    if lt(qh, 0x4000000000000000000000000000000000000000000000000000000000000000) {
+        qh := or(shl(1, qh), shr(255, ql))
+        ql := shl(1, ql)
+        kq := sub(kq, 1)
+    }
+    let lh, ll := w19_wlnw(qh, ql, 0)
+    // R = W0 + ln Q + kq ln 2 at 2^-510, modulo 2^512
+    let ph, pl := w19_kln2(absw(kq))
+    switch slt(kq, 0)
+    case 0 {
+        ll := add(ll, pl)
+        lh := add(add(lh, ph), lt(ll, pl))
+    }
+    default {
+        lh := sub(sub(lh, ph), lt(ll, pl))
+        ll := sub(ll, pl)
+    }
+    let zl := shl(210, e)
+    ll := add(ll, zl)
+    lh := add(add(add(lh, shl(126, r)), sar(46, e)), lt(ll, zl))
+    // the correction R W0 / (1 + W0) at 2^-360, applied at 2^-330
+    let w192 := add(shl(64, r), sar(108, e))
+    let c := mulraw(or(shl(106, lh), shr(150, ll)), fp127_div(w192, add(w192, 0x1000000000000000000000000000000000000000000000000)))
+    rr := add(r, sar(202, add(sub(shl(30, e), sar(30, c)), 0x200000000000000000000000000000000000000000000000000)))
 }
 
 /// q = 1 + e x at 2^-256 for -1/e <= x < 0, with e to 2^-254: the distance to
@@ -2635,7 +2734,7 @@ function fp127_lambertW0(x) -> r {
         if slt(x, sub(0, 0x5267adbd9d4543376382ee923e4a59ec)) {
             // sg as a value of x (0 here, x < 0), not the literal 0, so the
             // optimizer keeps one copy of lwbr, lwqs and the exp kernel
-            r := lwbr(lwq(x), sgt(x, 0))
+            r := lwbr(x, sgt(x, 0))
             leave
         }
         // the origin cubic, |x| < 0.184; its error is about 8/3 x^3 relative
@@ -2674,7 +2773,7 @@ function fp127_lambertWm1(x) -> r {
     if iszero(slt(x, 0)) { rev(0x7db3aba7) }
     if slt(x, sub(0, 0x5267adbd9d4543376382ee923e4a59ec)) {
         // sg = 1 as a value of x (x < 0): see lambertW0
-        r := lwbr(lwq(x), slt(x, 0))
+        r := lwbr(x, slt(x, 0))
         leave
     }
     let rr, kk := lnm(sub(0, x))

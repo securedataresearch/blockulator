@@ -24,8 +24,8 @@
      },
      "median": 457,
      "max": {
-      "op": "compound",
-      "bytes": 10996
+      "op": "lambertW0",
+      "bytes": 12424
      }
     },
     "viaIr": {
@@ -35,14 +35,14 @@
      },
      "median": 321,
      "max": {
-      "op": "compound",
-      "bytes": 10326
+      "op": "lambertW0",
+      "bytes": 11714
      }
     }
    },
    "sum": {
-    "legacy": 127384,
-    "viaIr": 117196
+    "legacy": 135376,
+    "viaIr": 124987
    },
    "ops": {
     "fromFixed18": {
@@ -214,12 +214,12 @@
      "viaIr": 690
     },
     "lambertW0": {
-     "legacy": 8427,
-     "viaIr": 7807
+     "legacy": 12424,
+     "viaIr": 11714
     },
     "lambertWm1": {
-     "legacy": 8112,
-     "viaIr": 7527
+     "legacy": 12107,
+     "viaIr": 11411
     },
     "log1p": {
      "legacy": 7422,
