@@ -1,6 +1,6 @@
 +++
 title = "Incidents"
-description = "Four real exploits replayed from their own transactions, on the deployed arithmetic and on exact, FP127 and FP19 arithmetic."
+description = "Five real exploits replayed from their own transactions, on the deployed arithmetic and on exact, FP127 and FP19 arithmetic."
 path = "results/incidents"
 
 [extra]

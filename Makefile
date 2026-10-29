@@ -1,4 +1,4 @@
-.PHONY: rates-verify home-data gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp19 predict-fp19 deploy-fp19-sepolia verify-fp19-sepolia smoke-fp19-sepolia bench-fp19 precision-report-fp19 gen-fp19 vectors-fp19 size-fp19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
+.PHONY: rates-verify home-data gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-thetanuts replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch replay-thetanuts-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp19 predict-fp19 deploy-fp19-sepolia verify-fp19-sepolia smoke-fp19-sepolia bench-fp19 precision-report-fp19 gen-fp19 vectors-fp19 size-fp19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
 
 PY := uv run
 
@@ -48,7 +48,7 @@ help:
 	@echo "  make wad              - BlockulatorWad beside Solady and PRBMath on the same inputs: wei error, gas, bytes -> docs/benchmarks/wad.{json,md}"
 	@echo "  make gen-wad          - generate contracts/src/wad/BlockulatorWad.sol and ops.json from BlockulatorWad.yul.src (on FP19.yul.src)"
 	@echo "  make profile          - where the gas goes: per op gas, fallback rate and per-helper share on the sweep inputs, and the via_ir bench -> docs/benchmarks/profile.{json,md}"
-	@echo "  make replays          - four exploits replayed bit-exact from pinned chain data, then in FP127, FP19 and exact -> docs/benchmarks/replay-*.md"
+	@echo "  make replays          - five exploits replayed bit-exact from pinned chain data, then in FP127, FP19 and exact -> docs/benchmarks/replay-*.md"
 	@echo "  make replays-fetch    - (network, read-only) re-pin scripts/replays/*.json from the attack transactions"
 	@echo "  make predict-ladder   - CREATE2 addresses of the ladder adapters and runner"
 	@echo "  make site             - Build the Zola site into public/ (pinned Zola is downloaded if none is installed)"
@@ -232,8 +232,8 @@ rates-verify: build
 # Replays. Each exploit's deployed arithmetic, bit-exact from integers pinned out of
 # the attack transaction (scripts/replays/*.json), then the same step under the
 # protocol's own fix, FP127, FP19 and exact rationals. Offline; *-fetch re-pins.
-replays: replay-resupply replay-bunni replay-balancer replay-balancer-v1
-replays-fetch: replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch
+replays: replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-thetanuts
+replays-fetch: replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch replay-thetanuts-fetch
 
 replay-resupply: build
 	@$(PY) scripts/replays/resupply.py
@@ -251,6 +251,10 @@ replay-balancer-v1:
 	@$(PY) scripts/replays/balancer_v1.py score
 replay-balancer-v1-fetch:
 	@$(PY) scripts/replays/balancer_v1.py fetch
+replay-thetanuts:
+	@$(PY) scripts/replays/thetanuts.py
+replay-thetanuts-fetch:
+	@$(PY) scripts/replays/thetanuts.py fetch
 
 gates:
 	@$(PY) scripts/gates.py $(if $(OPS),--ops $(OPS)) $(if $(QUICK),--quick) $(if $(ONLY),--only $(ONLY))
