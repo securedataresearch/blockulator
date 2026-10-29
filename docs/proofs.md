@@ -23,9 +23,10 @@ is for all inputs outside a stated window, where a pinned counterexample shows
 the op leaving its documented semantics. `fuzzed` has no symbolic proof: the
 op is fuzzed against the exact spec. `counterexample` is fuzzed and has a
 pinned input where it leaves its spec. Solver time is Halmos's own, with
-bitwuzla, from the last full run (`make proofs PROOFS_FULL=1`), on one machine
-with two solver threads per check; it varies by a factor of two or so between
-runs.
+bitwuzla, from the last recorded run, on one machine with two solver threads per
+check and each check allowed 2,000 s (the timed-out checks below ran out of that
+allowance); it varies by a factor of two or so between runs. The fuzz results in
+`proofs.json` are from 50,000 runs per test.
 
 <!-- proofs:table -->
 | library | op | status | spec | solver time | checks |
@@ -175,7 +176,8 @@ check uses the kernel as the floor quotient: the op is proved equal to the
 spec computed with the kernel, and the kernel equal to the floor by its
 lemma. They are also fuzzed against a long division
 ([`Fuzz.t.sol`](../test/proofs/Fuzz.t.sol)), as both square roots are against
-exact integer roots.
+exact integer roots, and the FP19 ops whose Halmos checks time out (add, sub and
+the three toFixed18 roundings) against the same specs the checks use (`Ref19`).
 
 ## What is and is not covered
 
