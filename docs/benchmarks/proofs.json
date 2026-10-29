@@ -8,10 +8,10 @@
   "solc": "0.8.38"
  },
  "summary": {
-  "ops": 41,
+  "ops": 43,
   "proven": 35,
   "proven_except": 0,
-  "fuzzed": 6,
+  "fuzzed": 8,
   "counterexamples": 0,
   "in_progress": 0,
   "solver_seconds": 5933
@@ -216,6 +216,34 @@
    "note": "a proof by exhaustion and error bounds (test/proofs/isqrt.py): the seed within 2^-4 for each of its 196,608 leading values, five Newton steps to below 2^-128, and the corrections exact; fixed in #159 where it once returned floor + 1",
    "tool": "exact integer arithmetic, test/proofs/isqrt.py",
    "reproduce": "python3 test/proofs/isqrt.py"
+  },
+  {
+   "lib": "FP127",
+   "op": "gavg",
+   "status": "fuzzed",
+   "spec": "sqrt(a b) to nearest from the exact product (never a tie); OutOfRange for opposite signs; Overflow only at a = b = -2^255",
+   "checks": [],
+   "lemmas": [],
+   "seconds": null,
+   "paths": null,
+   "fast_checks": [],
+   "note": "FuzzProofs against a bit-by-bit integer root of the exact product: testFuzz_fp127_gavg, testFuzz_fp127_roots_near_mid (next to the midpoints), test_fp127_roots_edges",
+   "tool": "forge fuzz, 50,000 runs",
+   "reproduce": "FOUNDRY_PROFILE=proofs forge test --match-contract FuzzProofs --match-test fp127_gavg"
+  },
+  {
+   "lib": "FP127",
+   "op": "hypot",
+   "status": "fuzzed",
+   "spec": "sqrt(a^2 + b^2) to nearest from the exact sum of squares (never a tie); Overflow past 2^255 - 1",
+   "checks": [],
+   "lemmas": [],
+   "seconds": null,
+   "paths": null,
+   "fast_checks": [],
+   "note": "FuzzProofs against a bit-by-bit integer root of the exact sum: testFuzz_fp127_hypot, testFuzz_fp127_roots_near_mid, test_fp127_roots_edges",
+   "tool": "forge fuzz, 50,000 runs",
+   "reproduce": "FOUNDRY_PROFILE=proofs forge test --match-contract FuzzProofs --match-test fp127_hypot"
   },
   {
    "lib": "FP127",
@@ -923,6 +951,26 @@
   },
   {
    "test": "test_fp127_sqrt_regression_159",
+   "result": "pass",
+   "runs": 1
+  },
+  {
+   "test": "testFuzz_fp127_gavg",
+   "result": "pass",
+   "runs": 50000
+  },
+  {
+   "test": "testFuzz_fp127_hypot",
+   "result": "pass",
+   "runs": 50000
+  },
+  {
+   "test": "testFuzz_fp127_roots_near_mid",
+   "result": "pass",
+   "runs": 50000
+  },
+  {
+   "test": "test_fp127_roots_edges",
    "result": "pass",
    "runs": 1
   }

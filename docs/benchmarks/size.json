@@ -22,7 +22,7 @@
       "op": "sign",
       "bytes": 8
      },
-     "median": 457,
+     "median": 480,
      "max": {
       "op": "lambertW0",
       "bytes": 12374
@@ -41,8 +41,8 @@
     }
    },
    "sum": {
-    "legacy": 158258,
-    "viaIr": 150640
+    "legacy": 148130,
+    "viaIr": 139488
    },
    "ops": {
     "fromFixed18": {
@@ -142,12 +142,12 @@
      "viaIr": 472
     },
     "gavg": {
-     "legacy": 457,
-     "viaIr": 343
+     "legacy": 566,
+     "viaIr": 483
     },
     "hypot": {
-     "legacy": 508,
-     "viaIr": 378
+     "legacy": 549,
+     "viaIr": 457
     },
     "inv": {
      "legacy": 135,
@@ -246,16 +246,16 @@
      "viaIr": 12219
     },
     "erf": {
-     "legacy": 8849,
-     "viaIr": 9087
+     "legacy": 5456,
+     "viaIr": 5364
     },
     "erfc": {
-     "legacy": 8880,
-     "viaIr": 9226
+     "legacy": 5431,
+     "viaIr": 5371
     },
     "normCdf": {
-     "legacy": 8926,
-     "viaIr": 9275
+     "legacy": 5490,
+     "viaIr": 5482
     }
    }
   },
@@ -630,11 +630,11 @@
     "erfc",
     "normCdf"
    ],
-   "legacy": 11356,
-   "viaIr": 16970,
+   "legacy": 5815,
+   "viaIr": 11394,
    "sumOfSingles": {
-    "legacy": 26655,
-    "viaIr": 27588
+    "legacy": 16377,
+    "viaIr": 16217
    }
   },
   {

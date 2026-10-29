@@ -8,8 +8,8 @@ The runtime bytecode one op adds to a contract that calls it through `FP127Lib` 
 
 | library | ops | smallest | median | largest | all ops, sum of singles |
 |---|---:|---|---:|---|---:|
-| FP127 legacy | 53 | `sign` 8 | 457 | `lambertW0` 12,374 | 158,258 |
-| FP127 via_ir | 53 | `sign` 10 | 321 | `atanh` 12,219 | 150,640 |
+| FP127 legacy | 53 | `sign` 8 | 480 | `lambertW0` 12,374 | 148,130 |
+| FP127 via_ir | 53 | `sign` 10 | 321 | `atanh` 12,219 | 139,488 |
 | FP19 legacy | 65 | `abs` 108 | 544 | `normCdf` 17,159 | 225,807 |
 | FP19 via_ir | 65 | `abs` 55 | 443 | `normCdf` 17,344 | 209,090 |
 
@@ -24,7 +24,7 @@ Every `FP*Lib` function is one self-contained `assembly` block that carries its 
 | FP127 | `exp`, `ln` | 7,768 | 11,868 | 7,222 | 10,975 |
 | FP127 | `exp`, `ln`, `pow` | 10,925 | 22,021 | 10,404 | 20,579 |
 | FP127 | `exp`, `log2`, `sqrt` | 7,855 | 12,032 | 7,227 | 11,000 |
-| FP127 | `erf`, `erfc`, `normCdf` | 11,356 | 26,655 | 16,970 | 27,588 |
+| FP127 | `erf`, `erfc`, `normCdf` | 5,815 | 16,377 | 11,394 | 16,217 |
 | FP127 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 11,522 | 11,622 | 10,663 | 10,698 |
 | FP19 | `add`, `sub`, `mul`, `div` | 1,113 | 2,046 | 1,031 | 1,661 |
 | FP19 | `exp`, `ln` | 11,852 | 12,764 | 10,340 | 10,833 |
@@ -64,8 +64,8 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `powu` | 1,212 | 1,151 |
 | `compound` | 10,996 | 10,326 |
 | `cbrt` | 600 | 472 |
-| `gavg` | 457 | 343 |
-| `hypot` | 508 | 378 |
+| `gavg` | 566 | 483 |
+| `hypot` | 549 | 457 |
 | `inv` | 135 | 84 |
 | `abs` | 74 | 34 |
 | `neg` | 70 | 28 |
@@ -90,9 +90,9 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `cosh` | 6,382 | 5,694 |
 | `tanh` | 6,715 | 6,962 |
 | `atanh` | 11,158 | 12,219 |
-| `erf` | 8,849 | 9,087 |
-| `erfc` | 8,880 | 9,226 |
-| `normCdf` | 8,926 | 9,275 |
+| `erf` | 5,456 | 5,364 |
+| `erfc` | 5,431 | 5,371 |
+| `normCdf` | 5,490 | 5,482 |
 
 ## FP19
 
