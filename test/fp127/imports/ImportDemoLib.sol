@@ -724,7 +724,8 @@ library ImportDemoLib {
     function rbad127(uint256 _v, uint256 _g, uint256 _err) internal pure returns (uint256 _b) {
         assembly ("memory-safe") {
             function f127_rbad127(v, g, err) -> b {
-                b := lt(shr(1, sub(add(and(v, sub(shl(g, 1), 1)), err), shl(sub(g, 1), 1))), err)
+                let half := shl(sub(g, 1), 1)
+                b := or(iszero(lt(err, half)), lt(and(sub(v, sub(half, err)), sub(shl(g, 1), 1)), shl(1, err)))
             }
 
             function demo_rbad127(v, g, err) -> b {

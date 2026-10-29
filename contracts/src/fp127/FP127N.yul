@@ -158,7 +158,8 @@ object "FP127N" {
             }
 
             function rbad127(v, g, err) -> b {
-                b := lt(shr(1, sub(add(and(v, sub(shl(g, 1), 1)), err), shl(sub(g, 1), 1))), err)
+                let half := shl(sub(g, 1), 1)
+                b := or(iszero(lt(err, half)), lt(and(sub(v, sub(half, err)), sub(shl(g, 1), 1)), shl(1, err)))
             }
 
             function exp2g(t) -> v {
@@ -359,14 +360,17 @@ object "FP127N" {
                 if lt(ax, 0x960000000000000000000000000000000) {
                     let xg := shl(64, ax)
                     let v := 0
-                    let e := 0x100000
+                    let b := 0
                     switch gt(ax, 0x400000000000000000000000000000000)
                     case 0 {
                         v := erfs(xg)
-                        e := 0x300000000000
+                        b := rbad127(v, 64, 0x300000000000)
                     }
-                    default { v := sub(0x1000000000000000000000000000000000000000000000000, erfct(xg)) }
-                    switch rbad127(v, 64, e)
+                    default {
+                        v := sub(0x1000000000000000000000000000000000000000000000000, erfct(xg))
+                        b := rbad127(v, 64, 0x100000)
+                    }
+                    switch b
                     case 0 { r := round64(v) }
                     default { r := erfw127(ax, 0) }
                 }
@@ -378,20 +382,24 @@ object "FP127N" {
                 if iszero(x) { r := one leave }
                 let ax := absw(x)
                 let v := 0
-                let e := 0
+                let b := 0
                 if lt(ax, 0x960000000000000000000000000000000) {
                     let xg := shl(64, ax)
-                    e := 0x100000
                     switch gt(ax, 0x400000000000000000000000000000000)
                     case 0 {
                         v := sub(0x1000000000000000000000000000000000000000000000000, erfs(xg))
-                        e := 0x300000000000
+                        b := rbad127(v, 64, 0x300000000000)
                     }
-                    default { v := erfct(xg) }
+                    default {
+                        v := erfct(xg)
+                        b := rbad127(v, 64, 0x100000)
+                    }
                 }
+                // tested before 2 - v: the test of 2 - v with err one less, which still
+                // covers the bound (erf_model.py), and err a constant in each branch
                 if slt(x, 0) { v := sub(0x2000000000000000000000000000000000000000000000000, v) }
                 r := round64(v)
-                if rbad127(v, 64, e) {
+                if b {
                     switch slt(x, 0)
                     case 1 { r := add(one, erfw127(ax, 0)) }
                     default { r := sub(one, erfw127(ax, 0)) }
@@ -402,22 +410,24 @@ object "FP127N" {
                 if iszero(x) { r := 0x80000000000000000000000000000000 leave }
                 let ax := absw(x)
                 let v := 0
-                let e := 0
+                let b := 0
                 // from |x| = 13.3125 (|x| / sqrt2 > 9.41) erfc is below 2^-130.8: Phi is 0 or 1
                 if lt(ax, 0xd50000000000000000000000000000000) {
                     let yg := mulg(shl(64, ax), 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
-                    e := 0x100000
                     switch gt(yg, 0x4000000000000000000000000000000000000000000000000)
                     case 0 {
-                        v := sub(0x1000000000000000000000000000000000000000000000000, erfs(yg))
-                        e := 0x300000000000
+                        v := shr(1, sub(0x1000000000000000000000000000000000000000000000000, erfs(yg)))
+                        b := rbad127(v, 64, 0x300000000000)
                     }
-                    default { v := erfct(yg) }
+                    default {
+                        v := shr(1, erfct(yg))
+                        b := rbad127(v, 64, 0x100000)
+                    }
                 }
-                v := shr(1, v)
+                // Phi(-|x|) tested before 1 - v, as erfc's
                 if iszero(slt(x, 0)) { v := sub(0x1000000000000000000000000000000000000000000000000, v) }
                 r := round64(v)
-                if rbad127(v, 64, e) {
+                if b {
                     switch slt(x, 0)
                     case 1 { r := sub(0x80000000000000000000000000000000, erfw127(ax, 1)) }
                     default { r := add(0x80000000000000000000000000000000, erfw127(ax, 1)) }

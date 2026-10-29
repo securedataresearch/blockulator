@@ -268,6 +268,10 @@ def check_source() -> bool:
 #     erfc(y) by under 2/sqrt(pi) of that, and the halving floors once: under
 #     err/2 + 3.2 for the series, err/2 + 1 for the tail, so ERR_S and ERR_T
 #     cover it too.
+#   erfc for x < 0 and normCdf for x > 0 test the value before 2 - v (1 - v):
+#     the low bits mirror, so that is 2 - v's test with err one less, still
+#     above the bounds; each branch's err is then a constant, which solc
+#     folds into the inlined rbad127 (about 40 to 80 gas a call in all).
 
 ERR_S = 0x300000000000      # 3 2^44 = 2^45.58 units of 2^-192
 ERR_T = 0x100000            # 2^20
