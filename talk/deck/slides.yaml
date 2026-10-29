@@ -17,6 +17,7 @@
   notes:
     - "[you: who you are, one line]"
 
+
 - slide: 2
   title: What is e⁴⁰?
   scene: s02_exp40.Exp40
@@ -30,6 +31,7 @@
     - name: closing
       cue: ""
 
+
 - slide: 3
   title: exp is under everything
   scene: s03_under.Under
@@ -40,6 +42,7 @@
       cue: ""
     - name: alone
       cue: "If exp has no canonical value on chain, nothing built on it has one. That is an attack vector."
+
 
 - slide: 4
   title: Computers round
@@ -55,6 +58,7 @@
       cue: "Half a unit is the gap that stays."
     - name: snaps
       cue: "The wrong tick, or the wrong direction, is the error we can end."
+
 
 - slide: 5
   title: $130 million
@@ -73,6 +77,7 @@
     - name: closing
       cue: "One rounding step each."
 
+
 - slide: 6
   title: Resupply
   scene: s06_resupply.Resupply
@@ -90,7 +95,78 @@
     - name: multiplier
       cue: ""
 
+
 - slide: 7
+  title: Bunni v2, 2 Sep 2025
+  scene: s06b_bunni.Bunni
+  sections:
+    - name: before
+      cue: "Forty-four withdrawals, each rounding the idle balance the way the team believed safe."
+    - name: step
+      cue: ""
+    - name: round
+      cue: ""
+    - name: repeat
+      cue: "Active USDC 28 base units to 4; liquidity down 84%."
+    - name: take
+      cue: ""
+    - name: exact
+      cue: ""
+  notes:
+    - "[you: Bunni's \"safe in isolation\", if you want it]"
+
+- slide: 8
+  title: Balancer V2, 3 Nov 2025
+  scene: s06c_balancer_v2.BalancerV2
+  sections:
+    - name: before
+      cue: ""
+    - name: step
+      cue: "17 × 1.0581 = 17.988, rounded down to 17."
+    - name: round
+      cue: ""
+    - name: repeat
+      cue: "A swap undercharged by 34.7%, repeated 55 times in one transaction."
+    - name: take
+      cue: "$121.1M across five chains."
+    - name: exact
+      cue: ""
+
+- slide: 9
+  title: Thetanuts, 15 Jun 2026
+  scene: s06d_thetanuts.Thetanuts
+  sections:
+    - name: before
+      cue: "Supply redeemed down to 3 raw units,"
+    - name: step
+      cue: "then 37 mints, each charged less than one raw unit, floored to 0."
+    - name: round
+      cue: ""
+    - name: repeat
+      cue: ""
+    - name: take
+      cue: "About $105,000 in USDC, plus the rest of the vault."
+    - name: exact
+      cue: ""
+
+- slide: 10
+  title: Balancer V1, 31 Aug 2026
+  scene: s06e_balancer_v1.BalancerV1
+  sections:
+    - name: before
+      cue: ""
+    - name: step
+      cue: "3 × 1.4999… = 4.4999…, rounded to 4."
+    - name: round
+      cue: ""
+    - name: repeat
+      cue: "One token unit paid for one and a half, 438 times."
+    - name: take
+      cue: "120 pools, $1.39M."
+    - name: exact
+      cue: ""
+
+- slide: 11
   title: Two failures, one decision
   scene: s07_two.Two
   sections:
@@ -115,7 +191,8 @@
   notes:
     - "[you: Bunni's \"safe in isolation\", if you want it]"
 
-- slide: 8
+
+- slide: 12
   title: Measure it
   scene: s08_ladder.Ladder
   sections:
@@ -130,7 +207,8 @@
     - name: closing
       cue: ""
 
-- slide: 9
+
+- slide: 13
   title: The cliff
   scene: s09_cliff.Cliff
   sections:
@@ -145,7 +223,8 @@
     - name: closing
       cue: ""
 
-- slide: 10
+
+- slide: 14
   title: Real markets, today
   scene: s10_live.Live
   sections:
@@ -158,7 +237,8 @@
     - name: closing
       cue: ""
 
-- slide: 11
+
+- slide: 15
   title: Precision is a budget
   scene: s11_budget.Budget
   sections:
@@ -175,7 +255,8 @@
     - name: direction
       cue: "And decide the direction of every rounding at a unit."
 
-- slide: 12
+
+- slide: 16
   title: There is no reference
   scene: s12_reference.Reference
   sections:
@@ -190,7 +271,8 @@
     - name: closing
       cue: "one call to check."
 
-- slide: 13
+
+- slide: 17
   title: Not switch. Measure.
   scene: s13_not_switch.NotSwitch
   sections:
@@ -199,7 +281,8 @@
     - name: measure
       cue: "\"Measure yourself against the reference.\""
 
-- slide: 14
+
+- slide: 18
   title: What institutions buy
   scene: s14_institutions.Institutions
   sections:
@@ -216,7 +299,8 @@
     - name: precedent
       cue: ""
 
-- slide: 15
+
+- slide: 19
   title: Two formats
   scene: s15_formats.Formats
   sections:
@@ -231,7 +315,8 @@
     - name: rule
       cue: ""
 
-- slide: 16
+
+- slide: 20
   title: What correct costs
   scene: s16_ziv.Ziv
   sections:
@@ -248,7 +333,8 @@
     - name: closing
       cue: ""
 
-- slide: 17
+
+- slide: 21
   title: Knowing it's right
   scene: s17_proofs.Proofs
   sections:
@@ -265,7 +351,8 @@
     - name: closing
       cue: "State your own guarantees this specifically."
 
-- slide: 18
+
+- slide: 22
   title: Decide. Measure. Declare.
   scene: s18_habits.Habits
   sections:
@@ -280,7 +367,8 @@
     - name: block
       cue: ""
 
-- slide: 19
+
+- slide: 23
   title: The reference
   scene: s19_address.Address
   sections:
@@ -292,5 +380,16 @@
       cue: ""
     - name: links
       cue: "Today, Sepolia. Measure yourself against it."
+  notes:
+    - "[you: thanks]"
+
+- slide: 24
+  title: Thank you
+  scene: s20_thanks.Thanks
+  sections:
+    - name: thanks
+      cue: ""
+    - name: links
+      cue: ""
   notes:
     - "[you: thanks]"
