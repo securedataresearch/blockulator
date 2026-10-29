@@ -28,17 +28,22 @@ import vocab  # noqa: E402
 def expect_s02_exp40(mod) -> dict:
     p = vocab.probe(mod.OP, mod.ARG)
     lib = vocab.libs()
-    word_digits = len(p["truth"].partition(".")[0]) + mod.WORD_DECIMALS
+    int_len = len(p["truth"].partition(".")[0])
+    word_digits = int_len + mod.WORD_DECIMALS
     rows = []
     for lid in mod.LIBS:
         v = p["cells"][lid]["value"]
         assert not p["cells"][lid].get("reverted") and not p["cells"][lid].get("zero"), lid
+        m = vocab.matching_digits(v, p["truth"])
         rows.append(
             {
                 "id": lid,
                 "label": lib[lid]["label"],
                 "value": v,
-                "matching": vocab.matching_digits(v, p["truth"]),
+                # decimals by the other route: the matching prefix less the integer part,
+                # 0 when the prefix ends inside the integer part
+                "decimals": m - int_len if m >= int_len else 0,
+                "matching": m,
                 "digits": vocab.correct_digits(v, p["truth"]),
                 "first_wrong": vocab.first_wrong_index(v, p["truth"]),
             }
@@ -47,13 +52,24 @@ def expect_s02_exp40(mod) -> dict:
         assert int(float(p["cells"][lid]["digits"])) == rows[-1]["digits"], (lid, p["cells"][lid]["digits"], rows[-1]["digits"])
         # the matching prefix ends exactly at the digit the scene lights red
         fw = rows[-1]["first_wrong"]
-        assert fw is not None and fw - (1 if fw > len(p["truth"].partition(".")[0]) else 0) == rows[-1]["matching"], (lid, fw, rows[-1]["matching"])
+        assert fw is not None and fw - (1 if fw > int_len else 0) == rows[-1]["matching"], (lid, fw, rows[-1]["matching"])
+        # an 18-decimal value cannot match more than 18 decimals
+        assert len(v.partition(".")[2]) == mod.WORD_DECIMALS and rows[-1]["decimals"] <= mod.WORD_DECIMALS, (lid, v)
     ours = []
-    for lid in mod.OURS:
-        v = p["cells"][lid]["value"]
-        m = vocab.matching_digits(v, p["truth"])
-        assert m >= word_digits, (lid, m)  # "every digit" is a claim about the 36 the word holds
-        ours.append({"id": lid, "label": lib[lid]["label"], "value": v, "matching": m, "digits": int(p["cells"][lid]["digits"])})
+    with localcontext() as ctx:
+        ctx.prec = 60
+        truth = Decimal(p["truth"])
+        for lid in mod.OURS:
+            c = p["cells"][lid]
+            v = c["value"]
+            m = vocab.matching_digits(v, p["truth"])
+            assert m >= word_digits, (lid, m)  # "every decimal" is a claim about the 18 the word holds
+            dec = int(c["digits"]) - int_len
+            # the other route: decimals from the cell's relative error, floor(−log10(|relErr| · truth));
+            # the scene's count (a floor of a floor) never exceeds it
+            exact = int((-(abs(Decimal(c["relErr"])) * truth).log10()).to_integral_value(rounding=ROUND_FLOOR))
+            assert dec <= exact <= dec + 1, (lid, dec, exact)
+            ours.append({"id": lid, "label": lib[lid]["label"], "value": v, "matching": m, "digits": int(c["digits"]), "decimals": dec, "beyond": dec - mod.WORD_DECIMALS})
     return {
         "truth": p["truth"],
         "word_digits": word_digits,
@@ -154,47 +170,86 @@ def expect_s06_resupply(mod) -> dict:
 
 
 def expect_s08_ladder(mod) -> dict:
-    d = vocab.ladder(mod.SCENARIO)
-    lib = vocab.libs()
-    groups = []
-    for lid, cells in d["scenario"]["summary"].items():
-        if lid in mod.SKIP:
-            continue
-        vals = []
-        for n in d["N"]:
-            c = cells.get(str(n), {})
-            vals.append(c["digits"]["median"] if c.get("count") else None)
-        if None in vals:
-            continue
-        for g in groups:
-            if g["digits"] == vals and g["family"] == lib[lid]["family"]:
-                g["ids"].append(lid)
-                g["labels"].append(lib[lid]["label"])
-                break
-        else:
-            groups.append({"ids": [lid], "labels": [lib[lid]["label"]], "family": lib[lid]["family"], "ours": bool(lib[lid].get("ours")), "digits": vals})
-    assert {"fp127", "fp19"} <= {lid for g in groups for lid in g["ids"]}
-    return {"N": d["N"], "log10": [d["log10"][str(n)] for n in d["N"]], "axisMax": d["axisMax"], "groups": groups}
+    lib = {lid: rec for lid, rec in vocab.libs().items() if lid != "blockulator"}
+    assert len(lib) == 17, len(lib)  # the registry's 18 less BlockulatorWad: every one is drawn or listed
+    first = vocab.ladder(mod.SCENARIOS[0])
+    N = first["N"]
+    scenarios = []
+    for sid in mod.SCENARIOS:
+        d = vocab.ladder(sid)
+        summary, ops = d["scenario"]["summary"], d["scenario"]["ops"]
+        series, absent = {}, {}
+        for lid in lib:
+            if lid in mod.SKIP:
+                continue
+            vals = []
+            for n in N:
+                c = summary[lid].get(str(n), {})
+                dg = c.get("digits") if c.get("count") else None
+                vals.append(float(dg["median"] if isinstance(dg, dict) else dg) if dg is not None else None)
+            if None in vals:
+                absent[lid] = "not offered" if ops[lid] == ["unsupported"] else "no result"
+            else:
+                series[lid] = vals
+        groups = []
+        for lid, vals in series.items():
+            for g in groups:
+                if g["digits"] == vals and g["family"] == lib[lid]["family"]:
+                    g["ids"].append(lid)
+                    g["labels"].append(lib[lid]["label"])
+                    break
+            else:
+                groups.append({"ids": [lid], "labels": [lib[lid]["label"]], "family": lib[lid]["family"], "ours": bool(lib[lid].get("ours")), "digits": vals})
+        end = {lid: vals[-1] for lid, vals in series.items()}
+        # the margin is over the BEST 18-decimal line at N = 10,000 (the smallest honest claim)
+        gold_end = max(end[lid] for lid in end if lib[lid]["family"] == "wad")
+        margins = {lid: round(end[lid] - gold_end, 1) for lid in ("fp127", "fp19")}
+        assert {"fp127", "fp19"} <= set(series) and len(series) + len(absent) == 17, sid
+        scenarios.append(
+            {
+                "id": sid,
+                "title": d["scenario"]["title"],
+                "series": series,
+                "groups": groups,
+                "end": end,
+                "absent": absent,
+                "gold_end": gold_end,
+                "margins": margins,
+                "margin_digits": {lid: int(m // 1) for lid, m in margins.items()},
+            }
+        )
+    # the story the slide tells, checked against the cells
+    by_id = {s["id"]: s for s in scenarios}
+    assert "maker" in by_id["compound"]["series"] and {"aave", "morpho"} <= set(by_id["accrual-continuous"]["series"]) and {"fraxlend", "euler"} <= set(by_id["adaptive-rate"]["series"])
+    assert all(s["margins"]["fp19"] > s["margins"]["fp127"] > 0 for s in scenarios)
+    return {"N": N, "log10": [first["log10"][str(n)] for n in N], "axisMax": first["axisMax"], "scenarios": scenarios}
 
 
 def expect_s09_cliff(mod) -> dict:
     op = vocab.edges(mod.OP)
-    lib = vocab.libs()
+    lib = {lid: rec for lid, rec in vocab.libs().items() if lid != "blockulator"}
+    assert len(lib) == 17, len(lib)
     probes = [p for p in op["probes"] if len(p["args"]) == 1 and mod.ARG_LO <= float(p["args"][0]) <= mod.ARG_HI]
-    lids = []
-    for lid in probes[0]["cells"]:
+    lids, absent = [], {}
+    for lid in lib:
         if lid in mod.SKIP:
             continue
-        ok = False
+        kinds = set()
         for p in probes:
             c = p["cells"][lid]
             if c.get("unsupported"):
-                continue
-            if c.get("reverted") and str(c.get("reasonName", "")).startswith(mod.RANGE_REASON):
-                continue
-            ok = True
-        if ok:
+                kinds.add("unsupported")
+            elif c.get("reverted") and str(c.get("reasonName", "")).startswith(mod.RANGE_REASON):
+                kinds.add("range")
+            else:
+                kinds.add("value")
+        if kinds == {"unsupported"}:
+            absent[lid] = {"label": lib[lid]["label"], "reason": "no exp"}
+        elif "value" not in kinds:
+            absent[lid] = {"label": lib[lid]["label"], "reason": "rejects negative inputs"}
+        else:
             lids.append(lid)
+    assert len(lids) + len(absent) == 17 and "prbud" in absent and absent["prbud"]["reason"] == "rejects negative inputs"
     lids.sort(key=lambda lid: (not lib[lid].get("ours"), list(lib).index(lid)))
     columns = []
     y_max = 0.0
@@ -217,10 +272,19 @@ def expect_s09_cliff(mod) -> dict:
     by_arg = {c["arg"]: c["cells"] for c in columns}
     assert by_arg["-42"]["solady"]["kind"] == "zero" and by_arg["-60"]["abdk"]["kind"] == "zero" and by_arg["-100"]["fp127"]["kind"] == "zero"
     assert all(c["cells"]["fp19"]["kind"] == "value" and c["cells"]["fp19"]["digits"] > 60 for c in columns)
+    fp19_min = min(c["cells"]["fp19"]["digits"] for c in columns)
+    # FP127's last standing point: the last probe where its value still had a digit (by the raw cells)
+    standing = [p for p in probes if not p["cells"]["fp127"].get("zero") and not p["cells"]["fp127"].get("reverted") and float(p["cells"]["fp127"]["digits"]) >= 1]
+    wad = [lid for lid in lids if lib[lid]["family"] == "wad"]
+    first_zero = next(p["args"][0] for p in probes if any(p["cells"][lid].get("zero") for lid in wad))
     return {
         "libs": [{"id": lid, "label": lib[lid]["label"], "family": lib[lid]["family"], "ours": bool(lib[lid].get("ours"))} for lid in lids],
+        "absent": absent,
         "columns": columns,
         "axisMax": axis_max,
+        "fp19_min": fp19_min,
+        "fp127_last": {"arg": standing[-1]["args"][0], "digits": float(standing[-1]["cells"]["fp127"]["digits"])},
+        "wad_first_zero": first_zero,
     }
 
 
@@ -233,6 +297,7 @@ def expect_s10_live(mod) -> dict:
             "protocol": c["protocol"],
             "deployed": float(c["truth"][c["primaryTruth"]]["deployed"]["digitsInterest"]),
             "fp127": float(c["truth"][c["primaryTruth"]]["fp127"]["digitsInterest"]),
+            "fp19": float(c["truth"][c["primaryTruth"]]["fp19"]["digitsInterest"]),
         }
         for c in cases
     ]
@@ -240,8 +305,19 @@ def expect_s10_live(mod) -> dict:
     counts = {}
     for x in pts:
         counts[x["protocol"]] = counts.get(x["protocol"], 0) + 1
-    assert set(counts) == set(mod.PROTOCOL_COLOUR), counts
-    return {"points": pts, "counts": counts, "block": f"{survey['block']:,}", "date": survey["date"], "above": sum(1 for x in pts if x["fp127"] > x["deployed"])}
+    assert set(counts) == set(mod.PROTOCOL_LABEL), counts
+
+    def median(key: str) -> float:  # the middle of the sorted list, by hand
+        v = sorted(x[key] for x in pts)
+        k = len(v) // 2
+        return round((v[k - 1] + v[k]) / 2 if len(v) % 2 == 0 else v[k], 1)
+
+    medians = {k: median(k) for k in ("deployed", "fp127", "fp19")}
+    above, above_fp19 = sum(1 for x in pts if x["fp127"] > x["deployed"]), sum(1 for x in pts if x["fp19"] > x["deployed"])
+    assert above == above_fp19 == len(pts), (above, above_fp19)
+    margins = {"fp127": round(medians["fp127"] - medians["deployed"], 1), "fp19": round(medians["fp19"] - medians["fp127"], 1)}
+    assert margins["fp127"] > 0 and margins["fp19"] > 0
+    return {"points": pts, "counts": counts, "block": f"{survey['block']:,}", "date": survey["date"], "above": above, "above_fp19": above_fp19, "medians": medians, "margins": margins}
 
 
 EXPECT = {

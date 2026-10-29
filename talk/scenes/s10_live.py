@@ -1,49 +1,62 @@
 """Slide 10, "Real markets, today": every live Aave reserve and Morpho
-market, its pending interest as deployed against the same in FP127.
+market, its pending interest as deployed, then the same interest in
+FP127, then in FP19.
 
-A square chart on a faint grid, the same scale on both axes: correct
-digits of the pending interest as deployed across, the same computed in
-FP127 up. A dot per market, Aave slate, Morpho sapphire (both are
-"protocol" family on the site; here they need telling apart), arriving in
-a burst in a shuffled order. Then a legend with the counts, the
-diagonal "deployed = FP127" (emerald: everything above it is a market
-FP127 computes to more digits), the camera leaning in on the cloud and
-back, and a pulse on each protocol's cloud in turn. About 70 s.
+One horizontal axis, correct digits of the pending interest (0–80), and
+three rows stacked down it: "as deployed" (slate), "the same interest in
+FP127" (emerald), "the same interest in FP19" (white). Each of the 326
+markets is one marker, a circle for Aave, a diamond for Morpho, at the
+same vertical jitter in every row so the eye can follow it. The markers
+burst into the top row at their deployed digits (a cluster around 7, a
+few near 0); then every marker lifts down to the FP127 row at its FP127
+digits, leaving a faint trail, the cluster re-forming around 30; then
+again to the FP19 row, around 67. Each row's median is ticked and
+labelled as it settles, a bracket between the medians names the margin
+in digits, and the two Blockulator rows settle under a soft band, drawn
+last. The closing line names the win in the rounded medians. About 45 s.
 
 Numbers from docs/benchmarks/accrual-deployed.json: .cases[] with .group
 == "live" (.protocol, .primaryTruth, .truth[primaryTruth].deployed
-.digitsInterest and .fp127.digitsInterest); .survey.block and .date for
-the caption.
+.digitsInterest, .fp127.digitsInterest and .fp19.digitsInterest); the
+medians and margins are computed here; .survey.block and .date for the
+caption.
 """
 
 from __future__ import annotations
 
 import random
+import statistics
 
 from manim import (
     DOWN,
     LEFT,
+    PI,
     RIGHT,
     UP,
     Create,
-    DashedLine,
+    Dot,
     FadeIn,
-    Indicate,
     LaggedStart,
-    MovingCameraScene,
+    Line,
+    RoundedRectangle,
+    Square,
     VGroup,
 )
 from manim.utils.rate_functions import ease_in_out_cubic
 
-from vocab import Chart, DeckScene, Palette, _load, live, thousands, words
+from vocab import DeckScene, GridLine, Palette, _load, digits, live, measure, thousands, words
 
-PROTOCOL_COLOUR = {"aave": Palette.SLATE, "morpho": Palette.SAPPHIRE}
+ROWS = (("deployed", "as deployed", Palette.SLATE), ("fp127", "the same interest in FP127", Palette.EMERALD), ("fp19", "the same interest in FP19", Palette.TEXT))
 PROTOCOL_LABEL = {"aave": "Aave", "morpho": "Morpho"}
-PROTOCOL_NOUN = {"aave": "reserves", "morpho": "markets"}
-AXIS = (0, 40, 10)
-SIDE = 5.7
-ORIGIN_XY = (-5.0, -2.45)
+AXIS = (0, 80, 10)
+AXIS_X0, AXIS_X1, AXIS_Y = -2.9, 6.5, -2.5  # the axis, scene units; the row names stand to its left
+ROW_Y = {"deployed": 2.1, "fp127": 0.3, "fp19": -1.5}
+JITTER = 0.2  # a market's vertical offset within its row, the same in every row
+MARKER = 0.05  # circle radius; the diamond is drawn to match
 SEED = 40
+LABEL_X = -3.25  # row names end here, level with their row
+BRACKET_DROP = 0.48  # the margin bracket sits this far under the upper row's centre
+CLOSE_Y = 3.5
 
 
 def numbers() -> dict:
@@ -51,70 +64,116 @@ def numbers() -> dict:
     pts = []
     for c in cases:
         t = c["truth"][c["primaryTruth"]]
-        pts.append({"id": c["id"], "protocol": c["protocol"], "deployed": float(t["deployed"]["digitsInterest"]), "fp127": float(t["fp127"]["digitsInterest"])})
+        pts.append({"id": c["id"], "protocol": c["protocol"], "deployed": float(t["deployed"]["digitsInterest"]), "fp127": float(t["fp127"]["digitsInterest"]), "fp19": float(t["fp19"]["digitsInterest"])})
     survey = _load("docs/benchmarks/accrual-deployed.json")["survey"]
-    counts = {p: sum(1 for x in pts if x["protocol"] == p) for p in PROTOCOL_COLOUR}
+    counts = {p: sum(1 for x in pts if x["protocol"] == p) for p in PROTOCOL_LABEL}
     assert sum(counts.values()) == len(pts)
-    assert all(AXIS[0] <= x["deployed"] <= AXIS[1] and AXIS[0] <= x["fp127"] <= AXIS[1] for x in pts)
-    return {"points": pts, "counts": counts, "block": thousands(survey["block"]), "date": survey["date"], "above": sum(1 for x in pts if x["fp127"] > x["deployed"])}
+    assert all(AXIS[0] <= x[k] <= AXIS[1] for x in pts for k, _, _ in ROWS)
+    medians = {k: round(statistics.median(x[k] for x in pts), 1) for k, _, _ in ROWS}
+    assert medians["deployed"] < medians["fp127"] < medians["fp19"]
+    return {
+        "points": pts,
+        "counts": counts,
+        "block": thousands(survey["block"]),
+        "date": survey["date"],
+        "above": sum(1 for x in pts if x["fp127"] > x["deployed"]),
+        "above_fp19": sum(1 for x in pts if x["fp19"] > x["deployed"]),
+        "medians": medians,
+        "margins": {"fp127": round(medians["fp127"] - medians["deployed"], 1), "fp19": round(medians["fp19"] - medians["fp127"], 1)},
+    }
 
 
-class Live(DeckScene, MovingCameraScene):
+def marker(protocol: str, colour: str):
+    """Aave a circle, Morpho a diamond: the shape tells them apart."""
+    if protocol == "aave":
+        return Dot(radius=MARKER, color=colour, fill_opacity=0.85)
+    return Square(side_length=MARKER * 1.8, color=colour, fill_color=colour, fill_opacity=0.85, stroke_width=0).rotate(PI / 4)
+
+
+class Live(DeckScene):
     def construct(self):
         n = numbers()
-        frame = self.camera.frame
+        med = n["medians"]
         self.wait(0.6)
         self.play(self.caption(f"docs/benchmarks/accrual-deployed.json · live · block {n['block']} · {n['date']}"))
 
-        chart = Chart(AXIS, AXIS, SIDE, SIDE, origin=(*ORIGIN_XY, 0))
-        for v in range(AXIS[0], AXIS[1] + 1, AXIS[2]):
-            chart.x_label(v, str(v), mono=True)
-            chart.y_label(v, str(v), mono=True)
-        chart.x_title("correct digits of the pending interest, as deployed", size=20, drop=0.62)
-        chart.y_title("the same, in FP127", size=20, colour=Palette.EMERALD)
-        grid = chart.grid()
-        self.play(Create(chart.x_axis, run_time=1.0), Create(chart.y_axis, run_time=1.0))
-        self.play(FadeIn(chart.labels, run_time=0.6), FadeIn(chart.titles, run_time=0.6), FadeIn(grid, run_time=0.8))
-        self.wait(1.0)
+        axis = GridLine(AXIS, length=AXIS_X1 - AXIS_X0, colour=Palette.RULE, tick_size=0.1)
+        axis.shift([AXIS_X0, AXIS_Y, 0] - axis.n2p(AXIS[0]))
+        ticks = VGroup(*[digits(str(v), 20, Palette.FAINT).next_to(axis.n2p(v), DOWN, buff=0.18) for v in range(AXIS[0], AXIS[1] + 1, AXIS[2])])
+        title = words("correct digits of the pending interest", 22, Palette.MUTED).move_to([(AXIS_X0 + AXIS_X1) / 2, AXIS_Y - 0.56, 0])
+        rules = VGroup(*[Line([axis.n2p(v)[0], ROW_Y["fp19"] - 0.5, 0], [axis.n2p(v)[0], ROW_Y["deployed"] + 0.5, 0], color=Palette.RULE, stroke_width=1, stroke_opacity=0.22) for v in range(AXIS[0] + AXIS[2], AXIS[1] + 1, AXIS[2])])
+        self.add(rules)
+        self.play(Create(axis, run_time=1.0), FadeIn(rules, run_time=0.8))
+        self.play(FadeIn(ticks, run_time=0.6), FadeIn(title, run_time=0.6))
+        self.wait(0.5)
 
-        # the burst
+        # one marker per market, its jitter fixed so it is the same market in every row
+        rng = random.Random(SEED)
         order = list(n["points"])
-        random.Random(SEED).shuffle(order)
-        dots = {p: VGroup() for p in PROTOCOL_COLOUR}
-        ordered = []
-        for x in order:
-            d = chart.dot(x["deployed"], x["fp127"], PROTOCOL_COLOUR[x["protocol"]], radius=0.055, fill_opacity=0.85)
-            dots[x["protocol"]].add(d)
-            ordered.append(d)
-        self.play(LaggedStart(*[FadeIn(d, scale=0.3) for d in ordered], lag_ratio=0.012, run_time=4.5))
-        self.wait(2.5)
+        rng.shuffle(order)
+        jitter = {x["id"]: rng.uniform(-JITTER, JITTER) for x in order}
+        markers = {}
 
-        # legend with the counts
-        legend = VGroup()
-        for p, colour in PROTOCOL_COLOUR.items():
-            row = VGroup(chart.dot(0, 0, colour, radius=0.07), words(f"{PROTOCOL_LABEL[p]} · {n['counts'][p]} {PROTOCOL_NOUN[p]}", 22, colour))
-            row[1].next_to(row[0], RIGHT, buff=0.18)
-            legend.add(row)
-        legend.arrange(DOWN, aligned_edge=LEFT, buff=0.3).move_to([4.6, 1.6, 0]).align_to([2.6, 0, 0], LEFT)
-        self.play(LaggedStart(*[FadeIn(r, shift=RIGHT * 0.08) for r in legend], lag_ratio=0.3, run_time=1.0))
-        self.wait(3.0)
+        def at(x, key):
+            return [axis.n2p(x[key])[0], ROW_Y[key] + jitter[x["id"]], 0]
 
-        # the diagonal: deployed = FP127
-        diag = DashedLine(chart.c2p(AXIS[0], AXIS[0]), chart.c2p(AXIS[1], AXIS[1]), color=Palette.EMERALD, stroke_width=1.5, dash_length=0.08, stroke_opacity=0.8)
-        diag_lbl = words("deployed = FP127", 18, Palette.EMERALD).rotate(0.7853982).move_to(chart.c2p(31.5, 29.0))
-        self.play(Create(diag, run_time=1.2))
-        self.play(FadeIn(diag_lbl, run_time=0.5))
-        above = words(f"{n['above']} of {len(n['points'])} above the line", 22, Palette.BODY)
-        above.next_to(legend, DOWN, buff=0.6).align_to(legend, LEFT)
-        self.play(FadeIn(above, shift=UP * 0.08, run_time=0.6))
-        self.wait(3.0)
+        prev_key, prev_colour = None, None
+        for key, name, colour in ROWS:
+            y = ROW_Y[key]
+            ours = key != "deployed"
+            label = words(name, 20, colour).move_to([0, y, 0]).align_to([LABEL_X, 0, 0], RIGHT)
+            self.play(FadeIn(label, shift=RIGHT * 0.08, run_time=0.5))
+            if prev_key is None:
+                # the burst into the top row
+                for x in order:
+                    markers[x["id"]] = marker(x["protocol"], colour).move_to(at(x, key))
+                self.play(LaggedStart(*[FadeIn(markers[x["id"]], scale=0.3) for x in order], lag_ratio=0.01, run_time=3.0))
+                self.wait(1.5)
+            else:
+                # the lift: every marker to its new digits, a faint trail behind it; ours under a band
+                band = RoundedRectangle(width=AXIS_X1 - AXIS_X0 + 0.3, height=2 * JITTER + 0.42, corner_radius=0.14, color=colour, fill_color=colour, fill_opacity=0, stroke_width=0).move_to([(AXIS_X0 + AXIS_X1) / 2, y, 0])
+                self.add(band)
+                self.bring_to_back(band)
+                trails = VGroup(*[Line(at(x, prev_key), at(x, key), color=colour, stroke_width=1, stroke_opacity=0).set_z_index(-1) for x in order])
+                self.add(trails)
+                self.bring_to_back(trails)
+                self.play(
+                    *[markers[x["id"]].animate(rate_func=ease_in_out_cubic).move_to(at(x, key)).set_color(colour) for x in order],
+                    trails.animate.set_stroke(opacity=0.14),
+                    band.animate.set_fill(opacity=0.08),
+                    run_time=2.4,
+                )
+                self.wait(0.8)
+            # the median, ticked and named over the row
+            mx = axis.n2p(med[key])[0]
+            tick = Line([mx, y - JITTER - 0.2, 0], [mx, y + JITTER + 0.2, 0], color=colour, stroke_width=2.5)
+            tick_lbl = words(f"median {med[key]}", 20, colour).next_to(tick, UP, buff=0.08)
+            self.play(Create(tick, run_time=0.5), FadeIn(tick_lbl, shift=UP * 0.06, run_time=0.5))
+            if prev_key is not None:
+                # the margin between the medians, bracketed in the gap under the row above
+                scale = 0.9
+                y_bar = ROW_Y[prev_key] - BRACKET_DROP
+                margin = measure(axis, med[prev_key], med[key], f"+{n['margins'][key]} digits", scale=scale, drop=(AXIS_Y - y_bar) / scale, colour=colour)
+                self.play(Create(margin[0], run_time=0.5), FadeIn(margin[1], run_time=0.5))
+                self.play(FadeIn(margin[2], shift=UP * 0.06, run_time=0.5))
+                self.wait(3.2)
+            else:
+                self.wait(2.0)
+            prev_key, prev_colour = key, colour
 
-        # lean in on the cloud, then back; a pulse on each protocol in turn
-        cloud = VGroup(*ordered)
-        self.play(frame.animate(rate_func=ease_in_out_cubic).set(width=9.5).move_to(cloud.get_center() + RIGHT * 0.8 + DOWN * 0.2), run_time=2.4)
+        # the markers' shapes, named once
+        legend = VGroup(marker("aave", Palette.BODY), words(f"{n['counts']['aave']} Aave", 18, Palette.BODY), marker("morpho", Palette.BODY), words(f"{n['counts']['morpho']} Morpho", 18, Palette.BODY))
+        legend.arrange(RIGHT, buff=0.14)
+        legend[2].shift(RIGHT * 0.2)
+        legend[3].shift(RIGHT * 0.2)
+        legend.move_to([0, CLOSE_Y - 0.45, 0]).align_to([6.9, 0, 0], RIGHT)
+        self.play(FadeIn(legend, run_time=0.6))
         self.wait(1.0)
-        for p in PROTOCOL_COLOUR:
-            self.play(Indicate(dots[p], color=PROTOCOL_COLOUR[p], scale_factor=1.06, run_time=0.9), Indicate(legend[list(PROTOCOL_COLOUR).index(p)], color=PROTOCOL_COLOUR[p], scale_factor=1.03, run_time=0.9))
-            self.wait(1.5)
-        self.play(frame.animate(rate_func=ease_in_out_cubic).set(width=14.222222222222221).move_to([0, 0, 0]), run_time=2.4)
-        self.wait(14.0)
+
+        close = words(
+            f"the same {len(n['points'])} markets: {round(med['deployed'])} digits as deployed, {round(med['fp127'])} in FP127, {round(med['fp19'])} in FP19",
+            24,
+            Palette.TEXT,
+        ).move_to([0, CLOSE_Y, 0])
+        self.play(FadeIn(close, shift=UP * 0.08, run_time=0.8))
+        self.wait(12.0)

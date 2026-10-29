@@ -44,31 +44,46 @@ Pango per process; every text helper calls it.
 - `snap(dot, line, to_tick, colour)`: the one verb. The dot slides to the
   tick, swells and settles in the colour of what it became.
 - `measure(line, a, b, label)`: a thin `|——|` bracket under the line naming
-  a distance.
+  a distance; `measure_up(p_lo, p_hi, label)` is the same stood on end, how
+  a chart names the margin between two line ends in its own units.
 - `DeckScene`: dark background, fonts registered, 30 fps, output under
   `talk/build/`; `self.caption(text)` returns the animation that puts the
   source of the numbers in the bottom-left corner.
 - Loaders, all by path from the repo root: `libs()` (static/data/libraries.json
-  → `{id: record}`), `edges(op)` and `probe(op, *args)` (docs/benchmarks/edges.json),
-  `ladder(scenario)` (docs/benchmarks/ladder.json → `{"N", "log10", "scenario"}`),
-  `live()` (docs/benchmarks/accrual-deployed.json, the 326 `group == "live"` cases),
+  → `{id: record}`) and `talk_libs()` (the same less BlockulatorWad: the 17
+  every comparison accounts for), `edges(op)` and `probe(op, *args)`
+  (docs/benchmarks/edges.json), `ladder(scenario)` (docs/benchmarks/ladder.json
+  → `{"N", "log10", "scenario"}`) with `ladder_median(cell)` (`.digits.median`,
+  or a bare `.digits` in older files) and `ladder_reason(scenario, lib)` ("not
+  offered" when `.ops[lib]` is `["unsupported"]`), `live()`
+  (docs/benchmarks/accrual-deployed.json, the 326 `group == "live"` cases),
   `resupply()` (scripts/replays/resupply.json).
 - `correctly_rounded_18(truth)`: the nearest 18-decimal value, ties away
   from zero (no probe in edges.json is a tie). `correct_digits(value, truth)`
   = floor(−log10(|value − truth| / truth)), the measure edges.json reports as
-  `.digits`. `first_wrong_index(value, truth)`: where the strings part.
+  `.digits`. `matching_digits` counts the shared prefix by eye;
+  `matching_decimals` counts it from the point (0 when the integer parts
+  differ), the count a fixed-point word is judged by; `correct_decimals(digits,
+  truth)` turns a cell's `.digits` into decimals (less the integer part's
+  length, a floor). `first_wrong_index(value, truth)`: where the strings part.
+
+Every chart that compares libraries shows all 17 that have a value and
+lists the rest with the reason the data gives ("no exp", "rejects negative
+inputs", "not offered"); none is dropped silently. Blockulator's rows and
+lines are drawn last, under a halo, and the margin is called out in the
+chart's own units.
 
 ## Scenes
 
 | file | slide | numbers from |
 |---|---|---|
-| `s02_exp40.py` | What is e^40? | edges.json op `exp`, probe `["40"]`: `.truth`, `.cells[solady|balancer|prb|fp19|fp127].value`, `.cells[fp19|fp127].digits`; labels from libraries.json |
+| `s02_exp40.py` | What is e^40? | edges.json op `exp`, probe `["40"]`: `.truth`, `.cells[solady|balancer|prb|fp19|fp127].value`, `.cells[fp19|fp127].digits` (the three counted in decimals of 18; FP127's decimals beyond 18 from its `.digits`); labels from libraries.json |
 | `s04_grid.py` | Computers round | edges.json op `exp`, probe `["40"]`: `.truth`, `.cells.fp127.value`; the 10^-18 and 2^-128 neighbours computed from the truth with Fraction |
 | `s05_cost.py` | $130 million | `talk/scenes/data/incidents.json` (`.incidents[]`, `.total`, `.since`; the rounding lines are essay-v6 §2 verbatim, the sum adds `.lossUsd`) |
 | `s06_resupply.py` | Resupply, 26 June 2025 | scripts/replays/resupply.json `.pins` (price, borrowAmount, collateral, maxLTV, ltvPrecision, exchangePrecision, block) and `.citations` (the two Solidity lines); every value computed from the pins |
-| `s08_ladder.py` | Measure it | ladder.json `.ladder`, `.ladderLog10`, `.axisMax`, scenario `compound` `.summary[lib][N].digits.median` (libraries with a median at every N; fp127lib skipped) |
-| `s09_cliff.py` | The cliff | edges.json op `exp`, the probes with one argument in [−100, −40]: `.cells[lib].digits/zero/reverted/reasonName` (libraries unsupported or ParamOutOfRange on every probe are dropped; fp127lib skipped) |
-| `s10_live.py` | Real markets, today | accrual-deployed.json `.cases[group == "live"]` `.truth[primaryTruth].deployed.digitsInterest` and `.fp127.digitsInterest`, `.survey.block/.date` |
+| `s08_ladder.py` | Measure it | ladder.json `.ladder`, `.ladderLog10`, `.axisMax`; one chart morphing across scenarios `compound`, `accrual-continuous`, `adaptive-rate`: `.summary[lib][N].digits.median` per library (one line each; those without a median at every N listed with `.ops[lib]`'s reason), the margins FP19 − best 18-decimal and FP127 − best 18-decimal at N = 10,000; fp127lib skipped |
+| `s09_cliff.py` | The cliff | edges.json op `exp`, the probes with one argument in [−100, −40]: `.cells[lib].digits/zero/reverted/reasonName/unsupported` (every library with a value drawn; unsupported on every probe listed as "no exp", ParamOutOfRange on every probe as "rejects negative inputs"; fp127lib skipped); FP19's least digits, FP127's last probe with a digit |
+| `s10_live.py` | Real markets, today | accrual-deployed.json `.cases[group == "live"]` `.truth[primaryTruth].deployed.digitsInterest`, `.fp127.digitsInterest` and `.fp19.digitsInterest`; the three medians and the margins between them computed; `.survey.block/.date` |
 
 Each scene module exposes `numbers()`, the values it draws.
 `uv run talk/scenes/check.py [scene…]` recomputes them from the loaders

@@ -206,6 +206,17 @@ def measure(line: GridLine, a: float, b: float, label: str, scale: float = 1.0, 
     return VGroup(bar, caps, text)
 
 
+def measure_up(p_lo, p_hi, label: str, colour: str = Palette.MUTED, size: float = 20, cap: float = 0.07, buff: float = 0.12, stroke_width: float = 1.5) -> VGroup:
+    """The bracket stood on end: a thin vertical |——| from the scene point
+    p_lo up to p_hi with the label to its right, centred on the span: how
+    the chart names a margin between two line ends in the axis's units."""
+    p_lo, p_hi = np.array(p_lo, dtype=float), np.array(p_hi, dtype=float)
+    bar = Line(p_lo, p_hi, color=colour, stroke_width=stroke_width)
+    caps = VGroup(Line(p_lo + LEFT * cap, p_lo + RIGHT * cap, color=colour, stroke_width=stroke_width), Line(p_hi + LEFT * cap, p_hi + RIGHT * cap, color=colour, stroke_width=stroke_width))
+    text = words(label, size, colour).next_to(bar, RIGHT, buff=buff)
+    return VGroup(bar, caps, text)
+
+
 def direction(line: GridLine, x_from: float, x_to: float, colour: str, lift: float = 0.3) -> Arrow:
     """The direction a rounding took, drawn just above the line; the tip and
     stroke are fixed so a short arrow reads like a long one."""
@@ -359,9 +370,20 @@ def incidents() -> dict:
     oldest first (.incidents[] with date, protocol, rounding, loss,
     lossUsd, source) and the slide's .total phrase."""
     return _load("talk/scenes/data/incidents.json")
+NOT_IN_TALK = ("blockulator",)  # BlockulatorWad: in the registry, not in the talk
+DUPLICATES = ("fp127lib",)  # the benchmarks' inline copy of fp127, not a registry entry
+
+
 def libs() -> dict[str, dict]:
     """static/data/libraries.json → {id: record}, in file order."""
     return {lib["id"]: lib for lib in _load("static/data/libraries.json")["libraries"]}
+
+
+def talk_libs() -> dict[str, dict]:
+    """The libraries every comparison in the talk accounts for: the registry
+    minus NOT_IN_TALK (17). A chart draws each one that has a value and
+    lists the rest with the reason the data gives; none is dropped silently."""
+    return {lid: lib for lid, lib in libs().items() if lid not in NOT_IN_TALK}
 
 
 def edges(op: str) -> dict:
@@ -390,6 +412,28 @@ def ladder(scenario: str) -> dict:
         if s["id"] == scenario:
             return {"N": d["ladder"], "log10": d["ladderLog10"], "axisMax": d["axisMax"], "scenario": s}
     raise KeyError(scenario)
+
+
+def ladder_median(cell: dict | None) -> float | None:
+    """The median correct digits of one ladder summary cell, or None when
+    no input completed. .digits is {min, median, max} in the current file
+    and was a bare value in earlier ones; both are read."""
+    if not cell or not cell.get("count"):
+        return None
+    dg = cell.get("digits")
+    if isinstance(dg, dict):
+        dg = dg.get("median")
+    return None if dg is None else float(dg)
+
+
+def ladder_reason(scenario: dict, lid: str) -> str:
+    """Why a library has no line in a ladder scenario, from the scenario's
+    own record: its .ops[lib] is ["unsupported"] when the library has no
+    model for the scenario ("not offered"); otherwise some N had no
+    completed input ("no result")."""
+    if scenario["ops"].get(lid) == ["unsupported"]:
+        return "not offered"
+    return "no result"
 
 
 def live() -> list[dict]:
@@ -445,6 +489,31 @@ def matching_digits(value: str, truth: str) -> int:
             break
         n += 1
     return n
+
+
+def matching_decimals(value: str, truth: str) -> int:
+    """How many digits after the point value shares with truth, counted
+    from the point: the count that matters for a fixed-point word, which
+    promises decimals, not significant digits. 0 if the integer parts
+    differ (then no decimal is right)."""
+    vi, _, vf = value.partition(".")
+    ti, _, tf = truth.partition(".")
+    if vi != ti:
+        return 0
+    n = 0
+    for a, b in zip(vf, tf):
+        if a != b:
+            break
+        n += 1
+    return n
+
+
+def correct_decimals(digits: int, truth: str) -> int:
+    """Correct decimals from a cell's correct significant digits: the
+    integer part's digits are the first ones, so the rest lie after the
+    point. A floor (digits is floored, log10 of the integer part is below
+    its length), so the count is never overstated."""
+    return int(digits) - len(truth.partition(".")[0].lstrip("-"))
 
 
 def first_wrong_index(value: str, truth: str) -> int | None:
