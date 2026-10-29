@@ -44,7 +44,7 @@ Inline library, median gas per call: random inputs that take no shortcut for `ex
 | pow | {{ <gas op="pow" /> }} | {{ <gas op="pow" lib="fp19" /> }} | {{ <gas op="pow" lib="fp19" form="quad" /> }} | {{ <gas op="pow" form="solady" /> }} | {{ <gas op="pow" form="prb" /> }} | {{ <gas op="pow" form="abdk" /> }} | {{ <gas op="pow" form="balancer" /> }} |
 | normCdf | {{ <gas op="normCdf" /> }} | {{ <gas op="normCdf" lib="fp19" /> }} | | | | | |
 
-FP127 costs less than PRBMath on every op both offer here, and more than Solady on every op Solady offers, because it computes twice the bits. The floats, FP19 and Quad, pay for their moving point on every `add` and `mul`. FP19 costs less than Quad on every op here but `sqrt`.
+FP127 costs less than PRBMath on every op both offer here but `exp` (2,835 gas against 2,816), and more than Solady on every op Solady offers, because it computes twice the bits. The floats, FP19 and Quad, pay for their moving point on every `add` and `mul`. FP19 costs less than Quad on every op here but `sqrt`.
 
 ## What it does not fix
 

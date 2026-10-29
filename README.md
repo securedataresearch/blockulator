@@ -4,7 +4,9 @@
 [![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-535%20forge%20tests-3f6d9c)](test) [![to the last wei](https://img.shields.io/badge/WAD-0%20wrong%20of%20108%2C000-00694e)](docs/benchmarks/wad.md) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
 <!-- badges:end -->
 
-**The definitive source for precision.** FP127 and FP19 put precision maths in one `int256`: 38 digits and 71, every op correctly rounded, checked on chain, and now competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)
+**The definitive source for precision.** Two libraries, one `int256` each: FP127, 38 digits of fixed point, every op correctly rounded; FP19, 71 digits of float, every op correctly rounded or exact. Checked on chain, competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)
+
+On typical inputs FP127's ln and pow cost 1,944 and 3,317 gas against PRBMath's 7,083 and 10,065, with 38 digits against 18; exp is 2,835 against 2,816. FP19's ln and pow cost 3,106 and 5,964 against ABDKMathQuad's 16,356 and 23,479, with 71 digits against 34; ABDKMathQuad's sqrt is cheaper, 760 against 1,205. Across the 326 live Aave and Morpho markets at the survey block, the deployed accrual keeps a median 7.2 correct digits of the pending interest; FP127 keeps 30 and FP19 67.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/digits-dark.svg">
