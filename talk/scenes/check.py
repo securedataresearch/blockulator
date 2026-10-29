@@ -540,6 +540,99 @@ def expect_s06b_bunni(mod) -> dict:
     }
 
 
+def expect_s06c_balancer_v2(mod) -> dict:
+    """The decisive step by the raw trace: the Vault's own onSwap call (not
+    the scored step), the rate the attacker's updateTokenRateCache set, the
+    product and its mulDown by Fraction, the exact charge from the forge
+    harness's expectation, the cycles counted in the trace, the
+    counterfactual's figures from the generated table."""
+    d = vocab.balancer()
+    pool, test, score = d["pools"][mod.POOL], d["test"][mod.POOL], d["score"][mod.POOL]
+    sym = pool["symbols"]
+    rk, wk = sym.index(mod.POOL), sym.index("WETH")
+    rate = int(pool["rateCacheUpdatedInTx"]["providerRate"])
+    first = int(test["first"])  # the replayed phase starts at this swap; the micro swap is the next call
+    raw = pool["swaps"][first + mod.MICRO_INDEX]
+    assert raw["kind"] == 1 and raw["i"] == wk and raw["j"] == rk, raw  # GIVEN_OUT, WETH in, osETH out
+    out, charged = int(raw["amount"]), int(raw["amountIn"])
+    assert charged == 625_492 and out == 17, (charged, out)  # C3
+    product = Fraction(out * rate, 10**mod.WAD)
+    mul_down, mul_up = product.numerator // product.denominator, -(-product.numerator // product.denominator)
+    assert mul_down == 17 and mul_up == 18 and product != mul_down, (mul_down, mul_up)  # C3: mulDown keeps 17, mulUp would give 18
+    exact = int(test["expectExact"][mod.MICRO_INDEX])
+    assert exact == 957_169, exact  # C3
+    with localcontext() as ctx:
+        ctx.prec = 60
+
+        def dec(x, places: int) -> str:
+            return f"{Decimal(x).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP):,}"
+
+        under_pct = dec((1 - Decimal(charged) / Decimal(exact)) * 100, mod.PCT_DECIMALS) + "%"
+        assert under_pct == "34.65%", under_pct  # C3
+        product_str = dec(Decimal(out * rate) / Decimal(10**mod.WAD), mod.WAD)
+        rate_str = dec(Decimal(rate) / Decimal(10**mod.WAD), mod.WAD)
+        d_start, d_end = Decimal(score["trueInvariantStart"]), Decimal(score["trueInvariantEnd"])
+        ratio = Decimal(score["onchainInvariantRatio"])
+        assert (d_end / d_start).quantize(Decimal(1).scaleb(-mod.RATIO_DECIMALS)) == ratio.quantize(Decimal(1).scaleb(-mod.RATIO_DECIMALS))
+        levels = [float(Decimal(score["steps"][3 * c]["trueInvariantBefore"]) / d_start) for c in range(1, score["kinds"]["micro"])] + [float(d_end / d_start)]
+        d_start_s, d_end_s, ratio_s = dec(d_start, mod.INVARIANT_DECIMALS), dec(d_end, mod.INVARIANT_DECIMALS), "×" + dec(ratio, mod.RATIO_DECIMALS)
+        net = dec(score["batchSwapNetEth"], mod.NET_DECIMALS)
+    # the cycles, counted in the trace: every GIVEN_OUT micro swap of `out` wei of the rate token
+    cycles = sum(1 for s in pool["swaps"] if s["kind"] == 1 and s["j"] == rk and int(s["amount"]) == out)
+    other = d["pools"][mod.OTHER]
+    ork = other["symbols"].index(mod.OTHER)
+    other_leave = int(d["test"][mod.OTHER]["leave"])
+    other_cycles = sum(1 for s in other["swaps"] if s["kind"] == 1 and s["j"] == ork and int(s["amount"]) == other_leave - 1)
+    assert (cycles, other_cycles) == (30, 25), (cycles, other_cycles)  # C3
+    # the counterfactual from the generated table (the scene cross-checks it against the JSON)
+    rulers = {r["model"]: r for r in vocab.replay_table("balancer", "The same calls on five rulers")}
+    dep = next(r for m, r in rulers.items() if m.startswith("deployed"))
+    fp = next(r for m, r in rulers.items() if m.startswith("FP127"))
+    would_lose = str(-Decimal(fp["projected take (ETH)"]))
+    inc = next(i for i in vocab.incidents()["incidents"] if i["protocol"] == mod.PROTOCOL)
+    cites = pool["source"]["cites"]
+    for k, v in mod.numbers().items():
+        assert "…" not in str(v), (k, v)
+    return {
+        "title": f"{mod.PROTOCOL}, {inc['date']}",
+        "tx_short": d["provenance"]["tx"][:10],
+        "block": f"{int(d['provenance']['block']):,}",
+        "chain": "Ethereum",
+        "pool": f"{mod.POOL}/WETH",
+        "other_pool": f"{mod.OTHER}/WETH",
+        "weth_before": f"{int(raw['balances'][wk]):,}",
+        "rate_before": f"{int(raw['balances'][rk]):,}",
+        "out": str(out),
+        "rate": rate_str,
+        "product": product_str,
+        "product_label": f"(to {mod.WAD} decimals)",
+        "grid_ticks": list(range(mod.GRID[0], mod.GRID[1] + 1)),
+        "mul_down": str(mul_down),
+        "mul_up": str(mul_up),
+        "charged": f"{charged:,}",
+        "exact": f"{exact:,}",
+        "under_pct": under_pct,
+        "cycles": cycles,
+        "other_cycles": other_cycles,
+        "other_out": str(other_leave - 1),
+        "other_leave": str(other_leave),
+        "counter_ticks": list(range(1, max(cycles, other_cycles) + 1)),
+        "d_start": d_start_s,
+        "d_end": d_end_s,
+        "d_ratio": ratio_s,
+        "d_levels": levels,
+        "loss": inc["loss"],
+        "net_eth": net,
+        "deployed_charged_total": dep["charged in (WETH-wei / rate-token-wei)"].split(" / ")[0],
+        "fp_charged_total": fp["charged in (WETH-wei / rate-token-wei)"].split(" / ")[0],
+        "deployed_below": int(dep["calls below exact"]),
+        "fp_below": int(fp["calls below exact"]),
+        "would_lose": would_lose,
+        "upscale_cite": cites["BasePool.sol:_upscale"].split("/")[-1],
+        "muldown_cite": cites["FixedPoint.sol:mulDown"].split("/")[-1],
+    }
+
+
 def expect_s08_ladder(mod) -> dict:
     lib = {lid: rec for lid, rec in vocab.libs().items() if lid != "blockulator"}
     assert len(lib) == 17, len(lib)  # the registry's 18 less BlockulatorWad: every one is drawn or listed
@@ -1161,6 +1254,7 @@ EXPECT = {
     "s05_cost": expect_s05_cost,
     "s06_resupply": expect_s06_resupply,
     "s06b_bunni": expect_s06b_bunni,
+    "s06c_balancer_v2": expect_s06c_balancer_v2,
     "s07_two": expect_s07_two,
     "s08_ladder": expect_s08_ladder,
     "s09_cliff": expect_s09_cliff,
