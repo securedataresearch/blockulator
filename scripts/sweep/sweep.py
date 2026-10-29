@@ -122,8 +122,9 @@ OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "er
 # (every test forced: their last stage) and, those with a middle stage,
 # FP127LibMid (the fast path's test forced). The phases that give the other
 # ops a test and a second stage add them here.
-WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound", "lambertW0", "lambertWm1"]
-MID127 = ["pow", "compound"]
+WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound", "sinh", "cosh", "tanh", "atanh",
+           "lambertW0", "lambertWm1"]
+MID127 = ["pow", "compound", "atanh"]
 WIDE = {"fp19": WIDE19, "fp127": WIDE127}
 MID = {"fp19": MID19, "fp127": MID127}
 TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
@@ -966,7 +967,7 @@ def fallback(lib: str, op: str, data) -> dict:
     assert got == plain, f"{lib} {op}: the count pass changed a result"
     fired = [w[0] for o, _, w in rec if w]
     out = {"fallback": sum(1 for c in fired if c), "fallbackRuns": sum(fired), "fallbackPct": round(100 * sum(1 for c in fired if c) / len(rec), 3)}
-    if lib == "fp19" and "rbadm" in closures(lib).get(op, set()):
+    if {"fp19": "rbadm", "fp127": "rbadm127"}.get(lib) in closures(lib).get(op, set()):
         second = sum(1 for o, _, w in rec if len(w) > 1 and w[1])
         out.update(second=second, secondPct=round(100 * second / len(rec), 3))
     return out

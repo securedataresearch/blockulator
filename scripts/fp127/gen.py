@@ -87,20 +87,17 @@ LIBS = {
         # from the op's last stage: rbad127 and rbadm127 (the tests the
         # correctly rounded ops call), nearmid (ln, log2, log10 and log1p take
         # the double-word l2p), pow2t (pow's and compound's one-word try) and
-        # pow2rt (compound's double-word try: powu decides), lwbad (lwfin's
-        # rbad127 in four operations: Lambert W takes lwwide). --mid-lib: only
-        # the fast paths' tests (rbad127, pow2t, lwbad), so pow and compound return
+        # pow2rt (compound's double-word try: powu decides). --mid-lib: only
+        # the fast paths' tests (rbad127, pow2t), so pow and compound return
         # their middle stage, the double word, its own test kept. powu's test
         # is inline today; it moves onto rbad127 with its second stage.
         "forced": {"rbad127": "function rbad127(v, g, err) -> b {\n    b := 1\n}",
                    "rbadm127": "function rbadm127(v, g, err) -> b {\n    b := 1\n}",
                    "nearmid": "function nearmid(v) -> b {\n    b := 1\n}",
                    "pow2t": "function pow2t(t, ay) -> r, ok {\n}",
-                   "pow2rt": "function pow2rt(y, lh, ll, eb) -> r, ok {\n}",
-                   "lwbad": "function lwbad(v, err) -> b {\n    b := 1\n}"},
+                   "pow2rt": "function pow2rt(y, lh, ll, eb) -> r, ok {\n}"},
         "mid_forced": {"rbad127": "function rbad127(v, g, err) -> b {\n    b := 1\n}",
-                       "pow2t": "function pow2t(t, ay) -> r, ok {\n}",
-                       "lwbad": "function lwbad(v, err) -> b {\n    b := 1\n}"},
+                       "pow2t": "function pow2t(t, ay) -> r, ok {\n}"},
     },
     "fp19": {
         "src": ROOT / "contracts" / "src" / "fp19" / "FP19.yul.src",
@@ -759,9 +756,9 @@ COUNTS = {
     # BlockulatorWad: wadbad fires when FP19's bound reaches a wei boundary
     "wad": {"wadbad": "ret"},
     # FP127: the double-word log l2p runs exactly when the one-word log or pow
-    # could not decide (nearmid, or pow2t not ok)
-    # Lambert W's lwwide is its second stage, run when its rounding test fires
-    "fp127": {"l2p": "call", "powus": "call", "lwwide": "call"},
+    # could not decide (nearmid, or pow2t not ok); from 3.0 rbad127 fires when
+    # a fast value cannot round, rbadm127 when a middle stage cannot either
+    "fp127": {"l2p": "call", "powus": "call", "rbad127": "ret", "rbadm127": "ret2"},
 }
 
 # The helpers make profile measures, in slot order.

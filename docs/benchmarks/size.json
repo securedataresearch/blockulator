@@ -24,8 +24,8 @@
      },
      "median": 457,
      "max": {
-      "op": "lambertW0",
-      "bytes": 12424
+      "op": "atanh",
+      "bytes": 11158
      }
     },
     "viaIr": {
@@ -35,14 +35,14 @@
      },
      "median": 321,
      "max": {
-      "op": "lambertW0",
-      "bytes": 11714
+      "op": "atanh",
+      "bytes": 12219
      }
     }
    },
    "sum": {
-    "legacy": 135376,
-    "viaIr": 124987
+    "legacy": 140095,
+    "viaIr": 131506
    },
    "ops": {
     "fromFixed18": {
@@ -214,12 +214,12 @@
      "viaIr": 690
     },
     "lambertW0": {
-     "legacy": 12424,
-     "viaIr": 11714
+     "legacy": 8427,
+     "viaIr": 7807
     },
     "lambertWm1": {
-     "legacy": 12107,
-     "viaIr": 11411
+     "legacy": 8112,
+     "viaIr": 7527
     },
     "log1p": {
      "legacy": 7422,
@@ -230,20 +230,20 @@
      "viaIr": 4651
     },
     "sinh": {
-     "legacy": 4898,
-     "viaIr": 4400
+     "legacy": 6392,
+     "viaIr": 5709
     },
     "cosh": {
-     "legacy": 4888,
-     "viaIr": 4394
+     "legacy": 6382,
+     "viaIr": 5694
     },
     "tanh": {
-     "legacy": 5183,
-     "viaIr": 4769
+     "legacy": 6715,
+     "viaIr": 6962
     },
     "atanh": {
-     "legacy": 2967,
-     "viaIr": 2711
+     "legacy": 11158,
+     "viaIr": 12219
     },
     "erf": {
      "legacy": 5456,

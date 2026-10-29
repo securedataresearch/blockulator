@@ -509,14 +509,7 @@ object "FP127S" {
 
             function rbad127(v, g, err) -> b {
                 let half := shl(sub(g, 1), 1)
-                if iszero(lt(err, half)) {
-                    b := 1
-                    leave
-                }
-                let low := and(v, sub(shl(g, 1), 1))
-                switch lt(low, half)
-                case 1 { b := iszero(gt(sub(half, low), err)) }
-                default { b := lt(sub(low, half), err) }
+                b := or(iszero(lt(err, half)), lt(and(sub(v, sub(half, err)), sub(shl(g, 1), 1)), shl(1, err)))
             }
 
             function lw(i) -> w {
@@ -727,13 +720,9 @@ object "FP127S" {
                 let f := sub(y, shr(45, hmul(ay, ay)))
                 let v := sub(0, fp127_div(mulraw(f, w), add(w, 0x100000000000000000000000000000000)))
                 r := add(w, sar(172, add(v, 0x8000000000000000000000000000000000000000000)))
-                if lwbad(v, add(add(shl(sub(344, add(shl(1, clz(ay)), clz(aw))), 1), shr(124, ay)), 16)) {
+                if rbad127(v, 172, add(add(shl(sub(344, add(shl(1, clz(ay)), clz(aw))), 1), shr(124, ay)), 16)) {
                     r := lwwide(x, r, sub(v, shl(172, sub(r, w))))
                 }
-            }
-
-            function lwbad(v, err) -> b {
-                b := lt(and(add(sub(v, 0x8000000000000000000000000000000000000000000), err), 0xfffffffffffffffffffffffffffffffffffffffffff), shl(1, err))
             }
 
             function lwwide(x, r, e) -> rr {
