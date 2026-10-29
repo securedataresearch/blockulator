@@ -235,8 +235,8 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `ceil`, `round` | exact | `Overflow` at the top of the range |
 | `zeroFloorSub`, `dist`, `lerp`, `hypot`, `gavg` | checked compositions | `Overflow`, `OutOfRange` |
 | `factorial(n)` | floor(n)! for 0 ≤ n < 34 | `OutOfRange` |
-| `lambertW0(x)` | W(x) for x ≥ −1/e | `OutOfRange` |
-| `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0 | `OutOfRange` |
+| `lambertW0(x)` | W(x) for x ≥ −1/e, correctly rounded: the double-word Newton step's value tested by `rbad127`, a log-form step at 2^-510 on a miss; W(0) = 0 the one exact point | `OutOfRange` |
+| `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0, correctly rounded as `lambertW0` | `OutOfRange` |
 | `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
 | `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −90 | `Overflow` above 88 |
 | `sinh`, `cosh` | \|x\| ≤ 88, correctly rounded; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192 (within 3 units plus 2^-299 relative, `rbad127` err 2^20), e^\|x\| and e^−\|x\| in two words past it; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
@@ -307,13 +307,22 @@ word steps, one residual step, exact cubes) and an exact midpoint test.
 bound cannot change the answer and fall back to `l2p` within 2^-145 of a
 midpoint (about one input in 2^17). Lambert W near −1/e (1 + e·x < 1/8)
 seeds q = 1 + W by a degree-16 fit in √(2(1 + e·x)) and takes one
-sixth-order step on the double-word exp kernel (q within 5 units of 2^-192
-whatever q, so the word is nearest unless within 5·2^-64 ULP of a
-midpoint); elsewhere it seeds from a crude logarithm, runs one-word
+sixth-order step on the double-word exp kernel (W within 6 units of 2^-192
+whatever q); elsewhere it seeds from a crude logarithm, runs one-word
 fourth-order log-form steps at 2^-126 on a table-driven logarithm until one
 starts within 2^-22, and ends with one Newton step whose residual comes
-from the double-word exponential (`precise_model.py lambertw` measures
-both). `scripts/fp127/generators/precise_model.py` models the
+from the double-word exponential, its value V at 2^-300 within
+err = 2^(2·msb|y| + msb|w| − 421) + |y|·2^-124 + 16 units (y the step's
+residual: Newton's own y²|w|/(2|1 + w|³) twice over, B's top word, the
+floors). From 3.0 `rbad127` tests either value and, when its bound may
+cross a midpoint, `lwwide` decides: FP19's `lwfix` in 127.128, one
+log-form Newton step at 2^-510 (`w19_wrecip`, `w19_wmul`, `w19_wlnw`,
+`w19_kln2`) from that value, within 2^-290 absolute, rounded once. W(x) is
+transcendental for every word x but 0 (Lindemann–Weierstrass), so it is
+never a midpoint and the tie rule never applies; W(0) = 0, and |x| < 2^-65
+returns x (W(x) − x is under 2^-130). `bounds127.py` checks both bounds
+(largest ratio 0.20 and 0.58 of the stated one) and
+`precise_model.py lambertw` the stages before them. `scripts/fp127/generators/precise_model.py` models the
 kernels in integers and measures them.
 
 Rounding directions of the arithmetic are inherited from the Huff and
