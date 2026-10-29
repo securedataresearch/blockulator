@@ -355,7 +355,7 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "Halmos ran out of time (2000 s) on check_fp19_add; fuzzed against the exact spec",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_add; fuzzed against the exact spec (FuzzProofs.testFuzz_fp19_add, 50,000 runs)",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
    "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_add)$'"
   },
@@ -371,7 +371,7 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "Halmos ran out of time (2000 s) on check_fp19_sub; fuzzed against the exact spec",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_sub; fuzzed against the exact spec (FuzzProofs.testFuzz_fp19_sub, 50,000 runs)",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
    "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_sub)$'"
   },
@@ -522,7 +522,7 @@
    "paths": null,
    "fast_checks": [],
    "note": "FuzzProofs against the exact integer root",
-   "tool": "forge fuzz, 3,000 runs",
+   "tool": "forge fuzz, 50,000 runs",
    "reproduce": "FOUNDRY_PROFILE=proofs forge test --match-contract FuzzProofs --match-test fp19_sqrt"
   },
   {
@@ -659,7 +659,7 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "Halmos ran out of time (2000 s) on check_fp19_toFixed18; fuzzed against the exact spec",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_toFixed18; fuzzed against the exact spec (FuzzProofs.testFuzz_fp19_toFixed18, 50,000 runs)",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
    "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toFixed18)$'"
   },
@@ -677,7 +677,7 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "Halmos ran out of time (2000 s) on check_fp19_toFixed18Down; fuzzed against the exact spec",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_toFixed18Down; fuzzed against the exact spec (FuzzProofs.testFuzz_fp19_toFixed18, 50,000 runs)",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
    "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toFixed18Down)$'"
   },
@@ -695,7 +695,7 @@
    "seconds": null,
    "paths": null,
    "fast_checks": [],
-   "note": "Halmos ran out of time (2000 s) on check_fp19_toFixed18Up; fuzzed against the exact spec",
+   "note": "Halmos ran out of time (2000 s) on check_fp19_toFixed18Up; fuzzed against the exact spec (FuzzProofs.testFuzz_fp19_toFixed18, 50,000 runs)",
    "tool": "Halmos 0.3.3, bitwuzla 0.8.1",
    "reproduce": "python3 test/proofs/run.py --only '^(check_fp19_toFixed18Up)$'"
   },
@@ -869,37 +869,52 @@
   {
    "test": "testFuzz_K127",
    "result": "pass",
-   "runs": 3000
+   "runs": 50000
   },
   {
    "test": "testFuzz_K19",
    "result": "pass",
-   "runs": 3000
+   "runs": 50000
   },
   {
    "test": "testFuzz_K19_significands",
    "result": "pass",
-   "runs": 3000
+   "runs": 50000
   },
   {
    "test": "testFuzz_fp127_sqrt",
    "result": "pass",
-   "runs": 3000
+   "runs": 50000
   },
   {
    "test": "testFuzz_fp127_sqrt_negative",
    "result": "pass",
-   "runs": 3000
+   "runs": 50000
+  },
+  {
+   "test": "testFuzz_fp19_add",
+   "result": "pass",
+   "runs": 50000
   },
   {
    "test": "testFuzz_fp19_sqrt",
    "result": "pass",
-   "runs": 3000
+   "runs": 50000
   },
   {
    "test": "testFuzz_fp19_sqrt_near_squares",
    "result": "pass",
-   "runs": 3000
+   "runs": 50000
+  },
+  {
+   "test": "testFuzz_fp19_sub",
+   "result": "pass",
+   "runs": 50000
+  },
+  {
+   "test": "testFuzz_fp19_toFixed18",
+   "result": "pass",
+   "runs": 50000
   },
   {
    "test": "test_fp127_mulUp_regression_159",

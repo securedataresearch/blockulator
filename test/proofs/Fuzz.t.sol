@@ -48,6 +48,13 @@ contract Lib127 {
 
 contract Lib19 {
     function sqrt(int256 x) external pure returns (int256) { return FP19Lib.sqrt(x); }
+    function add(int256 a, int256 b) external pure returns (int256) { return FP19Lib.add(a, b); }
+    function sub(int256 a, int256 b) external pure returns (int256) { return FP19Lib.sub(a, b); }
+    function toFixed18(int256 x, uint256 mode) external pure returns (int256) {
+        if (mode == 0) return FP19Lib.toFixed18(x);
+        if (mode == 1) return FP19Lib.toFixed18Down(x);
+        return FP19Lib.toFixed18Up(x);
+    }
 }
 
 /// @title FuzzProofs
@@ -83,9 +90,11 @@ contract FuzzProofs is Test {
 
     /// K19: Kernels.divh(a, b) = floor(a 2^255 / b) for b > 0, a < 2 b.
     function testFuzz_K19(uint256 a, uint256 b, uint256 sa, uint256 sb) public pure {
-        a = spread(a, sa);
         b = spread(b, sb);
-        vm.assume(b != 0 && a / 2 < b); // a < 2 b
+        if (b == 0) b = 1;
+        // a < 2 b by construction (an assume rejected most inputs and stopped a 50,000-run fuzz)
+        a = spread(a, sa);
+        if (b <= type(uint256).max / 2) a %= 2 * b;
         assertEq(Kernels.divh(a, b), LongDiv.div(a >> 1, a << 255, b));
     }
 
@@ -184,5 +193,54 @@ contract FuzzProofs is Test {
         int256 dd = int256(d) % 3;
         uint256 v = dd < 0 && sq < uint256(-dd) ? sq : uint256(int256(sq) + dd);
         checkSqrt19(FP19Lib.fromUint(v));
+    }
+
+    /// The FP19 ops whose Halmos checks run out of time (add, sub, the three
+    /// toFixed18 roundings), against the same exact specs (Ref19): the word,
+    /// or the same revert. Operands share nearby exponents so that every
+    /// alignment, cancellation and rounding path is reached, not only the
+    /// far-apart case random words give.
+    function nearExp(int256 a, uint256 b, uint256 d) internal pure returns (int256) {
+        uint256 ea = (uint256(a) >> 236) & 0x7ffff;
+        if (ea == 0) ea = 1;
+        uint256 eb = ea + (d % 600);
+        eb = eb > 300 ? eb - 300 : ea;
+        if (eb == 0 || eb > 0x7ffff) eb = ea;
+        return int256((b & ~(uint256(0x7ffff) << 236)) | (eb << 236));
+    }
+
+    function checkWord19(bool returned, int256 r, bytes memory err, bytes4 se, int256 sr, string memory op) internal pure {
+        if (returned) {
+            assertEq(se, bytes4(0), string.concat(op, " returned where the spec reverts"));
+            assertEq(r, sr, string.concat(op, " is not the spec's word"));
+        } else {
+            assertEq(bytes4(err), se, string.concat(op, " reverted differently"));
+        }
+    }
+
+    function testFuzz_fp19_add(int256 a, uint256 bb, uint256 d, bool flip) public view {
+        int256 b = nearExp(a, bb, d);
+        if (flip) b = int256(uint256(b) ^ (uint256(1) << 255));
+        (bytes4 se, int256 sr) = Ref19.add(a, b);
+        try l19.add(a, b) returns (int256 r) { checkWord19(true, r, "", se, sr, "add"); }
+        catch (bytes memory err) { checkWord19(false, 0, err, se, sr, "add"); }
+    }
+
+    function testFuzz_fp19_sub(int256 a, uint256 bb, uint256 d, bool flip) public view {
+        int256 b = nearExp(a, bb, d);
+        if (flip) b = int256(uint256(b) ^ (uint256(1) << 255));
+        (bytes4 se, int256 sr) = Ref19.sub(a, b);
+        try l19.sub(a, b) returns (int256 r) { checkWord19(true, r, "", se, sr, "sub"); }
+        catch (bytes memory err) { checkWord19(false, 0, err, se, sr, "sub"); }
+    }
+
+    /// toFixed18, Down and Up, with exponents across the whole range where the
+    /// result is a nonzero integer up to int256 and a little beyond.
+    function testFuzz_fp19_toFixed18(int256 x, uint256 e, uint256 mode) public view {
+        mode = mode % 3;
+        x = int256((uint256(x) & ~(uint256(0x7ffff) << 236)) | ((0x400eb - 300 + e % 310) << 236));
+        (bytes4 se, int256 sr) = Ref19.toFixed18(x, mode);
+        try l19.toFixed18(x, mode) returns (int256 r) { checkWord19(true, r, "", se, sr, "toFixed18"); }
+        catch (bytes memory err) { checkWord19(false, 0, err, se, sr, "toFixed18"); }
     }
 }
