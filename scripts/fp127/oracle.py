@@ -327,7 +327,30 @@ def op_pow(x, y):
         return op_exp2(y)
     if x == 10 * ONE:
         return op_exp10(y)
-    return _pow2_domain(mp.power(to_mpf(x), to_mpf(y)))
+    v = mp.power(to_mpf(x), to_mpf(y))
+    tie = _pow_tie(x, y, v)
+    return _pow2_domain(v) if tie is None else tie
+
+
+def _pow_tie(x, y, v):
+    """x^y's word when x^y is exactly a midpoint of the grid (odd 2^-129),
+    which mpmath's x^y, rounded at the working precision, could put on
+    either side; None otherwise. The candidate w 2^-129 nearest the value is
+    checked exactly: (w 2^-129)^(2^j) = x^p for y = p/2^j in lowest terms."""
+    if (y <= 0 and x & (x - 1)) or not mpf(2) ** -130 <= v < mpf(2) ** 127:
+        return None
+    w = int(mp.nint(v * mpf(2) ** 129))
+    if w % 2 == 0 or abs(v * mpf(2) ** 129 - w) > mpf(2) ** -64:
+        return None
+    from fractions import Fraction
+    q = Fraction(y, ONE)
+    if q.denominator > 1 << 7 or abs(q.numerator) > 1 << 16:
+        return None
+    if Fraction(w, 1 << 129) ** q.denominator != Fraction(x, ONE) ** q.numerator:
+        return None
+    if w + 1 >= 2 * TWO255:
+        raise Revert("Overflow")
+    return T((w + 1) // 2, mpf(w) / 2)
 
 
 def _root_near(n: int):

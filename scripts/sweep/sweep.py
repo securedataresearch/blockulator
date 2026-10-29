@@ -27,10 +27,12 @@ the one call, after its dispatch, and subtracts the same window around an assign
 
 FP127 has the same two passes for the ops whose rounding tests exist today
 (WIDE127, MID127): FP127LibWide with every test forced to fail (gen.py's fp127
-"forced" map: ln, log2, log10 and log1p take the double-word l2p; pow and compound
-skip the one-word pow2t; compound's pow2rt fails, so powu decides) and FP127LibMid
-with only the fast paths' tests forced (pow and compound return the double word).
-Their outputs are wide127_* and mid127_*.
+"forced" map: rbad127, rbadw, rbadm127, nearmid, pow2t, pow2rt), so every result
+comes from the op's last stage (the exponentials' and logs' two-word stages, pow's
+exact tie or two-word stage, powu's 512-bit mantissa or pow, compound through powu),
+and FP127LibMid with only the fast paths' tests forced (the logs, pow, compound and
+atanh return their double-word middle stage, its own test kept). Their outputs are
+wide127_* and mid127_*.
 
 Inputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not
 committed. FP19 results are compared with the word the oracle (scripts/fp19/oracle.py:
@@ -123,8 +125,9 @@ OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "er
 # FP127LibMid (the fast path's test forced). The phases that give the other
 # ops a test and a second stage add them here.
 WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound", "sinh", "cosh", "tanh", "atanh",
-           "lambertW0", "lambertWm1", "erf", "erfc", "normCdf"]
-MID127 = ["pow", "compound", "atanh"]
+           "lambertW0", "lambertWm1", "exp", "exp2", "exp10", "expm1", "powu",
+           "erf", "erfc", "normCdf"]
+MID127 = ["pow", "compound", "atanh", "ln", "log2", "log10", "log1p"]
 WIDE = {"fp19": WIDE19, "fp127": WIDE127}
 MID = {"fp19": MID19, "fp127": MID127}
 TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
@@ -259,6 +262,46 @@ def gen127():
     write("fp127_hypot", ha, hb)
     write("fp127_inv", [f127(rng, 1, 254) for _ in range(S)])
     write("fp127_mulDown", [f127(rng, 100, 200) for _ in range(S)], [f127(rng, 60, 160) for _ in range(S)])
+    # pow and powu's last quarter (3.0): bases within 2^-8 of one at every
+    # scale with exponents spreading y log2 x over the whole range (where
+    # v5's absolute log missed), and the exact ties (x^y an odd multiple of
+    # 2^-129); for powu |n| from 2^16 (pow's road) and its ties
+    mp.dps = 60
+    ties = [(3 << 127, 129 << 128), (1 << 127, 129 << 128), (8 << 128, -43 << 128)]
+    for k in range(1, 8):
+        ties.append((3 ** (2 ** k) << (128 - 2 ** k), (129 << 128) >> k))
+    for _ in range(12):
+        c = rng.getrandbits(rng.randint(2, 84)) | 1
+        ties += [(c << 85, 3 << 128), ((c * c) << 42, 3 << 127)]
+    for k in range(1, 6):
+        b = rng.randrange(3, 62, 2)
+        ties.append(((b ** (2 ** k)) << (128 - 3 * 2 ** k), (43 << 128) >> k))
+    near, yn = [], []
+    for _ in range(S // 4 - len(ties)):
+        d = rng.getrandbits(rng.randint(1, 120)) | 1
+        x = ONE + d * rng.choice((1, -1))
+        t = mpf(rng.uniform(-130, 127)) if rng.random() < 0.7 else mpf(2) ** rng.uniform(-20, 7) * rng.choice((1, -1))
+        near.append(x)
+        yn.append(max(min(int(t / mp.log(mpf(x) / ONE, 2) * ONE), 1 << 254), -(1 << 254)))
+    pw = json.loads((D / "fp127_pow.json").read_text())
+    keep = 3 * S // 4
+    write("fp127_pow", [int(v, 16) for v in pw["a"][:keep]] + near + [a for a, _ in ties],
+          [int(v, 16) for v in pw["b"][:keep]] + yn + [b for _, b in ties])
+    big, kn = [], []
+    for _ in range(S // 8):
+        d = rng.getrandbits(rng.randint(1, 100)) | 1
+        x = ONE + d * rng.choice((1, -1))
+        top = min(126 / abs(float(mp.log(mpf(x) / ONE, 2))), 2.0 ** 120)
+        k = rng.randint(1 << 16, max(1 << 16, int(top)))
+        big.append(x * rng.choice((1, -1)))
+        kn.append(rng.choice((1, -1)) * k << 128)
+    for _ in range(S // 8):
+        c = rng.getrandbits(rng.randint(2, 84)) | 1
+        big.append((c << 85) * rng.choice((1, -1)))
+        kn.append(3 << 128)
+    pu = json.loads((D / "fp127_powu.json").read_text())
+    keep = 3 * S // 4
+    write("fp127_powu", [int(v, 16) for v in pu["a"][:keep]] + big, [int(v, 16) for v in pu["b"][:keep]] + kn)
 
 
 def near_branch(rng, n):
@@ -673,8 +716,9 @@ def score():
            "for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, "
            "divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows "
            "the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, "
-           "median / p99 / largest; *fallback* is the share of inputs that took the double-word decider "
-           "(ln, log2, log10 and pow near a midpoint or, for pow, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).",
+           "median / p99 / largest; *fallback* is the share of inputs whose fast value's rounding test fired "
+           "(the next stage ran: for the logs, pow and compound the double word, and after the arrow the share "
+           "whose middle stage's test fired too; a dash: the op has none).",
            "",
            "| op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |",
            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|"]
@@ -693,14 +737,17 @@ def score():
             md.append(row127(r))
     for stage, title, text in (
             ("middle", "The middle stage alone",
-             "The first 4,000 inputs of pow and compound again, through a test-only copy of FP127Lib whose "
-             "fast paths' rounding tests always fail (pow2t, rbad127): log2 x to 2^-299 (l2p), the double-word "
-             "2^t, its own test kept (compound's pow2rt, with powu behind it)."),
+             "The first 4,000 inputs of the ops with a middle stage again, through a test-only copy of FP127Lib "
+             "whose fast paths' rounding tests always fail (nearmid, pow2t, rbad127, rbadw): log2 x to 2^-299 "
+             "(l2p; pow near one relative, through FP19's mratio), the logs rounded from it and pow's and "
+             "compound's double-word 2^t, each with its own test kept and the last stage behind it."),
             ("second", "The last stage alone",
              "The first 4,000 inputs of each op with a rounding test again, through a test-only copy of FP127Lib "
-             "whose tests (nearmid, pow2t, pow2rt, rbad127, rbadm127) always fail, so every result comes from "
-             "the stage that runs when the fast value is too close to a tie: the double-word l2p for the logs, "
-             "l2p and the double-word 2^t for pow, powu's 512-bit mantissa for compound.")):
+             "whose tests (nearmid, pow2t, pow2rt, rbad127, rbadw, rbadm127) always fail, so every result comes "
+             "from the stage that runs when every earlier value is too close to a tie: the two-word exponential "
+             "(FP19's wexpm1) for exp, exp2, exp10 and expm1, one Newton step through it for the logs, pow's "
+             "exact tie or its two-word log and exponential, powu's 512-bit mantissa (pow from |n| = 2^16), "
+             "compound through powu, and the hyperbolics' two-word stages.")):
         if any(r.get("stage") == stage and r["lib"] == "fp127" for r in rows):
             md += ["", f"### {title}", "", text, "",
                    "| op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max |",
