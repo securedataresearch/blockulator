@@ -2,3 +2,5 @@
 index.html
 script.md
 talk.pdf
+# the vendored reveal.js is source, not a build: undo the root dist/ rule
+!vendor/reveal.js/dist/
