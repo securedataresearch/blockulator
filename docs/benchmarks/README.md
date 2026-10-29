@@ -57,10 +57,12 @@ pi, the replays and the accrual are not diffed in CI.
   (`scripts/size/inline.py`, one throwaway contract per op against a
   baseline); CI checks it with `make size-inline-check`.
 - [`sweep.md`](sweep.md) / [`sweep.json`](sweep.json): **per-op accuracy on
-  random inputs.** Every FP19 op against the correctly rounded word and every
-  FP127 op against the real truth, 1,500 to 20,000 seeded inputs each,
-  with each op's gas and the share of inputs whose rounding test fell back
-  to the second stage (`make sweep`).
+  random inputs.** Every FP19 and FP127 op against its correctly rounded
+  word (FP127 also against the real truth, in ULPs), 1,500 to 20,000 seeded
+  inputs each, three times: plain, with every rounding test forced (the
+  last stage alone) and with the fast tests forced (the middle stage
+  alone); with each op's gas and the share of inputs whose rounding test
+  fell back to the next stage (`make sweep`).
 - [`profile.md`](profile.md) / [`profile.json`](profile.json): **where the
   gas goes.** On the sweep's inputs: each op's gas (median, p99, max), its
   fallback rate, and the share of its gas spent in each named helper,

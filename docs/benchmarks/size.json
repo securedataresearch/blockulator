@@ -15,7 +15,7 @@
  },
  "libs": {
   "fp127": {
-   "staticcallGas": 579,
+   "staticcallGas": 554,
    "summary": {
     "legacy": {
      "min": {

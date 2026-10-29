@@ -6,25 +6,57 @@ keeps its own version in its CREATE2 salt, because the salt names the address;
 
 ## Unreleased
 
-Blockulator 3.0's bytecode is frozen at this entry. Every object changed, so
-every object takes a new salt; FP127 v7, deployed on Sepolia on 2026-10-27,
-is superseded before mainnet. The CREATE2 addresses (the same on every chain):
+**FP127 is correctly rounded in every op.** Each transcendental's fast value
+now carries an error bound derived in the source, measured against 120-digit
+truth (`bounds127.py`, a merge gate) and tested by `rbad127` before the one
+rounding; where the bound could reach a midpoint a wider stage decides, in
+two words on FP19's kernels (2^-497 to 2^-510) or exactly where a tie is
+possible (`pow`, `powu`, `cbrt`). `gavg` and `hypot` are the nearest root of
+the exact product or sum of squares; the arithmetic is exact in its stated
+direction, as before. v8 rounded each transcendental's value with no test,
+`pow` could miss by up to 1e11 ULPs at extreme exponents and rounded exact
+ties down, and `gavg` and `hypot` were the Huff's floored compositions. The
+work went in by object (the five entries below: FP127S, FP127H, the roots,
+FP127E, FP127N), and the one FP127 object became five by idea, as FP19's are,
+so each had room for its second stages. Every FP127 object takes salt v9.
+
+The full release gate on this tree (2026-10-28): FP127 59 sweep rows,
+212,119 inputs, misrounded 0 in the plain pass, with every rounding test
+forced (the last stage alone) and with the fast tests forced (the middle
+stage alone); FP19 76 rows, 455,082 inputs, misrounded 0; BlockulatorWad
+160,000 results wrong 0; bounds and bounds127 0 regions over their bound;
+299 tests; every object under 24,576 bytes (FP19E tightest, 955 free).
+Gas on the ladder's inputs, inline, v8 → v9: the tests cost the
+transcendentals a few percent (`exp` 2,726 → 2,845, `sinh` 3,880 → 4,029,
+`erf` 7,588 → 7,739, `lambertW0` 8,170 → 8,367, `pow` 3,028 → 3,050), the
+logs and arithmetic are unchanged, `expm1` 3,106 → 2,968, `gavg` 1,079 →
+1,003, `hypot` 1,366 → 1,164; through the objects the smaller dispatchers
+take 20 to 70 gas off most ops (`add` 708 → 682, `mul` 928 → 862).
+
+The CREATE2 addresses (the same on every chain; FP127's predicted, not
+deployed; FP19's live on Sepolia since 2026-10-28):
 
 | object | salt | runtime bytes | address |
 |---|---|---:|---|
-| FP127 | `FP127 v8` | 23,797 | `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B` |
+| FP127 | `FP127 v9` | 3,728 | `0x0DF738d125677550a80A46BaF254386C66f96E0d` (predicted) |
+| FP127E | `FP127E v9` | 18,808 | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` (predicted) |
+| FP127H | `FP127H v9` | 13,093 | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` (predicted) |
+| FP127N | `FP127N v9` | 9,088 | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` (predicted) |
+| FP127S | `FP127S v9` | 11,817 | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` (predicted) |
 | FP19 | `FP19 v6` | 17,221 | `0x94d9d43D6202827429a8058959eeCf6d232b8729` |
 | FP19E | `FP19E v6` | 23,621 | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` |
 | FP19H | `FP19H v6` | 13,020 | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` |
 | FP19N | `FP19N v6` | 17,962 | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` |
 | FP19S | `FP19S v6` | 11,338 | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` |
 
-The FP19 salts drop the old name (2.2's were `FP256 v5`, `FP256E v5`, …,
+FP127 v8 (`FP127 v8`, 23,797 bytes, `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`,
+Sepolia, 2026-10-28) is the one object these five replace; v7 (2026-10-27)
+was superseded by v8 before mainnet. The FP19 salts drop the old name (2.2's salts were `FP256 v5`, `FP256E v5`, …,
 kept as bytes because they fix 2.2's addresses). The ladder's adapters name
-these addresses, so the runners take `FP127 ladder v13`. The full release
-gate on this tree: FP19 76 sweep rows misrounded 0, FP127 27 rows nearest
-everywhere, BlockulatorWad 160,000 results wrong 0; 292 tests; every object
-under 24,576 bytes (FP127 tightest, 779 free).
+these addresses, so the runners take
+`FP127 ladder v14` (v13 calls FP127 v8). The gate at the v8 freeze: FP19 76
+sweep rows misrounded 0, FP127 27 rows nearest everywhere, BlockulatorWad
+160,000 results wrong 0; 292 tests; FP127 tightest, 779 free.
 
 FP127S: lambertW0 and lambertWm1 correctly rounded (v8 rounded their last
 value with no test):

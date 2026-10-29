@@ -717,8 +717,9 @@ def score():
            "divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows "
            "the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, "
            "median / p99 / largest; *fallback* is the share of inputs whose fast value's rounding test fired "
-           "(the next stage ran: for the logs, pow and compound the double word, and after the arrow the share "
-           "whose middle stage's test fired too; a dash: the op has none).",
+           "(the next stage ran: every transcendental has one since 3.0, and for the logs, pow and compound, "
+           "which have a middle stage, the share whose middle stage's test fired too follows the arrow; "
+           "a dash: the op has none).",
            "",
            "| op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |",
            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|"]

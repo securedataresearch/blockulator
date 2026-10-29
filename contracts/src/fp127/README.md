@@ -91,11 +91,14 @@ export's `/// @object` tag in the source places it; an untagged one is in
 two objects share is copied into each: bytes, not gas) and has its own
 interface and ABI; `FP127Lib.sol` holds every export. Runtime sizes at the
 split: 3,367, 12,716, 7,560, 5,005 and 7,994 bytes, where v8's one object
-had 779 bytes free, so each now has room for the second stage behind its
+had 779 bytes free, so each had room for the second stage behind its
 rounding tests. The split kept v8's words, op for op (`test/objects/ObjectsEqLib.t.sol`
-with `FP_REF_DIR` set to v8's artifact under every name); since then `gavg`
-and `hypot` round once (see Rounding), and `FP127` is 3,728 bytes. Salts `"FP127 v9"`,
-`"FP127E v9"`, `"FP127H v9"`, `"FP127N v9"`, `"FP127S v9"`; not deployed yet.
+with `FP_REF_DIR` set to v8's artifact under every name); since then every
+object gained its second stages (see Rounding), and the sizes are `FP127`
+3,728, `FP127E` 18,808, `FP127H` 13,093, `FP127N` 9,088 and `FP127S` 11,817
+bytes. Salts `"FP127 v9"`, `"FP127E v9"`, `"FP127H v9"`, `"FP127N v9"`,
+`"FP127S v9"`; not deployed yet (the predicted CREATE2 addresses are in
+`CHANGELOG.md` and `contracts/src/ladder/ILadder.sol`).
 
 Each object wraps its bodies in a dispatcher that finds the 4-byte selector
 by binary search (a flat switch under ten exports: `FP127H`, `FP127N`,
@@ -220,17 +223,17 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `fromFixed18(x)` | trunc(x·2^128 / 10^18) | `OutOfRange` if \|x\| ≥ 2^127 |
 | `toFixed18(x)`, `toFixed18Down(x)` | floor(x·10^18 / 2^128) | never |
 | `toFixed18Up(x)` | ceil(x·10^18 / 2^128) | never |
-| `exp(x)` | e^x; 0 below −90 (under half an ULP from −89.42) | `Overflow` above 88 |
-| `exp2(x)` | 2^x; 0 below −129 | `Overflow` at or above 127 |
-| `exp10(x)` | 10^x; 0 below 2^-129 | `Overflow` from 2^127 (x ≈ 38.23) |
-| `ln`, `log2`, `log10` | x > 0 | `OutOfRange` |
-| `log2Up(x)` | ceil(log2 x): msb − 128, plus one unless a power of two | `OutOfRange` |
+| `exp(x)` | e^x, correctly rounded; 0 below −90 (under half an ULP from −89.42) | `Overflow` above 88 |
+| `exp2(x)` | 2^x, correctly rounded; 0 below −129 | `Overflow` at or above 127 |
+| `exp10(x)` | 10^x, correctly rounded; 0 below 2^-129 | `Overflow` from 2^127 (x ≈ 38.23) |
+| `ln`, `log2`, `log10` | x > 0, correctly rounded | `OutOfRange` |
+| `log2Up(x)` | ceil(log2 x): msb − 128, plus one unless a power of two; exact | `OutOfRange` |
 | `sqrt(x)` | floor, x ≥ 0 | `OutOfRange` |
 | `cbrt(x)` | all x, odd; nearest decided exactly; exact for perfect cubes | `Overflow` only at −2^255 |
-| `pow(x, y)` | x^y for x ≥ 0; 0^0 = 1; shortcuts y = 1, y = 2 (the rounded square), x = 2, x = 10 | `OutOfRange` for x < 0, `Overflow` |
-| `powu(x, n)` | x^floor(n) for any integer n, binary exponentiation on a 256-bit mantissa, a 512-bit one where that is ambiguous, one rounding; `pow` from \|n\| = 2^16; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
-| `compound(r, n)` | (1 + r)^floor(n), rounded to nearest: for \|n\| ≥ 16 n log2(1 + r) and 2^t in one word, then at 2^-299 with a test, `powu` last | `Overflow`, `DivisionByZero` |
-| `inv(x)` | 1/x | `DivisionByZero`, `Overflow` |
+| `pow(x, y)` | x^y for x ≥ 0, correctly rounded, exact ties decided exactly; 0^0 = 1; shortcuts y = 1, y = 2 (the rounded square), x = 2, x = 10 | `OutOfRange` for x < 0, `Overflow` |
+| `powu(x, n)` | x^floor(n) for any integer n, correctly rounded: binary exponentiation on a 256-bit mantissa, a 512-bit one where that is ambiguous, one rounding; `pow` from \|n\| = 2^16; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
+| `compound(r, n)` | (1 + r)^floor(n), correctly rounded: for \|n\| ≥ 16 n log2(1 + r) and 2^t in one word, then at 2^-299 with a test, `powu` last | `Overflow`, `DivisionByZero` |
+| `inv(x)` | 1/x, truncated toward zero (floor(2^256 / \|x\|), re-signed) | `DivisionByZero`, `Overflow` |
 | `abs`, `neg` | | `Overflow` at −2^255 |
 | `sign`, `min`, `max`, `clamp`, `avg`, `floor`, `frac` | exact, never revert | |
 | `ceil`, `round` | exact | `Overflow` at the top of the range |
@@ -240,8 +243,8 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `factorial(n)` | floor(n)! for 0 ≤ n < 34 | `OutOfRange` |
 | `lambertW0(x)` | W(x) for x ≥ −1/e, correctly rounded: the double-word Newton step's value tested by `rbad127`, a log-form step at 2^-510 on a miss; W(0) = 0 the one exact point | `OutOfRange` |
 | `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0, correctly rounded as `lambertW0` | `OutOfRange` |
-| `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
-| `expm1(x)` | e^x − 1: on the grid the one is exact, so `exp(x)` − 1 word for word (a series below 1/16); −1 below −90 | `Overflow` above 88 |
+| `log1p(x)` | ln(1 + x), the sum exact in the format, correctly rounded with `ln` | `OutOfRange` at or below −1, `Overflow` |
+| `expm1(x)` | e^x − 1, correctly rounded: on the grid the one is exact, so `exp(x)` − 1 word for word (a tested series below 1/16); −1 below −90 | `Overflow` above 88 |
 | `sinh`, `cosh` | \|x\| ≤ 88, correctly rounded; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192 (within 3 units plus 2^-299 relative, `rbad127` err 2^20), e^\|x\| and e^−\|x\| in two words past it; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
 | `tanh(x)` | all x, correctly rounded; u/(u + 2) or (1 − w)/(1 + w) at 2^-192 (err 2 or 3 units), (1 − w)/(1 + w) in two words past it; ±1 exactly from \|x\| = 46 | never |
 | `atanh(x)` | \|x\| < 1, correctly rounded; log1p(2\|x\|/(1 − \|x\|))/2, one division and one unrounded log at 2^-192 (err 2^47 units), then `l2p` of 1 ± \|x\| (2^-248), then ln(1 ± \|x\|) in two words | `OutOfRange` |
@@ -276,27 +279,54 @@ bodies are too large for solc to inline into: there a call with the general
 `g` cost 2 to 3% of the op. `scripts/fp127/generators/bounds127.py` measures each fast value's
 stated bound against 120-digit truth (CI runs it).
 
-**Rounding (v5).** Every transcendental returns the nearest word, ties up:
+**Rounding (3.0).** Every op is correctly rounded: its result is the exact
+real value rounded once, in the direction the op states, on every input of
+its domain. The transcendentals round to nearest under the tie rule above:
 `exp`, `exp2`, `exp10`, `expm1`, `sinh`, `cosh`, `tanh`, `atanh`, `pow`,
 `cbrt`, `ln`, `log2`, `log10`, `log1p`, `powu`, `compound`, `lambertW0`,
-`lambertWm1`, `erf`, `erfc` and `normCdf` (no misrounding at any vector
-or random input; `erf`, `erfc` and `normCdf` by a test on a derived bound
-and a wide second stage from 3.0, below). `gavg` and `hypot`
-return the nearest word too, decided exactly (3.0): for raw words A and B the
-raw result is the root of the integer A·B or A² + B², taken in two words and
-rounded once, and an integer's root is never a tie. `add`, `sub`,
-`log2Up` and the integer ops are exact. `mul`, `mulDown`, `divDown`,
-`sqrt`, `toFixed18`, `toFixed18Down` floor; `mulUp`, `divUp`, `toFixed18Up`
-ceil; `div`, `inv`, `fromFixed18` truncate. Up to v8 `pow` was the
-exception: with log2 x absolute to 2^-299 a base within 2^-88 of one raised
-past 2^90 (results near 2^120) missed by up to 1e11 ULPs, and it rounded
-exact ties down; 3.0 repairs both (below). Up to v8, `gavg` and
-`hypot` were the Huff's compositions, kept bit-identical to it: the floored
-root of a floored product or sum of squares. A product under one ULP floored
-to zero, so they were low by up to 2^64 ULPs (gavg(2^-78, 2^-60) returned 0
-for 2^-69), and they reverted with `Overflow` wherever a·b or a² + b² passed
-2^127 though the root fits. 3.0 drops that definition for FP19's: one
-rounding of the exact value.
+`lambertWm1`, `erf`, `erfc` and `normCdf`. Each one's fast value carries a
+bound derived in the source and tested by `rbad127` (`rbadw`, `rbadm127`)
+before the one rounding; where the bound could reach a midpoint a wider
+stage decides, in two words on FP19's kernels (2^-497 to 2^-510, far below
+what the 2^-128 grid can see) or, for `pow`, `powu` and `cbrt`, by an exact
+computation where a tie is possible. `gavg` and `hypot` return the nearest
+word decided exactly: for raw words A and B the raw result is the root of
+the integer A·B or A² + B², taken in two words and rounded once, and an
+integer's root is never a tie. `add`, `sub`, `log2Up` and the integer ops
+are exact. `mul`, `mulDown`, `divDown`, `sqrt`, `toFixed18`,
+`toFixed18Down` floor; `mulUp`, `divUp`, `toFixed18Up` ceil; `div`, `inv`,
+`fromFixed18` truncate.
+
+What is proven and what is tested: the arithmetic, the directed forms, the
+conversions, `inv`, `sqrt` and the rounding ops are proven for every input
+against a separate specification (Halmos, and an exact integer argument for
+the root: [`docs/proofs.md`](../../../docs/proofs.md)); `gavg` and `hypot`
+are fuzzed against a bit-by-bit root of the same integer. The
+transcendentals' guarantee rests on three checks, each a merge gate: every
+fast value's stated bound is measured against 120-digit truth
+(`scripts/fp127/generators/bounds127.py`; the largest ratio of measured
+error to stated bound is 0.92, the exponentials'); `make sweep` runs every
+op on seeded random inputs plain, with every rounding test forced (the last
+stage alone, `gen.py --wide-lib`) and with the fast tests forced (the middle
+stage alone, `--mid-lib`), each against the correctly rounded word: 0
+misrounded in all three passes; and `make test` holds every op to its
+contract on the committed vectors, which carry the inputs found within a
+bound of a midpoint. The last stage rounds without a test, so the one case
+no check covers is a transcendental whose true value lies within that
+stage's error of a midpoint (2^-290 for Lambert W, 2^-444 for the error
+function, 2^-487 or better elsewhere, relative where the op's bound is); no
+such input is known, and where a midpoint can be hit exactly (`pow`, `powu`,
+`cbrt`, `exp2(−129)`) it is decided exactly.
+
+Up to v8 `pow` was the one exception: with log2 x absolute to 2^-299 a
+base within 2^-88 of one raised past 2^90 (results near 2^120) missed by
+up to 1e11 ULPs, and it rounded exact ties down; 3.0 repairs both (below).
+Up to v8 `gavg` and `hypot` were the Huff's compositions, kept bit-identical
+to it: the floored root of a floored product or sum of squares. A product
+under one ULP floored to zero, so they were low by up to 2^64 ULPs
+(gavg(2^-78, 2^-60) returned 0 for 2^-69), and they reverted with
+`Overflow` wherever a·b or a² + b² passed 2^127 though the root fits. 3.0
+drops that definition for FP19's: one rounding of the exact value.
 
 **At the token edge.** The replays
 ([`docs/benchmarks/replay-*.md`](../../../docs/benchmarks/)) put every loss
@@ -317,7 +347,9 @@ Newton on y³ = |x|·2^256 with precision doubling (a seed from the bits, four
 word steps, one residual step, exact cubes) and an exact midpoint test.
 `ln`, `log2` and `log10` round the one-word kernel when its 2^-145 error
 bound cannot change the answer and fall back to `l2p` within 2^-145 of a
-midpoint (about one input in 2^17). Lambert W near −1/e (1 + e·x < 1/8)
+midpoint (about one input in 2^17); from 3.0 `l2p`'s value is tested too
+(`rbadm127`) and a two-word Newton step (`l2w`, `logw`) decides what it
+cannot. Lambert W near −1/e (1 + e·x < 1/8)
 seeds q = 1 + W by a degree-16 fit in √(2(1 + e·x)) and takes one
 sixth-order step on the double-word exp kernel (W within 6 units of 2^-192
 whatever q); elsewhere it seeds from a crude logarithm, runs one-word
@@ -478,7 +510,7 @@ difference at 2^-384 plus j ln 2. `bounds127.py` measures every err
 → 3,924, `cosh` 3,824 → 3,877, `tanh` 3,821 → 3,873, `atanh` 2,750 →
 2,814; the second stages cost about 27,700 (`sinh`, `cosh`), 28,200
 (`tanh`), 12,400 (`atanh`'s `l2p`) and 60,900 (its wide logs), and no
-sweep input reached one. `FP127H` is 13,234 bytes (7,560 before); inline, `sinh` and `cosh`
+sweep input reached one. `FP127H` is 13,093 bytes (7,560 before; 13,234 before the merge with the other phases); inline, `sinh` and `cosh`
 take about 6.4 KB, `tanh` 6.7 KB and `atanh`, with three stages, 11.2 KB
 ([`size.md`](../../../docs/benchmarks/size.md)).
 
@@ -581,7 +613,7 @@ each right). Inline A/B on the sweep's inputs: `erf` median 3,630 → 3,689,
 `erfc` 3,510 → 3,592, `normCdf` 3,715 → 3,750 (the same old and new calls side by side; the sweep table, its runner recompiled around the new library, reads 3,623 → 3,775, 3,497 → 3,654 and 3,694 → 3,823); `make cdf` on [−6, 6]:
 `normCdf` 12,435 → 12,466, `erfc` 9,140 → 9,211; the second stage costs
 about 48,000 at the median and 355,000 at most (the two-word series just
-below y = 7). `FP127N` is 9,013 bytes (5,005 before); inline, each op
+below y = 7). `FP127N` is 9,088 bytes (5,005 before; 9,013 before the merge with the other phases); inline, each op
 about 8.9 KB (5.5 before).
 
 ## Precision
@@ -596,11 +628,14 @@ one ULP, nearest ops at most half; v4's test allowed 2 ULP from a floored
 reference. It writes [`docs/fp127/precision.json`](../../../docs/fp127/precision.json);
 `make precision-report` renders [`docs/fp127/precision.md`](../../../docs/fp127/precision.md).
 Every nearest op is the nearest word on every vector.
-`make sweep` measures 4,000 seeded random inputs per op
-([`docs/benchmarks/sweep.md`](../../../docs/benchmarks/sweep.md)): every
-v5 transcendental within half an ULP, where v4 had `exp` at 4e32, `pow` at
-4.8e34, `cbrt` at 1.6e14, `compound` at 1.3e6, Lambert W at 1,153 and `ln`,
-`log2` at 1.31 and 1.88 ULPs.
+`make sweep` measures 1,500 to 5,000 seeded random inputs per op
+([`docs/benchmarks/sweep.md`](../../../docs/benchmarks/sweep.md)) against
+the correctly rounded word, three times (plain, every rounding test forced,
+the fast tests forced): 0 misrounded in each pass. v4 had `exp` at 4e32
+ULPs, `pow` at 4.8e34, `cbrt` at 1.6e14, `compound` at 1.3e6, Lambert W at
+1,153 and `ln`, `log2` at 1.31 and 1.88; v5 brought every transcendental
+within half an ULP on the sweep, and 3.0 adds the tests and stages that
+make that the contract on every input.
 
 ## Gas
 
@@ -627,6 +662,18 @@ v5 against v4, medians through the object: `exp` 7,076 (+1,544), `exp10`
 `lambertW0` 41,481 (+5,242), `lambertWm1` 31,764 (+2,402). Six more selectors
 put about 90 gas on most other ops' dispatch. The directed ops cost 900 to
 2,600 through the object, 950 to 1,530 inline.
+
+3.0 (v9) against v8, medians on the ladder's inputs: inline, the rounding
+tests cost the transcendentals a few percent (`exp` 2,726 → 2,845, `exp2`
+2,549 → 2,593, `exp10` 2,987 → 3,086, `sinh` 3,880 → 4,029, `cosh` 3,835 →
+3,981, `tanh` 3,828 → 3,967, `atanh` 2,746 → 2,910, `erf` 7,588 → 7,739,
+`erfc` 7,573 → 7,721, `normCdf` 8,286 → 8,421, `lambertW0` 8,170 → 8,367,
+`lambertWm1` 8,052 → 8,247, `pow` 3,028 → 3,050, `powu` 2,809 → 2,872),
+`expm1` is cheaper (3,106 → 2,968), the logs and the arithmetic are
+unchanged, and `gavg` and `hypot` fall (1,079 → 1,003, 1,366 → 1,164).
+Through the objects the smaller dispatchers take 20 to 70 gas off most ops
+(`add` 708 → 682, `mul` 928 → 862, `log2` 965 → 900); `exp` is 3,000 →
+3,058 and `hypot` 1,840 → 1,690.
 
 ## What changed from the Huff
 
