@@ -402,12 +402,54 @@ object "FP127" {
                 if slt(x, 0) { r := sub(0, r) }
             }
 
+            function pastmid(r, h, l) -> t {
+                let p1, p0 := mul512(r, add(r, 1))
+                t := or(gt(h, p1), and(eq(h, p1), gt(l, p0)))
+            }
+
+            function rootw(h, l) -> r {
+                if iszero(h) {
+                    if l {
+                        let c := iszero(shr(128, l))
+                        r := shr(shl(6, c), isqrtw(shl(shl(7, c), l)))
+                        r := add(r, gt(l, mul(r, add(r, 1))))
+                    }
+                    leave
+                }
+                if or(shr(254, h), and(eq(h, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(l, shl(255, 1)))) { rev(0x35278d12) }
+                let s := and(sub(255, msb(h)), not(1))
+                let k := shr(1, s)
+                let z := or(shl(s, h), shr(sub(256, s), l))
+                let Y := isqrtw(z)
+                r := add(shl(sub(128, k), Y), shr(k, add(div(shl(127, sub(z, mul(Y, Y))), Y), sub(shl(sub(k, 1), 1), 1))))
+                let p0 := mul(r, add(r, 1))
+                let p1 := mulmod(r, add(r, 1), not(0))
+                p1 := sub(sub(p1, p0), lt(p1, p0))
+                if or(gt(h, p1), and(eq(h, p1), gt(l, p0))) {
+                    r := add(r, 1)
+                    if pastmid(r, h, l) { r := add(r, 1) }
+                }
+            }
+
             function fp127_gavg(a, b) -> r {
-                r := fp127_sqrt(fp127_mul(a, b))
+                if slt(xor(a, b), 0) {
+                    if and(iszero(iszero(a)), iszero(iszero(b))) { rev(0x7db3aba7) }
+                    leave
+                }
+                a := absw(a)
+                b := absw(b)
+                let l := mul(a, b)
+                let h := mulmod(a, b, not(0))
+                r := rootw(sub(sub(h, l), lt(h, l)), l)
             }
 
             function fp127_hypot(a, b) -> r {
-                r := fp127_sqrt(fp127_add(fp127_mul(a, a), fp127_mul(b, b)))
+                let u := absw(a)
+                let h, l := mul512(u, u)
+                u := absw(b)
+                let h2, l2 := mul512(u, u)
+                l := add(l, l2)
+                r := rootw(add(add(h, h2), lt(l, l2)), l)
             }
 
             function fp127_inv(x) -> r {

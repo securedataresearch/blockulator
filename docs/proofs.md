@@ -41,6 +41,8 @@ allowance); it varies by a factor of two or so between runs. The fuzz results in
 | FP127 | `divUp` | proven (K127, L5) | ceil(a 2^128 / b) | 2 s | `check_fp127_divUp` |
 | FP127 | `inv` | proven (L4, L5) | trunc(2^256 / x); DivisionByZero; Overflow | 0 s | `check_fp127_inv` |
 | FP127 | `sqrt` | proven (R1, R2, L1) | floor(sqrt(x 2^128)); OutOfRange below zero | – | `isqrt.py` |
+| FP127 | `gavg` | fuzzed | sqrt(a b) to nearest from the exact product (never a tie); OutOfRange for opposite signs; Overflow only at a = b = -2^255 | – | FuzzProofs |
+| FP127 | `hypot` | fuzzed | sqrt(a^2 + b^2) to nearest from the exact sum of squares (never a tie); Overflow past 2^255 - 1 | – | FuzzProofs |
 | FP127 | `floor` | proven | 2^128 floor(x / 2^128) | 0 s | `check_fp127_floor` |
 | FP127 | `ceil` | proven | 2^128 ceil(x / 2^128); Overflow at 2^255 | 0 s | `check_fp127_ceil` |
 | FP127 | `round` | proven | 2^128 floor(x / 2^128 + 1/2); Overflow at 2^255 | 0 s | `check_fp127_round` |
@@ -81,7 +83,7 @@ The same data, with paths and the lemma list, is
 
 The proofs found two FP127 ops leaving their documented semantics; both are fixed in #159 and pinned as regression tests in [`test/proofs/Fuzz.t.sol`](../test/proofs/Fuzz.t.sol).
 
-- **`sqrt` returned floor + 1** where x·2^128 + 1 is a perfect square (s + 1)^2 (e.g. raw x = 2^126 + 1): the Huff's seven Newton steps, kept bit for bit until #159, could stop one above the floor. FP127 now returns the floor on every input, and that is now proven (R1, R2 below). `gavg` and `hypot`, built on it, may now be one below the Huff on those inputs.
+- **`sqrt` returned floor + 1** where x·2^128 + 1 is a perfect square (s + 1)^2 (e.g. raw x = 2^126 + 1): the Huff's seven Newton steps, kept bit for bit until #159, could stop one above the floor. FP127 now returns the floor on every input, and that is now proven (R1, R2 below). `gavg` and `hypot`, then built on it, no longer are: since 3.0 they round once from the exact product or sum of squares (below).
 - **`mulUp` reverted where its result fits**: where floor(a·b/2^128) = −2^255 − 1 the ceiling −2^255 fits; mulUp now returns it, proven in that window (`check_fp127_mulUp_window`) as on every other input.
 
 ## How the proofs work
@@ -175,17 +177,19 @@ polynomial identity that doubles the bits of the inverse, 4 to 256. A Halmos
 check uses the kernel as the floor quotient: the op is proved equal to the
 spec computed with the kernel, and the kernel equal to the floor by its
 lemma. They are also fuzzed against a long division
-([`Fuzz.t.sol`](../test/proofs/Fuzz.t.sol)), as both square roots are against
-exact integer roots, and the FP19 ops whose Halmos checks time out (add, sub and
-the three toFixed18 roundings) against the same specs the checks use (`Ref19`).
+([`Fuzz.t.sol`](../test/proofs/Fuzz.t.sol)), as both square roots and FP127's
+gavg and hypot are against exact integer roots, and the FP19 ops whose Halmos
+checks time out (add, sub and the three toFixed18 roundings) against the same
+specs the checks use (`Ref19`).
 
 ## What is and is not covered
 
-- **Covered:** the 17 FP127 and 24 FP19 ops in the table, for all inputs,
-  including which error each revert carries, except the six FP19 ops marked
-  fuzzed: `sqrt` (no symbolic check), and `add`, `sub`, `toFixed18`,
-  `toFixed18Down` and `toFixed18Up`, where Halmos runs out of time (2,000 s
-  each). Those are fuzzed against the same exact specs.
+- **Covered:** the 19 FP127 and 24 FP19 ops in the table, for all inputs,
+  including which error each revert carries, except the ops marked fuzzed:
+  FP127's `gavg` and `hypot` and FP19's `sqrt` (no symbolic check), and
+  FP19's `add`, `sub`, `toFixed18`, `toFixed18Down` and `toFixed18Up`, where
+  Halmos runs out of time (2,000 s each). Those are fuzzed against the same
+  exact specs.
 - **FP127's square root: proven outside the solver.** A Newton iteration's
   result is the floor only by an argument about its convergence, which Halmos
   cannot close: it would have to relate the iterate's square to the input
@@ -198,8 +202,17 @@ the three toFixed18 roundings) against the same specs the checks use (`Ref19`).
   random inputs. FP19's root is fuzzed against an exact integer root
   (`testFuzz_fp19_sqrt`, and next to exact squares
   `testFuzz_fp19_sqrt_near_squares`).
+- **FP127's `gavg` and `hypot`: fuzzed.** Since 3.0 each is the nearest
+  integer to the root of an exact two-word integer (the raw words' product,
+  or their sum of squares), taken by `rootw`: `isqrtw` as above, one Newton
+  step and an exact 512-bit test that steps the candidate up at most twice
+  (the error argument is in its comment). They are fuzzed against the
+  bit-by-bit root of the same integer, rounded once, with the same reverts
+  (`testFuzz_fp127_gavg`, `testFuzz_fp127_hypot`, next to the midpoints
+  `testFuzz_fp127_roots_near_mid`, and the extreme words
+  `test_fp127_roots_edges`).
 - **Not covered:** the deployed objects directly (see the top), every other op
-  (the transcendentals, `avg`, `lerp`, `hypot`, the comparisons and so on),
+  (the transcendentals, `avg`, `lerp`, the comparisons and so on),
   gas, and the compiler. The proofs trust Halmos's model of the EVM, the
   wrapper's two changes, bitwuzla and Z3, and the reading of each lemma's code
   as the integers its model names.

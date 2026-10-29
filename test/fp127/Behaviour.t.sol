@@ -190,6 +190,25 @@ contract Behaviour is FP127Harness {
         assertEq(objE.pow(9 * ONE, ONE / 2), 3 * ONE, "exact square root through the general path");
     }
 
+    /// gavg and hypot round once from the exact value (3.0): signs, zeros,
+    /// and the reverts v8's floored composition had where the root fits.
+    function test_gavg_hypot_domain() public view {
+        assertEq(obj.gavg(-2 * ONE, -8 * ONE), 4 * ONE, "two negatives");
+        assertEq(obj.gavg(0, -ONE), 0, "a zero with a negative");
+        _expectRevert(abi.encodeCall(IFP127.gavg, (-2 * ONE, 8 * ONE)), IFP127.OutOfRange.selector, "gavg(-2, 8)");
+        _expectRevert(abi.encodeCall(IFP127.gavg, (MIN, MAX)), IFP127.OutOfRange.selector, "gavg(MIN, MAX)");
+        assertEq(obj.gavg(MAX, MAX), MAX, "no intermediate overflow");
+        assertEq(obj.gavg(MIN, -1), int256(0xb504f333f9de6484597d89b3754abe9f), "sqrt(2^255) ULPs, rounded");
+        _expectRevert(abi.encodeCall(IFP127.gavg, (MIN, MIN)), IFP127.Overflow.selector, "gavg(MIN, MIN)");
+        assertEq(obj.gavg(1, 2), 1, "sqrt(2) ULPs");
+        assertEq(obj.gavg(1, 3), 2, "sqrt(3) ULPs");
+        assertEq(obj.hypot(MAX, 0), MAX);
+        assertEq(obj.hypot(-3, 4), 5);
+        assertEq(obj.hypot(int256(1) << 200, int256(1) << 200), int256(0x16a09e667f3bcc908b2fb1366ea957d3e3adec17512775099da));
+        _expectRevert(abi.encodeCall(IFP127.hypot, (MAX, 1 << 128)), IFP127.Overflow.selector, "hypot past the top");
+        _expectRevert(abi.encodeCall(IFP127.hypot, (MIN, 0)), IFP127.Overflow.selector, "hypot(MIN, 0)");
+    }
+
     function test_cbrt_shortcuts() public view {
         assertEq(obj.cbrt(8 * ONE), 2 * ONE);
         assertEq(obj.cbrt(27 * ONE), 3 * ONE);

@@ -115,6 +115,41 @@ and vector):
 - The FP127 object is 23,797 bytes; inline `FP127Lib.compound` 11.0 KB
   (was 1.3 KB).
 
+FP127 `gavg` and `hypot` round once, as FP19's do; the Huff's definition
+goes, and results change:
+
+- For raw words A and B the raw result is the root of the integer A·B or
+  A² + B². `rootw` takes it in two words (sqrt's `isqrtw`, unchanged, one
+  Newton step, and an exact 512-bit test that steps the candidate up) and
+  rounds it to nearest once; an integer's root is never a tie, so the tie
+  rule does not enter. Up to v8 both were the Huff's composition, the
+  floored root of the floored product or sum of squares.
+- Every changed word goes up: v8's was never above the nearest. Where the
+  result is 1 or more, by one ULP (gavg) or up to two (hypot); below, by
+  up to about 2^127/r ULPs (hypot 2^128/r) for a raw result r, as the
+  floors' lost 2^-128 is divided by the root: up to 2^64 ULPs (hypot
+  2^64.5) where the product, or each square, is under one ULP
+  (gavg(2^-78, 2^-60) was 0, now 2^-69, 2^59 ULPs). On Phase 1's 4,000 sweep inputs each, 3,549 gavg and 3,234 hypot
+  words change (451 and 766 were already nearest); of the vectors, 59 gavg
+  and 53 hypot words.
+- Reverts: gavg no longer overflows except at a = b = −2^255 (the root
+  2^255 does not fit), and hypot only where its root passes the largest
+  word; v8 reverted with `Overflow` wherever a·b or a² + b² passed 2^127 (42
+  of gavg's vectors now return). gavg's `OutOfRange` for opposite signs is
+  kept, and now also where v8 said `Overflow` first (a huge product of
+  opposite signs).
+- Gas, the gas ladder's rows: inline `FP127Lib.gavg` 1,079 → 1,003 (733 →
+  706 for a product under one), `hypot` 1,366 → 1,164 (1,020 → 867);
+  through the object gavg 1,567 → 1,615, hypot 1,832 → 1,686. The FP127
+  object is 3,728 bytes (3,367 at the split).
+- `make sweep`: 0 misrounded of 4,000 each against the once-rounded word
+  (`scripts/fp127/oracle.py` now computes it; it encoded v4's composition,
+  so the sweep had scored v8 as correctly rounded); half of each op's
+  inputs now span the whole word. FuzzProofs checks both against a
+  bit-by-bit root at 50,000 runs, next to the midpoints and at the extreme
+  words (`docs/proofs.md`: fuzzed). The Huff equivalence tests assert the
+  divergence: the nearest root of the exact value, at or above the Huff's.
+
 BlockulatorWad, a third library (`contracts/src/wad/`, inline, no deployed
 object): Solady's `FixedPointMathLib` WAD names, signatures and error
 selectors (mulWad, divWad, sMulWad, sDivWad, sqrtWad, cbrtWad, expWad, lnWad,

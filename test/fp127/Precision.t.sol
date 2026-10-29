@@ -15,8 +15,7 @@ import {console} from "forge-std/console.sol";
 /// is the true distance |got - truth|, measured to 2^-64 ULP, and it must be
 /// within the op's rounding contract (_contract): 0 for an exact op, one ULP
 /// for a directed one (floor, ceil, trunc), half an ULP for a nearest one,
-/// all at the 2^-64 ULP resolution of t. The two v4 composites (gavg, hypot)
-/// must equal their definition instead. Per op the test records the vectors, the reverts, the largest
+/// all at the 2^-64 ULP resolution of t. Per op the test records the vectors, the reverts, the largest
 /// error, how many results are the nearest word, and the fewest relative
 /// correct bits over results of magnitude 1 or more; PREC| lines and
 /// docs/fp127/precision.json carry them.
@@ -26,7 +25,6 @@ contract Precision is FP127Harness {
 
     uint256 constant ULP = 1 << 64;          // one ULP in the error's units
     uint256 constant HALF = 1 << 63;
-    uint256 constant COMPOSITE = type(uint256).max;   // bound marker: got must equal out
 
     function _ops() internal pure returns (string[53] memory o) {
         o = [
@@ -50,12 +48,9 @@ contract Precision is FP127Harness {
             || _is(h, "sqrt") || _is(h, "avg") || _is(h, "lerp")) return ("floor", ULP);
         if (_is(h, "mulUp") || _is(h, "divUp") || _is(h, "toFixed18Up")) return ("ceil", ULP);
         if (_is(h, "div") || _is(h, "inv") || _is(h, "fromFixed18")) return ("trunc", ULP);
-        // the v4 composites, kept bit-identical to the Huff: the floored sqrt
-        // of a floored product or sum. They must equal that definition (the
-        // oracle's out) exactly; their distance from the real root is
-        // recorded, not bounded, since the floored product's 2^-128 is
-        // amplified by 1 / (2 sqrt(a b)) when the product is small.
-        if (_is(h, "hypot") || _is(h, "gavg")) return ("sqrt of floors", COMPOSITE);
+        // gavg and hypot (3.0): the root of the exact product or sum of
+        // squares, rounded once; up to v8 the floored root of a floored value
+        if (_is(h, "hypot") || _is(h, "gavg")) return ("nearest", HALF);
         if (_is(h, "exp") || _is(h, "exp2") || _is(h, "exp10") || _is(h, "ln") || _is(h, "log2") || _is(h, "log10")
             || _is(h, "cbrt") || _is(h, "pow") || _is(h, "lambertW0") || _is(h, "lambertWm1") || _is(h, "powu")
             || _is(h, "compound") || _is(h, "log1p") || _is(h, "expm1") || _is(h, "sinh") || _is(h, "cosh")
@@ -173,8 +168,7 @@ contract Precision is FP127Harness {
             st.sumBits += b;
             if (b < st.minBits) st.minBits = b;
         }
-        if (st.bound == COMPOSITE) assertEq(got, ref, string.concat(op, " differs from its definition at ", _label(inp)));
-        else assertLe(e, st.bound, string.concat(op, " outside its rounding contract at ", _label(inp)));
+        assertLe(e, st.bound, string.concat(op, " outside its rounding contract at ", _label(inp)));
     }
 
     function _record(string memory op, Stats memory st) internal returns (string memory) {
