@@ -448,10 +448,11 @@ library FP127Lib {
     /// @notice 2^x, rounded to nearest.
     /// @dev Reverts with Overflow for x >= 127 (2^127 is 2^255 raw, which does
     ///      not fit; the Huff returned MAX_UINT256 above 127 and wrapped at 127
-    ///      exactly). v5: floor(x) and the fraction are split exactly, the
-    ///      fraction goes through the double-word kernel and the result is
-    ///      rounded once, so the answer is the nearest word (ties up: 2^-129 is
-    ///      one ULP). Exact for integer x.
+    ///      exactly). floor(x) and the fraction are split exactly, the fraction
+    ///      goes through the double-word kernel and the result is rounded once
+    ///      when its error bound clears the rounding boundary (3.0), else e^(x
+    ///      ln 2) in two words decides (expw): correctly rounded, ties up
+    ///      (2^-129 is one ULP). Exact for integer x.
     function exp2(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function expk(rh, rx) -> sh, sl {
@@ -796,11 +797,172 @@ library FP127Lib {
                 sl := shl(128, sl)
             }
 
-            function lnmul(fh, fl) -> rh, rx {
-                let pl := mul(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
-                let ph := mulmod(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
-                rh := sub(sub(ph, pl), lt(ph, pl))
-                rx := add(add(shr(128, pl), shr(128, mul(shr(128, fh), 0xe7b876206debac98559552fb4afa1b10))), shr(128, mul(shr(128, fl), 0xb17217f7d1cf79abc9e3b39803f2f6af)))
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function hmul(a, b) -> h {
+                let l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function mul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function rndw(k, eh, el) -> r {
+                let v := or(or(shr(sub(125, k), eh), shl(sub(k, 125), eh)), shr(sub(381, k), el))
+                r := shr(1, add(add(shl(add(k, 129), 1), v), 1))
+            }
+
+            function w19_absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function w19_kln2(a) -> ph, pl {
+                let y1, y0 := w19_mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                pl := add(y0, w19_mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
+                ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function w19_wexpr(s, kk, xh, xl) -> k2, eh, el {
+                let ph, pl := w19_kln2(w19_absw(kk))
+                let rh := 0
+                let rl := 0
+                switch s
+                case 0 { rh, rl := w19_wsub(xh, xl, ph, pl) }
+                default { rh, rl := w19_wsub(ph, pl, xh, xl) }
+                k2 := kk
+                if slt(rh, 0) {
+                    rh, rl := w19_wadd(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                    k2 := sub(k2, 1)
+                }
+                if iszero(lt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)) {
+                    if or(gt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), iszero(lt(rl, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09))) {
+                        rh, rl := w19_wsub(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                        k2 := add(k2, 1)
+                    }
+                }
+                eh, el := w19_wexpm1(rh, rl)
+            }
+
+            function expw(x, n, c2, c1, c0) -> r {
+                let ax := absw(x)
+                let p1 := hmul(ax, c0)
+                let q1, q0 := mul512(ax, c1)
+                let w1 := add(p1, q0)
+                let k, eh, el := w19_wexpr(slt(x, 0), n, add(add(q1, lt(w1, p1)), mul(ax, c2)), w1)
+                r := rndw(k, eh, el)
+            }
+
+            function rbadw(v, err) -> b {
+                b := lt(add(add(v, 0x8000000000000000000000000000000000000000000000000000000000000000), err), shl(1, err))
             }
 
             function rev(sel) {
@@ -814,10 +976,23 @@ library FP127Lib {
                 // n and the fraction exactly; then as pow2r, without its Overflow test,
                 // which x < 127 cannot reach
                 let n := sar(128, x)
-                let rh, rx := lnmul(shl(128, x), 0)
-                let sh, sl := expk(rh, rx)
+                // f ln 2 in X form as lnmul forms it, for f = x's fraction (nothing below 2^-256)
+                let f := shl(128, x)
+                let pl := mul(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+                let ph := mulmod(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
+                let sh, sl := expk(sub(sub(ph, pl), lt(ph, pl)), add(shr(128, pl), shr(128, mul(shr(128, f), 0xe7b876206debac98559552fb4afa1b10))))
                 let e := add(n, 129)
                 r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                // the fraction's f ln 2 within 2^-382 below and expk within 2^-311.2:
+                // V = 2^n (1 + s) within 2^(n - 311.1), under 2^200 units of 2^-384
+                // (n <= 126), whose 256 bits below the grid are (sh, sl) shifted right by
+                // 257 - e. At e = 0 (x in [-129, -128)) that shift leaves 0, which the
+                // test passes, and the word is 1: the value is above 2^-129, or the tie
+                // 2^-129 itself at x = -129, which rounds up. An integer x is exact (s =
+                // 0, the bits below the grid 0)
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+                    r := expw(x, n, 0x2c5c85fdf473de6af278ece600fcbdab, 0xd03cd0c99ca62d8b628345d6e2eabe8af9ee1d881b7aeb26156554bed2be86c4, 0x3b4bab8d704e085109d5ceca445a6e094fa5b2858892ba3146b2f6844c5f0e1f)
+                }
             }
 
             _r := fp127_exp2(_x)
@@ -825,12 +1000,13 @@ library FP127Lib {
     }
     /// @notice e^x, rounded to nearest.
     /// @dev Reverts with Overflow for x > 88 (the Huff returned MAX_UINT256).
-    ///      exp(0) is exactly ONE. v5: 2^(x log2 e) with log2 e to 2^-384, the
-    ///      integer part and the fraction split exactly and the fraction through
-    ///      the double-word kernel, rounded once: the nearest word on every
-    ///      input tested, where v4's one-word polynomial (2^-145 relative) was
-    ///      4e32 ULPs off near e^88. Below about -89.4 the value is under half
-    ///      an ULP and the result is 0; v4 returned 0 from -88, two ULPs early.
+    ///      exp(0) is exactly ONE. 2^(x log2 e): x = n ln 2 + r exactly enough
+    ///      (expr), e^r - 1 through the double-word kernel, rounded once when
+    ///      its error bound clears the rounding boundary (3.0), else in two words
+    ///      (expw): correctly rounded. v4's one-word polynomial (2^-145
+    ///      relative) was 4e32 ULPs off near e^88. Below about -89.4 the value is
+    ///      under half an ULP and the result is 0; v4 returned 0 from -88, two
+    ///      ULPs early.
     function exp(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function expk(rh, rx) -> sh, sl {
@@ -1198,6 +1374,174 @@ library FP127Lib {
                 }
             }
 
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function hmul(a, b) -> h {
+                let l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function mul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function rndw(k, eh, el) -> r {
+                let v := or(or(shr(sub(125, k), eh), shl(sub(k, 125), eh)), shr(sub(381, k), el))
+                r := shr(1, add(add(shl(add(k, 129), 1), v), 1))
+            }
+
+            function w19_absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function w19_kln2(a) -> ph, pl {
+                let y1, y0 := w19_mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                pl := add(y0, w19_mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
+                ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function w19_wexpr(s, kk, xh, xl) -> k2, eh, el {
+                let ph, pl := w19_kln2(w19_absw(kk))
+                let rh := 0
+                let rl := 0
+                switch s
+                case 0 { rh, rl := w19_wsub(xh, xl, ph, pl) }
+                default { rh, rl := w19_wsub(ph, pl, xh, xl) }
+                k2 := kk
+                if slt(rh, 0) {
+                    rh, rl := w19_wadd(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                    k2 := sub(k2, 1)
+                }
+                if iszero(lt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)) {
+                    if or(gt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), iszero(lt(rl, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09))) {
+                        rh, rl := w19_wsub(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                        k2 := add(k2, 1)
+                    }
+                }
+                eh, el := w19_wexpm1(rh, rl)
+            }
+
+            function expw(x, n, c2, c1, c0) -> r {
+                let ax := absw(x)
+                let p1 := hmul(ax, c0)
+                let q1, q0 := mul512(ax, c1)
+                let w1 := add(p1, q0)
+                let k, eh, el := w19_wexpr(slt(x, 0), n, add(add(q1, lt(w1, p1)), mul(ax, c2)), w1)
+                r := rndw(k, eh, el)
+            }
+
+            function rbadw(v, err) -> b {
+                b := lt(add(add(v, 0x8000000000000000000000000000000000000000000000000000000000000000), err), shl(1, err))
+            }
+
             function rev(sel) {
                 mstore(0x00, shl(224, sel))
                 revert(0x00, 0x04)
@@ -1210,18 +1554,24 @@ library FP127Lib {
                 let n, rh, rx := expr(x)
                 if slt(n, sub(0, 129)) { leave }
                 let sh, sl := expk(rh, rx)
-                // as pow2r; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s < 1.95)
+                // as pow2r; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
+                // 1.95). r within 2^-377 of x - n ln 2 and expk within 2^-311.2: within
+                // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-137 or more above
+                // 0, so the value is above 2^-129)
                 let e := add(n, 129)
                 r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) { r := expw(x, n, 0x40000000000000000000000000000000, 0, 0) }
             }
 
             _r := fp127_exp(_x)
         }
     }
     /// @notice 10^x, rounded to nearest.
-    /// @dev v5: 2^(x log2 10) with log2 10 to 2^-384; the integer part of the
+    /// @dev 2^(x log2 10) with log2 10 to 2^-384: the integer part of the
     ///      exponent is formed exactly, so it alone decides Overflow (from 2^127)
-    ///      and underflow to 0 (below 2^-129), for any x.
+    ///      and underflow to 0 (below 2^-129), for any x; the fraction through
+    ///      the double-word kernel, rounded once when its error bound clears the
+    ///      rounding boundary (3.0), else e^(x ln 10) in two words (expw).
     function exp10(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function expk(rh, rx) -> sh, sl {
@@ -1566,11 +1916,179 @@ library FP127Lib {
                 sl := shl(128, sl)
             }
 
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function hmul(a, b) -> h {
+                let l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function mul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function rndw(k, eh, el) -> r {
+                let v := or(or(shr(sub(125, k), eh), shl(sub(k, 125), eh)), shr(sub(381, k), el))
+                r := shr(1, add(add(shl(add(k, 129), 1), v), 1))
+            }
+
+            function w19_absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function w19_kln2(a) -> ph, pl {
+                let y1, y0 := w19_mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                pl := add(y0, w19_mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
+                ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function w19_wexpr(s, kk, xh, xl) -> k2, eh, el {
+                let ph, pl := w19_kln2(w19_absw(kk))
+                let rh := 0
+                let rl := 0
+                switch s
+                case 0 { rh, rl := w19_wsub(xh, xl, ph, pl) }
+                default { rh, rl := w19_wsub(ph, pl, xh, xl) }
+                k2 := kk
+                if slt(rh, 0) {
+                    rh, rl := w19_wadd(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                    k2 := sub(k2, 1)
+                }
+                if iszero(lt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)) {
+                    if or(gt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), iszero(lt(rl, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09))) {
+                        rh, rl := w19_wsub(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                        k2 := add(k2, 1)
+                    }
+                }
+                eh, el := w19_wexpm1(rh, rl)
+            }
+
+            function expw(x, n, c2, c1, c0) -> r {
+                let ax := absw(x)
+                let p1 := hmul(ax, c0)
+                let q1, q0 := mul512(ax, c1)
+                let w1 := add(p1, q0)
+                let k, eh, el := w19_wexpr(slt(x, 0), n, add(add(q1, lt(w1, p1)), mul(ax, c2)), w1)
+                r := rndw(k, eh, el)
+            }
+
             function lnmul(fh, fl) -> rh, rx {
                 let pl := mul(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
                 let ph := mulmod(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
                 rh := sub(sub(ph, pl), lt(ph, pl))
                 rx := add(add(shr(128, pl), shr(128, mul(shr(128, fh), 0xe7b876206debac98559552fb4afa1b10))), shr(128, mul(shr(128, fl), 0xb17217f7d1cf79abc9e3b39803f2f6af)))
+            }
+
+            function rbadw(v, err) -> b {
+                b := lt(add(add(v, 0x8000000000000000000000000000000000000000000000000000000000000000), err), shl(1, err))
             }
 
             function rev(sel) {
@@ -1589,19 +2107,23 @@ library FP127Lib {
                 n := add(sub(sub(sub(sub(mm, c0), lt(mm, c0)), mul(ng, lh)), mul(slt(lh, 0), y)), sub(lt(fh, c0), slt(b1, 0)))
             }
 
-            function pow2r(y, lh, ll) -> r {
-                let n, fh, fl := y2nf(y, lh, ll)
+            function fp127_exp10(x) -> r {
+                let n, fh, fl := y2nf(x, 0x35269e12f346e2bf924afdbfd36bf6d33, 0x65b157f8deceb53a46dab2020b9e167419943f7a77547ce8f892faad8eb42f58)
                 if sgt(n, 126) { rev(0x35278d12) }
                 if slt(n, sub(0, 129)) { leave }
                 let rh, rx := lnmul(fh, fl)
                 let sh, sl := expk(rh, rx)
+                // x log2 10 within |x| 2^-385 < 2^-379, f ln 2 within 2^-382 and expk
+                // within 2^-311.2: tested as exp2. x log2 10 on the grid stays 2^-125.9
+                // or more from -129 (and from 127; the nearest x computed), so n alone
+                // decides Overflow and 0, and at n = -129 the value is above 2^-129. 10^x
+                // is no tie: an integer from x = 0, not dyadic below
                 let e := add(n, 129)
                 r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+                    r := expw(x, n, 0x935d8dddaaa8ac16ea56d62b82d30a28, 0xe28fecf9da5df90e83c61e8201f02d72962f02d7b1a8105ccc70cbc02c5f0d68, 0x2c622418410be2dafb8f788402e516d6782cf8a28a8c911e765aa6c3b0d831fb)
+                }
                 if iszero(r) { rev(0x35278d12) }
-            }
-
-            function fp127_exp10(x) -> r {
-                r := pow2r(x, 0x35269e12f346e2bf924afdbfd36bf6d33, 0x65b157f8deceb53a46dab2020b9e167419943f7a77547ce8f892faad8eb42f58)
             }
 
             _r := fp127_exp10(_x)
@@ -2011,6 +2533,116 @@ library FP127Lib {
                 lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
             }
 
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mul3(h, l, m) -> n2, n1, n0 {
+                let a1, a0 := w19_mul512(h, m)
+                let b1 := 0
+                b1, n0 := w19_mul512(l, m)
+                n1 := add(a0, b1)
+                n2 := add(a1, lt(n1, a0))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function l2w(x, ms, lh, ll) -> fh, fl {
+                if iszero(and(x, sub(x, 1))) { leave }
+                let f0 :=sub(lh, shl(128, sub(ms, 128)))
+                // 1 - f0 at 2^-384, then at 2^-510
+                let gh := sub(sub(0x100000000000000000000000000000000, f0), iszero(iszero(ll)))
+                let gl := sub(0, ll)
+                let eh, el := w19_wmul(or(shl(126, gh), shr(130, gl)), shl(126, gl), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                eh, el := w19_wexpm1(eh, el)
+                let z2, z1, z0 := w19_mul3(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, shl(sub(255, ms), x))
+                // d log2 e at 2^-510: z1 (signed) times log2 e at 2^-255, floored
+                let ph, pl := smul512(z1, 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let c := or(shl(1, ph), shr(255, pl))
+                fh := or(shl(126, f0), shr(130, ll))
+                fl := add(shl(126, ll), c)
+                fh := add(fh, sub(lt(fl, c), slt(c, 0)))
+            }
+
             function log2m(mm) -> r {
                 let x := sub(mm, 0x1000000000000000000000000000000000000000000000000)
                 let i := shr(188, x)
@@ -2218,12 +2850,61 @@ library FP127Lib {
                 r := shr(63, add(acc, x))
             }
 
+            function w19_wshr(h, l, n) -> rh, rl {
+                switch lt(n, 256)
+                case 1 {
+                    rh := shr(n, h)
+                    rl := or(shl(sub(256, n), h), shr(n, l))
+                }
+                default { rl := shr(sub(n, 256), h) }
+            }
+
+            function w19_shr3(z2, z1, z0, n) -> rh, rl {
+                if lt(n, 256) {
+                    rh := or(shl(sub(256, n), z2), shr(n, z1))
+                    rl := or(shl(sub(256, n), z1), shr(n, z0))
+                    leave
+                }
+                rh, rl := w19_wshr(z2, z1, sub(n, 256))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function logw(a, fh, fl, ch, cl) -> r {
+                let n2, n1, n0 := w19_mul3(ch, cl, absw(a))
+                let ah, al := w19_shr3(n2, n1, n0, 10)
+                if slt(a, 0) { ah, al := w19_wsub(0, 0, ah, al) }
+                let bh, bl := w19_wmul(fh, fl, ch, cl)
+                ah, al := w19_wadd(ah, al, shr(10, bh), or(shl(246, bh), shr(10, bl)))
+                r := sar(1, add(sar(115, ah), 1))
+            }
+
             function msb(x) -> r {
                 if x { r := sub(255, clz(x)) }
             }
 
             function nearmid(v) -> b {
                 b := lt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), 0x800000000000)
+            }
+
+            function rbadm127(v, g, err) -> b {
+                let half := shl(sub(g, 1), 1)
+                if iszero(lt(err, half)) {
+                    b := 1
+                    leave
+                }
+                let low := and(v, sub(shl(g, 1), 1))
+                switch lt(low, half)
+                case 1 { b := iszero(gt(sub(half, low), err)) }
+                default { b := lt(sub(low, half), err) }
             }
 
             function rev(sel) {
@@ -2250,6 +2931,11 @@ library FP127Lib {
                 if nearmid(v) {
                     let lh, ll := l2p(x, ms, y0)
                     r := add(lh, shr(255, ll))
+                    // l2p within 2^-299, 2^85 units of ll: else the second stage
+                    if rbadm127(ll, 256, 0x2000000000000000000000) {
+                        let fh, fl := l2w(x, ms, lh, ll)
+                        r := logw(sub(ms, 128), fh, fl, 0x4000000000000000000000000000000000000000000000000000000000000000, 0)
+                    }
                     leave
                 }
                 r := round64(v)
@@ -2661,6 +3347,116 @@ library FP127Lib {
                 lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
             }
 
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mul3(h, l, m) -> n2, n1, n0 {
+                let a1, a0 := w19_mul512(h, m)
+                let b1 := 0
+                b1, n0 := w19_mul512(l, m)
+                n1 := add(a0, b1)
+                n2 := add(a1, lt(n1, a0))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function l2w(x, ms, lh, ll) -> fh, fl {
+                if iszero(and(x, sub(x, 1))) { leave }
+                let f0 :=sub(lh, shl(128, sub(ms, 128)))
+                // 1 - f0 at 2^-384, then at 2^-510
+                let gh := sub(sub(0x100000000000000000000000000000000, f0), iszero(iszero(ll)))
+                let gl := sub(0, ll)
+                let eh, el := w19_wmul(or(shl(126, gh), shr(130, gl)), shl(126, gl), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                eh, el := w19_wexpm1(eh, el)
+                let z2, z1, z0 := w19_mul3(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, shl(sub(255, ms), x))
+                // d log2 e at 2^-510: z1 (signed) times log2 e at 2^-255, floored
+                let ph, pl := smul512(z1, 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let c := or(shl(1, ph), shr(255, pl))
+                fh := or(shl(126, f0), shr(130, ll))
+                fl := add(shl(126, ll), c)
+                fh := add(fh, sub(lt(fl, c), slt(c, 0)))
+            }
+
             function log2m(mm) -> r {
                 let x := sub(mm, 0x1000000000000000000000000000000000000000000000000)
                 let i := shr(188, x)
@@ -2868,6 +3664,43 @@ library FP127Lib {
                 r := shr(63, add(acc, x))
             }
 
+            function w19_wshr(h, l, n) -> rh, rl {
+                switch lt(n, 256)
+                case 1 {
+                    rh := shr(n, h)
+                    rl := or(shl(sub(256, n), h), shr(n, l))
+                }
+                default { rl := shr(sub(n, 256), h) }
+            }
+
+            function w19_shr3(z2, z1, z0, n) -> rh, rl {
+                if lt(n, 256) {
+                    rh := or(shl(sub(256, n), z2), shr(n, z1))
+                    rl := or(shl(sub(256, n), z1), shr(n, z0))
+                    leave
+                }
+                rh, rl := w19_wshr(z2, z1, sub(n, 256))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function logw(a, fh, fl, ch, cl) -> r {
+                let n2, n1, n0 := w19_mul3(ch, cl, absw(a))
+                let ah, al := w19_shr3(n2, n1, n0, 10)
+                if slt(a, 0) { ah, al := w19_wsub(0, 0, ah, al) }
+                let bh, bl := w19_wmul(fh, fl, ch, cl)
+                ah, al := w19_wadd(ah, al, shr(10, bh), or(shl(246, bh), shr(10, bl)))
+                r := sar(1, add(sar(115, ah), 1))
+            }
+
             function msb(x) -> r {
                 if x { r := sub(255, clz(x)) }
             }
@@ -2885,6 +3718,18 @@ library FP127Lib {
                 b := lt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), 0x800000000000)
             }
 
+            function rbadm127(v, g, err) -> b {
+                let half := shl(sub(g, 1), 1)
+                if iszero(lt(err, half)) {
+                    b := 1
+                    leave
+                }
+                let low := and(v, sub(shl(g, 1), 1))
+                switch lt(low, half)
+                case 1 { b := iszero(gt(sub(half, low), err)) }
+                default { b := lt(sub(low, half), err) }
+            }
+
             function rev(sel) {
                 mstore(0x00, shl(224, sel))
                 revert(0x00, 0x04)
@@ -2894,12 +3739,12 @@ library FP127Lib {
                 q := sar(64, add(r, 0x8000000000000000))
             }
 
-            function x384mul(lh, ll, c) -> r {
+            function x384mul(lh, ll, c) -> r, v {
                 let ph, pl := smul512(lh, c)
                 let a := hmul(ll, c)
-                pl := add(pl, a)
-                ph := add(ph, lt(pl, a))
-                r := add(ph, shr(255, pl))
+                v := add(pl, a)
+                ph := add(ph, lt(v, a))
+                r := add(ph, shr(255, v))
             }
 
             function fp127_ln(x) -> r {
@@ -2918,7 +3763,14 @@ library FP127Lib {
                 v := mulg(v, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
                 if nearmid(v) {
                     let lh, ll := l2p(x, ms, y0)
-                    r := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
+                    let w := 0
+                    r, w := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
+                    // l2p's 2^-299 times ln 2, ln 2's rounding at 2^-256 times |log2 x|
+                    // <= 2^7 and two floors: under 2^135 units of w
+                    if rbadm127(w, 256, 0x800000000000000000000000000000000) {
+                        let fh, fl := l2w(x, ms, lh, ll)
+                        r := logw(sub(ms, 128), fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                    }
                     leave
                 }
                 r := round64(v)
@@ -3328,6 +4180,116 @@ library FP127Lib {
                 lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
             }
 
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mul3(h, l, m) -> n2, n1, n0 {
+                let a1, a0 := w19_mul512(h, m)
+                let b1 := 0
+                b1, n0 := w19_mul512(l, m)
+                n1 := add(a0, b1)
+                n2 := add(a1, lt(n1, a0))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function l2w(x, ms, lh, ll) -> fh, fl {
+                if iszero(and(x, sub(x, 1))) { leave }
+                let f0 :=sub(lh, shl(128, sub(ms, 128)))
+                // 1 - f0 at 2^-384, then at 2^-510
+                let gh := sub(sub(0x100000000000000000000000000000000, f0), iszero(iszero(ll)))
+                let gl := sub(0, ll)
+                let eh, el := w19_wmul(or(shl(126, gh), shr(130, gl)), shl(126, gl), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                eh, el := w19_wexpm1(eh, el)
+                let z2, z1, z0 := w19_mul3(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, shl(sub(255, ms), x))
+                // d log2 e at 2^-510: z1 (signed) times log2 e at 2^-255, floored
+                let ph, pl := smul512(z1, 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let c := or(shl(1, ph), shr(255, pl))
+                fh := or(shl(126, f0), shr(130, ll))
+                fl := add(shl(126, ll), c)
+                fh := add(fh, sub(lt(fl, c), slt(c, 0)))
+            }
+
             function log2m(mm) -> r {
                 let x := sub(mm, 0x1000000000000000000000000000000000000000000000000)
                 let i := shr(188, x)
@@ -3535,6 +4497,43 @@ library FP127Lib {
                 r := shr(63, add(acc, x))
             }
 
+            function w19_wshr(h, l, n) -> rh, rl {
+                switch lt(n, 256)
+                case 1 {
+                    rh := shr(n, h)
+                    rl := or(shl(sub(256, n), h), shr(n, l))
+                }
+                default { rl := shr(sub(n, 256), h) }
+            }
+
+            function w19_shr3(z2, z1, z0, n) -> rh, rl {
+                if lt(n, 256) {
+                    rh := or(shl(sub(256, n), z2), shr(n, z1))
+                    rl := or(shl(sub(256, n), z1), shr(n, z0))
+                    leave
+                }
+                rh, rl := w19_wshr(z2, z1, sub(n, 256))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function logw(a, fh, fl, ch, cl) -> r {
+                let n2, n1, n0 := w19_mul3(ch, cl, absw(a))
+                let ah, al := w19_shr3(n2, n1, n0, 10)
+                if slt(a, 0) { ah, al := w19_wsub(0, 0, ah, al) }
+                let bh, bl := w19_wmul(fh, fl, ch, cl)
+                ah, al := w19_wadd(ah, al, shr(10, bh), or(shl(246, bh), shr(10, bl)))
+                r := sar(1, add(sar(115, ah), 1))
+            }
+
             function msb(x) -> r {
                 if x { r := sub(255, clz(x)) }
             }
@@ -3552,6 +4551,18 @@ library FP127Lib {
                 b := lt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), 0x800000000000)
             }
 
+            function rbadm127(v, g, err) -> b {
+                let half := shl(sub(g, 1), 1)
+                if iszero(lt(err, half)) {
+                    b := 1
+                    leave
+                }
+                let low := and(v, sub(shl(g, 1), 1))
+                switch lt(low, half)
+                case 1 { b := iszero(gt(sub(half, low), err)) }
+                default { b := lt(sub(low, half), err) }
+            }
+
             function rev(sel) {
                 mstore(0x00, shl(224, sel))
                 revert(0x00, 0x04)
@@ -3561,12 +4572,12 @@ library FP127Lib {
                 q := sar(64, add(r, 0x8000000000000000))
             }
 
-            function x384mul(lh, ll, c) -> r {
+            function x384mul(lh, ll, c) -> r, v {
                 let ph, pl := smul512(lh, c)
                 let a := hmul(ll, c)
-                pl := add(pl, a)
-                ph := add(ph, lt(pl, a))
-                r := add(ph, shr(255, pl))
+                v := add(pl, a)
+                ph := add(ph, lt(v, a))
+                r := add(ph, shr(255, v))
             }
 
             function fp127_log10(x) -> r {
@@ -3585,7 +4596,13 @@ library FP127Lib {
                 v := mulg(v, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a5)
                 if nearmid(v) {
                     let lh, ll := l2p(x, ms, y0)
-                    r := x384mul(lh, ll, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e6)
+                    let w := 0
+                    r, w := x384mul(lh, ll, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e6)
+                    // as ln
+                    if rbadm127(w, 256, 0x800000000000000000000000000000000) {
+                        let fh, fl := l2w(x, ms, lh, ll)
+                        r := logw(sub(ms, 128), fh, fl, 0x134413509f79fef311f12b35816f922f04d5a618a87a3e69314bcde4d6f98c79, 0x650d45b03233f57a13cb978e668e37a25228e692b6317243cb16a4fea4aa5a59)
+                    }
                     leave
                 }
                 r := round64(v)
@@ -3683,17 +4700,18 @@ library FP127Lib {
     /// @dev Special cases in Huff order: y == 0 gives 1 (including 0^0); x == 0
     ///      gives 0; x == 1 gives 1; x < 0 reverts with OutOfRange. Shortcuts
     ///      y == 1 (x itself), y == 2 (the 512-bit square, rounded), x == 2
-    ///      (exp2) and x == 10 (exp10), all correctly rounded. The general path
-    ///      (v5) takes log2(x) to 2^-299 in the double word (l2p), forms
-    ///      y log2(x) exactly from it, splits integer and fraction, and runs the
-    ///      fraction through the double-word kernel with one rounding. The error
-    ///      is under 2^-299 (1 + |y|) relative before that rounding: the
-    ///      nearest word whenever |y| x^y < 2^140 or so, faithful to
-    ///      |y| x^y < 2^170. The one-word log2 and 2^t go first (pow2t) and
-    ///      decide when their error bound cannot change the rounding, as the
-    ///      logs do; the double word then gives the same word, so it runs only
-    ///      near a midpoint or for results from about 2^12. v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored
-    ///      or truncated; they now take the general path, which is nearest.
+    ///      (exp2) and x == 10 (exp10), all correctly rounded. The one-word
+    ///      log2 and 2^t go first (pow2t) and decide when their error bound
+    ///      cannot change the rounding, as the logs do; else the middle stage
+    ///      (powmid): log2(x) in the double word, relative near one (3.0: d =
+    ///      x - 1 exactly and FP19's mratio, where v5's absolute 2^-299 missed
+    ///      by up to 1e11 ULPs for a base within 2^-88 of one raised past
+    ///      2^90), y log2(x) split exactly into integer and fraction, the
+    ///      fraction through the double-word kernel, one rounding when its bound
+    ///      clears the rounding boundary; else an exact tie (powtie) or the
+    ///      second stage in two words (powslow): correctly rounded, ties up.
+    ///      v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored or truncated; they
+    ///      take the general path, which is nearest.
     function pow(int256 _x, int256 _y) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
@@ -4043,11 +5061,174 @@ library FP127Lib {
                 sl := shl(128, sl)
             }
 
+            function hmul(a, b) -> h {
+                let l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function mul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function rndw(k, eh, el) -> r {
+                let v := or(or(shr(sub(125, k), eh), shl(sub(k, 125), eh)), shr(sub(381, k), el))
+                r := shr(1, add(add(shl(add(k, 129), 1), v), 1))
+            }
+
+            function w19_absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function w19_kln2(a) -> ph, pl {
+                let y1, y0 := w19_mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                pl := add(y0, w19_mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
+                ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function w19_wexpr(s, kk, xh, xl) -> k2, eh, el {
+                let ph, pl := w19_kln2(w19_absw(kk))
+                let rh := 0
+                let rl := 0
+                switch s
+                case 0 { rh, rl := w19_wsub(xh, xl, ph, pl) }
+                default { rh, rl := w19_wsub(ph, pl, xh, xl) }
+                k2 := kk
+                if slt(rh, 0) {
+                    rh, rl := w19_wadd(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                    k2 := sub(k2, 1)
+                }
+                if iszero(lt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)) {
+                    if or(gt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), iszero(lt(rl, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09))) {
+                        rh, rl := w19_wsub(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                        k2 := add(k2, 1)
+                    }
+                }
+                eh, el := w19_wexpm1(rh, rl)
+            }
+
+            function expw(x, n, c2, c1, c0) -> r {
+                let ax := absw(x)
+                let p1 := hmul(ax, c0)
+                let q1, q0 := mul512(ax, c1)
+                let w1 := add(p1, q0)
+                let k, eh, el := w19_wexpr(slt(x, 0), n, add(add(q1, lt(w1, p1)), mul(ax, c2)), w1)
+                r := rndw(k, eh, el)
+            }
+
             function lnmul(fh, fl) -> rh, rx {
                 let pl := mul(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
                 let ph := mulmod(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
                 rh := sub(sub(ph, pl), lt(ph, pl))
                 rx := add(add(shr(128, pl), shr(128, mul(shr(128, fh), 0xe7b876206debac98559552fb4afa1b10))), shr(128, mul(shr(128, fl), 0xb17217f7d1cf79abc9e3b39803f2f6af)))
+            }
+
+            function rbadw(v, err) -> b {
+                b := lt(add(add(v, 0x8000000000000000000000000000000000000000000000000000000000000000), err), shl(1, err))
             }
 
             function rev(sel) {
@@ -4066,19 +5247,23 @@ library FP127Lib {
                 n := add(sub(sub(sub(sub(mm, c0), lt(mm, c0)), mul(ng, lh)), mul(slt(lh, 0), y)), sub(lt(fh, c0), slt(b1, 0)))
             }
 
-            function pow2r(y, lh, ll) -> r {
-                let n, fh, fl := y2nf(y, lh, ll)
+            function fp127_exp10(x) -> r {
+                let n, fh, fl := y2nf(x, 0x35269e12f346e2bf924afdbfd36bf6d33, 0x65b157f8deceb53a46dab2020b9e167419943f7a77547ce8f892faad8eb42f58)
                 if sgt(n, 126) { rev(0x35278d12) }
                 if slt(n, sub(0, 129)) { leave }
                 let rh, rx := lnmul(fh, fl)
                 let sh, sl := expk(rh, rx)
+                // x log2 10 within |x| 2^-385 < 2^-379, f ln 2 within 2^-382 and expk
+                // within 2^-311.2: tested as exp2. x log2 10 on the grid stays 2^-125.9
+                // or more from -129 (and from 127; the nearest x computed), so n alone
+                // decides Overflow and 0, and at n = -129 the value is above 2^-129. 10^x
+                // is no tie: an integer from x = 0, not dyadic below
                 let e := add(n, 129)
                 r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+                    r := expw(x, n, 0x935d8dddaaa8ac16ea56d62b82d30a28, 0xe28fecf9da5df90e83c61e8201f02d72962f02d7b1a8105ccc70cbc02c5f0d68, 0x2c622418410be2dafb8f788402e516d6782cf8a28a8c911e765aa6c3b0d831fb)
+                }
                 if iszero(r) { rev(0x35278d12) }
-            }
-
-            function fp127_exp10(x) -> r {
-                r := pow2r(x, 0x35269e12f346e2bf924afdbfd36bf6d33, 0x65b157f8deceb53a46dab2020b9e167419943f7a77547ce8f892faad8eb42f58)
             }
 
             function fp127_exp2(x) -> r {
@@ -4087,53 +5272,23 @@ library FP127Lib {
                 // n and the fraction exactly; then as pow2r, without its Overflow test,
                 // which x < 127 cannot reach
                 let n := sar(128, x)
-                let rh, rx := lnmul(shl(128, x), 0)
-                let sh, sl := expk(rh, rx)
+                // f ln 2 in X form as lnmul forms it, for f = x's fraction (nothing below 2^-256)
+                let f := shl(128, x)
+                let pl := mul(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+                let ph := mulmod(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
+                let sh, sl := expk(sub(sub(ph, pl), lt(ph, pl)), add(shr(128, pl), shr(128, mul(shr(128, f), 0xe7b876206debac98559552fb4afa1b10))))
                 let e := add(n, 129)
                 r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
-            }
-
-            function hmul(a, b) -> h {
-                let l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(mm, l), lt(mm, l))
-            }
-
-            function mul512(a, b) -> h, l {
-                l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(mm, l), lt(mm, l))
-            }
-
-            function smul512(a, b) -> h, l {
-                l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
-            }
-
-            function l2p(x, ms, y0) -> lh, ll {
-                let m := shl(sub(255, ms), x)
-                lh := shl(128, sub(ms, 128))
-                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
-                if slt(y0, 1) { y0 := 1 }
-                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
-                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
-                let rh, rx := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
-                let sh, sl := expk(rh, rx)
-                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
-                let qh, ql := mul512(m, sh)
-                let c := hmul(m, sl)
-                ql := add(ql, c)
-                qh := add(add(qh, m), lt(ql, c))
-                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
-                let d := or(shl(128, qh), shr(128, ql))
-                let ad := absw(d)
-                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
-                let corr := or(shl(1, ph), shr(255, pl))
-                // log2(x) = (ms - 128) + y0 + corr
-                let y1 := shl(192, y0)
-                ll := add(y1, corr)
-                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+                // the fraction's f ln 2 within 2^-382 below and expk within 2^-311.2:
+                // V = 2^n (1 + s) within 2^(n - 311.1), under 2^200 units of 2^-384
+                // (n <= 126), whose 256 bits below the grid are (sh, sl) shifted right by
+                // 257 - e. At e = 0 (x in [-129, -128)) that shift leaves 0, which the
+                // test passes, and the word is 1: the value is above 2^-129, or the tie
+                // 2^-129 itself at x = -129, which rounds up. An integer x is exact (s =
+                // 0, the bits below the grid 0)
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+                    r := expw(x, n, 0x2c5c85fdf473de6af278ece600fcbdab, 0xd03cd0c99ca62d8b628345d6e2eabe8af9ee1d881b7aeb26156554bed2be86c4, 0x3b4bab8d704e085109d5ceca445a6e094fa5b2858892ba3146b2f6844c5f0e1f)
+                }
             }
 
             function log2m(mm) -> r {
@@ -4483,6 +5638,391 @@ library FP127Lib {
                 r := shr(64, add(v, 0x8000000000000000))
             }
 
+            function smul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
+            }
+
+            function l2p(x, ms, y0) -> lh, ll {
+                let m := shl(sub(255, ms), x)
+                lh := shl(128, sub(ms, 128))
+                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
+                if slt(y0, 1) { y0 := 1 }
+                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
+                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
+                let rh, rx := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
+                let sh, sl := expk(rh, rx)
+                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
+                let qh, ql := mul512(m, sh)
+                let c := hmul(m, sl)
+                ql := add(ql, c)
+                qh := add(add(qh, m), lt(ql, c))
+                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
+                let d := or(shl(128, qh), shr(128, ql))
+                let ad := absw(d)
+                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let corr := or(shl(1, ph), shr(255, pl))
+                // log2(x) = (ms - 128) + y0 + corr
+                let y1 := shl(192, y0)
+                ll := add(y1, corr)
+                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+            }
+
+            function w19_mul3(h, l, m) -> n2, n1, n0 {
+                let a1, a0 := w19_mul512(h, m)
+                let b1 := 0
+                b1, n0 := w19_mul512(l, m)
+                n1 := add(a0, b1)
+                n2 := add(a1, lt(n1, a0))
+            }
+
+            function l2w(x, ms, lh, ll) -> fh, fl {
+                if iszero(and(x, sub(x, 1))) { leave }
+                let f0 :=sub(lh, shl(128, sub(ms, 128)))
+                // 1 - f0 at 2^-384, then at 2^-510
+                let gh := sub(sub(0x100000000000000000000000000000000, f0), iszero(iszero(ll)))
+                let gl := sub(0, ll)
+                let eh, el := w19_wmul(or(shl(126, gh), shr(130, gl)), shl(126, gl), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                eh, el := w19_wexpm1(eh, el)
+                let z2, z1, z0 := w19_mul3(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, shl(sub(255, ms), x))
+                // d log2 e at 2^-510: z1 (signed) times log2 e at 2^-255, floored
+                let ph, pl := smul512(z1, 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let c := or(shl(1, ph), shr(255, pl))
+                fh := or(shl(126, f0), shr(130, ll))
+                fl := add(shl(126, ll), c)
+                fh := add(fh, sub(lt(fl, c), slt(c, 0)))
+            }
+
+            function pow2wr(s, k, fh, fl) -> r {
+                if s {
+                    k := sub(0, k)
+                    if or(fh, fl) {
+                        k := sub(k, 1)
+                        fh, fl := w19_wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl)
+                    }
+                }
+                if sgt(k, 126) { rev(0x35278d12) }
+                if slt(k, sub(0, 130)) { leave }
+                fh, fl := w19_wmul(fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                fh, fl := w19_wexpm1(fh, fl)
+                r := rndw(k, fh, fl)
+                if and(eq(k, 126), iszero(r)) { rev(0x35278d12) }
+            }
+
+            function isqrt(z) -> y {
+                if iszero(z) { leave }
+                y := shl(shr(1, add(msb(z), 2)), 1)
+                for {} 1 {} {
+                    let t := shr(1, add(y, div(z, y)))
+                    if iszero(lt(t, y)) { break }
+                    y := t
+                }
+            }
+
+            function powtie(x, y) -> hit, r {
+                if gt(absw(y), 0x8100000000000000000000000000000000) { leave }
+                let tz := msb(and(x, sub(0, x)))
+                if iszero(eq(mul(sub(tz, 128), y), sub(0, 0x8100000000000000000000000000000000))) { leave }
+                let b := shr(tz, x)
+                if eq(b, 1) {
+                    hit := 1
+                    r := 1
+                    leave
+                }
+                if slt(y, 0) { leave }
+                // y = p 2^(ty - 128) with p odd; a y = -129 makes ty >= 121 and p <= 129
+                let ty := msb(and(y, sub(0, y)))
+                let p := shr(ty, y)
+                for {} lt(ty, 128) { ty := add(ty, 1) } {
+                    let q := isqrt(b)
+                    if iszero(eq(mul(q, q), b)) { leave }
+                    b := q
+                }
+                let w := b
+                for { let i := 1 } lt(i, p) { i := add(i, 1) } {
+                    if gt(w, div(not(0), b)) { leave }
+                    w := mul(w, b)
+                }
+                hit := 1
+                r := add(shr(1, w), 1)
+                if slt(r, 0) { rev(0x35278d12) }
+            }
+
+            function w19_wshr(h, l, n) -> rh, rl {
+                switch lt(n, 256)
+                case 1 {
+                    rh := shr(n, h)
+                    rl := or(shl(sub(256, n), h), shr(n, l))
+                }
+                default { rl := shr(sub(n, 256), h) }
+            }
+
+            function w19_shr3(z2, z1, z0, n) -> rh, rl {
+                if lt(n, 256) {
+                    rh := or(shl(sub(256, n), z2), shr(n, z1))
+                    rl := or(shl(sub(256, n), z1), shr(n, z0))
+                    leave
+                }
+                rh, rl := w19_wshr(z2, z1, sub(n, 256))
+            }
+
+            function w19_tsplit(z2, z1, z0, sg) -> k, fh, fl {
+                let kh := 0
+                kh, k := w19_shr3(z2, z1, z0, add(sg, 510))
+                switch slt(sg, 0)
+                case 1 {
+                    let g := sub(0, sg)
+                    fh := or(shl(g, z1), shr(sub(256, g), z0))
+                    fl := shl(g, z0)
+                }
+                default { fh, fl := w19_shr3(z2, z1, z0, sg) }
+                fh := and(fh, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            }
+
+            function w19_wmulf(h, l, m, n) -> rh, rl {
+                let z2, z1, z0 := w19_mul3(h, l, m)
+                rh, rl := w19_shr3(z2, z1, z0, n)
+            }
+
+            function w19_wln1ps(s, u, m) -> ph, pl {
+                for { let k := add(div(511, sub(sub(0, u), 1)), 1) } k { k := sub(k, 1) } {
+                    let dh, dl := w19_wmulf(ph, pl, m, sub(236, u))
+                    let ch, cl := w19_wdivs(0x4000000000000000000000000000000000000000000000000000000000000000, 0, k)
+                    switch s
+                    case 0 { ph, pl := w19_wsub(ch, cl, dh, dl) }
+                    default { ph, pl := w19_wadd(ch, cl, dh, dl) }
+                }
+            }
+
+            function w19_msb(x) -> r {
+                if iszero(x) { leave }
+                r := sub(255, clz(x))
+            }
+
+            function w19_wshl(h, l, n) -> rh, rl {
+                rh := or(shl(n, h), shr(sub(256, n), l))
+                rl := shl(n, l)
+            }
+
+            function w19_norm3(n2, n1, n0) -> h, l, e {
+                if n2 {
+                    e := add(w19_msb(n2), 1)
+                    h, l := w19_shr3(n2, n1, n0, e)
+                    leave
+                }
+                switch n1
+                case 0 {
+                    h := shl(sub(255, w19_msb(n0)), n0)
+                    e := sub(w19_msb(n0), 511)
+                }
+                default {
+                    e := sub(w19_msb(n1), 255)
+                    h, l := w19_wshl(n1, n0, sub(0, e))
+                }
+            }
+
+            function w19_wlog2r(ph, pl, u, m) -> lh, ll, le {
+                ph, pl := w19_wmul(ph, pl, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+                let n2, n1, n0 := w19_mul3(ph, pl, m)
+                lh, ll, le := w19_norm3(n2, n1, n0)
+                le := add(le, sub(u, 746))
+            }
+
+            function w19_wlog2s(s, u, m) -> lh, ll, le {
+                let ph, pl := w19_wln1ps(s, u, m)
+                lh, ll, le := w19_wlog2r(ph, pl, u, m)
+            }
+
+            function w19_wlog2u(u, wh, wl) -> lh, ll, le {
+                let a := w19_absw(u)
+                let n2 := shr(2, a)
+                let n1 := shl(254, a)
+                let n0 := 0
+                switch slt(u, 0)
+                case 0 {
+                    n0 := wl
+                    n1 := add(n1, wh)
+                    n2 := add(n2, lt(n1, wh))
+                }
+                default {
+                    n0 := sub(0, wl)
+                    let b := iszero(iszero(wl))
+                    let b2 := lt(n1, wh)
+                    n1 := sub(n1, wh)
+                    b2 := or(b2, lt(n1, b))
+                    n1 := sub(n1, b)
+                    n2 := sub(n2, b2)
+                }
+                lh, ll, le := w19_norm3(n2, n1, n0)
+                le := sub(le, 510)
+            }
+
+            function powslow(x, y, ms, lh, ll) -> r {
+                let hit := 0
+                hit, r := powtie(x, y)
+                if hit { leave }
+                let sg := lt(x, 0x100000000000000000000000000000000)
+                let mh := 0
+                let ml := 0
+                let le := 0
+                switch lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff)
+                case 1 {
+                    let ad := absw(sub(x, 0x100000000000000000000000000000000))
+                    let u := msb(ad)
+                    mh, ml, le := w19_wlog2s(sg, sub(u, 128), shl(sub(236, u), ad))
+                }
+                default {
+                    let fh, fl := l2w(x, ms, lh, ll)
+                    mh, ml, le := w19_wlog2u(sub(ms, 128), fh, fl)
+                }
+                let z2, z1, z0 := w19_mul3(mh, ml, absw(y))
+                let k, fh, fl := w19_tsplit(z2, z1, z0, sub(sub(0, le), 382))
+                r := pow2wr(xor(sg, slt(y, 0)), k, fh, fl)
+            }
+
+            function rbadm127(v, g, err) -> b {
+                let half := shl(sub(g, 1), 1)
+                if iszero(lt(err, half)) {
+                    b := 1
+                    leave
+                }
+                let low := and(v, sub(shl(g, 1), 1))
+                switch lt(low, half)
+                case 1 { b := iszero(gt(sub(half, low), err)) }
+                default { b := lt(sub(low, half), err) }
+            }
+
+            function w19_divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function w19_mratio(sg, dh, dl) -> rh, rl {
+                let den := add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, dh))
+                if sg { den := sub(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, dh)) }
+                let y0 := w19_divh(shl(6, dh), den)
+                let ah, al := w19_wmulf(dh, dl, y0, 263)
+                let eh, el := w19_wsub(dh, dl, shr(6, y0), shl(250, y0))
+                switch sg
+                case 0 { eh, el := w19_wsub(eh, el, ah, al) }
+                default { eh, el := w19_wadd(eh, el, ah, al) }
+                let c := or(shl(252, eh), shr(4, el))
+                let t := sar(6, sub(w19_mulhi(c, y0), mul(slt(c, 0), y0)))
+                switch sg
+                case 0 { c := sub(shl(1, c), t) }
+                default { c := add(shl(1, c), t) }
+                t := sub(w19_mulhi(c, y0), mul(slt(c, 0), y0))
+                let p1, p0 := w19_mul512(y0, y0)
+                let s := add(or(shl(3, p1), shr(253, p0)), sar(242, t))
+                p1, p0 := w19_wdivs(p1, p0, 3)
+                let q := add(or(shl(5, p1), shr(251, p0)), sdiv(sar(241, t), 3))
+                let v := shr(17, s)
+                let p := 0
+                let vs := shr(104, v)
+                p := 0x12f69f53dbda40bea02dab0b130a62cfcc8cf7ef15fc09cfb76a6085d261
+                p := add(shr(36, mul(shr(116, p), vs)), 0x147ae1479c90600e3e2c4ad817313c4cdc0f6f20150b341c66d8738e1b86)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1642c8590b216acd9588d4150b339a5f3c92251bb3e33e601a9ca3f81bfa)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x186186186186186184811649694e7873d88604818f87504ed1477032f384)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1af286bca1af286bca1af2c74c64108c3a55761c741a67ff9952c5cf9b95)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1e1e1e1e1e1e1e1e1e1e1e1e1e174a86a0b8619201dcf4d6d494af22b006)
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x222222222222222222222222222222229bc3bd8b6e2cdf594c940c087ca2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x2762762762762762762762762762762762762204bf9963433561f8c4b038) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2eaf6403e8d7b98f9ed2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38dbdd28692bf43) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x492492492492492492492492492492492492492492492492492492ef06c2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x666666666666666666666666666666666666666666666666666666666666) }
+                { let pl := mul(s, s) let ph := mulmod(s, s, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                { let pl := mul(t, p) let ph := mulmod(t, p, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                q := add(q, t)
+                { let pl := mul(y0, q) let ph := mulmod(y0, q, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                switch sg
+                case 0 { q := sub(q, shr(7, t)) }
+                default { q := add(q, shr(7, t)) }
+                rh := add(0x4000000000000000000000000000000000000000000000000000000000000000, shr(21, q))
+                rl := shl(235, q)
+                let yh := shr(9, y0)
+                let yl := shl(247, y0)
+                switch slt(c, 0)
+                case 0 { yh, yl := w19_wadd(yh, yl, 0, c) }
+                default { yh, yl := w19_wsub(yh, yl, 0, sub(0, c)) }
+                switch sg
+                case 0 { rh, rl := w19_wsub(rh, rl, yh, yl) }
+                default { rh, rl := w19_wadd(rh, rl, yh, yl) }
+            }
+
+            function tnear(x, y) -> n, fh, fl {
+                let sg := lt(x, 0x100000000000000000000000000000000)
+                let ad := absw(sub(x, 0x100000000000000000000000000000000))
+                let qh, ql := w19_mratio(sg, shl(128, ad), 0)
+                qh, ql := w19_wmul(qh, ql, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+                let j := add(msb(ad), 1)
+                let z2, z1, z0 := w19_mul3(qh, ql, ad)
+                let mh, ml := w19_shr3(z2, z1, z0, j)
+                z2, z1, z0 := w19_mul3(mh, ml, absw(y))
+                let k := 0
+                k, fh, fl := w19_tsplit(z2, z1, z0, sub(256, j))
+                fh := or(shl(2, fh), shr(254, fl))
+                fl := shl(2, fl)
+                n := k
+                if xor(sg, slt(y, 0)) {
+                    // -(k + f) = -(k + 1) + (1 - f)
+                    n := sub(0, k)
+                    if or(fh, fl) {
+                        n := sub(n, 1)
+                        fh := add(not(fh), iszero(fl))
+                        fl := sub(0, fl)
+                    }
+                }
+            }
+
+            function powmid(x, y, ms, y0) -> r {
+                let n := 0
+                let fh := 0
+                let fl := 0
+                let lh := 0
+                let ll := 0
+                let eb := 102
+                switch lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff)
+                case 1 {
+                    n, fh, fl := tnear(x, y)
+                    eb := 121
+                }
+                default {
+                    lh, ll := l2p(x, ms, y0)
+                    n, fh, fl := y2nf(y, lh, ll)
+                }
+                if sgt(n, 126) { rev(0x35278d12) }
+                if slt(n, sub(0, 130)) { leave }
+                let rh, rx := lnmul(fh, fl)
+                let sh, sl := expk(rh, rx)
+                let e := add(n, 129)
+                r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                let v := or(or(or(shl(sub(e, 1), sh), shr(sub(1, e), sh)), shr(sub(257, e), sl)), shl(add(e, 255), 1))
+                if rbadm127(v, 256, add(shl(add(n, eb), 1), 3)) {
+                    r := powslow(x, y, ms, lh, ll)
+                    leave
+                }
+                // at n = 126 the halving's sum reaches 2^256 (r wraps to 0) exactly when
+                // the word would be 2^255
+                if and(eq(n, 126), iszero(r)) { rev(0x35278d12) }
+            }
+
             function sqrn(x) -> r {
                 let p1, p0 := mul512(x, x)
                 if gt(p1, 0x7fffffffffffffffffffffffffffffff) { rev(0x35278d12) }
@@ -4519,10 +6059,7 @@ library FP127Lib {
                         let pm := mulmod(y, v, not(0))
                         let p1 := sub(sub(sub(sub(pm, p0), lt(pm, p0)), mul(slt(y, 0), v)), mul(slt(v, 0), y))
                         if eq(sar(70, p1), sar(255, p1)) { r, ok := pow2t(or(shl(128, p1), shr(128, p0)), absw(y)) }
-                        if iszero(ok) {
-                            let lh, ll := l2p(x, ms, y0)
-                            r := pow2r(y, lh, ll)
-                        }
+                        if iszero(ok) { r := powmid(x, y, ms, y0) }
                     }
                 }
             }
@@ -4534,9 +6071,12 @@ library FP127Lib {
     ///         exponentiation on a 256-bit mantissa with a separate binary
     ///         exponent, rounded once; when that mantissa's error bound
     ///         (k + 5) 2^-255, k = |n|, straddles a rounding midpoint, the same
-    ///         product on a 512-bit mantissa decides. Exact whenever the true
-    ///         value is representable. Negative n inverts the mantissa, so x^-n
-    ///         is as accurate as x^n.
+    ///         product on a 512-bit mantissa decides (within 3k 2^-511 relative,
+    ///         under 2^-238 ULP below k = 2^16; exact at every tie). From k =
+    ///         2^16, pow(|x|, n) with the sign restored. Correctly rounded, the
+    ///         magnitude's ties away from zero. Exact whenever the true value is
+    ///         representable. Negative n inverts the mantissa, so x^-n is as
+    ///         accurate as x^n.
     /// @dev Maker's rpow and PRBMath's powu square at the format's own
     ///      precision and floor on every step, so each squaring loses a bit of
     ///      the fraction; here |x| is written as m 2^(e-255) with m in
@@ -4549,6 +6089,1351 @@ library FP127Lib {
             function absw(x) -> r {
                 let m := sar(255, x)
                 r := sub(xor(x, m), m)
+            }
+
+            function expk(rh, rx) -> sh, sl {
+                let t := and(rh, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                {
+                    let ts := shr(101, t)
+                    sh := 0xb418cc295618d414e165a7d98fca893e61a35f0a8f41aeaa003
+                    sh := add(shr(63, mul(shr(92, sh), ts)), 0xca963b6e0247035a182837333d54a9e46c400e41e0249992d7d9)
+                    sh := add(shr(59, mul(shr(96, sh), ts)), 0xd73f9f399dee9ad49cd5fb86f3275162d37874eac70da14bfddfe)
+                    sh := add(shr(55, mul(shr(100, sh), ts)), 0xd73f9f399dc0f846e382a020f90e3a145dc0306aba7302a8d021be)
+                    sh := add(shr(51, mul(shr(104, sh), ts)), 0xc9cba54603e4e905d7492f4adbb3c24dcfa46326233bcad6502d5c9)
+                    sh := add(shr(47, mul(shr(108, sh), ts)), 0xb092309d43684be51c198e4fad88f859339eeb2cf4a0e40d8975c3fa)
+                    sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x8f76c77fc6c4bdaa26d4c3d67f6ace7b622e40c6dd8fc8a199ca38c68)
+                    sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x6b99159fd5138e3f9d1f92e0df71c7759331c2c4eb0e429d448c39adb1)
+                    sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x49f93edde27d71cbbc05b4fa999e392d877e08d8a3927455fcaf7c43358)
+                    sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x2e3bc74aad8e671f5583911ca002e3bc74aad8e4e01b799c4ca222154afb)
+                    sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x1a01a01a01a01a01a01a01a01a01a01a01a01a01a01a49e51b48917b39163)
+                    sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0xd00d00d00d00d00d00d00d00d00d00d00d00d00d00d00d003f830f5c2aa02)
+                    sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x5b05b05b05b05b05b05b05b05b05b05b05b05b05b05b05b05b05bc44a0572c)
+                    sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x222222222222222222222222222222222222222222222222222222222189a73)
+                    // g's last three steps in X form: (sh, sl) := c + t (sh, sl)
+                    let pl := mul(t, sh)
+                    let ph := mulmod(t, sh, not(0))
+                    sh := add(sub(sub(ph, pl), lt(ph, pl)), 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaae)
+                    sl := add(shr(128, pl), 0xade566d72bd4cb3f4e80179ffa2c0000)
+                    let th := shr(128, t)
+                    pl := mul(t, sh)
+                    ph := mulmod(t, sh, not(0))
+                    sl := add(add(shr(128, pl), shr(128, mul(th, sl))), 0xaaa9ff765c2b89e5432d1069ad06c000)
+                    sh := add(sub(sub(ph, pl), lt(ph, pl)), 0x2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)
+                    pl := mul(t, sh)
+                    ph := mulmod(t, sh, not(0))
+                    sl := add(add(shr(128, pl), shr(128, mul(th, sl))), 0xfffffffffff9f8deb513d42eeafec000)
+                    sh := add(sub(sub(ph, pl), lt(ph, pl)), 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+                    // u + u^2 g, u^2 = (qh, ql) to 2^-512
+                    let ql := mul(t, t)
+                    let qh := mulmod(t, t, not(0))
+                    qh := sub(sub(qh, ql), lt(qh, ql))
+                    pl := mul(qh, sh)
+                    ph := mulmod(qh, sh, not(0))
+                    sl := add(add(shr(128, pl), shr(128, mul(shr(128, qh), sl))), shr(128, mul(shr(128, ql), shr(128, sh))))
+                    sh := add(sub(sub(ph, pl), lt(ph, pl)), t)
+                    sl := add(add(sl, rx), shr(128, mul(rx, shr(128, sh))))
+                }
+                // level 3: e^(j 4096^-1) - 1
+                {
+                    let j := and(shr(244, rh), 15)
+                    let ch := 0
+                    let cl := 0
+                    switch and(j, 8)
+                    case 0 {
+                        switch and(j, 4)
+                        case 0 {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                }
+                                default {
+                                    ch := 0x10008002aab5557777d27df7e11e14c4df26269e70cc5f593ae718dc7de726 cl := 0xfb2b0aa954c722fbb00599de15435977
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x20020015560004445b06186326382ab19a3e5c922e8086da9f95cf2e94c476 cl := 0xe15d6eae0597f42aebf829ba43320348
+                                }
+                                default {
+                                    ch := 0x300480480360206769a08b2258a3ac6502165c217f6289cb0e5047b13167d7 cl := 0xa5f3969bc5a9a3b953062e106075409e
+                                }
+                            }
+                        }
+                        default {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x400800aab555dde38e6ce86e9277aa54811d5145a7542458df0c6b24e6e541 cl := 0xa1c30e2f0a3983530dbd925bf0f964a5
+                                }
+                                default {
+                                    ch := 0x500c814d6f61a0c05f30f14ef8aab49f165151d2ff56569732685dab0f7ef3 cl := 0x3fdc74e6aef5cea5e66fd56d8c0e1aef
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x6012024036040d0d9d1272ce89353c8b966e82a48e0a7948b22dfa3a08fb7a cl := 0x63ddfd733f1baccecdf53215ed873033
+                                }
+                                default {
+                                    ch := 0x701883930ebe16e7b53cab72a3eb5388d393c20aa9d28a761ea2e2f319768e cl := 0x20044397c8047211c21f11bb4a32c6d1
+                                }
+                            }
+                        }
+                    }
+                    default {
+                        switch and(j, 4)
+                        case 0 {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x802005560011127d41d5bd72f4c8f39bae49a2157e9d0d4405a6beeba52138 cl := 0xa3f09509ffb9baea7fafb8e557e76556
+                                }
+                                default {
+                                    ch := 0x90288799117ec4158b543333b678d3e48672bef63730c460e8595f5f277318 cl := 0x35b3cae4365afce42bb26275443004da
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0xa0320a6c4b8970180a449c83a3f0239b14142810b0cecde699d7101e5c770d cl := 0xe30db28695f5a8da624458474307419a
+                                }
+                                default {
+                                    ch := 0xb03c8ddfb7b3eb14e98f4c1f60125eed7186b85c4d436048740e9243d04a53 cl := 0x2304751f233a4bcf8336564294b18e8d
+                                }
+                            }
+                        }
+                        default {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0xc04812036081a9ce894e3dfc9a70cc052b6d48cb0a9c1f20ed5fc91840b245 cl := 0x4450743a574ae21ee9e83f5e12d6e408
+                                }
+                                default {
+                                    ch := 0xd05496e75176d14402432fdfc8620b939f2fd3a7feb7b45aee246e5abeb37f cl := 0xa689cf3b5310d05700e28a675c386f46
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0xe0621c9b971846bca9fdf6bfe9e0883df7ab6a06d1b7993184f01a0549c49a cl := 0xaa7617d34e21d9b7013d9042f81c68d0
+                                }
+                                default {
+                                    ch := 0xf070a3303eebbfd497c31c7c81db73b0e3b79e2aa2dffe851188686d0ef573 cl := 0x7cef3528f822dc43209ac097e506ec5e
+                                }
+                            }
+                        }
+                    }
+                    let pl := mul(sh, ch)
+                    let ph := mulmod(sh, ch, not(0))
+                    sl := add(add(add(sl, cl), shr(128, pl)), add(shr(128, mul(shr(128, sh), cl)), shr(128, mul(sl, shr(128, ch)))))
+                    sh := add(add(sh, ch), sub(sub(ph, pl), lt(ph, pl)))
+                }
+                // level 2: e^(j 256^-1) - 1
+                {
+                    let j := and(shr(248, rh), 15)
+                    let ch := 0
+                    let cl := 0
+                    switch and(j, 8)
+                    case 0 {
+                        switch and(j, 4)
+                        case 0 {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                }
+                                default {
+                                    ch := 0x100802ab55777d28a2a42d26aa9ee67bcf00c930cec0ede3d72020ba06e5484 cl := 0xaeb7a527f5f42403d05e6e4a041a691f
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x202015600445b0c326382bc73689d326f63923ddae1f48d0156896180904c29 cl := 0xb42ff665682d86678a9e2460843f5134
+                                }
+                                default {
+                                    ch := 0x304848362076a08d9411a1cee76ca2d65b11db81591418b4e8e6e3e58bab7d2 cl := 0x5124f75a4faea8807380b45aecf4ad31
+                                }
+                            }
+                        }
+                        default {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x4080ab55de3917ab864b3e9044e6b456f21041f46276ecb06a421c8bd85d6b8 cl := 0xce700e8f16fe0318b3274ff9356675fd
+                                }
+                                default {
+                                    ch := 0x50c94ef7a206dc2da1f7b86de3f8e864ef6a65a3035e9a78cf59e9c25533bd8 cl := 0x34ebf8422d47bb2c83b52ca485b36dfc
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x6122436410dd14e5659d75e95b76e1a857a4e668c209c142e74888d917e5ba7 cl := 0x1156d5164e24c3f0dc7e295d1722b6b4
+                                }
+                                default {
+                                    ch := 0x718b98f42084efbdb328b919e6909847ec98c18610614cd4ef8851e1743f887 cl := 0x1534c0bdf52ce9e1b56d3abc0e8dd3e8
+                                }
+                            }
+                        }
+                    }
+                    default {
+                        switch and(j, 4)
+                        case 0 {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x8205601127ec98e0bd083aba80c97a6aa5017852446806b13fdf317f61860ec cl := 0xb8ee41e5f3d3439956fcd31c6db4bdda
+                                }
+                                default {
+                                    ch := 0x928fa934ef9093044ef6e13adf7cd6eba2f7587278574706e41acdcec44cb53 cl := 0xd3f0e54ea5a01c4ff4926d120f00cfdb
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0xa32a84e9c1f58145cc1cf959b1b11093f5f980f94f78166ed662eb5841a4ed2 cl := 0x97789caf421ede23cf9293b1dfeaff1d
+                                }
+                                default {
+                                    ch := 0xb3d603ca7c32730fadc469f215fd20bf82fea58131ae73a78bb75b5221f0d56 cl := 0x34351067f1e0488e478ee4b8c6bc1985
+                                }
+                            }
+                        }
+                        default {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0xc49236829e8bc292cfe63d64b295ea1da758b460877c903650604546d3fa723 cl := 0xd534ea04e63e3fdd6d3f1128dc70daf6
+                                }
+                                default {
+                                    ch := 0xd55f2dce5d1e966e6b6d0a6a8e24e20c45fa36583ea5db5c3c99e6184606adf cl := 0x94f504a1914665aad50d4782bc77c7dd
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0xe63cfa7ab09d17324137d6c341c1d5cfb16053cd100bb6cffc908b29d281038 cl := 0x9b67ff6fb0b9a11588460289f3250080
+                                }
+                                default {
+                                    ch := 0xf72bad65671b69772cc4a342d0e03a3deef5af2022a8fe14e89c95a1f189159 cl := 0x939e550749537de86982ef6a88a6fbb6
+                                }
+                            }
+                        }
+                    }
+                    let pl := mul(sh, ch)
+                    let ph := mulmod(sh, ch, not(0))
+                    sl := add(add(add(sl, cl), shr(128, pl)), add(shr(128, mul(shr(128, sh), cl)), shr(128, mul(sl, shr(128, ch)))))
+                    sh := add(add(sh, ch), sub(sub(ph, pl), lt(ph, pl)))
+                }
+                // level 1: e^(j 16^-1) - 1
+                {
+                    let j := shr(252, rh)
+                    let ch := 0
+                    let cl := 0
+                    switch and(j, 8)
+                    case 0 {
+                        switch and(j, 4)
+                        case 0 {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                }
+                                default {
+                                    ch := 0x1082b577d34ed7d5b1a019e225c9a951ba29557587c246f8c497d80dde7f9e47 cl := 0xa5e9dc384baf5430ade65eea82195eea
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x2216045b6f5ccf9ced688384e06b8d4278bf0c84a957057d776b61e502312cd9 cl := 0x787700747515eb769de3228859c3c304
+                                }
+                                default {
+                                    ch := 0x34cb8170b58352d4e0c48cb7c664934508e6b0a713048f18461b695be2e8d011 cl := 0x8e77200d60439f0820dcaf6c3efe2008
+                                }
+                            }
+                        }
+                        default {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x48b5e3c3e81866767bc3b69baabe534ec43887164bbe2b0a993e8cf15a620beb cl := 0xaf42e6764e4dcdd2ea54de5e35c4e753
+                                }
+                                default {
+                                    ch := 0x5de9176045ff53b513246531754403c29db2c2f00cf3270be2032d5f422f830a cl := 0x6abeea8a026f5222eeed016c06418499
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0x747a513dbef6a623478b659b092405c578fa421f34b8db7db86d76f073a87a83 cl := 0xcc39d681fb6bd4b2f85abcc351bcd711
+                                }
+                                default {
+                                    ch := 0x8c802477b000fdc24db40ed853110bef137e20cf0aa4fdf2760ec30aed6184b8 cl := 0xad1d96eb92c60014e582ad0807021ad3
+                                }
+                            }
+                        }
+                    }
+                    default {
+                        switch and(j, 4)
+                        case 0 {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0xa61298e1e069bc972dfefab6df33f9b1f651f16c130b4759c44bfc906367f2cc cl := 0x2ef57279a9122e213e6edbf797159917
+                                }
+                                default {
+                                    ch := 0xc14b4312564464432aa513ba422005eb74c2ffc3e7e9ea8f25454f5fc9691912 cl := 0x51407b37175e987cce3dee1c7a692f1
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                    ch := 0xde455df80e3c05ca897b072f6daa5bc5942e1ee80a070fe14280cff85855265a cl := 0xa359ba5b9fc3dff9b06c76664e5cc3f9
+                                }
+                                default {
+                                    ch := 0xfd1de6182f8c89d2c3b6d08c6597224224e114f55b04c763a54143ba8e9369fb cl := 0x6d9a6bbbc3cb9ccc39acb191818fbdc7
+                                }
+                            }
+                        }
+                        default {
+                            switch and(j, 2)
+                            case 0 {
+                                switch and(j, 1)
+                                case 0 {
+                                }
+                                default {
+                                }
+                            }
+                            default {
+                                switch and(j, 1)
+                                case 0 {
+                                }
+                                default {
+                                }
+                            }
+                        }
+                    }
+                    let pl := mul(sh, ch)
+                    let ph := mulmod(sh, ch, not(0))
+                    sl := add(add(add(sl, cl), shr(128, pl)), add(shr(128, mul(shr(128, sh), cl)), shr(123, mul(sl, shr(133, ch)))))
+                    sh := add(add(sh, ch), sub(sub(ph, pl), lt(ph, pl)))
+                }
+                sh := add(sh, shr(128, sl))
+                sl := shl(128, sl)
+            }
+
+            function hmul(a, b) -> h {
+                let l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function mul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function rndw(k, eh, el) -> r {
+                let v := or(or(shr(sub(125, k), eh), shl(sub(k, 125), eh)), shr(sub(381, k), el))
+                r := shr(1, add(add(shl(add(k, 129), 1), v), 1))
+            }
+
+            function w19_absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function w19_kln2(a) -> ph, pl {
+                let y1, y0 := w19_mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                pl := add(y0, w19_mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
+                ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function w19_wexpr(s, kk, xh, xl) -> k2, eh, el {
+                let ph, pl := w19_kln2(w19_absw(kk))
+                let rh := 0
+                let rl := 0
+                switch s
+                case 0 { rh, rl := w19_wsub(xh, xl, ph, pl) }
+                default { rh, rl := w19_wsub(ph, pl, xh, xl) }
+                k2 := kk
+                if slt(rh, 0) {
+                    rh, rl := w19_wadd(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                    k2 := sub(k2, 1)
+                }
+                if iszero(lt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)) {
+                    if or(gt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), iszero(lt(rl, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09))) {
+                        rh, rl := w19_wsub(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                        k2 := add(k2, 1)
+                    }
+                }
+                eh, el := w19_wexpm1(rh, rl)
+            }
+
+            function expw(x, n, c2, c1, c0) -> r {
+                let ax := absw(x)
+                let p1 := hmul(ax, c0)
+                let q1, q0 := mul512(ax, c1)
+                let w1 := add(p1, q0)
+                let k, eh, el := w19_wexpr(slt(x, 0), n, add(add(q1, lt(w1, p1)), mul(ax, c2)), w1)
+                r := rndw(k, eh, el)
+            }
+
+            function lnmul(fh, fl) -> rh, rx {
+                let pl := mul(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+                let ph := mulmod(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
+                rh := sub(sub(ph, pl), lt(ph, pl))
+                rx := add(add(shr(128, pl), shr(128, mul(shr(128, fh), 0xe7b876206debac98559552fb4afa1b10))), shr(128, mul(shr(128, fl), 0xb17217f7d1cf79abc9e3b39803f2f6af)))
+            }
+
+            function rbadw(v, err) -> b {
+                b := lt(add(add(v, 0x8000000000000000000000000000000000000000000000000000000000000000), err), shl(1, err))
+            }
+
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function y2nf(y, lh, ll) -> n, fh, fl {
+                fl := mul(y, ll)
+                let mm := mulmod(y, ll, not(0))
+                let ng := slt(y, 0)
+                let b1 := sub(sub(sub(mm, fl), lt(mm, fl)), mul(ng, ll))
+                let c0 := mul(y, lh)
+                mm := mulmod(y, lh, not(0))
+                fh := add(c0, b1)
+                n := add(sub(sub(sub(sub(mm, c0), lt(mm, c0)), mul(ng, lh)), mul(slt(lh, 0), y)), sub(lt(fh, c0), slt(b1, 0)))
+            }
+
+            function fp127_exp10(x) -> r {
+                let n, fh, fl := y2nf(x, 0x35269e12f346e2bf924afdbfd36bf6d33, 0x65b157f8deceb53a46dab2020b9e167419943f7a77547ce8f892faad8eb42f58)
+                if sgt(n, 126) { rev(0x35278d12) }
+                if slt(n, sub(0, 129)) { leave }
+                let rh, rx := lnmul(fh, fl)
+                let sh, sl := expk(rh, rx)
+                // x log2 10 within |x| 2^-385 < 2^-379, f ln 2 within 2^-382 and expk
+                // within 2^-311.2: tested as exp2. x log2 10 on the grid stays 2^-125.9
+                // or more from -129 (and from 127; the nearest x computed), so n alone
+                // decides Overflow and 0, and at n = -129 the value is above 2^-129. 10^x
+                // is no tie: an integer from x = 0, not dyadic below
+                let e := add(n, 129)
+                r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+                    r := expw(x, n, 0x935d8dddaaa8ac16ea56d62b82d30a28, 0xe28fecf9da5df90e83c61e8201f02d72962f02d7b1a8105ccc70cbc02c5f0d68, 0x2c622418410be2dafb8f788402e516d6782cf8a28a8c911e765aa6c3b0d831fb)
+                }
+                if iszero(r) { rev(0x35278d12) }
+            }
+
+            function fp127_exp2(x) -> r {
+                if iszero(slt(x, 0x7f00000000000000000000000000000000)) { rev(0x35278d12) }
+                if slt(x, sub(0, 0x8100000000000000000000000000000000)) { r := 0 leave }
+                // n and the fraction exactly; then as pow2r, without its Overflow test,
+                // which x < 127 cannot reach
+                let n := sar(128, x)
+                // f ln 2 in X form as lnmul forms it, for f = x's fraction (nothing below 2^-256)
+                let f := shl(128, x)
+                let pl := mul(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+                let ph := mulmod(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
+                let sh, sl := expk(sub(sub(ph, pl), lt(ph, pl)), add(shr(128, pl), shr(128, mul(shr(128, f), 0xe7b876206debac98559552fb4afa1b10))))
+                let e := add(n, 129)
+                r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                // the fraction's f ln 2 within 2^-382 below and expk within 2^-311.2:
+                // V = 2^n (1 + s) within 2^(n - 311.1), under 2^200 units of 2^-384
+                // (n <= 126), whose 256 bits below the grid are (sh, sl) shifted right by
+                // 257 - e. At e = 0 (x in [-129, -128)) that shift leaves 0, which the
+                // test passes, and the word is 1: the value is above 2^-129, or the tie
+                // 2^-129 itself at x = -129, which rounds up. An integer x is exact (s =
+                // 0, the bits below the grid 0)
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+                    r := expw(x, n, 0x2c5c85fdf473de6af278ece600fcbdab, 0xd03cd0c99ca62d8b628345d6e2eabe8af9ee1d881b7aeb26156554bed2be86c4, 0x3b4bab8d704e085109d5ceca445a6e094fa5b2858892ba3146b2f6844c5f0e1f)
+                }
+            }
+
+            function log2m(mm) -> r {
+                let x := sub(mm, 0x1000000000000000000000000000000000000000000000000)
+                let i := shr(188, x)
+                x := div(shl(68, sub(x, shl(188, i))), add(16, i))
+                let acc := 0
+                switch and(i, 8)
+                case 0 {
+                    switch and(i, 4)
+                    case 0 {
+                        switch and(i, 2)
+                        case 0 {
+                            switch and(i, 1)
+                            case 0 {
+                            }
+                            default {
+                                acc := 0xb31fb7d64898b3e6629c130a22bad61e5283e7d58e93fcc24922424ff28c6bb
+                            }
+                        }
+                        default {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := 0x15c01a39fbd6879fa00b120a068badd124f3e6a3a259b0407be5904d25fa41f7
+                            }
+                            default {
+                                acc := 0x1fbc16b902680a23a8d998a784ef35f24cf56edad4a906b559f6388ebb212fb4
+                            }
+                        }
+                    }
+                    default {
+                        switch and(i, 2)
+                        case 0 {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := 0x2934f0979a3715fc9257edfe9b5fb699b2d8abfc6f675a9d236d590105cf0b3a
+                            }
+                            default {
+                                acc := 0x323775123e2e1169656a0ad70d38ab0c2edd45f5d1e58c059bdddb3561833c99
+                            }
+                        }
+                        default {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := 0x3acea7c065d41dfc7d7c3320aaaa6b5f9f3985dba08744adc52bceee7d6eae8b
+                            }
+                            default {
+                                acc := 0x4304140358ea9962095d4a6d897785541f9434eeb5f0e8e616e23af554bca557
+                            }
+                        }
+                    }
+                }
+                default {
+                    switch and(i, 4)
+                    case 0 {
+                        switch and(i, 2)
+                        case 0 {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := 0x4ae00d1cfdeb43cfd00589050345d6e89279f351d12cd8203df2c82692fd20fc
+                            }
+                            default {
+                                acc := 0x5269e12f346e2bf924afdbfd36bf6d3365b157f8deceb53a46dab2020b9e1674
+                            }
+                        }
+                        default {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := 0x59a802391e232f34bb6d0e4394c1a88f0e7a41e948033b63cbaad25837415d81
+                            }
+                            default {
+                                acc := 0x60a02756f9c1cb6f70109b0f09d184b9b76dd9f573868860b9d85873b8f762f3
+                            }
+                        }
+                    }
+                    default {
+                        switch and(i, 2)
+                        case 0 {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := 0x675767f54042cd99956481d209f2d4239c6352a400b8b3e55deb130ece861b9d
+                            }
+                            default {
+                                acc := 0x6dd2523d54cb692d2dc50cd8e31bb38f82ec26371756ff839004ba7ff729e09a
+                            }
+                        }
+                        default {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := 0x7414fdb4982259cc625d77039ea58d8245529f4e409432bd6160212798cc2c36
+                            }
+                            default {
+                                acc := 0x7a231acd89a9caa8868f1fc07de38a2a0360f8e9363884395c5e1e6a201d2dc5
+                            }
+                        }
+                    }
+                }
+                i := shr(248, x)
+                x := div(shl(8, sub(x, shl(248, i))), add(256, i))
+                switch and(i, 8)
+                case 0 {
+                    switch and(i, 4)
+                    case 0 {
+                        switch and(i, 2)
+                        case 0 {
+                            switch and(i, 1)
+                            case 0 {
+                            }
+                            default {
+                                acc := add(acc, 0xb84e236bd563ba56cde92497c21d6f044ff1f978abf5506eaa4a93db4258ac)
+                            }
+                        }
+                        default {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := add(acc, 0x16fe50b6ef08517f8e37b001794f4441ccdf648f265a41e57d756421e138187)
+                            }
+                            default {
+                                acc := add(acc, 0x226c622f52f618976834d92222908d8bce6118e14f7c55e08e13960e1258fd1)
+                            }
+                        }
+                    }
+                    default {
+                        switch and(i, 2)
+                        case 0 {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := add(acc, 0x2dcf2d0b85a45314dc4fc4230215f28c152ede5b76a9600ef182b593d1068bb)
+                            }
+                            default {
+                                acc := add(acc, 0x3926c7750a1f0cccdd01ee2e9a76160a7e00cdab9b0afc40bea4acd1d242291)
+                            }
+                        }
+                        default {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := add(acc, 0x447347544cd04bb6051413ea4d1d4bcdabff7514be985cca6a894b95ee67676)
+                            }
+                            default {
+                                acc := add(acc, 0x4fb4c251a16898809d2dc0fe24a3d4a19174c74f129ef35c63ad512936c5f42)
+                            }
+                        }
+                    }
+                }
+                default {
+                    switch and(i, 4)
+                    case 0 {
+                        switch and(i, 2)
+                        case 0 {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := add(acc, 0x5aeb4dd63bf61cc4d81bc25adf0424831b3792d71b41cce031e9715106bcf87)
+                            }
+                            default {
+                                acc := add(acc, 0x6616ff0d25465182838ed43de842b8f925fa9efe567193ab43f9e756fd94371)
+                            }
+                        }
+                        default {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := add(acc, 0x7137eae42aad7bd3e3e1a798ee20a15e958c17ed561ba9ab7e14b9d89a74b51)
+                            }
+                            default {
+                                acc := add(acc, 0x7c4e260cc94e7e87341aeede56c3d97d795a2a579d8a3d626f7eb3f3c76c227)
+                            }
+                        }
+                    }
+                    default {
+                        switch and(i, 2)
+                        case 0 {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := add(acc, 0x8759c4fd14fcd59e7ba5d5ccc90b8335c8a879e3eee911a8bdf35c07d56af5e)
+                            }
+                            default {
+                                acc := add(acc, 0x925adbf09ad1e44d1679a8afb2d05b6dce48ee52e2ee9669801fecf7d206316)
+                            }
+                        }
+                        default {
+                            switch and(i, 1)
+                            case 0 {
+                                acc := add(acc, 0x9d517ee93f8e16c0268890da5313b536a4685f1e2ede2fddd45b174bec66e2d)
+                            }
+                            default {
+                                acc := add(acc, 0xa83dc1b019ddb6a7969bdb4d16a214f63ca4d4f86091cf70c31c3c6b7edfcc6)
+                            }
+                        }
+                    }
+                }
+                let xs := shr(120, x)
+                r := 0xbfa5abc5c2ba21f73d0e05923d6adaf53fc4e1733ffedc3fc0215629cfee68f
+                r := add(sar(10, mul(sar(126, r), xs)), 0xf2d06337cecc2d89cda46065870e5e3fa2fe607993846a7637917ef4fd785619)
+                r := add(sar(10, mul(sar(126, r), xs)), 0xe3478777f2f3c9aa9d872d36e19779bce13105e98c45816ee2a3c076dab1189)
+                r := add(sar(10, mul(sar(126, r), xs)), 0xf09c7b14da0d8d7d9c9c84e7273eb711b50d4c76b634f67c3cc3a3faecc71a8e)
+                r := add(sar(10, mul(sar(126, r), xs)), 0x10c9a84991458369bd9828e4cc71823f6f63e3e73d1e82ad32527eaa0b42b282)
+                r := add(sar(9, mul(sar(127, r), xs)), 0xed8893af1065cf6fb63bd416e812ab274566d618a35aa6861e4bc58195d562e8)
+                r := add(sar(9, mul(sar(127, r), xs)), 0x1484b13d7c02a81d0e3e6f0e616f52b0bdd04746b58088b7c6272ddd9da52c48)
+                r := add(sar(9, mul(sar(127, r), xs)), 0xe8eab89ad47d01e8d2ef2a1a40bab98080614da7dfdb153aa83b4e68291f08c6)
+                r := add(sar(9, mul(sar(127, r), xs)), 0x1a61762a7aded93f644a94ccd793e2f25a1edc0247d311000a371d1145d7fe4e)
+                r := add(sar(9, mul(sar(127, r), xs)), 0xe138f623c5fc028b603eadd4ef71b08f946e48b2c5d5a4a9bb8e568631bb83ed)
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0x24eed8a1df37fcf2594e66295cdbcc9e76ef3c7e001462107e6acaff595ad672) }
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0xd1d57135a8fa03d1105e004be5bdfcca42a284f2b6a20a5356b0370dc665eac5) }
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0x3d8e13b87407fae93f82aa45785f14aa4807d36efcfa67d70474d75c4f89df12) }
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0xa3aae26b51f407a220bc0097cb7160bb8af209f2f3c2105e36602a6ec9b0e22a) }
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577a4f1dff7767dabf50321424a4eb) }
+                { let pl := mul(x, r) let ph := mulmod(x, r, not(0)) x := sub(sub(ph, pl), lt(ph, pl)) }
+                r := shr(63, add(acc, x))
+            }
+
+            function msb(x) -> r {
+                if x { r := sub(255, clz(x)) }
+            }
+
+            function exp2frac(f) -> r {
+                let x := shl(64, and(f, 0xfffffffffffffffffffffffffffffffffffffffffffffff))
+                let xs := shr(118, x)
+                r := 0xe6a823b1ca6185f22f486ff3574c55f1a5b5
+                r := add(shr(115, mul(shr(23, r), xs)), 0x131376dce88ced8d815c68b5ef87939e0679cd)
+                r := add(shr(110, mul(shr(28, r), xs)), 0x18161ba28735f978033c5099253edf557e8d388)
+                r := add(shr(106, mul(shr(32, r), xs)), 0x1c3bd64d70e4b90253e5dba61b91f58d7ae2700b)
+                r := add(shr(102, mul(shr(36, r), xs)), 0x1e8cac73555a748a7597509bfb6b6ebc7aee0b614)
+                r := add(shr(98, mul(shr(40, r), xs)), 0x1e4cf5158b8c1badc09d97a67c8cebf0ab6244a367)
+                r := add(shr(94, mul(shr(44, r), xs)), 0x1b5253d395e7c54e9d6d953b20e898a3a5b4acd0954)
+                r := add(shr(90, mul(shr(48, r), xs)), 0x162c0223a5c823fcfbc396a40543f772a1748de99af3)
+                r := add(shr(86, mul(shr(52, r), xs)), 0xffe5fe2c458634358d3d2c792520c7d0ea94c40e89f0)
+                r := add(shr(82, mul(shr(56, r), xs)), 0xa184897c363c3b7a5853be5447f71910414095d379445)
+                r := add(shr(79, mul(shr(59, r), xs)), 0x5761ff9e299cc441c5fda6a89111466135782e66958340)
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0x276556df749cee539977c16a7bf06e0ba0962ea6c8c2cb3) }
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0xe35846b82505fc599d3b15d995eb26a9a93df33ae3200d9) }
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0x3d7f7bff058b1d50de2d60dd92e6bf883b420e2d8eb3a834) }
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0xb17217f7d1cf79abc9e3b39803f2f6af43669e4d920ff940) }
+                { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0xffffffffffffffffffffffffffffffffffffec717ea441e3) }
+                let j := shr(188, f)
+                switch and(j, 8)
+                case 0 {
+                    switch and(j, 4)
+                    case 0 {
+                        switch and(j, 2)
+                        case 0 {
+                            switch and(j, 1)
+                            case 0 {
+                            }
+                            default {
+                                { let pl := mul(r, 0xb5586cf9890f6298b92b71842a98364291408b3ceb0a2a2ba8566c55e3dd0b3) let ph := mulmod(r, 0xb5586cf9890f6298b92b71842a98364291408b3ceb0a2a2ba8566c55e3dd0b3, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                        }
+                        default {
+                            switch and(j, 1)
+                            case 0 {
+                                { let pl := mul(r, 0x172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f23c26bdd0947ee67) let ph := mulmod(r, 0x172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f23c26bdd0947ee67, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                            default {
+                                { let pl := mul(r, 0x2387a6e75623866c1fadb1c15cb593b0328566902df69e4de240795ecb7f7373) let ph := mulmod(r, 0x2387a6e75623866c1fadb1c15cb593b0328566902df69e4de240795ecb7f7373, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                        }
+                    }
+                    default {
+                        switch and(j, 2)
+                        case 0 {
+                            switch and(j, 1)
+                            case 0 {
+                                { let pl := mul(r, 0x306fe0a31b7152de8d5a46305c85edecbc27343629f502f1af16cb97df4f76df) let ph := mulmod(r, 0x306fe0a31b7152de8d5a46305c85edecbc27343629f502f1af16cb97df4f76df, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                            default {
+                                { let pl := mul(r, 0x3dea64c12342235b41223e13d773fba2cb82b8244267c54443f2effcf8ff4230) let ph := mulmod(r, 0x3dea64c12342235b41223e13d773fba2cb82b8244267c54443f2effcf8ff4230, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                        }
+                        default {
+                            switch and(j, 1)
+                            case 0 {
+                                { let pl := mul(r, 0x4bfdad5362a271d4397afec42e20e0363ba2e159c579f82e4b1393150521a7e1) let ph := mulmod(r, 0x4bfdad5362a271d4397afec42e20e0363ba2e159c579f82e4b1393150521a7e1, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                            default {
+                                { let pl := mul(r, 0x5ab07dd48542958c93015191eb345d88d7c81280e069fbdb62cbe2830674cfb5) let ph := mulmod(r, 0x5ab07dd48542958c93015191eb345d88d7c81280e069fbdb62cbe2830674cfb5, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                        }
+                    }
+                }
+                default {
+                    switch and(j, 4)
+                    case 0 {
+                        switch and(j, 2)
+                        case 0 {
+                            switch and(j, 1)
+                            case 0 {
+                                { let pl := mul(r, 0x6a09e667f3bcc908b2fb1366ea957d3e3adec17512775099da2f590b0667322b) let ph := mulmod(r, 0x6a09e667f3bcc908b2fb1366ea957d3e3adec17512775099da2f590b0667322b, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                            default {
+                                { let pl := mul(r, 0x7a11473eb0186d7d51023f6cda1f5ef42b66977960531e821b3497c047d9c063) let ph := mulmod(r, 0x7a11473eb0186d7d51023f6cda1f5ef42b66977960531e821b3497c047d9c063, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                        }
+                        default {
+                            switch and(j, 1)
+                            case 0 {
+                                { let pl := mul(r, 0x8ace5422aa0db5ba7c55a192c9bb3e6ed61f2733304a346d8ed0c00dc9cd8125) let ph := mulmod(r, 0x8ace5422aa0db5ba7c55a192c9bb3e6ed61f2733304a346d8ed0c00dc9cd8125, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                            default {
+                                { let pl := mul(r, 0x9c49182a3f0901c7c46b071f2be58ddade50c217186c90b4577a7315e6b80f3e) let ph := mulmod(r, 0x9c49182a3f0901c7c46b071f2be58ddade50c217186c90b4577a7315e6b80f3e, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                        }
+                    }
+                    default {
+                        switch and(j, 2)
+                        case 0 {
+                            switch and(j, 1)
+                            case 0 {
+                                { let pl := mul(r, 0xae89f995ad3ad5e8734d1773205a7fbc3ae675ea440b162d6b8275b41cef0534) let ph := mulmod(r, 0xae89f995ad3ad5e8734d1773205a7fbc3ae675ea440b162d6b8275b41cef0534, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                            default {
+                                { let pl := mul(r, 0xc199bdd85529c2220cb12a091ba6679444964a366612400439733a7e3fe53144) let ph := mulmod(r, 0xc199bdd85529c2220cb12a091ba6679444964a366612400439733a7e3fe53144, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                        }
+                        default {
+                            switch and(j, 1)
+                            case 0 {
+                                { let pl := mul(r, 0xd5818dcfba48725da05aeb66e0dca9f589f559c0876ff2382fb1a3d194631015) let ph := mulmod(r, 0xd5818dcfba48725da05aeb66e0dca9f589f559c0876ff2382fb1a3d194631015, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                            default {
+                                { let pl := mul(r, 0xea4afa2a490d9858f73a18f5db301f86dea20610ceee13eb7bb006526c954540) let ph := mulmod(r, 0xea4afa2a490d9858f73a18f5db301f86dea20610ceee13eb7bb006526c954540, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                            }
+                        }
+                    }
+                }
+            }
+
+            function pow2t(t, ay) -> r, ok {
+                let at := t
+                let e := 0
+                if slt(t, 0) { at := sub(0, t) }
+                let k := shr(192, at)
+                switch slt(t, 0)
+                case 0 { e := add(k, 1) }
+                default { e := sub(0, k) }
+                // ay 2^(e+48) / 2^128 + 2^(e+48) + 6 (the shl is 0 for e < -48)
+                let eb := add(add(shr(sub(80, e), ay), shl(add(e, 48), 1)), 6)
+                if gt(eb, 0x2000000000000000) { leave }
+                let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+                let v := 0
+                switch slt(t, 0)
+                case 0 { v := shl(k, exp2frac(f)) }
+                default {
+                    switch f
+                    case 0 { v := shr(k, 0x1000000000000000000000000000000000000000000000000) }
+                    default { v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f))) }
+                }
+                ok := gt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), eb)
+                r := shr(64, add(v, 0x8000000000000000))
+            }
+
+            function smul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
+            }
+
+            function l2p(x, ms, y0) -> lh, ll {
+                let m := shl(sub(255, ms), x)
+                lh := shl(128, sub(ms, 128))
+                if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
+                if slt(y0, 1) { y0 := 1 }
+                if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
+                // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
+                let rh, rx := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
+                let sh, sl := expk(rh, rx)
+                // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
+                let qh, ql := mul512(m, sh)
+                let c := hmul(m, sl)
+                ql := add(ql, c)
+                qh := add(add(qh, m), lt(ql, c))
+                // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
+                let d := or(shl(128, qh), shr(128, ql))
+                let ad := absw(d)
+                let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let corr := or(shl(1, ph), shr(255, pl))
+                // log2(x) = (ms - 128) + y0 + corr
+                let y1 := shl(192, y0)
+                ll := add(y1, corr)
+                lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+            }
+
+            function w19_mul3(h, l, m) -> n2, n1, n0 {
+                let a1, a0 := w19_mul512(h, m)
+                let b1 := 0
+                b1, n0 := w19_mul512(l, m)
+                n1 := add(a0, b1)
+                n2 := add(a1, lt(n1, a0))
+            }
+
+            function l2w(x, ms, lh, ll) -> fh, fl {
+                if iszero(and(x, sub(x, 1))) { leave }
+                let f0 :=sub(lh, shl(128, sub(ms, 128)))
+                // 1 - f0 at 2^-384, then at 2^-510
+                let gh := sub(sub(0x100000000000000000000000000000000, f0), iszero(iszero(ll)))
+                let gl := sub(0, ll)
+                let eh, el := w19_wmul(or(shl(126, gh), shr(130, gl)), shl(126, gl), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                eh, el := w19_wexpm1(eh, el)
+                let z2, z1, z0 := w19_mul3(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, shl(sub(255, ms), x))
+                // d log2 e at 2^-510: z1 (signed) times log2 e at 2^-255, floored
+                let ph, pl := smul512(z1, 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let c := or(shl(1, ph), shr(255, pl))
+                fh := or(shl(126, f0), shr(130, ll))
+                fl := add(shl(126, ll), c)
+                fh := add(fh, sub(lt(fl, c), slt(c, 0)))
+            }
+
+            function pow2wr(s, k, fh, fl) -> r {
+                if s {
+                    k := sub(0, k)
+                    if or(fh, fl) {
+                        k := sub(k, 1)
+                        fh, fl := w19_wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl)
+                    }
+                }
+                if sgt(k, 126) { rev(0x35278d12) }
+                if slt(k, sub(0, 130)) { leave }
+                fh, fl := w19_wmul(fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                fh, fl := w19_wexpm1(fh, fl)
+                r := rndw(k, fh, fl)
+                if and(eq(k, 126), iszero(r)) { rev(0x35278d12) }
+            }
+
+            function isqrt(z) -> y {
+                if iszero(z) { leave }
+                y := shl(shr(1, add(msb(z), 2)), 1)
+                for {} 1 {} {
+                    let t := shr(1, add(y, div(z, y)))
+                    if iszero(lt(t, y)) { break }
+                    y := t
+                }
+            }
+
+            function powtie(x, y) -> hit, r {
+                if gt(absw(y), 0x8100000000000000000000000000000000) { leave }
+                let tz := msb(and(x, sub(0, x)))
+                if iszero(eq(mul(sub(tz, 128), y), sub(0, 0x8100000000000000000000000000000000))) { leave }
+                let b := shr(tz, x)
+                if eq(b, 1) {
+                    hit := 1
+                    r := 1
+                    leave
+                }
+                if slt(y, 0) { leave }
+                // y = p 2^(ty - 128) with p odd; a y = -129 makes ty >= 121 and p <= 129
+                let ty := msb(and(y, sub(0, y)))
+                let p := shr(ty, y)
+                for {} lt(ty, 128) { ty := add(ty, 1) } {
+                    let q := isqrt(b)
+                    if iszero(eq(mul(q, q), b)) { leave }
+                    b := q
+                }
+                let w := b
+                for { let i := 1 } lt(i, p) { i := add(i, 1) } {
+                    if gt(w, div(not(0), b)) { leave }
+                    w := mul(w, b)
+                }
+                hit := 1
+                r := add(shr(1, w), 1)
+                if slt(r, 0) { rev(0x35278d12) }
+            }
+
+            function w19_wshr(h, l, n) -> rh, rl {
+                switch lt(n, 256)
+                case 1 {
+                    rh := shr(n, h)
+                    rl := or(shl(sub(256, n), h), shr(n, l))
+                }
+                default { rl := shr(sub(n, 256), h) }
+            }
+
+            function w19_shr3(z2, z1, z0, n) -> rh, rl {
+                if lt(n, 256) {
+                    rh := or(shl(sub(256, n), z2), shr(n, z1))
+                    rl := or(shl(sub(256, n), z1), shr(n, z0))
+                    leave
+                }
+                rh, rl := w19_wshr(z2, z1, sub(n, 256))
+            }
+
+            function w19_tsplit(z2, z1, z0, sg) -> k, fh, fl {
+                let kh := 0
+                kh, k := w19_shr3(z2, z1, z0, add(sg, 510))
+                switch slt(sg, 0)
+                case 1 {
+                    let g := sub(0, sg)
+                    fh := or(shl(g, z1), shr(sub(256, g), z0))
+                    fl := shl(g, z0)
+                }
+                default { fh, fl := w19_shr3(z2, z1, z0, sg) }
+                fh := and(fh, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            }
+
+            function w19_wmulf(h, l, m, n) -> rh, rl {
+                let z2, z1, z0 := w19_mul3(h, l, m)
+                rh, rl := w19_shr3(z2, z1, z0, n)
+            }
+
+            function w19_wln1ps(s, u, m) -> ph, pl {
+                for { let k := add(div(511, sub(sub(0, u), 1)), 1) } k { k := sub(k, 1) } {
+                    let dh, dl := w19_wmulf(ph, pl, m, sub(236, u))
+                    let ch, cl := w19_wdivs(0x4000000000000000000000000000000000000000000000000000000000000000, 0, k)
+                    switch s
+                    case 0 { ph, pl := w19_wsub(ch, cl, dh, dl) }
+                    default { ph, pl := w19_wadd(ch, cl, dh, dl) }
+                }
+            }
+
+            function w19_msb(x) -> r {
+                if iszero(x) { leave }
+                r := sub(255, clz(x))
+            }
+
+            function w19_wshl(h, l, n) -> rh, rl {
+                rh := or(shl(n, h), shr(sub(256, n), l))
+                rl := shl(n, l)
+            }
+
+            function w19_norm3(n2, n1, n0) -> h, l, e {
+                if n2 {
+                    e := add(w19_msb(n2), 1)
+                    h, l := w19_shr3(n2, n1, n0, e)
+                    leave
+                }
+                switch n1
+                case 0 {
+                    h := shl(sub(255, w19_msb(n0)), n0)
+                    e := sub(w19_msb(n0), 511)
+                }
+                default {
+                    e := sub(w19_msb(n1), 255)
+                    h, l := w19_wshl(n1, n0, sub(0, e))
+                }
+            }
+
+            function w19_wlog2r(ph, pl, u, m) -> lh, ll, le {
+                ph, pl := w19_wmul(ph, pl, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+                let n2, n1, n0 := w19_mul3(ph, pl, m)
+                lh, ll, le := w19_norm3(n2, n1, n0)
+                le := add(le, sub(u, 746))
+            }
+
+            function w19_wlog2s(s, u, m) -> lh, ll, le {
+                let ph, pl := w19_wln1ps(s, u, m)
+                lh, ll, le := w19_wlog2r(ph, pl, u, m)
+            }
+
+            function w19_wlog2u(u, wh, wl) -> lh, ll, le {
+                let a := w19_absw(u)
+                let n2 := shr(2, a)
+                let n1 := shl(254, a)
+                let n0 := 0
+                switch slt(u, 0)
+                case 0 {
+                    n0 := wl
+                    n1 := add(n1, wh)
+                    n2 := add(n2, lt(n1, wh))
+                }
+                default {
+                    n0 := sub(0, wl)
+                    let b := iszero(iszero(wl))
+                    let b2 := lt(n1, wh)
+                    n1 := sub(n1, wh)
+                    b2 := or(b2, lt(n1, b))
+                    n1 := sub(n1, b)
+                    n2 := sub(n2, b2)
+                }
+                lh, ll, le := w19_norm3(n2, n1, n0)
+                le := sub(le, 510)
+            }
+
+            function powslow(x, y, ms, lh, ll) -> r {
+                let hit := 0
+                hit, r := powtie(x, y)
+                if hit { leave }
+                let sg := lt(x, 0x100000000000000000000000000000000)
+                let mh := 0
+                let ml := 0
+                let le := 0
+                switch lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff)
+                case 1 {
+                    let ad := absw(sub(x, 0x100000000000000000000000000000000))
+                    let u := msb(ad)
+                    mh, ml, le := w19_wlog2s(sg, sub(u, 128), shl(sub(236, u), ad))
+                }
+                default {
+                    let fh, fl := l2w(x, ms, lh, ll)
+                    mh, ml, le := w19_wlog2u(sub(ms, 128), fh, fl)
+                }
+                let z2, z1, z0 := w19_mul3(mh, ml, absw(y))
+                let k, fh, fl := w19_tsplit(z2, z1, z0, sub(sub(0, le), 382))
+                r := pow2wr(xor(sg, slt(y, 0)), k, fh, fl)
+            }
+
+            function rbadm127(v, g, err) -> b {
+                let half := shl(sub(g, 1), 1)
+                if iszero(lt(err, half)) {
+                    b := 1
+                    leave
+                }
+                let low := and(v, sub(shl(g, 1), 1))
+                switch lt(low, half)
+                case 1 { b := iszero(gt(sub(half, low), err)) }
+                default { b := lt(sub(low, half), err) }
+            }
+
+            function w19_divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function w19_mratio(sg, dh, dl) -> rh, rl {
+                let den := add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, dh))
+                if sg { den := sub(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, dh)) }
+                let y0 := w19_divh(shl(6, dh), den)
+                let ah, al := w19_wmulf(dh, dl, y0, 263)
+                let eh, el := w19_wsub(dh, dl, shr(6, y0), shl(250, y0))
+                switch sg
+                case 0 { eh, el := w19_wsub(eh, el, ah, al) }
+                default { eh, el := w19_wadd(eh, el, ah, al) }
+                let c := or(shl(252, eh), shr(4, el))
+                let t := sar(6, sub(w19_mulhi(c, y0), mul(slt(c, 0), y0)))
+                switch sg
+                case 0 { c := sub(shl(1, c), t) }
+                default { c := add(shl(1, c), t) }
+                t := sub(w19_mulhi(c, y0), mul(slt(c, 0), y0))
+                let p1, p0 := w19_mul512(y0, y0)
+                let s := add(or(shl(3, p1), shr(253, p0)), sar(242, t))
+                p1, p0 := w19_wdivs(p1, p0, 3)
+                let q := add(or(shl(5, p1), shr(251, p0)), sdiv(sar(241, t), 3))
+                let v := shr(17, s)
+                let p := 0
+                let vs := shr(104, v)
+                p := 0x12f69f53dbda40bea02dab0b130a62cfcc8cf7ef15fc09cfb76a6085d261
+                p := add(shr(36, mul(shr(116, p), vs)), 0x147ae1479c90600e3e2c4ad817313c4cdc0f6f20150b341c66d8738e1b86)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1642c8590b216acd9588d4150b339a5f3c92251bb3e33e601a9ca3f81bfa)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x186186186186186184811649694e7873d88604818f87504ed1477032f384)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1af286bca1af286bca1af2c74c64108c3a55761c741a67ff9952c5cf9b95)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1e1e1e1e1e1e1e1e1e1e1e1e1e174a86a0b8619201dcf4d6d494af22b006)
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x222222222222222222222222222222229bc3bd8b6e2cdf594c940c087ca2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x2762762762762762762762762762762762762204bf9963433561f8c4b038) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2eaf6403e8d7b98f9ed2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38dbdd28692bf43) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x492492492492492492492492492492492492492492492492492492ef06c2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x666666666666666666666666666666666666666666666666666666666666) }
+                { let pl := mul(s, s) let ph := mulmod(s, s, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                { let pl := mul(t, p) let ph := mulmod(t, p, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                q := add(q, t)
+                { let pl := mul(y0, q) let ph := mulmod(y0, q, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                switch sg
+                case 0 { q := sub(q, shr(7, t)) }
+                default { q := add(q, shr(7, t)) }
+                rh := add(0x4000000000000000000000000000000000000000000000000000000000000000, shr(21, q))
+                rl := shl(235, q)
+                let yh := shr(9, y0)
+                let yl := shl(247, y0)
+                switch slt(c, 0)
+                case 0 { yh, yl := w19_wadd(yh, yl, 0, c) }
+                default { yh, yl := w19_wsub(yh, yl, 0, sub(0, c)) }
+                switch sg
+                case 0 { rh, rl := w19_wsub(rh, rl, yh, yl) }
+                default { rh, rl := w19_wadd(rh, rl, yh, yl) }
+            }
+
+            function tnear(x, y) -> n, fh, fl {
+                let sg := lt(x, 0x100000000000000000000000000000000)
+                let ad := absw(sub(x, 0x100000000000000000000000000000000))
+                let qh, ql := w19_mratio(sg, shl(128, ad), 0)
+                qh, ql := w19_wmul(qh, ql, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+                let j := add(msb(ad), 1)
+                let z2, z1, z0 := w19_mul3(qh, ql, ad)
+                let mh, ml := w19_shr3(z2, z1, z0, j)
+                z2, z1, z0 := w19_mul3(mh, ml, absw(y))
+                let k := 0
+                k, fh, fl := w19_tsplit(z2, z1, z0, sub(256, j))
+                fh := or(shl(2, fh), shr(254, fl))
+                fl := shl(2, fl)
+                n := k
+                if xor(sg, slt(y, 0)) {
+                    // -(k + f) = -(k + 1) + (1 - f)
+                    n := sub(0, k)
+                    if or(fh, fl) {
+                        n := sub(n, 1)
+                        fh := add(not(fh), iszero(fl))
+                        fl := sub(0, fl)
+                    }
+                }
+            }
+
+            function powmid(x, y, ms, y0) -> r {
+                let n := 0
+                let fh := 0
+                let fl := 0
+                let lh := 0
+                let ll := 0
+                let eb := 102
+                switch lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff)
+                case 1 {
+                    n, fh, fl := tnear(x, y)
+                    eb := 121
+                }
+                default {
+                    lh, ll := l2p(x, ms, y0)
+                    n, fh, fl := y2nf(y, lh, ll)
+                }
+                if sgt(n, 126) { rev(0x35278d12) }
+                if slt(n, sub(0, 130)) { leave }
+                let rh, rx := lnmul(fh, fl)
+                let sh, sl := expk(rh, rx)
+                let e := add(n, 129)
+                r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                let v := or(or(or(shl(sub(e, 1), sh), shr(sub(1, e), sh)), shr(sub(257, e), sl)), shl(add(e, 255), 1))
+                if rbadm127(v, 256, add(shl(add(n, eb), 1), 3)) {
+                    r := powslow(x, y, ms, lh, ll)
+                    leave
+                }
+                // at n = 126 the halving's sum reaches 2^256 (r wraps to 0) exactly when
+                // the word would be 2^255
+                if and(eq(n, 126), iszero(r)) { rev(0x35278d12) }
+            }
+
+            function sqrn(x) -> r {
+                let p1, p0 := mul512(x, x)
+                if gt(p1, 0x7fffffffffffffffffffffffffffffff) { rev(0x35278d12) }
+                r := add(or(shl(128, p1), shr(128, p0)), and(shr(127, p0), 1))
+                if slt(r, 0) { rev(0x35278d12) }
+            }
+
+            function fp127_pow(x, y) -> r {
+                if iszero(y) { r := 0x100000000000000000000000000000000 leave }
+                if iszero(x) { r := 0 leave }
+                if eq(x, 0x100000000000000000000000000000000) { r := 0x100000000000000000000000000000000 leave }
+                if slt(x, 0) { rev(0x7db3aba7) }
+                switch y
+                case 0x100000000000000000000000000000000 { r := x }
+                case 0x200000000000000000000000000000000 { r := sqrn(x) }
+                default {
+                    switch x
+                    case 0x200000000000000000000000000000000 { r := fp127_exp2(y) }
+                    case 0xa00000000000000000000000000000000 { r := fp127_exp10(y) }
+                    default {
+                        // log2(x) at 2^-192 in one word (log2g), its msb and log2m kept for l2p
+                        let ms := msb(x)
+                        let y0 := 0
+                        let v := shl(192, sub(ms, 128))
+                        if and(x, sub(x, 1)) {
+                            let mm := shl(sub(192, ms), x)
+                            if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                            y0 := log2m(mm)
+                            v := add(v, y0)
+                        }
+                        // t = y log2(x) at 2^-192, the floor of the 512-bit product, while |t| < 2^198
+                        let ok := 0
+                        let p0 := mul(y, v)
+                        let pm := mulmod(y, v, not(0))
+                        let p1 := sub(sub(sub(sub(pm, p0), lt(pm, p0)), mul(slt(y, 0), v)), mul(slt(v, 0), y))
+                        if eq(sar(70, p1), sar(255, p1)) { r, ok := pow2t(or(shl(128, p1), shr(128, p0)), absw(y)) }
+                        if iszero(ok) { r := powmid(x, y, ms, y0) }
+                    }
+                }
             }
 
             function divu(a, b) -> q {
@@ -4578,10 +7463,6 @@ library FP127Lib {
                 c := shr(255, p1)
                 m := p1
                 if iszero(c) { m := or(shl(1, p1), shr(255, p0)) }
-            }
-
-            function msb(x) -> r {
-                if x { r := sub(255, clz(x)) }
             }
 
             function powum(ux, k, recip) -> am, ae {
@@ -4615,18 +7496,6 @@ library FP127Lib {
                 }
             }
 
-            function hmul(a, b) -> h {
-                let l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(mm, l), lt(mm, l))
-            }
-
-            function mul512(a, b) -> h, l {
-                l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(mm, l), lt(mm, l))
-            }
-
             function mant2(ah, al, bh, bl) -> rh, rl, c {
                 rh, rl := mul512(ah, bh)
                 let a := hmul(ah, bl)
@@ -4640,11 +7509,6 @@ library FP127Lib {
                     rh := or(shl(1, rh), shr(255, rl))
                     rl := shl(1, rl)
                 }
-            }
-
-            function rev(sel) {
-                mstore(0x00, shl(224, sel))
-                revert(0x00, 0x04)
             }
 
             function powus(ux, k, recip) -> r {
@@ -4692,6 +7556,18 @@ library FP127Lib {
                 r := add(shr(sh, ah), and(shr(sub(sh, 1), ah), 1))
             }
 
+            function rbad127(v, g, err) -> b {
+                let half := shl(sub(g, 1), 1)
+                if iszero(lt(err, half)) {
+                    b := 1
+                    leave
+                }
+                let low := and(v, sub(shl(g, 1), 1))
+                switch lt(low, half)
+                case 1 { b := iszero(gt(sub(half, low), err)) }
+                default { b := lt(sub(low, half), err) }
+            }
+
             function fp127_powu(x, n) -> r {
                 let k := sar(128, n)
                 if iszero(k) { r := 0x100000000000000000000000000000000 leave }
@@ -4703,6 +7579,14 @@ library FP127Lib {
                     leave
                 }
                 let ux := absw(x)
+                if gt(k, 0xffff) {
+                    // each squaring doubles the mantissas' error, k 2^-511 in all: from
+                    // 2^16 pow's 2^(n log2 |x|) is the better road (and no tie: a tie
+                    // needs k <= 129)
+                    r := fp127_pow(ux, and(n, not(0xffffffffffffffffffffffffffffffff)))
+                    if and(slt(x, 0), and(k, 1)) { r := sub(0, r) }
+                    leave
+                }
                 let am, ae := powum(ux, k, recip)
                 // am carries a relative error below (k + 5) 2^-255: under 2k + 10 units
                 let eb := add(shl(2, k), 16)
@@ -4717,9 +7601,8 @@ library FP127Lib {
                     switch gt(sh, 256)
                     case 1 { if and(eq(sh, 257), lt(sub(0, am), eb)) { slow := 1 } }
                     default {
-                        let disc := and(am, sub(shl(sh, 1), 1))
-                        slow := iszero(gt(absw(sub(disc, shl(sub(sh, 1), 1))), eb))
                         r := add(shr(sh, am), and(shr(sub(sh, 1), am), 1))
+                        slow := rbad127(am, sh, eb)
                     }
                 }
                 if slow { r := powus(ux, k, recip) }
@@ -5555,6 +8438,596 @@ library FP127Lib {
                 if xor(slt(r, a), slt(b, 0)) { rev(0x35278d12) }
             }
 
+            function rndw(k, eh, el) -> r {
+                let v := or(or(shr(sub(125, k), eh), shl(sub(k, 125), eh)), shr(sub(381, k), el))
+                r := shr(1, add(add(shl(add(k, 129), 1), v), 1))
+            }
+
+            function w19_absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function w19_kln2(a) -> ph, pl {
+                let y1, y0 := w19_mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                pl := add(y0, w19_mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
+                ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function w19_wexpr(s, kk, xh, xl) -> k2, eh, el {
+                let ph, pl := w19_kln2(w19_absw(kk))
+                let rh := 0
+                let rl := 0
+                switch s
+                case 0 { rh, rl := w19_wsub(xh, xl, ph, pl) }
+                default { rh, rl := w19_wsub(ph, pl, xh, xl) }
+                k2 := kk
+                if slt(rh, 0) {
+                    rh, rl := w19_wadd(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                    k2 := sub(k2, 1)
+                }
+                if iszero(lt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)) {
+                    if or(gt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), iszero(lt(rl, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09))) {
+                        rh, rl := w19_wsub(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                        k2 := add(k2, 1)
+                    }
+                }
+                eh, el := w19_wexpm1(rh, rl)
+            }
+
+            function expw(x, n, c2, c1, c0) -> r {
+                let ax := absw(x)
+                let p1 := hmul(ax, c0)
+                let q1, q0 := mul512(ax, c1)
+                let w1 := add(p1, q0)
+                let k, eh, el := w19_wexpr(slt(x, 0), n, add(add(q1, lt(w1, p1)), mul(ax, c2)), w1)
+                r := rndw(k, eh, el)
+            }
+
+            function rbadw(v, err) -> b {
+                b := lt(add(add(v, 0x8000000000000000000000000000000000000000000000000000000000000000), err), shl(1, err))
+            }
+
+            function fp127_exp10(x) -> r {
+                let n, fh, fl := y2nf(x, 0x35269e12f346e2bf924afdbfd36bf6d33, 0x65b157f8deceb53a46dab2020b9e167419943f7a77547ce8f892faad8eb42f58)
+                if sgt(n, 126) { rev(0x35278d12) }
+                if slt(n, sub(0, 129)) { leave }
+                let rh, rx := lnmul(fh, fl)
+                let sh, sl := expk(rh, rx)
+                // x log2 10 within |x| 2^-385 < 2^-379, f ln 2 within 2^-382 and expk
+                // within 2^-311.2: tested as exp2. x log2 10 on the grid stays 2^-125.9
+                // or more from -129 (and from 127; the nearest x computed), so n alone
+                // decides Overflow and 0, and at n = -129 the value is above 2^-129. 10^x
+                // is no tie: an integer from x = 0, not dyadic below
+                let e := add(n, 129)
+                r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+                    r := expw(x, n, 0x935d8dddaaa8ac16ea56d62b82d30a28, 0xe28fecf9da5df90e83c61e8201f02d72962f02d7b1a8105ccc70cbc02c5f0d68, 0x2c622418410be2dafb8f788402e516d6782cf8a28a8c911e765aa6c3b0d831fb)
+                }
+                if iszero(r) { rev(0x35278d12) }
+            }
+
+            function fp127_exp2(x) -> r {
+                if iszero(slt(x, 0x7f00000000000000000000000000000000)) { rev(0x35278d12) }
+                if slt(x, sub(0, 0x8100000000000000000000000000000000)) { r := 0 leave }
+                // n and the fraction exactly; then as pow2r, without its Overflow test,
+                // which x < 127 cannot reach
+                let n := sar(128, x)
+                // f ln 2 in X form as lnmul forms it, for f = x's fraction (nothing below 2^-256)
+                let f := shl(128, x)
+                let pl := mul(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+                let ph := mulmod(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
+                let sh, sl := expk(sub(sub(ph, pl), lt(ph, pl)), add(shr(128, pl), shr(128, mul(shr(128, f), 0xe7b876206debac98559552fb4afa1b10))))
+                let e := add(n, 129)
+                r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                // the fraction's f ln 2 within 2^-382 below and expk within 2^-311.2:
+                // V = 2^n (1 + s) within 2^(n - 311.1), under 2^200 units of 2^-384
+                // (n <= 126), whose 256 bits below the grid are (sh, sl) shifted right by
+                // 257 - e. At e = 0 (x in [-129, -128)) that shift leaves 0, which the
+                // test passes, and the word is 1: the value is above 2^-129, or the tie
+                // 2^-129 itself at x = -129, which rounds up. An integer x is exact (s =
+                // 0, the bits below the grid 0)
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+                    r := expw(x, n, 0x2c5c85fdf473de6af278ece600fcbdab, 0xd03cd0c99ca62d8b628345d6e2eabe8af9ee1d881b7aeb26156554bed2be86c4, 0x3b4bab8d704e085109d5ceca445a6e094fa5b2858892ba3146b2f6844c5f0e1f)
+                }
+            }
+
+            function w19_mul3(h, l, m) -> n2, n1, n0 {
+                let a1, a0 := w19_mul512(h, m)
+                let b1 := 0
+                b1, n0 := w19_mul512(l, m)
+                n1 := add(a0, b1)
+                n2 := add(a1, lt(n1, a0))
+            }
+
+            function l2w(x, ms, lh, ll) -> fh, fl {
+                if iszero(and(x, sub(x, 1))) { leave }
+                let f0 :=sub(lh, shl(128, sub(ms, 128)))
+                // 1 - f0 at 2^-384, then at 2^-510
+                let gh := sub(sub(0x100000000000000000000000000000000, f0), iszero(iszero(ll)))
+                let gl := sub(0, ll)
+                let eh, el := w19_wmul(or(shl(126, gh), shr(130, gl)), shl(126, gl), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                eh, el := w19_wexpm1(eh, el)
+                let z2, z1, z0 := w19_mul3(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, shl(sub(255, ms), x))
+                // d log2 e at 2^-510: z1 (signed) times log2 e at 2^-255, floored
+                let ph, pl := smul512(z1, 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let c := or(shl(1, ph), shr(255, pl))
+                fh := or(shl(126, f0), shr(130, ll))
+                fl := add(shl(126, ll), c)
+                fh := add(fh, sub(lt(fl, c), slt(c, 0)))
+            }
+
+            function pow2wr(s, k, fh, fl) -> r {
+                if s {
+                    k := sub(0, k)
+                    if or(fh, fl) {
+                        k := sub(k, 1)
+                        fh, fl := w19_wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl)
+                    }
+                }
+                if sgt(k, 126) { rev(0x35278d12) }
+                if slt(k, sub(0, 130)) { leave }
+                fh, fl := w19_wmul(fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                fh, fl := w19_wexpm1(fh, fl)
+                r := rndw(k, fh, fl)
+                if and(eq(k, 126), iszero(r)) { rev(0x35278d12) }
+            }
+
+            function isqrt(z) -> y {
+                if iszero(z) { leave }
+                y := shl(shr(1, add(msb(z), 2)), 1)
+                for {} 1 {} {
+                    let t := shr(1, add(y, div(z, y)))
+                    if iszero(lt(t, y)) { break }
+                    y := t
+                }
+            }
+
+            function powtie(x, y) -> hit, r {
+                if gt(absw(y), 0x8100000000000000000000000000000000) { leave }
+                let tz := msb(and(x, sub(0, x)))
+                if iszero(eq(mul(sub(tz, 128), y), sub(0, 0x8100000000000000000000000000000000))) { leave }
+                let b := shr(tz, x)
+                if eq(b, 1) {
+                    hit := 1
+                    r := 1
+                    leave
+                }
+                if slt(y, 0) { leave }
+                // y = p 2^(ty - 128) with p odd; a y = -129 makes ty >= 121 and p <= 129
+                let ty := msb(and(y, sub(0, y)))
+                let p := shr(ty, y)
+                for {} lt(ty, 128) { ty := add(ty, 1) } {
+                    let q := isqrt(b)
+                    if iszero(eq(mul(q, q), b)) { leave }
+                    b := q
+                }
+                let w := b
+                for { let i := 1 } lt(i, p) { i := add(i, 1) } {
+                    if gt(w, div(not(0), b)) { leave }
+                    w := mul(w, b)
+                }
+                hit := 1
+                r := add(shr(1, w), 1)
+                if slt(r, 0) { rev(0x35278d12) }
+            }
+
+            function w19_wshr(h, l, n) -> rh, rl {
+                switch lt(n, 256)
+                case 1 {
+                    rh := shr(n, h)
+                    rl := or(shl(sub(256, n), h), shr(n, l))
+                }
+                default { rl := shr(sub(n, 256), h) }
+            }
+
+            function w19_shr3(z2, z1, z0, n) -> rh, rl {
+                if lt(n, 256) {
+                    rh := or(shl(sub(256, n), z2), shr(n, z1))
+                    rl := or(shl(sub(256, n), z1), shr(n, z0))
+                    leave
+                }
+                rh, rl := w19_wshr(z2, z1, sub(n, 256))
+            }
+
+            function w19_tsplit(z2, z1, z0, sg) -> k, fh, fl {
+                let kh := 0
+                kh, k := w19_shr3(z2, z1, z0, add(sg, 510))
+                switch slt(sg, 0)
+                case 1 {
+                    let g := sub(0, sg)
+                    fh := or(shl(g, z1), shr(sub(256, g), z0))
+                    fl := shl(g, z0)
+                }
+                default { fh, fl := w19_shr3(z2, z1, z0, sg) }
+                fh := and(fh, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            }
+
+            function w19_wmulf(h, l, m, n) -> rh, rl {
+                let z2, z1, z0 := w19_mul3(h, l, m)
+                rh, rl := w19_shr3(z2, z1, z0, n)
+            }
+
+            function w19_wln1ps(s, u, m) -> ph, pl {
+                for { let k := add(div(511, sub(sub(0, u), 1)), 1) } k { k := sub(k, 1) } {
+                    let dh, dl := w19_wmulf(ph, pl, m, sub(236, u))
+                    let ch, cl := w19_wdivs(0x4000000000000000000000000000000000000000000000000000000000000000, 0, k)
+                    switch s
+                    case 0 { ph, pl := w19_wsub(ch, cl, dh, dl) }
+                    default { ph, pl := w19_wadd(ch, cl, dh, dl) }
+                }
+            }
+
+            function w19_msb(x) -> r {
+                if iszero(x) { leave }
+                r := sub(255, clz(x))
+            }
+
+            function w19_wshl(h, l, n) -> rh, rl {
+                rh := or(shl(n, h), shr(sub(256, n), l))
+                rl := shl(n, l)
+            }
+
+            function w19_norm3(n2, n1, n0) -> h, l, e {
+                if n2 {
+                    e := add(w19_msb(n2), 1)
+                    h, l := w19_shr3(n2, n1, n0, e)
+                    leave
+                }
+                switch n1
+                case 0 {
+                    h := shl(sub(255, w19_msb(n0)), n0)
+                    e := sub(w19_msb(n0), 511)
+                }
+                default {
+                    e := sub(w19_msb(n1), 255)
+                    h, l := w19_wshl(n1, n0, sub(0, e))
+                }
+            }
+
+            function w19_wlog2r(ph, pl, u, m) -> lh, ll, le {
+                ph, pl := w19_wmul(ph, pl, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+                let n2, n1, n0 := w19_mul3(ph, pl, m)
+                lh, ll, le := w19_norm3(n2, n1, n0)
+                le := add(le, sub(u, 746))
+            }
+
+            function w19_wlog2s(s, u, m) -> lh, ll, le {
+                let ph, pl := w19_wln1ps(s, u, m)
+                lh, ll, le := w19_wlog2r(ph, pl, u, m)
+            }
+
+            function w19_wlog2u(u, wh, wl) -> lh, ll, le {
+                let a := w19_absw(u)
+                let n2 := shr(2, a)
+                let n1 := shl(254, a)
+                let n0 := 0
+                switch slt(u, 0)
+                case 0 {
+                    n0 := wl
+                    n1 := add(n1, wh)
+                    n2 := add(n2, lt(n1, wh))
+                }
+                default {
+                    n0 := sub(0, wl)
+                    let b := iszero(iszero(wl))
+                    let b2 := lt(n1, wh)
+                    n1 := sub(n1, wh)
+                    b2 := or(b2, lt(n1, b))
+                    n1 := sub(n1, b)
+                    n2 := sub(n2, b2)
+                }
+                lh, ll, le := w19_norm3(n2, n1, n0)
+                le := sub(le, 510)
+            }
+
+            function powslow(x, y, ms, lh, ll) -> r {
+                let hit := 0
+                hit, r := powtie(x, y)
+                if hit { leave }
+                let sg := lt(x, 0x100000000000000000000000000000000)
+                let mh := 0
+                let ml := 0
+                let le := 0
+                switch lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff)
+                case 1 {
+                    let ad := absw(sub(x, 0x100000000000000000000000000000000))
+                    let u := msb(ad)
+                    mh, ml, le := w19_wlog2s(sg, sub(u, 128), shl(sub(236, u), ad))
+                }
+                default {
+                    let fh, fl := l2w(x, ms, lh, ll)
+                    mh, ml, le := w19_wlog2u(sub(ms, 128), fh, fl)
+                }
+                let z2, z1, z0 := w19_mul3(mh, ml, absw(y))
+                let k, fh, fl := w19_tsplit(z2, z1, z0, sub(sub(0, le), 382))
+                r := pow2wr(xor(sg, slt(y, 0)), k, fh, fl)
+            }
+
+            function rbadm127(v, g, err) -> b {
+                let half := shl(sub(g, 1), 1)
+                if iszero(lt(err, half)) {
+                    b := 1
+                    leave
+                }
+                let low := and(v, sub(shl(g, 1), 1))
+                switch lt(low, half)
+                case 1 { b := iszero(gt(sub(half, low), err)) }
+                default { b := lt(sub(low, half), err) }
+            }
+
+            function w19_divh(a, b) -> q {
+                let prod0 := shl(255, a)
+                let prod1 := shr(1, a)
+                let remainder := mulmod(a, 0x8000000000000000000000000000000000000000000000000000000000000000, b)
+                prod1 := sub(prod1, gt(remainder, prod0))
+                prod0 := sub(prod0, remainder)
+                let twos := and(sub(0, b), b)
+                b := div(b, twos)
+                prod0 := div(prod0, twos)
+                prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+                let iv := xor(mul(3, b), 2)
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                iv := mul(iv, sub(2, mul(b, iv)))
+                q := mul(prod0, iv)
+            }
+
+            function w19_mratio(sg, dh, dl) -> rh, rl {
+                let den := add(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, dh))
+                if sg { den := sub(0x8000000000000000000000000000000000000000000000000000000000000000, shr(2, dh)) }
+                let y0 := w19_divh(shl(6, dh), den)
+                let ah, al := w19_wmulf(dh, dl, y0, 263)
+                let eh, el := w19_wsub(dh, dl, shr(6, y0), shl(250, y0))
+                switch sg
+                case 0 { eh, el := w19_wsub(eh, el, ah, al) }
+                default { eh, el := w19_wadd(eh, el, ah, al) }
+                let c := or(shl(252, eh), shr(4, el))
+                let t := sar(6, sub(w19_mulhi(c, y0), mul(slt(c, 0), y0)))
+                switch sg
+                case 0 { c := sub(shl(1, c), t) }
+                default { c := add(shl(1, c), t) }
+                t := sub(w19_mulhi(c, y0), mul(slt(c, 0), y0))
+                let p1, p0 := w19_mul512(y0, y0)
+                let s := add(or(shl(3, p1), shr(253, p0)), sar(242, t))
+                p1, p0 := w19_wdivs(p1, p0, 3)
+                let q := add(or(shl(5, p1), shr(251, p0)), sdiv(sar(241, t), 3))
+                let v := shr(17, s)
+                let p := 0
+                let vs := shr(104, v)
+                p := 0x12f69f53dbda40bea02dab0b130a62cfcc8cf7ef15fc09cfb76a6085d261
+                p := add(shr(36, mul(shr(116, p), vs)), 0x147ae1479c90600e3e2c4ad817313c4cdc0f6f20150b341c66d8738e1b86)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1642c8590b216acd9588d4150b339a5f3c92251bb3e33e601a9ca3f81bfa)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x186186186186186184811649694e7873d88604818f87504ed1477032f384)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1af286bca1af286bca1af2c74c64108c3a55761c741a67ff9952c5cf9b95)
+                p := add(shr(36, mul(shr(116, p), vs)), 0x1e1e1e1e1e1e1e1e1e1e1e1e1e174a86a0b8619201dcf4d6d494af22b006)
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x222222222222222222222222222222229bc3bd8b6e2cdf594c940c087ca2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x2762762762762762762762762762762762762204bf9963433561f8c4b038) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8ba2eaf6403e8d7b98f9ed2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x38e38e38e38e38e38e38e38e38e38e38e38e38e38e38e38dbdd28692bf43) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x492492492492492492492492492492492492492492492492492492ef06c2) }
+                { let pl := mul(p, v) let ph := mulmod(p, v, not(0)) p := add(sub(sub(ph, pl), lt(ph, pl)), 0x666666666666666666666666666666666666666666666666666666666666) }
+                { let pl := mul(s, s) let ph := mulmod(s, s, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                { let pl := mul(t, p) let ph := mulmod(t, p, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                q := add(q, t)
+                { let pl := mul(y0, q) let ph := mulmod(y0, q, not(0)) t := sub(sub(ph, pl), lt(ph, pl)) }
+                switch sg
+                case 0 { q := sub(q, shr(7, t)) }
+                default { q := add(q, shr(7, t)) }
+                rh := add(0x4000000000000000000000000000000000000000000000000000000000000000, shr(21, q))
+                rl := shl(235, q)
+                let yh := shr(9, y0)
+                let yl := shl(247, y0)
+                switch slt(c, 0)
+                case 0 { yh, yl := w19_wadd(yh, yl, 0, c) }
+                default { yh, yl := w19_wsub(yh, yl, 0, sub(0, c)) }
+                switch sg
+                case 0 { rh, rl := w19_wsub(rh, rl, yh, yl) }
+                default { rh, rl := w19_wadd(rh, rl, yh, yl) }
+            }
+
+            function tnear(x, y) -> n, fh, fl {
+                let sg := lt(x, 0x100000000000000000000000000000000)
+                let ad := absw(sub(x, 0x100000000000000000000000000000000))
+                let qh, ql := w19_mratio(sg, shl(128, ad), 0)
+                qh, ql := w19_wmul(qh, ql, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+                let j := add(msb(ad), 1)
+                let z2, z1, z0 := w19_mul3(qh, ql, ad)
+                let mh, ml := w19_shr3(z2, z1, z0, j)
+                z2, z1, z0 := w19_mul3(mh, ml, absw(y))
+                let k := 0
+                k, fh, fl := w19_tsplit(z2, z1, z0, sub(256, j))
+                fh := or(shl(2, fh), shr(254, fl))
+                fl := shl(2, fl)
+                n := k
+                if xor(sg, slt(y, 0)) {
+                    // -(k + f) = -(k + 1) + (1 - f)
+                    n := sub(0, k)
+                    if or(fh, fl) {
+                        n := sub(n, 1)
+                        fh := add(not(fh), iszero(fl))
+                        fl := sub(0, fl)
+                    }
+                }
+            }
+
+            function powmid(x, y, ms, y0) -> r {
+                let n := 0
+                let fh := 0
+                let fl := 0
+                let lh := 0
+                let ll := 0
+                let eb := 102
+                switch lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff)
+                case 1 {
+                    n, fh, fl := tnear(x, y)
+                    eb := 121
+                }
+                default {
+                    lh, ll := l2p(x, ms, y0)
+                    n, fh, fl := y2nf(y, lh, ll)
+                }
+                if sgt(n, 126) { rev(0x35278d12) }
+                if slt(n, sub(0, 130)) { leave }
+                let rh, rx := lnmul(fh, fl)
+                let sh, sl := expk(rh, rx)
+                let e := add(n, 129)
+                r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                let v := or(or(or(shl(sub(e, 1), sh), shr(sub(1, e), sh)), shr(sub(257, e), sl)), shl(add(e, 255), 1))
+                if rbadm127(v, 256, add(shl(add(n, eb), 1), 3)) {
+                    r := powslow(x, y, ms, lh, ll)
+                    leave
+                }
+                // at n = 126 the halving's sum reaches 2^256 (r wraps to 0) exactly when
+                // the word would be 2^255
+                if and(eq(n, 126), iszero(r)) { rev(0x35278d12) }
+            }
+
+            function sqrn(x) -> r {
+                let p1, p0 := mul512(x, x)
+                if gt(p1, 0x7fffffffffffffffffffffffffffffff) { rev(0x35278d12) }
+                r := add(or(shl(128, p1), shr(128, p0)), and(shr(127, p0), 1))
+                if slt(r, 0) { rev(0x35278d12) }
+            }
+
+            function fp127_pow(x, y) -> r {
+                if iszero(y) { r := 0x100000000000000000000000000000000 leave }
+                if iszero(x) { r := 0 leave }
+                if eq(x, 0x100000000000000000000000000000000) { r := 0x100000000000000000000000000000000 leave }
+                if slt(x, 0) { rev(0x7db3aba7) }
+                switch y
+                case 0x100000000000000000000000000000000 { r := x }
+                case 0x200000000000000000000000000000000 { r := sqrn(x) }
+                default {
+                    switch x
+                    case 0x200000000000000000000000000000000 { r := fp127_exp2(y) }
+                    case 0xa00000000000000000000000000000000 { r := fp127_exp10(y) }
+                    default {
+                        // log2(x) at 2^-192 in one word (log2g), its msb and log2m kept for l2p
+                        let ms := msb(x)
+                        let y0 := 0
+                        let v := shl(192, sub(ms, 128))
+                        if and(x, sub(x, 1)) {
+                            let mm := shl(sub(192, ms), x)
+                            if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                            y0 := log2m(mm)
+                            v := add(v, y0)
+                        }
+                        // t = y log2(x) at 2^-192, the floor of the 512-bit product, while |t| < 2^198
+                        let ok := 0
+                        let p0 := mul(y, v)
+                        let pm := mulmod(y, v, not(0))
+                        let p1 := sub(sub(sub(sub(pm, p0), lt(pm, p0)), mul(slt(y, 0), v)), mul(slt(v, 0), y))
+                        if eq(sar(70, p1), sar(255, p1)) { r, ok := pow2t(or(shl(128, p1), shr(128, p0)), absw(y)) }
+                        if iszero(ok) { r := powmid(x, y, ms, y0) }
+                    }
+                }
+            }
+
             function divu(a, b) -> q {
                 let prod0 := shl(128, a)
                 let prod1 := shr(128, a)
@@ -5675,6 +9148,18 @@ library FP127Lib {
                 r := add(shr(sh, ah), and(shr(sub(sh, 1), ah), 1))
             }
 
+            function rbad127(v, g, err) -> b {
+                let half := shl(sub(g, 1), 1)
+                if iszero(lt(err, half)) {
+                    b := 1
+                    leave
+                }
+                let low := and(v, sub(shl(g, 1), 1))
+                switch lt(low, half)
+                case 1 { b := iszero(gt(sub(half, low), err)) }
+                default { b := lt(sub(low, half), err) }
+            }
+
             function fp127_powu(x, n) -> r {
                 let k := sar(128, n)
                 if iszero(k) { r := 0x100000000000000000000000000000000 leave }
@@ -5686,6 +9171,14 @@ library FP127Lib {
                     leave
                 }
                 let ux := absw(x)
+                if gt(k, 0xffff) {
+                    // each squaring doubles the mantissas' error, k 2^-511 in all: from
+                    // 2^16 pow's 2^(n log2 |x|) is the better road (and no tie: a tie
+                    // needs k <= 129)
+                    r := fp127_pow(ux, and(n, not(0xffffffffffffffffffffffffffffffff)))
+                    if and(slt(x, 0), and(k, 1)) { r := sub(0, r) }
+                    leave
+                }
                 let am, ae := powum(ux, k, recip)
                 // am carries a relative error below (k + 5) 2^-255: under 2k + 10 units
                 let eb := add(shl(2, k), 16)
@@ -5700,9 +9193,8 @@ library FP127Lib {
                     switch gt(sh, 256)
                     case 1 { if and(eq(sh, 257), lt(sub(0, am), eb)) { slow := 1 } }
                     default {
-                        let disc := and(am, sub(shl(sh, 1), 1))
-                        slow := iszero(gt(absw(sub(disc, shl(sub(sh, 1), 1))), eb))
                         r := add(shr(sh, am), and(shr(sub(sh, 1), am), 1))
+                        slow := rbad127(am, sh, eb)
                     }
                 }
                 if slow { r := powus(ux, k, recip) }
@@ -8257,6 +11749,116 @@ library FP127Lib {
                 lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
             }
 
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mul3(h, l, m) -> n2, n1, n0 {
+                let a1, a0 := w19_mul512(h, m)
+                let b1 := 0
+                b1, n0 := w19_mul512(l, m)
+                n1 := add(a0, b1)
+                n2 := add(a1, lt(n1, a0))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function l2w(x, ms, lh, ll) -> fh, fl {
+                if iszero(and(x, sub(x, 1))) { leave }
+                let f0 :=sub(lh, shl(128, sub(ms, 128)))
+                // 1 - f0 at 2^-384, then at 2^-510
+                let gh := sub(sub(0x100000000000000000000000000000000, f0), iszero(iszero(ll)))
+                let gl := sub(0, ll)
+                let eh, el := w19_wmul(or(shl(126, gh), shr(130, gl)), shl(126, gl), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                eh, el := w19_wexpm1(eh, el)
+                let z2, z1, z0 := w19_mul3(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, shl(sub(255, ms), x))
+                // d log2 e at 2^-510: z1 (signed) times log2 e at 2^-255, floored
+                let ph, pl := smul512(z1, 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+                let c := or(shl(1, ph), shr(255, pl))
+                fh := or(shl(126, f0), shr(130, ll))
+                fl := add(shl(126, ll), c)
+                fh := add(fh, sub(lt(fl, c), slt(c, 0)))
+            }
+
             function log2m(mm) -> r {
                 let x := sub(mm, 0x1000000000000000000000000000000000000000000000000)
                 let i := shr(188, x)
@@ -8464,6 +12066,43 @@ library FP127Lib {
                 r := shr(63, add(acc, x))
             }
 
+            function w19_wshr(h, l, n) -> rh, rl {
+                switch lt(n, 256)
+                case 1 {
+                    rh := shr(n, h)
+                    rl := or(shl(sub(256, n), h), shr(n, l))
+                }
+                default { rl := shr(sub(n, 256), h) }
+            }
+
+            function w19_shr3(z2, z1, z0, n) -> rh, rl {
+                if lt(n, 256) {
+                    rh := or(shl(sub(256, n), z2), shr(n, z1))
+                    rl := or(shl(sub(256, n), z1), shr(n, z0))
+                    leave
+                }
+                rh, rl := w19_wshr(z2, z1, sub(n, 256))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function logw(a, fh, fl, ch, cl) -> r {
+                let n2, n1, n0 := w19_mul3(ch, cl, absw(a))
+                let ah, al := w19_shr3(n2, n1, n0, 10)
+                if slt(a, 0) { ah, al := w19_wsub(0, 0, ah, al) }
+                let bh, bl := w19_wmul(fh, fl, ch, cl)
+                ah, al := w19_wadd(ah, al, shr(10, bh), or(shl(246, bh), shr(10, bl)))
+                r := sar(1, add(sar(115, ah), 1))
+            }
+
             function msb(x) -> r {
                 if x { r := sub(255, clz(x)) }
             }
@@ -8481,16 +12120,28 @@ library FP127Lib {
                 b := lt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), 0x800000000000)
             }
 
+            function rbadm127(v, g, err) -> b {
+                let half := shl(sub(g, 1), 1)
+                if iszero(lt(err, half)) {
+                    b := 1
+                    leave
+                }
+                let low := and(v, sub(shl(g, 1), 1))
+                switch lt(low, half)
+                case 1 { b := iszero(gt(sub(half, low), err)) }
+                default { b := lt(sub(low, half), err) }
+            }
+
             function round64(r) -> q {
                 q := sar(64, add(r, 0x8000000000000000))
             }
 
-            function x384mul(lh, ll, c) -> r {
+            function x384mul(lh, ll, c) -> r, v {
                 let ph, pl := smul512(lh, c)
                 let a := hmul(ll, c)
-                pl := add(pl, a)
-                ph := add(ph, lt(pl, a))
-                r := add(ph, shr(255, pl))
+                v := add(pl, a)
+                ph := add(ph, lt(v, a))
+                r := add(ph, shr(255, v))
             }
 
             function fp127_ln(x) -> r {
@@ -8509,7 +12160,14 @@ library FP127Lib {
                 v := mulg(v, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
                 if nearmid(v) {
                     let lh, ll := l2p(x, ms, y0)
-                    r := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
+                    let w := 0
+                    r, w := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
+                    // l2p's 2^-299 times ln 2, ln 2's rounding at 2^-256 times |log2 x|
+                    // <= 2^7 and two floors: under 2^135 units of w
+                    if rbadm127(w, 256, 0x800000000000000000000000000000000) {
+                        let fh, fl := l2w(x, ms, lh, ll)
+                        r := logw(sub(ms, 128), fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                    }
                     leave
                 }
                 r := round64(v)
@@ -8523,11 +12181,16 @@ library FP127Lib {
             _r := fp127_log1p(_x)
         }
     }
-    /// @notice e^x - 1, rounded to nearest, with the one subtracted before the
-    ///         rounding so a small x keeps its relative precision: a 27-term
-    ///         series at 2^-192 for |x| <= 1/16, the double-word exp beyond.
+    /// @notice e^x - 1, rounded to nearest: on the 2^-128 grid the one is
+    ///         exact, so this is exp(x) - 1 word for word, a small x by its own
+    ///         series for gas: 27 terms at 2^-192 for |x| <= 1/16.
     /// @dev Below 2^-65, x itself: x^2/2 is under a quarter ULP and the series'
-    ///      value is x 2^192 plus less than 2^62 units, which rounds to x.
+    ///      value is x 2^192 plus less than 2^62 units, which rounds to x. The
+    ///      series' value is within 2 units of 2^-192 (each Horner step's floor
+    ///      and truncation under 1 + 1/k, damped by |x|/k <= 1/32, then the last
+    ///      product's floor; the tail under 2^-200 relative); when that bound
+    ///      reaches the rounding boundary (3.0) the exponentials' second stage
+    ///      decides (expw, less one). Beyond 1/16, exp(x) - 1.
     function expm1(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
@@ -8565,6 +12228,165 @@ library FP127Lib {
                     v := add(0x1000000000000000000000000000000000000000000000000, sdiv(or(shl(64, sub(sub(sub(h, l), lt(h, l)), mul(slt(xs, 0), v))), shr(192, l)), k))
                 }
                 v := mulg(xs, v)
+            }
+
+            function hmul(a, b) -> h {
+                let l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function mul512(a, b) -> h, l {
+                l := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                h := sub(sub(mm, l), lt(mm, l))
+            }
+
+            function rndw(k, eh, el) -> r {
+                let v := or(or(shr(sub(125, k), eh), shl(sub(k, 125), eh)), shr(sub(381, k), el))
+                r := shr(1, add(add(shl(add(k, 129), 1), v), 1))
+            }
+
+            function w19_absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
+            function w19_mul512(a, b) -> p1, p0 {
+                p0 := mul(a, b)
+                let mm := mulmod(a, b, not(0))
+                p1 := sub(sub(mm, p0), lt(mm, p0))
+            }
+
+            function w19_mulhi(a, b) -> h {
+                let mm := mulmod(a, b, not(0))
+                let lo := mul(a, b)
+                h := sub(sub(mm, lo), lt(mm, lo))
+            }
+
+            function w19_kln2(a) -> ph, pl {
+                let y1, y0 := w19_mul512(a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                pl := add(y0, w19_mulhi(a, 0x4fa5b2858892ba3146b2f6844c5f0e1fae7aa6f0ec4d980ec95be83b1d95fdd2))
+                ph := add(add(mul(a, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), y1), lt(pl, y0))
+            }
+
+            function w19_wadd(ah, al, bh, bl) -> rh, rl {
+                rl := add(al, bl)
+                rh := add(add(ah, bh), lt(rl, al))
+            }
+
+            function w19_mulwu(a, b) -> r {
+                let p1, p0 := w19_mul512(a, b)
+                r := or(shl(2, p1), shr(254, p0))
+            }
+
+            function w19_wdbl(eh, el) -> rh, rl {
+                rh := eh
+                rl := el
+                for { let i := 25 } gt(i, 1) { i := sub(i, 1) } {
+                    let p0 := mul(rh, rh)
+                    let mm := mulmod(rh, rh, not(0))
+                    let sh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                    let sl := shl(2, p0)
+                    p0 := mul(rh, rl)
+                    mm := mulmod(rh, rl, not(0))
+                    let q1 := sub(sub(mm, p0), lt(mm, p0))
+                    // 2 rh rl = (q1, p0) 2: at 2^-510 its top part is (q1, p0) 2^3 / 2^256
+                    let c := or(shl(3, q1), shr(253, p0))
+                    sl := add(sl, c)
+                    sh := add(add(sh, shr(253, q1)), lt(sl, c))
+                    p0 := mul(rl, rl)
+                    mm := mulmod(rl, rl, not(0))
+                    c := shr(254, sub(sub(mm, p0), lt(mm, p0)))
+                    sl := add(sl, c)
+                    sh := add(sh, lt(sl, c))
+                    c := add(rl, or(shl(sub(256, i), sh), shr(i, sl)))
+                    rh := add(add(rh, shr(i, sh)), lt(c, rl))
+                    rl := c
+                }
+            }
+
+            function w19_wdivs(h, l, k) -> qh, ql {
+                qh := div(h, k)
+                let x := or(shl(128, mod(h, k)), shr(128, l))
+                let q1 := div(x, k)
+                x := or(shl(128, mod(x, k)), and(l, 0xffffffffffffffffffffffffffffffff))
+                ql := or(shl(128, q1), div(x, k))
+            }
+
+            function w19_wmul(ah, al, bh, bl) -> rh, rl {
+                let p0 := mul(ah, bh)
+                let mm := mulmod(ah, bh, not(0))
+                rh := or(shl(2, sub(sub(mm, p0), lt(mm, p0))), shr(254, p0))
+                rl := shl(2, p0)
+                // ah bl + al bh, at most 2^512
+                p0 := mul(ah, bl)
+                mm := mulmod(ah, bl, not(0))
+                let q1 := sub(sub(mm, p0), lt(mm, p0))
+                let t0 := mul(al, bh)
+                mm := mulmod(al, bh, not(0))
+                q1 := add(q1, sub(sub(mm, t0), lt(mm, t0)))
+                t0 := add(p0, t0)
+                q1 := add(q1, lt(t0, p0))
+                p0 := or(shl(2, q1), shr(254, t0))
+                rl := add(rl, p0)
+                rh := add(add(rh, shr(254, q1)), lt(rl, p0))
+                // al bl through its high word
+                t0 := mul(al, bl)
+                mm := mulmod(al, bl, not(0))
+                p0 := shr(254, sub(sub(mm, t0), lt(mm, t0)))
+                rl := add(rl, p0)
+                rh := add(rh, lt(rl, p0))
+            }
+
+            function w19_wexpm1(rh, rl) -> eh, el {
+                let t := 0x4000000000000000000000000000000000000000000000000000000000000000
+                for { let k := 20 } gt(k, 11) { k := sub(k, 1) } {
+                    t := add(0x4000000000000000000000000000000000000000000000000000000000000000, div(w19_mulwu(rh, t), shl(24, k)))
+                }
+                let tl := 0
+                for { let k := 11 } gt(k, 1) { k := sub(k, 1) } {
+                    t, tl := w19_wmul(rh, rl, t, tl)
+                    t, tl := w19_wdivs(t, tl, shl(24, k))
+                    t := add(t, 0x4000000000000000000000000000000000000000000000000000000000000000)
+                }
+                eh, el := w19_wmul(rh, rl, t, tl)
+                eh, el := w19_wdbl(eh, el)
+            }
+
+            function w19_wsub(ah, al, bh, bl) -> rh, rl {
+                rl := sub(al, bl)
+                rh := sub(sub(ah, bh), lt(al, bl))
+            }
+
+            function w19_wexpr(s, kk, xh, xl) -> k2, eh, el {
+                let ph, pl := w19_kln2(w19_absw(kk))
+                let rh := 0
+                let rl := 0
+                switch s
+                case 0 { rh, rl := w19_wsub(xh, xl, ph, pl) }
+                default { rh, rl := w19_wsub(ph, pl, xh, xl) }
+                k2 := kk
+                if slt(rh, 0) {
+                    rh, rl := w19_wadd(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                    k2 := sub(k2, 1)
+                }
+                if iszero(lt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a)) {
+                    if or(gt(rh, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a), iszero(lt(rl, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09))) {
+                        rh, rl := w19_wsub(rh, rl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+                        k2 := add(k2, 1)
+                    }
+                }
+                eh, el := w19_wexpm1(rh, rl)
+            }
+
+            function expw(x, n, c2, c1, c0) -> r {
+                let ax := absw(x)
+                let p1 := hmul(ax, c0)
+                let q1, q0 := mul512(ax, c1)
+                let w1 := add(p1, q0)
+                let k, eh, el := w19_wexpr(slt(x, 0), n, add(add(q1, lt(w1, p1)), mul(ax, c2)), w1)
+                r := rndw(k, eh, el)
             }
 
             function expk(rh, rx) -> sh, sl {
@@ -8932,11 +12754,8 @@ library FP127Lib {
                 }
             }
 
-            function expx(x) -> n, sh, sl {
-                let rh := 0
-                let rx := 0
-                n, rh, rx := expr(x)
-                sh, sl := expk(rh, rx)
+            function rbadw(v, err) -> b {
+                b := lt(add(add(v, 0x8000000000000000000000000000000000000000000000000000000000000000), err), shl(1, err))
             }
 
             function rev(sel) {
@@ -8944,46 +12763,39 @@ library FP127Lib {
                 revert(0x00, 0x04)
             }
 
-            function rnd192(vh, vl) -> r {
-                let l := add(vl, 0x8000000000000000)
-                let h := add(vh, lt(l, vl))
-                if gt(h, 0x7fffffffffffffff) { rev(0x35278d12) }
-                r := or(shl(192, h), shr(64, l))
+            function fp127_exp(x) -> r {
+                if iszero(x) { r := 0x100000000000000000000000000000000 leave }
+                if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+                if slt(x, sub(0, 0x5a00000000000000000000000000000000)) { r := 0 leave }
+                let n, rh, rx := expr(x)
+                if slt(n, sub(0, 129)) { leave }
+                let sh, sl := expk(rh, rx)
+                // as pow2r; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
+                // 1.95). r within 2^-377 of x - n ln 2 and expk within 2^-311.2: within
+                // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-137 or more above
+                // 0, so the value is above 2^-129)
+                let e := add(n, 129)
+                r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+                if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) { r := expw(x, n, 0x40000000000000000000000000000000, 0, 0) }
             }
 
             function round64(r) -> q {
                 q := sar(64, add(r, 0x8000000000000000))
             }
 
-            function sc192(n, sh, sl) -> vh, vl {
-                let e := add(n, 192)
-                switch lt(e, 256)
-                case 1 { vl := add(shr(sub(256, e), sh), shl(e, 1)) }
-                default {
-                    let k := sub(512, e)
-                    vh := add(shr(k, sh), shl(sub(e, 256), 1))
-                    vl := or(shl(sub(e, 256), sh), shr(k, sl))
-                }
-            }
-
             function fp127_expm1(x) -> r {
                 if iszero(x) { r := 0 leave }
-                if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
-                if slt(x, sub(0, 0x5a00000000000000000000000000000000)) { r := sub(0, 0x100000000000000000000000000000000) leave }
                 let ax := absw(x)
                 if iszero(gt(ax, 0x10000000000000000000000000000000)) {
                     r := x
-                    if iszero(lt(ax, 0x8000000000000000)) { r := round64(expm1s(x, ax)) }
+                    if iszero(lt(ax, 0x8000000000000000)) {
+                        let v := expm1s(x, ax)
+                        r := round64(v)
+                        if rbadw(shl(192, v), 0x2000000000000000000000000000000000000000000000000) { r := sub(expw(x, 0, 0x40000000000000000000000000000000, 0, 0), 0x100000000000000000000000000000000) }
+                    }
                     leave
                 }
-                let n, sh, sl := expx(x)
-                let vh, vl := sc192(n, sh, sl)
-                switch slt(x, 0)
-                case 1 { r := round64(sub(vl, 0x1000000000000000000000000000000000000000000000000)) }
-                default {
-                    let l := sub(vl, 0x1000000000000000000000000000000000000000000000000)
-                    r := rnd192(sub(vh, gt(l, vl)), l)
-                }
+                r := sub(fp127_exp(x), 0x100000000000000000000000000000000)
             }
 
             _r := fp127_expm1(_x)

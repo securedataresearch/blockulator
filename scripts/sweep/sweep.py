@@ -122,8 +122,8 @@ OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "er
 # (every test forced: their last stage) and, those with a middle stage,
 # FP127LibMid (the fast path's test forced). The phases that give the other
 # ops a test and a second stage add them here.
-WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound"]
-MID127 = ["pow", "compound"]
+WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound", "exp", "exp2", "exp10", "expm1", "powu"]
+MID127 = ["pow", "compound", "ln", "log2", "log10", "log1p"]
 WIDE = {"fp19": WIDE19, "fp127": WIDE127}
 MID = {"fp19": MID19, "fp127": MID127}
 TWO = {"add", "mul", "div", "pow", "compound", "powu", "mulDown", "mulUp", "divDown", "divUp",
@@ -240,6 +240,46 @@ def gen127():
     write("fp127_hypot", [f127(rng, 1, 190) for _ in range(S)], [f127(rng, 1, 190) for _ in range(S)])
     write("fp127_inv", [f127(rng, 1, 254) for _ in range(S)])
     write("fp127_mulDown", [f127(rng, 100, 200) for _ in range(S)], [f127(rng, 60, 160) for _ in range(S)])
+    # pow and powu's last quarter (3.0): bases within 2^-8 of one at every
+    # scale with exponents spreading y log2 x over the whole range (where
+    # v5's absolute log missed), and the exact ties (x^y an odd multiple of
+    # 2^-129); for powu |n| from 2^16 (pow's road) and its ties
+    mp.dps = 60
+    ties = [(3 << 127, 129 << 128), (1 << 127, 129 << 128), (8 << 128, -43 << 128)]
+    for k in range(1, 8):
+        ties.append((3 ** (2 ** k) << (128 - 2 ** k), (129 << 128) >> k))
+    for _ in range(12):
+        c = rng.getrandbits(rng.randint(2, 84)) | 1
+        ties += [(c << 85, 3 << 128), ((c * c) << 42, 3 << 127)]
+    for k in range(1, 6):
+        b = rng.randrange(3, 62, 2)
+        ties.append(((b ** (2 ** k)) << (128 - 3 * 2 ** k), (43 << 128) >> k))
+    near, yn = [], []
+    for _ in range(S // 4 - len(ties)):
+        d = rng.getrandbits(rng.randint(1, 120)) | 1
+        x = ONE + d * rng.choice((1, -1))
+        t = mpf(rng.uniform(-130, 127)) if rng.random() < 0.7 else mpf(2) ** rng.uniform(-20, 7) * rng.choice((1, -1))
+        near.append(x)
+        yn.append(max(min(int(t / mp.log(mpf(x) / ONE, 2) * ONE), 1 << 254), -(1 << 254)))
+    pw = json.loads((D / "fp127_pow.json").read_text())
+    keep = 3 * S // 4
+    write("fp127_pow", [int(v, 16) for v in pw["a"][:keep]] + near + [a for a, _ in ties],
+          [int(v, 16) for v in pw["b"][:keep]] + yn + [b for _, b in ties])
+    big, kn = [], []
+    for _ in range(S // 8):
+        d = rng.getrandbits(rng.randint(1, 100)) | 1
+        x = ONE + d * rng.choice((1, -1))
+        top = min(126 / abs(float(mp.log(mpf(x) / ONE, 2))), 2.0 ** 120)
+        k = rng.randint(1 << 16, max(1 << 16, int(top)))
+        big.append(x * rng.choice((1, -1)))
+        kn.append(rng.choice((1, -1)) * k << 128)
+    for _ in range(S // 8):
+        c = rng.getrandbits(rng.randint(2, 84)) | 1
+        big.append((c << 85) * rng.choice((1, -1)))
+        kn.append(3 << 128)
+    pu = json.loads((D / "fp127_powu.json").read_text())
+    keep = 3 * S // 4
+    write("fp127_powu", [int(v, 16) for v in pu["a"][:keep]] + big, [int(v, 16) for v in pu["b"][:keep]] + kn)
 
 
 def near_branch(rng, n):
@@ -957,7 +997,7 @@ def fallback(lib: str, op: str, data) -> dict:
     assert got == plain, f"{lib} {op}: the count pass changed a result"
     fired = [w[0] for o, _, w in rec if w]
     out = {"fallback": sum(1 for c in fired if c), "fallbackRuns": sum(fired), "fallbackPct": round(100 * sum(1 for c in fired if c) / len(rec), 3)}
-    if lib == "fp19" and "rbadm" in closures(lib).get(op, set()):
+    if {"fp19": "rbadm", "fp127": "rbadm127"}.get(lib) in closures(lib).get(op, set()):
         second = sum(1 for o, _, w in rec if len(w) > 1 and w[1])
         out.update(second=second, secondPct=round(100 * second / len(rec), 3))
     return out

@@ -15,24 +15,28 @@ interface IFP127E {
     /// @notice 2^x, rounded to nearest.
     /// @dev Reverts with Overflow for x >= 127 (2^127 is 2^255 raw, which does
     ///      not fit; the Huff returned MAX_UINT256 above 127 and wrapped at 127
-    ///      exactly). v5: floor(x) and the fraction are split exactly, the
-    ///      fraction goes through the double-word kernel and the result is
-    ///      rounded once, so the answer is the nearest word (ties up: 2^-129 is
-    ///      one ULP). Exact for integer x.
+    ///      exactly). floor(x) and the fraction are split exactly, the fraction
+    ///      goes through the double-word kernel and the result is rounded once
+    ///      when its error bound clears the rounding boundary (3.0), else e^(x
+    ///      ln 2) in two words decides (expw): correctly rounded, ties up
+    ///      (2^-129 is one ULP). Exact for integer x.
     function exp2(int256 x) external pure returns (int256 r);
     /// @notice e^x, rounded to nearest.
     /// @dev Reverts with Overflow for x > 88 (the Huff returned MAX_UINT256).
-    ///      exp(0) is exactly ONE. v5: 2^(x log2 e) with log2 e to 2^-384, the
-    ///      integer part and the fraction split exactly and the fraction through
-    ///      the double-word kernel, rounded once: the nearest word on every
-    ///      input tested, where v4's one-word polynomial (2^-145 relative) was
-    ///      4e32 ULPs off near e^88. Below about -89.4 the value is under half
-    ///      an ULP and the result is 0; v4 returned 0 from -88, two ULPs early.
+    ///      exp(0) is exactly ONE. 2^(x log2 e): x = n ln 2 + r exactly enough
+    ///      (expr), e^r - 1 through the double-word kernel, rounded once when
+    ///      its error bound clears the rounding boundary (3.0), else in two words
+    ///      (expw): correctly rounded. v4's one-word polynomial (2^-145
+    ///      relative) was 4e32 ULPs off near e^88. Below about -89.4 the value is
+    ///      under half an ULP and the result is 0; v4 returned 0 from -88, two
+    ///      ULPs early.
     function exp(int256 x) external pure returns (int256 r);
     /// @notice 10^x, rounded to nearest.
-    /// @dev v5: 2^(x log2 10) with log2 10 to 2^-384; the integer part of the
+    /// @dev 2^(x log2 10) with log2 10 to 2^-384: the integer part of the
     ///      exponent is formed exactly, so it alone decides Overflow (from 2^127)
-    ///      and underflow to 0 (below 2^-129), for any x.
+    ///      and underflow to 0 (below 2^-129), for any x; the fraction through
+    ///      the double-word kernel, rounded once when its error bound clears the
+    ///      rounding boundary (3.0), else e^(x ln 10) in two words (expw).
     function exp10(int256 x) external pure returns (int256 r);
     /// @notice log2(x) for x > 0, rounded to nearest.
     /// @dev Reverts with OutOfRange for x <= 0 (the Huff returned 0). Exact for
@@ -58,25 +62,29 @@ interface IFP127E {
     /// @dev Special cases in Huff order: y == 0 gives 1 (including 0^0); x == 0
     ///      gives 0; x == 1 gives 1; x < 0 reverts with OutOfRange. Shortcuts
     ///      y == 1 (x itself), y == 2 (the 512-bit square, rounded), x == 2
-    ///      (exp2) and x == 10 (exp10), all correctly rounded. The general path
-    ///      (v5) takes log2(x) to 2^-299 in the double word (l2p), forms
-    ///      y log2(x) exactly from it, splits integer and fraction, and runs the
-    ///      fraction through the double-word kernel with one rounding. The error
-    ///      is under 2^-299 (1 + |y|) relative before that rounding: the
-    ///      nearest word whenever |y| x^y < 2^140 or so, faithful to
-    ///      |y| x^y < 2^170. The one-word log2 and 2^t go first (pow2t) and
-    ///      decide when their error bound cannot change the rounding, as the
-    ///      logs do; the double word then gives the same word, so it runs only
-    ///      near a midpoint or for results from about 2^12. v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored
-    ///      or truncated; they now take the general path, which is nearest.
+    ///      (exp2) and x == 10 (exp10), all correctly rounded. The one-word
+    ///      log2 and 2^t go first (pow2t) and decide when their error bound
+    ///      cannot change the rounding, as the logs do; else the middle stage
+    ///      (powmid): log2(x) in the double word, relative near one (3.0: d =
+    ///      x - 1 exactly and FP19's mratio, where v5's absolute 2^-299 missed
+    ///      by up to 1e11 ULPs for a base within 2^-88 of one raised past
+    ///      2^90), y log2(x) split exactly into integer and fraction, the
+    ///      fraction through the double-word kernel, one rounding when its bound
+    ///      clears the rounding boundary; else an exact tie (powtie) or the
+    ///      second stage in two words (powslow): correctly rounded, ties up.
+    ///      v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored or truncated; they
+    ///      take the general path, which is nearest.
     function pow(int256 x, int256 y) external pure returns (int256 r);
     /// @notice x^floor(n) for an integer exponent, rounded to nearest: binary
     ///         exponentiation on a 256-bit mantissa with a separate binary
     ///         exponent, rounded once; when that mantissa's error bound
     ///         (k + 5) 2^-255, k = |n|, straddles a rounding midpoint, the same
-    ///         product on a 512-bit mantissa decides. Exact whenever the true
-    ///         value is representable. Negative n inverts the mantissa, so x^-n
-    ///         is as accurate as x^n.
+    ///         product on a 512-bit mantissa decides (within 3k 2^-511 relative,
+    ///         under 2^-238 ULP below k = 2^16; exact at every tie). From k =
+    ///         2^16, pow(|x|, n) with the sign restored. Correctly rounded, the
+    ///         magnitude's ties away from zero. Exact whenever the true value is
+    ///         representable. Negative n inverts the mantissa, so x^-n is as
+    ///         accurate as x^n.
     /// @dev Maker's rpow and PRBMath's powu square at the format's own
     ///      precision and floor on every step, so each squaring loses a bit of
     ///      the fraction; here |x| is written as m 2^(e-255) with m in
@@ -102,10 +110,15 @@ interface IFP127E {
     ///         because on an 18-decimal grid the sum is where a small x loses
     ///         its digits.
     function log1p(int256 x) external pure returns (int256 r);
-    /// @notice e^x - 1, rounded to nearest, with the one subtracted before the
-    ///         rounding so a small x keeps its relative precision: a 27-term
-    ///         series at 2^-192 for |x| <= 1/16, the double-word exp beyond.
+    /// @notice e^x - 1, rounded to nearest: on the 2^-128 grid the one is
+    ///         exact, so this is exp(x) - 1 word for word, a small x by its own
+    ///         series for gas: 27 terms at 2^-192 for |x| <= 1/16.
     /// @dev Below 2^-65, x itself: x^2/2 is under a quarter ULP and the series'
-    ///      value is x 2^192 plus less than 2^62 units, which rounds to x.
+    ///      value is x 2^192 plus less than 2^62 units, which rounds to x. The
+    ///      series' value is within 2 units of 2^-192 (each Horner step's floor
+    ///      and truncation under 1 + 1/k, damped by |x|/k <= 1/32, then the last
+    ///      product's floor; the tail under 2^-200 relative); when that bound
+    ///      reaches the rounding boundary (3.0) the exponentials' second stage
+    ///      decides (expw, less one). Beyond 1/16, exp(x) - 1.
     function expm1(int256 x) external pure returns (int256 r);
 }
