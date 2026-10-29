@@ -33,6 +33,11 @@ the script exits 1; scripts/gates.py and CI run it beside FP19's bounds.py.
   cbrt, word steps           cbrtw's Y                   exactly floor(cbrt z) (err 1: no error)
   cbrt, Newton step          y, one added (2^-128)       in [floor R, floor R + 3], R the root
                                                          (|y - (R + 1)| < 2)
+  lambertW0, lambertWm1,     lwfin's w + v 2^-300        2^(2 msb|y| + msb|w| - 421) + |y| 2^-124
+  lwfin                      (2^-300)                    + 16: Newton's y^2 |w| / (2 |1 + w|^3)
+                                                         twice over, B's top word, the floors
+  lambertW, near -1/e        lwbr's W = -1 +- q          6 (lwqs: y's floor, the kernel's 2^-256,
+                             (2^-192)                    the floored products, about 5)
   erf, erfc, erfs            erfs (2^-192)               ERR_S = 3 2^44 (2^45.58): derived in
                                                          erf_model.py, 2^45.29 (exp2frac's 2^-146.7
                                                          times erf, the floors)
@@ -40,7 +45,6 @@ the script exits 1; scripts/gates.py and CI run it beside FP19's bounds.py.
                                                          error times erfc(4), the certified fit)
   normCdf, erfs and erfct    erfc(y)/2 or 1 - it         ERR_S, ERR_T (y = x/sqrt 2 at 2^-192
                              (2^-192)                    and the halving: err/2 + 3.2 and + 1)
-
   sinh, cosh, one exp        V = (vh, vl) (2^-192)       2^20, the most over |x| <= 88 of 4 + vh / 2^43
                                                          (measured against the latter): two floors
                                                          and einvhalf's dropped bits (3), the
@@ -63,7 +67,7 @@ import random
 import sys
 from pathlib import Path
 
-from mpmath import mp, mpf, log, power, cbrt as mcbrt, sinh as msinh, cosh as mcosh, tanh as mtanh, atanh as matanh, erf as merf, erfc as merfc, ncdf
+from mpmath import mp, mpf, log, power, cbrt as mcbrt, sinh as msinh, cosh as mcosh, tanh as mtanh, atanh as matanh, lambertw, erf as merf, erfc as merfc, ncdf
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import precise_model as P  # noqa: E402
@@ -323,6 +327,41 @@ def hyperbolics(M: Meter, rng, n):
 
 
 # ---------------------------------------------------------------------------
+# Lambert W: lwfin's value against its err, lwbr's W near -1/e against 6
+# units (precise_model.py's lw_w0, lw_wm1, lw_br and lw_fin, as the Yul)
+# ---------------------------------------------------------------------------
+
+LW_BP = -0x5267adbd9d4543376382ee923e4a59ec      # 1 + e x = 1/8: lwbr below, lwfin above
+LW_MIN = -0x5e2d58d8b3bcdf1abadec7829054f90d     # -floor(2^128 / e), the smallest input
+
+
+def lambert(M: Meter, rng, n):
+    for i in range(n):
+        c = i % 5
+        br = -1 if c == 2 else rng.choice((0, -1)) if c > 2 else 0
+        if c == 0:                              # W0, x > 0, |x| from 2^-65 to 2^127
+            x = rand_pos(rng, 63, 254)
+        elif c == 1:                            # W0, -0.32 < x < 0
+            x = -rand_pos(rng, 63, 126)
+        elif c == 2:                            # W-1, -0.32 < x < 0, down to -2^-128
+            x = -rand_pos(rng, 0, 126)
+        elif c == 3:                            # either branch, just above 1 + e x = 1/8
+            x = LW_BP + rand_pos(rng, 0, 124)
+        else:                                   # near -1/e, both branches, to the smallest input
+            x = LW_MIN + rand_pos(rng, 0, 122)
+        if x < LW_MIN or (br and x >= 0) or abs(x) < 1 << 63:
+            continue
+        W = lambertw(mpf(x) / ONE, br).real
+        if x < LW_BP:
+            q, _ = P.lw_br(P.lw_q(x), 1 if br else 0)
+            M.add("lambertW, near -1/e, W at 2^-192", 6, q, abs(1 + W) * G)
+            continue
+        w, _ = (P.lw_wm1(x) if br else P.lw_w0(x))
+        _, v, err = P.lw_fin(x, w)
+        M.add(f"lambertW{'m1' if br else '0'}, lwfin (2^-300)", err, w * mpf(2) ** 172 + v, W * mpf(2) ** 300)
+
+
+# ---------------------------------------------------------------------------
 # erf, erfc, normCdf: the value round64 rounds, against ERR_S and ERR_T
 # ---------------------------------------------------------------------------
 
@@ -364,6 +403,7 @@ def run(n: int) -> bool:
     powu(M, rng, n)
     cbrt_(M, rng, n)
     hyperbolics(M, rng, n)
+    lambert(M, rng, n)
     erf_(M, rng, n)
     bad = M.report()
     print(f"{sum(1 for r in M.rows.values() if r[3] >= 1)} regions over their bound")

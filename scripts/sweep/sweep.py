@@ -122,7 +122,8 @@ OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "er
 # (every test forced: their last stage) and, those with a middle stage,
 # FP127LibMid (the fast path's test forced). The phases that give the other
 # ops a test and a second stage add them here.
-WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound", "sinh", "cosh", "tanh", "atanh", "erf", "erfc", "normCdf"]
+WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound", "sinh", "cosh", "tanh", "atanh",
+           "lambertW0", "lambertWm1", "erf", "erfc", "normCdf"]
 MID127 = ["pow", "compound", "atanh"]
 WIDE = {"fp19": WIDE19, "fp127": WIDE127}
 MID = {"fp19": MID19, "fp127": MID127}
@@ -222,6 +223,15 @@ def gen():
         db = rl.randint(1, 126)
         d = rl.getrandbits(db) | (1 << db)
         wm1.append(-d if -d >= nie else nie + (1 << 108) + rl.getrandbits(100))
+    # 3.0: both branches within 2^-20 of -1/e down to the smallest input
+    # (lwbr's q at 2^-64), and W0 on small negative x (lwfin from the cubic)
+    for _ in range(500):
+        db = rl.randint(0, 107)
+        w0.append(nie + (rl.getrandbits(db) | (1 << db)))
+        db = rl.randint(0, 107)
+        wm1.append(nie + (rl.getrandbits(db) | (1 << db)))
+        db = rl.randint(63, 120)
+        w0.append(-(rl.getrandbits(db) | (1 << db)))
     write("fp127_lambertW0", w0)
     write("fp127_lambertWm1", [x for x in wm1 if x < 0])
     gen127()
