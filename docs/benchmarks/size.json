@@ -41,8 +41,8 @@
     }
    },
    "sum": {
-    "legacy": 184361,
-    "viaIr": 175563
+    "legacy": 194639,
+    "viaIr": 186934
    },
    "ops": {
     "fromFixed18": {
@@ -246,16 +246,16 @@
      "viaIr": 12219
     },
     "erf": {
-     "legacy": 5456,
-     "viaIr": 5364
+     "legacy": 8849,
+     "viaIr": 9087
     },
     "erfc": {
-     "legacy": 5431,
-     "viaIr": 5371
+     "legacy": 8880,
+     "viaIr": 9226
     },
     "normCdf": {
-     "legacy": 5490,
-     "viaIr": 5482
+     "legacy": 8926,
+     "viaIr": 9275
     }
    }
   },
@@ -630,11 +630,11 @@
     "erfc",
     "normCdf"
    ],
-   "legacy": 5815,
-   "viaIr": 11394,
+   "legacy": 11356,
+   "viaIr": 16970,
    "sumOfSingles": {
-    "legacy": 16377,
-    "viaIr": 16217
+    "legacy": 26655,
+    "viaIr": 27588
    }
   },
   {
