@@ -98,7 +98,7 @@ LITERALS = {
     CAPTION: "V9",
     "e<sup>40</sup> =": "V9",
     "e<sup>40</sup>": "V9",
-    FOOTER: "REPORT",  # 2^256 words in 256 bits is arithmetic; e^40 is not dyadic (V9's truth is not a 2^-128 multiple): no ledger id yet
+    FOOTER: "V8",  # V8: a 256-bit word holds finitely many numbers and most exact results fall between two of them; e^40 is not a 2^-128 multiple (V9 truth)
 }
 
 
