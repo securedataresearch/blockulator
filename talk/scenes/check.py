@@ -180,20 +180,35 @@ def expect_s06_resupply(mod) -> dict:
     with localcontext() as ctx:
         ctx.prec = 120
         rate = Decimal(10**36) / Decimal(price)
-        quotient = str(rate.quantize(Decimal(1).scaleb(-mod.QUOTIENT_DIGITS), rounding=ROUND_FLOOR))
+
+        def to_decimals(x: Decimal, places: int) -> str:  # rounded half-up at the stated decimal, by Decimal
+            return f"{x.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP):,}"
+
+        quotient = to_decimals(rate, mod.QUOTIENT_DIGITS)
+        rate_short = to_decimals(rate, mod.RATE_SHORT)
         ltv = Decimal(borrow) * rate * ltv_p / ex_p / coll
-        ltv_str = f"{ltv.quantize(Decimal(1).scaleb(-mod.LTV_DECIMALS), rounding=ROUND_FLOOR):,}"
+        ltv_str = to_decimals(ltv, mod.LTV_DECIMALS)
         ratio = f"{int((ltv / max_ltv).to_integral_value()):,}"
         pct = f"{(Decimal(max_ltv) / ltv_p * 100).normalize()}%"
+        # the story: the rate reads below one half at the count the scene names it to, and
+        # that count is the fewest that does (one fewer rounds up to 0.5), so the floor to 0 is visible
+        assert Decimal(rate_short) < Decimal("0.5") and Decimal(quotient) < Decimal("0.5"), (rate_short, quotient)
+        assert Decimal(to_decimals(rate, mod.RATE_SHORT - 1)) == Decimal("0.5"), mod.RATE_SHORT
+        assert len(quotient.partition(".")[2]) == mod.QUOTIENT_DIGITS and len(ltv_str.partition(".")[2]) == mod.LTV_DECIMALS
     floor_rate = 10**36 // price
     assert floor_rate == int(p["exchangeRateOnChain"]), "the chain stored the floored rate"
     ltv_floor = ((borrow * floor_rate * ltv_p) // ex_p) // coll
     cite = {c["line"]: c["text"] for c in d["citations"] if c["file"].endswith("ResupplyPairCore.sol")}
+    # no number on screen carries an ellipsis: every string the scene draws is complete in a stated format
+    for k, v in mod.numbers().items():
+        assert "…" not in str(v), (k, v)
     return {
         "block": f"{int(p['block']):,}",
         "price": f"{price:,}",
-        "quotient": quotient + "…",
-        "rate_short": quotient[: mod.RATE_SHORT + 2] + "…",
+        "quotient": quotient,
+        "quotient_label": f"(to {mod.QUOTIENT_DIGITS} decimals)",
+        "rate_short": rate_short,
+        "rate_label": f"(to {mod.RATE_SHORT} decimals)",
         "floor": str(floor_rate),
         "borrow_tokens": f"{borrow // ex_p:,}",
         "collateral": f"{coll:,}",
@@ -201,7 +216,8 @@ def expect_s06_resupply(mod) -> dict:
         "ltv_floor": f"{ltv_floor:,}",
         "max_ltv": f"{max_ltv:,}",
         "max_ltv_pct": pct,
-        "ltv_exact": ltv_str + "…",
+        "ltv_exact": ltv_str,
+        "ltv_label": f"(to {mod.LTV_DECIMALS} decimals)",
         "ratio": ratio,
         "solvent_floor": ltv_floor <= max_ltv,
         "solvent_exact": ltv <= max_ltv,
