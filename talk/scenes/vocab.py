@@ -734,6 +734,41 @@ def thetanuts() -> dict:
     return _load("scripts/replays/thetanuts.json")
 
 
+def replay_table(name: str, heading: str) -> list[dict]:
+    """The first markdown table under a heading in docs/benchmarks/replay-<name>.md
+    (the pages the replay scripts generate): one dict per data row, keyed by the
+    header cells, every cell the stripped string as written (thousands separators
+    kept; a scene's numbers() parses what it draws). The heading matches a
+    "#…# <heading>" line exactly, after its hashes; a numbered-list table under
+    it counts too (the first table whose rows start with "|" after the heading).
+    KeyError if the heading is not found, ValueError if no table follows it."""
+    path = ROOT / "docs" / "benchmarks" / f"replay-{name}.md"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    start = None
+    for i, line in enumerate(lines):
+        if line.startswith("#") and line.lstrip("#").strip() == heading.strip():
+            start = i + 1
+            break
+    if start is None:
+        raise KeyError((path.name, heading))
+    rows: list[list[str]] = []
+    for line in lines[start:]:
+        if rows and not line.strip().startswith("|"):
+            break
+        if line.startswith("#"):
+            break
+        t = line.strip()
+        if t.startswith("|"):
+            cells = [c.strip() for c in t.strip("|").split("|")]
+            if all(set(c) <= set("-: ") for c in cells):
+                continue  # the header/body separator
+            rows.append(cells)
+    if len(rows) < 2:
+        raise ValueError((path.name, heading, "no table"))
+    header = rows[0]
+    return [dict(zip(header, r)) for r in rows[1:]]
+
+
 def balancer() -> dict:
     """scripts/replays/balancer.json, whole (about, provenance, pools, test, score)."""
     return _load("scripts/replays/balancer.json")
