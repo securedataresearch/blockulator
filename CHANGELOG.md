@@ -41,9 +41,9 @@ value with no test):
 - Sweep (now 2,500 and 2,000 inputs, with 1,000 within 2^-20 of −1/e down
   to the smallest input and 500 small negative x): 0 misrounded plain and
   with the tests forced; fallback 0 of 4,500. Typical gas on v8's 1,500
-  inputs: lambertW0 8,152 → 8,311, lambertWm1 7,968 → 8,127 (+2.0%);
-  through the second stage about 36,000. FP127S 7,994 → 11,844 bytes;
-  inline `FP127Lib.lambertW0` 8,427 → 12,424.
+  inputs: lambertW0 8,152 → 8,347, lambertWm1 7,968 → 8,163 (+2.4%);
+  through the second stage about 36,000. FP127S 7,994 → 11,817 bytes;
+  inline `FP127Lib.lambertW0` 8,427 → 12,374.
 
 FP127's exp kernel and division, same words (FP127 takes a new salt at the
 next deploy):
