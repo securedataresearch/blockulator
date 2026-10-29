@@ -119,6 +119,11 @@ ROW_COLOUR = {
     "s15": {"sign": Palette.TEXT, "fp127_integer": Palette.SAPPHIRE, "fp127_fraction": Palette.EMERALD, "fp19_exponent": Palette.VIOLET, "fp19_fraction": Palette.TEXT},
     "s16": {"mul": Palette.GOLD, "divh": Palette.VIOLET},
     "s17": {"proven": Palette.EMERALD, "fuzzed": Palette.GOLD, "tested": Palette.SAPPHIRE, "limits": Palette.MUTED},
+    # the text slides (talk/briefs/text_slides.md): four budget bullets, two curves, three habits, two audiences
+    "s11": {"long horizons": Palette.GOLD, "cancellation": Palette.SAPPHIRE, "extreme ranges and tails": Palette.VIOLET, "iteration": Palette.SLATE, "direction": Palette.EMERALD},
+    "s14": {"fees": Palette.MUTED, "errors": Palette.RED, "words": Palette.EMERALD},
+    "s18": {"Decide": Palette.GOLD, "Measure": Palette.SAPPHIRE, "Declare": Palette.VIOLET, "tick": Palette.EMERALD, "example": Palette.AMBER},
+    "s19": {"engineers": Palette.GOLD, "agents": Palette.SAPPHIRE},
 }
 
 
@@ -341,15 +346,18 @@ def snap(dot: Dot, line: GridLine, to_tick: float, colour: str, run_time: float 
     )
 
 
-def measure(line: GridLine, a: float, b: float, label: str, scale: float = 1.0, drop: float = 0.45, colour: str = Palette.MUTED, use_markup: bool = False) -> VGroup:
+def measure(line: GridLine, a: float, b: float, label: str | None, scale: float = 1.0, drop: float = 0.45, colour: str = Palette.MUTED, use_markup: bool = False) -> VGroup:
     """A thin bracket |——| under the line from tick a to b with a label
     beneath: the vocabulary's way of naming a distance on the grid.
-    use_markup sets the label through markup() (a power in <sup>)."""
+    use_markup sets the label through markup() (a power in <sup>); label
+    None is the bare bracket (a schematic gap with no number, s11)."""
     y = DOWN * drop * scale
     cap = UP * 0.07 * scale
     pa, pb = line.n2p(a) + y, line.n2p(b) + y
     bar = Line(pa, pb, color=colour, stroke_width=1.5)
     caps = VGroup(Line(pa - cap, pa + cap, color=colour, stroke_width=1.5), Line(pb - cap, pb + cap, color=colour, stroke_width=1.5))
+    if label is None:
+        return VGroup(bar, caps)
     text = (markup if use_markup else words)(label, SIZE_BODY, colour).scale(scale).next_to(bar, DOWN, buff=0.1 * scale)
     return VGroup(bar, caps, text)
 
@@ -675,14 +683,18 @@ def qr_matrix(url: str) -> list[list[bool]]:
     return [[bool(c) for c in row] for row in q.get_matrix()]
 
 
-def qr(url: str, size: float, colour: str = Palette.TEXT, module_colour: str = Palette.BG, label_colour: str = Palette.MUTED, label_size: float = SIZE_CAPTION, label_buff: float = 0.2) -> VGroup:
+def qr(url: str, size: float, colour: str = Palette.TEXT, module_colour: str = Palette.BG, label_colour: str = Palette.MUTED, label_size: float = SIZE_CAPTION, label_buff: float = 0.2, label: str | None = None, label_align: str = "centre") -> VGroup:
     """A QR code the deck can show: a white rounded panel (the quiet zone
     is part of it) with the dark modules as one VGroup of squares, drawn,
     not an image, so it stays crisp at any size; `size` is the panel's
     side in scene units. The URL is drawn under it with digits() at
     CAPTION (the font's ligatures left on: "//"), so check.py sees it (a
     URL with a digit needs a LITERALS entry). The group's .panel, .modules, .label and .matrix name the
-    parts; the whole is centred on the origin."""
+    parts; the whole is centred on the origin. `label` is the text drawn
+    under the tile when it is not the URL itself (the URL without its
+    scheme; lines split on newlines, each its own digits(), stacked,
+    centred or right-aligned to the panel per `label_align`, where a
+    column is narrower than the URL); .url keeps the encoded URL."""
     matrix = qr_matrix(url)
     n = len(matrix)
     cell = size / n
@@ -693,11 +705,116 @@ def qr(url: str, size: float, colour: str = Palette.TEXT, module_colour: str = P
         for j, dark in enumerate(row):
             if dark:
                 modules.add(Rectangle(width=cell + grow, height=cell + grow, color=module_colour, fill_color=module_colour, fill_opacity=1.0, stroke_width=0).move_to([-size / 2 + (j + 0.5) * cell, size / 2 - (i + 0.5) * cell, 0]))
-    label = digits(url, label_size, label_colour, ligatures=True).next_to(panel, DOWN, buff=label_buff)
-    g = VGroup(panel, modules, label)
-    g.panel, g.modules, g.label, g.matrix = panel, modules, label, matrix
+    lines = VGroup(*[digits(line, label_size, label_colour, ligatures=True) for line in (url if label is None else label).split("\n")])
+    lines.arrange(DOWN, buff=0.05, aligned_edge=RIGHT if label_align == "right" else None)
+    if label_align == "right":
+        lines.next_to(panel, DOWN, buff=label_buff, aligned_edge=RIGHT)
+    else:
+        lines.next_to(panel, DOWN, buff=label_buff)
+    g = VGroup(panel, modules, lines)
+    g.panel, g.modules, g.label, g.matrix, g.url = panel, modules, lines, matrix, url
     g.move_to([0, 0, 0])
     return g
+
+
+# ------------------------------------------------------------- text slides --
+TYPE_PER_CHAR = 0.035  # a typed line's pace, seconds per glyph
+
+
+def wrap(text: str, width: int) -> str:
+    """A long line broken at spaces into lines of at most `width`
+    characters (textwrap), joined with newlines for a multi-line Text."""
+    import textwrap
+
+    return "\n".join(textwrap.wrap(text, width))
+
+
+def glyphs(txt: Text, sub: str) -> VGroup:
+    """The glyphs of `sub` inside a Text, as a group: Text keeps one
+    submobject per non-space character, so the span is found in the
+    string with its spaces removed. sub must occur once."""
+    raw = txt.original_text if hasattr(txt, "original_text") else txt.text
+    flat, key = raw.replace(" ", "").replace("\n", ""), sub.replace(" ", "")
+    assert flat.count(key) == 1, (raw, sub)
+    i = flat.index(key)
+    return txt[i : i + len(key)]
+
+
+class Checkbox(VGroup):
+    """A square box and its label; tick() puts an EMERALD check_mark()
+    inside the box and returns the animation that draws it. .box, .label,
+    .mark name the parts."""
+
+    def __init__(self, label: str, size: float = SIZE_BODY, colour: str = Palette.TEXT, side: float = 0.42, gap: float = 0.25, box_colour: str = Palette.RULE):
+        super().__init__()
+        self.box = Rectangle(width=side, height=side, color=box_colour, stroke_width=2.5)
+        self.label = words(label, size, colour)
+        self.label.next_to(self.box, RIGHT, buff=gap)
+        self.label.set_y(self.box.get_y())
+        self.mark = check_mark(Palette.CORRECT, size=side * 0.78).move_to(self.box)
+        self.add(self.box, self.label)
+
+    def tick(self, run_time: float = 0.4):
+        from manim import Create
+
+        self.mark.move_to(self.box)  # wherever the checkbox has been moved to
+        self.add(self.mark)
+        return Create(self.mark, run_time=run_time)
+
+
+class TextScene(DeckScene):
+    """The seven text slides' helper (talk/briefs/text_slides.md): a line
+    typed in glyph by glyph, a strike through part of one, a checkbox that
+    ticks, a bullet row (a glyph beside a line). Titles and keys stay
+    static chrome through fix(); only the typed lines and the glyphs move."""
+
+    def typed(self, text: str, size: float = SIZE_BODY, colour: str = Palette.TEXT, run_time: float | None = None, mono: bool = False, place=None, **kw) -> Text:
+        """Make the Text (words(), or digits() with mono), place it with
+        `place(mobj)` if given, and play AddTextLetterByLetter at
+        TYPE_PER_CHAR a glyph (or spread over run_time). Returns the Text."""
+        from manim import AddTextLetterByLetter
+
+        t = (digits if mono else words)(text, size, colour, **kw)
+        if place is not None:
+            place(t)
+        n = max(1, len(text.replace(" ", "").replace("\n", "")))
+        per = (run_time / n) if run_time else TYPE_PER_CHAR
+        self.play(AddTextLetterByLetter(t, time_per_char=per))
+        return t
+
+    def strike(self, mobj, colour: str = Palette.WRONG, overshoot: float = 0.1, stroke_width: float = 4.0) -> Line:
+        """A line through a text (or a span of its glyphs), left to right;
+        the caller plays Create on it."""
+        y = mobj.get_center()[1]
+        return Line([mobj.get_left()[0] - overshoot, y, 0], [mobj.get_right()[0] + overshoot, y, 0], color=colour, stroke_width=stroke_width)
+
+    def checkbox(self, label: str, size: float = SIZE_BODY, colour: str = Palette.TEXT, **kw) -> Checkbox:
+        return Checkbox(label, size, colour, **kw)
+
+    def bullet(self, glyph, text: str, size: float = SIZE_BODY, colour: str = Palette.TEXT, gap: float = 0.4, glyph_right: bool = False) -> VGroup:
+        """A row: a glyph (any mobject) and a line, the glyph left of the
+        text (or right of it with glyph_right). .glyph and .text name them."""
+        t = words(text, size, colour)
+        row = VGroup(t, glyph) if glyph_right else VGroup(glyph, t)
+        row.arrange(RIGHT, buff=gap)
+        row.glyph, row.text = glyph, t
+        return row
+
+    def snapshot(self) -> list:
+        """The scene's state, for a looping scene: every mobject's class,
+        centre, size, colour and opacity, so check.py can assert the last
+        frame is the first (the chrome included)."""
+        out = []
+        for m in self.mobjects:
+            for part in m.get_family():
+                # the drawn things only: an animation leaves empty Group wrappers behind
+                if not isinstance(part, (VMobject, ImageMobject)):
+                    continue
+                rec = (type(part).__name__, tuple(float(v) for v in np.round(part.get_center(), 2)), round(float(part.width), 2), round(float(part.height), 2))
+                if isinstance(part, VMobject):
+                    rec += (part.get_color().to_hex().lower(), round(float(part.get_stroke_opacity()), 2), round(float(part.get_fill_opacity()), 2))
+                out.append(rec)
+        return out
 
 
 # ---------------------------------------------------------------- numbers --

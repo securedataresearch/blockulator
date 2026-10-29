@@ -76,7 +76,12 @@ to 80 decimals when the binary dive needs them; s12's chain names land
 together at the start of the table section (the hero address fills
 section 0) and dim with the table under the call; s15's FP19 axis
 replaces FP127's grid; s16's grid arrives after the coins; s17's two
-lines leave when the table begins.
+lines leave when the table begins. On the text slides nothing moves:
+s14's chart keeps its place at the left (the brief had it shrink; its
+axes and both series labels are chrome), s13 dims its first line to
+FAINT under the second, s19 fills its regions in turn (the addresses,
+the objects' column, the tiles at the right, the two ways in, the
+closing line) and holds them all on the poster.
 
 ## The complete spectrum
 
@@ -99,6 +104,10 @@ rest is assigned once, in `vocab.py`, and reused by every builder:
 | s15's fields | sign TEXT; FP127 integer SAPPHIRE, fraction EMERALD; FP19 exponent VIOLET, fraction TEXT | `ROW_COLOUR["s15"]` |
 | s16's coins | MUL GOLD, the 512-by-256-bit division VIOLET | `ROW_COLOUR["s16"]` |
 | s17's rows | proven EMERALD, fuzzed GOLD, tested SAPPHIRE, limits MUTED | `ROW_COLOUR["s17"]` |
+| s11's bullets | long horizons GOLD, cancellation SAPPHIRE, extreme ranges and tails VIOLET, iteration SLATE; the direction EMERALD (the dropped tail RED) | `ROW_COLOUR["s11"]` |
+| s14's curves | fees MUTED, errors RED; the three words on EMERALD panels | `ROW_COLOUR["s14"]` |
+| s18's habits | Decide GOLD, Measure SAPPHIRE, Declare VIOLET; the ticks EMERALD; the `example` tag AMBER | `ROW_COLOUR["s18"]` |
+| s19's and s20's audiences | engineers GOLD, agents SAPPHIRE; the objects in their family colours | `ROW_COLOUR["s19"]` |
 
 `protocol_colour(name)` finds the hue from incidents.json's protocol name
 ("Bunni v2" → bunni). A new slide that names a protocol or a row takes
@@ -114,7 +123,11 @@ drops a section with no play/wait silently, which would shift every
 later name in the index) and the scene ends with `self.close()`, a long
 hold whose last frame is the slide's poster. Nothing fades to the
 background at the end: the last frame reads as a finished slide. The
-deck plays one section per click and holds its last frame.
+deck plays one section per click and holds its last frame. The title
+(s01, `loop: true` in slides.yaml) is the one single-section scene: its
+last frame is its first (`TextScene.snapshot()` before and after the
+beat, asserted in the scene and by check.py), so the clip loops with no
+seam.
 
 ## Fonts
 
@@ -157,6 +170,20 @@ Pango per process; every text helper calls it.
   `talk/build/`; `self.caption(text)` returns the animation that puts the
   source of the numbers in the bottom-left corner; `SECTIONS`,
   `section(i, hold)`, `close()` as above.
+- `TextScene(DeckScene)`: the seven text slides' helper. `typed(text,
+  size, colour, run_time, mono=False, place=None)` makes the Text (words(),
+  or digits() with mono), places it with `place(mobj)`, plays
+  `AddTextLetterByLetter` at `TYPE_PER_CHAR` (0.035 s a glyph, or spread
+  over run_time) and returns it; `strike(mobj, colour)` is the Line
+  through a text or a span of its glyphs (`glyphs(txt, sub)` finds the
+  span: Text keeps one submobject per non-space character), played with
+  Create; `checkbox(label, size, colour)` is a `Checkbox` (a square and
+  its label; `.tick()` puts an EMERALD check_mark() in the box and returns
+  the Create); `bullet(glyph, text)` a row of a glyph and a line;
+  `snapshot()` the state of every drawn mobject (class, centre, size,
+  colour, opacities) for the looping title. `wrap(text, width)` breaks a
+  line at spaces for a multi-line Text. `measure(…, label=None)` is the
+  bare bracket (s11's schematic gaps carry no number).
 - `qr(url, size)`: a QR code drawn, not an image: a white rounded panel
   (`Palette.TEXT`, the quiet zone of 4 modules inside it) with the dark
   modules (`Palette.BG`) as one `VGroup` of squares, `size` units a side,
@@ -165,7 +192,12 @@ Pango per process; every text helper calls it.
   with a digit needs a `LITERALS` entry. Error correction M, the smallest
   version that fits (`qrcode`, a dev dependency). `.panel`, `.modules`,
   `.label`, `.matrix` name the parts; `qr_matrix(url)` is the matrix
-  alone, for `check.py` to regenerate and compare.
+  alone, for `check.py` to regenerate and compare. `label` is the text
+  drawn under the tile when it is not the URL (the URL without its
+  scheme; lines split on newlines, each its own digits(), centred or
+  right-aligned to the panel with `label_align="right"`), `.url` the URL
+  encoded; s19 breaks the repository's URL at its slashes into three
+  lines (one line is 6.8 units, the tile column 4.1), s20 draws it whole.
 - Loaders, all by path from the repo root: `libs()` (static/data/libraries.json
   → `{id: record}`) and `talk_libs()` (the same less BlockulatorWad: the 17
   every comparison accounts for), `edges(op)` and `probe(op, *args)`
@@ -234,6 +266,13 @@ chart's own units.
 | `s16_ziv.py` | What correct costs | sweep.json rows `lib=fp19 op=exp` and `lib=fp127 op=exp` (plain pass): `.n`, `.fallback`, FP127's `.inputs`; gas.json `.ops.exp.typical.gas.lib`'s median through `gas("exp")` (2,835); the pre-test figure 2,716 is a module constant (contracts/deployments/FP127.md, claim V19) and the percentage is computed; the opcode prices (MUL 5, divh 393) are `LITERALS` (V32); the grid of the middle sections carries no numbers |
 | `s17_proofs.py` | Knowing it's right | proofs.json `.ops[]` by lib and status (FP127's 17 proven: 16 whose `.tool` is Halmos, sqrt by exact integers; its 2 fuzzed, gavg and hypot; FP19's 18 proven of 24, six fuzzed), `.fuzz[]` runs (every `testFuzz_` entry 50,000); sweep.json `.rows[]` for fp19 and fp127: `.n` and `.misrounded` summed per library over every row (455,082 / 212,119, 0 misrounded) and over the rows whose op is one of the 21 transcendentals (the FP127 README's "The transcendentals round to nearest" list, V34: 327,488 / 168,120); the oracles' digits (300 / 200) parsed from `._doc`; the limits' 0.92 and 0.79 and the footnote are `LITERALS` (V38, V52); row 4's two limits play as two held sub-beats inside one section |
 | `s12_reference.py` | There is no reference | contracts/deployments/RELEASE.json `.components.FP127.address/.version` (the address, typed in; it fits the frame only below SIZE_HERO); talk/scenes/data/chains.json `.chains[]` (chain, clz_since, status, deployed, proxy; `.probed`, the caption): one row per chain in the README's order, "deployed" on the `deployed` row alone, "has CLZ · proxy present · not yet deployed" where `proxy` is true, "no CLZ" with a cross on the unsupported; the exp(40) word to 18 decimals from `correctly_rounded_18(truth80())`, typed twice (the reference's and your contract's, the same string); `box()` for the two contracts |
+| `s01_title.py` | THE END OF ROUNDING ERRORS | no JSON: the title (the user's), `blockulator.com` (K12) and the speaker placeholder `[speaker]` (REPORT: the user's line) are `LITERALS`; the one looping scene: everything is on the first frame, the dot drifts, snaps in EMERALD under a halo and returns; `start_state == end_state` |
+| `s11_budget.py` | Precision is a budget | no JSON: the essay's four bullets (essay-v7 §5) and the script's fifth line (§11) are `LITERALS`, the glyphs schematic (a stretching GridLine, two bars to a sliver with a bare `measure()`, a dot off the grid's end in RED with a cross, three `snap()`s under a loop arrow, an EMERALD `direction()`); the fifth line is two lines at HERO (15.4 units on one) |
+| `s13_not_switch.py` | Not switch. Measure. | no JSON: the script's two lines (§13), straight quotes; a RED `strike()` through "switch libraries", the second line on an EMERALD `glow_bar()` |
+| `s14_institutions.py` | What institutions buy | no JSON: the essay's words (§7) and the ERC-4626 line (V1) are `LITERALS`; a `Chart` with no tick numbers (x `amount`), fees flat MUTED, errors rising RED with an arrow; the three words at HERO on EMERALD panels |
+| `s18_habits.py` | Decide. Measure. Declare. | RELEASE.json `.components.FP127.address/.version` (the one number, in the example declaration block, at CAPTION mono: 42 characters are 6.95 units there); the block's op names are FP127Lib's (`toFixed18Down`, `divUp`, `exp`, check.py finds each `function` in the source), tagged `example`; the sub-lines wrapped to 19 characters at BODY in three columns |
+| `s19_address.py` | The reference | RELEASE.json `.components[FP19|FP127|FP127E/H/N/S|FP19E/H/N/S].address/.version` (ten addresses; check.py reads the file by a second path: each 42 characters, distinct, in its record's markdown); the two install commands, `blockulator.com/llms.txt` and `every op is a free eth_call` verbatim from README.md's Install section (K12, asserted); the repository from `git remote get-url origin`, normalised (check.py parses .git/config instead); the two `qr()` tiles' matrices regenerated from the URLs; `today: Sepolia` (V6) beside the title. Sizes forced by the frame (reported): version names 24 beside BODY addresses, the commands mono 28 beside their BODY key |
+| `s20_thanks.py` | Thank you | no JSON: the user's thank-you line, on three centred lines at BODY (25.4 units on one; the brief's two would be 12.1 and 13.2), the two `qr()` tiles at 1.8 with their URLs whole, `agents: blockulator.com/llms.txt`; the matrices regenerated by check.py |
 | `s15_formats.py` | Two formats | no JSON: format constants (claims K1–K4, E9). `numbers()` derives every figure from the bit widths (vocab's `FP127_FRACTION_BITS`, `FP19_EXPONENT_BITS`, `FP19_FRACTION_BITS`; the sum 256): the fields 1 · 127 · 128 and 1 · 19 · 236, the 237-bit significand, the digit counts floor(bits · log10 2) (38, 71), FP127's range 2^127 to one decimal (about ±1.7 × 10^38), FP19's extremes 2^−262142 and (2 − 2^−236) · 2^262144 as powers of ten (about 10^±78,913) by mpmath; check.py recomputes each with Decimal. `bit_bar()` for the word; the window's stops carry no digits; "laid out as IEEE 754 binary256" is the one literal (E9) |
 
 Each scene module exposes `numbers()`, the values it draws, and
