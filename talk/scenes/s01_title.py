@@ -14,7 +14,7 @@ One section, title (the one single-section scene check.py allows); the
 same scene's snapshot() before and after the beat must agree.
 
 No numbers: numbers() is empty, every string is a LITERAL. The speaker
-line is the placeholder "[speaker]" (REPORT: the user supplies it; no
+line is the speaker line (the user supplied it 2026-10-29); no
 name is invented).
 """
 
@@ -36,12 +36,12 @@ from vocab import (
 
 TITLE = "THE END OF ROUNDING ERRORS"
 SITE = "blockulator.com"
-SPEAKER = "[speaker]"  # the user's one line: who they are
+SPEAKER = "Sam Reeves · founder, Secure Data Research · developer of Blockulator"  # the user's line (2026-10-29): "The speaker is Sam Reeves founder of secure data research, dev of blockulator"
 
 LITERALS = {
     TITLE: "V-none",  # the user's own title
     SITE: "K12",
-    SPEAKER: "REPORT",  # a placeholder until the user supplies the line
+    SPEAKER: "user 2026-10-29",  # the user: "The speaker is Sam Reeves founder of secure data research, dev of blockulator"
 }
 
 Y_TITLE = 1.1

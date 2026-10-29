@@ -1514,8 +1514,8 @@ def _text_only(mod, strings: set[str], ids: set[str] | None = None) -> None:
 def expect_s01_title(mod) -> dict:
     """No JSON; the title is the user's, the speaker line a placeholder
     (REPORT), the only loop in the deck (slides.yaml says so)."""
-    _text_only(mod, {"THE END OF ROUNDING ERRORS", "blockulator.com", "[speaker]"})
-    assert mod.LITERALS["[speaker]"] == "REPORT" and mod.SPEAKER == "[speaker]"
+    _text_only(mod, {"THE END OF ROUNDING ERRORS", "blockulator.com", "Sam Reeves · founder, Secure Data Research · developer of Blockulator"})
+    assert mod.SPEAKER == "Sam Reeves · founder, Secure Data Research · developer of Blockulator" and mod.LITERALS[mod.SPEAKER]
     assert mod.Title.SECTIONS == ("title",) and mod.Title.LOOP is True
     deck = (vocab.ROOT / "talk/deck/slides.yaml").read_text(encoding="utf-8")
     assert deck.count("loop: true") == 1 and "scene: s01_title.Title\n  loop: true" in deck, "the title is the only looping scene"
