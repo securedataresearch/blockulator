@@ -633,6 +633,140 @@ def expect_s06c_balancer_v2(mod) -> dict:
     }
 
 
+def expect_s06e_balancer_v1(mod) -> dict:
+    """The decisive step by a second route (Decimal): BNum's ratio at pool 1's
+    first join at balance 3 times the balance, bmul's half-up from the raw
+    integer (ROUND_HALF_UP on the 10^-18 grid), the ceil toward the pool;
+    the counts straight from the module's replay rows; the exact cost per
+    join by Decimal at 80 digits over all 438; the per-op balances from the
+    JSON's logged results walked here; the table cross-checked."""
+    d = vocab._load("scripts/replays/balancer_v1.json")
+    pool = d["pools"][mod.POOL]
+    inc = next(i for i in vocab.incidents()["incidents"] if i["protocol"] == mod.PROTOCOL)
+    replay = vocab.balancer_v1_replay()
+    rows = replay[mod.POOL]
+    joins = [r for r in rows if r["kind"] == 2]
+    all_joins = [r for p in replay for r in p if r["kind"] == 2]
+    first = next(r for r in joins if r["balance"] == 3)
+    ratio, b = int(first["steps"]["tokenInRatio"]), int(first["balance"])
+    with localcontext() as ctx:
+        ctx.prec = 80
+
+        def dec(x, places: int) -> str:
+            return format(Decimal(x).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP), "f")
+
+        product = Decimal(ratio) * b / Decimal(10**mod.WAD)
+        product_str = dec(product, mod.WAD)
+        nearest = int(product.quantize(Decimal(1), rounding=ROUND_HALF_UP))
+        toward = int(-(-product).to_integral_value(rounding=ROUND_FLOOR))
+        below = (Decimal("4.5") - product) * Decimal(10**mod.WAD)
+        # C5, V27: 3 × 1.499999999999999997 = 4.499999999999999991, nearest (half up) is 4, not 5; toward the pool 5
+        assert product_str == "4.499999999999999991" and nearest == 4 and toward == 5 and product < Decimal("4.5"), product_str
+        assert below == 9 and int(first["steps"]["newTokenBalanceIn"]) == nearest and int(first["deployed"]) == 1 == int(first["limit"])
+        assert dec(Decimal(ratio) / Decimal(10**mod.WAD), mod.WAD) == "1.499999999999999997"
+
+        def cost(r: dict) -> Decimal:  # balance × ((1 + P/S)^(tW/w) − 1) / (1 − f), f = (1 − w/tW) × fee
+            n_ = int(r["totalWeight"]) // int(r["weight"])
+            assert int(r["totalWeight"]) % int(r["weight"]) == 0
+            f = (1 - Decimal(r["weight"]) / Decimal(r["totalWeight"])) * Decimal(r["fee"]) / Decimal(10**mod.WAD)
+            return Decimal(r["balance"]) * ((1 + Decimal(r["poolAmount"]) / Decimal(r["supply"])) ** n_ - 1) / (1 - f)
+
+        costs = [cost(r) for r in all_joins]
+        cost_str = dec(cost(first), mod.COST_DECIMALS)
+        cost_min, cost_max = dec(min(costs), mod.RANGE_DECIMALS), dec(max(costs), mod.RANGE_DECIMALS)
+        # C5: 438 joins, 400 at balance 3, exact cost 1.50079 to 1.52749, every one rounds up to 2 toward the pool
+        assert len(all_joins) == 438 and sum(1 for r in all_joins if r["balance"] == 3) == 400, len(all_joins)
+        assert (cost_min, cost_max) == ("1.50079", "1.52749") and cost_str == "1.5056462", (cost_min, cost_max, cost_str)
+        assert all(Decimal("1.5") < c < 2 for c in costs)
+        cost_toward = int(-(-cost(first)).to_integral_value(rounding=ROUND_FLOOR))
+        assert cost_toward == 2
+        # the per-op balances walked here on the logged results
+        tokens = pool["state"]["tokens"]
+        sym = [t["symbol"] for t in tokens]
+        di, wi = sym.index("DPI"), sym.index("WBTC")
+        bal = [int(t["balance"]) for t in tokens]
+        dpi_path, wbtc_path, join_ops = [bal[di]], [bal[wi]], []
+        for k, op in enumerate(pool["ops"]):
+            res = [int(x) for x in op["result"]]
+            if op["kind"] in (0, 1):
+                bal[op["tokenIn"]] += res[0]
+                bal[op["tokenOut"]] -= res[1]
+            elif op["kind"] == 2:
+                bal[op["token"]] += res[0]
+                join_ops.append(k)
+            elif op["kind"] == 3:
+                bal[op["token"]] -= res[0]
+            else:
+                assert op["kind"] == 4
+                for j, out in enumerate(res):
+                    bal[j] -= out
+            dpi_path.append(bal[di])
+            wbtc_path.append(bal[wi])
+        assert len(join_ops) == len(joins) == 100 and sum(1 for r in joins if r["balance"] == 3) == 96
+        dpi0, dpi1 = dpi_path[0], dpi_path[-1]
+        dpi_pct = dec((Decimal(dpi1) / Decimal(dpi0) - 1) * 100, mod.PCT_DECIMALS).replace("-", "−") + "%"
+        dpi_before, dpi_after = dec(Decimal(dpi0) / Decimal(10**18), 8), dec(Decimal(dpi1) / Decimal(10**18), 8)
+        assert tokens[di]["decimals"] == 18 and tokens[wi]["decimals"] == 8
+        assert (dpi_before, dpi_after, dpi_pct) == ("546.83609422", "0.57099095", "−99.90%"), (dpi_before, dpi_after, dpi_pct)
+    # the loader agrees with the walk here
+    lb = vocab.balancer_v1_balances(mod.POOL)
+    assert [x[di] for x in lb["balances"]] == dpi_path and [x[wi] for x in lb["balances"]] == wbtc_path and lb["joins"] == join_ops
+    # the generated table against the JSON and the arithmetic above
+    table = [r for r in vocab.replay_table("balancer-v1", mod.TABLE_HEADING) if r["call"].startswith("join")]
+    assert [int(r["n"]) for r in table] == [100, 56, 80, 102, 100] and sum(int(r["n"]) for r in table) == 438
+    assert all(r["FP127"] == r["FP19"] == r["exact, rounded"] == str(cost_toward) and r["pays?"] == "no" for r in table), table
+    lo, hi = table[mod.POOL]["exact (range)"].split(" – ")
+    assert Decimal(lo) == Decimal(hi) == Decimal(cost_str), (lo, hi, cost_str)
+    lines = d["source"]["lines"]
+    assert lines["BMath.sol"]["calcSingleInGivenPoolOut"] == [156, 182] and lines["BNum.sol"]["bmul"] == [63, 73]
+    for k, v in mod.numbers().items():
+        assert "…" not in str(v), (k, v)
+    return {
+        "protocol": inc["protocol"],
+        "date": inc["date"],
+        "chain": "Ethereum",
+        "block": f"{int(pool['block']):,}",
+        "tx_short": pool["tx"][: 2 + mod.TX_SHORT],
+        "tx_short_len": mod.TX_SHORT,
+        "tx_len": 64,
+        "pool_index": 1,
+        "pools": 5,
+        "dpi_before": dpi_before,
+        "wbtc_before": f"{wbtc_path[0]:,}",
+        "loop_balance": 3,
+        "joins_pool": 100,
+        "at3_pool": 96,
+        "cite_fn": "BMath.sol:156-182",
+        "cite_bmul": "BNum.sol:63-73",
+        "ratio": "1.499999999999999997",
+        "balance": 3,
+        "product": product_str,
+        "product_label": f"(to {mod.WAD} decimals)",
+        "grid_ticks": [3, 4, 5, 6],
+        "below_half_e18": 9,
+        "wad": 18,
+        "nearest": nearest,
+        "toward": toward,
+        "charged": 1,
+        "limit": 1,
+        "cost": cost_str,
+        "cost_label": f"(to {mod.COST_DECIMALS} decimals)",
+        "joins": 438,
+        "at3": 400,
+        "dpi_path": dpi_path,
+        "wbtc_path": wbtc_path,
+        "join_ops": join_ops,
+        "dpi_after": dpi_after,
+        "dpi_pct": dpi_pct,
+        "loss": inc["loss"],
+        "source": inc["source"],
+        "cost_min": cost_min,
+        "cost_max": cost_max,
+        "cost_toward": cost_toward,
+        "fp_join": table[mod.POOL]["FP127"],  # forge's; the table alone carries it (REPORT)
+    }
+
+
 def expect_s08_ladder(mod) -> dict:
     lib = {lid: rec for lid, rec in vocab.libs().items() if lid != "blockulator"}
     assert len(lib) == 17, len(lib)  # the registry's 18 less BlockulatorWad: every one is drawn or listed
@@ -1255,6 +1389,7 @@ EXPECT = {
     "s06_resupply": expect_s06_resupply,
     "s06b_bunni": expect_s06b_bunni,
     "s06c_balancer_v2": expect_s06c_balancer_v2,
+    "s06e_balancer_v1": expect_s06e_balancer_v1,
     "s07_two": expect_s07_two,
     "s08_ladder": expect_s08_ladder,
     "s09_cliff": expect_s09_cliff,
