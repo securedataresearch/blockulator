@@ -292,24 +292,27 @@ class Grid(DeckScene):
         self.t = Fraction(n["truth"])
         self.int_len = len(n["truth"].partition(".")[0])
         self.section(0)
-        self.wait(0.3)
-        self.play(self.caption(CAPTION))
-
-        # human scale: the integers around e^40, the exact value between two of them
+        # the chrome: the caption, the header (e^40 to 18 decimals, the slide's title line)
+        # and the grid's counter are on the first frame; the header goes to 80 decimals
+        # when the binary dive needs them and the counter reads each level as it comes
+        self.caption_now(CAPTION)
         head = self.header(n["correctly_rounded"], f"(to {WORD_DECIMALS} decimals)", 0)
         num = head[1]
-        self.play(FadeIn(head, run_time=0.6))
+        self.fix(head)
+        counter = self.counter("one tick = 1")
+        self.fix(counter)
+        self.wait(0.3)
+
+        # human scale: the integers around e^40, the exact value between two of them
 
         def dec_labels(i, majors, base):
             k = i  # decimals at level i: the two neighbours, complete at k decimals
             return self.neighbour_labels(majors, {m: _frac_str(Fraction(base + m, 10**k), k) for m in (0, 1)})
 
         dec_grids = [(Fraction(1, 10**k), 10) for k in range(0, WORD_DECIMALS + 1)]
-        counter = self.counter("one tick = 1")
         g, majors, minors, base = self.level(*dec_grids[0])
         self.play(Create(g[0], run_time=0.7))
         self.play(LaggedStart(*[Create(majors[m]) for m in sorted(majors)], lag_ratio=0.06, run_time=0.8))
-        self.add(counter)
         self.remove(g)
         dot = Circle(radius=0.11, color=Palette.EXACT, fill_color=Palette.EXACT, fill_opacity=1, stroke_width=0).move_to([0, Y_LINE + 2.0, 0])
         self.play(FadeIn(dot, run_time=0.2))

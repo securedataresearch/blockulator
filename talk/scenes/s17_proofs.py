@@ -2,8 +2,9 @@
 
 Two lines first: "A test checks the inputs it was given." beside a plane
 of inputs on which tests land as a scatter of dots; "A proof covers every
-input." and the plane fills. Then four rows land one by one, each a label
-at the left of its first line (MUTED) and its string in white (EXACT, the
+input." and the plane fills. The four row labels are on the first frame (each with its mark, in its
+row's hue: proven EMERALD, fuzzed GOLD, tested SAPPHIRE, limits MUTED);
+their values land one by one, each row's string in white (EXACT, the
 table's text): what is proven (an EMERALD tick), what is fuzzed (a MUTED
 tick), what is tested against an oracle (the two counts ticking up from
 0, then the hero "0 misrounded" at HERO size under a halo, then the
@@ -46,6 +47,7 @@ from manim import (
 from manim.utils.rate_functions import ease_out_cubic, linear
 
 from vocab import (
+    ROW_COLOUR,
     MONO,
     SIZE_BODY,
     SIZE_CAPTION,
@@ -99,6 +101,17 @@ PLANE_SEED = 17
 PLANE_DOTS = 48
 PLANE_SMALL = 0.25  # the plane's scale once the table begins
 PLANE_CORNER = (5.6, 2.45, 0)  # under the right mark (was 5.75, 3.12)
+PLANE_ORIGIN = (1.3, -0.9, 0)  # the plane in section 0, right of the row keys; the two lines sit under it
+Y_LINES = (-1.75, -2.35)  # the test line and the proof line, right-aligned under the plane
+HUES = ROW_COLOUR["s17"]  # the rows: proven EMERALD, fuzzed GOLD, tested SAPPHIRE, limits MUTED
+# the first line of each row: row 1 at Y_ROWS; each row's last line and the gap to the next
+# (two lines at PITCH per row; row 3 adds the hero line and the totals), as construct() walks them
+ROW_Y = (
+    Y_ROWS,
+    Y_ROWS - 2 * PITCH - ROW_GAP,
+    Y_ROWS - 4 * PITCH - 2 * ROW_GAP,
+    Y_ROWS - 6 * PITCH - 3 * ROW_GAP - HERO_PITCH - (HERO_PITCH - 0.06),
+)
 
 # the digit-bearing fixed strings, each with its claim id (research_notes/talk/claims.md)
 LITERALS = {
@@ -155,9 +168,9 @@ class Proofs(DeckScene):
     SECTIONS = ("test-proof", "proven", "fuzzed", "tested", "limits", "closing")
 
     # ---------------------------------------------------------------- rows --
-    def label(self, text: str, mark, y: float) -> VGroup:
-        """A row's left cell: its mark, then the label in MUTED, at the margin."""
-        lbl = words(text, SIZE_BODY, Palette.MUTED)
+    def label(self, text: str, mark, y: float, colour: str = Palette.MUTED) -> VGroup:
+        """A row's left cell: its mark, then the label in the row's hue, at the margin."""
+        lbl = words(text, SIZE_BODY, colour)
         mark.move_to([X_LEFT + mark.width / 2 + 0.02, y, 0])
         lbl.next_to(mark, RIGHT, buff=MARK_BUFF).set_y(y)
         return VGroup(mark, lbl)
@@ -193,19 +206,28 @@ class Proofs(DeckScene):
 
         # 0 · a test, a proof: the two lines and the plane of inputs
         self.section(0)
-        self.wait(0.3)
-        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
-        self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5), self.caption(CAPTION))
-        plane = Chart((0, 8, 1), (0, 6, 1), width=4.6, height=3.5, origin=(1.3, -1.5, 0))
+        # the chrome, on the first frame: the title, the caption, the plane's axes and
+        # grid, and the four row keys (each mark and label in its row's hue); the rows'
+        # values arrive per click
+        self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
+        self.caption_now(CAPTION)
+        plane = Chart((0, 8, 1), (0, 6, 1), width=4.6, height=3.5, origin=PLANE_ORIGIN)
         grid = plane.grid()
-        self.play(Create(plane.x_axis, run_time=0.6), Create(plane.y_axis, run_time=0.6), FadeIn(grid, run_time=0.6))
-        test_line = words(TEST_LINE, SIZE_BODY, Palette.TEXT).move_to([0, 0.9, 0]).align_to([X_LEFT, 0, 0], LEFT)
+        labs = [
+            self.label(LABELS[0], check_mark(HUES["proven"]), ROW_Y[0], HUES["proven"]),
+            self.label(LABELS[1], check_mark(HUES["fuzzed"]), ROW_Y[1], HUES["fuzzed"]),
+            self.label(LABELS[2], check_mark(HUES["tested"]), ROW_Y[2], HUES["tested"]),
+            self.label(LABELS[3], Circle(radius=0.13, color=HUES["limits"], stroke_width=3, fill_opacity=0), ROW_Y[3], HUES["limits"]),
+        ]
+        self.fix(plane, *labs)
+        self.wait(0.3)
+        test_line = words(TEST_LINE, SIZE_BODY, Palette.TEXT).move_to([0, Y_LINES[0], 0]).align_to([X_RIGHT, 0, 0], RIGHT)
         self.play(FadeIn(test_line, shift=RIGHT * 0.1, run_time=0.5))
         rng = random.Random(PLANE_SEED)
         dots = VGroup(*[plane.dot(rng.uniform(0.3, 7.7), rng.uniform(0.3, 5.7), Palette.BODY, radius=0.055) for _ in range(PLANE_DOTS)])
         self.play(LaggedStart(*[FadeIn(d, scale=0.3) for d in dots], lag_ratio=0.04, run_time=1.6))
         self.wait(0.6)
-        proof_line = words(PROOF_LINE, SIZE_BODY, Palette.TEXT).move_to([0, 0.1, 0]).align_to([X_LEFT, 0, 0], LEFT)
+        proof_line = words(PROOF_LINE, SIZE_BODY, Palette.TEXT).move_to([0, Y_LINES[1], 0]).align_to([X_RIGHT, 0, 0], RIGHT)
         self.play(FadeIn(proof_line, shift=RIGHT * 0.1, run_time=0.5))
         fill = Rectangle(width=plane.width, height=plane.height, color=Palette.EMERALD, fill_color=Palette.EMERALD, fill_opacity=0.22, stroke_width=0)
         fill.move_to(plane.c2p(4, 3))
@@ -216,7 +238,7 @@ class Proofs(DeckScene):
         self.play(Create(proof_mark, run_time=0.4))
         whole_plane = VGroup(fill, grid, plane, dots, proof_mark)
 
-        # 1 · proven: the plane to the corner, the first row lands
+        # 1 · proven: the plane (filled, a story element now) to the corner, the first row's values land
         self.section(1, hold=1.2)
         self.play(
             FadeOut(test_line, run_time=0.5),
@@ -225,11 +247,11 @@ class Proofs(DeckScene):
             run_time=0.9,
         )
         y = Y_ROWS
-        lab1 = self.label(LABELS[0], check_mark(Palette.CORRECT), y)
+        lab1 = labs[0]
+        assert abs(y - ROW_Y[0]) < 1e-9
         r1a = self.line([words(f"{fp127}: {n['proven_count']['FP127']} core operations", SIZE_BODY, Palette.TEXT)], y, x=lab1.get_right()[0] + LABEL_BUFF)
         y -= PITCH
         r1b = self.block(f"({n['halmos_count']} by Halmos, {n['exact_integer'][0]} in exact integers) · {fp19}: {n['proven_count']['FP19']} of {n['ops']['FP19']}", y)
-        self.land(lab1)
         self.land(r1a)
         self.land(r1b)
         self.wait(0.5)
@@ -237,11 +259,11 @@ class Proofs(DeckScene):
         # 2 · fuzzed
         self.section(2, hold=2.0)
         y -= PITCH + ROW_GAP
-        lab2 = self.label(LABELS[1], check_mark(Palette.MUTED), y)
+        lab2 = labs[1]
+        assert abs(y - ROW_Y[1]) < 1e-9
         r2a = self.line([words(f"{fp127}: {', '.join(n['fuzzed']['FP127'])} · {fp19}: {n['fp19_fuzzed_word']} ·", SIZE_BODY, Palette.TEXT)], y, x=lab2.get_right()[0] + LABEL_BUFF)
         y -= PITCH
         r2b = self.line([digits(thousands(n["runs"]), SIZE_BODY, Palette.TEXT), words("runs a test", SIZE_BODY, Palette.TEXT)], y)
-        self.land(lab2)
         self.land(r2a)
         self.land(r2b)
         self.wait(0.4)
@@ -249,8 +271,8 @@ class Proofs(DeckScene):
         # 3 · tested: the counts tick up, the hero lands last
         self.section(3, hold=1.8)
         y -= PITCH + ROW_GAP
-        lab3 = self.label(LABELS[2], check_mark(Palette.MUTED), y)
-        self.land(lab3)
+        lab3 = labs[2]
+        assert abs(y - ROW_Y[2]) < 1e-9
         trackers = {lid: ValueTracker(0) for lid in LIBS}
         tick19 = self.ticking(trackers["fp19"], SIZE_BODY, Palette.TEXT)
         r3a_words = [words(f"{fp19}:", SIZE_BODY, Palette.TEXT), words("transcendental", SIZE_BODY, Palette.TEXT)]
@@ -297,13 +319,12 @@ class Proofs(DeckScene):
         # 4 · known limits: a hollow marker, two sub-beats, "none is known" last
         self.section(4, hold=1.6)
         y -= PITCH + ROW_GAP
-        hollow = Circle(radius=0.13, color=Palette.MUTED, stroke_width=3, fill_opacity=0)
-        lab4 = self.label(LABELS[3], hollow, y)
+        lab4 = labs[3]
+        assert abs(y - ROW_Y[3]) < 1e-9
         x4 = lab4.get_right()[0] + LABEL_BUFF
         y4a = y
         bound_a = self.line([words(LIMIT_BOUND[0], SIZE_BODY, Palette.TEXT)], y4a, x=x4)
         bound_b = self.block(LIMIT_BOUND[1], y4a - PITCH)
-        self.land(lab4)
         self.land(bound_a)
         self.land(bound_b, run_time=0.6)
         self.wait(1.8)

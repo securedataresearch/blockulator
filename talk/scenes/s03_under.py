@@ -1,12 +1,13 @@
 """Slide 3, "exp is under everything": four things a protocol charges for,
 and the one function under all of them.
 
-Four rows draw in, staggered: a compounding rate, a discount factor, an
-option price, a growth curve, each with its formula, each formula ending
-in a power of e. Then, row by row, the exp term lights (EMERALD, a brief
+The title and the four row labels (each in its own hue: GOLD, SAPPHIRE,
+VIOLET, SLATE) are on the first frame; the formulas draw in, staggered,
+in their row's hue: a compounding rate, a discount factor, an option
+price, a growth curve, each formula ending in a power of e. Then, row by row, the exp term lights (EMERALD, a brief
 Indicate) and a thin EMERALD wire draws from it to a central e^x that
 grows in under a halo: the hero, the one function the four resolve to.
-Last, the rows dim and the closing line types under the hero: if exp has
+Last, the formulas dim (the labels stay) and the closing line types under the hero: if exp has
 no canonical value on chain, nothing built on it has one.
 
 Three sections, one per click: four; resolve; alone. The last frame
@@ -34,10 +35,8 @@ from manim import (
     RIGHT,
     UP,
     AddTextLetterByLetter,
-    AnimationGroup,
     Arrow,
     Create,
-    FadeIn,
     GrowFromCenter,
     Indicate,
     LaggedStart,
@@ -47,6 +46,7 @@ from manim import (
 )
 
 from vocab import (
+    ROW_COLOUR,
     SIZE_BODY,
     SIZE_HERO,
     DeckScene,
@@ -55,6 +55,8 @@ from vocab import (
     markup,
     words,
 )
+
+HUES = ROW_COLOUR["s03"]  # one hue per row (the key and its formula); the hero e^x EMERALD
 
 SUP_SIZE = "125%"  # Pango's <sup> scale is ~0.58 of the body; this brings a superscript to ~23 of 32
 SUP2_SIZE = "172%"  # the "2" of x², a superscript of a superscript, back up to the exponent's size
@@ -132,9 +134,10 @@ class Under(DeckScene):
         drawn arrows between them. Returns (label, formula group, exp term)."""
         label_text, stages = ROWS[i]
         y = Y_ROWS[i]
-        label = words(label_text, SIZE_BODY, Palette.MUTED)
+        hue = HUES[label_text]
+        label = words(label_text, SIZE_BODY, hue)
         label.move_to([X_LEFT + label.width / 2, y, 0])
-        texts = [markup(s, SIZE_BODY, Palette.TEXT) for s in stages]
+        texts = [markup(s, SIZE_BODY, hue) for s in stages]
         parts = []
         x = X_FORMULA
         for k, t in enumerate(texts):
@@ -149,23 +152,19 @@ class Under(DeckScene):
 
     def construct(self):
         self.section(0)
-        self.wait(0.3)
-        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
-        self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5))
-
-        # the four rows draw in, staggered
+        # the chrome: the title and the four row labels (the keys, each in its hue) are on the first frame
+        self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
         labels, formulas, terms = [], [], []
         for i in range(len(ROWS)):
             label, formula, term = self.row(i)
             labels.append(label)
             formulas.append(formula)
             terms.append(term)
-        self.play(
-            LaggedStart(
-                *[AnimationGroup(FadeIn(labels[i], shift=RIGHT * 0.1, run_time=0.5), Write(formulas[i], run_time=1.0)) for i in range(len(ROWS))],
-                lag_ratio=STAGGER,
-            )
-        )
+        self.fix(*labels)
+        self.wait(0.3)
+
+        # the four formulas draw in, staggered, each in its row's hue
+        self.play(LaggedStart(*[Write(formulas[i], run_time=1.0) for i in range(len(ROWS))], lag_ratio=STAGGER))
 
         # each exp term lights and wires into e^x, which grows in under a halo
         self.section(1, hold=1.2)
@@ -186,9 +185,9 @@ class Under(DeckScene):
                 self.play(Create(wire, run_time=PER_ROW * 0.55), Indicate(hero_group, color=Palette.EMERALD, scale_factor=1.08, run_time=PER_ROW * 0.55))
             self.bring_to_front(hero_group)
 
-        # the rows dim; e^x stays; the closing line types under it
+        # the formulas and wires dim (the keys stay); e^x stays; the closing line types under it
         self.section(2, hold=1.2)
-        rows = VGroup(*labels, *formulas)
+        rows = VGroup(*formulas)
         self.play(rows.animate.set_color(Palette.FAINT).set_opacity(DIM), VGroup(*wires).animate.set_color(Palette.FAINT).set_stroke(opacity=DIM), run_time=0.6)
         close = words(CLOSE, SIZE_BODY, Palette.TEXT, line_spacing=0.9).move_to([0, Y_CLOSE, 0])
         # Text sets its lines flush left; centre the second (spaces are not glyphs, so count the rest)

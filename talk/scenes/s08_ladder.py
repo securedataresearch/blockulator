@@ -53,7 +53,7 @@ from manim import (
     VMobject,
 )
 
-from vocab import DUPLICATES, SIZE_CAPTION, WAD_DECIMALS, Chart, DeckScene, Palette, colour_of, glow_line, halo, ladder, ladder_median, ladder_reason, measure_up, talk_libs, thousands, words
+from vocab import DUPLICATES, SIZE_CAPTION, TITLE_GAP, WAD_DECIMALS, Chart, DeckScene, Palette, colour_of, glow_line, halo, ladder, ladder_median, ladder_reason, measure_up, talk_libs, thousands, words
 
 SCENARIOS = ("compound", "accrual-continuous", "adaptive-rate")
 # what the panel says each one is; the first keeps the ladder's own title
@@ -62,14 +62,16 @@ SKIP = DUPLICATES
 GOLD = "wad"  # the family the margins are measured against
 HEROES = ("fp127", "fp19")  # drawn last, in this order: the king last
 X_RANGE = (0, 4, 1)  # log10 N
-WIDTH, HEIGHT = 7.8, 5.0
+WIDTH, HEIGHT = 7.8, 4.4  # the chart stops at y = 2.1: the key's two lines and the scenario's note sit above it
 ORIGIN_XY = (-5.6, -2.3)
 LABEL_GAP = 0.3  # minimum spacing between end labels, scene units
 GUIDE_DROP = 5.0  # digits below the 18-decimal line the slope guide is drawn
 BRACKET_X = {"fp19": 5.2, "fp127": 5.5}  # where each margin bracket stands
 CLUSTER_XY = (0.35, 1.1)  # the 18-decimal names: chart x in log10 N, scene y
 CLUSTER_WIDTH = 60  # characters per line of the 18-decimal names
-LEGEND_Y = 2.95  # the top strip: the scenario (the title, beside the left mark), then who has no line, under the mark at the title's left
+KEY_Y = (2.92, 2.64)  # the static key, two lines under the title: every series of the three scenarios, then the 18-decimal names
+ABSENT_Y = 2.36  # the scenario's note under the key: who has no line in it, and why (swapped at each morph)
+KEY_SIZE = 16
 CLOSE_XY = (6.9, -3.0)  # the closing lines, right-aligned, bottom right, under the x labels
 CLOSE_PITCH = 0.33
 Y_STEP = 20
@@ -147,6 +149,24 @@ def cluster_text(groups: list[dict]) -> str:
     return "\n".join(line for chunk in lines for line in textwrap.wrap(chunk, CLUSTER_WIDTH))
 
 
+def key_series(lib: dict, scenarios: list[dict]) -> list[str]:
+    """Every library that has a line in any of the scenarios, ours first,
+    then the rest in the order they first appear; the 18-decimal family
+    shares one entry (key_wad) and is left out here."""
+    seen: list[str] = []
+    for sc in scenarios:
+        for lid in sc["series"]:
+            if lid not in seen and lib[lid]["family"] != GOLD:
+                seen.append(lid)
+    return sorted(seen, key=lambda lid: (not lib[lid].get("ours"), HEROES.index(lid) if lid in HEROES else 0, seen.index(lid)))
+
+
+def key_wad(lib: dict, scenarios: list[dict]) -> list[str]:
+    """The 18-decimal libraries with a line in any scenario, in libraries.json order."""
+    ids = {lid for sc in scenarios for lid in sc["series"] if lib[lid]["family"] == GOLD}
+    return [lid for lid in lib if lid in ids]
+
+
 def legend_text(lib: dict, absent: dict[str, str]) -> str:
     """The libraries with no line, by reason: "not offered: Aave · Morpho"."""
     by_reason: dict[str, list[str]] = {}
@@ -200,8 +220,29 @@ class Ladder(DeckScene):
             out["brackets"][lid] = measure_up(lo, hi, f"+{s['margin_digits'][lid]} digits", colour_of(lib[lid]), size=20)
         title = s["title"] + (f" · {SUBTITLES[s['id']]}" if s["id"] in SUBTITLES else "")
         out["title"] = self.title(title, 21, Palette.BODY)
-        out["legend"] = words(legend_text(lib, s["absent"]), 16, Palette.FAINT).move_to([0, LEGEND_Y, 0]).align_to(out["title"], LEFT)
+        out["legend"] = words(legend_text(lib, s["absent"]), KEY_SIZE, Palette.FAINT).move_to([0, ABSENT_Y, 0]).align_to(out["title"], LEFT)
         return out
+
+    def key(self, chart: Chart, lib: dict, scenarios: list[dict]) -> VGroup:
+        """The static key: every series the three scenarios draw, a dot and its
+        label in its family colour, on one line; the 18-decimal family's names
+        on a second, after its one entry. Left-aligned with the title."""
+        x_left = self.logo_left.get_right()[0] + TITLE_GAP
+
+        def entry(label: str, colour: str, size: float = KEY_SIZE) -> VGroup:
+            e = VGroup(chart.dot(0, 0, colour, radius=0.06), words(label, size, colour))
+            e[1].next_to(e[0], RIGHT, buff=0.1)
+            return e
+
+        line1 = VGroup(*[entry(lib[lid]["label"], colour_of(lib[lid])) for lid in key_series(lib, scenarios)]).arrange(RIGHT, buff=0.38)
+        wad = key_wad(lib, scenarios)
+        line2 = VGroup(entry(f"{WAD_DECIMALS}-decimal", Palette.GOLD), words(" · ".join(lib[lid]["label"] for lid in wad), KEY_SIZE, Palette.GOLD)).arrange(RIGHT, buff=0.22)
+        line1.move_to([0, KEY_Y[0], 0]).align_to([x_left, 0, 0], LEFT)
+        line2.move_to([0, KEY_Y[1], 0]).align_to([x_left, 0, 0], LEFT)
+        for line in (line1, line2):
+            for e in line:
+                e.set_y(line.get_y())
+        return VGroup(line1, line2)
 
     def draw_order(self, items) -> list[dict]:
         """18-decimal first, then up the chart by end value, ours last."""
@@ -220,9 +261,9 @@ class Ladder(DeckScene):
         y_max = int(n["axisMax"])
         scenarios = n["scenarios"]
         self.section(0)
-        self.wait(0.3)
-        self.play(self.caption(f"docs/benchmarks/ladder.json · scenarios[{scenarios[0]['id']}]"))
-
+        # the chrome, on the first frame: the caption, the chart (axes, gridlines, tick
+        # labels, axis titles) and the key of every series the three scenarios draw; the
+        # scenario's title and its note (who has no line in it) read the current scenario
         chart = Chart(X_RANGE, (0, y_max, Y_STEP), WIDTH, HEIGHT, origin=(*ORIGIN_XY, 0))
         for k in range(X_RANGE[0], X_RANGE[1] + 1):
             chart.x_label(k, thousands(10**k))
@@ -231,15 +272,14 @@ class Ladder(DeckScene):
         chart.x_title("N steps")
         chart.y_title("correct digits")
         grid = chart.grid()
-        self.play(Create(chart.x_axis, run_time=1.0), Create(chart.y_axis, run_time=1.0))
-        self.play(FadeIn(chart.labels, run_time=0.6), FadeIn(chart.titles, run_time=0.6), FadeIn(grid, run_time=0.8))
-        self.wait(1.0)
-
-        # ---- the first scenario draws in: 18-decimal first, up the chart, ours last on top
+        self.caption_now(f"docs/benchmarks/ladder.json · scenarios[{scenarios[0]['id']}]")
+        self.fix(chart, self.key(chart, lib, scenarios))
         s = scenarios[0]
         cur = self.build(chart, xs, lib, s)
-        self.play(FadeIn(cur["title"], shift=RIGHT * 0.08, run_time=0.6), FadeIn(cur["legend"], run_time=0.6))
-        self.wait(1.0)
+        self.add(cur["title"], cur["legend"])
+        self.wait(1.3)
+
+        # ---- the first scenario draws in: 18-decimal first, up the chart, ours last on top
         order = self.draw_order(cur["libs"].values())
         gold_items = [it for it in order if it["gold"]]
         self.play(*[Create(it["line"], run_time=2.2) for it in gold_items], *[LaggedStart(*[FadeIn(d, scale=0.5) for d in it["dots"]], lag_ratio=0.1, run_time=2.2) for it in gold_items])
