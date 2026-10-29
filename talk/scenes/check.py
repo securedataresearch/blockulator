@@ -500,6 +500,79 @@ def expect_s06b_bunni(mod) -> dict:
     fp19 = table["FP19 idle balance"]["active USDC after 44 (wei)"]  # the forge run's; the table alone carries it (REPORT)
     cite = next(c for c in d["cites"] if c["id"] == "idle")
     assert cite["file"] == "src/lib/BunniHubLogic.sol" and cite["line"] == 478
+    }
+
+
+def expect_s06d_thetanuts(mod) -> dict:
+    """The first mint's charge recomputed as a Fraction from the JSON operands
+    and the 37 mints rerun with ceil by integer arithmetic; the claim's
+    supply 3, the 185 zero transfers, and the ceil total against the
+    generated table (docs/benchmarks/replay-thetanuts.md) by replay_table()."""
+    from datetime import datetime, timezone
+
+    d = vocab.thetanuts()
+    inc = next(i for i in vocab.incidents()["incidents"] if i["protocol"] == mod.INCIDENT)
+    mints, claim, comps = d["mints"], d["claim"], d["components"]
+    # the state the claim left: supply 3, one raw unit of each of the five components
+    assert int(claim["supplyAfter"]) == 3 == int(d["pre"]["totalSupply"]) - int(d["flashLoan"]["amount"]), claim["supplyAfter"]
+    assert claim["storedAfter"] == ["1"] * 5 and len(comps) == 5 and mints[0]["storedBefore"] == ["1"] * 5
+    # the claim paid floor(stored × amount / supply), at or below the pro-rata share (not inflated)
+    for sb, pay, sa in zip(claim["storedBefore"], claim["payout"], claim["storedAfter"]):
+        assert int(pay) == int(sb) * int(claim["amount"]) // int(claim["supplyBefore"]) and int(sb) - int(pay) == int(sa)
+    # the first mint's charge, as a Fraction of the JSON operands: two thirds
+    m0 = mints[0]
+    charge0 = Fraction(int(m0["storedBefore"][0]) * int(m0["amount"]), int(m0["supplyBefore"]))
+    assert charge0 == Fraction(2, 3) and m0["charge"] == ["0"] * 5
+    with localcontext() as ctx:
+        ctx.prec = 60
+        charge0_str = str((Decimal(charge0.numerator) / Decimal(charge0.denominator)).quantize(Decimal(1).scaleb(-mod.CHARGE_DECIMALS), rounding=ROUND_HALF_UP))
+    # 37 mints, 185 component transfers, every one for 0; the supply chains and ends at the post-state
+    assert len(mints) == 37 and len(mints) * len(comps) == 185 == int(d["trace"]["transferFromCalls"]) == int(d["trace"]["mintExecutions"])
+    assert all(c == "0" for m in mints for c in m["charge"])
+    supply = int(claim["supplyAfter"])
+    for m in mints:
+        assert int(m["supplyBefore"]) == supply and int(m["amount"]) * 1 // supply == 0, m
+        supply += int(m["amount"])
+    assert supply == int(d["post"]["totalSupply"]) and d["post"]["stored"] == ["1"] * 5
+    minted = supply - int(claim["supplyAfter"])
+    assert minted == int(d["flashLoan"]["amount"]) + int(d["flashLoan"]["premium"]), "the minted tokens repay the loan and its fee"
+    # the counterfactual by the other route: ceil as (num + den - 1) // den, the vault's holding growing by each charge
+    held, sup, ceil_total, first_ceil = 1, int(claim["supplyAfter"]), 0, None
+    for m in mints:
+        a = int(m["amount"])
+        c = (held * a + sup - 1) // sup
+        first_ceil = c if first_ceil is None else first_ceil
+        ceil_total += c
+        held += c
+        sup += a
+    assert first_ceil == 1 and ceil_total == 76_596_174_855, ceil_total
+    # the generated table agrees: the ceil rule's total per component, and every mint's ceil charge is 1
+    rules = {r["rule"]: r for r in vocab.replay_table("thetanuts", "The decisive step on each rule")}
+    assert rules["rounded up (ceil)"]["paid per component, 37 mints"] == f"{ceil_total:,}", rules["rounded up (ceil)"]
+    assert rules["rounded up (ceil)"]["first charge (raw units)"] == "1"
+    rows = vocab.replay_table("thetanuts", "Every mint, on the chain path")
+    assert len(rows) == 37 and all(r["ceil"] == "1" and r["deployed (floor)"] == "0" for r in rows)
+    assert [r["amount"] for r in rows] == [f"{int(m['amount']):,}" for m in mints] and [r["supply before"] for r in rows] == [f"{int(m['supplyBefore']):,}" for m in mints]
+    assert Decimal(rows[0]["exact charge"]) == (Decimal(2) / Decimal(3)).quantize(Decimal(rows[0]["exact charge"]), rounding=ROUND_HALF_UP)
+    per_comp = vocab.replay_table("thetanuts", "Round up: what any mint sequence costs")
+    assert [r["paid under round-up, the attacker's 37 amounts"] for r in per_comp] == [f"{ceil_total:,}"] * 5
+    assert [r["claim took"] for r in per_comp] == [f"{int(p):,}" for p in claim["payout"]]
+    max_take = max(int(p) for p in claim["payout"])
+    assert ceil_total > max_take
+    # the date: incidents.json's day is the block's (UTC)
+    assert datetime.fromtimestamp(int(d["blockTimestamp"]), timezone.utc).strftime("%-d %b %Y") == inc["date"], inc["date"]
+    (dec,) = {int(c["decimals"]) for c in comps}
+    assert dec == 6 == mod.USDC_DECIMALS
+
+    def tok(raw: int, places: int) -> str:
+        return f"{Decimal(raw).scaleb(-places):,.{places}f}"
+
+    usdc = tok(int(d["realised"]["usdcTotal"]), mod.USDC_DECIMALS)
+    page = (vocab.ROOT / "docs" / "benchmarks" / "replay-thetanuts.md").read_text(encoding="utf-8")
+    assert f"{usdc} USDC" in page, usdc  # the page writes the realised USDC with the same six decimals
+    by_addr = {c["address"].lower(): c for c in comps}
+    leftovers = [(tok(int(v), dec), by_addr[a.lower()]["symbol"].split("-")[-1]) for a, v in d["realised"]["sentToBeneficiary"].items() if a.lower() in by_addr]
+    assert len(leftovers) == 3
     for k, v in mod.numbers().items():
         assert "…" not in str(v), (k, v)
     return {
@@ -630,6 +703,44 @@ def expect_s06c_balancer_v2(mod) -> dict:
         "would_lose": would_lose,
         "upscale_cite": cites["BasePool.sol:_upscale"].split("/")[-1],
         "muldown_cite": cites["FixedPoint.sol:mulDown"].split("/")[-1],
+        "vault_name": d["vault"]["name"],
+        "tx_short": d["tx"][:10],
+        "block": f"{int(d['block']):,}",
+        "supply_before": f"{int(d['pre']['totalSupply']):,}",
+        "borrowed": f"{int(d['flashLoan']['amount']):,}",
+        "supply_after_claim": "3",
+        "stored_after": "1",
+        "n_components": 5,
+        "components": [
+            {"label": c["symbol"].split("-")[-1], "stored_before": f"{int(s):,}", "payout": f"{int(p):,}", "stored_after": "1"}
+            for c, s, p in zip(comps, claim["storedBefore"], claim["payout"])
+        ],
+        "pc_mul": 12186,
+        "pc_div": 12220,
+        "amount0": "2",
+        "supply0": "3",
+        "charge0": charge0_str,
+        "charge0_label": f"(to {mod.CHARGE_DECIMALS} decimals)",
+        "charge0_x": Fraction(2, 3),
+        "floor0": "0",
+        "ceil0": "1",
+        "grid_ticks": [0, 1, 2],
+        "n_mints": 37,
+        "mint_index": list(range(1, 38)),
+        "amounts": [f"{int(m['amount']):,}" for m in mints],
+        "supplies": [f"{int(m['supplyBefore']):,}" for m in mints],
+        "supply_after": f"{int(d['post']['totalSupply']):,}",
+        "minted": f"{minted:,}",
+        "loan_fee": f"{int(d['flashLoan']['amount']) + int(d['flashLoan']['premium']):,}",
+        "zero_transfers": 185,
+        "loss": inc["loss"],
+        "usdc": usdc,
+        "leftovers": leftovers,
+        "ceil_total_raw": f"{ceil_total:,}",
+        "ceil_total": tok(ceil_total, dec),
+        "max_take": tok(max_take, dec),
+        "repaid": True,
+        "ceil_wins": True,
     }
 
 
@@ -1255,6 +1366,7 @@ EXPECT = {
     "s06_resupply": expect_s06_resupply,
     "s06b_bunni": expect_s06b_bunni,
     "s06c_balancer_v2": expect_s06c_balancer_v2,
+    "s06d_thetanuts": expect_s06d_thetanuts,
     "s07_two": expect_s07_two,
     "s08_ladder": expect_s08_ladder,
     "s09_cliff": expect_s09_cliff,
