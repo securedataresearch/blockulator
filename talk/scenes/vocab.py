@@ -809,38 +809,38 @@ def thetanuts() -> dict:
 
 
 def replay_table(name: str, heading: str) -> list[dict]:
-    """The first markdown table under a heading in docs/benchmarks/replay-<name>.md
-    (the pages the replay scripts generate): one dict per data row, keyed by the
-    header cells, every cell the stripped string as written (thousands separators
-    kept; a scene's numbers() parses what it draws). The heading matches a
-    "#…# <heading>" line exactly, after its hashes; a numbered-list table under
-    it counts too (the first table whose rows start with "|" after the heading).
-    KeyError if the heading is not found, ValueError if no table follows it."""
+    """The first markdown table under `heading` in docs/benchmarks/replay-<name>.md,
+    as a list of {column: cell} rows in file order; header and cells are the
+    stripped markdown text as written (backticks, thousands separators and all;
+    a scene's numbers() parses what it draws). The heading matches a "#…# text"
+    line by exact text after the hashes, any level; failing that, by the first
+    heading whose text contains `heading` (case-insensitive). The table is the
+    first run of "|" lines before the next heading. These tables are generated
+    by scripts/replays/<name>.py from its JSON, so a scene cross-checks what it
+    reads here against the JSON. KeyError if the heading is not found,
+    ValueError if no table follows it."""
     path = ROOT / "docs" / "benchmarks" / f"replay-{name}.md"
     lines = path.read_text(encoding="utf-8").splitlines()
-    start = None
-    for i, line in enumerate(lines):
-        if line.startswith("#") and line.lstrip("#").strip() == heading.strip():
-            start = i + 1
-            break
+    heads = [(i, l.lstrip("#").strip()) for i, l in enumerate(lines) if l.startswith("#")]
+    start = next((i for i, t in heads if t == heading.strip()), None)
     if start is None:
-        raise KeyError((path.name, heading))
+        start = next((i for i, t in heads if heading.strip().lower() in t.lower()), None)
+    if start is None:
+        raise KeyError((name, heading))
     rows: list[list[str]] = []
-    for line in lines[start:]:
-        if rows and not line.strip().startswith("|"):
-            break
+    for line in lines[start + 1 :]:
         if line.startswith("#"):
             break
         t = line.strip()
         if t.startswith("|"):
-            cells = [c.strip() for c in t.strip("|").split("|")]
-            if all(set(c) <= set("-: ") for c in cells):
-                continue  # the header/body separator
-            rows.append(cells)
-    if len(rows) < 2:
-        raise ValueError((path.name, heading, "no table"))
+            rows.append([c.strip() for c in t.strip("|").split("|")])
+        elif rows:
+            break
+    if len(rows) < 3:
+        raise ValueError((name, heading, "no table"))
     header = rows[0]
-    return [dict(zip(header, r)) for r in rows[1:]]
+    body = [r for r in rows[1:] if not all(set(c) <= set("-: ") for c in r)]
+    return [dict(zip(header, r)) for r in body]
 
 
 def balancer() -> dict:
