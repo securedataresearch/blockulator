@@ -247,6 +247,62 @@ inputs", "not offered"); none is dropped silently. Blockulator's rows and
 lines are drawn last, under a halo, and the margin is called out in the
 chart's own units.
 
+## The 3D vocabulary (`vocab3d.py`)
+
+Things are things (talk/briefs/3d-direction.md): the concept and replay
+scenes are `DeckScene3D` (manim's `ThreeDScene`, Cairo renderer) with the
+same chrome as `DeckScene` (the marks, the title beside the left mark,
+the caption bottom-left), all `add_fixed_in_frame_mobjects`, and the
+same `SECTIONS`/`section()`/`close()`. Axes: x right, y into the scene,
+z up; the ground is z = 0; the camera looks from the front and above,
+framed on `STAGE_CENTRE` (0, 0, 0.7) so the ground sits low and labels
+have the upper half under the chrome. Surfaces are flat-shaded, one
+palette colour per piece, lit from the upper left (the camera's
+`light_source` at (−7, −9, 10)), on `Palette.BG`.
+
+- Labels are `words()`/`digits()/markup()` (so `check.py` reads them from
+  `DRAWN`), shown as billboards: `scene.billboard(mobj, anchor, offset)`
+  fixes the text's orientation (`add_fixed_orientation_mobjects`) at a
+  3D point, a mobject or a function to follow, plus `offset` in screen
+  units; a billboard keeps its size under a dolly. `scene.relabel(old,
+  new)` swaps one for another at the same anchor; `scene.hud(*mobjs)` is
+  text on the frame that is not chrome (a hero line); `scene.fix()` the
+  chrome. The Cairo camera draws every non-3D mobject after every 3D
+  piece, so a label is never behind a tank.
+- `Tank(label, capacity, level, colour, radius, height, quantity, at)`: a
+  glass cylinder (SLATE at 0.22) with a liquid (a shorter cylinder in the
+  thing's colour), its name at its foot, its quantity (`digits()`) over
+  its rim; `fill(tank, level)`, `drain(tank, level)`, `pour(src, dst,
+  amount)` (nine small spheres arc rim to rim while both levels move, the
+  destination taking the source's colour); `slide(thing, delta,
+  opacity)` moves a thing whole (a Tank's glass stays glass).
+- `Stack(n, colour, cols, side, label, at)`: n cubes on the ground in
+  columns with a count label; `.appear(dt)` one per dt;
+  `transfer(stack, to_point, opacity)`.
+- `Lattice(x_range, tick, length, depth, at, minor)`: a rail on the ground
+  with a tick post at every tick, numbered beneath; `minor` adds shorter,
+  unnumbered posts (the half: the rounding boundary); `point(x)` (and
+  `n2p`, so `vocab.direction()` draws on it), `post(x)`,
+  `stretch(factor, about)` for a dive (never a camera zoom past float64).
+- `Ball(colour, radius, at)`: a value; `drop_snap(ball, lattice, from_x,
+  to_x, colour)` falls to the rail, squashes, rolls to the tick, flashes
+  in the result colour and draws the direction arrow on the ground;
+  `lift(ball, lattice, to_x, colour)` rises and crosses back.
+- `Gate(text, lattice, x, width, height)`: a slab between two posts across
+  the lattice, its label above; `open(gate, scene)` EMERALD, lifts, under a
+  `check_mark()`; `shut(gate, scene)` RED, drops, under a `cross_mark()`.
+- Camera: `look(scene, preset)` cuts to `front` (72°, from the front),
+  `three_quarter` (66°, −52°) or `top` (28°); `orbit(scene, phi, theta)`
+  swings it ease-in-out (a reveal: pass the thing's arrival as
+  `added_anims`); `dolly(scene, zoom, at)` zooms and re-centres. The
+  camera moves only between reads. `dim(scene.dimmable(*keep))` fades
+  everything but the chrome and the things kept.
+- The Cairo renderer has no true depth buffer: 3D pieces are sorted by
+  depth per frame (a liquid inside a glass reads because the glass is
+  translucent), there is no shadow, and a 3D render is slower than 2D (s06's 43 s
+  take about 75 s at `-ql` and 105 s at `-qh`; the dry run under
+  check.py is as slow as a render), so iterate at `-ql`.
+
 ## Scenes
 
 | file | slide | numbers from |
@@ -255,7 +311,7 @@ chart's own units.
 | `s03_under.py` | exp is under everything | no JSON: `numbers()` is empty and every string is a `LITERALS` entry (the title, four row labels, their formulas with the exp term last, the hero `e^x`: V11; the closing line: V10, V11); the `→` between a formula's stages is a drawn arrow and the `²` a `<sup>2</sup>`, since Instrument Sans has neither glyph; `check.py` compares the strings, markup stripped, with the brief's table |
 | `s04_grid.py` | Computers round | edges.json op `exp`, probe `["40"]`: `.truth` to 80 decimals (`truth80()`), `.cells.bl127.value`; the neighbours at every decimal and binary level, the 2^-128 words' readings to 80 decimals (they part at the 39th), computed from the truth with Fraction |
 | `s05_cost.py` | $130 million | `talk/scenes/data/incidents.json` (`.incidents[]`, `.total`, `.since`; the rounding lines are essay-v6 §2's, listed, not summed) |
-| `s06_resupply.py` | Resupply, 26 June 2025 | scripts/replays/resupply.json `.pins` (price, borrowAmount, collateral, maxLTV, ltvPrecision, exchangePrecision, block) and `.citations` (the two Solidity lines); every value computed from the pins |
+| `s06_resupply.py` | Resupply, 26 Jun 2025 | the model 3D scene (`DeckScene3D`): scripts/replays/resupply.json `.pins` (price, borrowAmount, collateral, maxLTV, ltvPrecision, exchangePrecision, block, donation, mintShares, vaultTotalSupply) and `.citations` (ResupplyPairCore.sol:573 for the formula's 36, :282 in the check's caption); the date from incidents.json; every value computed from the pins. Two tanks and a pour (2,000 crvUSD), a `Stack` of one block (1 share), the price per share at HERO on the vault (49 characters: two lines, broken after a thousands group); a `Lattice` 0–2 with the half post, the rate as a `Ball` hovering at 0.4999999999999999999995 (to 22 decimals; in float64 the ball sits on the half post: the gap of 5 × 10^-22 is in the digits, reported), `drop_snap` to 0 in RED, a `Gate` that opens on 10,000,000 × 0 = 0 ≤ 95,000 and shuts on 499,999,999,999.9999999995004995 > 95,000; the multiplier 5,263,158× at HERO on the gate |
 | `s06b_bunni.py` | Bunni v2, 2 Sep 2025 | scripts/replays/bunni.json `.start` (raw0, the vault's cash/borrows/shares, idle, totalSupply), `.steps.shares[0]`, `.snapshots.idle[0]`, `.observed.swap3` and `.afterWithdrawals` `.totalLiquidity` (the −84.37%), `.tx` (the caption), `.cites[idle]` (BunniHubLogic.sol:478); `bunni_replay()` for the active USDC after each of the 44 withdrawals (28 to 4) and the mulDivUp / BL127 ends; `bunni_liquidity()` (the module's `queryLDF` per step) for the liquidity bar and the −0.0000009%; `replay_table("bunni", …)` for the BL19 row (forge's: the table alone carries it); the loss and date from talk/scenes/data/incidents.json; the first withdrawal's subtrahend idle × shares / totalSupply (to 3 decimals) and its floor computed with Fraction |
 | `s06c_balancer_v2.py` | Balancer V2, 3 Nov 2025 | scripts/replays/balancer.json: `.pools.osETH.swaps[23]` (the Vault's onSwap: balances 374,353 WETH-wei / 18 osETH-wei, 17 out, 625,492 charged), `.pools.osETH.rateCacheUpdatedInTx.providerRate` (the rate, 1.058132408689971699), the product 17.988250947729518883 and its mulDown 17 / mulUp 18 by Fraction, `.test.osETH.expectExact[1]` and `.score.osETH.steps[1]` (the exact charge 957,169; 34.65% under, computed), `.score.*.kinds.micro` (30 and 25 cycles), `.score.osETH.trueInvariantStart/End`, `.onchainInvariantRatio` (D* 137,894.598 → 2,446.080, ×0.017739) with the per-cycle invariants driving the bar, `.batchSwapNetEth` (11,873.89 ETH), `.models.bl127/bl19` (0 calls below exact, −127.677 ETH projected); incidents.json's loss ($121.1M); docs/benchmarks/replay-balancer.md through `replay_table()` ("The same calls on five rulers", "What happened"), every cell cross-checked against the JSON; the citations from `.pools.osETH.source.cites`; the title is the one literal (C3) |
 | `s06d_thetanuts.py` | Thetanuts, 15 Jun 2026 | scripts/replays/thetanuts.json: `.pre.totalSupply`, `.flashLoan.amount/.premium`, `.claim` (supplyAfter 3, storedBefore, payout, storedAfter 1), `.components[].symbol/.decimals`, `.mints[]` (amount, supplyBefore, supplyAfter, storedBefore, charge: 37 mints, 185 charges of 0), `.post.totalSupply`, `.realised` (usdcTotal, sentToBeneficiary), `.trace.pcMul/.pcDiv` (the bytecode citation: the vault's source is unverified), `.tx`, `.block`; the date and the loss line from incidents.json; the first mint's charge 1 × 2 / 3 as a Fraction (to 6 decimals) and its floor 0 on the raw-unit grid; the 37 mints rerun here with the charge rounded up (76,596,174,855 raw per component, C8: computed off-chain), cross-checked by check.py against `replay_table("thetanuts", …)`'s tables in docs/benchmarks/replay-thetanuts.md; USDC's 6 decimals are the module constant `USDC_DECIMALS` (the page writes 105,471.499078 USDC) |

@@ -44,6 +44,9 @@ config.verbosity = "ERROR"
 config.progress_bar = "none"
 
 import vocab  # noqa: E402
+import vocab3d  # noqa: E402
+
+SCENE_BASES = (vocab.DeckScene, vocab3d.DeckScene3D)  # a scene is a subclass of either (3D scenes: talk/briefs/3d-direction.md)
 
 NUMBER = re.compile(r"0x[0-9a-fA-F]+|\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
 TAG = re.compile(r"<[^>]+>")
@@ -102,9 +105,9 @@ def known_tokens(numbers: dict) -> set[str]:
     return toks
 
 
-def dry_run(mod) -> "vocab.DeckScene":
-    """Run the module's DeckScene subclass under manim's dry run and return it."""
-    classes = [c for _, c in inspect.getmembers(mod, inspect.isclass) if issubclass(c, vocab.DeckScene) and c is not vocab.DeckScene and c.__module__ == mod.__name__]
+def dry_run(mod) -> "vocab.DeckScene | vocab3d.DeckScene3D":
+    """Run the module's scene (a DeckScene or a DeckScene3D) under manim's dry run and return it."""
+    classes = [c for _, c in inspect.getmembers(mod, inspect.isclass) if issubclass(c, SCENE_BASES) and c not in SCENE_BASES and c.__module__ == mod.__name__]
     assert len(classes) == 1, (mod.__name__, classes)
     config.dry_run = True
     vocab.reset_drawn()
@@ -420,7 +423,16 @@ def expect_s06_resupply(mod) -> dict:
         assert "…" not in str(v), (k, v)
     rate_exp = int(cite[573].split("1e")[1].split(" ")[0])
     assert rate_exp == 36
+    files = {c["line"]: c["file"] for c in d["citations"] if c["file"].endswith("ResupplyPairCore.sol")}
+    assert files[573].split("/")[-1] == files[282].split("/")[-1] == "ResupplyPairCore.sol"
+    inc = next(i for i in vocab.incidents()["incidents"] if i["protocol"] == "Resupply")
+    with localcontext() as ctx:
+        ctx.prec = 60
+        donation = Decimal(p["donation"]).scaleb(-18)  # crvUSD, whole
+        assert donation == donation.to_integral_value() and Decimal(p["donation"]) / Decimal(ex_p) == donation
+    assert int(p["mintShares"]) == 1 == int(p["vaultTotalSupply"]) and int(p["mintAssets"]) > 0  # one share minted into a vault with none
     return {
+        "title": f"Resupply, {inc['date']}",
         "block": f"{int(p['block']):,}",
         "rate_exp": rate_exp,
         "base": 10,
@@ -444,6 +456,11 @@ def expect_s06_resupply(mod) -> dict:
         "solvent_exact": ltv <= max_ltv,
         "rate_line": cite[573],
         "ltv_line": cite[282],
+        "rate_cite": "ResupplyPairCore.sol:573",
+        "ltv_cite": "ResupplyPairCore.sol:282",
+        "donation_tokens": f"{int(donation):,}",
+        "mint_shares": "1",
+        "shares_before": str(int(p["vaultTotalSupply"]) - int(p["mintShares"])),
     }
 
 

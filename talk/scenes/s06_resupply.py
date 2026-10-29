@@ -1,28 +1,30 @@
-"""Slide 6, "Resupply, 26 June 2025": one floor, in full.
+"""Slide 6, "Resupply, 26 Jun 2025": one floor, in full, as things.
 
-The exchange rate is 10^36 ÷ price (ResupplyPairCore.sol:573). The price
-the oracle returned types in; the long division runs out digit by digit
-to its 30th decimal and is labelled "(to 30 decimals)"; on the integer
-grid the rate is stored on, the value sits between 0 and 1 and the floor
-snaps it to 0 (WRONG, red). The solvency check (ResupplyPairCore.sol:282)
-then reads 10,000,000 × 0 × 10^5 = 0 ≤ 95,000 and draws an emerald tick.
-Then the half is restored: the dot returns to the exact value, named to
-22 decimals (the fewest at which it still reads below one half; at 21 it
-rounds to 0.5), the LTV recomputes to 499,999,999,999.9999999995004995
-(to 16 decimals), the comparison with 95,000 reads 5,263,158× and the
-tick becomes a red cross, and the multiplier names the miss.
+The attacker's tank pours 2,000 crvUSD into the empty cvcrvUSD vault; one
+block, 1 share, is minted; the vault's quantity becomes the oracle's price
+per share (the one number of the beat, HERO). The tanks slide back; a
+lattice 0–2 (the integer grid the stored rate lives on) rises; a ball,
+the exchange rate 10^36 ÷ price, hovers at 0.4999999999999999999995 (to
+22 decimals: the fewest at which it still reads below one half); the
+camera dollies in on the half. The floor: the ball drops and rolls to 0
+in RED, the direction arrow on the ground, tick 0 lit. The check: a gate
+labelled 10,000,000 × 0 = 0 ≤ 95,000 opens EMERALD (ResupplyPairCore.sol:
+282, the caption), 10,000,000 reUSD pour into the attacker's tank while
+the 1 share sits as collateral. The half restored: the ball lifts back to
+0.4999… in white, the gate's label becomes 499,999,999,999.9999999995004995
+> 95,000 and it shuts RED under a cross: insolvent. The multiplier: all
+but the gate dims; 5,263,158× the limit (claim V12).
 
-Six sections, one per click: the price; the long division; the floor to
-0; the check passes; the half restored and the check fails; the
-multiplier (claim V12).
-
-No number on screen carries an ellipsis: each is complete in a stated
-format, rounded half-up at the stated decimal (check.py asserts both).
+Six sections, one per click: price, division, floor, check, half,
+multiplier. No number on screen carries an ellipsis: each is complete in
+a stated format, rounded half-up at the stated decimal (check.py asserts
+both).
 
 Numbers from scripts/replays/resupply.json: .pins.price, .borrowAmount,
-.collateral, .maxLTV, .ltvPrecision, .exchangePrecision, .block; the two
-Solidity lines from .citations (file, line, text). Every value is
-computed here from the pins with Fraction and Decimal, as
+.collateral, .maxLTV, .ltvPrecision, .exchangePrecision, .block,
+.donation, .mintShares, .vaultTotalSupply; the two Solidity lines from
+.citations (file, line, text); the title's date from incidents.json.
+Every value is computed here from the pins with Fraction and Decimal, as
 docs/benchmarks/replay-resupply.md does: rate = 10^36 / price; LTV =
 borrow × rate × ltvPrecision / exchangePrecision / collateral.
 """
@@ -34,31 +36,17 @@ from fractions import Fraction
 import re
 from math import log10
 
-from manim import (
-    DOWN,
-    LEFT,
-    RIGHT,
-    UP,
-    AddTextLetterByLetter,
-    Create,
-    FadeIn,
-    FadeOut,
-    Transform,
-    VGroup,
-)
-from manim.utils.rate_functions import ease_out_cubic
+from manim import DEGREES, DOWN, OUT, RIGHT, UP, FadeIn, FadeOut, VGroup
 
-from vocab import PROTOCOL_COLOUR, SIZE_BODY, DeckScene, GridLine, Palette, check_mark, cross_mark, digits, direction, markup, resupply, snap, thousands, words
+from vocab import SIZE_BODY, SIZE_HERO, Palette, digits, incidents, markup, resupply, thousands, words
+from vocab3d import Ball, DeckScene3D, Gate, Lattice, Stack, Tank, dim, dolly, drop_snap, lift, orbit, pour, shut, slide, transfer
+from vocab3d import open as open_gate
 
-QUOTIENT_DIGITS = 30  # decimals of the long division, complete and labelled
+QUOTIENT_DIGITS = 30  # decimals of the long division (numbers() keeps it for s07 and check.py; the slide no longer draws it)
 LTV_DECIMALS = 16  # decimals of the exact LTV, complete and labelled
-RATE_SHORT = 22  # decimals of the rate where it is named in passing: the fewest that still read below one half
+RATE_SHORT = 22  # decimals of the rate where it is named: the fewest that still read below one half
 GRID = (0, 2, 1)  # the integer grid the stored rate lives on
-MONO = 30
-SANS = SIZE_BODY - 4
-SMALL = 14  # the Solidity citations
-CHECK = 24  # the solvency rows
-LABEL = 18  # "(to N decimals)"
+PRICE_SPLIT = 26  # the price per share is 49 characters: at HERO it is two lines, broken after this many (a thousands group ends there)
 
 
 def _rounded(q: Fraction, places: int) -> str:
@@ -107,7 +95,11 @@ def numbers() -> dict:
     cite = {c["line"]: c for c in d["citations"] if c["file"].endswith("ResupplyPairCore.sol")}
     rate_exp = _numerator_exp(cite[573]["text"])
     assert 10**rate_exp == 10**36 and rate == Fraction(10**rate_exp, price), rate_exp
+    inc = next(i for i in incidents()["incidents"] if i["protocol"] == "Resupply")
+    donation, mint_shares, supply_after = int(p["donation"]), int(p["mintShares"]), int(p["vaultTotalSupply"])
+    assert donation % ex_p == 0 and supply_after - mint_shares == 0  # the vault had no shares before the mint
     return {
+        "title": f"{inc['protocol']}, {inc['date']}",
         "block": thousands(p["block"]),
         "rate_exp": rate_exp,
         "base": 10,
@@ -131,147 +123,138 @@ def numbers() -> dict:
         "solvent_exact": ltv <= max_ltv,
         "rate_line": cite[573]["text"],
         "ltv_line": cite[282]["text"],
+        "rate_cite": f"{cite[573]['file'].rsplit('/', 1)[-1]}:{cite[573]['line']}",
+        "ltv_cite": f"{cite[282]['file'].rsplit('/', 1)[-1]}:{cite[282]['line']}",
+        "donation_tokens": thousands(donation // ex_p),  # crvUSD, exact
+        "mint_shares": str(mint_shares),
+        "shares_before": str(supply_after - mint_shares),
     }
 
 
-class Resupply(DeckScene):
+class Resupply(DeckScene3D):
     SECTIONS = ("price", "division", "floor", "check", "half", "multiplier")
 
     def construct(self):
         n = numbers()
         assert n["solvent_floor"] and not n["solvent_exact"]
+        x_exact = float(Fraction(10**36, int(resupply()["pins"]["price"])))  # 0.5 in float64: the gap of 5 × 10^-22 is in the digits, not on the ground
+
+        # ---- price: a donation into an empty vault
         self.section(0)
-        y0 = 3.3
-        y_chk = -1.72
-        # the chrome, on the first frame: the caption; the title (the formula); the two
-        # cited Solidity lines in SAPPHIRE, Resupply's hue (its own code); the row keys
-        # "price", "10^36 ÷ price", "stored rate"; the integer grid with its ticks named
         self.caption_now(f"scripts/replays/resupply.json · block {n['block']}")
-        formula = self.title(f"exchange rate  =  10<sup>{n['rate_exp']}</sup> ÷ price", SANS, Palette.TEXT, use_markup=True)
-        src = digits(n["rate_line"], SMALL, PROTOCOL_COLOUR["resupply"])
-        src.move_to([-6.3 + src.width / 2, y0 - 0.45, 0])
-        chk_src = digits(n["ltv_line"], SMALL, PROTOCOL_COLOUR["resupply"])
-        chk_src.move_to([-6.3 + chk_src.width / 2, y_chk + 0.47, 0])
-        price_lbl = words("price", SANS, Palette.MUTED)
-        price_lbl.move_to([-6.3 + price_lbl.width / 2, y0 - 1.15, 0])
-        q_lbl = markup(f"10<sup>{n['rate_exp']}</sup> ÷ price", SANS, Palette.MUTED)
-        q_lbl.move_to([-6.3 + q_lbl.width / 2, y0 - 1.95, 0])
-        stored_lbl = words("stored rate", SANS, Palette.MUTED)
-        stored_lbl.move_to([-6.3 + stored_lbl.width / 2, y0 - 2.7, 0])
-        line = GridLine(GRID, length=6.5, tick_size=0.14).move_to([-1.6, -0.6, 0])
-        tick_lbls = VGroup(*[digits(str(k), 24, Palette.FAINT).next_to(line.n2p(k), DOWN, buff=0.22) for k in n["grid_ticks"]])
-        grid_lbl = words("the stored rate is an integer", 22, Palette.FAINT).next_to(line.get_end(), RIGHT, buff=0.4)
-        self.fix(formula, src, chk_src, price_lbl, q_lbl, stored_lbl, line, tick_lbls, grid_lbl)
-        self.wait(1.3)
+        self.fix(self.title(n["title"]))
+        vault = Tank("cvcrvUSD vault", level=0.0, colour=Palette.GOLD, quantity=f"{n['shares_before']} shares", at=[-2.2, 0.4, 0], height=1.8)
+        attacker = Tank("attacker", level=0.78, colour=Palette.GOLD, quantity=f"{n['donation_tokens']} crvUSD", at=[3.0, 0.4, 0], height=1.8)
+        self.show(vault, attacker)
+        self.play(FadeIn(vault, attacker, vault.name, vault.quantity, attacker.name, attacker.quantity, run_time=0.8))
+        self.wait(0.4)
+        self.play(pour(attacker, vault, 0.78, run_time=2.4))
+        emptied = digits(f"{n['floor']} crvUSD", SIZE_BODY, Palette.GOLD)
+        self.play(self.relabel(attacker.quantity, emptied, run_time=0.5))
+        attacker.quantity = emptied
+        share = Stack(1, Palette.VIOLET, label=f"{n['mint_shares']} share", at=[-4.3, -1.3, 0])
+        self.show(share)
+        share.label.set_opacity(0)
+        self.play(share.appear(), share.label.animate.set_opacity(1), run_time=0.6)
+        self.wait(0.3)
+        price_lines = n["price"][:PRICE_SPLIT] + "\n" + n["price"][PRICE_SPLIT:]
+        assert n["price"][PRICE_SPLIT - 1] == "," and price_lines.replace("\n", "") == n["price"]
+        price = VGroup(digits(price_lines, SIZE_HERO, Palette.EXACT, line_spacing=0.7), words("per share", SIZE_BODY, Palette.MUTED)).arrange(DOWN, buff=0.12)
+        self.play(self.relabel(vault.quantity, price, run_time=0.9, offset=UP * 0.9))
+        vault.quantity = price
 
-        # the price the oracle returned
-        price = digits(n["price"], MONO - 2, Palette.TEXT)
-        price.next_to(price_lbl, RIGHT, buff=0.45).set_y(y0 - 1.15)
-        self.play(AddTextLetterByLetter(price, time_per_char=0.045))
-
-        # the long division runs out
+        # ---- division: the lattice rises; the rate hovers just under the half
         self.section(1, hold=2.0)
-        quotient = digits(n["quotient"], MONO, Palette.EXACT)
-        quotient.next_to(q_lbl, RIGHT, buff=0.45).set_y(y0 - 1.95)
-        quotient_lbl = words(n["quotient_label"], LABEL, Palette.FAINT).next_to(quotient, RIGHT, buff=0.3).set_y(y0 - 1.95)
-        self.play(AddTextLetterByLetter(quotient, time_per_char=0.09))
-        self.play(FadeIn(quotient_lbl, run_time=0.4))
-        self.wait(1.0)
+        aside = 0.0  # parked out of frame; perspective would still show a dimmed tank at the edge
+        self.play(
+            FadeOut(price, run_time=0.6),
+            slide(vault, [-7.8, 0.6, 0], opacity=aside),
+            slide(attacker, [6.8, 0.6, 0], opacity=aside),
+            transfer(share, [-11.5, -0.5, 0], opacity=aside),
+            *[m.animate.set_opacity(aside) for m in (vault.name, attacker.name, attacker.quantity, share.label)],
+            run_time=1.2,
+        )
+        self.remove(vault, vault.name)  # parked and invisible: a later dim must not bring it back
+        lattice = Lattice(GRID, length=6.5, at=[-1.6, -0.6, 0], minor=0.5)
+        self.show(lattice)
+        for num in lattice.numbers.values():
+            num.set_opacity(0)
+        lattice.shift(OUT * -1.4)
+        orbit(self, 62 * DEGREES, -66 * DEGREES, run_time=1.6, added_anims=[lattice.animate.shift(OUT * 1.4), *[num.animate.set_opacity(1) for num in lattice.numbers.values()]])
+        ball = Ball(Palette.EXACT, at=lattice.point(x_exact) + OUT * (0.9 + 0.24))
+        formula = markup(f"{n['base']}<sup>{n['rate_exp']}</sup> ÷ price", SIZE_BODY, Palette.MUTED)
+        value = VGroup(digits(n["rate_short"], SIZE_BODY, Palette.EXACT), words(n["rate_label"], SIZE_BODY, Palette.FAINT)).arrange(RIGHT, buff=0.25)
+        rate_label = VGroup(formula, value).arrange(DOWN, buff=0.12)
+        self.add(ball)
+        self.billboard(rate_label, ball, UP * 0.95)
+        rate_label.set_opacity(0)
+        self.play(FadeIn(ball, shift=OUT * 0.3, run_time=0.6), rate_label.animate.set_opacity(1))
+        self.wait(0.4)
+        dolly(self, 1.8, at=ball.get_center() - OUT * 0.45, run_time=1.6)
 
-        # the exact value lands on the integer grid
-        x_exact = float(Fraction(10**36, int(resupply()["pins"]["price"])))
-        dot = line.dot_at(x_exact, Palette.EXACT)
-        dot.move_to(line.n2p(x_exact) + UP * 1.6)
-
-        def rate_label(size: float) -> VGroup:
-            """The exact rate to RATE_SHORT decimals with its format stated, to the
-            right of the dot so the floor arrow (leftwards) stays clear."""
-            value = digits(n["rate_short"], size, Palette.EXACT)
-            stated = words(n["rate_label"], LABEL, Palette.FAINT).next_to(value, RIGHT, buff=0.25)
-            return VGroup(value, stated)
-
-        exact_lbl = rate_label(22)
-        exact_lbl.next_to(line.n2p(x_exact), UP, buff=0.3).align_to(line.n2p(x_exact) + RIGHT * 0.15, LEFT)
-        self.play(FadeIn(dot, run_time=0.3))
-        self.play(dot.animate(rate_func=ease_out_cubic).move_to(line.n2p(x_exact)), run_time=0.8)
-        self.play(FadeIn(exact_lbl, run_time=0.4))
-
-        # the floor sweeps the fraction away
+        # ---- floor: the ball drops and rolls to 0
         self.section(2, hold=2.0)
-        arrow = direction(line, x_exact, float(n["floor"]), Palette.WRONG, lift=0.42)
-        floor_lbl = words("floor", 22, Palette.WRONG).next_to(arrow, UP, buff=0.1)
-        self.play(Create(arrow, run_time=0.6), FadeIn(floor_lbl, run_time=0.4))
+        dolly(self, 1.0, run_time=1.2)
+        anim, arrow = drop_snap(ball, lattice, x_exact, float(n["floor"]), Palette.WRONG)
+        floor_lbl = words("floor", SIZE_BODY, Palette.WRONG)
+        self.billboard(floor_lbl, (lattice.point(x_exact) + lattice.point(float(n["floor"]))) / 2, UP * 0.8)
+        floor_lbl.set_opacity(0)
+        self.play(anim, rate_label.animate.set_opacity(0))
+        self.remove(rate_label)
         self.play(
-            snap(dot, line, float(n["floor"]), Palette.WRONG, run_time=1.0),
-            quotient[1:].animate.set_color(Palette.FAINT),
-            FadeOut(exact_lbl, run_time=0.5),
+            floor_lbl.animate.set_opacity(1),
+            lattice.post(float(n["floor"])).animate.set_fill(Palette.WRONG).set_stroke(Palette.WRONG),
+            lattice.numbers[float(n["floor"])].animate.set_color(Palette.WRONG),
+            run_time=0.5,
         )
-        stored = digits(n["floor"], MONO, Palette.WRONG)
-        stored.next_to(stored_lbl, RIGHT, buff=0.45).set_y(y0 - 2.7)
-        self.play(FadeIn(stored, shift=DOWN * 0.1, run_time=0.5))
 
-        # the solvency check, as deployed: two rows, the product and the comparison
+        # ---- check: the gate opens on 10,000,000 × 0
         self.section(3, hold=2.0)
-        y_cmp = y_chk - 0.52
-        self.wait(0.5)
-
-        def stated(label: str | None) -> str:
-            """A rounded number's format, small and faint, right after it; nothing after an integer."""
-            return f" <span foreground='{Palette.FAINT}' size='small'>{label}</span>" if label else ""
-
-        def check_rows(rate_str: str, rate_fmt: str | None, ltv_str: str, ltv_fmt: str | None, cmp: str, colour: str):
-            top = markup(
-                f"LTV  =  {n['borrow_tokens']} × <span foreground='{colour}'>{rate_str}</span>{stated(rate_fmt)} × {n['base']}<sup>{n['ltv_exp']}</sup>",
-                CHECK,
-                Palette.TEXT,
-            )
-            top.move_to([-6.3 + top.width / 2, y_chk, 0])
-            bottom = markup(f"=  <span foreground='{colour}'>{ltv_str}</span>{stated(ltv_fmt)}", CHECK, Palette.TEXT)
-            bottom.move_to([-6.3 + bottom.width / 2, y_cmp, 0])
-            right = markup(cmp, CHECK, Palette.TEXT).next_to(bottom, RIGHT, buff=0.5).set_y(y_cmp)
-            return top, bottom, right
-
-        row_t, row_b, row_r = check_rows(n["floor"], None, n["ltv_floor"], None, f"≤  {n['max_ltv']}  ({n['max_ltv_pct']})", Palette.WRONG)
-        self.play(FadeIn(row_t, shift=RIGHT * 0.1, run_time=0.6))
-        self.play(FadeIn(row_b, shift=RIGHT * 0.1, run_time=0.6))
-        self.wait(1.5)
-        self.play(FadeIn(row_r, run_time=0.5))
-        tick = check_mark(Palette.CORRECT).next_to(row_r, RIGHT, buff=0.45).set_y(y_cmp)
-        verdict = words("solvent", 22, Palette.CORRECT).next_to(tick, RIGHT, buff=0.25).set_y(y_cmp)
-        self.play(Create(tick, run_time=0.5))
-        self.play(FadeIn(verdict, run_time=0.4))
-
-        # the half, restored
-        self.section(4, hold=2.5)
-        self.play(FadeOut(arrow, run_time=0.4), FadeOut(floor_lbl, run_time=0.4))
-        back = dot.copy().move_to(line.n2p(x_exact)).set_color(Palette.EXACT)
-        self.play(Transform(dot, back, run_time=1.0), quotient.animate.set_color(Palette.EXACT))
-        exact_lbl = rate_label(22)
-        exact_lbl.next_to(line.n2p(x_exact), UP, buff=0.3).align_to(line.n2p(x_exact) + RIGHT * 0.15, LEFT)
-        self.play(FadeIn(exact_lbl, run_time=0.4))
-        new_stored_lbl = words("exact rate", SANS, Palette.MUTED)
-        new_stored_lbl.move_to([-6.3 + new_stored_lbl.width / 2, y0 - 2.7, 0])
-        new_stored = rate_label(MONO).next_to(new_stored_lbl, RIGHT, buff=0.45)
-        new_stored[0].set_y(y0 - 2.7)
-        new_stored[1].set_y(y0 - 2.7)
-        self.play(Transform(stored, new_stored[0], run_time=0.6), Transform(stored_lbl, new_stored_lbl, run_time=0.6), FadeIn(new_stored[1], run_time=0.6))
-        self.wait(1.0)
-
-        # each rounded number carries its stated format; the comparison follows the LTV's
-        new_t, new_b, new_r = check_rows(n["rate_short"], n["rate_label"], n["ltv_exact"], n["ltv_label"], f">  {n['max_ltv']}", Palette.EXACT)
-        new_tick = cross_mark(Palette.WRONG).next_to(new_r, RIGHT, buff=0.45).set_y(y_cmp)
-        new_verdict = words("insolvent", 22, Palette.WRONG).next_to(new_tick, RIGHT, buff=0.25).set_y(y_cmp)
+        self.play(self.caption(f"{n['ltv_cite']} · scripts/replays/resupply.json · block {n['block']}"))
+        gate = Gate(f"{n['borrow_tokens']} × {n['floor']} = {n['ltv_floor']} ≤ {n['max_ltv']}", lattice, x=1.5, label_lift=0.55, mark_lift=1.3)
+        self.show(gate)
+        gate.label.set_opacity(0)
+        self.play(FadeIn(gate, shift=OUT * 0.6), gate.label.animate.set_opacity(1), run_time=0.9)
+        self.play(open_gate(gate, self))
+        reusd = Tank("reUSD", level=0.85, colour=Palette.SAPPHIRE, quantity=n["borrow_tokens"], at=[4.9, 2.2, 0])
+        self.show(reusd)
         self.play(
-            Transform(row_t, new_t, run_time=0.9),
-            Transform(row_b, new_b, run_time=0.9),
-            Transform(row_r, new_r, run_time=0.9),
-            Transform(tick, new_tick, run_time=0.9),
-            Transform(verdict, new_verdict, run_time=0.9),
+            FadeIn(reusd, reusd.name, reusd.quantity, run_time=0.6),
+            slide(attacker, [-6.6, -2.2, 0], opacity=1.0),
+            attacker.name.animate.set_opacity(1),
+            attacker.quantity.animate.set_opacity(1),
+            transfer(share, lattice.point(1.5) + DOWN * 1.3 + RIGHT * 0.8, opacity=1.0),
+            share.label.animate.set_opacity(1),
+            run_time=1.0,
         )
+        collateral = digits(f"{n['mint_shares']} share\ncollateral", SIZE_BODY, Palette.VIOLET, line_spacing=0.8)
+        self.play(self.relabel(share.label, collateral, run_time=0.5))
+        share.label = collateral
+        self.play(pour(reusd, attacker, 0.85, run_time=2.4))
+        borrowed = digits(f"{n['borrow_tokens']} reUSD", SIZE_BODY, Palette.SAPPHIRE)
+        self.play(self.relabel(attacker.quantity, borrowed, run_time=0.5))
+        attacker.quantity = borrowed
 
-        # the multiplier: how far the exact LTV is over the limit
+        # ---- half: the ball lifts back; the gate shuts on the exact LTV
+        self.section(4, hold=2.5)
+        self.play(FadeOut(arrow, floor_lbl, run_time=0.4), lattice.post(float(n["floor"])).animate.set_fill(Palette.FAINT).set_stroke(Palette.FAINT), lattice.numbers[float(n["floor"])].animate.set_color(Palette.FAINT))
+        self.play(lift(ball, lattice, x_exact, Palette.EXACT))
+        exact = digits(f"{n['ltv_exact']}\n> {n['max_ltv']}", SIZE_BODY, Palette.MUTED, line_spacing=0.8)  # two lines: on one it is 10.9 units wide
+        self.play(self.relabel(gate.label, exact, run_time=0.8))
+        gate.label = exact
+        gate.labels = [(exact, gate.top, UP * gate.label_lift)]
+        self.wait(0.6)
+        verdict = words("insolvent", SIZE_BODY, Palette.WRONG)
+        self.billboard(verdict, gate.top, UP * gate.mark_lift + RIGHT * 1.2)
+        gate.extras.append(verdict)
+        verdict.set_opacity(0)
+        self.play(shut(gate, self), verdict.animate.set_opacity(1))
+
+        # ---- multiplier: all but the gate dims; the one number
         self.section(5, hold=2.0)
-        ratio = markup(f"<span foreground='{Palette.WRONG}'>{n['ratio']}×</span> the limit", SANS, Palette.TEXT)
-        ratio.move_to([-6.3 + ratio.width / 2, y_cmp - 0.62, 0])
-        self.play(FadeIn(ratio, shift=UP * 0.08, run_time=0.7))
+        self.play(dim(self.dimmable(gate), 0.12))
+        ratio = markup(f"<span foreground='{Palette.WRONG}'>{n['ratio']}×</span> the limit", SIZE_HERO, Palette.TEXT)
+        self.billboard(ratio, gate.top, UP * 1.95)
+        ratio.set_opacity(0)
+        self.play(ratio.animate.set_opacity(1), run_time=0.7)
         self.close()

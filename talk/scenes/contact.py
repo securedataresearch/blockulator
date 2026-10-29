@@ -37,9 +37,11 @@ def sections_of(scene: str) -> list[str]:
     from manim import config  # noqa: F401  (vocab sets the deck's config)
 
     import vocab
+    import vocab3d
 
+    bases = (vocab.DeckScene, vocab3d.DeckScene3D)
     mod = importlib.import_module(scene)
-    classes = [c for c in vars(mod).values() if isinstance(c, type) and issubclass(c, vocab.DeckScene) and c is not vocab.DeckScene and c.__module__ == mod.__name__]
+    classes = [c for c in vars(mod).values() if isinstance(c, type) and issubclass(c, bases) and c not in bases and c.__module__ == mod.__name__]
     assert len(classes) == 1, (scene, classes)
     return list(classes[0].SECTIONS)
 
