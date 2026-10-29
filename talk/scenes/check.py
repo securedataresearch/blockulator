@@ -524,30 +524,42 @@ def expect_s10_live(mod) -> dict:
     counts = {}
     for x in pts:
         counts[x["protocol"]] = counts.get(x["protocol"], 0) + 1
-    assert set(counts) == set(mod.PROTOCOL_LABEL), counts
+    assert set(counts) == set(mod.PROTOCOL_LABEL) == set(mod.PROTOCOLS), counts
+    assert counts == {"aave": 74, "morpho": 252}, counts  # the brief's facet counts
 
-    def median(key: str) -> float:  # the middle of the sorted list, by hand
-        v = sorted(x[key] for x in pts)
+    def median(sub: list[dict], key: str) -> float:  # the middle of the sorted list, by hand
+        v = sorted(x[key] for x in sub)
         k = len(v) // 2
         return round((v[k - 1] + v[k]) / 2 if len(v) % 2 == 0 else v[k], 1)
 
-    medians = {k: median(k) for k in ("deployed", "fp127", "fp19")}
+    def summary(sub: list[dict]) -> dict:
+        medians = {k: median(sub, k) for k in ("deployed", "fp127", "fp19")}
+        margins = {"fp127": round(medians["fp127"] - medians["deployed"], 1), "fp19": round(medians["fp19"] - medians["fp127"], 1)}
+        assert margins["fp127"] > 0 and margins["fp19"] > 0
+        return {"medians": medians, "margins": margins}
+
+    whole = summary(pts)
+    medians = whole["medians"]
     above, above_fp19 = sum(1 for x in pts if x["fp127"] > x["deployed"]), sum(1 for x in pts if x["fp19"] > x["deployed"])
     assert above == above_fp19 == len(pts), (above, above_fp19)
-    margins = {"fp127": round(medians["fp127"] - medians["deployed"], 1), "fp19": round(medians["fp19"] - medians["fp127"], 1)}
-    assert margins["fp127"] > 0 and margins["fp19"] > 0
+    by_protocol = {p: {"count": counts[p], **summary([x for x in pts if x["protocol"] == p])} for p in ("aave", "morpho")}
+    # every facet's rows climb like the whole: deployed < FP127 < FP19
+    for p, s in by_protocol.items():
+        assert s["medians"]["deployed"] < s["medians"]["fp127"] < s["medians"]["fp19"], (p, s)
+    assert medians["deployed"] < medians["fp127"] < medians["fp19"], medians
     return {
         "points": pts,
         "count": len(pts),
         "counts": counts,
         "block": f"{survey['block']:,}",
         "date": survey["date"],
-        "axis_ticks": [0, 10, 20, 30, 40, 50, 60, 70, 80],
+        "axis_ticks": [0, 20, 40, 60, 80],
         "above": above,
         "above_fp19": above_fp19,
         "medians": medians,
         "medians_rounded": {k: int(Decimal(str(v)).quantize(Decimal(1), rounding="ROUND_HALF_EVEN")) for k, v in medians.items()},
-        "margins": margins,
+        "margins": whole["margins"],
+        "by_protocol": by_protocol,
     }
 
 
