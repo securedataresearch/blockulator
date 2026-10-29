@@ -691,6 +691,136 @@ def expect_s03_under(mod) -> dict:
     assert toks == {"1", "2"}, toks
     assert all(stage.startswith("e<sup>") for _, stages in mod.ROWS for stage in stages[-1:]), "every row ends in a power of e"
     return {}
+def expect_s07_two(mod) -> dict:
+    inc = vocab.incidents()["incidents"]
+    names = [i["protocol"] for i in inc]
+    with localcontext() as ctx:
+        ctx.prec = 120
+
+        def dec(x: Decimal, places: int) -> str:  # nearest, half-up, by Decimal (the scene used integer arithmetic on Fractions)
+            return str(x.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP))
+
+        # row 1: the rate by Decimal, as slide 6's check; the scene reuses slide 6's strings
+        s06 = mod.resupply_numbers()
+        price = int(vocab.resupply()["pins"]["price"])
+        rate = Decimal(10 ** s06["rate_exp"]) / Decimal(price)
+        rate22, floor1 = dec(rate, 22), str(int(rate.to_integral_value(rounding=ROUND_FLOOR)))
+        assert rate22 == s06["rate_short"] and floor1 == s06["floor"] == "0" and s06["rate_label"] == "(to 22 decimals)" and Decimal(rate22) < Decimal("0.5"), (rate22, floor1)  # C1, V12
+        # row 2: the first withdrawal's subtrahend from the raw operands; the chain's idle balance fell by its floor
+        bj = vocab._load("scripts/replays/bunni.json")
+        idle0, s0, t0 = int(bj["start"]["idle"]), int(bj["steps"]["shares"][0]), int(bj["start"]["totalSupply"])
+        sub = Decimal(idle0) * Decimal(s0) / Decimal(t0)
+        sub3, sub_floor = dec(sub, mod.SUB_DECIMALS), int(sub.to_integral_value(rounding=ROUND_FLOOR))
+        assert Fraction(idle0 * s0, t0) == Fraction(sub3) + (Fraction(idle0 * s0, t0) - Fraction(sub3)) and abs(Fraction(idle0 * s0, t0) - Fraction(sub3)) < Fraction(1, 2 * 10**mod.SUB_DECIMALS)
+        assert int(bj["snapshots"]["after"][0]) == 1 and idle0 - int(bj["snapshots"]["idle"][0]) == sub_floor == 23, sub_floor  # C2
+        active = [int(a) for a in vocab.bunni_replay()["seq"]["deployed"]]
+        withdrawals = len(active) - 1
+        assert withdrawals == len(bj["steps"]["shares"]) == 44 and active[0] == 28 and active[-1] == 4, (withdrawals, active[0], active[-1])  # C2: 44 withdrawals, 28 → 4
+        # row 3: the upscale from the rate in the tx; mulDown floors it, mulUp would not
+        bal = vocab.balancer()
+        pool, score = bal["pools"]["osETH"], bal["score"]["osETH"]
+        factor = int(pool["rateCacheUpdatedInTx"]["providerRate"])
+        micro = [s for s in score["steps"] if s["what"] == "micro"]
+        cycles = len(micro)
+        assert cycles == score["kinds"]["micro"] == 30 and {int(s["out"]) for s in micro} == {17}, cycles  # C3
+        out = int(micro[0]["out"])
+        up = Decimal(out) * Decimal(factor) / Decimal(10**18)
+        up18, mul_down = dec(up, 18), int(up.to_integral_value(rounding=ROUND_FLOOR))
+        assert up18 == "17.988250947729518883" and mul_down == 17 and all(int(s["upscaledOutDeployed"]) == 17 and int(s["upscaledOutMulUp"]) == 18 for s in micro), up18  # C3
+        assert Fraction(up18) == Fraction(out * factor, 10**18), "17 × the factor is exact at 18 decimals"
+        # row 4: the first mint's charge, exactly two thirds; every charge 0 across the 37 mints
+        tj = vocab.thetanuts()
+        mints = tj["mints"]
+        m0 = mints[0]
+        amount, held, supply = int(m0["amount"]), int(m0["storedBefore"][0]), int(m0["supplyBefore"])
+        charge = Fraction(amount * held, supply)
+        assert charge == Fraction(2, 3) and (amount, held, supply) == (2, 1, 3) and len(mints) == 37 and supply == int(tj["claim"]["supplyAfter"])  # C4, C8
+        assert all(int(c) == 0 for m in mints for c in m["charge"]) and all(int(h) == 1 for m in mints[:1] for h in m["storedBefore"])
+        # row 5: BNum's ratio at a balance of 3, pools 1–3 (pools 4–5 land lower: C5); × 3 by Decimal; half-up to 4
+        v1 = vocab.balancer_v1_replay()
+        at3 = [[r for r in p if r["kind"] == 2 and r["balance"] == 3] for p in v1]
+        ratios = [{int(r["steps"]["tokenInRatio"]) for r in rows} for rows in at3]
+        assert ratios[0] == ratios[1] == ratios[2] and len(ratios[0]) == 1 and ratios[3] == ratios[4] and ratios[3] != ratios[0], ratios
+        (ratio,) = ratios[0]
+        product = Decimal(3) * Decimal(ratio) / Decimal(10**18)
+        prod18, nearest = dec(product, 18), int(product.quantize(Decimal(1), rounding=ROUND_HALF_UP))
+        assert prod18 == "4.499999999999999991" and nearest == 4 and Decimal(prod18) < Decimal("4.5"), prod18  # C5, V27: nearest, and still 4
+        assert all(int(r["steps"]["newTokenBalanceIn"]) == 4 and int(r["deployed"]) == 1 for rows in at3[:3] for r in rows)
+        joins = sum(1 for p in v1 for r in p if r["kind"] == 2)
+        assert joins == 438 and sum(len(rows) for rows in at3) == 400, joins  # C5
+    # the strings: complete in a stated format, never cut short
+    for s, places in ((rate22, 22), (sub3, mod.SUB_DECIMALS), (up18, 18), (prod18, 18)):
+        assert "…" not in s and len(s.partition(".")[2]) == places, (s, places)
+    assert "floored" not in mod.MECH_V1 and mod.MECH_V1.startswith("nearest") and mod.MECH_RESUPPLY == "floored once" and "would have cost" in mod.CEIL_LABEL  # flags
+    rows = [
+        {"id": "resupply", "protocol": names[0], "date": inc[0]["date"], "ticks": [0, 1], "x": float(Fraction(10 ** s06["rate_exp"], price)), "exact": rate22, "exact_label": s06["rate_label"], "rounded": floor1, "to": 0, "mechanism": mod.MECH_RESUPPLY},
+        {
+            "id": "bunni",
+            "protocol": names[1],
+            "date": inc[1]["date"],
+            "ticks": [sub_floor, sub_floor + 1],
+            "x": float(Fraction(idle0 * s0, t0)),
+            "exact": sub3,
+            "exact_label": f"(to {mod.SUB_DECIMALS} decimals)",
+            "rounded": str(sub_floor),
+            "to": sub_floor,
+            "mechanism": mod.mech_bunni(withdrawals, active[0], active[-1]),
+            "counter": [mod.mech_bunni(k, active[0], active[k]) for k in range(1, withdrawals + 1)],
+            "withdrawals": withdrawals,
+            "active": active,
+        },
+        {
+            "id": "balancer-v2",
+            "protocol": names[2],
+            "date": inc[2]["date"],
+            "ticks": [mul_down, mul_down + 1],
+            "x": float(Fraction(out * factor, 10**18)),
+            "exact": up18,
+            "exact_label": "(to 18 decimals)",
+            "rounded": str(mul_down),
+            "to": mul_down,
+            "mechanism": mod.mech_v2(cycles),
+            "counter": [mod.mech_v2(k) for k in range(1, cycles + 1)],
+            "cycles": cycles,
+            "out": out,
+            "factor": str(factor),
+        },
+        {
+            "id": "thetanuts",
+            "protocol": names[3],
+            "date": inc[3]["date"],
+            "ticks": [0, 1],
+            "x": float(charge),
+            "exact": mod.TWO_THIRDS,
+            "exact_label": mod.TWO_THIRDS_FRACTION,
+            "rounded": "0",
+            "to": 0,
+            "mechanism": mod.MECH_THETANUTS.format(mints=len(mints), charge=0),
+            "mints": len(mints),
+            "operands": [amount, held, supply],
+            "other_way": 1,
+            "other_label": mod.CEIL_LABEL,
+        },
+        {
+            "id": "balancer-v1",
+            "protocol": names[4],
+            "date": inc[4]["date"],
+            "ticks": [nearest, nearest + 1],
+            "x": float(Fraction(3 * ratio, 10**18)),
+            "exact": prod18,
+            "exact_label": "(to 18 decimals)",
+            "rounded": str(nearest),
+            "to": nearest,
+            "mechanism": mod.MECH_V1,
+            "ratio": str(ratio),
+            "balance": 3,
+            "joins": joins,
+            "other_way": nearest + 1,
+            "other_label": mod.TOWARD_POOL,
+        },
+    ]
+    assert mod.Two.SECTIONS == ("bands", "resupply", "bunni", "balancer-v2", "round-once", "thetanuts", "balancer-v1", "direction", "box")
+    return {"rows": rows, "half": 0.5, "wad_decimals": 18}
 
 
 EXPECT = {
@@ -699,6 +829,7 @@ EXPECT = {
     "s04_grid": expect_s04_grid,
     "s05_cost": expect_s05_cost,
     "s06_resupply": expect_s06_resupply,
+    "s07_two": expect_s07_two,
     "s08_ladder": expect_s08_ladder,
     "s09_cliff": expect_s09_cliff,
     "s10_live": expect_s10_live,

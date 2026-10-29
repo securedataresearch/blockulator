@@ -96,7 +96,9 @@ Pango per process; every text helper calls it.
   table, to re-probe before the talk), `bunni_replay()` (runs
   scripts/replays/bunni.py's `replay` on bunni.json: the per-withdrawal
   chain), `thetanuts()`, `balancer()`, `balancer_v1()` (the raw replay
-  JSONs), and `truth80()`: e^40 to 80 decimals by mpmath, its first 24
+  JSONs), `balancer_v1_replay()` (scripts/replays/balancer_v1.py's `replay`
+  on each pool: the joins and exits with BNum's intermediate integers), and
+  `truth80()`: e^40 to 80 decimals by mpmath, its first 24
   decimals asserted against edges.json's truth.
 - The words: `fp127_value(raw)` and `fp19_value(raw)` decode a cell's
   `.raw` word (FP127: 128 fraction bits; FP19: binary256's layout) to a
@@ -125,6 +127,7 @@ chart's own units.
 | `s04_grid.py` | Computers round | edges.json op `exp`, probe `["40"]`: `.truth` to 80 decimals (`truth80()`), `.cells.fp127.value`; the neighbours at every decimal and binary level, the 2^-128 words' readings to 80 decimals (they part at the 39th), computed from the truth with Fraction |
 | `s05_cost.py` | $130 million | `talk/scenes/data/incidents.json` (`.incidents[]`, `.total`, `.since`; the rounding lines are essay-v6 §2's, listed, not summed) |
 | `s06_resupply.py` | Resupply, 26 June 2025 | scripts/replays/resupply.json `.pins` (price, borrowAmount, collateral, maxLTV, ltvPrecision, exchangePrecision, block) and `.citations` (the two Solidity lines); every value computed from the pins |
+| `s07_two.py` | Two failures, one decision | one row per incident, names and dates from `talk/scenes/data/incidents.json`: Resupply's rate and floor as `s06_resupply.numbers()` names them; Bunni's first idle-balance subtrahend idle × shares / totalSupply from scripts/replays/bunni.json `.start`/`.steps` (to 3 decimals) and its floor, the active balance after each of the 44 withdrawals from `bunni_replay()`; Balancer V2's 17 wei × the osETH rate in the tx (balancer.json `.pools.osETH.rateCacheUpdatedInTx.providerRate`, to 18 decimals), mulDown's 17 and the 30 micro-swap cycles from `.score.osETH.steps`; Thetanuts' first mint 2 × 1 / 3 and its 0 from thetanuts.json `.mints[0]`, 37 mints; Balancer V1's BNum tokenInRatio at a balance of 3 (pools 1–3, `balancer_v1_replay()`) × 3 (to 18 decimals) and bmul's half-up 4. Fixed strings (2/3, the ceil and toward-the-pool labels) carry claim ids C4, C5, C8 |
 | `s08_ladder.py` | Measure it | ladder.json `.ladder`, `.ladderLog10`, `.axisMax`; one chart morphing across scenarios `compound`, `accrual-continuous`, `adaptive-rate`: `.summary[lib][N].digits.median` per library (one line each; those without a median at every N listed with `.ops[lib]`'s reason), the margins FP19 − best 18-decimal and FP127 − best 18-decimal at N = 10,000; fp127lib skipped |
 | `s09_cliff.py` | The cliff | edges.json op `exp`, the probes with one argument in [−100, −40]: `.cells[lib].digits/zero/reverted/reasonName/unsupported` (every library with a value drawn; unsupported on every probe listed as "no exp", ParamOutOfRange on every probe as "rejects negative inputs"; fp127lib skipped); FP19's least digits, FP127's last probe with a digit |
 | `s10_live.py` | Real markets, today | accrual-deployed.json `.cases[group == "live"]` `.truth[primaryTruth].deployed.digitsInterest`, `.fp127.digitsInterest` and `.fp19.digitsInterest`; the three medians and the margins between them computed; `.survey.block/.date` |
