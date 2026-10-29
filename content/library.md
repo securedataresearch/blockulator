@@ -1,6 +1,6 @@
 +++
 title = "FP127"
-description = "Signed fixed point with 128 bits after the point: 38 correct digits at 1, in one int256. 53 ops, every transcendental rounded to the nearest representable value (pow near 2⁹⁰ excepted). Inline it or call the deployed contract."
+description = "Signed fixed point with 128 bits after the point: 38 correct digits at 1, in one int256. 53 ops, every one correctly rounded. Inline it or call the deployed contracts."
 
 [extra]
 group = "library"
@@ -69,18 +69,30 @@ The range is ±1.7 × 10<sup>38</sup>. With 128 bits after the point, FP127 keep
 
 Errors are `Overflow()`, `DivisionByZero()` and `OutOfRange()`. Nothing wraps.
 
-## The deployed contract
+## The deployed contracts
 
 Calling the deployed contract costs one `staticcall`, about 600 gas more than inlining on simple ops like `add` and `mul`. On the heavy ops (`exp`, `exp2`, `exp10`, `sinh`, `cosh` and both Lambert W branches) it is cheaper than inlining, by 50 to 620 gas ([`gas.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas.md)). It is also the way to use FP127 from an `eth_call`, where gas is free.
 
 {{ <deployment /> }}
 
-It has no storage, no owner and no upgrade path: a new version gets a new salt and a new address, and v1 to v7 stay deployed at the addresses in the record. It is built for evmVersion osaka and needs the CLZ opcode (EIP-7939), so it runs on Ethereum, Sepolia and the other chains with CLZ, but not on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list]({{ config.extra.repo }}/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)). What changed in each version is in the [changelog]({{ config.extra.repo }}/blob/master/CHANGELOG.md).
+FP127 v9 (Blockulator 3.0) is five contracts from one source, one idea each. The record above is the FP127 contract's; [`FP127.md`](/contracts/deployments/FP127.md) has all five.
+
+| contract | what it holds | address | ops |
+|---|---|---|---|
+| FP127 | the number | `0x0DF738d125677550a80A46BaF254386C66f96E0d` | `add` `sub` `mul` `div` `inv` `sqrt` `cbrt` `hypot` `gavg`; `neg` `abs` `sign`; `min` `max` `clamp`; `floor` `ceil` `round` `frac`; `avg` `dist` `zeroFloorSub` `lerp`; `factorial`; `mulDown` `mulUp` `divDown` `divUp`; `fromFixed18` `toFixed18` `toFixed18Down` `toFixed18Up` |
+| FP127E | the elementary functions, on one exp/log kernel | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` | `exp` `exp2` `exp10` `expm1` `ln` `log2` `log10` `log2Up` `log1p` `pow` `powu` `compound` |
+| FP127H | the hyperbolic functions | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` | `sinh` `cosh` `tanh` `atanh` |
+| FP127N | the normal distribution | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` | `erf` `erfc` `normCdf` |
+| FP127S | Lambert W | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` | `lambertW0` `lambertWm1` |
+
+Each object has its own interface (`IFP127.sol`, `IFP127E.sol`, `IFP127H.sol`, `IFP127N.sol`, `IFP127S.sol`) and ABI; [`ops.json`](/data/ops.json) names each op's object. The inline library holds all 53 ops.
+
+They have no storage, no owner and no upgrade path: a new version gets a new salt and a new address, and v1 to v8 (one contract each) stay deployed at the addresses in the record. It is built for evmVersion osaka and needs the CLZ opcode (EIP-7939), so it runs on Ethereum, Sepolia and the other chains with CLZ, but not on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list]({{ config.extra.repo }}/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)). What changed in each version is in the [changelog]({{ config.extra.repo }}/blob/master/CHANGELOG.md).
 
 `sqrt(2)` from the command line:
 
 ```sh
-cast call 0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B "sqrt(int256)(int256)" \
+cast call 0x0DF738d125677550a80A46BaF254386C66f96E0d "sqrt(int256)(int256)" \
   680564733841876926926749214863536422912 \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com
 # 481231938336009023090067544955250113854
@@ -94,7 +106,7 @@ From Solidity:
 import {IFP127} from "fp127/IFP127.sol";
 
 contract StaticcallExample {
-    IFP127 public constant FP127 = IFP127(0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B);
+    IFP127 public constant FP127 = IFP127(0x0DF738d125677550a80A46BaF254386C66f96E0d);
     int256 internal constant ONE = int256(1) << 128;
 
     function accrue(int256 principalWad, int256 rateWad, uint256 steps)

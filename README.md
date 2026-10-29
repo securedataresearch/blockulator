@@ -87,7 +87,7 @@ uint256 paid = FP19Lib.toUintDown(grown);          // to the user: floor
 int256  ltv  = FP127Lib.divUp(debt, collateral);    // a limit check: never below the truth
 ```
 
-Or call the deployed contracts, where every op is a free `eth_call`: `IFP127E(0x9DCa…4887).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
+Or call the deployed contracts, where every op is a free `eth_call`: `IFP127E(0xc16F…0808).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
 
 **Requires the CLZ opcode** (EIP-7939, the Osaka EVM). Supported: Ethereum, Arbitrum, OP Mainnet, Base, Unichain, Polygon PoS, BNB Chain, Gnosis, Scroll, Linea. Not supported: zkSync Era, Avalanche C-Chain. Check any chain with `make probe-clz RPC=<url>`.
 
@@ -104,7 +104,11 @@ The [integration guide](https://blockulator.com/library/#integrating) has the wo
 
 | contract | address |
 |---|---|
-| FP127 v8 | `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B` |
+| FP127 (the number) | `0x0DF738d125677550a80A46BaF254386C66f96E0d` |
+| FP127E (exp, log, pow) | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` |
+| FP127H (hyperbolic) | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` |
+| FP127N (erf, normCdf) | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` |
+| FP127S (Lambert W) | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` |
 | FP19 (the number) | `0x94d9d43D6202827429a8058959eeCf6d232b8729` |
 | FP19E (exp, log, pow) | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` |
 | FP19H (hyperbolic) | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` |

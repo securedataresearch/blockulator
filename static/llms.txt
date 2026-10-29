@@ -10,16 +10,17 @@
 > agents get results more precise than a double by calling FP127, and at
 > any magnitude by calling FP19.
 
-Current release: Blockulator 3.0 (FP127 v8 + FP19 v6, ladder v13), live
-on Sepolia since 2026-10-28, every address in
-/contracts/deployments/RELEASE.json. CLZ required: the 3.0 contracts are
+Current release: Blockulator 3.0 (FP127 v9 + FP19 v6, ladder v14), live
+on Sepolia (FP19 since 2026-10-28, FP127 since 2026-10-29), every address
+in /contracts/deployments/RELEASE.json. CLZ required: the 3.0 contracts are
 evmVersion osaka builds using the CLZ opcode (EIP-7939); they run on
 Ethereum, Sepolia, Arbitrum, OP, Base, Unichain, Polygon PoS, BNB Chain,
 Gnosis and other chains with CLZ, not on zkSync Era, Avalanche C-Chain or
 Polygon zkEVM. Blockulator 2.2 (FP127 v6, FP19 v5, ladder v11), 2.1
 (FP127 v5, FP19 v4, ladder v9) and 2.0 (FP127 v4, FP19 v3) stay live on
-Sepolia, as does FP127 v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
-2026-10-27), superseded by v8 before mainnet.
+Sepolia, as do FP127 v8 (0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B,
+2026-10-28, one object) and v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
+2026-10-27), both superseded by v9 before mainnet.
 
 ## What it is
 
@@ -55,7 +56,8 @@ Sepolia, as does FP127 v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
   0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697,
   0x59D51481cb2EA924EC17FE263cd05b90CEF22383) and FP19 v3 (Blockulator 2.0, 28
   ops, salt "FP256 v3", 0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be) stay live.
-- FP127, 53 operations: add, sub, mul, div, fromFixed18, toFixed18, exp, exp2,
+- FP127 (/library/), v9, 53 operations in five objects by idea (the
+  addresses below): add, sub, mul, div, fromFixed18, toFixed18, exp, exp2,
   exp10, ln, log2, log10, log2Up, sqrt, cbrt, pow, powu, compound, gavg,
   hypot, inv, abs, neg, sign, min, max, clamp, avg, zeroFloorSub, dist, lerp,
   floor, ceil, frac, round, factorial, lambertW0, lambertWm1,
@@ -72,27 +74,26 @@ Sepolia, as does FP127 v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
   exact; mul and sqrt round down, div and inv toward zero, mulUp, divUp
   and toFixed18Up up, mulDown, divDown and toFixed18Down down; every
   transcendental (exp, ln, pow, cbrt, Lambert W, erf, ...) to nearest. In
-  the deployed v8 the transcendentals are the nearest word at every
-  committed vector and on 1,500 to 4,000 random inputs per op (mpmath at
-  200 decimal places), pow at extreme exponents excepted. From v9 (the
-  current source, not yet deployed) every op is correctly rounded on every
-  input: each fast value carries a derived error bound and a rounding
-  test, a wider stage decides what the test cannot, and the sweep is 0
-  misrounded plain and with every test forced. exp(ln(x)) returns the same
-  word for 10,000 steps. /data/precision.json
-- FP127 v9 (not deployed; predicted CREATE2 addresses through the same
-  proxy, the same on every chain): five objects by idea, as FP19's. FP127
-  the number (arithmetic, directed forms, conversions, sqrt, cbrt, gavg,
-  hypot, inv, factorial and the small ops) at
-  0x0DF738d125677550a80A46BaF254386C66f96E0d (salt "FP127 v9"), FP127E
+  v9, the deployed release, every op is correctly rounded on every input:
+  each fast value carries a derived error bound and a rounding test, a
+  wider stage decides what the test cannot, and the release sweep (212,119
+  inputs over 59 rows) is 0 misrounded plain and with every test forced.
+  exp(ln(x)) returns the same word for 10,000 steps. /data/precision.json
+- FP127 v9's five objects, live on Sepolia since 2026-10-29 (CREATE2
+  through the same proxy, the same address on every chain; Sourcify and
+  Blockscout verified): FP127, the number (arithmetic, directed forms,
+  conversions, sqrt, cbrt, gavg, hypot, inv, factorial and the small ops),
+  at 0x0DF738d125677550a80A46BaF254386C66f96E0d (salt "FP127 v9"), FP127E
   (exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu,
   compound) at 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808 (salt "FP127E
   v9"), FP127H (sinh, cosh, tanh, atanh) at
   0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B (salt "FP127H v9"), FP127N
   (erf, erfc, normCdf) at 0xAA7Cd9635aE8630379636F533f23DBf2C193d296 (salt
   "FP127N v9") and FP127S (lambertW0, lambertWm1) at
-  0xB9C2583a7Ad2251444DC7752658B6C1107C25036 (salt "FP127S v9"). Until a
-  deployment record exists at /contracts/deployments/, call v8 above.
+  0xB9C2583a7Ad2251444DC7752658B6C1107C25036 (salt "FP127S v9"). Call the
+  object that holds the op (/data/ops.json names it); each has its own ABI
+  (/data/abi.json for FP127, abiE.json, abiH.json, abiN.json, abiS.json in
+  contracts/src/fp127/). Record: /contracts/deployments/FP127.md.
 - Machine-readable op table (signature, selector, domain, reverts):
   /data/ops.json
 
@@ -100,10 +101,15 @@ Sepolia, as does FP127 v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
 
 - Network: Ethereum Sepolia, chainId 11155111
 - RPC: https://ethereum-sepolia-rpc.publicnode.com
-- FP127: 0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B (CREATE2 through
-  0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v8"; record at
-  /contracts/deployments/FP127.md and /data/fp127.json)
-- ABI: /data/abi.json. All functions are pure; selectors are in /data/ops.json.
+- FP127: 0x0DF738d125677550a80A46BaF254386C66f96E0d, the number (CREATE2
+  through 0x4e59b44847b379578588920cA78FbF26c0B4956C, salt "FP127 v9";
+  record at /contracts/deployments/FP127.md and /data/fp127.json); the
+  transcendentals are on FP127E 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808,
+  FP127H 0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B, FP127N
+  0xAA7Cd9635aE8630379636F533f23DBf2C193d296 and FP127S
+  0xB9C2583a7Ad2251444DC7752658B6C1107C25036 (above).
+- ABI: /data/abi.json (FP127, the number). All functions are pure; selectors
+  and each op's object are in /data/ops.json.
 - Example: sqrt(2) is `sqrt(int256)` with 2 * 2**128 =
   680564733841876926926749214863536422912; the result divided by 2**128 is
   1.41421356...
@@ -126,8 +132,8 @@ Sepolia, as does FP127 v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
   compounding, reference input, N = 365: FP127 36 digits (40 against the
   format truth), Solady and PRBMath 16, ABDK 17.
 - Any FP127 or FP19 cell can be re-run on chain against the deployed
-  release (FP127 v8, FP19 v6): LadderRunner at
-  0xCbD62BdD4Fdd66EA814198B3B7804Cfab80e170C (salt "FP127 ladder v13"),
+  release (FP127 v9, FP19 v6): LadderRunner at
+  0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589 (salt "FP127 ladder v14"),
   run(uint8 scenario, uint8 form, uint32 n, int256[] p) returns (bool ok,
   int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal), with p
   the input's floored parameters from /data/ladder-inputs.json; form 0 is
@@ -146,7 +152,7 @@ Sepolia, as does FP127 v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
   each cell with its digits or how the library had no answer (zero below
   its floor, revert, out of range, unsupported); /results/edges/ renders it;
   any FP127 or FP19 cell re-runs through EdgeRunner.run(uint8 op, uint8 form, int256[] args)
-  at 0x05A77934179b701EE2a093bAd83497765ED20d91 (selector 0xf833b7d5) with
+  at 0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A (selector 0xf833b7d5) with
   the arguments from /data/edge-inputs.json.
 - /results/ the headline numbers, /results/ladder/ the ladder, /results/edges/ the cliffs,
   /results/ops/ gas and precision per op, /library/ address, ABI and the op table,
@@ -166,4 +172,4 @@ Sepolia, as does FP127 v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
 - The Vyper calculators listed in /.well-known/agent.json with
   "status": "archived", and the games and futures market on /archive/,
   are from the Huff era, do not call FP127 and are not maintained. Use the
-  FP127 contract above.
+  FP127 objects above.

@@ -33,28 +33,34 @@ logs and arithmetic are unchanged, `expm1` 3,106 → 2,968, `gavg` 1,079 →
 1,003, `hypot` 1,366 → 1,164; through the objects the smaller dispatchers
 take 20 to 70 gas off most ops (`add` 708 → 682, `mul` 928 → 862).
 
-The CREATE2 addresses (the same on every chain; FP127's predicted, not
-deployed; FP19's live on Sepolia since 2026-10-28):
+The CREATE2 addresses (the same on every chain), live on Sepolia: FP19's
+since 2026-10-28 (blocks 12,015,306 to 12,015,314), FP127's since
+2026-10-29 UTC (blocks 12,017,693 to 12,017,701), with ladder v14's runners
+(12,017,704 to 12,017,707); Sourcify and Blockscout verified, `make
+smoke-sepolia` passes, and the live check through the v14 runners is 1,913
+ladder cells and 276 edge cells, 0 mismatches. Not on mainnet yet:
 
-| object | salt | runtime bytes | address |
-|---|---|---:|---|
-| FP127 | `FP127 v9` | 3,728 | `0x0DF738d125677550a80A46BaF254386C66f96E0d` (predicted) |
-| FP127E | `FP127E v9` | 18,808 | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` (predicted) |
-| FP127H | `FP127H v9` | 13,093 | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` (predicted) |
-| FP127N | `FP127N v9` | 9,088 | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` (predicted) |
-| FP127S | `FP127S v9` | 11,817 | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` (predicted) |
-| FP19 | `FP19 v6` | 17,221 | `0x94d9d43D6202827429a8058959eeCf6d232b8729` |
-| FP19E | `FP19E v6` | 23,621 | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` |
-| FP19H | `FP19H v6` | 13,020 | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` |
-| FP19N | `FP19N v6` | 17,962 | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` |
-| FP19S | `FP19S v6` | 11,338 | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` |
+| object | salt | runtime bytes | address | block |
+|---|---|---:|---|---:|
+| FP127 | `FP127 v9` | 3,728 | `0x0DF738d125677550a80A46BaF254386C66f96E0d` | 12,017,693 |
+| FP127E | `FP127E v9` | 18,808 | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` | 12,017,695 |
+| FP127H | `FP127H v9` | 13,093 | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` | 12,017,697 |
+| FP127N | `FP127N v9` | 9,088 | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` | 12,017,699 |
+| FP127S | `FP127S v9` | 11,817 | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` | 12,017,701 |
+| FP19 | `FP19 v6` | 17,221 | `0x94d9d43D6202827429a8058959eeCf6d232b8729` | 12,015,306 |
+| FP19E | `FP19E v6` | 23,621 | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` | 12,015,308 |
+| FP19H | `FP19H v6` | 13,020 | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` | 12,015,310 |
+| FP19N | `FP19N v6` | 17,962 | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` | 12,015,312 |
+| FP19S | `FP19S v6` | 11,338 | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` | 12,015,314 |
 
 FP127 v8 (`FP127 v8`, 23,797 bytes, `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`,
-Sepolia, 2026-10-28) is the one object these five replace; v7 (2026-10-27)
-was superseded by v8 before mainnet. The FP19 salts drop the old name (2.2's salts were `FP256 v5`, `FP256E v5`, …,
+Sepolia, 2026-10-28) is the one object these five replace, superseded before
+mainnet as v7 (2026-10-27) was by v8; both stay live. The FP19 salts drop the old name (2.2's salts were `FP256 v5`, `FP256E v5`, …,
 kept as bytes because they fix 2.2's addresses). The ladder's adapters name
-these addresses, so the runners take
-`FP127 ladder v14` (v13 calls FP127 v8). The gate at the v8 freeze: FP19 76
+these addresses, so the runners took
+`FP127 ladder v14` (v13 calls FP127 v8): `LadderRunner`
+`0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589`, `EdgeRunner`
+`0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A`. The gate at the v8 freeze: FP19 76
 sweep rows misrounded 0, FP127 27 rows nearest everywhere, BlockulatorWad
 160,000 results wrong 0; 292 tests; FP127 tightest, 779 free.
 

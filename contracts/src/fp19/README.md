@@ -526,7 +526,7 @@ pow(c², 3/2), powu(−c, 3) and compound(c − 1, 3) for c = 2^79 + 1, whose
 cube has exactly 238 bits, and 3^150.
 
 `make sweep` ([`docs/benchmarks/sweep.md`](../../../docs/benchmarks/sweep.md))
-runs 364,658 seeded random inputs through the ops, each compared with
+runs 455,082 seeded random inputs through the ops, each compared with
 the correctly rounded word: 0 misrounded (`factorial` at every n of its
 domain). The first 4,000 inputs of each
 correctly rounded op go again through a test-only copy of the library whose

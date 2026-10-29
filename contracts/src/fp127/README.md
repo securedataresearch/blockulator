@@ -97,25 +97,29 @@ with `FP_REF_DIR` set to v8's artifact under every name); since then every
 object gained its second stages (see Rounding), and the sizes are `FP127`
 3,728, `FP127E` 18,808, `FP127H` 13,093, `FP127N` 9,088 and `FP127S` 11,817
 bytes. Salts `"FP127 v9"`, `"FP127E v9"`, `"FP127H v9"`, `"FP127N v9"`,
-`"FP127S v9"`; not deployed yet (the predicted CREATE2 addresses are in
-`CHANGELOG.md` and `contracts/src/ladder/ILadder.sol`).
+`"FP127S v9"`; live on Sepolia since 2026-10-29 (Blockulator 3.0) at
+`0x0DF738d125677550a80A46BaF254386C66f96E0d`, `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808`,
+`0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B`, `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` and
+`0xB9C2583a7Ad2251444DC7752658B6C1107C25036`.
 
 Each object wraps its bodies in a dispatcher that finds the 4-byte selector
 by binary search (a flat switch under ten exports: `FP127H`, `FP127N`,
-`FP127S`). It is deployed with CREATE2
+`FP127S`). Each is deployed with CREATE2
 through the deterministic proxy at
 `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the version.
-v8 (salt `"FP127 v8"`, 53 ops, 23,797 bytes of runtime, an evm osaka
-build that needs CLZ) is live on Sepolia at
-`0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B` since 2026-10-28 (Blockulator
-3.0): the same words as v6, with `exp`, `div`, `factorial`, `compound` and
-the erfc tail cheaper. v7 (salt `"FP127 v7"`, `0xb97E0b824d86470BfAA52fe44f09363755d52591`,
-2026-10-27: `exp` and `div` only) was superseded by v8 before mainnet and stays live. v6 (salt `"FP127 v6"`, Blockulator 2.2) stays live at
+v9 (salts `"FP127 v9"`, `"FP127E v9"`, …; 53 ops in the five objects, evm
+osaka builds that need CLZ) is live on Sepolia since 2026-10-29 (Blockulator
+3.0) at the addresses above: every op correctly rounded. v8 (salt `"FP127
+v8"`, one object, 23,797 bytes, `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`,
+2026-10-28: the same words as v6, with `exp`, `div`, `factorial`, `compound`
+and the erfc tail cheaper) and v7 (salt `"FP127 v7"`,
+`0xb97E0b824d86470BfAA52fe44f09363755d52591`, 2026-10-27: `exp` and `div`
+only) were superseded before mainnet and stay live. v6 (salt `"FP127 v6"`, Blockulator 2.2) stays live at
 `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4`; there `pi` became the constant `FP127Lib.PI` and `gcd` was removed. v5
 (salt `"FP127 v5"`, 55 ops, Blockulator 2.1) stays live at
 `0x619176d72D7a12390F8970802943D344c0fd3fE2`, and v1 to v4 stay deployed. Record and verification recipe in
 [`contracts/deployments/FP127.md`](../../deployments/FP127.md).
-Every contract that `staticcall`s it runs identical bytecode.
+Every contract that `staticcall`s them runs identical bytecode.
 `FP127Caller.sol` is the minimal Solidity wrapper for that path; it bubbles
 revert data unchanged.
 
