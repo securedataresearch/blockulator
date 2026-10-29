@@ -551,6 +551,50 @@ def expect_s10_live(mod) -> dict:
     }
 
 
+def expect_s16_ziv(mod) -> dict:
+    # the sweep rows by hand: the plain pass (no .stage) for each library
+    rows = {}
+    for r in vocab._load("docs/benchmarks/sweep.json")["rows"]:
+        if r["op"] == mod.OP and "stage" not in r and r["lib"] in ("fp19", "fp127"):
+            assert r["lib"] not in rows, r["lib"]
+            rows[r["lib"]] = r
+    lib = vocab.libs()
+    fp19, fp127 = rows["fp19"], rows["fp127"]
+    # the story (V18): FP19's last stage ran once in its sweep, FP127's never; FP127's n is the scored
+    # inputs, the unscored both-revert inputs make up the generated count
+    assert fp19["fallback"] == 1 and fp19["fallbackRuns"] == 1 and fp127["fallback"] == 0, (fp19["fallback"], fp127["fallback"])
+    assert fp127["n"] + fp127["status"]["gotrev"] == fp127["inputs"] and fp127["status"]["ok"] == fp127["n"], fp127["status"]
+    assert fp19["status"]["ok"] == fp19["n"], fp19["status"]
+    # the gas median by hand: the middle of the sorted typical inline cells (V19: 2,835)
+    g = vocab._load("docs/benchmarks/gas.json")
+    cells = sorted(c for c in g["ops"][mod.OP]["typical"]["gas"][mod.GAS_FORM] if c is not None)
+    k = len(cells) // 2
+    median = (cells[k - 1] + cells[k]) / 2 if len(cells) % 2 == 0 else float(cells[k])
+    assert median == 2835, median
+    assert mod.GAS_BEFORE_TEST == 2716 and mod.MUL_GAS == 5 and mod.DIVH_GAS == 393  # V19, V32: the figures the ledger verified
+    with localcontext() as ctx:
+        ctx.prec = 30
+        pct = float(((Decimal(median) - mod.GAS_BEFORE_TEST) / mod.GAS_BEFORE_TEST * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
+    assert 0 < pct < 10, pct  # "a few percent"
+    counters = {lid: f"{rows[lid]['fallback']} of {rows[lid]['n']:,}" for lid in ("fp19", "fp127")}
+    # every figure carries its library: the fallback counters FP19's and FP127's, the gas line FP127's
+    gas_line = f"{lib['fp127']['label']} {mod.OP}: {mod.GAS_BEFORE_TEST:,} → {int(median):,} gas with the test"
+    assert gas_line.startswith("FP127") and "FP19" not in gas_line
+    return {
+        "op": mod.OP,
+        "fp19": {"label": lib["fp19"]["label"], "n": fp19["n"], "fallback": fp19["fallback"]},
+        "fp127": {"label": lib["fp127"]["label"], "n": fp127["n"], "fallback": fp127["fallback"], "inputs": fp127["inputs"]},
+        "gas_before": mod.GAS_BEFORE_TEST,
+        "gas_with_test": median,
+        "gas_form": g["formLabels"][mod.GAS_FORM],
+        "pct": pct,
+        "gas_line": gas_line,
+        "pct_line": f"+{pct}%",
+        "counters": counters,
+        "close_line": f"the last stage: {counters['fp127']} inputs",
+    }
+
+
 EXPECT = {
     "s02_exp40": expect_s02_exp40,
     "s04_grid": expect_s04_grid,
@@ -559,6 +603,7 @@ EXPECT = {
     "s08_ladder": expect_s08_ladder,
     "s09_cliff": expect_s09_cliff,
     "s10_live": expect_s10_live,
+    "s16_ziv": expect_s16_ziv,
 }
 
 
