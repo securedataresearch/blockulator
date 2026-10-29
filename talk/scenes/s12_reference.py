@@ -194,6 +194,8 @@ class Reference(DeckScene):
         parts.append(st)
         g = VGroup(*parts)
         g.status = st
+        g.name = name
+        g.cells = VGroup(*parts[1:])  # what lands after the name: the date, the cross, the status
         return g
 
     def construct(self):
@@ -203,9 +205,10 @@ class Reference(DeckScene):
 
         # 0 · the address, the hero: typed in on a glowing panel, the version under it
         self.section(0)
+        # the chrome, on the first frame: the title and the caption (the probe date)
+        self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
+        self.caption_now(n["probed_caption"])
         self.wait(0.3)
-        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
-        self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5))
         addr = digits(n["address"], SIZE_ADDRESS, Palette.CORRECT).move_to([0, Y_ADDRESS_HERO, 0])
         assert addr.width <= X_RIGHT - X_LEFT, addr.width  # the whole address, inside the safe area
         panel = glow_bar(addr, Palette.EMERALD, pad=0.26, opacity=0.1)
@@ -227,7 +230,7 @@ class Reference(DeckScene):
             Transform(version, version_small, run_time=0.9, rate_func=ease_out_cubic),
             FadeOut(panel, run_time=0.5),
         )
-        self.play(self.caption(n["probed_caption"]))
+        # the table's keys (the chain names) land together, then each row's cells in turn
         table = VGroup()
         sepolia = None
         for i, r in enumerate(rows):
@@ -235,16 +238,19 @@ class Reference(DeckScene):
             assert g.get_right()[0] <= X_RIGHT + 0.05, (r["chain"], g.get_right()[0])
             table.add(g)
             if r["deployed"]:
-                sepolia = g  # lands last, the hero row
+                sepolia = g  # its status lands last, the hero row
+        self.play(FadeIn(VGroup(*[g.name for g in table]), shift=RIGHT * 0.12, run_time=0.5))
+        for g, r in zip(table, rows):
+            if r["deployed"]:
                 continue
-            self.play(FadeIn(g, shift=RIGHT * 0.12, run_time=0.25))
+            self.play(FadeIn(g.cells, shift=RIGHT * 0.12, run_time=0.25))
             self.wait(0.05)
         assert sepolia is not None
         bar = glow_bar(sepolia, Palette.EMERALD, pad=0.06, opacity=0.1)
         bar.stretch_to_fit_width(X_RIGHT - X_LEFT + 0.3).set_x((X_LEFT + X_RIGHT) / 2)
         glow = halo(sepolia.status.get_center(), Palette.EMERALD, radius=0.12, spread=2.6, opacity=0.16)
         table.add_to_back(bar, glow)
-        self.play(FadeIn(bar, run_time=0.5), FadeIn(glow, run_time=0.5), FadeIn(sepolia, shift=RIGHT * 0.12, run_time=0.5))
+        self.play(FadeIn(bar, run_time=0.5), FadeIn(glow, run_time=0.5), FadeIn(sepolia.cells, shift=RIGHT * 0.12, run_time=0.5))
         self.play(Indicate(sepolia.status, color=Palette.CORRECT, scale_factor=1.08, run_time=0.6))
 
         # 2 · the call: the reference box closes around the address, your contract calls it, the one word twice

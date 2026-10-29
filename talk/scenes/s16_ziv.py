@@ -47,6 +47,7 @@ from manim import (
 from manim.utils.rate_functions import ease_in_out_cubic, ease_out_cubic, linear, smooth
 
 from vocab import (
+    ROW_COLOUR,
     MONO,
     SIZE_BODY,
     SIZE_CAPTION,
@@ -106,6 +107,7 @@ Y_VERDICT = -1.55
 Y_COUNTER = 1.05
 Y_GAS = -1.75
 Y_CLOSE = -2.45
+HUES = ROW_COLOUR["s16"]  # the two coins: MUL GOLD, the division VIOLET
 
 # the digit-bearing fixed strings on the slide, each with its claim id (research_notes/talk/claims.md)
 LITERALS = {
@@ -167,13 +169,15 @@ class Ziv(DeckScene):
     def construct(self):
         n = numbers()
         self.section(0)
+        # the chrome, on the first frame: the title and the caption (the prices' sources;
+        # it names the sweep and gas.json once those numbers are on screen)
+        self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
+        self.caption_now(CAPTION_PRICES)
         self.wait(0.3)
-        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
-        self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5), self.caption(CAPTION_PRICES))
 
-        # the two prices, area for area: the speck, then the weight
-        small = coin(MUL_GAS).move_to([-3.4, 0.45, 0])
-        big = coin(DIVH_GAS).move_to([1.9, 0.45, 0])
+        # the two prices, area for area: the speck (GOLD), then the weight (VIOLET)
+        small = coin(MUL_GAS, HUES["mul"]).move_to([-3.4, 0.45, 0])
+        big = coin(DIVH_GAS, HUES["divh"]).move_to([1.9, 0.45, 0])
         small_lbl = words(MUL_LABEL, SIZE_BODY, Palette.BODY).next_to(small, DOWN, buff=0.45)
         big_lbl = words(DIVH_LABEL, SIZE_BODY, Palette.BODY).next_to(big, DOWN, buff=0.45)
         self.play(FadeIn(small, scale=0.3, run_time=0.4))
@@ -182,15 +186,15 @@ class Ziv(DeckScene):
         big.shift(UP * 5.5)
         self.add(big)
         self.play(big.animate(rate_func=land).shift(DOWN * 5.5), run_time=1.1)
-        ripple = Circle(radius=COIN_R, color=Palette.GOLD, stroke_width=2, stroke_opacity=0.6).move_to(big)
+        ripple = Circle(radius=COIN_R, color=HUES["divh"], stroke_width=2, stroke_opacity=0.6).move_to(big)
         self.play(ripple.animate(rate_func=ease_out_cubic).scale(1.35).set_stroke(opacity=0), run_time=0.7)
         self.remove(ripple)
         self.play(FadeIn(big_lbl, shift=UP * 0.08, run_time=0.4))
 
         # the technique: the coins to the corner, the grid, a fast value and its bound
         self.section(1, hold=1.2)
-        c_small = coin(MUL_GAS, radius_of_divh=CORNER_R)
-        c_big = coin(DIVH_GAS, radius_of_divh=CORNER_R)
+        c_small = coin(MUL_GAS, HUES["mul"], radius_of_divh=CORNER_R)
+        c_big = coin(DIVH_GAS, HUES["divh"], radius_of_divh=CORNER_R)
         c_small_lbl = words(MUL_LABEL, 22, Palette.MUTED)
         c_big_lbl = words(DIVH_LABEL, 22, Palette.MUTED)
         row2 = VGroup(c_big, c_big_lbl).arrange(RIGHT, buff=0.22)
@@ -277,7 +281,7 @@ class Ziv(DeckScene):
         self.play(grid_stuff.animate.set_opacity(0.1), run_time=0.5)
         self.remove(step1, step2, yes, cross)
         cols = {"fp19": -3.3, "fp127": 3.3}
-        colours = {"fp19": Palette.BODY, "fp127": Palette.EMERALD}
+        colours = {"fp19": Palette.TEXT, "fp127": Palette.EMERALD}  # the libraries' family colours
         names = {lid: words(f"{n[lid]['label']} {OP}", SIZE_BODY, Palette.MUTED).move_to([cols[lid], Y_COUNTER + 0.95, 0]) for lid in cols}
         reached = {lid: words(REACHED, SIZE_BODY, Palette.MUTED).move_to([cols[lid], Y_COUNTER - 0.8, 0]) for lid in cols}
         self.play(LaggedStart(*[FadeIn(names[lid], shift=UP * 0.06) for lid in cols], lag_ratio=0.3, run_time=0.6))

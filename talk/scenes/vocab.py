@@ -51,6 +51,7 @@ from manim import (
     Succession,
     Transform,
     VGroup,
+    VMobject,
     Text,
     config,
 )
@@ -80,6 +81,7 @@ class Palette:
     RED = "#ff6079"  # wrong, zero, revert
     VIOLET = "#c896b4"  # ABDKMathQuad: color-mix(in oklab, sapphire 55%, red)
     SLATE = "#91a9bd"  # the protocols: color-mix(in oklab, sapphire 50%, faint)
+    AMBER = "#e7a784"  # the deck's fifth hue (Balancer V1): color-mix(in oklab, gold 65%, red), computed as the two above
 
     # the three meanings
     EXACT = TEXT
@@ -95,6 +97,38 @@ FAMILY_COLOUR = {
     "6464": Palette.SAPPHIRE,
     "protocol": Palette.SLATE,
 }
+
+# The complete spectrum (talk/briefs/RULES.md, "Chrome and colour"): one
+# protocol = one hue everywhere in the deck, keyed by the incident ids s05
+# and s07 use; protocol_colour(name) finds a hue from incidents.json's
+# protocol name ("Bunni v2" → bunni).
+PROTOCOL_COLOUR = {
+    "resupply": Palette.SAPPHIRE,
+    "bunni": Palette.GOLD,
+    "balancer-v2": Palette.VIOLET,
+    "thetanuts": Palette.SLATE,
+    "balancer-v1": Palette.AMBER,
+}
+
+# The rows, steps and categories of the slides that are not library charts,
+# per scene, so the replay builders and the text slides reuse them. The fixed
+# meanings keep theirs: RED wrong, EMERALD FP127/correct, TEXT FP19/exact.
+ROW_COLOUR = {
+    "s03": {"compounding rate": Palette.GOLD, "discount factor": Palette.SAPPHIRE, "option price": Palette.VIOLET, "growth curve": Palette.SLATE, "hero": Palette.EMERALD},
+    "s10": {"deployed": Palette.SLATE, "fp127": Palette.EMERALD, "fp19": Palette.TEXT},
+    "s15": {"sign": Palette.TEXT, "fp127_integer": Palette.SAPPHIRE, "fp127_fraction": Palette.EMERALD, "fp19_exponent": Palette.VIOLET, "fp19_fraction": Palette.TEXT},
+    "s16": {"mul": Palette.GOLD, "divh": Palette.VIOLET},
+    "s17": {"proven": Palette.EMERALD, "fuzzed": Palette.GOLD, "tested": Palette.SAPPHIRE, "limits": Palette.MUTED},
+}
+
+
+def protocol_colour(name: str) -> str:
+    """The hue of a protocol named as incidents.json names it."""
+    key = name.lower().replace(" ", "-")
+    for pid, colour in PROTOCOL_COLOUR.items():
+        if key.startswith(pid):
+            return colour
+    raise KeyError(name)
 
 
 def colour_of(lib: dict) -> str:
@@ -210,6 +244,31 @@ class DeckScene(Scene):
         self.logo_right.move_to([x, y, 0], aligned_edge=UP + RIGHT)
         self.chrome = Group(self.logo_left, self.logo_right)
         self.add(self.chrome)
+        # the static chrome a scene fixes (title, caption, axes, keys): on the
+        # first frame, never animated; a "dim everything" step skips self.fixed
+        self.fixed = VGroup()
+
+    def fix(self, *mobjs):
+        """Static chrome: add the mobjects now (no animation) and remember them
+        in self.fixed, so a dim-everything step can leave them alone. Returns
+        the mobjects as a VGroup."""
+        g = VGroup(*mobjs)
+        self.fixed.add(*mobjs)
+        self.add(*mobjs)
+        return g
+
+    def dimmable(self):
+        """Every VMobject on the scene that is not chrome: what a dim-everything
+        step may fade (the marks are not VMobjects; self.fixed is skipped)."""
+        skip = set(self.fixed.get_family())
+        return VGroup(*[m for m in self.mobjects if isinstance(m, VMobject) and m not in skip])
+
+    def caption_now(self, text: str, size: float = SIZE_CAPTION, corner=DOWN + LEFT):
+        """The source caption as static chrome: placed and added at once (no
+        animation); caption() may still replace it later."""
+        new = words(text, size, Palette.FAINT).to_corner(corner, buff=0.45)
+        self._caption = new
+        return self.fix(new)
 
     def title(self, text: str, size: float = SIZE_BODY, colour: str = Palette.MUTED, use_markup: bool = False):
         """The slide's title: words() (markup() with use_markup) to the right

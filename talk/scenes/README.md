@@ -42,10 +42,68 @@ one that names its mobjects must not name `self.chrome`.
 A slide's title goes beside the left mark: `self.title(text, size,
 colour, use_markup=False)` returns the `words()` (or `markup()`) placed
 `TITLE_GAP` (0.3) to the right of it, centred on its height, so a title
-never collides with the mark; the caller plays it in. It registers in
+never collides with the mark; the caller fixes it (below). It registers in
 `DRAWN` as any `words()` does, so a title in `LITERALS` keeps its string.
 Content at the top-right stays under the right mark (its bottom is at
 y = 3.05) or left of it (x < 6.2); nothing shrinks for it.
+
+## Static chrome: titles, axes and keys are always visible
+
+The user's rule (talk/briefs/RULES.md, "Chrome and colour"): like the
+logos, the title, the source caption, every chart's axes, gridlines, axis
+titles and tick labels, and the key (every series or category that will
+appear in the scene, in its colour) are on the first frame of section 0,
+drawn with `add`, never revealed, faded, moved, dimmed or re-created; only
+the data and the story elements animate. Row labels on a data slide
+(s10's "as deployed / in FP127 / in FP19", s05's and s07's protocols,
+s17's four rows) are keys: on the first frame, only their values arrive.
+
+`DeckScene` carries it: `self.fix(*mobjs)` adds the mobjects at once (no
+animation) and remembers them in `self.fixed`; `self.caption_now(text,
+corner=DOWN + LEFT)` is the source caption as chrome (`self.caption()`
+still swaps it when the source on screen changes, as s08's scenario and
+s16's second half do); `self.dimmable()` is every `VMobject` on the scene
+that is not in `self.fixed`, what a "dim everything" step may fade (s07's
+box uses it; the marks are not `VMobject`s and are never collected). A
+chart that morphs (s08) keeps the axes and a key of every series across
+the morph from the first frame; the scenario's title and its "no line"
+note read the current scenario and swap at each morph.
+
+Where a slide's layout reuses a region for a later beat, the rule bends
+and the README's table says so: s02's three library names leave with
+their values when the two words need the rows; s04's header goes from 18
+to 80 decimals when the binary dive needs them; s12's chain names land
+together at the start of the table section (the hero address fills
+section 0) and dim with the table under the call; s15's FP19 axis
+replaces FP127's grid; s16's grid arrives after the coins; s17's two
+lines leave when the table begins.
+
+## The complete spectrum
+
+Distinct categories get distinct hues from the whole palette (EMERALD,
+GOLD, SAPPHIRE, VIOLET, SLATE, AMBER, RED, TEXT; MUTED and FAINT for
+de-emphasis), never two categories in one hue on a slide, never a hue with
+no meaning. The fixed meanings keep theirs: RED wrong, EMERALD FP127 /
+correct, TEXT FP19 / exact, `FAMILY_COLOUR` on every library chart. The
+rest is assigned once, in `vocab.py`, and reused by every builder:
+
+| what | hue | where |
+|---|---|---|
+| Resupply | SAPPHIRE | `PROTOCOL_COLOUR["resupply"]`: s05, s07; s06 names it so (the cited Solidity lines) |
+| Bunni | GOLD | `PROTOCOL_COLOUR["bunni"]`: s05, s07 |
+| Balancer V2 | VIOLET | `PROTOCOL_COLOUR["balancer-v2"]`: s05, s07 |
+| Thetanuts | SLATE | `PROTOCOL_COLOUR["thetanuts"]`: s05, s07 |
+| Balancer V1 | AMBER | `PROTOCOL_COLOUR["balancer-v1"]`: s05, s07. `Palette.AMBER` (#e7a784) is the deck's fifth hue, color-mix(in oklab, gold 65%, red), computed as the site computes VIOLET and SLATE |
+| s03's rows | compounding GOLD, discount SAPPHIRE, option VIOLET, growth SLATE; e^x EMERALD | `ROW_COLOUR["s03"]` |
+| s10's rows | deployed SLATE, FP127 EMERALD, FP19 TEXT; the facets neutral | `ROW_COLOUR["s10"]` |
+| s15's fields | sign TEXT; FP127 integer SAPPHIRE, fraction EMERALD; FP19 exponent VIOLET, fraction TEXT | `ROW_COLOUR["s15"]` |
+| s16's coins | MUL GOLD, the 512-by-256-bit division VIOLET | `ROW_COLOUR["s16"]` |
+| s17's rows | proven EMERALD, fuzzed GOLD, tested SAPPHIRE, limits MUTED | `ROW_COLOUR["s17"]` |
+
+`protocol_colour(name)` finds the hue from incidents.json's protocol name
+("Bunni v2" → bunni). A new slide that names a protocol or a row takes
+its hue from these tables; a new category takes the first hue the slide
+has not used.
 
 ## Sections: one click, one beat
 
@@ -70,7 +128,8 @@ Pango per process; every text helper calls it.
 ## The vocabulary (`vocab.py`)
 
 - `Palette`: the site's dark theme hex for hex (`static/css/site.css`
-  :39–46; `VIOLET` and `SLATE` are blockulator.css's `color-mix` in OKLab).
+  :39–46; `VIOLET` and `SLATE` are blockulator.css's `color-mix` in OKLab;
+  `AMBER` is the deck's own, gold 65% with red, the same mix).
   Three meanings: `EXACT` (white, the true value), `CORRECT` (emerald, the
   nearest representable value), `WRONG` (red, any other). `colour_of(lib)`
   gives a library's family colour as the site's charts do: FP127 emerald,

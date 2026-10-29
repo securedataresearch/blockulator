@@ -24,7 +24,7 @@ from manim import (
     FadeIn,
 )
 
-from vocab import SIZE_CAPTION, DeckScene, Palette, digits, incidents, typographic, words
+from vocab import SIZE_CAPTION, DeckScene, Palette, digits, incidents, protocol_colour, typographic, words
 
 X_LEFT = -6.5
 X_RIGHT = 6.5
@@ -52,7 +52,7 @@ class Cost(DeckScene):
         y = Y_TOP - i * PITCH
         date = words(r["date"], BODY, Palette.FAINT)
         date.move_to([X_LEFT + date.width / 2, y, 0])
-        proto = words(r["protocol"], HEAD, Palette.TEXT)
+        proto = words(r["protocol"], HEAD, protocol_colour(r["protocol"]))
         proto.next_to(date, RIGHT, buff=0.35).set_y(y)
         text = words("\n".join(textwrap.wrap(typographic(r["rounding"]), WRAP)), BODY, Palette.BODY, line_spacing=0.6)
         text.move_to([X_LEFT + text.width / 2, y - LINE_GAP - text.height / 2, 0])
@@ -63,13 +63,15 @@ class Cost(DeckScene):
     def construct(self):
         n = numbers()
         assert len(n["rows"]) + 1 == len(self.SECTIONS), (len(n["rows"]), self.SECTIONS)
-        for i, r in enumerate(n["rows"]):
+        rows = [self.row(i, r) for i, r in enumerate(n["rows"])]
+        for i, (date, proto, text, loss) in enumerate(rows):
             self.section(i, hold=1.5)
             if i == 0:
+                # the chrome: the caption and every row's key (its date and its protocol,
+                # in the protocol's hue) are on the first frame; the values arrive per click
+                self.caption_now(n["caption"])
+                self.fix(*[m for d, p, _, _ in rows for m in (d, p)])
                 self.wait(0.3)
-                self.play(self.caption(n["caption"]))
-            date, proto, text, loss = self.row(i, r)
-            self.play(FadeIn(date, shift=RIGHT * 0.1, run_time=0.4), FadeIn(proto, shift=RIGHT * 0.1, run_time=0.4))
             self.play(FadeIn(text, run_time=0.6))
             self.wait(1.2)
             self.play(FadeIn(loss, shift=LEFT * 0.1, run_time=0.4))

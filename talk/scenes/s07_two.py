@@ -48,12 +48,12 @@ from manim import (
     Line,
     RoundedRectangle,
     VGroup,
-    VMobject,
 )
 from manim.utils.rate_functions import ease_out_cubic
 
 from s06_resupply import numbers as resupply_numbers
 from vocab import (
+    PROTOCOL_COLOUR,
     SIZE_BODY,
     SIZE_HERO,
     DeckScene,
@@ -312,17 +312,17 @@ class Two(DeckScene):
     def mechanism(self, text: str, x: float, y: float, colour: str = Palette.MUTED):
         return self.left(words(text, SIZE_BODY, colour), x, y)
 
-    def row(self, i: int, r: dict, slot: VGroup) -> dict:
-        """One incident: name and date, the exact value in its format, the grid,
-        the white dot, the red snap with its direction, the mechanism."""
+    def head_for(self, i: int, r: dict):
+        """The row's key: protocol · date, in the protocol's hue."""
+        return self.left(words(f"{r['protocol']} · {r['date']}", SIZE_BODY, PROTOCOL_COLOUR[r["id"]]), X_LEFT, Y_A[i])
+
+    def row(self, i: int, r: dict, head, grid: VGroup) -> dict:
+        """One incident on its row (the key and the grid are chrome, on the
+        first frame): the exact value in its format, the white dot, the red
+        snap with its direction, the mechanism."""
         ya = Y_A[i]
         yb = ya - A_B
-        head = self.left(words(f"{r['protocol']} · {r['date']}", SIZE_BODY, Palette.TEXT), X_LEFT, ya)
-        grid = self.grid_for(r, yb)
         line = grid.line
-        self.play(FadeIn(head, shift=RIGHT * 0.1, run_time=0.5), slot.animate.set_stroke(opacity=0.9), FadeIn(grid[0], run_time=0.5), FadeIn(grid[2], run_time=0.5))
-        self.remove(slot)
-        self.add(line)
         exact = line.dot_at(r["x"], Palette.EXACT)
         exact.move_to(line.n2p(r["x"]) + UP * 0.6)
         self.play(FadeIn(exact, run_time=0.2))
@@ -387,24 +387,25 @@ class Two(DeckScene):
         n = numbers()
         rows = n["rows"]
         self.section(0)
-        self.wait(0.2)
-        cap = self.caption(CAPTION)
-        self._caption.to_corner(DOWN + RIGHT, buff=0.45)  # the left corner is row 5's half-unit bracket
-        self.play(cap)
+        # the chrome, on the first frame: the caption (bottom right: the left corner is row
+        # 5's half-unit bracket), the title, the two band titles and the rule between them,
+        # every row's key (protocol · date, in the protocol's hue) and its mini grid with
+        # its two ticks named; only the values and the story arrive per click
+        self.caption_now(CAPTION, corner=DOWN + RIGHT)
         title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         band1 = self.left(words(BAND_1_TITLE, SIZE_BODY, Palette.MUTED), X_LEFT, Y_BAND_1)
         band2 = self.left(words(BAND_2_TITLE, SIZE_BODY, Palette.MUTED), X_LEFT, Y_BAND_2)
         rule = Line([X_LEFT, Y_RULE, 0], [-X_LEFT, Y_RULE, 0], color=Palette.RULE, stroke_width=1, stroke_opacity=0.6)
-        slots = [self.grid_for(r, Y_A[i] - A_B).line.set_stroke(opacity=0.22) for i, r in enumerate(rows)]
-        self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.6))
-        self.play(FadeIn(band1, run_time=0.5), *[FadeIn(slots[i], run_time=0.5) for i in BAND_1])
-        self.play(Create(rule, run_time=0.5), FadeIn(band2, run_time=0.5), *[FadeIn(slots[i], run_time=0.5) for i in BAND_2])
+        heads = [self.head_for(i, r) for i, r in enumerate(rows)]
+        grids = [self.grid_for(r, Y_A[i] - A_B) for i, r in enumerate(rows)]
+        self.fix(title, band1, band2, rule, *heads, *grids)
+        self.wait(1.2)
 
         # band 1: too early, too often
         parts = []
         for i in BAND_1:
             self.section(i + 1, hold=1.2)
-            parts.append(self.row(i, rows[i], slots[i]))
+            parts.append(self.row(i, rows[i], heads[i], grids[i]))
 
         # round once: the red goes faint, the exact value pulses, the line and its tick
         self.section(4, hold=1.5)
@@ -421,10 +422,10 @@ class Two(DeckScene):
 
         # band 2: at a unit
         self.section(5, hold=1.5)
-        parts.append(self.row(3, rows[3], slots[3]))
+        parts.append(self.row(3, rows[3], heads[3], grids[3]))
 
         self.section(6, hold=1.2)
-        p5 = self.row(4, rows[4], slots[4])
+        p5 = self.row(4, rows[4], heads[4], grids[4])
         parts.append(p5)
         a = rows[4]["ticks"][0]
         half = measure(p5["line"], a, a + n["half"], "half a unit", drop=HALF_DROP)
@@ -438,9 +439,9 @@ class Two(DeckScene):
         self.wait(0.5)
         self.other_way(parts[4])
 
-        # the box: the hero line over a dimmed slide
+        # the box: the hero line over the dimmed data (the chrome stays as it is)
         self.section(8, hold=1.5)
-        everything = VGroup(*[m for m in self.mobjects if isinstance(m, VMobject)])
+        everything = self.dimmable()
         box = VGroup(words(BOX_1, SIZE_HERO, Palette.TEXT), words(BOX_2, SIZE_HERO, Palette.TEXT)).arrange(DOWN, buff=0.2)
         box.move_to([0, -0.4, 0])
         bar = glow_bar(box, Palette.CORRECT, pad=0.22, opacity=0.14)

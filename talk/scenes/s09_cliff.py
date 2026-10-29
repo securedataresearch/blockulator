@@ -11,7 +11,8 @@ axis, labelled "revert". FP127 and FP19 draw last in every column, on
 top, each under a halo. Then the margins: a glow along FP19's row with
 its least digits on any probe ("71 digits on every probe"), and FP127's
 last standing point, the last probe where it still had a digit, named.
-A legend names the libraries drawn and, under them, those with no dot
+The chart's axes and a legend at the right are on the first frame; the
+legend names the libraries drawn and, under them, those with no dot
 and why: "no exp" (unsupported on every probe) and "rejects negative
 inputs" (ParamOutOfRange on every probe: the representation is
 unsigned). None of the talk's 17 is dropped silently. The closing line
@@ -21,7 +22,7 @@ claim V28), and FP19's least digits.
 
 Five sections, one per click: the columns arrive (every value); the
 zeros snap red and the reverts appear; FP127's last digit and FP19's
-row; the legend; the closing line.
+row; the legend lit; the closing line.
 
 Numbers from docs/benchmarks/edges.json: op "exp", the probes whose
 single argument lies in [−100, −40] (.args, .truth, .cells[lib].digits /
@@ -46,7 +47,7 @@ from manim import (
     VGroup,
 )
 
-from vocab import DUPLICATES, WAD_DECIMALS, Chart, DeckScene, GridLine, Palette, colour_of, edges, glow_line, halo, snap, talk_libs, words
+from vocab import DUPLICATES, WAD_DECIMALS, Chart, DeckScene, GridLine, Palette, colour_of, edges, glow_bar, glow_line, halo, snap, talk_libs, words
 
 OP = "exp"
 ARG_LO, ARG_HI = -100, -40
@@ -145,9 +146,9 @@ class Cliff(DeckScene):
         fam = {r["id"]: r for r in n["libs"]}
         y_max = n["axisMax"]
         self.section(0)
-        self.wait(0.3)
-        self.play(self.caption(f"docs/benchmarks/edges.json · {OP}"))
-
+        # the chrome, on the first frame: the caption, the chart (axes, gridlines, tick
+        # labels, the axis title, the revert band's name) and the legend at the right:
+        # every library drawn, in its family colour, then those with no dot and why
         chart = Chart((0, len(cols) - 1, 1), (0, y_max, Y_STEP), WIDTH, HEIGHT, origin=(*ORIGIN_XY, 0))
         for i, col in enumerate(cols):
             chart.x_label(i, f"exp({minus(col['arg'])})", use_markup=True, buff=0.55)
@@ -156,8 +157,18 @@ class Cliff(DeckScene):
         revert_lbl = words("revert", 18, Palette.WRONG).next_to(chart.c2p(0, REVERT_BAND), LEFT, buff=0.18)
         chart.y_title("correct digits")
         grid = chart.grid()
-        self.play(Create(chart.x_axis, run_time=1.0), Create(chart.y_axis, run_time=1.0))
-        self.play(FadeIn(chart.labels, run_time=0.6), FadeIn(chart.titles, run_time=0.6), FadeIn(grid, run_time=0.8))
+        legend = VGroup()
+        for r in n["libs"]:
+            colour = colour_of(r)
+            item = VGroup(chart.dot(0, 0, colour, radius=0.07), words(r["label"], 17, colour))
+            item[1].next_to(item[0], RIGHT, buff=0.15)
+            legend.add(item)
+        legend.arrange(DOWN, aligned_edge=LEFT, buff=0.13).move_to([5.9, 0, 0]).align_to([LEGEND_X, 0, 0], LEFT).align_to([0, LEGEND_TOP, 0], UP)
+        absent = words("no dot:\n" + absent_text(n["absent"]), 15, Palette.FAINT, line_spacing=0.6)
+        absent.next_to(legend, DOWN, buff=0.32).align_to(legend, LEFT)
+        self.caption_now(f"docs/benchmarks/edges.json · {OP}")
+        self.fix(chart, revert_lbl, legend, absent)
+        self.wait(0.8)
 
         offsets = {lid: (k - (len(lids) - 1) / 2) * SPREAD for k, lid in enumerate(lids)}
         hero_dots = {lid: {} for lid in lids if fam[lid]["ours"]}  # lid → {column: dot}
@@ -214,7 +225,6 @@ class Cliff(DeckScene):
                     reverts.append(m)
                     if not seen_revert:
                         labels.append(words("revert", 16, Palette.WRONG).move_to([x_lbl + 0.32, chart.c2p(0, REVERT_BAND)[1], 0]))
-                        labels.append(revert_lbl)
                         seen_revert = True
             if snaps:
                 for d, _ in snaps:
@@ -244,19 +254,12 @@ class Cliff(DeckScene):
         row_lbl = words(f"FP19 · {fmt(n['fp19_min'])} digits on every probe", 20, Palette.TEXT).move_to([chart.c2p(len(cols) / 2 - 0.5, 0)[0], row[0][1] + 0.38, 0])
         self.play(Create(glow, run_time=1.4), FadeIn(row_lbl, shift=UP * 0.06, run_time=0.8))
 
-        # ---- legend, right of the plot: the libraries drawn, then those with no dot and why
+        # ---- the legend (static, at the right since the first frame) is lit: a panel behind it
         self.section(3, hold=1.5)
-        legend = VGroup()
-        for r in n["libs"]:
-            colour = colour_of(r)
-            item = VGroup(chart.dot(0, 0, colour, radius=0.07), words(r["label"], 17, colour))
-            item[1].next_to(item[0], RIGHT, buff=0.15)
-            legend.add(item)
-        legend.arrange(DOWN, aligned_edge=LEFT, buff=0.13).move_to([5.9, 0, 0]).align_to([LEGEND_X, 0, 0], LEFT).align_to([0, LEGEND_TOP, 0], UP)
-        absent = words("no dot:\n" + absent_text(n["absent"]), 15, Palette.FAINT, line_spacing=0.6)
-        absent.next_to(legend, DOWN, buff=0.32).align_to(legend, LEFT)
-        self.play(LaggedStart(*[FadeIn(r, shift=RIGHT * 0.05) for r in legend], lag_ratio=0.1, run_time=1.2))
-        self.play(FadeIn(absent, run_time=0.6))
+        panel = glow_bar(VGroup(legend, absent), Palette.MUTED, pad=0.2, opacity=0.08)
+        self.add(panel)
+        self.bring_to_back(panel)
+        self.play(FadeIn(panel, run_time=0.8))
 
         # ---- the closing line (V28)
         self.section(4, hold=1.5)

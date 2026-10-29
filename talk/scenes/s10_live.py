@@ -48,10 +48,10 @@ from manim import (
 )
 from manim.utils.rate_functions import ease_in_out_cubic
 
-from vocab import SIZE_BODY, SIZE_CAPTION, Chart, DeckScene, Palette, _load, glow_bar, glow_line, live, thousands, words
+from vocab import ROW_COLOUR, SIZE_BODY, SIZE_CAPTION, Chart, DeckScene, Palette, _load, glow_bar, glow_line, live, thousands, words
 
 TITLE = "Real markets, today"
-ROWS = (("deployed", "as deployed", Palette.SLATE), ("fp127", "in FP127", Palette.EMERALD), ("fp19", "in FP19", Palette.TEXT))
+ROWS = tuple((key, name, ROW_COLOUR["s10"][key]) for key, name in (("deployed", "as deployed"), ("fp127", "in FP127"), ("fp19", "in FP19")))
 PROTOCOLS = ("aave", "morpho")  # the facets, left to right
 PROTOCOL_LABEL = {"aave": "Aave", "morpho": "Morpho"}
 AXIS = (0, 80, 20)  # correct digits; a gridline and a label at every tick
@@ -116,10 +116,12 @@ class Live(DeckScene):
     def construct(self):
         n = numbers()
         self.section(0)
-        self.wait(0.3)
-        self.play(self.caption(f"docs/benchmarks/accrual-deployed.json · live · block {n['block']} · {n['date']}"))
+        # the chrome, on the first frame: the caption, the title, the two facets (their
+        # titles, axes, gridlines, tick labels, the axis title) and the three row keys in
+        # the rows' colours (ROW_COLOUR["s10"]); only the dots and their medians arrive
+        self.caption_now(f"docs/benchmarks/accrual-deployed.json · live · block {n['block']} · {n['date']}")
         title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
-        self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.6))
+        row_labels = {key: words(name, SIZE_BODY, colour).move_to([0, ROW_Y[key], 0]).align_to([LABEL_RIGHT, 0, 0], RIGHT) for key, name, colour in ROWS}
 
         # ---- the facets: one panel per protocol on the same scale, a gridline at every tick
         panels: dict[str, Chart] = {}
@@ -134,9 +136,8 @@ class Live(DeckScene):
             panels[p] = chart
             facet_titles.add(words(f"{PROTOCOL_LABEL[p]} · {n['by_protocol'][p]['count']} markets", SIZE_BODY, Palette.MUTED).move_to([x0 + PANEL_W / 2, Y_FACET, 0]))
         axis_title = words(AXIS_TITLE, 22, Palette.MUTED).move_to([PANEL_X0 + PANEL_W + PANEL_GAP / 2, Y_AXIS_TITLE, 0])
-        self.play(*[Create(c.x_axis, run_time=1.0) for c in panels.values()], FadeIn(grids, run_time=0.8), *[FadeIn(c.y_axis, run_time=0.8) for c in panels.values()])
-        self.play(*[FadeIn(c.labels, run_time=0.6) for c in panels.values()], FadeIn(axis_title, run_time=0.6), FadeIn(facet_titles, shift=UP * 0.06, run_time=0.6))
-        self.wait(0.3)
+        self.fix(title, *panels.values(), axis_title, facet_titles, *row_labels.values())
+        self.wait(0.6)
 
         # ---- the data: one dot per market, its jitter fixed so it is the same dot in every row
         rng = random.Random(SEED)
@@ -197,8 +198,6 @@ class Live(DeckScene):
         for k, (key, name, colour) in enumerate(ROWS):
             if k:
                 self.section(k, hold=1.2)
-            row_label = words(name, SIZE_BODY, colour).move_to([0, ROW_Y[key], 0]).align_to([LABEL_RIGHT, 0, 0], RIGHT)
-            self.play(FadeIn(row_label, shift=RIGHT * 0.08, run_time=0.5))
             if dots is None:
                 dots = dots_at(key, colour)
                 self.play(LaggedStart(*[FadeIn(d, scale=0.3) for d in dots], lag_ratio=0.002, run_time=1.0))

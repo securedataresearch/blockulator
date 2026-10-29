@@ -286,11 +286,6 @@ class Exp40(DeckScene):
         t.move_to([X_RIGHT - t.width / 2, y, 0])
         return t
 
-    def type_row(self, lbl, txt, per_char=0.065):
-        self.play(FadeIn(lbl, shift=RIGHT * 0.1, run_time=0.4))
-        self.play(AddTextLetterByLetter(txt, time_per_char=per_char))
-        self.wait(0.3)
-
     def mark_wrong(self, txt, k: int, after=Palette.FAINT):
         """Light the first wrong digit and dim everything after it."""
         glyph = txt[k]
@@ -355,23 +350,29 @@ class Exp40(DeckScene):
         rows = n["rows"]
         point = len(n["truth"].partition(".")[0])  # index of the point in every row
         self.section(0)
+        # the chrome: the caption, the title (the exact row's name) and the three
+        # library rows' names (the keys, in their family colour) are on the first frame
+        self.caption_now(CAPTION)
+        e_lbl, e_txt = self.place_row(0, EXACT_LABEL, Palette.EXACT, n["exact_row"], label_markup=True, as_title=True)
+        self.fix(e_lbl)
+        lib = libs()
+        placed = [self.place_row(i, r["label"], colour_of(lib[r["id"]]), r["value"]) for i, r in enumerate(rows, start=1)]
+        self.fix(*[lbl for lbl, _ in placed])
         self.wait(0.3)
-        self.play(self.caption(CAPTION))
 
         # the closest 18-decimal value: e^40 rounded at the 18th decimal, complete; its name is the slide's title
-        e_lbl, e_txt = self.place_row(0, EXACT_LABEL, Palette.EXACT, n["exact_row"], label_markup=True, as_title=True)
-        self.type_row(e_lbl, e_txt, per_char=0.06)
+        self.play(AddTextLetterByLetter(e_txt, time_per_char=0.06))
+        self.wait(0.3)
         e_right = self.right_label(self.row_y(0), EXACT_RIGHT, Palette.FAINT)
         self.play(FadeIn(e_right, run_time=0.5))
 
         # three answers, counted in decimals: the word promises 18
         self.section(1)
-        lib = libs()
         row_mobjects = VGroup()
         for i, r in enumerate(rows, start=1):
-            colour = colour_of(lib[r["id"]])
-            lbl, txt = self.place_row(i, r["label"], colour, r["value"])
-            self.type_row(lbl, txt)
+            lbl, txt = placed[i - 1]
+            self.play(AddTextLetterByLetter(txt, time_per_char=0.065))
+            self.wait(0.3)
             self.mark_wrong(txt, r["first_wrong"])
             right = self.right_label(self.row_y(i), r["right_label"], Palette.MUTED)
             self.play(FadeIn(right, run_time=0.4))

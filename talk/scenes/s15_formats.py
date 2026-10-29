@@ -50,6 +50,7 @@ from manim import (
 from manim.utils.rate_functions import ease_in_cubic, ease_in_out_cubic, ease_out_cubic
 
 from vocab import (
+    ROW_COLOUR,
     FP19_EXPONENT_BITS,
     FP19_FRACTION_BITS,
     FP127_FRACTION_BITS,
@@ -105,6 +106,7 @@ GRID_TICKS = (0, 24, 1)  # FP127's uniform grid: 24 units across the same width
 WINDOW = 1.2  # the 71-digit window, in axis ticks (illustrative)
 STOPS = (0.0, 0.5, 1.0)  # the window's stops: the left end, the middle, the right end of the axis
 CLOSE_SIZE = 30  # the closing line is 13.4 units wide at SIZE_BODY, wider than the safe area; 30 fits
+HUES = ROW_COLOUR["s15"]  # the fields: sign TEXT; FP127's integer SAPPHIRE, fraction EMERALD; FP19's exponent VIOLET, fraction TEXT
 
 
 def _power_of_ten(x: Decimal) -> int:
@@ -225,9 +227,10 @@ class Formats(DeckScene):
         self.n = n = numbers()
         s = n["strings"]
         self.section(0)
+        # the chrome, on the first frame: the title and the caption
+        self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
+        self.caption_now(CAPTION)
         self.wait(0.3)
-        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
-        self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5), self.caption(CAPTION))
 
         # the word: 256 cells draw across the slide, then are counted
         bar = bit_bar(WORD_BITS, BAR_WIDTH).move_to([0, Y_BAR, 0])
@@ -240,7 +243,7 @@ class Formats(DeckScene):
         self.section(1, hold=1.0)
         f = n["fp127"]
         edges127 = (0, f["sign"], f["sign"] + f["integer"], WORD_BITS)
-        colours127 = (Palette.TEXT, Palette.MUTED, Palette.EMERALD)
+        colours127 = (HUES["sign"], HUES["fp127_integer"], HUES["fp127_fraction"])
         label127 = words(s["fp127_label"], SIZE_BODY, Palette.EMERALD)
         fields127 = digits(s["fp127_fields"], SIZE_BODY, Palette.TEXT)
         names127 = words(s["fp127_names"], SIZE_BODY, Palette.MUTED)
@@ -277,7 +280,7 @@ class Formats(DeckScene):
         g = n["fp19"]
         self.play(FadeOut(VGroup(row_a, row_b, grid, grid_glow, end), run_time=0.5))
         edges19 = (0, g["sign"], g["sign"] + g["exponent"], WORD_BITS)
-        colours19 = (Palette.TEXT, Palette.SAPPHIRE, Palette.TEXT)
+        colours19 = (HUES["sign"], HUES["fp19_exponent"], HUES["fp19_fraction"])
         label19 = words(s["fp19_label"], SIZE_BODY, Palette.TEXT)
         fields19 = digits(s["fp19_fields"], SIZE_BODY, Palette.TEXT)
         row_a2 = self.row(0, label19, fields19)

@@ -48,7 +48,7 @@ from manim import (
 )
 from manim.utils.rate_functions import ease_out_cubic
 
-from vocab import SIZE_BODY, DeckScene, GridLine, Palette, check_mark, cross_mark, digits, direction, markup, resupply, snap, thousands, words
+from vocab import PROTOCOL_COLOUR, SIZE_BODY, DeckScene, GridLine, Palette, check_mark, cross_mark, digits, direction, markup, resupply, snap, thousands, words
 
 QUOTIENT_DIGITS = 30  # decimals of the long division, complete and labelled
 LTV_DECIMALS = 16  # decimals of the exact LTV, complete and labelled
@@ -141,43 +141,44 @@ class Resupply(DeckScene):
         n = numbers()
         assert n["solvent_floor"] and not n["solvent_exact"]
         self.section(0)
-        self.wait(0.3)
-        self.play(self.caption(f"scripts/replays/resupply.json · block {n['block']}"))
-
-        # the formula, from the verified source, and the price the oracle returned
         y0 = 3.3
+        y_chk = -1.72
+        # the chrome, on the first frame: the caption; the title (the formula); the two
+        # cited Solidity lines in SAPPHIRE, Resupply's hue (its own code); the row keys
+        # "price", "10^36 ÷ price", "stored rate"; the integer grid with its ticks named
+        self.caption_now(f"scripts/replays/resupply.json · block {n['block']}")
         formula = self.title(f"exchange rate  =  10<sup>{n['rate_exp']}</sup> ÷ price", SANS, Palette.TEXT, use_markup=True)
-        src = digits(n["rate_line"], SMALL, Palette.FAINT)
+        src = digits(n["rate_line"], SMALL, PROTOCOL_COLOUR["resupply"])
         src.move_to([-6.3 + src.width / 2, y0 - 0.45, 0])
-        self.play(FadeIn(formula, shift=RIGHT * 0.1, run_time=0.6))
-        self.play(FadeIn(src, run_time=0.5))
-        self.wait(1.0)
-
+        chk_src = digits(n["ltv_line"], SMALL, PROTOCOL_COLOUR["resupply"])
+        chk_src.move_to([-6.3 + chk_src.width / 2, y_chk + 0.47, 0])
         price_lbl = words("price", SANS, Palette.MUTED)
         price_lbl.move_to([-6.3 + price_lbl.width / 2, y0 - 1.15, 0])
+        q_lbl = markup(f"10<sup>{n['rate_exp']}</sup> ÷ price", SANS, Palette.MUTED)
+        q_lbl.move_to([-6.3 + q_lbl.width / 2, y0 - 1.95, 0])
+        stored_lbl = words("stored rate", SANS, Palette.MUTED)
+        stored_lbl.move_to([-6.3 + stored_lbl.width / 2, y0 - 2.7, 0])
+        line = GridLine(GRID, length=6.5, tick_size=0.14).move_to([-1.6, -0.6, 0])
+        tick_lbls = VGroup(*[digits(str(k), 24, Palette.FAINT).next_to(line.n2p(k), DOWN, buff=0.22) for k in n["grid_ticks"]])
+        grid_lbl = words("the stored rate is an integer", 22, Palette.FAINT).next_to(line.get_end(), RIGHT, buff=0.4)
+        self.fix(formula, src, chk_src, price_lbl, q_lbl, stored_lbl, line, tick_lbls, grid_lbl)
+        self.wait(1.3)
+
+        # the price the oracle returned
         price = digits(n["price"], MONO - 2, Palette.TEXT)
         price.next_to(price_lbl, RIGHT, buff=0.45).set_y(y0 - 1.15)
-        self.play(FadeIn(price_lbl, run_time=0.4))
         self.play(AddTextLetterByLetter(price, time_per_char=0.045))
 
         # the long division runs out
         self.section(1, hold=2.0)
-        q_lbl = markup(f"10<sup>{n['rate_exp']}</sup> ÷ price", SANS, Palette.MUTED)
-        q_lbl.move_to([-6.3 + q_lbl.width / 2, y0 - 1.95, 0])
         quotient = digits(n["quotient"], MONO, Palette.EXACT)
         quotient.next_to(q_lbl, RIGHT, buff=0.45).set_y(y0 - 1.95)
         quotient_lbl = words(n["quotient_label"], LABEL, Palette.FAINT).next_to(quotient, RIGHT, buff=0.3).set_y(y0 - 1.95)
-        self.play(FadeIn(q_lbl, run_time=0.4))
         self.play(AddTextLetterByLetter(quotient, time_per_char=0.09))
         self.play(FadeIn(quotient_lbl, run_time=0.4))
         self.wait(1.0)
 
-        # the integer grid the stored rate lives on
-        line = GridLine(GRID, length=6.5, tick_size=0.14).move_to([-1.6, -0.6, 0])
-        tick_lbls = VGroup(*[digits(str(k), 24, Palette.FAINT).next_to(line.n2p(k), DOWN, buff=0.22) for k in n["grid_ticks"]])
-        grid_lbl = words("the stored rate is an integer", 22, Palette.FAINT).next_to(line.get_end(), RIGHT, buff=0.4)
-        self.play(Create(line, run_time=1.0), FadeIn(tick_lbls, run_time=0.8))
-        self.play(FadeIn(grid_lbl, run_time=0.5))
+        # the exact value lands on the integer grid
         x_exact = float(Fraction(10**36, int(resupply()["pins"]["price"])))
         dot = line.dot_at(x_exact, Palette.EXACT)
         dot.move_to(line.n2p(x_exact) + UP * 1.6)
@@ -206,19 +207,13 @@ class Resupply(DeckScene):
             FadeOut(exact_lbl, run_time=0.5),
         )
         stored = digits(n["floor"], MONO, Palette.WRONG)
-        stored_lbl = words("stored rate", SANS, Palette.MUTED)
-        stored_lbl.move_to([-6.3 + stored_lbl.width / 2, y0 - 2.7, 0])
         stored.next_to(stored_lbl, RIGHT, buff=0.45).set_y(y0 - 2.7)
-        self.play(FadeIn(stored_lbl, run_time=0.4), FadeIn(stored, shift=DOWN * 0.1, run_time=0.5))
+        self.play(FadeIn(stored, shift=DOWN * 0.1, run_time=0.5))
 
         # the solvency check, as deployed: two rows, the product and the comparison
         self.section(3, hold=2.0)
-        y_chk = -1.72
         y_cmp = y_chk - 0.52
-        chk_src = digits(n["ltv_line"], SMALL, Palette.FAINT)
-        chk_src.move_to([-6.3 + chk_src.width / 2, y_chk + 0.47, 0])
-        self.play(FadeIn(chk_src, run_time=0.5))
-        self.wait(1.0)
+        self.wait(0.5)
 
         def stated(label: str | None) -> str:
             """A rounded number's format, small and faint, right after it; nothing after an integer."""
