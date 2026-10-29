@@ -18,7 +18,7 @@ accrual_note = "Put $10,000 in at 5% a year and accrue it in one step after N da
 accrual_source = "Correct digits against exact arithmetic, each capped at what the library's format holds. OpenZeppelin, Uniswap and Maker have no exponential, so they are not here. The input is the <a href=\"/results/ladder/#accrual-continuous\">continuous-accrual scenario</a>'s; data: <a href=\"/data/ladder.json\">ladder.json</a>."
 
 gas_title = "Twice the digits, and competitive on gas"
-gas_note = "FP127 carries twice the digits of every 18-decimal library and costs less than PRBMath's SD59x18 on add, mul, div, exp, ln, pow and sqrt. FP19 carries twice binary128's digits and costs less than ABDKMathQuad on add, mul, div, exp, ln and pow. Solady is cheaper than both, at 18 digits."
+gas_note = "FP127 carries twice the digits of every 18-decimal library and costs less than PRBMath's SD59x18 on add, mul, div, ln, pow and sqrt; exp is 2,835 gas against 2,816. FP19 carries twice binary128's digits and costs less than ABDKMathQuad on add, mul, div, exp, ln and pow. Solady is cheaper than both, at 18 digits."
 gas_source = "Each dot is a library: the digits its format holds at 1, against its gas as a multiple of FP127's over the ops both offer; hover for the range. Median of inline calls over random inputs that take no shortcut (<sup>t</sup>). Aave, Morpho and Maker are formulas inside protocols, so they have no gas. Every op: <a href=\"/results/ops/\">per op</a>; data: <a href=\"/data/gas.json\">gas.json</a>, <a href=\"/data/fp19/gas.json\">fp19/gas.json</a>."
 
 wad_title = "Correct to the last wei"
