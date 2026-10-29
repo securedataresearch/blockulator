@@ -14,5 +14,7 @@ package = false
 
 [dependency-groups]
 dev = [
+    "img2pdf>=0.6.3",
     "manim==0.22.1",
+    "pyyaml>=6.0.3",
 ]
