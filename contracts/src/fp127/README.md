@@ -245,8 +245,8 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `sinh`, `cosh` | \|x\| ≤ 88, correctly rounded; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192 (within 3 units plus 2^-299 relative, `rbad127` err 2^20), e^\|x\| and e^−\|x\| in two words past it; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
 | `tanh(x)` | all x, correctly rounded; u/(u + 2) or (1 − w)/(1 + w) at 2^-192 (err 2 or 3 units), (1 − w)/(1 + w) in two words past it; ±1 exactly from \|x\| = 46 | never |
 | `atanh(x)` | \|x\| < 1, correctly rounded; log1p(2\|x\|/(1 − \|x\|))/2, one division and one unrounded log at 2^-192 (err 2^47 units), then `l2p` of 1 ± \|x\| (2^-248), then ln(1 ± \|x\|) in two words | `OutOfRange` |
-| `erf(x)`, `erfc(x)` | all x; series to 4, e^(x²) erfc(x) by a minimax polynomial beyond, at 2^-192; erfc(9.3) is one ULP, zero beyond | never |
-| `normCdf(x)` | Φ(x) = erfc(−x/√2)/2, the N(d) of Black-Scholes; Φ(−13) is two ULPs, Φ(−14) is zero, Φ(14) is one | never |
+| `erf(x)`, `erfc(x)` | all x, correctly rounded; series to 4, e^(x²) erfc(x) by a minimax polynomial beyond, at 2^-192 (`rbad127` err 3·2^44 and 2^20 units, derived), FP19's series or continued fraction in two words past it; erfc(9.3) is one ULP, zero beyond | never |
+| `normCdf(x)` | Φ(x) = erfc(−x/√2)/2, the N(d) of Black-Scholes, correctly rounded as `erf` (y = \|x\|/√2 exact in the second stage); Φ(−13) is two ULPs, Φ(−14) is zero, Φ(14) is one | never |
 
 **Constants.** `FP127Lib.ONE` is 2^128 and `FP127Lib.PI` is π · 2^128 to
 the nearest integer, `0x3243f6a8885a308d313198a2e03707345` (38 digits). Pi
@@ -279,8 +279,9 @@ stated bound against 120-digit truth (CI runs it).
 **Rounding (v5).** Every transcendental returns the nearest word, ties up:
 `exp`, `exp2`, `exp10`, `expm1`, `sinh`, `cosh`, `tanh`, `atanh`, `pow`,
 `cbrt`, `ln`, `log2`, `log10`, `log1p`, `powu`, `compound`, `lambertW0`,
-`lambertWm1`, and, through the one-word kernel, `erf`, `erfc` and
-`normCdf` (no misrounding at any vector or random input). `gavg` and `hypot`
+`lambertWm1`, `erf`, `erfc` and `normCdf` (no misrounding at any vector
+or random input; `erf`, `erfc` and `normCdf` by a test on a derived bound
+and a wide second stage from 3.0, below). `gavg` and `hypot`
 return the nearest word too, decided exactly (3.0): for raw words A and B the
 raw result is the root of the integer A·B or A² + B², taken in two words and
 rounded once, and an integer's root is never a tie. `add`, `sub`,
@@ -450,7 +451,8 @@ near x = 4. It is now e^(−x²) g(x) with g(x) = e^(x²) erfc(x) the degree-43
 minimax polynomial in t = (2x − 13.5)/5.5 (`erfct`): what is rounded is
 erfc on the 2^-128 grid, so the fit is held to an absolute 2^-175 on erfc,
 the tolerance 2^-175 e^(x²) on g, which is 2^-149 relative at x = 4 and
-2^-45 at 9.5; certified 0.24 of it after the coefficients' rounding.
+2^-45 at 9.5; within 0.244 of it after the coefficients' rounding on all
+of the interval (3.0: certified, below).
 `erf_model.py --tail` models the Horner in integers (largest error against
 erfc 2^18.25 units of 2^-192, the fraction's 2^18.17, both e^(−x²)'s);
 `--check` holds the source to its Yul (CI). 7,650 gas at every x of the
@@ -545,6 +547,42 @@ exponentials), 29,000 (the logs) and 55,000 to 90,000 (`pow`); the middle
 stage of the logs about 5,500. `pow`'s sweep now holds 961 bases within 2^-8
 of one (t spread over the whole range) and 39 exact ties, where v8
 misrounded 48. `FP127E` is 18,808 bytes (12,716 before).
+
+**The error function, correctly rounded (3.0).** `erf`, `erfc` and
+`normCdf` (`FP127N`) test their value at 2^-192 with `rbad127` before the
+one rounding, each branch's err a constant. Both bounds are derived, not
+only measured (`erf_model.py --bounds`, run by `--check` in CI). `erfs`
+(|x| ≤ 4): e^(−x²) carries `exp2frac`'s 2^-146.7 relative (plus 2^-187 at most
+from its exponent's floors), which times erf is at most 2^45.29 units of
+2^-192; the series' floors (each term's error bounded by the recurrence
+ε_k ≤ ε_(k−1)·2x²/(2k + 1) + 1, the stop no later than the first term
+under a unit, the true tail from the earliest stop) and the three floored
+products add under 2^23.5: err 3·2^44 (2^45.58). `erfct` (4 < x < 9.375):
+the fit is certified on all of [−1, 1], not only at points: on 20,000 steps
+the error is at most the larger end value plus h²/8 max |e″|, and |e″| on
+each of 1,000 blocks is bounded by its Taylor series at the block's centre
+(g's derivatives by g^(n+1) = 2x g^(n) + 2n g^(n−1)) with the Lagrange
+remainder from |g^(n)(x)| ≤ n!/(√π x^(n+1)), which follows from g(x) =
+(2/√π) ∫ e^(−s² − 2xs) ds: 0.2438 of the tolerance 2^-175 e^(x²) (0.2404
+the largest sampled). With e^(−x²)'s 2^-146.7 times erfc(4), t's rounding
+(|g′| ≤ 1/(√π x²)) and the Horner's 43 floors (under 43 units of g, times
+e^(−x²)): 2^19.41 units, err 2^20. `normCdf`'s y = |x|/√2 at 2^-192 and
+the halving add under 4 units, inside the same errs. Past the test,
+`erfw127` hands x to FP19's wide second stage as its exact (u, m) (y =
+|x|/√2 stays exact, as in `fp19_normCdf`): below y = 7 the series in two
+words (`w19_erfser2`), from 7 one minus the continued fraction
+(`w19_erfccf2`), 2^-444 or better, rounded once to the grid 2^-128
+(2^-127 for `normCdf`, which is ½ ± that). erf(y) is never a midpoint for
+x ≠ 0, so `erfc` = 1 ∓ that word and Φ = ½ ± it exactly. `bounds127.py`
+measures both errs (ratios 0.41 and 0.30). The fast path skips the second
+stage unless within 2^-18.4 ULP of a midpoint (series) or 2^-44 (tail);
+the vectors carry 13 random inputs found that close, decided by it (v8 had
+each right). Inline A/B on the sweep's inputs: `erf` median 3,630 → 3,689,
+`erfc` 3,510 → 3,592, `normCdf` 3,715 → 3,750 (the same old and new calls side by side; the sweep table, its runner recompiled around the new library, reads 3,623 → 3,775, 3,497 → 3,654 and 3,694 → 3,823); `make cdf` on [−6, 6]:
+`normCdf` 12,435 → 12,466, `erfc` 9,140 → 9,211; the second stage costs
+about 48,000 at the median and 355,000 at most (the two-word series just
+below y = 7). `FP127N` is 9,013 bytes (5,005 before); inline, each op
+about 8.9 KB (5.5 before).
 
 ## Precision
 

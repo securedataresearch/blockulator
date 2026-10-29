@@ -100,7 +100,11 @@ contract Imports is Test {
         else if (shape % 3 == 1) err = bound(err, 0, g > 2 ? uint256(1) << (g - 2) : 2);
         else err = bound(err, 0, uint256(1) << (g < 200 ? g : 200));
         // v near a midpoint of its step, the case the test exists for
-        if (shape >= 128 && g < 254) v = ((v >> g) << g) + (uint256(1) << (g - 1)) + (err % 7) - 3;
+        // (three below it at most: for g = 1 or 2 the midpoint can be under 3)
+        if (shape >= 128 && g < 254) {
+            v = ((v >> g) << g) + (uint256(1) << (g - 1)) + (err % 7);
+            v = v < 3 ? 0 : v - 3;
+        }
         if (v < err) v = err;
         uint256 w = _word(v, g);
         bool bad = _word(v - err, g) != w || _word(v + err, g) != w;

@@ -3535,10 +3535,15 @@ function fp127_atanh(x) -> r {
 // The error function and the normal distribution
 // ---------------------------------------------------------------------------
 
+// The second stage behind their rounding tests (erfw127, 3.0): FP19's
+// two-word series and continued fraction, erfw's pieces, 2^-444 or better.
+/// @import fp19 as w19: erfser2, erfccf2, shr3, wshr, wsub
+
 /// erf(x) at 2^-192 for 0 <= x <= 4 given at 2^-192, by the all-positive
 /// series (2/sqrt(pi)) e^(-x^2) x sum_k (2x^2)^k / (2k+1)!!, summed forward
-/// until the term floors to zero: 145 bits or better, at most about 125
-/// terms at x = 4 (scripts/fp127/generators/erf_model.py). The term's
+/// until the term floors to zero: at most about 125 terms at x = 4, within
+/// 2^45.3 units of 2^-192 (exp2frac's 2^-146.7 times erf, and the floors:
+/// erf_model.py --bounds), the rounding tests' 3 2^44. The term's
 /// mulg is inline and unsigned (term and 2 x^2 are non-negative and below
 /// 2^255), the divisor 2k + 1 counted directly: the same floors.
 function erfs(xg) -> v {
@@ -3560,12 +3565,15 @@ function erfs(xg) -> v {
 /// erfc(x) at 2^-192 for 4 < x <= 9.5 given at 2^-192: e^(-x^2) g(x),
 /// g(x) = e^(x^2) erfc(x) by the degree-43 minimax polynomial in
 /// t = (2x - 13.5) / 5.5 on [4, 9.5], fitted to the tolerance 2^-175 e^(x^2)
-/// (erf_model.py: certified 0.240 of it after the coefficients'
-/// rounding), so erfc is within 2^-175 before e^(-x^2)'s own error; signed
-/// Horner at 2^-192, each step's floor under a unit of g, the product
-/// written in line (mulg's words, t's sign once). e^(-x^2) is taken
-/// unrounded, so a result far below one keeps its bits: erfc(9.3) is the
-/// last value above half an ULP and comes out as one ULP. Release 2.2's
+/// (erf_model.py: within 0.244 of it on all of [-1, 1] after the
+/// coefficients' rounding, certified by a dense grid and a bound on the
+/// error's second derivative), so erfc is within 2^-175 before e^(-x^2)'s
+/// own error; signed Horner at 2^-192, the 43 floors under 43 units of g,
+/// the product written in line (mulg's words, t's sign once). e^(-x^2) is
+/// taken unrounded, so a result far below one keeps its bits: erfc(9.3)
+/// is the last value above half an ULP and comes out as one ULP. In all
+/// within 2^19.4 units of 2^-192, e^(-x^2)'s error at x = 4 the most of it
+/// (erf_model.py --bounds): the rounding tests' 2^20. Release 2.2's
 /// continued fraction cost about 20,000 gas at x = 4.
 function erfct(xg) -> v {
     let t := sub(mulg(xg, 0x5d1745d1745d1745d1745d1745d1745d1745d1745d1745d1), 0x2745d1745d1745d1745d1745d1745d1745d1745d1745d1746)
@@ -3705,26 +3713,67 @@ function erfct(xg) -> v {
     v := mulg(expg(sub(0, mulg(xg, xg))), p)
 }
 
+/// The second stage of erf, erfc and normCdf (3.0): erf(y) for y = |x| /
+/// sqrt(2^h), x = ax 2^-128 > 0, to nearest on the grid 2^-(128 - h), from
+/// FP19's wide kernels on x as FP19's (u, m), exact: below y = 7 the series
+/// in two words (erfser2), from 7 one minus the continued fraction
+/// (erfccf2), each 2^-444 or better, then one rounding of the value at
+/// 2^-510. erf(y) is transcendental for x != 0, never a midpoint, so
+/// 1 +- erf(y) rounds to 1 +- this word: the ops add it to or subtract it
+/// from one (normCdf from one half) under any tie rule.
+function erfw127(ax, h) -> r {
+    let b := msb(ax)
+    let u := sub(b, 128)
+    let m := shl(sub(236, b), ax)
+    let fh := 0
+    let fl := 0
+    let lim := 0x700000000000000000000000000000000
+    if h { lim := 0x9e6454cd7aa297f3ce4dd87d06a166cb4 }
+    switch lt(ax, lim)
+    case 1 {
+        let n2, n1, n0, e := w19_erfser2(u, m, h)
+        fh, fl := w19_shr3(n2, n1, n0, sub(sub(0, 510), e))
+    }
+    default {
+        let vh, vl, ve := w19_erfccf2(u, m, h)
+        vh, vl := w19_wshr(vh, vl, sub(0, ve))
+        fh, fl := w19_wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, vh, vl)
+    }
+    r := shr(add(126, h), add(fh, shl(add(125, h), 1)))
+}
+
 /// @object FP127N
 /// @export erf(int256 x) returns (int256 r)
 /// @domain any x
 /// @reverts never
 /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
-///         1 - erfc(x) by the tail polynomial, both at 2^-192 and rounded
-///         once; +-1 exactly from |x| >= 9.375, where 1 - erf is below
-///         2^-130.8 and the subtraction rounds to one.
+///         1 - erfc(x) by the tail polynomial, both at 2^-192; one rounding
+///         when the value's bound (2^45.6 and 2^20 units of 2^-192,
+///         erf_model.py) clears the rounding boundary, else FP19's wide
+///         second stage (erfw127): correctly rounded. +-1 exactly from
+///         |x| >= 9.375, where 1 - erf is below 2^-130.8 and the subtraction
+///         rounds to one.
 function fp127_erf(x) -> r {
     if iszero(x) { r := 0 leave }
-    let one := 0x100000000000000000000000000000000
     let ax := absw(x)
-    switch lt(ax, 0x960000000000000000000000000000000)
-    case 1 {
+    r := 0x100000000000000000000000000000000
+    if lt(ax, 0x960000000000000000000000000000000) {
         let xg := shl(64, ax)
+        let v := 0
+        let b := 0
         switch gt(ax, 0x400000000000000000000000000000000)
-        case 0 { r := round64(erfs(xg)) }
-        default { r := round64(sub(0x1000000000000000000000000000000000000000000000000, erfct(xg))) }
+        case 0 {
+            v := erfs(xg)
+            b := rbad127(v, 64, 0x300000000000)
+        }
+        default {
+            v := sub(0x1000000000000000000000000000000000000000000000000, erfct(xg))
+            b := rbad127(v, 64, 0x100000)
+        }
+        switch b
+        case 0 { r := round64(v) }
+        default { r := erfw127(ax, 0) }
     }
-    default { r := one }
     if slt(x, 0) { r := sub(0, r) }
 }
 
@@ -3735,20 +3784,35 @@ function fp127_erf(x) -> r {
 /// @notice The complementary error function 1 - erf(x), computed directly
 ///         for x > 4 so the tail keeps its digits down to the format's
 ///         floor (erfc(9.3) is one ULP; zero from 9.375, where it is below
-///         2^-130.8); 2 - erfc(-x) for x < 0.
+///         2^-130.8); 2 - erfc(-x) for x < 0. One rounding, or erf's second
+///         stage when the bound reaches the boundary: correctly rounded.
 function fp127_erfc(x) -> r {
     let one := 0x100000000000000000000000000000000
     if iszero(x) { r := one leave }
     let ax := absw(x)
     let v := 0
+    let b := 0
     if lt(ax, 0x960000000000000000000000000000000) {
         let xg := shl(64, ax)
         switch gt(ax, 0x400000000000000000000000000000000)
-        case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(xg)) }
-        default { v := erfct(xg) }
+        case 0 {
+            v := sub(0x1000000000000000000000000000000000000000000000000, erfs(xg))
+            b := rbad127(v, 64, 0x300000000000)
+        }
+        default {
+            v := erfct(xg)
+            b := rbad127(v, 64, 0x100000)
+        }
     }
+    // tested before 2 - v: the test of 2 - v with err one less, which still
+    // covers the bound (erf_model.py), and err a constant in each branch
     if slt(x, 0) { v := sub(0x2000000000000000000000000000000000000000000000000, v) }
     r := round64(v)
+    if b {
+        switch slt(x, 0)
+        case 1 { r := add(one, erfw127(ax, 0)) }
+        default { r := sub(one, erfw127(ax, 0)) }
+    }
 }
 
 /// @object FP127N
@@ -3759,21 +3823,34 @@ function fp127_erfc(x) -> r {
 ///         Phi(x) = erfc(-x / sqrt2) / 2, the argument scaled at 2^-192. The
 ///         tail keeps its digits to the format's floor: Phi(-13) is about
 ///         two ULPs, Phi(-14) rounds to zero, and Phi(x) is exactly one from
-///         x = 14. This is the N(d) of Black-Scholes; on an 18-decimal grid
+///         x = 14. One rounding, or erf's second stage at y = |x| / sqrt 2
+///         (exact, as FP19's) when the bound reaches the boundary: correctly
+///         rounded. This is the N(d) of Black-Scholes; on an 18-decimal grid
 ///         it is zero from about d = -8.3.
 function fp127_normCdf(x) -> r {
     if iszero(x) { r := 0x80000000000000000000000000000000 leave }
-    let one := 0x100000000000000000000000000000000
     let ax := absw(x)
     let v := 0
+    let b := 0
     // from |x| = 13.3125 (|x| / sqrt2 > 9.41) erfc is below 2^-130.8: Phi is 0 or 1
     if lt(ax, 0xd50000000000000000000000000000000) {
         let yg := mulg(shl(64, ax), 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
         switch gt(yg, 0x4000000000000000000000000000000000000000000000000)
-        case 0 { v := sub(0x1000000000000000000000000000000000000000000000000, erfs(yg)) }
-        default { v := erfct(yg) }
+        case 0 {
+            v := shr(1, sub(0x1000000000000000000000000000000000000000000000000, erfs(yg)))
+            b := rbad127(v, 64, 0x300000000000)
+        }
+        default {
+            v := shr(1, erfct(yg))
+            b := rbad127(v, 64, 0x100000)
+        }
     }
-    switch slt(x, 0)
-    case 1 { r := round64(shr(1, v)) }
-    default { r := round64(sub(0x1000000000000000000000000000000000000000000000000, shr(1, v))) }
+    // Phi(-|x|) tested before 1 - v, as erfc's
+    if iszero(slt(x, 0)) { v := sub(0x1000000000000000000000000000000000000000000000000, v) }
+    r := round64(v)
+    if b {
+        switch slt(x, 0)
+        case 1 { r := sub(0x80000000000000000000000000000000, erfw127(ax, 1)) }
+        default { r := add(0x80000000000000000000000000000000, erfw127(ax, 1)) }
+    }
 }
