@@ -1,0 +1,51 @@
+// ImportDemo: TEST ONLY. The demonstration of scripts/fp127/gen.py's
+// `@import`, which lets one library's source call another's functions under
+// a prefix (FP127.yul.src takes FP19's wide kernels this way). Nothing here
+// ships: gen.py --lib import-demo emits ImportDemoLib.sol beside this file,
+// make gen-check keeps it current, and test/fp127/Imports.t.sol checks it.
+//
+// Three exports, each a call into another source through the imports below:
+//   * wexpm1, FP19's wide e^r - 1 kernel itself (with its helpers wmul,
+//     wdivs, mulwu, wdbl, ...), checked against mpmath's e^r - 1;
+//   * expm1, FP19's whole expm1 export (its fast path, its rounding test
+//     and its second stage, some thirty functions with msb, rev and the
+//     other helpers FP127.yul.src also defines), which must return the
+//     word FP19Lib.expm1 returns, and revert where and as it reverts;
+//   * rbad127, FP127.yul.src's rounding test (unused there until a phase
+//     calls it), checked against the rounding it describes.
+// Every function of each closure arrives renamed <alias>_<name>, its calls
+// with it; the errors FP19's code reverts with are declared here, as the
+// importer must.
+
+/// @error Overflow() 0x35278d12
+/// @error DivisionByZero() 0x23d359a3
+/// @error OutOfRange() 0x7db3aba7
+
+/// @import fp19 as w19: wexpm1, fp19_expm1
+/// @import fp127 as f127: rbad127
+
+/// @export wexpm1(uint256 rh, uint256 rl) returns (uint256 eh, uint256 el)
+/// @domain r = (rh 2^256 + rl) 2^-510 in [0, 1)
+/// @reverts nothing
+/// @notice FP19's w19_wexpm1: e^r - 1 in two words at 2^-510, within
+///         2^-503.
+function demo_wexpm1(rh, rl) -> eh, el {
+    eh, el := w19_wexpm1(rh, rl)
+}
+
+/// @export expm1(int256 x) returns (int256 r)
+/// @domain any FP19 word, as FP19Lib.expm1
+/// @reverts as FP19Lib.expm1
+/// @notice FP19's w19_fp19_expm1: FP19Lib.expm1's own body, imported.
+function demo_expm1(x) -> r {
+    r := w19_fp19_expm1(x)
+}
+
+/// @export rbad127(uint256 v, uint256 g, uint256 err) returns (uint256 b)
+/// @domain 1 <= g <= 256
+/// @reverts nothing
+/// @notice FP127's f127_rbad127: 1 when v +- err, with g guard bits, may
+///         round to another word than v under FP127's tie rule.
+function demo_rbad127(v, g, err) -> b {
+    b := f127_rbad127(v, g, err)
+}

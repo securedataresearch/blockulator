@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import {FP127_ADDRESS, Form, Op} from "../../contracts/src/ladder/ILadder.sol";
+import {FP127_ADDRESS, FP127E_ADDRESS, FP127H_ADDRESS, FP127N_ADDRESS, FP127S_ADDRESS, Form, Op} from "../../contracts/src/ladder/ILadder.sol";
 import {EdgeRunner} from "../../contracts/src/ladder/EdgeRunner.sol";
 import {LadderFP127} from "../../contracts/src/ladder/LadderFP127.sol";
 import {LadderFP127Lib} from "../../contracts/src/ladder/LadderFP127Lib.sol";
@@ -46,9 +46,16 @@ contract Edges is Test {
         require(m != address(0), "SnekmateMath deploy");
     }
 
+    function _etch(address a, string memory name) internal {
+        vm.etch(a, vm.parseJsonBytes(vm.readFile(string.concat("out/", name, ".yul/", name, ".json")), ".deployedBytecode.object"));
+    }
+
     function setUp() public {
-        bytes memory runtime = vm.parseJsonBytes(vm.readFile("out/FP127.yul/FP127.json"), ".deployedBytecode.object");
-        vm.etch(FP127_ADDRESS, runtime);
+        _etch(FP127_ADDRESS, "FP127");
+        _etch(FP127E_ADDRESS, "FP127E");
+        _etch(FP127H_ADDRESS, "FP127H");
+        _etch(FP127N_ADDRESS, "FP127N");
+        _etch(FP127S_ADDRESS, "FP127S");
         runner = new EdgeRunner([
             address(new LadderFP127()),
             address(new LadderFP127Lib()),

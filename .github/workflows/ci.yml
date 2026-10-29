@@ -54,6 +54,9 @@ jobs:
       - name: FP19's fast-path error bounds hold on their samples (bounds.py, the release gate's check)
         run: uv run scripts/fp19/generators/bounds.py
 
+      - name: FP127's fast-path error bounds hold on their samples (bounds127.py)
+        run: uv run scripts/fp127/generators/bounds127.py
+
       - name: Build (forge for Solidity; stdjson.py for the Yul objects, pinned solc and optimizer sequence)
         run: make build
 

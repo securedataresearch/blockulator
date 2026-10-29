@@ -107,6 +107,11 @@ contract Sweep is Test {
         if (op == "fp127_divUp") { g0 = gasleft(); r = FP127Lib.divUp(a, b); g = gasleft(); }
         if (op == "fp127_divDown") { g0 = gasleft(); r = FP127Lib.divDown(a, b); g = gasleft(); }
         if (op == "fp127_toFixed18Up") { g0 = gasleft(); r = FP127Lib.toFixed18Up(a); g = gasleft(); }
+        if (op == "fp127_log1p") { g0 = gasleft(); r = FP127Lib.log1p(a); g = gasleft(); }
+        if (op == "fp127_gavg") { g0 = gasleft(); r = FP127Lib.gavg(a, b); g = gasleft(); }
+        if (op == "fp127_hypot") { g0 = gasleft(); r = FP127Lib.hypot(a, b); g = gasleft(); }
+        if (op == "fp127_inv") { g0 = gasleft(); r = FP127Lib.inv(a); g = gasleft(); }
+        if (op == "fp127_mulDown") { g0 = gasleft(); r = FP127Lib.mulDown(a, b); g = gasleft(); }
         if (op == "fp19_clamp") { g0 = gasleft(); r = FP19Lib.clamp(a, b, c); g = gasleft(); }
         if (op == "fp19_lerp") { g0 = gasleft(); r = FP19Lib.lerp(a, b, c); g = gasleft(); }
         require(g0 != 0, "op");
@@ -239,4 +244,9 @@ contract Sweep is Test {
     function test_fp127_divUp() public { this.runOne("fp127_divUp", true); }
     function test_fp127_divDown() public { this.runOne("fp127_divDown", true); }
     function test_fp127_toFixed18Up() public { this.runOne("fp127_toFixed18Up", false); }
+    function test_fp127_log1p() public { this.runOne("fp127_log1p", false); }
+    function test_fp127_gavg() public { this.runOne("fp127_gavg", true); }
+    function test_fp127_hypot() public { this.runOne("fp127_hypot", true); }
+    function test_fp127_inv() public { this.runOne("fp127_inv", false); }
+    function test_fp127_mulDown() public { this.runOne("fp127_mulDown", true); }
 }

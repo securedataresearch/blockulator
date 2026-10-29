@@ -85,7 +85,7 @@ uint256 paid = FP19Lib.toUintDown(grown);          // to the user: floor
 int256  ltv  = FP127Lib.divUp(debt, collateral);    // a limit check: never below the truth
 ```
 
-Or call the deployed contracts, where every op is a free `eth_call`: `IFP127(0xb349…CBe4).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
+Or call the deployed contracts, where every op is a free `eth_call`: `IFP127E(0x9DCa…4887).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
 
 **Requires the CLZ opcode** (EIP-7939, the Osaka EVM). Supported: Ethereum, Arbitrum, OP Mainnet, Base, Unichain, Polygon PoS, BNB Chain, Gnosis, Scroll, Linea. Not supported: zkSync Era, Avalanche C-Chain. Check any chain with `make probe-clz RPC=<url>`.
 

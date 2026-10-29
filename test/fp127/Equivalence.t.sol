@@ -79,7 +79,7 @@ contract Equivalence is FP127Harness {
         string memory what
     ) internal view {
         Res memory r = _try(address(ref), newCall);
-        Res memory o = _try(address(obj), newCall);
+        Res memory o = _try(_objOf(newCall), newCall);
         if (r.ok) {
             assertTrue(o.ok, string.concat(what, ": obj reverted where ref fits"));
             assertEq(o.value, r.value, string.concat(what, ": obj != ref"));

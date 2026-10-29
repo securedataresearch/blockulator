@@ -57,6 +57,10 @@ contract GasLadder is FP127Harness {
     function _warm() internal view {
         huff.mulRaw(uint256(ONE), uint256(ONE));
         obj.mul(ONE, ONE);
+        objE.exp(ONE);
+        objH.sinh(ONE);
+        objN.erf(ONE);
+        objS.lambertW0(ONE);
         caller.mul(ONE, ONE);
     }
 
@@ -94,7 +98,7 @@ contract GasLadder is FP127Harness {
 
     function _fp127Rows(string memory op, uint256 idx, string memory label, bytes memory newCall, bytes memory huffCall, int256 libGas, string memory set) internal view {
         _emit(op, idx, label, "huff", _ext(address(huff), huffCall, NA), set);
-        _emit(op, idx, label, "yul", _ext(address(obj), newCall, REV), set);
+        _emit(op, idx, label, "yul", _ext(_objFor(op), newCall, REV), set);
         _emit(op, idx, label, "caller", _ext(address(caller), newCall, NA), set);
         _emit(op, idx, label, "lib", libGas, set);
     }
@@ -526,7 +530,7 @@ contract GasLadder is FP127Harness {
     function _row3(string memory op, uint256 i, int256 a, int256 b, int256 c) internal view {
         string memory label = string.concat(vm.toString(a), ",", vm.toString(b), ",", vm.toString(c));
         _emit(op, i, label, "huff", NA, "");
-        _emit(op, i, label, "yul", _ext(address(obj), abi.encodeWithSignature(string.concat(op, "(int256,int256,int256)"), a, b, c), REV), "");
+        _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256,int256)"), a, b, c), REV), "");
         _emit(op, i, label, "caller", NA, "");
         _emit(op, i, label, "lib", _timed(abi.encodeCall(this.cLib3, (op, a, b, c)), abi.encodeCall(this.cLib3, ("id", a, b, c))), "");
         _emit(op, i, label, "solady", _timed(abi.encodeCall(this.cSolady3, (op, _wad(a), _wad(b), _wad(c))), abi.encodeCall(this.cSolady3, ("id", _wad(a), _wad(b), _wad(c)))), "");

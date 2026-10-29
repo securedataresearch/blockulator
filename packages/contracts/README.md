@@ -27,7 +27,7 @@ The libraries use the CLZ opcode (EIP-7939): compile with solc ≥ 0.8.31 and `e
 
 | path | contents |
 |---|---|
-| `fp127/` | `FP127Lib.sol` (inline library), `IFP127.sol`, `FP127Caller.sol`, the deployed object `FP127.yul`, `abi.json` |
+| `fp127/` | `FP127Lib.sol` (inline library), `IFP127.sol`, `IFP127E.sol`, `IFP127H.sol`, `IFP127N.sol`, `IFP127S.sol`, `FP127Caller.sol`, the five objects `FP127*.yul`, `abi*.json` |
 | `fp19/` | `FP19Lib.sol`, `IFP19.sol`, `IFP19E.sol`, `IFP19H.sol`, `IFP19N.sol`, `IFP19S.sol`, the five objects `FP19*.yul`, `abi*.json` |
 | `wad/` | `BlockulatorWad.sol` (inline only, no deployed object) |
 | `deployments/` | one JSON record per deployed contract (address, chain, salt, compiler, verification links) and `RELEASE.json` |

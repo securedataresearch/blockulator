@@ -121,6 +121,7 @@ def main() -> int:
         ("build", "make build"),
         ("test", "make test"),
         ("bounds", "uv run scripts/fp19/generators/bounds.py"),
+        ("bounds127", "uv run scripts/fp127/generators/bounds127.py"),
         ("size", "make size size-fp19 size-inline-check"),
         ("ladder", "make ladder-check"),
         ("edges", "make edges-check"),
@@ -148,7 +149,7 @@ def main() -> int:
             pass
         elif name == "test":
             detail = tests(out)
-        elif name == "bounds":
+        elif name in ("bounds", "bounds127"):
             n = out.count("EXCEEDS")
             ok = ok and n == 0
             detail = f"{n} regions over their bound"

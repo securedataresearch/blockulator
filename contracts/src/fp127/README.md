@@ -5,28 +5,29 @@ Signed 127.128 fixed-point arithmetic for the EVM. One `int256` per value,
 bits on an absolute grid of 2^-128: 38 digits at 1, 32 at 10^-6, 8 at
 10^-30.
 
-This directory holds **one hand-written file** and five generated ones.
+This directory holds **one hand-written source** and the files generated
+from it.
 
 | file | role |
 |---|---|
 | `FP127.yul.src` | the source of truth: Yul function bodies only |
-| `FP127.yul` | generated: deployable object with a selector dispatcher |
+| `FP127.yul`, `FP127E.yul`, `FP127H.yul`, `FP127N.yul`, `FP127S.yul` | generated: the five deployable objects (from 3.0), each with a selector dispatcher |
 | `FP127Lib.sol` | generated: Solidity library, one `assembly` block per op |
-| `IFP127.sol` | generated: interface and custom errors of the deployed object |
-| `abi.json` | generated: ABI of the deployed object |
-| `ops.json` | generated: op table (signature, selector, domain, reverts) for the site |
+| `IFP127.sol`, `IFP127E.sol`, `IFP127H.sol`, `IFP127N.sol`, `IFP127S.sol` | generated: interface and custom errors of each deployed object |
+| `abi.json`, `abiE.json`, `abiH.json`, `abiN.json`, `abiS.json` | generated: ABI of each deployed object |
+| `ops.json` | generated: op table (signature, selector, object, domain, reverts) for the site |
 | `FP127Caller.sol` | hand-written: thin `staticcall` harness around a deployed object |
 | `FP127Type.sol` | hand-written: the typed API, `type FP127 is int256` with operators over `FP127Lib` |
 
 ```
-make gen              # regenerate the five outputs
+make gen              # regenerate the outputs
 make gen-check        # fail if they are stale (CI runs this)
 make vectors          # regenerate the mpmath vectors in test/fp127/vectors/
 make vectors-check    # fail if they are stale (CI runs this)
 make test             # gen-check + vectors-check + equivalence, behaviour, precision
 make precision-report # docs/fp127/precision.md from the last test run
 make bench            # gas ladder for every op and form -> docs/benchmarks/
-make size             # deployed runtime size against the 24,576-byte limit
+make size             # the five objects' runtime sizes against the 24,576-byte limit
 ```
 
 ## Chains: CLZ (Osaka) required
@@ -77,8 +78,27 @@ to send unless the answer is 255.
 
 The same Yul function bodies are emitted twice.
 
-**Deployed object.** `FP127.yul` wraps the bodies in a dispatcher that
-finds the 4-byte selector by binary search. It is deployed with CREATE2
+**Deployed objects.** From 3.0 (v9) FP127 deploys as five objects by idea,
+as FP19 does: `FP127` the number (arithmetic and its directed forms,
+conversions, `sqrt`, `cbrt`, `gavg`, `hypot`, `inv`, `factorial` and the
+small ops, 32 exports), `FP127E` the elementary functions on the exp/log
+kernels (`exp`, `exp2`, `exp10`, `expm1`, `ln`, `log2`, `log10`, `log2Up`,
+`log1p`, `pow`, `powu`, `compound`), `FP127H` the hyperbolic functions
+(`sinh`, `cosh`, `tanh`, `atanh`), `FP127N` the normal distribution (`erf`,
+`erfc`, `normCdf`) and `FP127S` Lambert W (`lambertW0`, `lambertWm1`). An
+export's `/// @object` tag in the source places it; an untagged one is in
+`FP127`. Each object carries only its exports and their callees (a kernel
+two objects share is copied into each: bytes, not gas) and has its own
+interface and ABI; `FP127Lib.sol` holds every export. Runtime sizes at the
+split: 3,367, 12,716, 7,560, 5,005 and 7,994 bytes, where v8's one object
+had 779 bytes free, so each now has room for the second stage behind its
+rounding tests. The words are v8's, op for op (`test/objects/ObjectsEqLib.t.sol`
+with `FP_REF_DIR` set to v8's artifact under every name). Salts `"FP127 v9"`,
+`"FP127E v9"`, `"FP127H v9"`, `"FP127N v9"`, `"FP127S v9"`; not deployed yet.
+
+Each object wraps its bodies in a dispatcher that finds the 4-byte selector
+by binary search (a flat switch under ten exports: `FP127H`, `FP127N`,
+`FP127S`). It is deployed with CREATE2
 through the deterministic proxy at
 `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the version.
 v8 (salt `"FP127 v8"`, 53 ops, 23,797 bytes of runtime, an evm osaka
@@ -134,6 +154,24 @@ members.
 8. Reverts go through `rev(sel)` with a selector declared by
    `/// @error Name() 0xselector`. The generator checks every selector
    against keccak and every `rev(...)` literal against the declared list.
+9. Functions of another library's source come in through an import line,
+   `/// @import fp19 as w19: wexp, wexpm1, wlnw, ...`. The generator takes
+   each named function of `contracts/src/fp19/FP19.yul.src` and every
+   function it calls, transitively, and renames each `w19_<name>` where the
+   imported text defines or calls it: the source calls `w19_wexpm1`, which
+   calls `w19_wmul`, `w19_msb` and so on, so the helpers both sources define
+   (`msb`, `rev`, `mul512`, `log2m`, ...) never meet. Lines naming the same
+   library and alias join. The imported code is validated with the source;
+   an imported parameter or local named like one of this source's functions
+   is rejected (Yul forbids the shadowing), and every error it reverts with
+   must be declared here. An import costs nothing until an export calls it:
+   objects and the library's blocks carry closures only, so the line in
+   `FP127.yul.src` (FP19's wide kernels for the second stages, at 2^-497 to
+   2^-510) changes no object's bytes by itself. BlockulatorWad's base source
+   is the same mechanism without the prefix. `test/fp127/imports/` holds the
+   demonstration: a test-only library importing FP19's `wexpm1` and its whole
+   `expm1`, and FP127's `rbad127`, checked against `FP19Lib`, mpmath and the
+   rounding `rbad127` describes (`test/fp127/Imports.t.sol`).
 
 ## Typed API
 
@@ -214,6 +252,21 @@ constant it is exact to the grid and costs nothing, and an object caller can
 copy the literal. e, ln 2 and ln 10 are not constants: `exp(ONE)`, `ln(2 ONE)`
 and `ln(10 ONE)` return the same nearest words, and `exp2`, `log2` and
 `log10` absorb most uses of them.
+
+**The tie rule.** To nearest is floor(v + 1/2) on the 2^-128 grid: ties
+toward +∞ (`round64`, `rnd192`, `pow2r` and the logs' `x384mul` all add half
+and floor). `powu` and `compound`, `cbrt`, and the odd `sinh`, `tanh` and
+`erf` round the magnitude and apply the sign, so their ties go away from
+zero; `scripts/fp127/oracle.py` rounds each op the same way, and make sweep's
+*correctly rounded* column compares with its word. `rbad127(v, g, err)` is
+the rounding test under this rule (3.0, called by the ops' second stages as
+they land): 1 when a value within `err` of `v`, carried with `g` guard bits
+below the grid (`v`'s low `g` bits; `g = 256` for a two-word value's low
+word), may round to another word than `v` does: when the low bits are within
+`err` below half a step, at most `err` above it, or `err` reaches half a
+step. A `v` exactly on the midpoint with `err = 0` is the tie itself and
+rounds up. `scripts/fp127/generators/bounds127.py` measures each fast value's
+stated bound against 120-digit truth (CI runs it).
 
 **Rounding (v5).** Every transcendental returns the nearest word, ties up:
 `exp`, `exp2`, `exp10`, `expm1`, `sinh`, `cosh`, `tanh`, `pow`, `cbrt`,
