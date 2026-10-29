@@ -50,6 +50,23 @@ the script exits 1; scripts/gates.py and CI run it beside FP19's bounds.py.
   atanh, l2p                 atanhmid (2^-384)           2^137: ln 2 / 2 floored at 2^-256 under a
                                                          log2 of at most 129, two l2p (2^-299)
 
+3.0, FP127E (rbadw, the fast paths' test, and rbadm127, the middle stages'):
+  exp, exp2, exp10           2^n (1 + s) (2^-384)        2^(n + 73) + 1 (expk 2^-311.2, the
+                                                         reduction 2^-376, v's floor; the Yul
+                                                         takes 2^200, n <= 126)
+  expm1, series              expm1s (2^-192)             2 (Horner's floors and truncations
+                                                         under 1 + 1/k, damped by |x|/k)
+  ln, log10, l2p             x384mul's product (2^-384)  2^135 (l2p's 2^-299 times c, c's
+                                                         rounding at 2^-256 times |log2 x|)
+  pow, middle near one       2^n (1 + s) (2^-384)        2^(n + 121) + 3 (|x - 1| < 2^-8, |y| >
+                                                         2^14: mratio 2^-272.1 relative, t
+                                                         within |t| 2^-271.9)
+  pow, middle l2p            2^n (1 + s) (2^-384)        2^(n + 102) + 3 (l2p 2^-299, |y| <=
+                                                         2^14.52 while |t| <= 131)
+  powu, 512-bit mantissa     powus's ah (relative)       (3k + 2) 2^-510 relative (each product
+                                                         3 2^-510, squarings double it; the last
+                                                         stage below k = 2^16: no test)
+
 Later phases add the regions of the tests they introduce (rbad127's err per
 op). The models' agreement with the Yul is checked by the sweep (make sweep)
 and the kernels' generators (kernel192.py --check, expk.py --check).
@@ -64,6 +81,8 @@ from mpmath import mp, mpf, log, power, cbrt as mcbrt, sinh as msinh, cosh as mc
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import precise_model as P  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "fp19" / "generators"))
+import mid254  # noqa: E402  FP19's mratio and wmul, which pow's middle stage imports
 
 mp.dps = 120
 ONE = P.ONE
@@ -353,6 +372,173 @@ def lambert(M: Meter, rng, n):
         M.add(f"lambertW{'m1' if br else '0'}, lwfin (2^-300)", err, w * mpf(2) ** 172 + v, W * mpf(2) ** 300)
 
 
+# ---------------------------------------------------------------------------
+# 3.0, FP127E: the exponentials' fast value, expm1's series, the logs' and
+# pow's middle values, powu's last stage
+# ---------------------------------------------------------------------------
+
+def v384(n, s):
+    """floor(2^(n + 384) (1 + s 2^-512)): the value whose low word the
+    exponentials' and pow's tests read (s as expk gives it, n >= -130)."""
+    return (1 << (n + 384)) + (s >> (128 - n))
+
+
+def exps(M: Meter, rng, n):
+    with mp.workdps(220):
+        for i in range(n):
+            X = rand_pos(rng, 60, 134) * rng.choice((1, -1))
+            if X > 88 * ONE or X < -89 * ONE:
+                continue
+            k, rh, rx = P.expr(X)
+            if k >= -129:
+                M.add("exp, double word", mpf(2) ** (k + 73) + 1, v384(k, P.expkx(rh, rx)), mp.exp(mpf(X) / ONE) * mpf(2) ** 384)
+            if -129 * ONE <= X < 127 * ONE:
+                k = X >> 128
+                s = P.expkx(*P.lnmul(((X << 128) & M256) << 256))
+                M.add("exp2, double word", mpf(2) ** (k + 73) + 1, v384(k, s), mpf(2) ** (mpf(X) / ONE + 384))
+            X = X % (38 * ONE) if X > 0 else -((-X) % (38 * ONE))
+            k, f = P.y2nf(X, P.LOG2_10_384)
+            if -129 <= k <= 126:
+                s = P.expkx(*P.lnmul(f))
+                M.add("exp10, double word", mpf(2) ** (k + 73) + 1, v384(k, s), mpf(10) ** (mpf(X) / ONE) * mpf(2) ** 384)
+
+
+def sdiv(a, b):
+    q = abs(a) // abs(b)
+    return -q if (a < 0) != (b < 0) else q
+
+
+def expm1s(X):
+    """The Yul's expm1s: e^x - 1 at 2^-192 for |x| <= 1/16 at 2^-128."""
+    ax = abs(X)
+    k = 27
+    if ax < 1 << 122:
+        k = 22
+        for lim, kk in ((120, 18), (116, 14), (112, 11), (104, 8), (96, 6), (80, 5)):
+            if ax < 1 << lim:
+                k = kk
+    xs = X << 64
+    v = G
+    for j in range(k, 1, -1):
+        v = G + sdiv((xs * v) >> 192, j)
+    return (xs * v) >> 192
+
+
+def expm1(M: Meter, rng, n):
+    for i in range(n):
+        X = rand_pos(rng, 63, 123) * rng.choice((1, -1))
+        M.add("expm1, series", 2, expm1s(X), mp.expm1(mpf(X) / ONE) * G)
+
+
+def x384(L, c):
+    """The Yul's x384mul before its rounding: (L's high word) c + floor(L's low word c / 2^256)."""
+    return (L >> 256) * c + (((L & M256) * c) >> 256)
+
+
+LN2_256R = 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c
+LOG10_2_256R = 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e6
+
+
+def logs_mid(M: Meter, rng, n):
+    for i in range(n):
+        X = rand_pos(rng, 1, 254) if i % 3 else ONE + rng.getrandbits(rng.randint(1, 120)) * rng.choice((1, -1))
+        if X <= 0 or X & (X - 1) == 0:
+            continue
+        L = P.l2p(X)
+        x = mpf(X) / ONE
+        M.add("ln, l2p", mpf(2) ** 135, x384(L, LN2_256R), log(x) * mpf(2) ** 384)
+        M.add("log10, l2p", mpf(2) ** 135, x384(L, LOG10_2_256R), log(x, 10) * mpf(2) ** 384)
+
+
+L2E = (mid254.L2E_H << 256) | mid254.L2E_L
+
+
+def tnear(Mid, X, Y):
+    """The Yul's tnear: (n, F) for t = y log2 x, x within 2^-8 of one."""
+    sg = int(X < ONE)
+    ad = abs(X - ONE)
+    q = mid254.wmul(Mid.mratio(sg, ad << 128, 0), L2E)
+    j = ad.bit_length()
+    Z = ((q * ad) >> j) * abs(Y)
+    k, f = Z >> (256 - j + 510), (Z >> (256 - j)) & ((1 << 510) - 1)
+    F = f << 2
+    if sg ^ (Y < 0):
+        k = -k
+        if F:
+            k, F = k - 1, (1 << 512) - F
+    return k, F
+
+
+def pow_mid(M: Meter, rng, n):
+    Mid = mid254.build()
+    with mp.workdps(220):
+        for i in range(n):
+            if i % 2:
+                X = ONE + (rng.getrandbits(rng.randint(1, 119)) | 1) * rng.choice((1, -1))
+            else:
+                X = rand_pos(rng, 100, 140)
+                if abs(X - ONE) < 1 << 120:
+                    continue
+            x = mpf(X) / ONE
+            t = mpf(rng.uniform(-130, 127)) if i % 4 else mpf(2) ** rng.uniform(-30, 3)
+            Y = int(t / log(x, 2) * ONE)
+            if not 0 < abs(Y) < 1 << 254:
+                continue
+            if abs(X - ONE) < 1 << 120 and abs(Y) > 1 << 142:
+                k, F = tnear(Mid, X, Y)
+                name, eb = "pow, middle near one", 121
+            else:
+                k, F = P.y2nf(Y, P.l2p(X))
+                name, eb = "pow, middle l2p", 102
+            if not -130 <= k <= 126:
+                continue
+            V = v384(k, P.expkx(*P.lnmul(F)))
+            M.add(name, mpf(2) ** (k + eb) + 3, V, power(x, mpf(Y) / ONE) * mpf(2) ** 384)
+
+
+def mant2(a, b):
+    """The Yul's mant2: the top 512 bits of a b for 512-bit mantissas (the
+    low-by-low product dropped), renormalised, and the carry."""
+    ah, al, bh, bl = a >> 256, a & M256, b >> 256, b & M256
+    p = ah * bh + ((ah * bl) >> 256) + ((al * bh) >> 256)
+    c = p >> 511
+    return (p if c else p << 1), c
+
+
+def powus_m(ux, k, recip):
+    """The Yul's powus before its rounding: (A, ae), x^k = A 2^(ae - 511)."""
+    s = ux.bit_length() - 1
+    m = ux << (255 - s) << 256
+    e = s - 128
+    if recip:
+        if m == 1 << 511:
+            e = -e
+        else:
+            m, e = (1 << 1023) // m, -e - 1
+    a, ae = 1 << 511, 0
+    while True:
+        if k & 1:
+            a, c = mant2(a, m)
+            ae += e + c
+        k >>= 1
+        if not k:
+            break
+        m, c = mant2(m, m)
+        e = 2 * e + c
+    return a, ae
+
+
+def powus(M: Meter, rng, n):
+    with mp.workdps(260):
+        for i in range(n // 4):
+            ux = rand_pos(rng, 64, 200) if i % 2 else ONE + rng.getrandbits(rng.randint(1, 100))
+            k = rng.randint(2, (1 << 16) - 1)
+            recip = rng.random() < 0.4
+            A, ae = powus_m(ux, k, recip)
+            exact = power(mpf(ux) / ONE, -k if recip else k) * power(2, 511 - ae)
+            M.add("powu, 512-bit mantissa", (3 * k + 2) * mpf(2) ** 512 / mpf(2) ** 510, A, exact)
+
+
 def run(n: int) -> bool:
     rng = random.Random(127)
     M = Meter()
@@ -363,6 +549,11 @@ def run(n: int) -> bool:
     cbrt_(M, rng, n)
     hyperbolics(M, rng, n)
     lambert(M, rng, n)
+    exps(M, rng, n)
+    expm1(M, rng, n)
+    logs_mid(M, rng, n)
+    pow_mid(M, rng, n)
+    powus(M, rng, n)
     bad = M.report()
     print(f"{sum(1 for r in M.rows.values() if r[3] >= 1)} regions over their bound")
     return bad

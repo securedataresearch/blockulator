@@ -228,7 +228,7 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `sqrt(x)` | floor, x ≥ 0 | `OutOfRange` |
 | `cbrt(x)` | all x, odd; nearest decided exactly; exact for perfect cubes | `Overflow` only at −2^255 |
 | `pow(x, y)` | x^y for x ≥ 0; 0^0 = 1; shortcuts y = 1, y = 2 (the rounded square), x = 2, x = 10 | `OutOfRange` for x < 0, `Overflow` |
-| `powu(x, n)` | x^floor(n) for any integer n, binary exponentiation on a 256-bit mantissa, a 512-bit one where that is ambiguous, one rounding; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
+| `powu(x, n)` | x^floor(n) for any integer n, binary exponentiation on a 256-bit mantissa, a 512-bit one where that is ambiguous, one rounding; `pow` from \|n\| = 2^16; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
 | `compound(r, n)` | (1 + r)^floor(n), rounded to nearest: for \|n\| ≥ 16 n log2(1 + r) and 2^t in one word, then at 2^-299 with a test, `powu` last | `Overflow`, `DivisionByZero` |
 | `inv(x)` | 1/x | `DivisionByZero`, `Overflow` |
 | `abs`, `neg` | | `Overflow` at −2^255 |
@@ -241,7 +241,7 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `lambertW0(x)` | W(x) for x ≥ −1/e, correctly rounded: the double-word Newton step's value tested by `rbad127`, a log-form step at 2^-510 on a miss; W(0) = 0 the one exact point | `OutOfRange` |
 | `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0, correctly rounded as `lambertW0` | `OutOfRange` |
 | `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
-| `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −90 | `Overflow` above 88 |
+| `expm1(x)` | e^x − 1: on the grid the one is exact, so `exp(x)` − 1 word for word (a series below 1/16); −1 below −90 | `Overflow` above 88 |
 | `sinh`, `cosh` | \|x\| ≤ 88, correctly rounded; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192 (within 3 units plus 2^-299 relative, `rbad127` err 2^20), e^\|x\| and e^−\|x\| in two words past it; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
 | `tanh(x)` | all x, correctly rounded; u/(u + 2) or (1 − w)/(1 + w) at 2^-192 (err 2 or 3 units), (1 − w)/(1 + w) in two words past it; ±1 exactly from \|x\| = 46 | never |
 | `atanh(x)` | \|x\| < 1, correctly rounded; log1p(2\|x\|/(1 − \|x\|))/2, one division and one unrounded log at 2^-192 (err 2^47 units), then `l2p` of 1 ± \|x\| (2^-248), then ln(1 ± \|x\|) in two words | `OutOfRange` |
@@ -257,7 +257,7 @@ and `ln(10 ONE)` return the same nearest words, and `exp2`, `log2` and
 `log10` absorb most uses of them.
 
 **The tie rule.** To nearest is floor(v + 1/2) on the 2^-128 grid: ties
-toward +∞ (`round64`, `rnd192`, `pow2r` and the logs' `x384mul` all add half
+toward +∞ (`round64`, `rnd192`, `rndw` and the logs' `x384mul` all add half
 and floor). `powu` and `compound`, `cbrt`, and the odd `sinh`, `tanh`, `atanh` and
 `erf` round the magnitude and apply the sign, so their ties go away from
 zero; `scripts/fp127/oracle.py` rounds each op the same way, and make sweep's
@@ -270,7 +270,10 @@ word), may round to another word than `v` does: when the low bits are within
 step. A `v` exactly on the midpoint with `err = 0` is the tie itself and
 rounds up. Its body is one interval test, the low bits within [half − err,
 half + err), with no branch, so solc inlines a call with constant `g` and
-`err` (about 40 gas; the branching form cost 190). `scripts/fp127/generators/bounds127.py` measures each fast value's
+`err` (about 40 gas; the branching form cost 190). `rbadw(v, err)` is
+`rbad127(v, 256, err)` in four operations, for the exponentials, whose
+bodies are too large for solc to inline into: there a call with the general
+`g` cost 2 to 3% of the op. `scripts/fp127/generators/bounds127.py` measures each fast value's
 stated bound against 120-digit truth (CI runs it).
 
 **Rounding (v5).** Every transcendental returns the nearest word, ties up:
@@ -283,11 +286,10 @@ raw result is the root of the integer A·B or A² + B², taken in two words and
 rounded once, and an integer's root is never a tie. `add`, `sub`,
 `log2Up` and the integer ops are exact. `mul`, `mulDown`, `divDown`,
 `sqrt`, `toFixed18`, `toFixed18Down` floor; `mulUp`, `divUp`, `toFixed18Up`
-ceil; `div`, `inv`, `fromFixed18` truncate. The exception is `pow` with an
-extreme exponent: its error is below 2^-299 (1 + |y|) relative before the
-rounding, so it is the nearest word while |y| x^y < 2^140 or so and
-faithful to |y| x^y < 2^170; a base within 2^-88 of one raised past 2^90
-(results near 2^120) misses by up to 1e11 ULPs. Up to v8, `gavg` and
+ceil; `div`, `inv`, `fromFixed18` truncate. Up to v8 `pow` was the
+exception: with log2 x absolute to 2^-299 a base within 2^-88 of one raised
+past 2^90 (results near 2^120) missed by up to 1e11 ULPs, and it rounded
+exact ties down; 3.0 repairs both (below). Up to v8, `gavg` and
 `hypot` were the Huff's compositions, kept bit-identical to it: the floored
 root of a floored product or sum of squares. A product under one ULP floored
 to zero, so they were low by up to 2^64 ULPs (gavg(2^-78, 2^-60) returned 0
@@ -432,8 +434,8 @@ logarithm first: t = n log2(1 + r) is formed exactly from the one-word
 `log2m` (within 2^-160.5, so t within |n| 2^-160), and `pow2t` rounds 2^t
 when its bound, given |n| 2^113 + 1 as the scale of t's error, cannot
 change the word. Where it cannot (a result from about 2^3 with a large n,
-or within reach of a midpoint), `l2p` (log2 to 2^-299) and `pow2rt`, which
-is `pow2r` with a rounding test (V within (1 + |n|) 2^-299 relative plus
+or within reach of a midpoint), `l2p` (log2 to 2^-299) and `pow2rt`, the
+double-word 2^t with a rounding test (V within (1 + |n|) 2^-299 relative plus
 one unit of `sh`, eb = |n| 2^-42 + 3 units), try again; |t| from 128 is
 Overflow or 0 by itself; `powu`, whose 512-bit decider is the nearest word,
 takes |n| < 16, ties and what is left. `precise_model.py fastcompound`
@@ -477,6 +479,72 @@ difference at 2^-384 plus j ln 2. `bounds127.py` measures every err
 sweep input reached one. `FP127H` is 13,234 bytes (7,560 before); inline, `sinh` and `cosh`
 take about 6.4 KB, `tanh` 6.7 KB and `atanh`, with three stages, 11.2 KB
 ([`size.md`](../../../docs/benchmarks/size.md)).
+
+**The elementary functions, correctly rounded (3.0).** Every op of `FP127E`
+now rounds a value only when its stated bound cannot change the word, and a
+last stage decides the rest: FP19's wide kernels (`w19_*`, 2^-497 to 2^-503
+absolute, far below anything the 2^-128 grid can see), or an exact
+computation where a tie is possible. Each bound is derived in the source and
+measured by `bounds127.py`; `make sweep` runs every op plain, with every
+test forced (the last stage alone) and with the fast tests forced (the
+middle stage alone): 0 misrounded in all three.
+
+- `exp`, `exp2`, `exp10`: V = 2^n (1 + s) from `expk` (2^-311.2) and the
+  reduction (2^-376) is within 2^(n − 311.1), under 2^(n + 73) + 1 units of
+  2^-384 (largest ratio 0.92); the test (`rbadw`) takes 2^200 for every n ≤
+  126. Past it `expw`: |x| c at 2^-510 modulo 4 from the three-word
+  c 2^638 (c = 1, ln 2, ln 10), FP19's `wexpr` and `wexpm1`, rounded once
+  by `rndw`: within 2^(n − 502.9), under 2^-248 ULP. No tie exists except
+  2^-129 = `exp2(−129)`, which is exact and rounds up. `exp2` forms f ln 2
+  in line (`lnmul` with nothing below 2^-256).
+- `ln`, `log2`, `log10`, `log1p`: the one-word value and `nearmid` as
+  before; `l2p` (2^-299, 2^85 units of 2^-384) is now tested (`rbadm127`;
+  ln and log10 2^135, the constant's 2^-257 times |log2 x| ≤ 2^7); past it
+  one Newton step in two words (`l2w`: f0 = l2p − (ms − 128), 2^-f0 = (1 +
+  E)/2 by `wexpm1`, d = m 2^-f0 − 1 from the exact three-word product,
+  log2(1 + d) = d log2 e within d² < 2^-597) and c (a + F) summed at 2^-500
+  (`logw`): within 2^-497.8. `log1p` is `ln` of the exact 1 + x, so it is
+  correctly rounded with `ln` (the grid is absolute: no relative loss near
+  zero).
+- `expm1`: on the 2^-128 grid the one is exact, so `expm1(x)` is `exp(x)`
+  − 1 word for word; beyond 1/16 it is exactly that. Below, the series stays
+  (cheaper) with a test: within 2 units of 2^-192 (each Horner step's floor
+  and truncation under 1 + 1/k, damped by |x|/k ≤ 1/32; measured 1.02),
+  and `expw` − 1 behind it.
+- `pow`: `pow2t` first, as before. The middle stage (`powmid`) takes `l2p`
+  while |y| ≤ 2^14 or off the near-one band (|log2 x| ≥ 2^-7.48 bounds |y|
+  by 2^14.52 for any result in range: t within 2^-284.4), and log2 x
+  relative within 2^-8 of one with a larger y (`tnear`: d = x − 1 exact,
+  FP19's `mratio` for ln(1 + d)/d within 2^-272.1 relative, so t within |t|
+  2^-271.9); t split exactly, 2^f by `expk`, and the test
+  2^(n + 121) + 3 or 2^(n + 102) + 3 units of 2^-384 (largest ratios 0.29,
+  0.33). Past it `powslow`: an exact tie first (`powtie`: x = c 2^a with c
+  odd gives an odd multiple of 2^-129 only for a y = −129 exactly, so y is
+  3, 3/2, 43/2^j (j ≤ 5) or 129/2^j (j ≤ 7), c a perfect 2^j-th power b^(2^j)
+  and the word (b^p + 1)/2; for c = 1 it is 2^-129 itself), else log2 x in
+  two words (FP19's `wlog2s` near one, `l2w` and `wlog2u` elsewhere), t =
+  y log2 x split at 2^-510 and 2^t by `wexpm1`: within 2^-487.5 relative,
+  under 2^-232 ULP. v8 rounded the ties down (`pow2r` is one-sided low).
+- `powu`: the 256-bit mantissa's test is `rbad127` (forceable); the 512-bit
+  `powus` behind it is the last stage, within (3k + 2) 2^-510 relative
+  (each product 3 2^-510 after renormalising, squarings doubling it;
+  `bounds127.py` largest ratio 0.62), under 2^-237 ULP while k < 2^16 and
+  exact at a tie (a tie needs k ≤ 129 and c^k < 2^256, so every partial
+  product fits). From k = 2^16 the doubling would reach 2^-384, so `powu`
+  calls `pow` (no tie is possible there): the sweep's |n| from 2^16 cost
+  11,780 / 146,949 gas (median, p99) on `powus`, now 3,572 / 10,762.
+- `compound`: unchanged; `powu` is its backstop, so it inherits the above.
+
+Gas on the sweep's inputs, inline, median (master → 3.0): `exp` 2,697 →
+2,828 (+4.9%), `exp2` 2,640 → 2,684 (+1.7%), `exp10` 2,970 → 3,069
+(+3.3%), `expm1` 2,061 → 2,076, the logs unchanged (their fast path is
+untouched), `pow` 3,314 → 3,376 (+1.9%; p99 8,399 → 8,833, the middle
+stage's test) on the inputs both versions share, `powu` 3,493 → 3,520,
+`compound` 3,301 → 3,360. The last stages cost about 25,000 (the
+exponentials), 29,000 (the logs) and 55,000 to 90,000 (`pow`); the middle
+stage of the logs about 5,500. `pow`'s sweep now holds 961 bases within 2^-8
+of one (t spread over the whole range) and 39 exact ties, where v8
+misrounded 48. `FP127E` is 18,808 bytes (12,716 before).
 
 ## Precision
 

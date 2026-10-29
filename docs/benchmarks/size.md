@@ -8,8 +8,8 @@ The runtime bytecode one op adds to a contract that calls it through `FP127Lib` 
 
 | library | ops | smallest | median | largest | all ops, sum of singles |
 |---|---:|---|---:|---|---:|
-| FP127 legacy | 53 | `sign` 8 | 480 | `lambertW0` 12,374 | 148,130 |
-| FP127 via_ir | 53 | `sign` 10 | 321 | `atanh` 12,219 | 139,488 |
+| FP127 legacy | 53 | `sign` 8 | 480 | `compound` 16,930 | 184,361 |
+| FP127 via_ir | 53 | `sign` 10 | 321 | `compound` 16,473 | 175,563 |
 | FP19 legacy | 65 | `abs` 108 | 544 | `normCdf` 17,159 | 225,807 |
 | FP19 via_ir | 65 | `abs` 55 | 443 | `normCdf` 17,344 | 209,090 |
 
@@ -21,11 +21,11 @@ Every `FP*Lib` function is one self-contained `assembly` block that carries its 
 |---|---|---:|---:|---:|---:|
 | FP127 | `mul`, `div` | 582 | 599 | 372 | 389 |
 | FP127 | `mulDown`, `mulUp`, `divDown`, `divUp` | 914 | 1,368 | 592 | 900 |
-| FP127 | `exp`, `ln` | 7,768 | 11,868 | 7,222 | 10,975 |
-| FP127 | `exp`, `ln`, `pow` | 10,925 | 22,021 | 10,404 | 20,579 |
-| FP127 | `exp`, `log2`, `sqrt` | 7,855 | 12,032 | 7,227 | 11,000 |
+| FP127 | `exp`, `ln` | 9,765 | 14,399 | 9,116 | 13,178 |
+| FP127 | `exp`, `ln`, `pow` | 16,995 | 29,626 | 16,458 | 27,963 |
+| FP127 | `exp`, `log2`, `sqrt` | 9,816 | 14,489 | 9,095 | 13,178 |
 | FP127 | `erf`, `erfc`, `normCdf` | 5,815 | 16,377 | 11,394 | 16,217 |
-| FP127 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 11,522 | 11,622 | 10,663 | 10,698 |
+| FP127 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 17,447 | 17,556 | 16,804 | 16,845 |
 | FP19 | `add`, `sub`, `mul`, `div` | 1,113 | 2,046 | 1,031 | 1,661 |
 | FP19 | `exp`, `ln` | 11,852 | 12,764 | 10,340 | 10,833 |
 | FP19 | `exp`, `ln`, `pow` | 17,208 | 27,561 | 15,726 | 23,842 |
@@ -52,17 +52,17 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `mulUp` | 243 | 162 |
 | `divDown` | 498 | 333 |
 | `divUp` | 499 | 337 |
-| `exp2` | 4,333 | 3,943 |
-| `exp` | 4,533 | 4,157 |
-| `exp10` | 4,484 | 4,141 |
-| `log2` | 7,141 | 6,571 |
-| `ln` | 7,335 | 6,818 |
-| `log10` | 7,335 | 6,818 |
+| `exp2` | 5,637 | 5,137 |
+| `exp` | 5,794 | 5,173 |
+| `exp10` | 5,825 | 5,360 |
+| `log2` | 8,337 | 7,733 |
+| `ln` | 8,605 | 8,005 |
+| `log10` | 8,605 | 8,267 |
 | `log2Up` | 106 | 56 |
 | `sqrt` | 358 | 272 |
-| `pow` | 10,153 | 9,604 |
-| `powu` | 1,212 | 1,151 |
-| `compound` | 10,996 | 10,326 |
+| `pow` | 15,227 | 14,785 |
+| `powu` | 16,406 | 15,992 |
+| `compound` | 16,930 | 16,473 |
 | `cbrt` | 600 | 472 |
 | `gavg` | 566 | 483 |
 | `hypot` | 549 | 457 |
@@ -84,8 +84,8 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `factorial` | 864 | 690 |
 | `lambertW0` | 12,374 | 11,698 |
 | `lambertWm1` | 12,050 | 11,399 |
-| `log1p` | 7,422 | 6,878 |
-| `expm1` | 5,090 | 4,651 |
+| `log1p` | 8,692 | 8,065 |
+| `expm1` | 6,207 | 6,143 |
 | `sinh` | 6,392 | 5,709 |
 | `cosh` | 6,382 | 5,694 |
 | `tanh` | 6,715 | 6,962 |

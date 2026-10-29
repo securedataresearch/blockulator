@@ -192,6 +192,36 @@ goes, and results change:
   words (`docs/proofs.md`: fuzzed). The Huff equivalence tests assert the
   divergence: the nearest root of the exact value, at or above the Huff's.
 
+FP127's elementary functions (`FP127E`) correctly rounded: every value is
+rounded only when its stated bound cannot change the word, with a last stage
+in two words (FP19's `wexpr`, `wexpm1`, `mratio`, `wlog2s`, …) or exact
+behind it:
+
+- `exp`, `exp2`, `exp10`: the double-word value is tested (`rbadw`, err
+  2^200 units of 2^-384 for 2^(n + 73) + 1 derived); past it `expw`, e^(x c)
+  in two words, rounded once (`rndw`). `expm1` is `exp(x) − 1` (the one is
+  exact on the grid) beyond 1/16 and its series with a test (err 2) below.
+- `ln`, `log2`, `log10`, `log1p`: `l2p` is now tested (`rbadm127`); past it
+  one Newton step through `wexpm1` (`l2w`) and the scaled sum at 2^-500
+  (`logw`). `log1p` is `ln` of an exact sum.
+- `pow`: the documented miss is gone. The middle stage (`powmid`) takes
+  log2 x relative near one when |y| > 2^14 (d = x − 1 exact and `mratio`,
+  2^-272) and `l2p` otherwise, with a test; the last stage decides exact ties (`powtie`: a y =
+  −129, c a perfect 2^j-th power; v8 rounded them down) and otherwise runs
+  log2 x and 2^t in two words. A base within 2^-88 of one raised past 2^90
+  was up to 1e11 ULPs off.
+- `powu`: its test is `rbad127`; `powus` is the last stage below |n| = 2^16
+  ((3k + 2) 2^-510 relative, exact at ties) and `pow` from there.
+- `pow2r` is gone (`pow2rt` keeps its rounding). `gen.py`'s forced maps add
+  `rbadw` (and `nearmid` to the middle pass); the sweep's `pow` and `powu`
+  rows take 1,000 new inputs each (bases near one, ties, |n| from 2^16) and
+  the oracle decides `pow`'s exact ties exactly.
+- `bounds127.py` measures every new err (largest ratio 0.92). Plain, forced
+  and middle sweeps of the 11 ops: 0 misrounded. Medians, inline: exp 2,697
+  → 2,828 (+4.9%), exp2 2,640 → 2,684, exp10 2,970 → 3,069, expm1 2,061 →
+  2,076, logs unchanged, pow 3,314 → 3,376 (shared inputs), powu 3,493 →
+  3,520, compound 3,301 → 3,360. FP127E 12,716 → 18,808 bytes.
+
 BlockulatorWad, a third library (`contracts/src/wad/`, inline, no deployed
 object): Solady's `FixedPointMathLib` WAD names, signatures and error
 selectors (mulWad, divWad, sMulWad, sDivWad, sqrtWad, cbrtWad, expWad, lnWad,

@@ -84,19 +84,22 @@ LIBS = {
                        "iface_notice": "Interface of the deployed FP127S object, FP127's special\n///         functions: lambertW0 and lambertWm1, the two real branches of\n///         Lambert W, on the same signed 127.128 fixed-point words as IFP127."},
         },
         # --wide-lib: every rounding test forced to fail, so every result comes
-        # from the op's last stage: rbad127 and rbadm127 (the tests the
+        # from the op's last stage: rbad127, rbadw and rbadm127 (the tests the
         # correctly rounded ops call), nearmid (ln, log2, log10 and log1p take
-        # the double-word l2p), pow2t (pow's and compound's one-word try) and
-        # pow2rt (compound's double-word try: powu decides). --mid-lib: only
-        # the fast paths' tests (rbad127, pow2t), so pow and compound return
-        # their middle stage, the double word, its own test kept. powu's test
-        # is inline today; it moves onto rbad127 with its second stage.
+        # the double-word l2p, whose rbadm127 then sends them on), pow2t (pow's
+        # and compound's one-word try) and pow2rt (compound's double-word try:
+        # powu decides). --mid-lib: only the fast paths' tests (rbad127, rbadw,
+        # nearmid, pow2t), so the logs, pow and compound return their middle
+        # stage, the double word, its own test kept.
         "forced": {"rbad127": "function rbad127(v, g, err) -> b {\n    b := 1\n}",
+                   "rbadw": "function rbadw(v, err) -> b {\n    b := 1\n}",
                    "rbadm127": "function rbadm127(v, g, err) -> b {\n    b := 1\n}",
                    "nearmid": "function nearmid(v) -> b {\n    b := 1\n}",
                    "pow2t": "function pow2t(t, ay) -> r, ok {\n}",
                    "pow2rt": "function pow2rt(y, lh, ll, eb) -> r, ok {\n}"},
         "mid_forced": {"rbad127": "function rbad127(v, g, err) -> b {\n    b := 1\n}",
+                       "rbadw": "function rbadw(v, err) -> b {\n    b := 1\n}",
+                       "nearmid": "function nearmid(v) -> b {\n    b := 1\n}",
                        "pow2t": "function pow2t(t, ay) -> r, ok {\n}"},
     },
     "fp19": {
@@ -755,10 +758,12 @@ COUNTS = {
     "fp19": {"rbad": "ret", "rbadm": "ret2"},
     # BlockulatorWad: wadbad fires when FP19's bound reaches a wei boundary
     "wad": {"wadbad": "ret"},
-    # FP127: the double-word log l2p runs exactly when the one-word log or pow
-    # could not decide (nearmid, or pow2t not ok); from 3.0 rbad127 fires when
-    # a fast value cannot round, rbadm127 when a middle stage cannot either
-    "fp127": {"l2p": "call", "powus": "call", "rbad127": "ret", "rbadm127": "ret2"},
+    # FP127: rbad127 and rbadw fire when a fast value cannot round (the
+    # second stage follows); the double-word log l2p and pow's middle stage
+    # powmid run exactly when the one-word log, pow2t or compt could not
+    # decide; rbadm127 fires when a middle stage cannot either (counted in the
+    # next word)
+    "fp127": {"rbad127": "ret", "rbadw": "ret", "l2p": "call", "powmid": "call", "rbadm127": "ret2"},
 }
 
 # The helpers make profile measures, in slot order.

@@ -103,38 +103,38 @@ The first 4,000 inputs of each op again, through a test-only copy of FP19Lib who
 
 ## FP127
 
-*correctly rounded*: the word scripts/fp127/oracle.py gives, the rounding the op promises: to nearest with FP127's tie rule (ties up; powu, compound, cbrt, sinh, tanh and erf round the magnitude, so their ties go away from zero), the directed ops in their direction; a revert where the oracle reverts counts as correct, so *inputs* includes the reverts; the ULP columns are over the results that returned. *nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, median / p99 / largest; *fallback* is the share of inputs that took the double-word decider (ln, log2, log10 and pow near a midpoint or, for pow, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).
+*correctly rounded*: the word scripts/fp127/oracle.py gives, the rounding the op promises: to nearest with FP127's tie rule (ties up; powu, compound, cbrt, sinh, tanh and erf round the magnitude, so their ties go away from zero), the directed ops in their direction; a revert where the oracle reverts counts as correct, so *inputs* includes the reverts; the ULP columns are over the results that returned. *nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, median / p99 / largest; *fallback* is the share of inputs whose fast value's rounding test fired (the next stage ran: for the logs, pow and compound the double word, and after the arrow the share whose middle stage's test fired too; a dash: the op has none).
 
 | op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|
 | mul | 4,000 | 4,000 | 0 | 2,001 | 4,000 | 1 | 0.5 | 128.2 | 4,000 / 0 | 263 / 263 / 263 | — |
 | div | 4,000 | 4,000 | 0 | 2,072 | 4,000 | 1 | 0.484 | 128.3 | 1,962 / 2,038 | 420 / 828 / 828 | — |
 | sqrt | 4,000 | 4,000 | 0 | 1,983 | 4,000 | 1 | 0.504 | 128.3 | 3,990 / 0 | 469 / 816 / 816 | — |
-| exp | 4,000 | 4,000 | 0 | 3,963 | 3,963 | 0.5 | 0.248 | 129.0 | 2,003 / 1,948 | 2,709 / 2,752 / 2,776 | — |
-| ln | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.252 | 129.3 | 1,987 / 2,013 | 1,934 / 1,974 / 1,984 | 0 |
-| log2 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.245 | 129.2 | 2,020 / 1,970 | 1,718 / 1,758 / 1,768 | 0 |
-| pow | 4,000 | 4,000 | 0 | 3,970 | 3,970 | 0.5 | 0.245 | 129.0 | 1,992 / 1,955 | 3,375 / 8,393 / 9,502 | 6.75% |
+| exp | 4,000 | 4,000 | 0 | 3,963 | 3,963 | 0.5 | 0.248 | 129.0 | 2,003 / 1,948 | 2,828 / 2,871 / 2,895 | 0 |
+| ln | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.252 | 129.3 | 1,987 / 2,013 | 1,934 / 1,974 / 1,984 | 0 → 0 |
+| log2 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.245 | 129.2 | 2,020 / 1,970 | 1,718 / 1,758 / 1,768 | 0 → 0 |
+| pow | 4,000 | 4,000 | 0 | 3,979 | 3,979 | 0.5 | 0.246 | 129.0 | 1,943 / 2,018 | 3,400 / 10,537 / 24,379 | 28.35% → 0.97% |
 | cbrt | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.254 | 129.3 | 1,986 / 2,007 | 1,948 / 1,948 / 2,670 | — |
-| expm1 | 4,000 | 4,000 | 0 | 3,987 | 3,987 | 0.5 | 0.238 | 129.2 | 2,121 / 1,860 | 2,061 / 5,151 / 5,151 | — |
+| expm1 | 4,000 | 4,000 | 0 | 3,987 | 3,987 | 0.5 | 0.238 | 129.2 | 2,121 / 1,860 | 2,076 / 5,166 / 5,166 | 0 |
 | erf | 2,000 | 2,000 | 0 | 2,000 | 2,000 | 0.5 | 0.239 | — | 1,037 / 963 | 3,623 / 17,125 / 20,532 | — |
 | erfc | 2,000 | 2,000 | 0 | 2,000 | 2,000 | 0.5 | 0.247 | 129.0 | 1,014 / 937 | 3,497 / 17,430 / 20,538 | — |
 | normCdf | 2,000 | 2,000 | 0 | 2,000 | 2,000 | 0.5 | 0.24 | — | 1,001 / 989 | 3,694 / 15,884 / 20,746 | — |
-| compound | 4,000 | 4,000 | 0 | 3,367 | 3,367 | 0.5 | 0.203 | 129.0 | 1,364 / 1,447 | 3,360 / 9,344 / 41,484 | 7.33% |
-| exp2 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.249 | 129.0 | 1,960 / 2,040 | 2,628 / 2,674 / 2,688 | — |
-| exp10 | 4,000 | 4,000 | 0 | 3,963 | 3,963 | 0.5 | 0.245 | 129.0 | 2,022 / 1,913 | 2,958 / 3,001 / 3,015 | — |
-| log10 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.255 | 129.2 | 2,007 / 1,993 | 1,934 / 1,974 / 1,984 | 0 |
+| compound | 4,000 | 4,000 | 0 | 3,367 | 3,367 | 0.5 | 0.203 | 129.0 | 1,364 / 1,447 | 3,360 / 9,373 / 18,649 | 7.35% → 0 |
+| exp2 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.249 | 129.0 | 1,960 / 2,040 | 2,684 / 2,730 / 2,744 | 0 |
+| exp10 | 4,000 | 4,000 | 0 | 3,963 | 3,963 | 0.5 | 0.245 | 129.0 | 2,022 / 1,913 | 3,069 / 3,112 / 3,126 | 0 |
+| log10 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.255 | 129.2 | 2,007 / 1,993 | 1,934 / 1,974 / 1,984 | 0 → 0 |
 | sinh | 4,000 | 4,000 | 0 | 3,929 | 3,929 | 0.5 | 0.248 | 129.2 | 1,930 / 1,999 | 3,924 / 4,068 / 4,103 | 0 |
 | cosh | 4,000 | 4,000 | 0 | 3,924 | 3,924 | 0.5 | 0.247 | 129.0 | 1,976 / 1,948 | 3,877 / 4,015 / 4,045 | 0 |
 | tanh | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.232 | — | 1,947 / 1,906 | 3,873 / 6,093 / 6,093 | 0 |
 | atanh | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.154 | 129.3 | 1,614 / 1,682 | 2,814 / 3,536 / 3,556 | 0 → 0 |
-| powu | 4,000 | 4,000 | 0 | 2,390 | 2,390 | 0.499 | 9.86e-72 | 129.9 | 413 / 393 | 3,494 / 4,838 / 14,599 | 0.50% |
+| powu | 4,000 | 4,000 | 0 | 2,775 | 2,775 | 0.5 | 0.0803 | 129.0 | 802 / 784 | 3,565 / 10,810 / 13,250 | 25.00% → 0 |
 | mulUp | 4,000 | 4,000 | 0 | 1,986 | 4,000 | 1 | 0.503 | 128.0 | 0 / 4,000 | 382 / 382 / 382 | — |
 | divUp | 4,000 | 4,000 | 0 | 1,998 | 4,000 | 1 | 0.501 | 128.4 | 0 / 4,000 | 474 / 882 / 882 | — |
 | divDown | 4,000 | 4,000 | 0 | 1,990 | 4,000 | 1 | 0.502 | 128.2 | 4,000 / 0 | 471 / 879 / 879 | — |
 | toFixed18Up | 4,000 | 4,000 | 0 | 1,988 | 4,000 | 1 | 0.504 | 128.5 | 0 / 3,706 | 190 / 190 / 190 | — |
 | lambertW0 | 2,500 | 2,500 | 0 | 2,500 | 2,500 | 0.5 | 0.236 | 129.1 (129.0 near −1/e) | 1,173 / 1,230 | 8,347 / 11,333 / 11,404 | 0 |
 | lambertWm1 | 2,000 | 2,000 | 0 | 2,000 | 2,000 | 0.5 | 0.242 | 129.1 (129.0 near −1/e) | 981 / 1,019 | 8,197 / 11,346 / 11,346 | 0 |
-| log1p | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.176 | 129.1 | 1,507 / 1,743 | 2,097 / 2,137 / 2,147 | 0 |
+| log1p | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.176 | 129.1 | 1,507 / 1,743 | 2,097 / 2,137 / 2,147 | 0 → 0 |
 | gavg | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.247 | 129.3 | 2,028 / 1,972 | 702 / 999 / 999 | — |
 | hypot | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.00943 | 129.6 | 1,492 / 948 | 1,160 / 1,160 / 1,388 | — |
 | inv | 4,000 | 4,000 | 0 | 2,040 | 3,999 | 1 | 0.487 | 128.3 | 1,962 / 2,021 | 242 / 242 / 242 | — |
@@ -142,32 +142,41 @@ The first 4,000 inputs of each op again, through a test-only copy of FP19Lib who
 
 ### The middle stage alone
 
-The first 4,000 inputs of pow and compound again, through a test-only copy of FP127Lib whose fast paths' rounding tests always fail (pow2t, rbad127): log2 x to 2^-299 (l2p), the double-word 2^t, its own test kept (compound's pow2rt, with powu behind it).
+The first 4,000 inputs of the ops with a middle stage again, through a test-only copy of FP127Lib whose fast paths' rounding tests always fail (nearmid, pow2t, rbad127, rbadw): log2 x to 2^-299 (l2p; pow near one relative, through FP19's mratio), the logs rounded from it and pow's and compound's double-word 2^t, each with its own test kept and the last stage behind it.
 
 | op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|
-| pow | 4,000 | 4,000 | 0 | 3,970 | 3,970 | 0.5 | 0.245 | 129.0 | 1,992 / 1,955 | 7,991 / 8,069 / 8,113 |
-| compound | 4,000 | 4,000 | 0 | 3,367 | 3,367 | 0.5 | 0.203 | 129.0 | 1,364 / 1,447 | 8,023 / 8,100 / 41,145 |
+| pow | 4,000 | 4,000 | 0 | 3,979 | 3,979 | 0.5 | 0.246 | 129.0 | 1,943 / 2,018 | 8,566 / 10,221 / 24,340 |
+| compound | 4,000 | 4,000 | 0 | 3,367 | 3,367 | 0.5 | 0.203 | 129.0 | 1,364 / 1,447 | 8,128 / 8,205 / 18,285 |
 | atanh | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.154 | 129.3 | 1,614 / 1,682 | 12,356 / 13,156 / 13,202 |
+| ln | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.252 | 129.3 | 1,987 / 2,013 | 5,446 / 5,501 / 5,521 |
+| log2 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.245 | 129.2 | 2,020 / 1,970 | 4,915 / 4,970 / 5,000 |
+| log10 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.255 | 129.2 | 2,007 / 1,993 | 5,447 / 5,501 / 5,521 |
+| log1p | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.176 | 129.1 | 1,507 / 1,743 | 5,566 / 5,664 / 5,684 |
 
 ### The last stage alone
 
-The first 4,000 inputs of each op with a rounding test again, through a test-only copy of FP127Lib whose tests (nearmid, pow2t, pow2rt, rbad127, rbadm127) always fail, so every result comes from the stage that runs when the fast value is too close to a tie: the double-word l2p for the logs, l2p and the double-word 2^t for pow, powu's 512-bit mantissa for compound.
+The first 4,000 inputs of each op with a rounding test again, through a test-only copy of FP127Lib whose tests (nearmid, pow2t, pow2rt, rbad127, rbadw, rbadm127) always fail, so every result comes from the stage that runs when every earlier value is too close to a tie: the two-word exponential (FP19's wexpm1) for exp, exp2, exp10 and expm1, one Newton step through it for the logs, pow's exact tie or its two-word log and exponential, powu's 512-bit mantissa (pow from |n| = 2^16), compound through powu, and the hyperbolics' two-word stages.
 
 | op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|
-| ln | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.252 | 129.3 | 1,987 / 2,013 | 5,313 / 5,368 / 5,388 |
-| log2 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.245 | 129.2 | 2,020 / 1,970 | 4,794 / 4,849 / 4,879 |
-| log10 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.255 | 129.2 | 2,007 / 1,993 | 5,314 / 5,368 / 5,388 |
-| log1p | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.176 | 129.1 | 1,507 / 1,743 | 5,421 / 5,519 / 5,539 |
-| pow | 4,000 | 4,000 | 0 | 3,970 | 3,970 | 0.5 | 0.245 | 129.0 | 1,992 / 1,955 | 7,991 / 8,069 / 8,113 |
-| compound | 4,000 | 4,000 | 0 | 3,367 | 3,367 | 0.5 | 0.203 | 129.0 | 1,364 / 1,447 | 14,114 / 15,958 / 38,322 |
+| ln | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.252 | 129.3 | 1,987 / 2,013 | 29,394 / 29,458 / 29,478 |
+| log2 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.245 | 129.2 | 2,020 / 1,970 | 28,811 / 28,864 / 28,894 |
+| log10 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.255 | 129.2 | 2,007 / 1,993 | 29,337 / 29,390 / 29,420 |
+| log1p | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.176 | 129.1 | 1,507 / 1,743 | 29,497 / 29,593 / 29,613 |
+| pow | 4,000 | 4,000 | 0 | 3,979 | 3,979 | 0.5 | 0.246 | 129.0 | 1,943 / 2,018 | 55,271 / 66,421 / 89,337 |
+| compound | 4,000 | 4,000 | 0 | 3,367 | 3,367 | 0.5 | 0.203 | 129.0 | 1,364 / 1,447 | 54,761 / 67,390 / 81,109 |
 | sinh | 4,000 | 4,000 | 0 | 3,929 | 3,929 | 0.5 | 0.248 | 129.2 | 1,930 / 1,999 | 27,742 / 27,884 / 27,920 |
 | cosh | 4,000 | 4,000 | 0 | 3,924 | 3,924 | 0.5 | 0.247 | 129.0 | 1,976 / 1,948 | 27,716 / 27,853 / 27,883 |
 | tanh | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.232 | — | 1,947 / 1,906 | 28,152 / 30,371 / 30,371 |
 | atanh | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.154 | 129.3 | 1,614 / 1,682 | 60,870 / 61,735 / 61,781 |
 | lambertW0 | 2,500 | 2,500 | 0 | 2,500 | 2,500 | 0.5 | 0.236 | 129.1 (129.0 near −1/e) | 1,173 / 1,230 | 35,969 / 38,533 / 38,579 |
 | lambertWm1 | 2,000 | 2,000 | 0 | 2,000 | 2,000 | 0.5 | 0.242 | 129.1 (129.0 near −1/e) | 981 / 1,019 | 35,833 / 38,700 / 38,700 |
+| exp | 4,000 | 4,000 | 0 | 3,963 | 3,963 | 0.5 | 0.248 | 129.0 | 2,003 / 1,948 | 25,218 / 25,265 / 25,289 |
+| exp2 | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.249 | 129.0 | 1,960 / 2,040 | 25,131 / 25,172 / 25,192 |
+| exp10 | 4,000 | 4,000 | 0 | 3,963 | 3,963 | 0.5 | 0.245 | 129.0 | 2,022 / 1,913 | 25,513 / 25,554 / 25,574 |
+| expm1 | 4,000 | 4,000 | 0 | 3,987 | 3,987 | 0.5 | 0.238 | 129.2 | 2,121 / 1,860 | 24,447 / 27,662 / 27,662 |
+| powu | 4,000 | 4,000 | 0 | 2,775 | 2,775 | 0.5 | 0.0803 | 129.0 | 802 / 784 | 4,113 / 49,019 / 53,175 |
 
 ## BlockulatorWad
 
