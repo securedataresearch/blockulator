@@ -905,6 +905,97 @@ def expect_s15_formats(mod) -> dict:
     }
 
 
+def expect_s17_proofs(mod) -> dict:
+    """The counts straight from proofs.json by op, the sums from sweep.json by
+    a loop over every row with running totals, the transcendental list from
+    the FP127 README's own sentence (V34) and from the sweep's forced pass."""
+    pj = vocab._load("docs/benchmarks/proofs.json")
+    lib = vocab.libs()
+    counts = {}
+    for o in pj["ops"]:
+        c = counts.setdefault(o["lib"], {"ops": 0, "proven": [], "fuzzed": [], "halmos": 0, "exact": []})
+        c["ops"] += 1
+        assert o["status"] in ("proven", "fuzzed"), o  # nothing in progress, no counterexample open (V22, V23)
+        c[o["status"]].append(o["op"])
+        if o["status"] == "proven":
+            if "Halmos" in o["tool"]:
+                c["halmos"] += 1
+            else:
+                c["exact"].append(o["op"])
+    assert set(counts) == {"FP127", "FP19"}
+    # the summary agrees with the rows, and the story: 17 = 16 + sqrt; 18 of 24; gavg, hypot; six (V22, V23)
+    assert sum(c["ops"] for c in counts.values()) == pj["summary"]["ops"] == 43
+    assert sum(len(c["proven"]) for c in counts.values()) == pj["summary"]["proven"] == 35
+    assert sum(len(c["fuzzed"]) for c in counts.values()) == pj["summary"]["fuzzed"] == 8
+    assert pj["summary"]["counterexamples"] == 0 and pj["summary"]["in_progress"] == 0
+    f127, f19 = counts["FP127"], counts["FP19"]
+    assert len(f127["proven"]) == 17 and f127["halmos"] == 16 and f127["exact"] == ["sqrt"] and f127["fuzzed"] == ["gavg", "hypot"]
+    assert len(f19["proven"]) == 18 and f19["ops"] == 24 and len(f19["fuzzed"]) == 6 and f19["halmos"] == 18 and f19["exact"] == []
+    assert set(f19["fuzzed"]) == {"add", "sub", "sqrt", "toFixed18", "toFixed18Down", "toFixed18Up"}, f19["fuzzed"]
+    # the fuzz runs: every testFuzz_ entry ran 50,000 times and passed; the two regression pins once
+    fuzz = {f["test"]: f for f in pj["fuzz"]}
+    for op in f127["fuzzed"]:
+        assert fuzz[f"testFuzz_fp127_{op}"]["runs"] == 50000 and fuzz[f"testFuzz_fp127_{op}"]["result"] == "pass", op
+    for t in ("testFuzz_fp19_add", "testFuzz_fp19_sub", "testFuzz_fp19_sqrt", "testFuzz_fp19_toFixed18"):
+        assert fuzz[t]["runs"] == 50000 and fuzz[t]["result"] == "pass", t
+    assert all(f["runs"] == 50000 for t, f in fuzz.items() if t.startswith("testFuzz_")) and all(f["result"] == "pass" for f in fuzz.values())
+    assert mod.NUMBER_WORDS[len(f19["fuzzed"])] == "six"
+    # the transcendentals by two routes: the README's sentence, and the sweep's forced pass plus cbrt (V34: 20 + cbrt)
+    readme = (vocab.ROOT / "contracts/src/fp127/README.md").read_text(encoding="utf-8")
+    sentence = readme.split("The transcendentals round to nearest under the tie rule above:", 1)[1].split(". ", 1)[0]
+    from_readme = re.findall(r"`(\w+)`", sentence)
+    assert from_readme == list(mod.TRANSCENDENTAL) and len(from_readme) == 21, from_readme
+    sw = vocab._load("docs/benchmarks/sweep.json")
+    forced = {lid: sorted({r["op"] for r in sw["rows"] if r["lib"] == lid and r.get("stage") == "second"}) for lid in mod.LIBS}
+    assert forced["fp19"] == forced["fp127"] and len(forced["fp19"]) == 20 and sorted(set(mod.TRANSCENDENTAL) - set(forced["fp19"])) == ["cbrt"], forced
+    # the sums by a running loop; every row of both libraries counted once, every fp19/fp127 row correctly rounded in full
+    total, mis, trans, nrows, seen = {}, {}, {}, {}, set()
+    for r in sw["rows"]:
+        lid = r["lib"]
+        if lid not in mod.LIBS:
+            continue
+        key = (lid, r["op"], r.get("stage"))
+        assert key not in seen, key
+        seen.add(key)
+        # n is the results that returned; FP127 counts a revert where the oracle reverts as correct over its inputs (sweep.md)
+        assert r["correctlyRounded"] + r["misrounded"] == r.get("inputs", r["n"]) and r["status"].get("ok", r["n"]) == r["n"], key
+        nrows[lid] = nrows.get(lid, 0) + 1
+        total[lid] = total.get(lid, 0) + r["n"]
+        mis[lid] = mis.get(lid, 0) + r["misrounded"]
+        if r["op"] in mod.TRANSCENDENTAL:
+            trans[lid] = trans.get(lid, 0) + r["n"]
+    assert mis == {"fp19": 0, "fp127": 0}, mis
+    assert total == {"fp19": 455082, "fp127": 212119} and nrows == {"fp19": 76, "fp127": 59}, (total, nrows)  # V25
+    assert trans == {"fp19": 327488, "fp127": 168120}, trans  # V34
+    assert all(trans[lid] < total[lid] for lid in mod.LIBS)
+    # the oracles' digits by the other route: sweep.md's header (V17)
+    header = (vocab.ROOT / "docs/benchmarks/sweep.md").read_text(encoding="utf-8").split("\n## ", 1)[0]
+    ref = {"fp19": int(re.search(r"oracle\.py, (\d+) digits", header).group(1)), "fp127": int(re.search(r"real truth at (\d+) digits", header).group(1))}
+    assert ref == {"fp19": 300, "fp127": 200}, ref
+    # the flags: the oracle row says tested, row 4 is never a bug list, the footnote's bugs are history
+    assert mod.LABELS[2].startswith("tested") and "proven" not in mod.LABELS[2] and mod.LABELS[3] == "known limits"
+    assert "bug" not in " ".join(mod.LIMIT_BOUND + mod.LIMIT_STAGE).lower() and "fixed, now proven" in mod.FOOTNOTE
+    assert "0.79" in mod.LIMIT_BOUND[1] and "0.78" not in mod.LIMIT_BOUND[1] and "0.92" in mod.LIMIT_BOUND[1]  # V38: the ledger's figure
+    assert mod.CLOSING == "State your own guarantees this specifically."
+    assert not any(ch in s for s in (*mod.LIMIT_BOUND, *mod.LIMIT_STAGE, mod.FOOTNOTE, mod.CLOSING) for ch in "²→½√…")
+    return {
+        "labels": {"fp19": lib["fp19"]["label"], "fp127": lib["fp127"]["label"]},
+        "proven": {"FP127": f127["proven"], "FP19": f19["proven"]},
+        "fuzzed": {"FP127": f127["fuzzed"], "FP19": f19["fuzzed"]},
+        "ops": {"FP127": f127["ops"], "FP19": f19["ops"]},
+        "proven_count": {"FP127": len(f127["proven"]), "FP19": len(f19["proven"])},
+        "halmos_count": f127["halmos"],
+        "exact_integer": f127["exact"],
+        "fp19_fuzzed_word": "six",
+        "runs": 50000,
+        "rows": nrows,
+        "total": total,
+        "misrounded": mis,
+        "transcendental": trans,
+        "reference_digits": ref,
+    }
+
+
 EXPECT = {
     "s02_exp40": expect_s02_exp40,
     "s03_under": expect_s03_under,
@@ -918,6 +1009,7 @@ EXPECT = {
     "s16_ziv": expect_s16_ziv,
     "s12_reference": expect_s12_reference,
     "s15_formats": expect_s15_formats,
+    "s17_proofs": expect_s17_proofs,
 }
 
 
