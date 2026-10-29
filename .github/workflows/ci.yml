@@ -27,7 +27,7 @@ jobs:
           enable-cache: true
 
       - name: Python deps
-        run: uv sync --frozen
+        run: uv sync --frozen --no-group talk
 
       - name: No old library names (scripts/gates.py names; deployed salts excepted)
         run: uv run scripts/gates.py --only names

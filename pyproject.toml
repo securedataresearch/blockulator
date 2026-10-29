@@ -11,9 +11,13 @@ dependencies = [
 
 [tool.uv]
 package = false
+# "talk" holds the deck's renderer (manim needs pango and cairo on the machine);
+# installed by default locally, skipped in CI with `uv sync --no-group talk`.
+default-groups = ["dev", "talk"]
 
 [dependency-groups]
-dev = [
+dev = []
+talk = [
     "img2pdf>=0.6.3",
     "manim==0.22.1",
     "pyyaml>=6.0.3",

@@ -272,7 +272,7 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
-dev = [
+talk = [
     { name = "img2pdf" },
     { name = "manim" },
     { name = "pyyaml" },
@@ -287,7 +287,8 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [
+dev = []
+talk = [
     { name = "img2pdf", specifier = ">=0.6.3" },
     { name = "manim", specifier = "==0.22.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
