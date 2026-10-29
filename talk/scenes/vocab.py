@@ -397,6 +397,26 @@ def glow_bar(mobj, colour: str = Palette.EMERALD, pad: float = 0.18, opacity: fl
     ).move_to(mobj)
 
 
+def box(label: str, *content, colour: str = Palette.RULE, size: float = SIZE_BODY, label_colour: str = Palette.TEXT, pad: float = 0.3, gap: float = 0.18, min_width: float = 0.0, fill: str = Palette.BG) -> VGroup:
+    """A named thing (a contract, a caller): a rounded box with its label
+    inside and any further mobjects stacked beneath the label. The fill is
+    the background so the box occludes whatever it is drawn over. The
+    group's .rect, .label and .content name the parts."""
+    inner = VGroup(words(label, size, label_colour), *content).arrange(DOWN, buff=gap)
+    rect = RoundedRectangle(
+        width=max(inner.width, min_width) + 2 * pad,
+        height=inner.height + 2 * pad,
+        corner_radius=0.16,
+        color=colour,
+        stroke_width=2,
+        fill_color=fill,
+        fill_opacity=1.0,
+    ).move_to(inner)
+    g = VGroup(rect, inner)
+    g.rect, g.label, g.content = rect, inner[0], VGroup(*content)
+    return g
+
+
 # ---------------------------------------------------------------- numbers --
 def thousands(n: int | str) -> str:
     """An integer with thousands separators: 95000 → "95,000"."""
@@ -552,10 +572,10 @@ def chains() -> dict:
     """talk/scenes/data/chains.json: a dated hand copy of the chain table in
     contracts/deployments/README.md ("Chains: CLZ (Osaka) required"):
     .chains[] with chain, clz_since (null where the README says "(probe)"),
-    upgrade, status "supported" | "unsupported", probed (the README's
-    date), deployed (true for Sepolia only, RELEASE.json) and proxy (null:
-    the deterministic-deployment proxy's presence is not yet probed);
-    .source and .note say so. Re-probe before the talk (claims V5)."""
+    upgrade, status "supported" | "unsupported", probed (the date of the
+    last probe), deployed (true for Sepolia only, RELEASE.json) and proxy
+    (true where the deterministic-deployment proxy has code; null until
+    probed); .source and .note say so. Re-probed 2026-10-29 (claims V3, V5)."""
     return _load("talk/scenes/data/chains.json")
 
 

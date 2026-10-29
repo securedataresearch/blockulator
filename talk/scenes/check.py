@@ -551,6 +551,80 @@ def expect_s10_live(mod) -> dict:
     }
 
 
+def expect_s12_reference(mod) -> dict:
+    # the address straight from the file, not through the loader
+    rel = vocab._load("contracts/deployments/RELEASE.json")
+    comp = rel["components"][mod.COMPONENT]
+    address, version = comp["address"], comp["version"]
+    assert len(address) == 42 and address[:2] == "0x" and int(address[2:], 16) > 0, address
+    assert version.startswith(mod.COMPONENT + " v"), version  # the version names the component (V15)
+    # the record's markdown names the same address (V15, contracts/deployments/FP127.md)
+    assert address in (vocab.ROOT / comp["record"]).read_text(encoding="utf-8"), (address, comp["record"])
+    # the word by the other route: the probe's own 24-decimal truth, rounded half-up at the 18th by integer arithmetic
+    truth = vocab.probe(mod.OP, mod.ARG)["truth"]
+    ti, _, tf = truth.partition(".")
+    q = 10 ** (len(tf) - mod.WORD_DECIMALS)
+    scaled = (int(ti + tf) * 2 + q) // (2 * q)
+    word = f"{scaled // 10**mod.WORD_DECIMALS}.{scaled % 10**mod.WORD_DECIMALS:0{mod.WORD_DECIMALS}d}"
+    assert word == vocab.correctly_rounded_18(truth) and len(word.partition(".")[2]) == mod.WORD_DECIMALS, word
+    # the chains straight from the file (V3, V5, V6)
+    d = vocab._load("talk/scenes/data/chains.json")
+    rows = []
+    for r in d["chains"]:
+        assert r["status"] in ("supported", "unsupported"), r
+        assert r["probed"] == d["probed"], (r["chain"], r["probed"], d["probed"])
+        if r["status"] == "unsupported":
+            status = "no CLZ"
+        elif r["deployed"]:
+            status = "deployed"
+        elif r["proxy"]:
+            status = "has CLZ · proxy present · not yet deployed"
+        else:
+            status = "has CLZ · not yet deployed"
+        rows.append(
+            {
+                "chain": r["chain"],
+                "clz_since": r["clz_since"],
+                "clz_text": f"CLZ since {r['clz_since']}" if r["clz_since"] else None,
+                "status": r["status"],
+                "deployed": bool(r["deployed"]),
+                "proxy": r["proxy"],
+                "status_text": status,
+                "probed": r["probed"],
+            }
+        )
+    # no row says "ready" or "live"; "deployed" is Sepolia's alone (V6, the brief's flags)
+    for r in rows:
+        low = r["status_text"].lower()
+        assert "ready" not in low and "live" not in low, r
+    deployed = [r["chain"] for r in rows if r["deployed"]]
+    assert deployed == ["Sepolia"] and rel["network"] == "sepolia", (deployed, rel["network"])
+    assert [r["status_text"] for r in rows if r["deployed"]] == ["deployed"]
+    # an unsupported chain never carries a CLZ date; a supported one never reads "no CLZ"
+    assert all(r["clz_since"] is None for r in rows if r["status"] == "unsupported")
+    assert all(r["status_text"] != "no CLZ" for r in rows if r["status"] == "supported")
+    # the probe is the 2026-10-29 one and the proxy was found everywhere (verify-K.md "2026-10-29 chain probe")
+    assert d["probed"] == "2026-10-29" and all(r["proxy"] is True for r in rows), d["probed"]
+    assert any(r["status"] == "unsupported" for r in rows) and len(rows) == 15, len(rows)
+    for s in (mod.CLOSE, mod.STATUS_SUPPORTED, mod.STATUS_DEPLOYED, mod.STATUS_UNSUPPORTED):
+        assert "ready" not in s.lower() and "live" not in s.lower(), s
+    assert mod.CLOSE == "one call to check · deployed today: Sepolia"  # script §12, verbatim
+    return {
+        "address": address,
+        "version": version,
+        "release": rel["release"],
+        "network": rel["network"],
+        "rows": rows,
+        "probed": d["probed"],
+        "probed_caption": f"probed {d['probed']}",
+        "arg": mod.ARG,
+        "call": f"eth_call {mod.OP}({mod.ARG})",
+        "truth_probe": truth,
+        "word": word,
+        "word_decimals": mod.WORD_DECIMALS,
+    }
+
+
 EXPECT = {
     "s02_exp40": expect_s02_exp40,
     "s04_grid": expect_s04_grid,
@@ -559,6 +633,7 @@ EXPECT = {
     "s08_ladder": expect_s08_ladder,
     "s09_cliff": expect_s09_cliff,
     "s10_live": expect_s10_live,
+    "s12_reference": expect_s12_reference,
 }
 
 
