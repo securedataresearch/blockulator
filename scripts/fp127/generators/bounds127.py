@@ -54,11 +54,13 @@ the script exits 1; scripts/gates.py and CI run it beside FP19's bounds.py.
                                                          under 1 + 1/k, damped by |x|/k)
   ln, log10, l2p             x384mul's product (2^-384)  2^135 (l2p's 2^-299 times c, c's
                                                          rounding at 2^-256 times |log2 x|)
-  pow, middle near one       2^n (1 + s) (2^-384)        2^(n + 121) + 3 (mratio 2^-272.1
-                                                         relative: t within |t| 2^-271.9)
-  pow, middle elsewhere      2^n (1 + s) (2^-384)        2^(n + 102) + 3 (l2p 2^-299, |y| <=
+  pow, middle near one       2^n (1 + s) (2^-384)        2^(n + 121) + 3 (|x - 1| < 2^-8, |y| >
+                                                         2^14: mratio 2^-272.1 relative, t
+                                                         within |t| 2^-271.9)
+  pow, middle l2p            2^n (1 + s) (2^-384)        2^(n + 102) + 3 (l2p 2^-299, |y| <=
                                                          2^14.52 while |t| <= 131)
-  powu, 512-bit mantissa     powus's ah (relative)       3k + 1 units of 2^-511 (the last
+  powu, 512-bit mantissa     powus's ah (relative)       (3k + 2) 2^-510 relative (each product
+                                                         3 2^-510, squarings double it; the last
                                                          stage below k = 2^16: no test)
 
 Later phases add the regions of the tests they introduce (rbad127's err per
@@ -439,16 +441,16 @@ def pow_mid(M: Meter, rng, n):
                 if abs(X - ONE) < 1 << 120:
                     continue
             x = mpf(X) / ONE
-            t = mpf(rng.uniform(-130, 127))
+            t = mpf(rng.uniform(-130, 127)) if i % 4 else mpf(2) ** rng.uniform(-30, 3)
             Y = int(t / log(x, 2) * ONE)
             if not 0 < abs(Y) < 1 << 254:
                 continue
-            if abs(X - ONE) < 1 << 120:
+            if abs(X - ONE) < 1 << 120 and abs(Y) > 1 << 142:
                 k, F = tnear(Mid, X, Y)
                 name, eb = "pow, middle near one", 121
             else:
                 k, F = P.y2nf(Y, P.l2p(X))
-                name, eb = "pow, middle elsewhere", 102
+                name, eb = "pow, middle l2p", 102
             if not -130 <= k <= 126:
                 continue
             V = v384(k, P.expkx(*P.lnmul(F)))
@@ -495,7 +497,7 @@ def powus(M: Meter, rng, n):
             recip = rng.random() < 0.4
             A, ae = powus_m(ux, k, recip)
             exact = power(mpf(ux) / ONE, -k if recip else k) * power(2, 511 - ae)
-            M.add("powu, 512-bit mantissa", (3 * k + 1) * mpf(2) ** 512 / mpf(2) ** 511, A, exact)
+            M.add("powu, 512-bit mantissa", (3 * k + 2) * mpf(2) ** 512 / mpf(2) ** 510, A, exact)
 
 
 def run(n: int) -> bool:

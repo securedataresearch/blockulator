@@ -335,7 +335,7 @@ def _pow_tie(x, y, v):
     which mpmath's x^y, rounded at the working precision, could put on
     either side; None otherwise. The candidate w 2^-129 nearest the value is
     checked exactly: (w 2^-129)^(2^j) = x^p for y = p/2^j in lowest terms."""
-    if y <= 0 and x & (x - 1):
+    if (y <= 0 and x & (x - 1)) or not mpf(2) ** -130 <= v < mpf(2) ** 127:
         return None
     w = int(mp.nint(v * mpf(2) ** 129))
     if w % 2 == 0 or abs(v * mpf(2) ** 129 - w) > mpf(2) ** -64:

@@ -688,8 +688,8 @@ object "FP127E" {
             function fp127_exp2(x) -> r {
                 if iszero(slt(x, 0x7f00000000000000000000000000000000)) { rev(0x35278d12) }
                 if slt(x, sub(0, 0x8100000000000000000000000000000000)) { r := 0 leave }
-                // n and the fraction exactly; then as pow2r, without its Overflow test,
-                // which x < 127 cannot reach
+                // n and the fraction exactly; 2^n (1 + s) halved as pow2rt halves it,
+                // without an Overflow test, which x < 127 cannot reach
                 let n := sar(128, x)
                 // f ln 2 in X form as lnmul forms it, for f = x's fraction (nothing below 2^-256)
                 let f := shl(128, x)
@@ -717,7 +717,7 @@ object "FP127E" {
                 let n, rh, rx := expr(x)
                 if slt(n, sub(0, 129)) { leave }
                 let sh, sl := expk(rh, rx)
-                // as pow2r; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
+                // as exp2; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
                 // 1.95). r within 2^-377 of x - n ln 2 and expk within 2^-311.2: within
                 // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-137 or more above
                 // 0, so the value is above 2^-129)
@@ -1189,7 +1189,7 @@ object "FP127E" {
                 let lh := 0
                 let ll := 0
                 let eb := 102
-                switch lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff)
+                switch and(lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff), gt(absw(y), 0x400000000000000000000000000000000000))
                 case 1 {
                     n, fh, fl := tnear(x, y)
                     eb := 121
@@ -1294,9 +1294,14 @@ object "FP127E" {
                 }
                 let ux := absw(x)
                 if gt(k, 0xffff) {
-                    // each squaring doubles the mantissas' error, k 2^-511 in all: from
+                    // each squaring doubles the mantissas' error, k 2^-510 in all: from
                     // 2^16 pow's 2^(n log2 |x|) is the better road (and no tie: a tie
-                    // needs k <= 129)
+                    // needs k <= 129). |x| = 2^127 (x = -2^127, no positive word) puts
+                    // x^n past the format, or under 2^-130 for n < 0
+                    if shr(255, ux) {
+                        if iszero(recip) { rev(0x35278d12) }
+                        leave
+                    }
                     r := fp127_pow(ux, and(n, not(0xffffffffffffffffffffffffffffffff)))
                     if and(slt(x, 0), and(k, 1)) { r := sub(0, r) }
                     leave

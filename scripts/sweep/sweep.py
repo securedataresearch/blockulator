@@ -27,10 +27,12 @@ the one call, after its dispatch, and subtracts the same window around an assign
 
 FP127 has the same two passes for the ops whose rounding tests exist today
 (WIDE127, MID127): FP127LibWide with every test forced to fail (gen.py's fp127
-"forced" map: ln, log2, log10 and log1p take the double-word l2p; pow and compound
-skip the one-word pow2t; compound's pow2rt fails, so powu decides) and FP127LibMid
-with only the fast paths' tests forced (pow and compound return the double word).
-Their outputs are wide127_* and mid127_*.
+"forced" map: rbad127, rbadw, rbadm127, nearmid, pow2t, pow2rt), so every result
+comes from the op's last stage (the exponentials' and logs' two-word stages, pow's
+exact tie or two-word stage, powu's 512-bit mantissa or pow, compound through powu),
+and FP127LibMid with only the fast paths' tests forced (the logs, pow, compound and
+atanh return their double-word middle stage, its own test kept). Their outputs are
+wide127_* and mid127_*.
 
 Inputs are seeded (20261020; Lambert W 7) and written to cache/sweep/, which is not
 committed. FP19 results are compared with the word the oracle (scripts/fp19/oracle.py:
@@ -695,8 +697,9 @@ def score():
            "for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, "
            "divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows "
            "the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, "
-           "median / p99 / largest; *fallback* is the share of inputs that took the double-word decider "
-           "(ln, log2, log10 and pow near a midpoint or, for pow, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).",
+           "median / p99 / largest; *fallback* is the share of inputs whose fast value's rounding test fired "
+           "(the next stage ran: for the logs, pow and compound the double word, and after the arrow the share "
+           "whose middle stage's test fired too; a dash: the op has none).",
            "",
            "| op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |",
            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|"]
@@ -715,14 +718,17 @@ def score():
             md.append(row127(r))
     for stage, title, text in (
             ("middle", "The middle stage alone",
-             "The first 4,000 inputs of pow and compound again, through a test-only copy of FP127Lib whose "
-             "fast paths' rounding tests always fail (pow2t, rbad127): log2 x to 2^-299 (l2p), the double-word "
-             "2^t, its own test kept (compound's pow2rt, with powu behind it)."),
+             "The first 4,000 inputs of the ops with a middle stage again, through a test-only copy of FP127Lib "
+             "whose fast paths' rounding tests always fail (nearmid, pow2t, rbad127, rbadw): log2 x to 2^-299 "
+             "(l2p; pow near one relative, through FP19's mratio), the logs rounded from it and pow's and "
+             "compound's double-word 2^t, each with its own test kept and the last stage behind it."),
             ("second", "The last stage alone",
              "The first 4,000 inputs of each op with a rounding test again, through a test-only copy of FP127Lib "
-             "whose tests (nearmid, pow2t, pow2rt, rbad127, rbadm127) always fail, so every result comes from "
-             "the stage that runs when the fast value is too close to a tie: the double-word l2p for the logs, "
-             "l2p and the double-word 2^t for pow, powu's 512-bit mantissa for compound.")):
+             "whose tests (nearmid, pow2t, pow2rt, rbad127, rbadw, rbadm127) always fail, so every result comes "
+             "from the stage that runs when every earlier value is too close to a tie: the two-word exponential "
+             "(FP19's wexpm1) for exp, exp2, exp10 and expm1, one Newton step through it for the logs, pow's "
+             "exact tie or its two-word log and exponential, powu's 512-bit mantissa (pow from |n| = 2^16), "
+             "compound through powu, and the hyperbolics' two-word stages.")):
         if any(r.get("stage") == stage and r["lib"] == "fp127" for r in rows):
             md += ["", f"### {title}", "", text, "",
                    "| op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max |",

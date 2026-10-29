@@ -263,7 +263,8 @@ def op_exp2(X):
 
 
 def pow2r(Y: int, L: int):
-    """The Yul's pow2r: 2^(y L) rounded to nearest, L at 2^-384."""
+    """v5's pow2r (pow2rt's rounding without its test): 2^(y L) rounded to
+    nearest, L at 2^-384. 3.0's exp10 and pow add a rounding test."""
     n, f = y2nf(Y, L)
     if n > 126:
         return "REVERT"

@@ -24,8 +24,8 @@
      },
      "median": 457,
      "max": {
-      "op": "atanh",
-      "bytes": 11158
+      "op": "compound",
+      "bytes": 16930
      }
     },
     "viaIr": {
@@ -35,14 +35,14 @@
      },
      "median": 321,
      "max": {
-      "op": "atanh",
-      "bytes": 12219
+      "op": "compound",
+      "bytes": 16473
      }
     }
    },
    "sum": {
-    "legacy": 140095,
-    "viaIr": 131506
+    "legacy": 176326,
+    "viaIr": 167581
    },
    "ops": {
     "fromFixed18": {
@@ -94,28 +94,28 @@
      "viaIr": 337
     },
     "exp2": {
-     "legacy": 4333,
-     "viaIr": 3943
+     "legacy": 5637,
+     "viaIr": 5137
     },
     "exp": {
-     "legacy": 4533,
-     "viaIr": 4157
+     "legacy": 5794,
+     "viaIr": 5173
     },
     "exp10": {
-     "legacy": 4484,
-     "viaIr": 4141
+     "legacy": 5825,
+     "viaIr": 5360
     },
     "log2": {
-     "legacy": 7141,
-     "viaIr": 6571
+     "legacy": 8337,
+     "viaIr": 7733
     },
     "ln": {
-     "legacy": 7335,
-     "viaIr": 6818
+     "legacy": 8605,
+     "viaIr": 8005
     },
     "log10": {
-     "legacy": 7335,
-     "viaIr": 6818
+     "legacy": 8605,
+     "viaIr": 8267
     },
     "log2Up": {
      "legacy": 106,
@@ -126,16 +126,16 @@
      "viaIr": 272
     },
     "pow": {
-     "legacy": 10153,
-     "viaIr": 9604
+     "legacy": 15227,
+     "viaIr": 14785
     },
     "powu": {
-     "legacy": 1212,
-     "viaIr": 1151
+     "legacy": 16406,
+     "viaIr": 15992
     },
     "compound": {
-     "legacy": 10996,
-     "viaIr": 10326
+     "legacy": 16930,
+     "viaIr": 16473
     },
     "cbrt": {
      "legacy": 600,
@@ -222,12 +222,12 @@
      "viaIr": 7527
     },
     "log1p": {
-     "legacy": 7422,
-     "viaIr": 6878
+     "legacy": 8692,
+     "viaIr": 8065
     },
     "expm1": {
-     "legacy": 5090,
-     "viaIr": 4651
+     "legacy": 6207,
+     "viaIr": 6143
     },
     "sinh": {
      "legacy": 6392,
@@ -588,11 +588,11 @@
     "exp",
     "ln"
    ],
-   "legacy": 7768,
-   "viaIr": 7222,
+   "legacy": 9765,
+   "viaIr": 9116,
    "sumOfSingles": {
-    "legacy": 11868,
-    "viaIr": 10975
+    "legacy": 14399,
+    "viaIr": 13178
    }
   },
   {
@@ -602,11 +602,11 @@
     "ln",
     "pow"
    ],
-   "legacy": 10925,
-   "viaIr": 10404,
+   "legacy": 16995,
+   "viaIr": 16458,
    "sumOfSingles": {
-    "legacy": 22021,
-    "viaIr": 20579
+    "legacy": 29626,
+    "viaIr": 27963
    }
   },
   {
@@ -616,11 +616,11 @@
     "log2",
     "sqrt"
    ],
-   "legacy": 7855,
-   "viaIr": 7227,
+   "legacy": 9816,
+   "viaIr": 9095,
    "sumOfSingles": {
-    "legacy": 12032,
-    "viaIr": 11000
+    "legacy": 14489,
+    "viaIr": 13178
    }
   },
   {
@@ -647,11 +647,11 @@
     "mulUp",
     "compound"
    ],
-   "legacy": 11522,
-   "viaIr": 10663,
+   "legacy": 17447,
+   "viaIr": 16804,
    "sumOfSingles": {
-    "legacy": 11622,
-    "viaIr": 10698
+    "legacy": 17556,
+    "viaIr": 16845
    }
   },
   {

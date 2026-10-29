@@ -42,10 +42,12 @@
 //                l2p); ln, log2, log10, pow and cbrt run the one-word kernel
 //                at 2^-192 and fall back to the double word when its error
 //                bound straddles a rounding midpoint; powu and compound do
-//                the same with a two-word mantissa
+//                the same with a two-word mantissa. 3.0: every such value
+//                carries a rounding test, and a last stage in two words
+//                (FP19's kernels at 2^-503) or exact decides the rest
 //
 // The tie rule. To nearest is floor(v + 1/2) on the grid, ties toward +inf
-// (round64, rnd192, pow2r): ties up. powu and compound, cbrt and the odd
+// (round64, rnd192, rndw): ties up. powu and compound, cbrt and the odd
 // sinh, tanh, atanh and erf round the magnitude and apply the sign, so
 // their ties go away from zero (scripts/fp127/oracle.py rounds each op the
 // same way).
@@ -1028,33 +1030,15 @@ function rnd192(vh, vl) -> r {
     r := or(shl(192, h), shr(64, l))
 }
 
-/// 2^(y L) rounded to nearest, for L = (lh, ll) a log2 at 2^-384: Overflow
-/// from 2^127, and 0 below 2^-129, where the value is under half an ULP. With
-/// e = n + 129 in [0, 255] the word is half of 2^e + floor(sh 2^(e - 256)) +
-/// 1: the bits of s below sh are under one unit of that sum and cannot move
-/// the halving, so sl is not read. At e = 255 the sum reaches 2^256 (and
-/// wraps to 0) exactly when the word would be 2^255: Overflow.
-function pow2r(y, lh, ll) -> r {
-    let n, fh, fl := y2nf(y, lh, ll)
-    if sgt(n, 126) { rev(0x35278d12) }
-    if slt(n, sub(0, 129)) { leave }
-    let rh, rx := lnmul(fh, fl)
-    let sh, sl := expk(rh, rx)
-    let e := add(n, 129)
-    r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
-    if iszero(r) { rev(0x35278d12) }
-}
-
 /// 2^t rounded to nearest through the one-word kernel, for an exponent t at
 /// 2^-192 within ay 2^-145 + 2^-192 of the true one (ay a bound on |y| in
 /// 127.128, y the exponent's multiplier: log2g is within 2^-145). ok = 1 when
-/// the rounding is certain, and r is then the word pow2r gives from the
-/// double word. With P below 2^e the true value, v = 2^t 2^192 here is within
-/// P 2^192 (0.7 ay 2^-145 + 0.7 2^-192 + 2^-145 (exp2frac)) + 1 of P 2^192,
-/// and pow2r's value before its rounding within P (1 + |y|) 2^-107 + 1
-/// (precise_model.py); eb, in units of 2^-192, bounds the two together, and
-/// a v whose bits below the 2^-128 grid are more than eb from the midpoint
-/// rounds as both. Out of reach (ok = 0, nothing computed) when eb > 2^61:
+/// the rounding is certain. With P below 2^e the true value, v = 2^t 2^192
+/// here is within P 2^192 (0.7 ay 2^-145 + 0.7 2^-192 + 2^-145 (exp2frac))
+/// + 1 of P 2^192, and v5's double word (l2p, then 2^t) within P (1 + |y|)
+/// 2^-107 + 1 (precise_model.py); eb, in units of 2^-192, bounds the two
+/// together (v5 kept the two words equal), and a v whose bits below the
+/// 2^-128 grid are more than eb from the midpoint rounds as the truth. Out of reach (ok = 0, nothing computed) when eb > 2^61:
 /// results from about 2^12 up, or a large |y|.
 function pow2t(t, ay) -> r, ok {
     let at := t
@@ -1129,8 +1113,8 @@ function expw(x, n, c2, c1, c0) -> r {
 function fp127_exp2(x) -> r {
     if iszero(slt(x, 0x7f00000000000000000000000000000000)) { rev(0x35278d12) }
     if slt(x, sub(0, 0x8100000000000000000000000000000000)) { r := 0 leave }
-    // n and the fraction exactly; then as pow2r, without its Overflow test,
-    // which x < 127 cannot reach
+    // n and the fraction exactly; 2^n (1 + s) halved as pow2rt halves it,
+    // without an Overflow test, which x < 127 cannot reach
     let n := sar(128, x)
     // f ln 2 in X form as lnmul forms it, for f = x's fraction (nothing below 2^-256)
     let f := shl(128, x)
@@ -1171,7 +1155,7 @@ function fp127_exp(x) -> r {
     let n, rh, rx := expr(x)
     if slt(n, sub(0, 129)) { leave }
     let sh, sl := expk(rh, rx)
-    // as pow2r; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
+    // as exp2; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
     // 1.95). r within 2^-377 of x - n ln 2 and expk within 2^-311.2: within
     // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-137 or more above
     // 0, so the value is above 2^-129)
@@ -1859,10 +1843,12 @@ function tnear(x, y) -> n, fh, fl {
 
 /// pow's middle stage, where pow2t could not decide: n = floor(t) and the
 /// fraction f of t = y log2 x, 2^f by the double-word kernel, rounded once
-/// when its bound clears the rounding boundary, else powslow. Within 2^-8 of
-/// one tnear (t within |t| 2^-271.9); elsewhere l2p and y2nf (log2 x within
-/// 2^-299 and at least 2^-7.48 in size, so |y| <= 2^14.52 while |t| <= 131:
-/// t within 2^-284.4). From n = 127 the value is past 2^127 (1 - 2^-264),
+/// when its bound clears the rounding boundary, else powslow. l2p and y2nf
+/// (log2 x within 2^-299 absolute) while |y| <= 2^14, or off the near-one
+/// band, where |log2 x| >= 2^-7.48 bounds |y| by 2^14.52 for |t| <= 131: t
+/// within 2^-284.4 either way. Within 2^-8 of one with |y| > 2^14 the
+/// absolute error would grow with y, and tnear's relative log takes over (t
+/// within |t| 2^-271.9). From n = 127 the value is past 2^127 (1 - 2^-264),
 /// Overflow; under n = -130 it is below 2^-130 (1 + 2^-264), 0. Else V =
 /// 2^n (1 + s), with f ln 2 within 2^-382 and expk's 2^-311.2, is within
 /// 2^(n - 136.4) of x^y near one (|t| 2^-271.9 ln 2), 2^(n - 156) elsewhere:
@@ -1876,7 +1862,7 @@ function powmid(x, y, ms, y0) -> r {
     let lh := 0
     let ll := 0
     let eb := 102
-    switch lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff)
+    switch and(lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff), gt(absw(y), 0x400000000000000000000000000000000000))
     case 1 {
         n, fh, fl := tnear(x, y)
         eb := 121
@@ -2000,8 +1986,8 @@ function powslow(x, y, ms, lh, ll) -> r {
 ///         exponentiation on a 256-bit mantissa with a separate binary
 ///         exponent, rounded once; when that mantissa's error bound
 ///         (k + 5) 2^-255, k = |n|, straddles a rounding midpoint, the same
-///         product on a 512-bit mantissa decides (within 3k 2^-511 relative,
-///         under 2^-238 ULP below k = 2^16; exact at every tie). From k =
+///         product on a 512-bit mantissa decides (within (3k + 2) 2^-510
+///         relative, under 2^-237 ULP below k = 2^16; exact at every tie). From k =
 ///         2^16, pow(|x|, n) with the sign restored. Correctly rounded, the
 ///         magnitude's ties away from zero. Exact whenever the true value is
 ///         representable. Negative n inverts the mantissa, so x^-n is as
@@ -2025,9 +2011,14 @@ function fp127_powu(x, n) -> r {
     }
     let ux := absw(x)
     if gt(k, 0xffff) {
-        // each squaring doubles the mantissas' error, k 2^-511 in all: from
+        // each squaring doubles the mantissas' error, k 2^-510 in all: from
         // 2^16 pow's 2^(n log2 |x|) is the better road (and no tie: a tie
-        // needs k <= 129)
+        // needs k <= 129). |x| = 2^127 (x = -2^127, no positive word) puts
+        // x^n past the format, or under 2^-130 for n < 0
+        if shr(255, ux) {
+            if iszero(recip) { rev(0x35278d12) }
+            leave
+        }
         r := fp127_pow(ux, and(n, not(0xffffffffffffffffffffffffffffffff)))
         if and(slt(x, 0), and(k, 1)) { r := sub(0, r) }
         leave
@@ -2090,10 +2081,12 @@ function powum(ux, k, recip) -> am, ae {
 
 /// |x|^k (or |x|^-k) on a 512-bit mantissa, rounded to nearest at 2^-128:
 /// the decider when the 256-bit mantissa's error straddles a midpoint. Each
-/// product keeps the top 512 bits (the low-by-low term dropped: within 3
-/// units of 2^-511), and squaring doubles the relative error carried in, so
-/// x^k is within 3k 2^-511 relative (the reciprocal adds one unit): under
-/// 2^-492.4 for k < 2^16, where powu uses it, under 2^-238 ULP of any word.
+/// product keeps the top 512 bits of the 1,024-bit product (the low-by-low
+/// term and two floors dropped: under 3 units, 6 after the renormalising
+/// shift, 3 2^-510 relative), and squaring doubles the relative error
+/// carried in, so x^k is within (3k + 2) 2^-510 relative (the reciprocal
+/// adds two units; bounds127.py): under 2^-492.4 for k < 2^16, where powu
+/// uses it, under 2^-237 ULP of any word.
 /// A tie, x^k = odd 2^-129, has k <= 129 and c^k < 2^256 for x's odd part
 /// c, so every partial product has at most 256 significant bits and is
 /// exact. The rounding reads only the top word: the bits below it cannot
@@ -2235,12 +2228,15 @@ function compt(x, k) -> r, ok {
     r, ok := pow2rt(shl(128, k), lh, ll, add(shr(42, absw(k)), 3))
 }
 
-/// pow2r with a rounding test: ok = 1 when 2^(y L) is certainly nearest r.
-/// V = 2^e + sh 2^(e - 256), the value pow2r halves, is within (1 + |y|)
+/// 2^(y L) rounded to nearest for L = (lh, ll) a log2 at 2^-384, with a
+/// rounding test (compound's middle stage): ok = 1 when 2^(y L) is certainly
+/// nearest r. With n = floor(y L) and e = n + 129 the word is half of 2^e +
+/// floor(sh 2^(e - 256)) + 1 (the bits of s below sh cannot move the
+/// halving). V = 2^e + sh 2^(e - 256), the value halved, is within (1 + |y|)
 /// 2^-299 relative of the truth (l2p's 2^-299, expk's 2^-311) plus sh's one
 /// unit, under eb units of sh's last bit for eb = |y| 2^-42 + 3: the word
 /// is certain when V's bits below the halving are more than eb from the
-/// midpoint, an odd integer. ok = 0 where pow2r would revert or the result
+/// midpoint, an odd integer. ok = 0 where the result overflows or
 /// is 0 within reach of 2^-129: the caller decides those.
 function pow2rt(y, lh, ll, eb) -> r, ok {
     let n, fh, fl := y2nf(y, lh, ll)

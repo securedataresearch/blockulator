@@ -79,8 +79,8 @@ interface IFP127E {
     ///         exponentiation on a 256-bit mantissa with a separate binary
     ///         exponent, rounded once; when that mantissa's error bound
     ///         (k + 5) 2^-255, k = |n|, straddles a rounding midpoint, the same
-    ///         product on a 512-bit mantissa decides (within 3k 2^-511 relative,
-    ///         under 2^-238 ULP below k = 2^16; exact at every tie). From k =
+    ///         product on a 512-bit mantissa decides (within (3k + 2) 2^-510
+    ///         relative, under 2^-237 ULP below k = 2^16; exact at every tie). From k =
     ///         2^16, pow(|x|, n) with the sign restored. Correctly rounded, the
     ///         magnitude's ties away from zero. Exact whenever the true value is
     ///         representable. Negative n inverts the mantissa, so x^-n is as
