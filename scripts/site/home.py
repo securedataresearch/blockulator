@@ -439,6 +439,7 @@ INCIDENTS = [  # each replay's verdict section, then the section with its full n
     ("bunni", "replay-bunni.md", "Numbers", "What happened"),
     ("balancer", "replay-balancer.md", "Which alternative alone suffices", "The same calls on five rulers"),
     ("balancer-v1", "replay-balancer-v1.md", "The answer first", "Precision or direction?"),
+    ("thetanuts", "replay-thetanuts.md", "The answer first", "The decisive step on each rule"),
 ]
 
 

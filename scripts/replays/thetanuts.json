@@ -1,0 +1,1239 @@
+{
+ "_doc": "Pinned by `uv run scripts/replays/thetanuts.py fetch` (read-only, public RPC). The vault's source is not verified, so every integer comes from the transaction's Transfer logs, eth_getStorageAt / eth_call at block-1 (the tx is index 0) and at the block, and an opcode trace of the vault; test/replays/Thetanuts.t.sol replays them. Integers are decimal strings.",
+ "tx": "0xbba9f138fe39503bfd1aa62932dbd6ab35d37d23d48e4b7bf2988a9d5dc39fec",
+ "block": 25323329,
+ "txIndex": 0,
+ "blockTimestamp": 1781531639,
+ "attackerEOA": "0x30498e4466789e534c72e03b52a16c978655b41e",
+ "attackContract": "0xa589c5342068b0c1fefd44d3c95354427502ac91",
+ "exploitContract": "0x0f9daa9e0adced4e64578b2e131930dde54e492e",
+ "beneficiary": "0xaf3a0fdbfb0e3127247b66a042310e09c32f2299",
+ "addresses": {
+  "vault": "0xc2c3ae0a7b405058558c9b4a63b373486cb86ac7",
+  "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  "lendingPool": "0x2ca7641b841a79cc70220ce838d0b9f8197accda",
+  "aToken": "0x075da7e9efea6813ab0b2680423df75150120d12"
+ },
+ "vault": {
+  "name": "Thetanuts Index Vault V1 USDC PUT",
+  "symbol": "TN-IDX-USDC-PUT",
+  "decimals": 6,
+  "owner": "0x4a4c7c5549359b9fff0137bb3ec4d48c4aa79cc7",
+  "codeSize": 12494,
+  "codeKeccak": "0x510db13e39e464d3ed6b98a9e866666bd0bcfbccd37c9b26d0590c9349b9792a",
+  "solc": "0.8.9",
+  "sourcify": "HTTP 404, match None",
+  "etherscanAbi": "Contract source code not verified",
+  "created": {
+   "tx": "0x5fe942c5d09bd3b427c5d8c0ecabd0d2468d4452b0b7f32f87ca358c0c997132",
+   "block": 14668794,
+   "creator": "0x4a4c7c5549359b9fff0137bb3ec4d48c4aa79cc7",
+   "timestamp": 1651093496
+  }
+ },
+ "lendingPoolCreated": {
+  "tx": "0xd0030bd0c645f3bf2b72e8e82c8ee5c0d9d208be30ad2f6f4dcf5bf5a6af7a5d",
+  "block": 14633694,
+  "creator": "0x4a4c7c5549359b9fff0137bb3ec4d48c4aa79cc7",
+  "timestamp": 1650617521
+ },
+ "components": [
+  {
+   "address": "0x3ba337f3167ea35910e6979d5bc3b0aee60e7d59",
+   "name": "Thetanuts Cash Settled Cash Secured Put Vault BTC USD",
+   "symbol": "TN-CSCPv1-BTCUSD",
+   "decimals": 6,
+   "totalSupplyBefore": "50904256155",
+   "usdcHeldBefore": "71995543702"
+  },
+  {
+   "address": "0xe1c93de547cc85cbd568295f6cc322b1dbbcf8ae",
+   "name": "Thetanuts Cash Settled Cash Secured Put Vault ETH USD",
+   "symbol": "TN-CSCPv1-ETHUSD",
+   "decimals": 6,
+   "totalSupplyBefore": "23993591533",
+   "usdcHeldBefore": "35212163722"
+  },
+  {
+   "address": "0x248038fdb6f00f4b636812ca6a7f06b81a195ab8",
+   "name": "Thetanuts Cash Settled Cash Secured Put Vault AVAX USD",
+   "symbol": "TN-CSCPv1-AVAXUSD",
+   "decimals": 6,
+   "totalSupplyBefore": "6380274984",
+   "usdcHeldBefore": "0"
+  },
+  {
+   "address": "0xe5e8caa04c4b9e1c9bd944a2a78a48b05c3ef3af",
+   "name": "Thetanuts Cash Settled Cash Secured Put Vault BNB USD",
+   "symbol": "TN-CSCPv1-BNBUSD",
+   "decimals": 6,
+   "totalSupplyBefore": "17186382742",
+   "usdcHeldBefore": "0"
+  },
+  {
+   "address": "0xad57221ae9897da08656aaabd5b1d4673d4ede71",
+   "name": "Thetanuts Cash Settled Cash Secured Put Vault MATIC USD",
+   "symbol": "TN-CSCPv1-MATICUSD",
+   "decimals": 6,
+   "totalSupplyBefore": "10028704590",
+   "usdcHeldBefore": "0"
+  }
+ ],
+ "slots": {
+  "balances": 2,
+  "totalSupply": 4,
+  "components": 9,
+  "componentInfo": 10,
+  "storedOffset": 1,
+  "totalWeight": 11,
+  "storedSlots": [
+   "0xea24ea2e10843d83b99845421f0d00e3923b3b8a3e6385202c366c7e0ca17f85",
+   "0x9e8cf757631efcb4fbc4d5813a6db27d185a5ca7f6465cba9e6e4814cb72d93d",
+   "0x6f932660279731eb3955cbd88b3a885ff97d70cc86d34fe74140894284dfeddc",
+   "0x8dca6a506e7cf4748da8be67d0b8cef73e2465de02d0b76b1affaf664a79e257",
+   "0x6508b87932efa8604f5bd4a723ab7155c51a1278f69ea42dd8e5e844a99d2a03"
+  ],
+  "componentsBase": "0x6e1540171b6c0c960b71a7020d9f60077f6af931a8bbf590da0223dacf75c7af"
+ },
+ "pre": {
+  "block": 25323328,
+  "totalSupply": "153054600572",
+  "stored": [
+   "49716431048",
+   "23955277334",
+   "6378688542",
+   "17186382410",
+   "10028704388"
+  ],
+  "infoWord0": [
+   "11521",
+   "6401",
+   "1281",
+   "3841",
+   "2561"
+  ],
+  "totalWeight": "100",
+  "componentBalanceOfVault": [
+   "49716431048",
+   "23955277334",
+   "6378688542",
+   "17186382410",
+   "10028704388"
+  ],
+  "indexBalanceOfAToken": "153054600572"
+ },
+ "post": {
+  "block": 25323329,
+  "totalSupply": "153192349712",
+  "stored": [
+   "1",
+   "1",
+   "1",
+   "1",
+   "1"
+  ],
+  "componentBalanceOfVault": [
+   "1",
+   "1",
+   "1",
+   "1",
+   "1"
+  ],
+  "indexBalanceOfAToken": "153192349712"
+ },
+ "flashLoan": {
+  "amount": "153054600569",
+  "premium": "137749140",
+  "logIndex": 418,
+  "receiver": "0x0f9daa9e0adced4e64578b2e131930dde54e492e"
+ },
+ "claim": {
+  "amount": "153054600569",
+  "supplyBefore": "153054600572",
+  "supplyAfter": "3",
+  "storedBefore": [
+   "49716431048",
+   "23955277334",
+   "6378688542",
+   "17186382410",
+   "10028704388"
+  ],
+  "payout": [
+   "49716431047",
+   "23955277333",
+   "6378688541",
+   "17186382409",
+   "10028704387"
+  ],
+  "storedAfter": [
+   "1",
+   "1",
+   "1",
+   "1",
+   "1"
+  ],
+  "burnLogIndex": 1
+ },
+ "mints": [
+  {
+   "amount": "2",
+   "supplyBefore": "3",
+   "supplyAfter": "5",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 17
+  },
+  {
+   "amount": "4",
+   "supplyBefore": "5",
+   "supplyAfter": "9",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 28
+  },
+  {
+   "amount": "8",
+   "supplyBefore": "9",
+   "supplyAfter": "17",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 39
+  },
+  {
+   "amount": "16",
+   "supplyBefore": "17",
+   "supplyAfter": "33",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 50
+  },
+  {
+   "amount": "32",
+   "supplyBefore": "33",
+   "supplyAfter": "65",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 61
+  },
+  {
+   "amount": "64",
+   "supplyBefore": "65",
+   "supplyAfter": "129",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 72
+  },
+  {
+   "amount": "128",
+   "supplyBefore": "129",
+   "supplyAfter": "257",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 83
+  },
+  {
+   "amount": "256",
+   "supplyBefore": "257",
+   "supplyAfter": "513",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 94
+  },
+  {
+   "amount": "512",
+   "supplyBefore": "513",
+   "supplyAfter": "1025",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 105
+  },
+  {
+   "amount": "1024",
+   "supplyBefore": "1025",
+   "supplyAfter": "2049",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 116
+  },
+  {
+   "amount": "2048",
+   "supplyBefore": "2049",
+   "supplyAfter": "4097",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 127
+  },
+  {
+   "amount": "4096",
+   "supplyBefore": "4097",
+   "supplyAfter": "8193",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 138
+  },
+  {
+   "amount": "8192",
+   "supplyBefore": "8193",
+   "supplyAfter": "16385",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 149
+  },
+  {
+   "amount": "16384",
+   "supplyBefore": "16385",
+   "supplyAfter": "32769",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 160
+  },
+  {
+   "amount": "32768",
+   "supplyBefore": "32769",
+   "supplyAfter": "65537",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 171
+  },
+  {
+   "amount": "65536",
+   "supplyBefore": "65537",
+   "supplyAfter": "131073",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 182
+  },
+  {
+   "amount": "131072",
+   "supplyBefore": "131073",
+   "supplyAfter": "262145",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 193
+  },
+  {
+   "amount": "262144",
+   "supplyBefore": "262145",
+   "supplyAfter": "524289",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 204
+  },
+  {
+   "amount": "524288",
+   "supplyBefore": "524289",
+   "supplyAfter": "1048577",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 215
+  },
+  {
+   "amount": "1048576",
+   "supplyBefore": "1048577",
+   "supplyAfter": "2097153",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 226
+  },
+  {
+   "amount": "2097152",
+   "supplyBefore": "2097153",
+   "supplyAfter": "4194305",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 237
+  },
+  {
+   "amount": "4194304",
+   "supplyBefore": "4194305",
+   "supplyAfter": "8388609",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 248
+  },
+  {
+   "amount": "8388608",
+   "supplyBefore": "8388609",
+   "supplyAfter": "16777217",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 259
+  },
+  {
+   "amount": "16777216",
+   "supplyBefore": "16777217",
+   "supplyAfter": "33554433",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 270
+  },
+  {
+   "amount": "33554432",
+   "supplyBefore": "33554433",
+   "supplyAfter": "67108865",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 281
+  },
+  {
+   "amount": "67108864",
+   "supplyBefore": "67108865",
+   "supplyAfter": "134217729",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 292
+  },
+  {
+   "amount": "134217728",
+   "supplyBefore": "134217729",
+   "supplyAfter": "268435457",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 303
+  },
+  {
+   "amount": "268435456",
+   "supplyBefore": "268435457",
+   "supplyAfter": "536870913",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 314
+  },
+  {
+   "amount": "536870912",
+   "supplyBefore": "536870913",
+   "supplyAfter": "1073741825",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 325
+  },
+  {
+   "amount": "1073741824",
+   "supplyBefore": "1073741825",
+   "supplyAfter": "2147483649",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 336
+  },
+  {
+   "amount": "2147483648",
+   "supplyBefore": "2147483649",
+   "supplyAfter": "4294967297",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 347
+  },
+  {
+   "amount": "4294967296",
+   "supplyBefore": "4294967297",
+   "supplyAfter": "8589934593",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 358
+  },
+  {
+   "amount": "8589934592",
+   "supplyBefore": "8589934593",
+   "supplyAfter": "17179869185",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 369
+  },
+  {
+   "amount": "17179869184",
+   "supplyBefore": "17179869185",
+   "supplyAfter": "34359738369",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 380
+  },
+  {
+   "amount": "34359738368",
+   "supplyBefore": "34359738369",
+   "supplyAfter": "68719476737",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 391
+  },
+  {
+   "amount": "68719476736",
+   "supplyBefore": "68719476737",
+   "supplyAfter": "137438953473",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 402
+  },
+  {
+   "amount": "15753396239",
+   "supplyBefore": "137438953473",
+   "supplyAfter": "153192349712",
+   "storedBefore": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "charge": [
+    "0",
+    "0",
+    "0",
+    "0",
+    "0"
+   ],
+   "storedAfter": [
+    "1",
+    "1",
+    "1",
+    "1",
+    "1"
+   ],
+   "mintLogIndex": 413
+  }
+ ],
+ "realised": {
+  "initWithdraw": [
+   {
+    "component": "0x3ba337f3167ea35910e6979d5bc3b0aee60e7d59",
+    "tokensIn": "49716431047",
+    "usdcOut": "70315563951"
+   },
+   {
+    "component": "0xe1c93de547cc85cbd568295f6cc322b1dbbcf8ae",
+    "tokensIn": "23955277333",
+    "usdcOut": "35155935127"
+   }
+  ],
+  "usdcTotal": "105471499078",
+  "sentToBeneficiary": {
+   "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "105471499078",
+   "0x248038fdb6f00f4b636812ca6a7f06b81a195ab8": "6378688541",
+   "0xe5e8caa04c4b9e1c9bd944a2a78a48b05c3ef3af": "17186382409",
+   "0xad57221ae9897da08656aaabd5b1d4673d4ede71": "10028704387"
+  }
+ },
+ "trace": {
+  "tracer": "debug_traceTransaction, JS tracer over the vault's MUL/DIV/SLOAD/SSTORE",
+  "helperExecutions": 190,
+  "claimExecutions": 5,
+  "mintExecutions": 185,
+  "pcOverflowCheckDiv": 12165,
+  "pcMul": 12186,
+  "pcDiv": 12220,
+  "helperMulEntry": 12158,
+  "helperDivEntry": 12189,
+  "helperBytes": "0x5b6000816000190483118215151615612f9857612f98612f51565b500290565b600082612fba57634e487b7160e01b600052601260045260246000fd5b50049056",
+  "claimSites": {
+   "storedSload": [
+    2578,
+    2633
+   ],
+   "storedSstore": [
+    2655
+   ],
+   "supplySstore": [
+    10112
+   ]
+  },
+  "mintSites": {
+   "storedSload": [
+    3880,
+    3953
+   ],
+   "storedSstore": [
+    3973
+   ],
+   "supplySstore": [
+    8638
+   ]
+  },
+  "runInput": "153054600569",
+  "storedWrites": 190,
+  "supplyWrites": 38,
+  "transferFromCalls": 185
+ }
+}

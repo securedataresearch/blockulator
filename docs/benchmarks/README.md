@@ -69,7 +69,7 @@ pi, the replays and the accrual are not diffed in CI.
   and whether compiling the caller with `via_ir` closes the gap between the
   inline libraries and the Yul objects (`test/profile/ViaIr.t.sol`). `make
   profile`.
-- **Replays: four exploits, bit-exact.** Each one reproduces the deployed
+- **Replays: five exploits, bit-exact.** Each one reproduces the deployed
   arithmetic from integers pinned out of the attack transaction and asserted
   against the chain, then prices the decisive step again under the
   protocol's own fix, FP127, FP19 and exact rationals (`make replays`;
@@ -78,6 +78,7 @@ pi, the replays and the accrual are not diffed in CI.
   - [`replay-bunni.md`](replay-bunni.md): Bunni v2, 2 Sep 2025. 44 withdrawals take active USDC from 28 wei to 4 and liquidity falls 84%.
   - [`replay-balancer.md`](replay-balancer.md): Balancer V2, 3 Nov 2025. 17.988 is read as 17 in the osETH and wstETH pools, with the invariant's Newton solve measured on each ruler.
   - [`replay-balancer-v1.md`](replay-balancer-v1.md): Balancer V1, 31 Aug 2026. Five pools; rounding to nearest at raw token units, a case decided by direction, not precision.
+  - [`replay-thetanuts.md`](replay-thetanuts.md): Thetanuts index vault, 15 Jun 2026. Pinned to bytecode (the source is unverified). 37 mints each charged 1 × amount / supply, floored to 0, after one claim left 1 raw unit per component; rounding up makes any mint sequence cost more than the claim took.
 - [`accrual-deployed.md`](accrual-deployed.md) / [`accrual-deployed.json`](accrual-deployed.json):
   **the accrual maths as deployed.** Aave v3 Core (v3.7.0) and Morpho Blue
   (v1.0.0, with the AdaptiveCurveIrm) run from submodules whose runtime
