@@ -120,7 +120,10 @@ def check_drawn(name: str, mod, numbers: dict) -> int:
     assert isinstance(literals, dict) and all(isinstance(k, str) and isinstance(v, str) and v for k, v in literals.items()), name
     scene = dry_run(mod)
     drawn = list(vocab.DRAWN)
-    assert len(scene.SECTIONS) >= 2, (name, scene.SECTIONS)
+    # one section only for the looping title (slides.yaml loop: true), whose last frame must be its first
+    assert len(scene.SECTIONS) >= 2 or getattr(scene, "LOOP", False), (name, scene.SECTIONS)
+    if getattr(scene, "LOOP", False):
+        assert scene.start_state == scene.end_state and len(scene.start_state) > 0, (name, "the loop must end where it starts")
     assert scene.sections_called == list(scene.SECTIONS), (name, scene.sections_called, scene.SECTIONS)
     toks = known_tokens(numbers)
     bad, seen = 0, set()
