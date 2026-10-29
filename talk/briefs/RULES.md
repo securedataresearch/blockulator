@@ -20,7 +20,7 @@ These are the user's rules. They are not negotiable and they are not summarised;
 - Always more impressive: staggered reveals, halos, ticking counters, depth; never static text where a drawn thing can carry it.
 
 ## Legibility (1920×1080, a dark room, the back row)
-- `SIZE_CAPTION = 20` (the source caption only), `SIZE_BODY = 32` (everything else), `SIZE_HERO = 48` (the one hero number or line). Mono strings at most `MAX_MONO_CHARS = 46` per line at body size.
+- `SIZE_CAPTION = 20` (the source caption only), `SIZE_BODY = 32` (everything else), `SIZE_HERO = 48` (the one hero number or line). These are manim font sizes in scene units, not pixels: the frame is 14.2 units wide, a mono character at size 32 is about 0.26 units, so a mono line holds about 46 characters at BODY and a 42-character address does not fit at HERO (draw it at the largest size that fits, and say so in the report). Nothing below CAPTION, ever; below BODY only when a string cannot fit, reported.
 - 5% safe area on every edge. One idea per section. Nothing smaller than `SIZE_CAPTION`, ever.
 
 ## Sections (the deck steps one click per section)
