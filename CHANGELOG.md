@@ -6,25 +6,63 @@ keeps its own version in its CREATE2 salt, because the salt names the address;
 
 ## Unreleased
 
-Blockulator 3.0's bytecode is frozen at this entry. Every object changed, so
-every object takes a new salt; FP127 v7, deployed on Sepolia on 2026-10-27,
-is superseded before mainnet. The CREATE2 addresses (the same on every chain):
+**FP127 is correctly rounded in every op.** Each transcendental's fast value
+now carries an error bound derived in the source, measured against 120-digit
+truth (`bounds127.py`, a merge gate) and tested by `rbad127` before the one
+rounding; where the bound could reach a midpoint a wider stage decides, in
+two words on FP19's kernels (2^-497 to 2^-510) or exactly where a tie is
+possible (`pow`, `powu`, `cbrt`). `gavg` and `hypot` are the nearest root of
+the exact product or sum of squares; the arithmetic is exact in its stated
+direction, as before. v8 rounded each transcendental's value with no test,
+`pow` could miss by up to 1e11 ULPs at extreme exponents and rounded exact
+ties down, and `gavg` and `hypot` were the Huff's floored compositions. The
+work went in by object (the five entries below: FP127S, FP127H, the roots,
+FP127E, FP127N), and the one FP127 object became five by idea, as FP19's are,
+so each had room for its second stages. Every FP127 object takes salt v9.
 
-| object | salt | runtime bytes | address |
-|---|---|---:|---|
-| FP127 | `FP127 v8` | 23,797 | `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B` |
-| FP19 | `FP19 v6` | 17,221 | `0x94d9d43D6202827429a8058959eeCf6d232b8729` |
-| FP19E | `FP19E v6` | 23,621 | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` |
-| FP19H | `FP19H v6` | 13,020 | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` |
-| FP19N | `FP19N v6` | 17,962 | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` |
-| FP19S | `FP19S v6` | 11,338 | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` |
+The full release gate on this tree (2026-10-28): FP127 59 sweep rows,
+212,119 inputs, misrounded 0 in the plain pass, with every rounding test
+forced (the last stage alone) and with the fast tests forced (the middle
+stage alone); FP19 76 rows, 455,082 inputs, misrounded 0; BlockulatorWad
+160,000 results wrong 0; bounds and bounds127 0 regions over their bound;
+299 tests; every object under 24,576 bytes (FP19E tightest, 955 free).
+Gas on the ladder's inputs, inline, v8 → v9: the tests cost the
+transcendentals a few percent (`exp` 2,726 → 2,845, `sinh` 3,880 → 4,029,
+`erf` 7,588 → 7,739, `lambertW0` 8,170 → 8,367, `pow` 3,028 → 3,050), the
+logs and arithmetic are unchanged, `expm1` 3,106 → 2,968, `gavg` 1,079 →
+1,003, `hypot` 1,366 → 1,164; through the objects the smaller dispatchers
+take 20 to 70 gas off most ops (`add` 708 → 682, `mul` 928 → 862).
 
-The FP19 salts drop the old name (2.2's were `FP256 v5`, `FP256E v5`, …,
+The CREATE2 addresses (the same on every chain), live on Sepolia: FP19's
+since 2026-10-28 (blocks 12,015,306 to 12,015,314), FP127's since
+2026-10-29 UTC (blocks 12,017,693 to 12,017,701), with ladder v14's runners
+(12,017,704 to 12,017,707); Sourcify and Blockscout verified, `make
+smoke-sepolia` passes, and the live check through the v14 runners is 1,913
+ladder cells and 276 edge cells, 0 mismatches. Not on mainnet yet:
+
+| object | salt | runtime bytes | address | block |
+|---|---|---:|---|---:|
+| FP127 | `FP127 v9` | 3,728 | `0x0DF738d125677550a80A46BaF254386C66f96E0d` | 12,017,693 |
+| FP127E | `FP127E v9` | 18,808 | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` | 12,017,695 |
+| FP127H | `FP127H v9` | 13,093 | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` | 12,017,697 |
+| FP127N | `FP127N v9` | 9,088 | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` | 12,017,699 |
+| FP127S | `FP127S v9` | 11,817 | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` | 12,017,701 |
+| FP19 | `FP19 v6` | 17,221 | `0x94d9d43D6202827429a8058959eeCf6d232b8729` | 12,015,306 |
+| FP19E | `FP19E v6` | 23,621 | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` | 12,015,308 |
+| FP19H | `FP19H v6` | 13,020 | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` | 12,015,310 |
+| FP19N | `FP19N v6` | 17,962 | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` | 12,015,312 |
+| FP19S | `FP19S v6` | 11,338 | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` | 12,015,314 |
+
+FP127 v8 (`FP127 v8`, 23,797 bytes, `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`,
+Sepolia, 2026-10-28) is the one object these five replace, superseded before
+mainnet as v7 (2026-10-27) was by v8; both stay live. The FP19 salts drop the old name (2.2's salts were `FP256 v5`, `FP256E v5`, …,
 kept as bytes because they fix 2.2's addresses). The ladder's adapters name
-these addresses, so the runners take `FP127 ladder v13`. The full release
-gate on this tree: FP19 76 sweep rows misrounded 0, FP127 27 rows nearest
-everywhere, BlockulatorWad 160,000 results wrong 0; 292 tests; every object
-under 24,576 bytes (FP127 tightest, 779 free).
+these addresses, so the runners took
+`FP127 ladder v14` (v13 calls FP127 v8): `LadderRunner`
+`0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589`, `EdgeRunner`
+`0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A`. The gate at the v8 freeze: FP19 76
+sweep rows misrounded 0, FP127 27 rows nearest everywhere, BlockulatorWad
+160,000 results wrong 0; 292 tests; FP127 tightest, 779 free.
 
 FP127S: lambertW0 and lambertWm1 correctly rounded (v8 rounded their last
 value with no test):
@@ -221,6 +259,31 @@ behind it:
   → 2,828 (+4.9%), exp2 2,640 → 2,684, exp10 2,970 → 3,069, expm1 2,061 →
   2,076, logs unchanged, pow 3,314 → 3,376 (shared inputs), powu 3,493 →
   3,520, compound 3,301 → 3,360. FP127E 12,716 → 18,808 bytes.
+
+FP127's error function (`FP127N`) correctly rounded: `erf`, `erfc` and
+`normCdf` test their value at 2^-192 against a derived bound, with FP19's
+wide series and continued fraction behind it:
+
+- Bounds derived in `erf_model.py --bounds` (in `--check`, CI): `erfs`
+  within 2^45.29 units of 2^-192 (exp2frac's 2^-146.7 times erf, the
+  series' floors by their recurrence), err 3·2^44; `erfct` within 2^19.41,
+  err 2^20, its degree-43 fit now certified on all of [4, 9.5] (0.2438 of
+  2^-175 e^(x²): a 20,000-step grid and a Taylor bound on the error's
+  second derivative, g's derivatives bounded by n!/(√π x^(n+1))), where
+  2.2 sampled 6,002 points. `bounds127.py` measures both (ratios 0.41,
+  0.30) and normCdf's.
+- `erfw127`: x as FP19's exact (u, m), `w19_erfser2` below y = 7,
+  `w19_erfccf2` from 7 (2^-444 or better), one rounding; `erfc` and
+  `normCdf` are 1 ∓ and ½ ± its word, exact since erf(y) is never a
+  midpoint. 13 vectors whose fast value lies within the bound of a
+  midpoint (none misrounded by v8); `make sweep` plain and second-stage
+  passes 0 misrounded (no middle stage).
+- Inline, on the sweep's inputs: `erf` 3,630 → 3,689, `erfc` 3,510 →
+  3,592, `normCdf` 3,715 → 3,750 (median, old and new side by side; the sweep table reads 3,623 → 3,775, 3,497 → 3,654, 3,694 → 3,823); `make cdf`: `normCdf` 12,435 →
+  12,466, `erfc` 9,140 → 9,211. The second stage about 48,000 gas at the
+  median, 355,000 at most. FP127N 5,005 → 9,013 bytes.
+- `test/fp127/Imports.t.sol`'s rbad127 fuzz no longer underflows building
+  v for g = 1 or 2.
 
 BlockulatorWad, a third library (`contracts/src/wad/`, inline, no deployed
 object): Solady's `FixedPointMathLib` WAD names, signatures and error

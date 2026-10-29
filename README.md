@@ -1,10 +1,12 @@
 # Blockulator
 
 <!-- badges:begin -->
-[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-509%20forge%20tests-3f6d9c)](test) [![to the last wei](https://img.shields.io/badge/WAD-0%20wrong%20of%20108%2C000-00694e)](docs/benchmarks/wad.md) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
+[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-535%20forge%20tests-3f6d9c)](test) [![to the last wei](https://img.shields.io/badge/WAD-0%20wrong%20of%20108%2C000-00694e)](docs/benchmarks/wad.md) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
 <!-- badges:end -->
 
-**The definitive source for precision.** FP127 and FP19 put precision maths in one `int256`: 38 digits and 71, every op correctly rounded, checked on chain, and now competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)
+**The definitive source for precision.** Two libraries, one `int256` each: FP127, 38 digits of fixed point, every op correctly rounded; FP19, 71 digits of float, every op correctly rounded or exact. Checked on chain, competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)
+
+On typical inputs FP127's ln and pow cost 1,944 and 3,317 gas against PRBMath's 7,083 and 10,065, with 38 digits against 18; exp is 2,835 against 2,816. FP19's ln and pow cost 3,106 and 5,964 against ABDKMathQuad's 16,356 and 23,479, with 71 digits against 34; ABDKMathQuad's sqrt is cheaper, 760 against 1,205. Across the 326 live Aave and Morpho markets at the survey block, the deployed accrual keeps a median 7.2 correct digits of the pending interest; FP127 keeps 30 and FP19 67.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/digits-dark.svg">
@@ -31,7 +33,7 @@ Share of results off by at least one wei, against the exact value rounded in eac
 | `powWad` | **0 of 3,461** | 66% | 71% | 85% | 66% | — |
 | `lambertW0Wad` | **0 of 3,999** | 28% | — | — | — | — |
 
-Where they offer them, Solady, PRBMath, Solmate, OpenZeppelin Math, Uniswap FullMath and snekmate are exact on `divWad`, `divWadUp`, `mulWad`, `mulWadUp`, `sDivWad`, `sMulWad`, `sqrtWad`, `sqrtWadUp`. Versions: BlockulatorWad 7356be2, Solady v0.1.26, PRBMath SD59x18 v4.2.0, PRBMath UD60x18 v4.2.0, Solmate main@89365b8, OpenZeppelin Math v5.7.0 (vendored), Uniswap FullMath v4-core v4.0.0 (vendored), snekmate v0.1.2 (vyper 0.4.3); counts in [`wad.md`](docs/benchmarks/wad.md).
+Where they offer them, Solady, PRBMath, Solmate, OpenZeppelin Math, Uniswap FullMath and snekmate are exact on `divWad`, `divWadUp`, `mulWad`, `mulWadUp`, `sDivWad`, `sMulWad`, `sqrtWad`, `sqrtWadUp`. Versions: BlockulatorWad 6c2eeaf, Solady v0.1.26, PRBMath SD59x18 v4.2.0, PRBMath UD60x18 v4.2.0, Solmate main@89365b8, OpenZeppelin Math v5.7.0 (vendored), Uniswap FullMath v4-core v4.0.0 (vendored), snekmate v0.1.2 (vyper 0.4.3); counts in [`wad.md`](docs/benchmarks/wad.md).
 <!-- wad:end -->
 
 ## Twice the digits, at the same gas
@@ -40,20 +42,20 @@ Where they offer them, Solady, PRBMath, Solmate, OpenZeppelin Math, Uniswap Full
 | | digits | add | mul | div | exp<sup>t</sup> | ln<sup>t</sup> | pow<sup>t</sup> | sqrt<sup>t</sup> |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | *floating point* | | | | | | | | |
-| **FP19** | **71** | **662** | **530** | **800** | **3,278** | **3,077** | **5,935** | **1,205** |
+| **FP19** | **71** | **662** | **530** | **800** | **3,278** | **3,106** | **5,964** | **1,205** |
 | ABDKMathQuad | 34 | 734 | 709 | 818 | 5,668 | 16,356 | 23,479 | 760 |
 | *fixed point* | | | | | | | | |
-| **FP127** | **38** | **128** | **267** | **412** | **2,716** | **1,944** | **3,316** | **469** |
+| **FP127** | **38** | **128** | **267** | **413** | **2,835** | **1,944** | **3,317** | **469** |
 | ABDKMath64x64 | 19 | 162 | 171 | 221 | 3,380 | 7,080 |  | 828 |
 | PRBMath SD59x18 | 18 | 189 | 485 | 509 | 2,816 | 7,083 | 10,065 | 978 |
 | PRBMath UD60x18 | 18 | 150 | 237 | 261 | 2,720 | 6,474 | 9,544 | 824 |
 | Solady | 18 | 3 | 126 | 93 | 430 | 556 | 1,279 | 393 |
 | Solmate | 18 |  | 131 | 97 | 430 | 632 | 1,355 | 456 |
-| Balancer LogExpMath | 18 |  |  |  | 1,040 | 1,091 | 2,223 | 2,349 |
+| Balancer LogExpMath | 18 |  |  |  | 1,040 | 1,091 | 2,223 | 2,351 |
 | snekmate | 18 |  |  |  | 604 | 1,226 |  |  |
 | OpenZeppelin Math | 18 |  |  |  |  |  |  | 766 |
 
-Median gas per inline call, over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder; digits are precision at 1. FP19 is cheaper than ABDKMathQuad on `add`, `mul`, `div`, `exp`, `ln` and `pow`, not `sqrt`, and over these 7 ops carries 2.1× its digits at 32% of its mean gas. FP127 carries twice the digits of every fixed-point library here; it is cheaper than PRBMath SD59x18 and OpenZeppelin Math on every op they share, and than ABDKMath64x64 on `add`, `exp`, `ln` and `sqrt`, and than PRBMath UD60x18 on `add`, `exp`, `ln`, `pow` and `sqrt`. Solady, Solmate, Balancer LogExpMath and snekmate are cheaper on most ops, at 18 digits; Solady's `add` is the unchecked `rawAdd`.
+Median gas per inline call, over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder; digits are precision at 1. FP19 is cheaper than ABDKMathQuad on `add`, `mul`, `div`, `exp`, `ln` and `pow`, not `sqrt`, and over these 7 ops carries 2.1× its digits at 32% of its mean gas. FP127 carries twice the digits of every fixed-point library here; it is cheaper than OpenZeppelin Math on every op they share, and than ABDKMath64x64 on `add`, `exp`, `ln` and `sqrt`, and than PRBMath SD59x18 on `add`, `mul`, `div`, `ln`, `pow` and `sqrt`, and than PRBMath UD60x18 on `add`, `ln`, `pow` and `sqrt`. Solady, Solmate, Balancer LogExpMath and snekmate are cheaper on most ops, at 18 digits; Solady's `add` is the unchecked `rawAdd`.
 <!-- gas:end -->
 
 Every op and library: [`gas.md`](docs/benchmarks/gas.md), [`gas19.md`](docs/benchmarks/gas19.md). Compile with `via_ir = true`; it takes another 10–33% off the inline libraries.
@@ -85,7 +87,7 @@ uint256 paid = FP19Lib.toUintDown(grown);          // to the user: floor
 int256  ltv  = FP127Lib.divUp(debt, collateral);    // a limit check: never below the truth
 ```
 
-Or call the deployed contracts, where every op is a free `eth_call`: `IFP127E(0x9DCa…4887).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
+Or call the deployed contracts, where every op is a free `eth_call`: `IFP127E(0xc16F…0808).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
 
 **Requires the CLZ opcode** (EIP-7939, the Osaka EVM). Supported: Ethereum, Arbitrum, OP Mainnet, Base, Unichain, Polygon PoS, BNB Chain, Gnosis, Scroll, Linea. Not supported: zkSync Era, Avalanche C-Chain. Check any chain with `make probe-clz RPC=<url>`.
 
@@ -102,7 +104,11 @@ The [integration guide](https://blockulator.com/library/#integrating) has the wo
 
 | contract | address |
 |---|---|
-| FP127 v8 | `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B` |
+| FP127 (the number) | `0x0DF738d125677550a80A46BaF254386C66f96E0d` |
+| FP127E (exp, log, pow) | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` |
+| FP127H (hyperbolic) | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` |
+| FP127N (erf, normCdf) | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` |
+| FP127S (Lambert W) | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` |
 | FP19 (the number) | `0x94d9d43D6202827429a8058959eeCf6d232b8729` |
 | FP19E (exp, log, pow) | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` |
 | FP19H (hyperbolic) | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` |

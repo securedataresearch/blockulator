@@ -2,10 +2,15 @@
 
 Everything in this directory is served at blockulator.com/contracts/deployments/.
 
-- `FP127.md`, `FP127.json`: the FP127 object on Sepolia, CREATE2 through the
-  deterministic proxy with salt "FP127 v8" (v1 to v7 recorded below it), the
-  verification recipe and the smoke test. Deploy a new version with
-  `make deploy-sepolia`, `make verify-sepolia`, `make smoke-sepolia`.
+- `FP127.md`, `FP127.json`, `FP127E.json`, `FP127H.json`, `FP127N.json`,
+  `FP127S.json`: FP127 v9, five objects from one source, one idea each
+  (salts "FP127 v9", "FP127E v9", "FP127H v9", "FP127N v9", "FP127S v9":
+  the number, the elementary, hyperbolic and normal-distribution functions,
+  and Lambert W), CREATE2 through the deterministic proxy, with the
+  verification recipe and the smoke test; v1 to v8 (one object each) are
+  recorded below them. Deploy a new version with `make deploy-sepolia`,
+  `make verify-sepolia`, `make smoke-sepolia` (FP127's) and the `-fp127e`,
+  `-fp127h`, `-fp127n`, `-fp127s` targets.
 - `FP19.md`, `FP19.json`, `FP19E.json`, `FP19H.json`, `FP19N.json`,
   `FP19S.json`: FP19 v6, five objects from one source, one idea each (salts
   "FP19 v6", "FP19E v6", "FP19H v6", "FP19N v6", "FP19S v6": the number,
@@ -18,9 +23,9 @@ Everything in this directory is served at blockulator.com/contracts/deployments/
   `FP19X2.json` and `FP19X3.json` stay here marked `"release": "Blockulator
   2.1"`, `"current": false`: those addresses are still live, and not part
   of 3.0.
-- `Ladder.md`, `Ladder.json`: ladder v13 (salt "FP127 ladder v13"):
+- `Ladder.md`, `Ladder.json`: ladder v14 (salt "FP127 ladder v14"):
   `LadderFP127` and `LadderFP19Deployed`, which call the deployed objects,
-  with `LadderRunner` and `EdgeRunner` (v1 to v12 recorded below).
+  with `LadderRunner` and `EdgeRunner` (v1 to v13 recorded below).
   `make deploy-ladder-sepolia`, `make verify-ladder-sepolia`.
 - `RELEASE.md`, `RELEASE.json`: every address in Blockulator 3.0, and those
   of 2.2, 2.1 and 2.0, which stay live.
@@ -86,7 +91,8 @@ to send unless the answer is 255.
 
 The deploy targets are pattern rules over the objects table in
 `scripts/fp127/gen.py` (name, library, salt): for each stem `<o>` in `fp127
-fp19 fp19e fp19h fp19n fp19s` (`gen.py --objects`), `make predict-<o>`,
+fp127e fp127h fp127n fp127s fp19 fp19e fp19h fp19n fp19s` (`gen.py
+--objects`), `make predict-<o>`,
 `deploy-<o>-sepolia` and `verify-<o>-sepolia` (`scripts/fp127/deploy.py`,
 `stdjson.py`, `verify.py`); `predict`, `deploy-sepolia` and `verify-sepolia`
 are FP127's. A new object or salt edits only the table.

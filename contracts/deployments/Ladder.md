@@ -10,22 +10,45 @@ called this same code, so the two cannot disagree; `scripts/ladder/livecap.py`
 re-runs every cell of every input through the live runner and records the
 largest N the public RPC completes.
 
-Version 13 (Blockulator 3.0, 2026-10-28, salt `"FP127 ladder v13"`,
-`0x4650313237206c61646465722076313300000000000000000000000000000000`) puts
+Version 14 (Blockulator 3.0, 2026-10-29, salt `"FP127 ladder v14"`,
+`0x4650313237206c61646465722076313400000000000000000000000000000000`) puts
 only our deployed objects' forms on chain: `LadderFP127`, which staticcalls
-FP127 v8 at `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`, and
-`LadderFP19Deployed`, which staticcalls FP19 v6's five objects (add, sub and
-fromUint inline, as `LadderBase` keeps them pure), with the two runners.
-The runners take eighteen adapter slots in form-id order (form 0 `fp127`,
-form 10 `fp19`); every other slot is the zero address. The other libraries'
-adapters run the same Solidity locally (`make ladder`, `make edges`), and
-ladder v11's runners, still live, run 2.2's eleven forms (FP127 v6 and
-FP19 v5 among them). Deployed 2026-10-28 by `make deploy-ladder-sepolia`, blocks 12,015,319
-to 12,015,322, with source commit `81e4771`. All four are verified on
-Sourcify, `exact_match`. `scripts/ladder/livecap.py` and `liveedges.py`
-re-ran every cell through these runners on 2026-10-28: 1,920 ladder cells at
-block 12,015,346 and 276 edge cells at block 12,015,374, 0 mismatches (the
-datasets' live stamps). Machine-readable copy: `Ladder.json`.
+FP127 v9's five objects (FP127 `0x0DF738d125677550a80A46BaF254386C66f96E0d`,
+FP127E `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808`, FP127H
+`0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B`, FP127N
+`0xAA7Cd9635aE8630379636F533f23DBf2C193d296`, FP127S
+`0xB9C2583a7Ad2251444DC7752658B6C1107C25036`; the op's object by
+`contracts/src/fp127/ops.json`), and `LadderFP19Deployed`, which staticcalls
+FP19 v6's five objects (add, sub and fromUint inline, as `LadderBase` keeps
+them pure), with the two runners. The runners take eighteen adapter slots in
+form-id order (form 0 `fp127`, form 10 `fp19`); every other slot is the zero
+address. The other libraries' adapters run the same Solidity locally (`make
+ladder`, `make edges`), and ladder v11's runners, still live, run 2.2's
+eleven forms (FP127 v6 and FP19 v5 among them). Deployed 2026-10-29 (UTC) by
+`make deploy-ladder-sepolia`, blocks 12,017,704 to 12,017,707, with source
+commit `80d0656`. All four are verified on Sourcify, `exact_match`.
+`scripts/ladder/livecap.py` and `liveedges.py` re-ran every cell through
+these runners on 2026-10-29: 1,913 ladder cells at block 12,017,732 and 276
+edge cells at block 12,017,760, 0 mismatches (the datasets' live stamps).
+Machine-readable copy: `Ladder.json`.
+
+| contract | address | tx | block | gas |
+|---|---|---|---:|---:|
+| `LadderFP127` | `0x29409AA44f185b649c614Ece5F49007363C95C92` | [`0x460b2730…`](https://sepolia.etherscan.io/tx/0x460b2730f57ea81db41f3d2818e37687ee5fd5f7211e1af00ab56491ab2bb7c6) | 12,017,704 | 8,004,033 |
+| `LadderFP19Deployed` | `0x25B7Ffce88Cc8742720c33B7B74Dd3076E4Ec5B8` | [`0xea7bf1bf…`](https://sepolia.etherscan.io/tx/0xea7bf1bf3e689387253e611c280cf793be688b5b26635b0fc30c57cf82f5b28d) | 12,017,705 | 8,704,753 |
+| `LadderRunner` | `0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589` | [`0x118cc8ba…`](https://sepolia.etherscan.io/tx/0x118cc8badea6940df5fcd54ff9bd24031b15c1f887cf41e6ecf1a9843c07fc59) | 12,017,706 | 4,728,716 |
+| `EdgeRunner` | `0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A` | [`0x64b0d45d…`](https://sepolia.etherscan.io/tx/0x64b0d45d194d1aac6101318eb4949698d0ca4aa49d582e8b2fab2496797a53c0) | 12,017,707 | 4,541,546 |
+
+Version 13 (2026-10-28, salt `"FP127 ladder v13"`,
+`0x4650313237206c61646465722076313300000000000000000000000000000000`;
+superseded by v14 on 2026-10-29, still live) put the same two forms on
+chain: `LadderFP127`, which staticcalls FP127 v8, the one object, at
+`0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`, and `LadderFP19Deployed`,
+which staticcalls FP19 v6's five objects, with the two runners. Deployed
+2026-10-28, blocks 12,015,319 to 12,015,322, with source commit `81e4771`.
+All four are verified on Sourcify, `exact_match`. The live check on
+2026-10-28: 1,920 ladder cells at block 12,015,346 and 276 edge cells at
+block 12,015,374, 0 mismatches.
 
 | contract | address | tx | block | gas |
 |---|---|---|---:|---:|
@@ -293,7 +316,7 @@ stamps). Machine-readable copy: `Ladder.json`.
 An edge (one op once) through `EdgeRunner`:
 
 ```
-cast call 0x05A77934179b701EE2a093bAd83497765ED20d91 "run(uint8,uint8,int256[])(bool,int256,bytes4,uint256)" \
+cast call 0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A "run(uint8,uint8,int256[])(bool,int256,bytes4,uint256)" \
   <op> <form> "[<arg0>,...]" --rpc-url https://ethereum-sepolia-rpc.publicnode.com
 ```
 
@@ -304,7 +327,7 @@ probe's array for the form's scale in `scripts/ladder/edge-inputs.json`,
 an integer exponent unscaled. A ladder cell through `LadderRunner`:
 
 ```
-cast call 0xCbD62BdD4Fdd66EA814198B3B7804Cfab80e170C \
+cast call 0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589 \
   "run(uint8,uint8,uint32,int256[])(bool,int256,bytes4,uint256,uint256)" \
   <scenario> <form> <n> "[<p0>,<p1>,...]" \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com
@@ -317,7 +340,7 @@ Scenario ids are the `index` field in `scripts/ladder/scenarios.json`
 the last four from v5);
 forms are 0 fp127, 1 fp127lib, 2 abdk, 3 solady, 4 prb, and from v5
 5 quad, 6 balancer, 7 aave, 8 morpho, 9 maker, and from v6 10 fp19. On
-the v12 and v13 runners only forms 0 and 10 have an adapter; the others
+the v12 to v14 runners only forms 0 and 10 have an adapter; the others
 run on v11's runner, `0x08b06D93620e7B33cD2d600118a75B45EF779Cec`. `p` is
 the input's `fp127`, `abdk`, `wad`, `quad`, `ray` or `fp19` array from
 `scripts/ladder/inputs.json` (forms 0 and 1 take `fp127`, 2 `abdk`, 3, 4, 6
@@ -335,7 +358,7 @@ scenario function.
 Example, the headline cell (compound, reference input, FP127, N = 365):
 
 ```
-cast call 0xCbD62BdD4Fdd66EA814198B3B7804Cfab80e170C \
+cast call 0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589 \
   "run(uint8,uint8,uint32,int256[])(bool,int256,bytes4,uint256,uint256)" 0 0 365 \
   "[3402823669209384634633746074317682114560000,93228045731763962592705371899114578]" \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com

@@ -2,15 +2,15 @@
 pragma solidity ^0.8.24;
 
 // @notice FP127's Yul objects (3.0, salts "FP127 v9", "FP127E v9", "FP127H v9", "FP127N v9", "FP127S v9"): the
-//         number, the elementary, hyperbolic, normal and special functions, at their predicted CREATE2 addresses
-//         (contracts/deployments/FP127.md has v8, the one object they replace). Tests etch the artifacts' runtimes
+//         number, the elementary, hyperbolic, normal and special functions, at their CREATE2 addresses, live on
+//         Sepolia since 2026-10-29 (contracts/deployments/FP127.md). Tests etch the artifacts' runtimes
 //         here, so the same adapter code runs in the harness and on chain; the adapters that call them are deployed
 //         after them.
-address constant FP127_ADDRESS = 0xBbA5Eec16edf078eb26880BD67f64c919892F236;
-address constant FP127E_ADDRESS = 0x9DCa6968D7Ec0212d95654c55bA62654ea484887;
-address constant FP127H_ADDRESS = 0xFCF033Ccd330dEf687e6561d7216aC44aBCD8328;
-address constant FP127N_ADDRESS = 0x6B5FFDDA80b3CCE0E66d50bCdfdcE8AAed1b41e3;
-address constant FP127S_ADDRESS = 0x8951091C410B84AaE9Dc297f17f4b25Ad522250e;
+address constant FP127_ADDRESS = 0x0DF738d125677550a80A46BaF254386C66f96E0d;
+address constant FP127E_ADDRESS = 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808;
+address constant FP127H_ADDRESS = 0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B;
+address constant FP127N_ADDRESS = 0xAA7Cd9635aE8630379636F533f23DBf2C193d296;
+address constant FP127S_ADDRESS = 0xB9C2583a7Ad2251444DC7752658B6C1107C25036;
 // @notice FP19's Yul objects (contracts/deployments/FP19.md; 3.0, salts "FP19 v6", "FP19E v6", "FP19H v6",
 //         "FP19S v6"): the number, the elementary, hyperbolic and special functions. LadderFP19 is inline (FP19Lib) and calls none of them; LadderFP19Deployed, the form
 //         the on-chain runners use, calls these, and tests etch the artifacts' runtimes here.

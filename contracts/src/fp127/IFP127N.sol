@@ -12,20 +12,26 @@ interface IFP127N {
     error OutOfRange();
 
     /// @notice The error function. |x| <= 4 by the series, |x| > 4 as
-    ///         1 - erfc(x) by the tail polynomial, both at 2^-192 and rounded
-    ///         once; +-1 exactly from |x| >= 9.375, where 1 - erf is below
-    ///         2^-130.8 and the subtraction rounds to one.
+    ///         1 - erfc(x) by the tail polynomial, both at 2^-192; one rounding
+    ///         when the value's bound (2^45.6 and 2^20 units of 2^-192,
+    ///         erf_model.py) clears the rounding boundary, else FP19's wide
+    ///         second stage (erfw127): correctly rounded. +-1 exactly from
+    ///         |x| >= 9.375, where 1 - erf is below 2^-130.8 and the subtraction
+    ///         rounds to one.
     function erf(int256 x) external pure returns (int256 r);
     /// @notice The complementary error function 1 - erf(x), computed directly
     ///         for x > 4 so the tail keeps its digits down to the format's
     ///         floor (erfc(9.3) is one ULP; zero from 9.375, where it is below
-    ///         2^-130.8); 2 - erfc(-x) for x < 0.
+    ///         2^-130.8); 2 - erfc(-x) for x < 0. One rounding, or erf's second
+    ///         stage when the bound reaches the boundary: correctly rounded.
     function erfc(int256 x) external pure returns (int256 r);
     /// @notice The standard normal distribution function
     ///         Phi(x) = erfc(-x / sqrt2) / 2, the argument scaled at 2^-192. The
     ///         tail keeps its digits to the format's floor: Phi(-13) is about
     ///         two ULPs, Phi(-14) rounds to zero, and Phi(x) is exactly one from
-    ///         x = 14. This is the N(d) of Black-Scholes; on an 18-decimal grid
+    ///         x = 14. One rounding, or erf's second stage at y = |x| / sqrt 2
+    ///         (exact, as FP19's) when the bound reaches the boundary: correctly
+    ///         rounded. This is the N(d) of Black-Scholes; on an 18-decimal grid
     ///         it is zero from about d = -8.3.
     function normCdf(int256 x) external pure returns (int256 r);
 }

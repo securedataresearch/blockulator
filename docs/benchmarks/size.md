@@ -8,8 +8,8 @@ The runtime bytecode one op adds to a contract that calls it through `FP127Lib` 
 
 | library | ops | smallest | median | largest | all ops, sum of singles |
 |---|---:|---|---:|---|---:|
-| FP127 legacy | 53 | `sign` 8 | 480 | `compound` 16,930 | 184,361 |
-| FP127 via_ir | 53 | `sign` 10 | 321 | `compound` 16,473 | 175,563 |
+| FP127 legacy | 53 | `sign` 8 | 480 | `compound` 16,930 | 194,639 |
+| FP127 via_ir | 53 | `sign` 10 | 321 | `compound` 16,473 | 186,934 |
 | FP19 legacy | 65 | `abs` 108 | 544 | `normCdf` 17,159 | 225,807 |
 | FP19 via_ir | 65 | `abs` 55 | 443 | `normCdf` 17,344 | 209,090 |
 
@@ -24,7 +24,7 @@ Every `FP*Lib` function is one self-contained `assembly` block that carries its 
 | FP127 | `exp`, `ln` | 9,765 | 14,399 | 9,116 | 13,178 |
 | FP127 | `exp`, `ln`, `pow` | 16,995 | 29,626 | 16,458 | 27,963 |
 | FP127 | `exp`, `log2`, `sqrt` | 9,816 | 14,489 | 9,095 | 13,178 |
-| FP127 | `erf`, `erfc`, `normCdf` | 5,815 | 16,377 | 11,394 | 16,217 |
+| FP127 | `erf`, `erfc`, `normCdf` | 11,356 | 26,655 | 16,970 | 27,588 |
 | FP127 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 17,447 | 17,556 | 16,804 | 16,845 |
 | FP19 | `add`, `sub`, `mul`, `div` | 1,113 | 2,046 | 1,031 | 1,661 |
 | FP19 | `exp`, `ln` | 11,852 | 12,764 | 10,340 | 10,833 |
@@ -34,7 +34,7 @@ Every `FP*Lib` function is one self-contained `assembly` block that carries its 
 
 ## Inline or call the deployed object
 
-Inlining saves the external call: about 579 gas per call to the deployed FP127 and 464 to FP19 ([`gas.json`](gas.json), [`gas19.json`](gas19.json): `add`, object median minus inline median). `staticcall` the deployed object instead (for FP19, whichever of FP19, FP19E, FP19H, FP19N and FP19S holds the op) when inlining would take the contract near the 24,576-byte limit (EIP-170), or when the op is large and called rarely. Deploying code costs at least 200 gas a byte, so inlining an op of N bytes pays for itself only after about 200N / 579 calls: a small op at once, `pow` after thousands. The deployed objects already hold every op, so calling one adds only the call site.
+Inlining saves the external call: about 554 gas per call to the deployed FP127 and 464 to FP19 ([`gas.json`](gas.json), [`gas19.json`](gas19.json): `add`, object median minus inline median). `staticcall` the deployed object instead (for FP19, whichever of FP19, FP19E, FP19H, FP19N and FP19S holds the op) when inlining would take the contract near the 24,576-byte limit (EIP-170), or when the op is large and called rarely. Deploying code costs at least 200 gas a byte, so inlining an op of N bytes pays for itself only after about 200N / 554 calls: a small op at once, `pow` after thousands. The deployed objects already hold every op, so calling one adds only the call site.
 
 ## FP127
 
@@ -90,9 +90,9 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `cosh` | 6,382 | 5,694 |
 | `tanh` | 6,715 | 6,962 |
 | `atanh` | 11,158 | 12,219 |
-| `erf` | 5,456 | 5,364 |
-| `erfc` | 5,431 | 5,371 |
-| `normCdf` | 5,490 | 5,482 |
+| `erf` | 8,849 | 9,087 |
+| `erfc` | 8,880 | 9,226 |
+| `normCdf` | 8,926 | 9,275 |
 
 ## FP19
 
