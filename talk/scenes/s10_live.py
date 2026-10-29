@@ -13,7 +13,10 @@ digits, leaving a faint trail, the cluster re-forming around 30; then
 again to the FP19 row, around 67. Each row's median is ticked and
 labelled as it settles, a bracket between the medians names the margin
 in digits, and the two Blockulator rows settle under a soft band, drawn
-last. The closing line names the win in the rounded medians. About 45 s.
+last. The closing line names the win in the rounded medians.
+
+Four sections, one per click: the burst into the deployed row; the
+drop to FP127; the drop to FP19; the legend and the closing line (V33).
 
 Numbers from docs/benchmarks/accrual-deployed.json: .cases[] with .group
 == "live" (.protocol, .primaryTruth, .truth[primaryTruth].deployed
@@ -44,7 +47,7 @@ from manim import (
 )
 from manim.utils.rate_functions import ease_in_out_cubic
 
-from vocab import DeckScene, GridLine, Palette, _load, digits, live, measure, thousands, words
+from vocab import SIZE_CAPTION, DeckScene, GridLine, Palette, _load, digits, live, measure, thousands, words
 
 ROWS = (("deployed", "as deployed", Palette.SLATE), ("fp127", "the same interest in FP127", Palette.EMERALD), ("fp19", "the same interest in FP19", Palette.TEXT))
 PROTOCOL_LABEL = {"aave": "Aave", "morpho": "Morpho"}
@@ -57,6 +60,8 @@ SEED = 40
 LABEL_X = -3.25  # row names end here, level with their row
 BRACKET_DROP = 0.48  # the margin bracket sits this far under the upper row's centre
 CLOSE_Y = 3.5
+
+LITERALS: dict[str, str] = {}  # every digit on the slide is a value of numbers()
 
 
 def numbers() -> dict:
@@ -73,12 +78,15 @@ def numbers() -> dict:
     assert medians["deployed"] < medians["fp127"] < medians["fp19"]
     return {
         "points": pts,
+        "count": len(pts),
         "counts": counts,
         "block": thousands(survey["block"]),
         "date": survey["date"],
+        "axis_ticks": list(range(AXIS[0], AXIS[1] + 1, AXIS[2])),
         "above": sum(1 for x in pts if x["fp127"] > x["deployed"]),
         "above_fp19": sum(1 for x in pts if x["fp19"] > x["deployed"]),
         "medians": medians,
+        "medians_rounded": {k: round(v) for k, v in medians.items()},
         "margins": {"fp127": round(medians["fp127"] - medians["deployed"], 1), "fp19": round(medians["fp19"] - medians["fp127"], 1)},
     }
 
@@ -91,15 +99,18 @@ def marker(protocol: str, colour: str):
 
 
 class Live(DeckScene):
+    SECTIONS = ("deployed", "fp127", "fp19", "closing")
+
     def construct(self):
         n = numbers()
         med = n["medians"]
-        self.wait(0.6)
+        self.section(0)
+        self.wait(0.3)
         self.play(self.caption(f"docs/benchmarks/accrual-deployed.json · live · block {n['block']} · {n['date']}"))
 
         axis = GridLine(AXIS, length=AXIS_X1 - AXIS_X0, colour=Palette.RULE, tick_size=0.1)
         axis.shift([AXIS_X0, AXIS_Y, 0] - axis.n2p(AXIS[0]))
-        ticks = VGroup(*[digits(str(v), 20, Palette.FAINT).next_to(axis.n2p(v), DOWN, buff=0.18) for v in range(AXIS[0], AXIS[1] + 1, AXIS[2])])
+        ticks = VGroup(*[digits(str(v), SIZE_CAPTION, Palette.FAINT).next_to(axis.n2p(v), DOWN, buff=0.18) for v in n["axis_ticks"]])
         title = words("correct digits of the pending interest", 22, Palette.MUTED).move_to([(AXIS_X0 + AXIS_X1) / 2, AXIS_Y - 0.56, 0])
         rules = VGroup(*[Line([axis.n2p(v)[0], ROW_Y["fp19"] - 0.5, 0], [axis.n2p(v)[0], ROW_Y["deployed"] + 0.5, 0], color=Palette.RULE, stroke_width=1, stroke_opacity=0.22) for v in range(AXIS[0] + AXIS[2], AXIS[1] + 1, AXIS[2])])
         self.add(rules)
@@ -118,7 +129,9 @@ class Live(DeckScene):
             return [axis.n2p(x[key])[0], ROW_Y[key] + jitter[x["id"]], 0]
 
         prev_key, prev_colour = None, None
-        for key, name, colour in ROWS:
+        for k, (key, name, colour) in enumerate(ROWS):
+            if k:
+                self.section(k, hold=1.5)
             y = ROW_Y[key]
             ours = key != "deployed"
             label = words(name, 20, colour).move_to([0, y, 0]).align_to([LABEL_X, 0, 0], RIGHT)
@@ -128,7 +141,7 @@ class Live(DeckScene):
                 for x in order:
                     markers[x["id"]] = marker(x["protocol"], colour).move_to(at(x, key))
                 self.play(LaggedStart(*[FadeIn(markers[x["id"]], scale=0.3) for x in order], lag_ratio=0.01, run_time=3.0))
-                self.wait(1.5)
+                self.wait(0.8)
             else:
                 # the lift: every marker to its new digits, a faint trail behind it; ours under a band
                 band = RoundedRectangle(width=AXIS_X1 - AXIS_X0 + 0.3, height=2 * JITTER + 0.42, corner_radius=0.14, color=colour, fill_color=colour, fill_opacity=0, stroke_width=0).move_to([(AXIS_X0 + AXIS_X1) / 2, y, 0])
@@ -156,24 +169,23 @@ class Live(DeckScene):
                 margin = measure(axis, med[prev_key], med[key], f"+{n['margins'][key]} digits", scale=scale, drop=(AXIS_Y - y_bar) / scale, colour=colour)
                 self.play(Create(margin[0], run_time=0.5), FadeIn(margin[1], run_time=0.5))
                 self.play(FadeIn(margin[2], shift=UP * 0.06, run_time=0.5))
-                self.wait(3.2)
-            else:
-                self.wait(2.0)
             prev_key, prev_colour = key, colour
 
-        # the markers' shapes, named once
+        # the markers' shapes, named once, then the closing line
+        self.section(len(ROWS), hold=2.0)
         legend = VGroup(marker("aave", Palette.BODY), words(f"{n['counts']['aave']} Aave", 18, Palette.BODY), marker("morpho", Palette.BODY), words(f"{n['counts']['morpho']} Morpho", 18, Palette.BODY))
         legend.arrange(RIGHT, buff=0.14)
         legend[2].shift(RIGHT * 0.2)
         legend[3].shift(RIGHT * 0.2)
         legend.move_to([0, CLOSE_Y - 0.45, 0]).align_to([6.9, 0, 0], RIGHT)
         self.play(FadeIn(legend, run_time=0.6))
-        self.wait(1.0)
+        self.wait(0.6)
 
+        mr = n["medians_rounded"]
         close = words(
-            f"the same {len(n['points'])} markets: {round(med['deployed'])} digits as deployed, {round(med['fp127'])} in FP127, {round(med['fp19'])} in FP19",
+            f"the same {n['count']} markets: {mr['deployed']} digits as deployed, {mr['fp127']} in FP127, {mr['fp19']} in FP19",
             24,
             Palette.TEXT,
         ).move_to([0, CLOSE_Y, 0])
         self.play(FadeIn(close, shift=UP * 0.08, run_time=0.8))
-        self.wait(12.0)
+        self.close()

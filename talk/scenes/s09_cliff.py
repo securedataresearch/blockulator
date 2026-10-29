@@ -14,7 +14,14 @@ last standing point, the last probe where it still had a digit, named.
 A legend names the libraries drawn and, under them, those with no dot
 and why: "no exp" (unsupported on every probe) and "rejects negative
 inputs" (ParamOutOfRange on every probe: the representation is
-unsigned). None of the talk's 17 is dropped silently. About 55 s.
+unsigned). None of the talk's 17 is dropped silently. The closing line
+says where the 18-decimal grid is zero from, the last probe where FP127
+still has a digit (−88: it has 0 digits at −89 and a zero value by −100;
+claim V28), and FP19's least digits.
+
+Five sections, one per click: the columns arrive (every value); the
+zeros snap red and the reverts appear; FP127's last digit and FP19's
+row; the legend; the closing line.
 
 Numbers from docs/benchmarks/edges.json: op "exp", the probes whose
 single argument lies in [−100, −40] (.args, .truth, .cells[lib].digits /
@@ -39,7 +46,7 @@ from manim import (
     VGroup,
 )
 
-from vocab import DUPLICATES, Chart, DeckScene, GridLine, Palette, colour_of, edges, glow_line, halo, snap, talk_libs, words
+from vocab import DUPLICATES, WAD_DECIMALS, Chart, DeckScene, GridLine, Palette, colour_of, edges, glow_line, halo, snap, talk_libs, words
 
 OP = "exp"
 ARG_LO, ARG_HI = -100, -40
@@ -53,6 +60,8 @@ REVERT_BAND = -6.0  # digits axis position of the "revert" band, under 0
 SPREAD = 0.1  # scene units between libraries within a column
 LEGEND_X, LEGEND_TOP = 4.75, 2.55
 CLOSE_Y = 3.5
+
+LITERALS: dict[str, str] = {}  # every digit on the slide is a value of numbers()
 
 
 def minus(arg: str) -> str:
@@ -105,6 +114,8 @@ def numbers() -> dict:
         "absent": {lid: {"label": lib[lid]["label"], "reason": why} for lid, why in absent.items()},
         "columns": columns,
         "axisMax": int(-(-y_max // Y_STEP) * Y_STEP),
+        "y_ticks": list(range(0, int(-(-y_max // Y_STEP) * Y_STEP) + 1, Y_STEP)),
+        "wad_decimals": WAD_DECIMALS,
         "fp19_min": min(c["digits"] for c in fp19),
         "fp127_last": {"arg": standing[-1]["arg"], "digits": standing[-1]["cells"]["fp127"]["digits"]},
         "wad_first_zero": first_zero,
@@ -126,17 +137,21 @@ def fmt(d: float) -> str:
 
 
 class Cliff(DeckScene):
+    SECTIONS = ("columns", "zeros", "fp19", "legend", "closing")
+
     def construct(self):
         n = numbers()
         cols, lids = n["columns"], [r["id"] for r in n["libs"]]
+        fam = {r["id"]: r for r in n["libs"]}
         y_max = n["axisMax"]
-        self.wait(0.6)
+        self.section(0)
+        self.wait(0.3)
         self.play(self.caption(f"docs/benchmarks/edges.json · {OP}"))
 
         chart = Chart((0, len(cols) - 1, 1), (0, y_max, Y_STEP), WIDTH, HEIGHT, origin=(*ORIGIN_XY, 0))
         for i, col in enumerate(cols):
             chart.x_label(i, f"exp({minus(col['arg'])})", use_markup=True, buff=0.55)
-        for y in range(0, y_max + 1, Y_STEP):
+        for y in n["y_ticks"]:
             chart.y_label(y, str(y), mono=True)
         revert_lbl = words("revert", 18, Palette.WRONG).next_to(chart.c2p(0, REVERT_BAND), LEFT, buff=0.18)
         chart.y_title("correct digits")
@@ -144,44 +159,52 @@ class Cliff(DeckScene):
         self.play(Create(chart.x_axis, run_time=1.0), Create(chart.y_axis, run_time=1.0))
         self.play(FadeIn(chart.labels, run_time=0.6), FadeIn(chart.titles, run_time=0.6), FadeIn(grid, run_time=0.8))
 
-        # legend, right of the plot: the libraries drawn, then those with no dot and why
-        legend = VGroup()
-        for r in n["libs"]:
-            colour = colour_of(r)
-            row = VGroup(chart.dot(0, 0, colour, radius=0.07), words(r["label"], 17, colour))
-            row[1].next_to(row[0], RIGHT, buff=0.15)
-            legend.add(row)
-        legend.arrange(DOWN, aligned_edge=LEFT, buff=0.13).move_to([5.9, 0, 0]).align_to([LEGEND_X, 0, 0], LEFT).align_to([0, LEGEND_TOP, 0], UP)
-        absent = words("no dot:\n" + absent_text(n["absent"]), 15, Palette.FAINT, line_spacing=0.6)
-        absent.next_to(legend, DOWN, buff=0.32).align_to(legend, LEFT)
-        self.play(LaggedStart(*[FadeIn(r, shift=RIGHT * 0.05) for r in legend], lag_ratio=0.1, run_time=1.2))
-        self.play(FadeIn(absent, run_time=0.6))
-        self.wait(1.5)
-
         offsets = {lid: (k - (len(lids) - 1) / 2) * SPREAD for k, lid in enumerate(lids)}
-        last_digits = {lid: None for lid in lids}
-        hero_dots = {lid: {} for lid in lids if next(r for r in n["libs"] if r["id"] == lid)["ours"]}  # lid → {column: dot}
-        seen_zero = seen_revert = False  # the labels name the first column where each appears
+        hero_dots = {lid: {} for lid in lids if fam[lid]["ours"]}  # lid → {column: dot}
+
+        def x_of(i: int, lid: str) -> float:
+            return chart.c2p(i, 0)[0] + offsets[lid]
+
+        # ---- the columns arrive, left to right: every value, ours last with a halo
         for i, col in enumerate(cols):
-            arrive, snaps, reverts, labels = [], [], [], []
-            x_lbl = chart.c2p(i, 0)[0] + (len(lids) - 1) / 2 * SPREAD + 0.12
+            plain, ours = [], []
             for lid in lids:  # ours first in lids, so draw them last
                 c = col["cells"][lid]
-                fam = next(r for r in n["libs"] if r["id"] == lid)
-                colour = colour_of(fam)
-                x = chart.c2p(i, 0)[0] + offsets[lid]
+                if c["kind"] != "value":
+                    continue
+                colour = colour_of(fam[lid])
+                d = chart.dot(i, c["digits"], colour, radius=0.075 if fam[lid]["ours"] else 0.065).set_x(x_of(i, lid))
+                if fam[lid]["ours"]:
+                    ours.append((d, colour))
+                    hero_dots[lid][i] = d
+                else:
+                    plain.append(d)
+            if plain:
+                self.play(LaggedStart(*[FadeIn(d, scale=0.4) for d in reversed(plain)], lag_ratio=0.08, run_time=0.6))
+            for d, colour in reversed(ours):
+                self.add(halo(d.get_center(), colour, radius=0.075))
+                self.play(FadeIn(d, scale=0.4, run_time=0.35))
+            self.wait(0.4)
+
+        # ---- the zeros snap down and turn red; the reverts appear in the band under the axis
+        self.section(1, hold=1.0)
+        last_digits = {lid: None for lid in lids}
+        seen_zero = seen_revert = False  # the labels name the first column where each appears
+        for i, col in enumerate(cols):
+            snaps, reverts, labels = [], [], []
+            x_lbl = chart.c2p(i, 0)[0] + (len(lids) - 1) / 2 * SPREAD + 0.12
+            for lid in lids:
+                c = col["cells"][lid]
+                colour = colour_of(fam[lid])
+                x = x_of(i, lid)
                 if c["kind"] == "value":
-                    d = chart.dot(i, c["digits"], colour, radius=0.075 if fam["ours"] else 0.065).set_x(x)
-                    arrive.append((d, fam["ours"], colour))
                     last_digits[lid] = c["digits"]
-                    if fam["ours"]:
-                        hero_dots[lid][i] = d
                 elif c["kind"] == "zero":
                     start = last_digits[lid] if last_digits[lid] else Y_STEP / 4
-                    d = chart.dot(i, start, colour, radius=0.075 if fam["ours"] else 0.065).set_x(x)
+                    d = chart.dot(i, start, colour, radius=0.075 if fam[lid]["ours"] else 0.065).set_x(x)
                     line = GridLine((0, 1, 1), length=abs(chart.c2p(0, start)[1] - chart.c2p(0, 0)[1]), rotation=-1.5707963, tick_size=0)
                     line.move_to([x, (chart.c2p(0, start)[1] + chart.c2p(0, 0)[1]) / 2, 0])
-                    snaps.append((d, line, fam["ours"]))
+                    snaps.append((d, line))
                     if not seen_zero:
                         labels.append(words("0", 16, Palette.WRONG).move_to([x_lbl + 0.1, chart.c2p(0, 0)[1] + 0.12, 0]))
                         seen_zero = True
@@ -191,35 +214,28 @@ class Cliff(DeckScene):
                     reverts.append(m)
                     if not seen_revert:
                         labels.append(words("revert", 16, Palette.WRONG).move_to([x_lbl + 0.32, chart.c2p(0, REVERT_BAND)[1], 0]))
+                        labels.append(revert_lbl)
                         seen_revert = True
-            # plain values first, then the zeros snapping down, then the reverts; ours on top with a halo
-            plain = [a for a in reversed(arrive) if not a[1]]
-            ours = [a for a in reversed(arrive) if a[1]]
-            if plain:
-                self.play(LaggedStart(*[FadeIn(d, scale=0.4) for d, _, _ in plain], lag_ratio=0.08, run_time=0.6))
             if snaps:
-                for d, _, _ in snaps:
+                for d, _ in snaps:
                     self.add(d)
-                self.play(LaggedStart(*[snap(d, line, 1, Palette.WRONG, run_time=0.7) for d, line, _ in snaps], lag_ratio=0.12))
+                self.play(LaggedStart(*[snap(d, line, 1, Palette.WRONG, run_time=0.7) for d, line in snaps], lag_ratio=0.12))
             if reverts:
                 self.play(*[Create(m, run_time=0.4) for m in reverts])
-            if i == 0 and revert_lbl not in self.mobjects and any(c["kind"] == "revert" for col2 in cols for c in col2["cells"].values()):
-                self.play(FadeIn(revert_lbl, run_time=0.4))
-            for d, _, colour in ours:
-                self.add(halo(d.get_center(), colour, radius=0.075))
-                self.play(FadeIn(d, scale=0.4, run_time=0.35))
             if labels:
                 self.play(*[FadeIn(t, run_time=0.3) for t in labels])
-            self.wait(1.2)
+            if snaps or reverts:
+                self.wait(0.6)
 
-        # the margins: FP127's last standing point, then the king's row
+        # ---- the margins: FP127's last standing point, then the king's row
+        self.section(2, hold=1.0)
         last = n["fp127_last"]
         i_last = next(i for i, col in enumerate(cols) if col["arg"] == last["arg"])
         d_last = hero_dots["fp127"][i_last]
         last_lbl = words(f"FP127 · {fmt(last['digits'])} digit{'' if last['digits'] == 1 else 's'} still at exp({minus(last['arg'])})", 16, Palette.EMERALD)
         last_lbl.next_to(d_last, UP, buff=0.5)
         self.play(FadeIn(last_lbl, shift=UP * 0.08, run_time=0.5))
-        self.wait(2.0)
+        self.wait(1.0)
         fp19_dots = [hero_dots["fp19"][i] for i in range(len(cols))]
         row = [d.get_center() for d in fp19_dots]
         glow = glow_line(row, Palette.TEXT, width=16.0, opacity=0.22)
@@ -227,12 +243,27 @@ class Cliff(DeckScene):
         self.bring_to_front(*fp19_dots)
         row_lbl = words(f"FP19 · {fmt(n['fp19_min'])} digits on every probe", 20, Palette.TEXT).move_to([chart.c2p(len(cols) / 2 - 0.5, 0)[0], row[0][1] + 0.38, 0])
         self.play(Create(glow, run_time=1.4), FadeIn(row_lbl, shift=UP * 0.06, run_time=0.8))
-        self.wait(2.0)
 
+        # ---- legend, right of the plot: the libraries drawn, then those with no dot and why
+        self.section(3, hold=1.5)
+        legend = VGroup()
+        for r in n["libs"]:
+            colour = colour_of(r)
+            item = VGroup(chart.dot(0, 0, colour, radius=0.07), words(r["label"], 17, colour))
+            item[1].next_to(item[0], RIGHT, buff=0.15)
+            legend.add(item)
+        legend.arrange(DOWN, aligned_edge=LEFT, buff=0.13).move_to([5.9, 0, 0]).align_to([LEGEND_X, 0, 0], LEFT).align_to([0, LEGEND_TOP, 0], UP)
+        absent = words("no dot:\n" + absent_text(n["absent"]), 15, Palette.FAINT, line_spacing=0.6)
+        absent.next_to(legend, DOWN, buff=0.32).align_to(legend, LEFT)
+        self.play(LaggedStart(*[FadeIn(r, shift=RIGHT * 0.05) for r in legend], lag_ratio=0.1, run_time=1.2))
+        self.play(FadeIn(absent, run_time=0.6))
+
+        # ---- the closing line (V28)
+        self.section(4, hold=1.5)
         close = words(
-            f"the 18-decimal grid is zero from exp({minus(n['wad_first_zero'])}) · FP127 stands to exp({minus(last['arg'])}) · FP19: {fmt(n['fp19_min'])} digits on every probe",
+            f"the {n['wad_decimals']}-decimal grid is zero from exp({minus(n['wad_first_zero'])}) · FP127 has digits to exp({minus(last['arg'])}) · FP19: {fmt(n['fp19_min'])} digits on every probe",
             22,
             Palette.TEXT,
         ).move_to([0, CLOSE_Y, 0])
         self.play(FadeIn(close, shift=UP * 0.08, run_time=0.8))
-        self.wait(10.0)
+        self.close()

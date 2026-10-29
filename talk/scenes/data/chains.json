@@ -1,0 +1,22 @@
+{
+  "source": "contracts/deployments/README.md, section \"Chains: CLZ (Osaka) required\" (the table and the Unsupported line), copied by hand on 2026-10-29",
+  "note": "A dated hand copy: the README's probes are from 2026-10-22. Re-probe every chain (make probe-clz RPC=<url>) and the deterministic-deployment proxy's presence (proxy: null means not yet probed) before the talk; claims V5, V3.",
+  "probed": "2026-10-22",
+  "chains": [
+    {"chain": "Ethereum mainnet", "clz_since": "2025-12-03", "upgrade": "Fusaka", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Sepolia", "clz_since": "2025-10-14", "upgrade": "Fusaka", "status": "supported", "probed": "2026-10-22", "deployed": true, "proxy": null},
+    {"chain": "Hoodi", "clz_since": null, "upgrade": "Fusaka", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Arbitrum One", "clz_since": "2026-01-08", "upgrade": "ArbOS 51", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "OP Mainnet", "clz_since": "2026-07-08", "upgrade": "Upgrade 19 \"Karst\"", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Unichain", "clz_since": "2026-07-08", "upgrade": "Upgrade 19 \"Karst\"", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Base", "clz_since": "2026-05-28", "upgrade": "\"Azul\"", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Polygon PoS", "clz_since": "2026-03-04", "upgrade": "Lisovo", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "BNB Chain", "clz_since": "2026-04-28", "upgrade": "Osaka / Mendel", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Gnosis", "clz_since": "2026-04-14", "upgrade": "Fusaka", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Scroll", "clz_since": null, "upgrade": "Galileo", "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Linea", "clz_since": null, "upgrade": null, "status": "supported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "zkSync Era", "clz_since": null, "upgrade": null, "status": "unsupported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Avalanche C-Chain", "clz_since": null, "upgrade": null, "status": "unsupported", "probed": "2026-10-22", "deployed": false, "proxy": null},
+    {"chain": "Polygon zkEVM", "clz_since": null, "upgrade": null, "status": "unsupported", "probed": "2026-10-22", "deployed": false, "proxy": null}
+  ]
+}

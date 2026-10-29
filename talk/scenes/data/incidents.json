@@ -1,5 +1,5 @@
 {
-  "_doc": "Slide 5, '$130 million': the five incidents of research_notes/talk/essay-v6.txt §2, oldest first. 'rounding' is §2's one-line wording verbatim (the scene sets its ' x ' as ' × ' and '...' as '…'); 'loss' is the figure the slide shows; 'lossUsd' is what the running sum adds (the lower Resupply bound, the realised Thetanuts figure); 'source' says where each figure comes from. 'total' is the slide's phrase for the sum.",
+  "_doc": "Slide 5, '$130 million': the five incidents of research_notes/talk/essay-v6.txt §2, oldest first. 'rounding' is §2's one-line wording (the scene sets its ' x ' as ' × '); the Balancer V1 line's '1.4999...' is written 'just under 1.5', since no number on screen carries an ellipsis (REPORT: the wording is the author's to settle); 'loss' is the figure the slide shows; 'lossUsd' is what the running sum adds (the lower Resupply bound, the realised Thetanuts figure); 'source' says where each figure comes from. 'total' is the slide's phrase for the sum.",
   "since": "June 2025",
   "total": "more than $130 million, before recoveries",
   "incidents": [
@@ -38,7 +38,7 @@
     {
       "date": "31 Aug 2026",
       "protocol": "Balancer V1",
-      "rounding": "3 x 1.4999... = 4.4999..., rounded to 4. One token unit paid for one and a half, 438 times.",
+      "rounding": "3 x a rate just under 1.5 = just under 4.5, rounded to 4. One token unit paid for one and a half, 438 times.",
       "loss": "$1.39M",
       "lossUsd": 1390000,
       "source": "$1.39M, BIP-930"

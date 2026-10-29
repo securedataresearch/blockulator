@@ -21,12 +21,16 @@ row shown. numbers() also carries each row's correct significant digits,
 floor(−log10(|value − truth| / truth)), the measure edges.json reports
 as .digits, so the ledger keeps both counts. Then the reveal: the FP19
 and FP127 rows, larger, on a glowing panel, drawn last, labelled in the
-same form as the others, the plain count: all 18 right, then what the
-word holds by the cell's measure. FP127 (fixed point) holds correct
-decimals, the cell's .digits less the integer part's digits (a floor);
-FP19 (a float) holds the cell's .digits correct digits. Labels come from
-static/data/libraries.json; no row says why a library's digits end where
-they do (a documented precision is not a defect). About 75 s.
+same form as the others, the plain count: all 18 right, then how many
+digits of the whole word match e^40 by eye: the word's value (decoded
+from the cell's .raw, written to 80 decimals) against e^40 to 80
+decimals (vocab.truth80, mpmath), counted with matching_digits. Labels
+come from static/data/libraries.json; no row says why a library's digits
+end where they do (a documented precision is not a defect). Nothing
+here says what the format holds (that is slide 15's fact).
+
+Four sections, one per click: the exact row; the three library rows;
+the two Blockulator rows; the closing line (claims V9, V29).
 """
 
 from __future__ import annotations
@@ -43,10 +47,11 @@ from manim import (
 from manim.utils.rate_functions import ease_out_cubic
 
 from vocab import (
+    SIZE_BODY,
+    TRUTH_DECIMALS,
     DeckScene,
     Palette,
     colour_of,
-    correct_decimals,
     correct_digits,
     correctly_rounded_18,
     digits,
@@ -57,6 +62,9 @@ from vocab import (
     matching_decimals,
     matching_digits,
     probe,
+    to_decimals,
+    truth80,
+    word_value,
     words,
 )
 
@@ -71,13 +79,23 @@ Y_TOP = 3.45
 PITCH = 1.04  # row to row
 HERO_DROP = 0.12  # the reveal rows sit a little lower, clear of the row above
 LABEL_DROP = 0.38  # label line to digit line
-MONO = 32
+MONO = SIZE_BODY
 MONO_OURS = 35  # the reveal rows are the biggest on the slide
 SANS = 23
 SANS_OURS = 25
 
 EXACT_LABEL = f"e<sup>40</sup> to {WORD_DECIMALS} decimals"  # the first row's name (markup)
 EXACT_RIGHT = f"the closest {WORD_DECIMALS}-decimal value"
+CAPTION = "docs/benchmarks/edges.json · exp(40)"
+CLOSE = "three good answers, none the closest · Blockulator: all 18"
+
+# the digit-bearing fixed strings on the slide, each with its claim id (research_notes/talk/claims.md)
+LITERALS = {
+    EXACT_LABEL: "V9",  # e^40 and its correctly rounded 18-decimal word
+    EXACT_RIGHT: "V9",
+    CAPTION: "V9",  # the exp(40) probe
+    CLOSE: "V29",  # three distinct 18-decimal answers, none the closest; Blockulator's words round to it
+}
 
 
 def ordinal(n: int) -> str:
@@ -102,16 +120,13 @@ def row_label_text(r: dict) -> str:
 
 def ours_label_text(r: dict) -> str:
     """The reveal rows' labels, the same form: all 18 decimals right, then
-    what the word holds by the cell's measure. FP127 (fixed point) holds
-    correct decimals; FP19 (a float) holds correct digits."""
-    if r["id"] == "fp127":
-        return f"{WORD_DECIMALS} right of {WORD_DECIMALS} · the word holds {r['decimals']} decimals"
-    return f"{WORD_DECIMALS} right of {WORD_DECIMALS} · the word holds {r['digits']} digits"
+    how many digits of the whole word match e^40 to 80 decimals, by eye."""
+    return f"{WORD_DECIMALS} right of {WORD_DECIMALS} · {r['matching']} digits right"
 
 
 def numbers() -> dict:
     p = probe(OP, ARG)
-    truth = p["truth"]
+    truth = truth80()  # e^40 to 80 decimals; its first 24 are the probe's .truth (asserted there)
     lib = libs()
     integer_part = truth.partition(".")[0]
     word_digits = len(integer_part) + WORD_DECIMALS
@@ -130,23 +145,26 @@ def numbers() -> dict:
             "first_wrong": fw,
             "wrong_decimal": wrong_decimal(fw, truth),
         }
-        # the red digit and the count hold against the rounded row on screen too
+        # the red digit and the count hold against the rounded row on screen and against the probe's own truth
         assert first_wrong_index(value, exact_row) == fw and matching_decimals(value, exact_row) == r["decimals"], (lid, fw)
+        assert first_wrong_index(value, p["truth"]) == fw and matching_decimals(value, p["truth"]) == r["decimals"], (lid, fw)
         r["right_label"] = row_label_text(r)
         rows.append(r)
     ours = []
     for lid in OURS:
-        value = p["cells"][lid]["value"]
-        cell_digits = int(p["cells"][lid]["digits"])
+        cell = p["cells"][lid]
+        value = to_decimals(word_value(lid, cell["raw"]), TRUTH_DECIMALS)  # the word's value, to 80 decimals
+        assert value.startswith(cell["value"][:-1]), (lid, value, cell["value"])  # the cell prints the same word
         m = matching_digits(value, truth)
-        dec = correct_decimals(cell_digits, truth)
         word18 = correctly_rounded_18(value)  # the word rendered to 18 decimals, nearest
-        assert m >= word_digits and dec >= WORD_DECIMALS and lib[lid].get("ours") and word18 == exact_row, (lid, m, dec, word18)
-        r = {"id": lid, "label": lib[lid]["label"], "value": value, "word18": word18, "matching": m, "digits": cell_digits, "decimals": dec, "beyond": dec - WORD_DECIMALS}
+        assert m >= word_digits and lib[lid].get("ours") and word18 == exact_row, (lid, m, word18)
+        r = {"id": lid, "label": lib[lid]["label"], "value": value, "word18": word18, "matching": m, "digits": int(cell["digits"])}
         r["right_label"] = ours_label_text(r)
         ours.append(r)
     return {
         "truth": truth,
+        "truth_decimals": TRUTH_DECIMALS,
+        "truth_probe": p["truth"],
         "word_digits": word_digits,
         "exact_row": exact_row,
         "rows": rows,
@@ -156,6 +174,8 @@ def numbers() -> dict:
 
 
 class Exp40(DeckScene):
+    SECTIONS = ("exact", "libraries", "blockulator", "closing")
+
     def row_y(self, i: int) -> float:
         return Y_TOP - i * PITCH - HERO_DROP * max(0, i - len(LIBS))
 
@@ -200,18 +220,19 @@ class Exp40(DeckScene):
         n = numbers()
         rows = n["rows"]
         point = len(n["truth"].partition(".")[0])  # index of the point in every row
-        self.wait(0.6)
-        self.play(self.caption("docs/benchmarks/edges.json · exp(40)"))
+        self.section(0)
+        self.wait(0.3)
+        self.play(self.caption(CAPTION))
 
         # the closest 18-decimal value: e^40 rounded at the 18th decimal, complete
         e_lbl, e_txt = self.place_row(0, EXACT_LABEL, Palette.EXACT, n["exact_row"], label_markup=True)
         self.type_row(e_lbl, e_txt, per_char=0.06)
         e_right = self.right_label(0, EXACT_RIGHT, Palette.FAINT)
         self.play(FadeIn(e_right, run_time=0.5))
-        self.wait(4.5)
         point_x = e_txt[point].get_x()
 
         # three answers, counted in decimals: the word promises 18
+        self.section(1)
         lib = libs()
         for i, r in enumerate(rows, start=1):
             colour = colour_of(lib[r["id"]])
@@ -220,9 +241,10 @@ class Exp40(DeckScene):
             self.mark_wrong(txt, r["first_wrong"])
             right = self.right_label(i, r["right_label"], Palette.MUTED)
             self.play(FadeIn(right, run_time=0.4))
-            self.wait(5.5)
+            self.wait(2.0)
 
         # the reveal: ours, bigger, on a glowing panel, their words to 18 decimals: all 18 right
+        self.section(2)
         for j, r in enumerate(n["ours"], start=len(rows) + 1):
             colour = colour_of(lib[r["id"]])
             lbl, txt = self.place_row(j, r["label"], colour, r["word18"], colour, mono=MONO_OURS, sans=SANS_OURS, point_x=point_x)
@@ -234,9 +256,10 @@ class Exp40(DeckScene):
             self.play(Indicate(txt, color=colour, scale_factor=1.03, run_time=0.6))
             right = self.right_label(j, r["right_label"], colour, size=SANS_OURS)
             self.play(FadeIn(right, shift=LEFT * 0.08, run_time=0.4))
-            self.wait(2.5)
+            self.wait(1.5)
 
-        close = words("three good answers, none the closest · Blockulator: all 18", 27, Palette.BODY)
+        self.section(3)
+        close = words(CLOSE, 27, Palette.BODY)
         close.move_to([0, self.row_y(len(rows) + len(n["ours"])) - LABEL_DROP - 0.66, 0])  # under the last panel, above the caption
         self.play(FadeIn(close, shift=UP * 0.08, run_time=0.8))
-        self.wait(12.0)
+        self.close()

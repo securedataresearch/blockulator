@@ -1,4 +1,4 @@
-"""Check that each scene draws the numbers the JSON holds.
+"""Check that each scene draws the numbers the JSON holds, and nothing else.
 
 Every scene module exposes numbers(): the values it puts on screen. This
 recomputes them straight from the loaders in vocab.py (by a second route
@@ -7,6 +7,19 @@ arithmetic where it used strings) and compares, so a regenerated
 edges.json or ladder.json that a scene silently ignored (a hard-coded
 digit, a stale copy) fails here before it is rendered.
 
+Then it runs each scene's construct() under manim's dry run (no frames
+are encoded) and reads vocab.DRAWN, every string the text helpers were
+asked to draw. A drawn string that carries a digit must be accounted
+for: either every number in it (a run of digits, with its commas and
+point, or a 0x word) is a number that numbers() holds (a value, or a
+value formatted as the scenes format it: thousands(), str, one decimal,
+rounded) or the whole string is a key of the module's LITERALS, the
+digit-bearing fixed strings (captions, "to 18 decimals", a closing line)
+each mapped to a claim id in research_notes/talk/claims.md or to
+"REPORT" for the ones still to be verified. Anything else prints as
+UNSUPPORTED and fails. The dry run also asserts the scene called every
+one of its SECTIONS in order.
+
     uv run talk/scenes/check.py            # every scene that has numbers()
     uv run talk/scenes/check.py s02_exp40  # one
 """
@@ -14,34 +27,149 @@ digit, a stale copy) fails here before it is rendered.
 from __future__ import annotations
 
 import importlib
+import inspect
+import re
 import sys
 from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal, localcontext
+from fractions import Fraction
 from math import log10
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+from manim import config  # noqa: E402
+
+config.verbosity = "ERROR"
+config.progress_bar = "none"
+
 import vocab  # noqa: E402
+
+NUMBER = re.compile(r"0x[0-9a-fA-F]+|\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
+TAG = re.compile(r"<[^>]+>")
+
+
+def number_tokens(s: str) -> set[str]:
+    """The numbers in a string: markup tags dropped (a colour's hex is not
+    a number on screen), line breaks closed (a long number wraps), then
+    every run of digits with its commas and point, hex words lower-cased."""
+    s = TAG.sub(" ", s).replace("\n", "")
+    return {t.lower() for t in NUMBER.findall(s)}
+
+
+def formatted(x) -> list[str]:
+    """How the scenes print a value: a string as is; an int plain and with
+    thousands separators; a float plain, to one decimal, as an int when
+    whole, and rounded."""
+    if isinstance(x, bool) or x is None:
+        return []
+    if isinstance(x, str):
+        return [x]
+    if isinstance(x, int):
+        return [str(x), vocab.thousands(x)]
+    if isinstance(x, float):
+        out = [str(x), f"{x:.1f}", str(round(x)), vocab.thousands(round(x))]
+        if x.is_integer():
+            out.append(str(int(x)))
+        return out
+    if isinstance(x, Fraction):
+        return [str(x.numerator), str(x.denominator)]
+    return [str(x)]
+
+
+def leaves(x, out: list) -> list:
+    if isinstance(x, dict):
+        for v in x.values():
+            leaves(v, out)
+    elif isinstance(x, (list, tuple)):
+        for v in x:
+            leaves(v, out)
+    else:
+        out.append(x)
+    return out
+
+
+def known_tokens(numbers: dict) -> set[str]:
+    """The numbers in numbers()'s leaves, plus the digits in the libraries'
+    names (static/data/libraries.json: "FP127", "PRBMath SD59x18", …)."""
+    toks = set()
+    for leaf in leaves(numbers, []):
+        for f in formatted(leaf):
+            toks |= number_tokens(f)
+    for rec in vocab.libs().values():
+        for k in ("id", "label", "short", "long"):
+            toks |= number_tokens(str(rec.get(k, "")))
+    return toks
+
+
+def dry_run(mod) -> "vocab.DeckScene":
+    """Run the module's DeckScene subclass under manim's dry run and return it."""
+    classes = [c for _, c in inspect.getmembers(mod, inspect.isclass) if issubclass(c, vocab.DeckScene) and c is not vocab.DeckScene and c.__module__ == mod.__name__]
+    assert len(classes) == 1, (mod.__name__, classes)
+    config.dry_run = True
+    vocab.reset_drawn()
+    scene = classes[0]()
+    scene.render()
+    return scene
+
+
+def check_drawn(name: str, mod, numbers: dict) -> int:
+    """Every drawn string with a digit is pinned by numbers() or LITERALS.
+    Returns the count of unsupported strings (printed)."""
+    literals = getattr(mod, "LITERALS", {})
+    assert isinstance(literals, dict) and all(isinstance(k, str) and isinstance(v, str) and v for k, v in literals.items()), name
+    scene = dry_run(mod)
+    drawn = list(vocab.DRAWN)
+    assert len(scene.SECTIONS) >= 2, (name, scene.SECTIONS)
+    assert scene.sections_called == list(scene.SECTIONS), (name, scene.sections_called, scene.SECTIONS)
+    toks = known_tokens(numbers)
+    bad, seen = 0, set()
+    for s in drawn:
+        assert "…" not in s and "½" not in s, (name, s)
+        if s in seen:
+            continue
+        seen.add(s)
+        if s in literals:
+            if literals[s] == "REPORT":
+                print(f'REPORT {name} "{s}"')
+            continue
+        missing = number_tokens(s) - toks
+        if missing:
+            bad += 1
+            print(f'UNSUPPORTED {name} "{s}" (not in numbers(): {sorted(missing)})')
+    unused = [k for k in literals if k not in seen]
+    for k in unused:
+        print(f'UNUSED LITERAL {name} "{k}"')
+    return bad + len(unused)
 
 
 def expect_s02_exp40(mod) -> dict:
     p = vocab.probe(mod.OP, mod.ARG)
     lib = vocab.libs()
-    int_len = len(p["truth"].partition(".")[0])
+    # the truth to 80 decimals by the other route: mpmath's own string, truncated one place
+    # further than the probe's and rounded there by hand (the probe's 24 decimals must agree)
+    import mpmath
+
+    mpmath.mp.dps = 120
+    long = mpmath.nstr(mpmath.exp(40), 110, strip_zeros=False)
+    li, _, lf = long.partition(".")
+    lf = lf[: mod.TRUTH_DECIMALS + 1]
+    scaled = (int(li + lf) + 5) // 10
+    truth = f"{scaled // 10**mod.TRUTH_DECIMALS}.{scaled % 10**mod.TRUTH_DECIMALS:0{mod.TRUTH_DECIMALS}d}"
+    assert truth.startswith(p["truth"][:-1]) and len(truth.partition(".")[2]) == mod.TRUTH_DECIMALS
+    int_len = len(truth.partition(".")[0])
     word_digits = int_len + mod.WORD_DECIMALS
     # the first row, e^40 to 18 decimals, by integer arithmetic: round half-up at the 18th
-    ti, _, tf = p["truth"].partition(".")
-    assert len(tf) > mod.WORD_DECIMALS, tf
+    ti, _, tf = truth.partition(".")
     q = 10 ** (len(tf) - mod.WORD_DECIMALS)
     scaled = (int(ti + tf) * 2 + q) // (2 * q)
     exact_row = f"{scaled // 10**mod.WORD_DECIMALS}.{scaled % 10**mod.WORD_DECIMALS:0{mod.WORD_DECIMALS}d}"
-    assert exact_row == vocab.correctly_rounded_18(p["truth"]), exact_row
+    assert exact_row == vocab.correctly_rounded_18(p["truth"]) == vocab.correctly_rounded_18(truth), exact_row
     rows = []
     for lid in mod.LIBS:
         v = p["cells"][lid]["value"]
         assert not p["cells"][lid].get("reverted") and not p["cells"][lid].get("zero"), lid
-        m = vocab.matching_digits(v, p["truth"])
+        m = vocab.matching_digits(v, truth)
         rows.append(
             {
                 "id": lid,
@@ -51,8 +179,8 @@ def expect_s02_exp40(mod) -> dict:
                 # 0 when the prefix ends inside the integer part
                 "decimals": m - int_len if m >= int_len else 0,
                 "matching": m,
-                "digits": vocab.correct_digits(v, p["truth"]),
-                "first_wrong": vocab.first_wrong_index(v, p["truth"]),
+                "digits": vocab.correct_digits(v, truth),
+                "first_wrong": vocab.first_wrong_index(v, truth),
             }
         )
         # the integer-rounded measure edges.json reports agrees with ours
@@ -64,46 +192,49 @@ def expect_s02_exp40(mod) -> dict:
         assert len(v.partition(".")[2]) == mod.WORD_DECIMALS and rows[-1]["decimals"] <= mod.WORD_DECIMALS, (lid, v)
         # the first wrong decimal's position by the other route: the decimal after the last right one,
         # or 0 (before the point) when the integer parts differ
-        wd = rows[-1]["decimals"] + 1 if v.partition(".")[0] == p["truth"].partition(".")[0] else 0
+        wd = rows[-1]["decimals"] + 1 if v.partition(".")[0] == truth.partition(".")[0] else 0
         rows[-1]["wrong_decimal"] = wd
         rows[-1]["right_label"] = (
             f"{rows[-1]['decimals']} right · wrong at the {mod.ordinal(wd)} decimal" if wd else f"{rows[-1]['decimals']} right · wrong before the point"
         )
-    # the story the slide tells, checked against the cells: 3rd, 4th, and one wrong before the point
+    # the story the slide tells, checked against the cells: 3rd, 4th, and one wrong before the point (V29)
     by_id = {r["id"]: r for r in rows}
     assert by_id["solady"]["wrong_decimal"] == 3 and by_id["solady"]["right_label"] == "2 right · wrong at the 3rd decimal", by_id["solady"]
     assert by_id["balancer"]["wrong_decimal"] == 4 and by_id["balancer"]["right_label"] == "3 right · wrong at the 4th decimal", by_id["balancer"]
     assert by_id["prb"]["wrong_decimal"] == 0 and by_id["prb"]["decimals"] == 0 and by_id["prb"]["right_label"] == "0 right · wrong before the point", by_id["prb"]
     assert mod.ordinal(1) == "1st" and mod.ordinal(2) == "2nd" and mod.ordinal(11) == "11th" and mod.ordinal(13) == "13th" and mod.ordinal(21) == "21st" and mod.ordinal(22) == "22nd"
+    # the words by the other route: scripts/replays/bunni.py's decoders, Decimal for the expansion
+    bunni = vocab._import_script("scripts/replays/bunni.py")
+    decode = {"fp19": bunni.fp19_value, "fp127": bunni.fp127_value}
     ours = []
     with localcontext() as ctx:
-        ctx.prec = 60
-        truth = Decimal(p["truth"])
+        ctx.prec = 200
         for lid in mod.OURS:
             c = p["cells"][lid]
-            v = c["value"]
-            m = vocab.matching_digits(v, p["truth"])
-            assert m >= word_digits, (lid, m)  # "every decimal" is a claim about the 18 the word holds
-            dec = int(c["digits"]) - int_len
-            # the other route: decimals from the cell's relative error, floor(−log10(|relErr| · truth));
-            # the scene's count (a floor of a floor) never exceeds it
-            exact = int((-(abs(Decimal(c["relErr"])) * truth).log10()).to_integral_value(rounding=ROUND_FLOOR))
-            assert dec <= exact <= dec + 1, (lid, dec, exact)
-            measure = f"the word holds {dec} decimals" if lid == "fp127" else f"the word holds {int(c['digits'])} digits"
-            # the word to 18 decimals by integer arithmetic: floor(v · 10^18 + 1/2) (half-up), and it is the closest 18-decimal value
-            vi, _, vf = v.partition(".")
-            scaled = (int(vi + vf) * 2 * 10 ** (mod.WORD_DECIMALS - len(vf)) + 10 ** mod.WORD_DECIMALS) // (2 * 10 ** mod.WORD_DECIMALS) if len(vf) <= mod.WORD_DECIMALS else (int(vi + vf) * 2 + 10 ** (len(vf) - mod.WORD_DECIMALS)) // (2 * 10 ** (len(vf) - mod.WORD_DECIMALS))
-            word18 = f"{scaled // 10**mod.WORD_DECIMALS}.{scaled % 10**mod.WORD_DECIMALS:0{mod.WORD_DECIMALS}d}"
+            q = decode[lid](int(c["raw"]))
+            v = str((Decimal(q.numerator) / Decimal(q.denominator)).quantize(Decimal(1).scaleb(-mod.TRUTH_DECIMALS), rounding=ROUND_HALF_UP))
+            m = 0
+            for a, b in zip(v.replace(".", ""), truth.replace(".", "")):
+                if a != b:
+                    break
+                m += 1
+            assert m >= word_digits, (lid, m)  # every one of the 18 decimals is right
+            # the cell's log measure never exceeds the prefix count by more than one (a floor of a floor)
+            assert int(c["digits"]) <= m <= int(c["digits"]) + 1, (lid, c["digits"], m)
+            word18 = str(Decimal(v).quantize(Decimal(1).scaleb(-mod.WORD_DECIMALS), rounding=ROUND_HALF_UP))
             assert word18 == exact_row, (lid, word18, exact_row)
-            ours.append({"id": lid, "label": lib[lid]["label"], "value": v, "word18": word18, "matching": m, "digits": int(c["digits"]), "decimals": dec, "beyond": dec - mod.WORD_DECIMALS, "right_label": f"{mod.WORD_DECIMALS} right of {mod.WORD_DECIMALS} · {measure}"})
-    # no row says "every decimal": the reveal rows carry the plain count like the others
-    assert [o["right_label"] for o in ours] == ["18 right of 18 · the word holds 72 digits", "18 right of 18 · the word holds 39 decimals"], [o["right_label"] for o in ours]
+            ours.append({"id": lid, "label": lib[lid]["label"], "value": v, "word18": word18, "matching": m, "digits": int(c["digits"]), "right_label": f"{mod.WORD_DECIMALS} right of {mod.WORD_DECIMALS} · {m} digits right"})
+    # the reveal rows carry the plain count like the others, and never what the format holds
+    for o in ours:
+        assert "holds" not in o["right_label"], o["right_label"]
     # no number on the slide is cut short: every row is exactly 18 decimals, no ellipsis
     for s in [exact_row] + [r["value"] for r in rows] + [o["word18"] for o in ours]:
         assert "…" not in s and len(s.partition(".")[2]) == mod.WORD_DECIMALS, s
     assert "…" not in mod.EXACT_LABEL and "…" not in mod.EXACT_RIGHT
     return {
-        "truth": p["truth"],
+        "truth": truth,
+        "truth_decimals": mod.TRUTH_DECIMALS,
+        "truth_probe": p["truth"],
         "word_digits": word_digits,
         "exact_row": exact_row,
         "rows": rows,
@@ -114,9 +245,10 @@ def expect_s02_exp40(mod) -> dict:
 
 def expect_s04_grid(mod) -> dict:
     p = vocab.probe(mod.OP, mod.ARG)
-    truth = p["truth"]
+    truth = vocab.truth80()
+    assert truth.startswith(p["truth"][:-1]) and len(truth.partition(".")[2]) == mod.EXPANSION_DECIMALS == mod.TRUTH_DECIMALS
     with localcontext() as ctx:
-        ctx.prec = 120
+        ctx.prec = 200
         t = Decimal(truth)
         q18 = Decimal(1).scaleb(-mod.WORD_DECIMALS)
         lo18 = t.quantize(q18, rounding=ROUND_FLOOR)
@@ -136,16 +268,33 @@ def expect_s04_grid(mod) -> dict:
         neighbours_128 = [reading(lob, mod.EXPANSION_DECIMALS), reading(hib, mod.EXPANSION_DECIMALS)]
         nearest_128 = reading(nearest, mod.EXPANSION_DECIMALS)
         word18 = reading(nearest, mod.WORD_DECIMALS)
-        # the readings go exactly as far as the truth does, and FP127's word to 18 decimals is the closest 18-decimal value
-        assert mod.EXPANSION_DECIMALS == len(truth.partition(".")[2]) and word18 == vocab.correctly_rounded_18(truth), (mod.EXPANSION_DECIMALS, word18)
+        # the readings go exactly as far as the truth does, part from each other, and FP127's word to 18 decimals is the closest 18-decimal value
+        assert neighbours_128[0] != neighbours_128[1] and word18 == vocab.correctly_rounded_18(truth), (neighbours_128, word18)
         # the two words differ by one in the last place of their 32-hex-digit fractions, shown complete
         hexes = [f"0x{w % (1 << mod.FRACTION_BITS):032x}" for w in (lob, hib)]
         assert all(len(h) == 2 + mod.HEX_DIGITS and "…" not in h for h in hexes) and int(hexes[1], 16) - int(hexes[0], 16) == 1, hexes
-    bits = list(range(mod.BIT_START, mod.FRACTION_BITS + 1, mod.BIT_STEP))
+        # every level's neighbours: floor and floor + 1 at that level, written complete
+        levels = list(range(mod.WORD_DECIMALS + 1))
+        neighbours_decimal = []
+        for k in levels:
+            qk = Decimal(1).scaleb(-k)
+            lo = t.quantize(qk, rounding=ROUND_FLOOR)
+            neighbours_decimal.append([str(lo), str(lo + qk)])
+        bits = list(range(mod.BIT_START, mod.FRACTION_BITS + 1, mod.BIT_STEP))
+        neighbours_hex = []
+        for b in bits:
+            w = int((t * Decimal(2) ** b).to_integral_value(rounding=ROUND_FLOOR))
+            neighbours_hex.append([f"0x{(w + m) % (1 << b):0{b // 4}x}" for m in (0, 1)])
     assert bits[-1] == mod.FRACTION_BITS and all(b % 4 == 0 for b in bits)  # every binary level's fraction is whole hex digits
     return {
         "truth": truth,
+        "truth_probe": p["truth"],
+        "expansion_decimals": mod.EXPANSION_DECIMALS,
         "levels_decimal": mod.WORD_DECIMALS,
+        "decimal_levels": levels,
+        "bases": [10, 2],
+        "neighbours_decimal": neighbours_decimal,
+        "neighbours_hex_levels": neighbours_hex,
         "neighbours_18": [str(lo18), str(hi18)],
         "fraction_18": f18,
         "correctly_rounded": vocab.correctly_rounded_18(truth),
@@ -163,13 +312,15 @@ def expect_s04_grid(mod) -> dict:
 
 def expect_s05_cost(mod) -> dict:
     d = vocab.incidents()
-    rows, total = [], 0
-    for r in d["incidents"]:
-        total += r["lossUsd"]
-        rows.append({"date": r["date"], "protocol": r["protocol"], "rounding": r["rounding"], "loss": r["loss"], "sum": f"${total / 1e6:,.1f}M"})
-    assert total > 130_000_000, total  # the slide says more than $130 million
+    rows = [{"date": r["date"], "protocol": r["protocol"], "rounding": r["rounding"], "loss": r["loss"]} for r in d["incidents"]]
+    total = sum(r["lossUsd"] for r in d["incidents"])
+    assert total > 130_000_000, total  # the slide says more than $130 million (V49: the figures are listed, not summed)
     assert [r["date"][-4:] for r in rows] == sorted(r["date"][-4:] for r in rows), "oldest first"
-    return {"rows": rows, "sum_usd": total, "sum": f"${total / 1e6:,.1f}M", "total": d["total"], "since": d["since"]}
+    assert "sum" not in mod.numbers() and not any("sum" in r for r in mod.numbers()["rows"])
+    for r in rows:
+        assert "wrong way" not in r["rounding"], r  # V27: one rounding step, never "rounded the wrong way"
+    assert len(rows) + 1 == len(mod.Cost.SECTIONS), (len(rows), mod.Cost.SECTIONS)
+    return {"rows": rows, "total": d["total"], "since": d["since"], "caption": f"talk/scenes/data/incidents.json · since {d['since']}"}
 
 
 def expect_s06_resupply(mod) -> dict:
@@ -202,8 +353,13 @@ def expect_s06_resupply(mod) -> dict:
     # no number on screen carries an ellipsis: every string the scene draws is complete in a stated format
     for k, v in mod.numbers().items():
         assert "…" not in str(v), (k, v)
+    rate_exp = int(cite[573].split("1e")[1].split(" ")[0])
+    assert rate_exp == 36
     return {
         "block": f"{int(p['block']):,}",
+        "rate_exp": rate_exp,
+        "base": 10,
+        "grid_ticks": [0, 1, 2],
         "price": f"{price:,}",
         "quotient": quotient,
         "quotient_label": f"(to {mod.QUOTIENT_DIGITS} decimals)",
@@ -279,7 +435,8 @@ def expect_s08_ladder(mod) -> dict:
     by_id = {s["id"]: s for s in scenarios}
     assert "maker" in by_id["compound"]["series"] and {"aave", "morpho"} <= set(by_id["accrual-continuous"]["series"]) and {"fraxlend", "euler"} <= set(by_id["adaptive-rate"]["series"])
     assert all(s["margins"]["fp19"] > s["margins"]["fp127"] > 0 for s in scenarios)
-    return {"N": N, "log10": [first["log10"][str(n)] for n in N], "axisMax": first["axisMax"], "scenarios": scenarios}
+    assert mod.CLOSE_FIRST == "Blockulator's lines start higher and keep the gap" and "flat" not in mod.CLOSE_FIRST  # V14
+    return {"N": N, "log10": [first["log10"][str(n)] for n in N], "axisMax": first["axisMax"], "y_ticks": list(range(0, int(first["axisMax"]) + 1, 20)), "wad_decimals": 18, "scenarios": scenarios}
 
 
 def expect_s09_cliff(mod) -> dict:
@@ -328,10 +485,13 @@ def expect_s09_cliff(mod) -> dict:
     # the story the slide tells, checked against the cells
     by_arg = {c["arg"]: c["cells"] for c in columns}
     assert by_arg["-42"]["solady"]["kind"] == "zero" and by_arg["-60"]["abdk"]["kind"] == "zero" and by_arg["-100"]["fp127"]["kind"] == "zero"
+    # V28: FP127 has 0 digits at −89 (a value, 2^-128) and a digit still at −88
+    assert by_arg["-89"]["fp127"] == {"kind": "value", "digits": 0.0} and by_arg["-88"]["fp127"]["digits"] >= 1, (by_arg["-89"]["fp127"], by_arg["-88"]["fp127"])
     assert all(c["cells"]["fp19"]["kind"] == "value" and c["cells"]["fp19"]["digits"] > 60 for c in columns)
     fp19_min = min(c["cells"]["fp19"]["digits"] for c in columns)
     # FP127's last standing point: the last probe where its value still had a digit (by the raw cells)
     standing = [p for p in probes if not p["cells"]["fp127"].get("zero") and not p["cells"]["fp127"].get("reverted") and float(p["cells"]["fp127"]["digits"]) >= 1]
+    assert standing[-1]["args"][0] == "-88", standing[-1]["args"]  # the closing line: "FP127 has digits to exp(−88)" (V28)
     wad = [lid for lid in lids if lib[lid]["family"] == "wad"]
     first_zero = next(p["args"][0] for p in probes if any(p["cells"][lid].get("zero") for lid in wad))
     return {
@@ -339,6 +499,8 @@ def expect_s09_cliff(mod) -> dict:
         "absent": absent,
         "columns": columns,
         "axisMax": axis_max,
+        "y_ticks": list(range(0, axis_max + 1, mod.Y_STEP)),
+        "wad_decimals": 18,
         "fp19_min": fp19_min,
         "fp127_last": {"arg": standing[-1]["args"][0], "digits": float(standing[-1]["cells"]["fp127"]["digits"])},
         "wad_first_zero": first_zero,
@@ -374,7 +536,19 @@ def expect_s10_live(mod) -> dict:
     assert above == above_fp19 == len(pts), (above, above_fp19)
     margins = {"fp127": round(medians["fp127"] - medians["deployed"], 1), "fp19": round(medians["fp19"] - medians["fp127"], 1)}
     assert margins["fp127"] > 0 and margins["fp19"] > 0
-    return {"points": pts, "counts": counts, "block": f"{survey['block']:,}", "date": survey["date"], "above": above, "above_fp19": above_fp19, "medians": medians, "margins": margins}
+    return {
+        "points": pts,
+        "count": len(pts),
+        "counts": counts,
+        "block": f"{survey['block']:,}",
+        "date": survey["date"],
+        "axis_ticks": [0, 10, 20, 30, 40, 50, 60, 70, 80],
+        "above": above,
+        "above_fp19": above_fp19,
+        "medians": medians,
+        "medians_rounded": {k: int(Decimal(str(v)).quantize(Decimal(1), rounding="ROUND_HALF_EVEN")) for k, v in medians.items()},
+        "margins": margins,
+    }
 
 
 EXPECT = {
@@ -403,6 +577,12 @@ def main(argv: list[str]) -> int:
             print(f"FAIL  {name}: {keys}")
             for k in keys:
                 print(f"  drawn[{k}]: {str(drawn.get(k))[:300]}\n  json [{k}]: {str(want.get(k))[:300]}")
+        n_bad = check_drawn(name, mod, drawn)
+        if n_bad:
+            bad += 1
+            print(f"FAIL  {name}: {n_bad} drawn strings unsupported")
+        else:
+            print(f"ok    {name} drawn")
     return 1 if bad else 0
 
 

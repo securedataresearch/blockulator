@@ -18,8 +18,13 @@ draws with what the loaders return.
 
 from __future__ import annotations
 
+import importlib.util
 import json
+import re
+import statistics
+import sys
 from decimal import ROUND_HALF_UP, Decimal, localcontext
+from fractions import Fraction
 from pathlib import Path
 
 from manim import (
@@ -96,6 +101,20 @@ def colour_of(lib: dict) -> str:
 SANS = "Instrument Sans"
 MONO = "JetBrains Mono"
 
+# legibility from the back row (plan, structural decision 5)
+SIZE_CAPTION = 20  # the source caption, small labels
+SIZE_BODY = 32  # a row of digits, a formula
+SIZE_HERO = 48  # the one number a slide is about
+MAX_MONO_CHARS = 46  # a mono string at SIZE_BODY fits the frame to this length
+
+# every string the text helpers are asked to draw, in order, the raw string
+# before Pango markup; check.py reads it after a dry run of construct()
+DRAWN: list[str] = []
+
+
+def reset_drawn() -> None:
+    DRAWN.clear()
+
 _fonts_registered = False
 
 
@@ -116,12 +135,14 @@ def setup_fonts() -> None:
 def words(s: str, size: float = 36, colour: str = Palette.TEXT, **kw) -> Text:
     """Text in Instrument Sans."""
     setup_fonts()
+    DRAWN.append(s)
     return Text(s, font=SANS, font_size=size, color=colour, **kw)
 
 
 def markup(s: str, size: float = 36, colour: str = Palette.TEXT, **kw) -> MarkupText:
     """Pango markup in Instrument Sans: <sup>, <sub>, <i>, <b> (Pango ≥ 1.50)."""
     setup_fonts()
+    DRAWN.append(s)
     return MarkupText(s, font=SANS, font_size=size, color=colour, **kw)
 
 
@@ -129,6 +150,7 @@ def digits(s: str, size: float = 36, colour: str = Palette.TEXT, **kw) -> Text:
     """Text in JetBrains Mono, ligatures off so every glyph is one character
     (the scenes index into digit strings)."""
     setup_fonts()
+    DRAWN.append(s)
     return Text(s, font=MONO, font_size=size, color=colour, disable_ligatures=True, **kw)
 
 
@@ -137,18 +159,50 @@ def digits(s: str, size: float = 36, colour: str = Palette.TEXT, **kw) -> Text:
 config.frame_rate = 30
 config.background_color = Palette.BG
 config.media_dir = str(ROOT / "talk" / "build")
+# one mp4 per section plus an index, under <media_dir>/videos/<scene>/<quality>/sections/:
+# {Scene}_{nnnn}_{name}.mp4 and {Scene}.json (name, video, duration, nb_frames, …)
+config.save_sections = True
+
+END_HOLD = 3.0  # the last section's hold: its last frame is the slide's poster
 
 
 class DeckScene(Scene):
     """Dark background, the fonts registered, a caption slot bottom-left
-    for the source of the numbers on screen."""
+    for the source of the numbers on screen, and the clicker's sections.
+
+    A scene declares SECTIONS = ("price", "division", …) and calls
+    self.section(i) at each beat, in order, starting with section(0)
+    before anything is played. section() closes the previous section
+    with a hold (manim silently drops a section with no play/wait, which
+    would shift every later name in the index) and ends with
+    self.close(), the long hold whose last frame is the slide's poster.
+    check.py asserts sections_called == list(SECTIONS)."""
+
+    SECTIONS: tuple[str, ...] = ()
 
     def setup(self):
         setup_fonts()
         self.camera.background_color = Palette.BG
         self._caption = None
+        self.sections_called: list[str] = []
 
-    def caption(self, text: str, size: float = 20, run_time: float = 0.6):
+    def section(self, i: int, hold: float = 1.0) -> None:
+        """Start SECTIONS[i]; i must be the next index. The previous section
+        gets its closing hold first, so no section is ever empty."""
+        assert i == len(self.sections_called), (i, self.sections_called)
+        assert i < len(self.SECTIONS), (i, self.SECTIONS)
+        if i:
+            self.wait(hold)
+        name = self.SECTIONS[i]
+        self.next_section(name)
+        self.sections_called.append(name)
+
+    def close(self, hold: float = END_HOLD) -> None:
+        """The final hold: every section must have been called."""
+        assert self.sections_called == list(self.SECTIONS), (self.sections_called, self.SECTIONS)
+        self.wait(hold)
+
+    def caption(self, text: str, size: float = SIZE_CAPTION, run_time: float = 0.6):
         """Put (or replace) the small source caption in the bottom-left corner.
         Returns the animation to play."""
         new = words(text, size, Palette.FAINT).to_corner(DOWN + LEFT, buff=0.45)
@@ -202,11 +256,11 @@ def measure(line: GridLine, a: float, b: float, label: str, scale: float = 1.0, 
     pa, pb = line.n2p(a) + y, line.n2p(b) + y
     bar = Line(pa, pb, color=colour, stroke_width=1.5)
     caps = VGroup(Line(pa - cap, pa + cap, color=colour, stroke_width=1.5), Line(pb - cap, pb + cap, color=colour, stroke_width=1.5))
-    text = words(label, 32, colour).scale(scale).next_to(bar, DOWN, buff=0.1 * scale)
+    text = words(label, SIZE_BODY, colour).scale(scale).next_to(bar, DOWN, buff=0.1 * scale)
     return VGroup(bar, caps, text)
 
 
-def measure_up(p_lo, p_hi, label: str, colour: str = Palette.MUTED, size: float = 20, cap: float = 0.07, buff: float = 0.12, stroke_width: float = 1.5) -> VGroup:
+def measure_up(p_lo, p_hi, label: str, colour: str = Palette.MUTED, size: float = SIZE_CAPTION, cap: float = 0.07, buff: float = 0.12, stroke_width: float = 1.5) -> VGroup:
     """The bracket stood on end: a thin vertical |——| from the scene point
     p_lo up to p_hi with the label to its right, centred on the span: how
     the chart names a margin between two line ends in the axis's units."""
@@ -273,13 +327,13 @@ class Chart(VGroup):
     def c2p(self, x: float, y: float):
         return self.origin + RIGHT * (self.x_axis.n2p(x) - self.origin)[0] + UP * (self.y_axis.n2p(y) - self.origin)[1]
 
-    def x_label(self, x: float, text: str, size: float = 20, colour: str = Palette.FAINT, buff: float = 0.18, use_markup: bool = False, mono: bool = False):
+    def x_label(self, x: float, text: str, size: float = SIZE_CAPTION, colour: str = Palette.FAINT, buff: float = 0.18, use_markup: bool = False, mono: bool = False):
         make = markup if use_markup else (digits if mono else words)
         t = make(text, size, colour).next_to(self.c2p(x, self.y_range[0]), DOWN, buff=buff)
         self.labels.add(t)
         return t
 
-    def y_label(self, y: float, text: str, size: float = 20, colour: str = Palette.FAINT, buff: float = 0.18, mono: bool = False):
+    def y_label(self, y: float, text: str, size: float = SIZE_CAPTION, colour: str = Palette.FAINT, buff: float = 0.18, mono: bool = False):
         t = (digits if mono else words)(text, size, colour).next_to(self.c2p(self.x_range[0], y), LEFT, buff=buff)
         self.labels.add(t)
         return t
@@ -445,6 +499,169 @@ def live() -> list[dict]:
 def resupply() -> dict:
     """scripts/replays/resupply.json, whole: .pins, .checks, .state, .sources…"""
     return _load("scripts/replays/resupply.json")
+
+
+def sweep(lib: str, op: str, stage: str | None = None) -> dict:
+    """docs/benchmarks/sweep.json → the one .rows[] record with .lib == lib,
+    .op == op and .stage == stage (no .stage key is the plain pass; "second"
+    and "middle" are the forced passes). Its fields: n, correctlyRounded,
+    misrounded, maxUlp, hist, gasMedian, gasP99, gasMax, fallback…"""
+    rows = [r for r in _load("docs/benchmarks/sweep.json")["rows"] if r["lib"] == lib and r["op"] == op and r.get("stage") == stage]
+    if len(rows) != 1:
+        raise KeyError((lib, op, stage, len(rows)))
+    return rows[0]
+
+
+def gas(op: str) -> dict:
+    """docs/benchmarks/gas.json → .ops[op] (inputs, gas[form][], summary[form]
+    {min, median, max} | null, reverts, typical {inputs, gas, …}) plus
+    "inlineMedian": {form: median gas} over .ops[op].typical.gas[form] (the
+    random inputs that take no shortcut; computed here with statistics.median,
+    null cells skipped) falling back to .ops[op].summary[form].median where
+    there is no typical block; forms without a measurement are absent.
+    "formLabels" is the file's .formLabels."""
+    d = _load("docs/benchmarks/gas.json")
+    rec = dict(d["ops"][op])
+    source = rec.get("typical", rec)
+    medians = {}
+    for form, cells in source["gas"].items():
+        vals = [c for c in cells if c is not None]
+        if vals:
+            medians[form] = statistics.median(vals)
+    rec["inlineMedian"] = medians
+    rec["formLabels"] = d["formLabels"]
+    return rec
+
+
+def proofs() -> dict:
+    """docs/benchmarks/proofs.json → {"summary": .summary (ops, proven,
+    proven_except, fuzzed, counterexamples, in_progress, solver_seconds),
+    "ops": .ops[] (lib, op, status, spec, checks, seconds, tool, reproduce…)}."""
+    d = _load("docs/benchmarks/proofs.json")
+    return {"summary": d["summary"], "ops": d["ops"]}
+
+
+def release() -> dict:
+    """contracts/deployments/RELEASE.json, whole: .release, .date, .chainId,
+    .network, .components{name: {version, address, block, runtimeBytes,
+    record}}, .live, .superseded."""
+    return _load("contracts/deployments/RELEASE.json")
+
+
+def chains() -> dict:
+    """talk/scenes/data/chains.json: a dated hand copy of the chain table in
+    contracts/deployments/README.md ("Chains: CLZ (Osaka) required"):
+    .chains[] with chain, clz_since (null where the README says "(probe)"),
+    upgrade, status "supported" | "unsupported", probed (the README's
+    date), deployed (true for Sepolia only, RELEASE.json) and proxy (null:
+    the deterministic-deployment proxy's presence is not yet probed);
+    .source and .note say so. Re-probe before the talk (claims V5)."""
+    return _load("talk/scenes/data/chains.json")
+
+
+def thetanuts() -> dict:
+    """scripts/replays/thetanuts.json, whole (tx, block, components, slots…)."""
+    return _load("scripts/replays/thetanuts.json")
+
+
+def balancer() -> dict:
+    """scripts/replays/balancer.json, whole (about, provenance, pools, test, score)."""
+    return _load("scripts/replays/balancer.json")
+
+
+def balancer_v1() -> dict:
+    """scripts/replays/balancer_v1.json, whole (generated, rpc, report, source, pools)."""
+    return _load("scripts/replays/balancer_v1.json")
+
+
+def _import_script(rel: str):
+    """Import a script by path (scripts/replays is not a package)."""
+    path = ROOT / rel
+    name = "talk_" + path.stem
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def bunni_replay() -> dict:
+    """scripts/replays/bunni.py:replay(scripts/replays/bunni.json): the 44
+    withdrawals replayed from the pinned start state, every on-chain
+    observation asserted on the way. Returns its dict: .seq[form][] the
+    active balance (balance − idle) after each step for the forms
+    "deployed", "mulDivUp", "fp127" (Fractions) and "exact" (Fractions),
+    .bal0[] / .bal1[] the balances, .idle{form}, .exactIdle, .T, .final."""
+    mod = _import_script("scripts/replays/bunni.py")
+    return mod.replay(_load("scripts/replays/bunni.json"))
+
+
+TRUTH_DECIMALS = 80
+
+
+def truth80() -> str:
+    """exp(40) to 80 decimals: mpmath at 120 digits, rounded half-up at the
+    80th decimal. Asserted against docs/benchmarks/edges.json's exp(40)
+    .truth (42 digits, 24 decimals): the two agree on every one of those
+    24 decimals under the same half-up rounding (the file's last decimal
+    is a 2 where the longer expansion reads 1617…: the file rounds, it
+    does not truncate), and the first 23 are a plain string prefix."""
+    import mpmath
+
+    mpmath.mp.dps = 120
+    s = mpmath.nstr(mpmath.exp(40), 120, strip_zeros=False)
+    with localcontext() as ctx:
+        ctx.prec = 200
+        x = Decimal(s)
+        t80 = str(x.quantize(Decimal(1).scaleb(-TRUTH_DECIMALS), rounding=ROUND_HALF_UP))
+        truth = probe("exp", "40")["truth"]
+        t24 = str(x.quantize(Decimal(1).scaleb(-len(truth.partition(".")[2])), rounding=ROUND_HALF_UP))
+    assert t24 == truth and t80.startswith(truth[:-1]), (t24, truth)
+    assert len(t80.partition(".")[2]) == TRUTH_DECIMALS, t80
+    return t80
+
+
+# ----------------------------------------------------------- the words --
+# FP127: a signed 256-bit word, 128 fraction bits (contracts/src/fp127/README.md; claims K1, K2)
+FP127_FRACTION_BITS = 128
+# FP19: IEEE 754 binary256's layout: sign, 19-bit exponent (bias 262143), 236-bit fraction
+# (contracts/src/fp19/README.md; claims K3, E9); subnormals are not produced (K4)
+FP19_EXPONENT_BITS, FP19_FRACTION_BITS = 19, 236
+FP19_BIAS = (1 << (FP19_EXPONENT_BITS - 1)) - 1
+WAD_DECIMALS = 18  # the 18-decimal libraries' unit, 10^-18 (claims R6, K7)
+
+
+def fp127_value(raw: int | str) -> Fraction:
+    """The value of an FP127 word from its raw uint256 (edges.json .cells[lib].raw)."""
+    w = int(raw)
+    return Fraction(w - (1 << 256) if w >> 255 else w, 1 << FP127_FRACTION_BITS)
+
+
+def fp19_value(raw: int | str) -> Fraction:
+    """The value of an FP19 word from its raw uint256."""
+    w = int(raw)
+    if w == 0:
+        return Fraction(0)
+    sign = w >> 255
+    e = (w >> FP19_FRACTION_BITS) & ((1 << FP19_EXPONENT_BITS) - 1)
+    f = w & ((1 << FP19_FRACTION_BITS) - 1)
+    v = Fraction((1 << FP19_FRACTION_BITS) + f) * Fraction(2) ** (e - FP19_BIAS - FP19_FRACTION_BITS)
+    return -v if sign else v
+
+
+def word_value(lid: str, raw: int | str) -> Fraction:
+    return {"fp19": fp19_value, "fp127": fp127_value}[lid](raw)
+
+
+def to_decimals(q: Fraction, places: int) -> str:
+    """A Fraction as a decimal string with exactly `places` decimals, nearest,
+    half-up on the magnitude (integer arithmetic)."""
+    neg = q < 0
+    scaled = (2 * abs(q).numerator * 10**places + abs(q).denominator) // (2 * abs(q).denominator)
+    whole, frac = divmod(scaled, 10**places)
+    return ("-" if neg else "") + (f"{whole}.{frac:0{places}d}" if places else str(whole))
 
 
 def correctly_rounded_18(truth: str) -> str:

@@ -279,7 +279,9 @@ talk:
 SCENES := $(basename $(notdir $(wildcard talk/scenes/s[0-9][0-9]_*.py)))
 anim:
 	@$(PY) talk/scenes/check.py
-	@for s in $(if $(SCENE),$(SCENE),$(SCENES)); do $(PY) manim -qh -a talk/scenes/$$s.py || exit 1; done
+	@for s in $(if $(SCENE),$(SCENE),$(SCENES)); do $(PY) manim -qh -a --save_sections talk/scenes/$$s.py || exit 1; done
+contact:
+	@$(PY) --with pillow python talk/scenes/contact.py $(if $(QUALITY),--quality $(QUALITY),)
 talk-fonts:
 	@uv run --with fonttools --with brotli python talk/scenes/fonts.py
 

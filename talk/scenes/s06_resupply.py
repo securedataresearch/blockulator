@@ -10,7 +10,11 @@ Then the half is restored: the dot returns to the exact value, named to
 22 decimals (the fewest at which it still reads below one half; at 21 it
 rounds to 0.5), the LTV recomputes to 499,999,999,999.9999999995004995
 (to 16 decimals), the comparison with 95,000 reads 5,263,158× and the
-tick becomes a red cross. About 66 s.
+tick becomes a red cross, and the multiplier names the miss.
+
+Six sections, one per click: the price; the long division; the floor to
+0; the check passes; the half restored and the check fails; the
+multiplier (claim V12).
 
 No number on screen carries an ellipsis: each is complete in a stated
 format, rounded half-up at the stated decimal (check.py asserts both).
@@ -27,6 +31,7 @@ from __future__ import annotations
 
 from decimal import Decimal, localcontext
 from fractions import Fraction
+import re
 from math import log10
 
 from manim import (
@@ -43,14 +48,14 @@ from manim import (
 )
 from manim.utils.rate_functions import ease_out_cubic
 
-from vocab import DeckScene, GridLine, Palette, check_mark, cross_mark, digits, direction, markup, resupply, snap, thousands, words
+from vocab import SIZE_BODY, DeckScene, GridLine, Palette, check_mark, cross_mark, digits, direction, markup, resupply, snap, thousands, words
 
 QUOTIENT_DIGITS = 30  # decimals of the long division, complete and labelled
 LTV_DECIMALS = 16  # decimals of the exact LTV, complete and labelled
 RATE_SHORT = 22  # decimals of the rate where it is named in passing: the fewest that still read below one half
 GRID = (0, 2, 1)  # the integer grid the stored rate lives on
 MONO = 30
-SANS = 28
+SANS = SIZE_BODY - 4
 SMALL = 14  # the Solidity citations
 CHECK = 24  # the solvency rows
 LABEL = 18  # "(to N decimals)"
@@ -76,6 +81,17 @@ def _power_of_ten(n: int) -> int:
     return e
 
 
+def _numerator_exp(rate_line: str) -> int:
+    """The exponent of the rate's numerator, read from the cited Solidity
+    line ("_exchangeRate = 1e36 / …"): the formula is the source's."""
+    m = re.search(r"\b1e(\d+)\b", rate_line)
+    assert m, rate_line
+    return int(m.group(1))
+
+
+LITERALS: dict[str, str] = {}  # every digit on the slide is a value of numbers() (the formula's 36 is read from the cited line)
+
+
 def numbers() -> dict:
     d = resupply()
     p = d["pins"]
@@ -89,8 +105,13 @@ def numbers() -> dict:
         ctx.prec = 60
         pct = str((Decimal(max_ltv) / Decimal(ltv_p) * 100).normalize())
     cite = {c["line"]: c for c in d["citations"] if c["file"].endswith("ResupplyPairCore.sol")}
+    rate_exp = _numerator_exp(cite[573]["text"])
+    assert 10**rate_exp == 10**36 and rate == Fraction(10**rate_exp, price), rate_exp
     return {
         "block": thousands(p["block"]),
+        "rate_exp": rate_exp,
+        "base": 10,
+        "grid_ticks": list(range(GRID[0], GRID[1] + 1)),
         "price": thousands(price),
         "quotient": _rounded(rate, QUOTIENT_DIGITS),
         "quotient_label": to_decimals(QUOTIENT_DIGITS),
@@ -114,21 +135,24 @@ def numbers() -> dict:
 
 
 class Resupply(DeckScene):
+    SECTIONS = ("price", "division", "floor", "check", "half", "multiplier")
+
     def construct(self):
         n = numbers()
         assert n["solvent_floor"] and not n["solvent_exact"]
-        self.wait(0.6)
+        self.section(0)
+        self.wait(0.3)
         self.play(self.caption(f"scripts/replays/resupply.json · block {n['block']}"))
 
         # the formula, from the verified source, and the price the oracle returned
         y0 = 3.3
-        formula = markup("exchange rate  =  10<sup>36</sup> ÷ price", SANS, Palette.TEXT)
+        formula = markup(f"exchange rate  =  10<sup>{n['rate_exp']}</sup> ÷ price", SANS, Palette.TEXT)
         formula.move_to([-6.3 + formula.width / 2, y0, 0])
         src = digits(n["rate_line"], SMALL, Palette.FAINT)
         src.move_to([-6.3 + src.width / 2, y0 - 0.45, 0])
         self.play(FadeIn(formula, shift=RIGHT * 0.1, run_time=0.6))
         self.play(FadeIn(src, run_time=0.5))
-        self.wait(3.0)
+        self.wait(1.0)
 
         price_lbl = words("price", SANS, Palette.MUTED)
         price_lbl.move_to([-6.3 + price_lbl.width / 2, y0 - 1.15, 0])
@@ -136,10 +160,10 @@ class Resupply(DeckScene):
         price.next_to(price_lbl, RIGHT, buff=0.45).set_y(y0 - 1.15)
         self.play(FadeIn(price_lbl, run_time=0.4))
         self.play(AddTextLetterByLetter(price, time_per_char=0.045))
-        self.wait(4.0)
 
         # the long division runs out
-        q_lbl = markup("10<sup>36</sup> ÷ price", SANS, Palette.MUTED)
+        self.section(1, hold=2.0)
+        q_lbl = markup(f"10<sup>{n['rate_exp']}</sup> ÷ price", SANS, Palette.MUTED)
         q_lbl.move_to([-6.3 + q_lbl.width / 2, y0 - 1.95, 0])
         quotient = digits(n["quotient"], MONO, Palette.EXACT)
         quotient.next_to(q_lbl, RIGHT, buff=0.45).set_y(y0 - 1.95)
@@ -147,11 +171,11 @@ class Resupply(DeckScene):
         self.play(FadeIn(q_lbl, run_time=0.4))
         self.play(AddTextLetterByLetter(quotient, time_per_char=0.09))
         self.play(FadeIn(quotient_lbl, run_time=0.4))
-        self.wait(4.0)
+        self.wait(1.0)
 
         # the integer grid the stored rate lives on
         line = GridLine(GRID, length=6.5, tick_size=0.14).move_to([-1.6, -0.6, 0])
-        tick_lbls = VGroup(*[digits(str(k), 24, Palette.FAINT).next_to(line.n2p(k), DOWN, buff=0.22) for k in range(GRID[0], GRID[1] + 1)])
+        tick_lbls = VGroup(*[digits(str(k), 24, Palette.FAINT).next_to(line.n2p(k), DOWN, buff=0.22) for k in n["grid_ticks"]])
         grid_lbl = words("the stored rate is an integer", 22, Palette.FAINT).next_to(line.get_end(), RIGHT, buff=0.4)
         self.play(Create(line, run_time=1.0), FadeIn(tick_lbls, run_time=0.8))
         self.play(FadeIn(grid_lbl, run_time=0.5))
@@ -171,9 +195,9 @@ class Resupply(DeckScene):
         self.play(FadeIn(dot, run_time=0.3))
         self.play(dot.animate(rate_func=ease_out_cubic).move_to(line.n2p(x_exact)), run_time=0.8)
         self.play(FadeIn(exact_lbl, run_time=0.4))
-        self.wait(3.0)
 
         # the floor sweeps the fraction away
+        self.section(2, hold=2.0)
         arrow = direction(line, x_exact, float(n["floor"]), Palette.WRONG, lift=0.42)
         floor_lbl = words("floor", 22, Palette.WRONG).next_to(arrow, UP, buff=0.1)
         self.play(Create(arrow, run_time=0.6), FadeIn(floor_lbl, run_time=0.4))
@@ -187,9 +211,9 @@ class Resupply(DeckScene):
         stored_lbl.move_to([-6.3 + stored_lbl.width / 2, y0 - 2.7, 0])
         stored.next_to(stored_lbl, RIGHT, buff=0.45).set_y(y0 - 2.7)
         self.play(FadeIn(stored_lbl, run_time=0.4), FadeIn(stored, shift=DOWN * 0.1, run_time=0.5))
-        self.wait(4.0)
 
         # the solvency check, as deployed: two rows, the product and the comparison
+        self.section(3, hold=2.0)
         y_chk = -1.72
         y_cmp = y_chk - 0.52
         chk_src = digits(n["ltv_line"], SMALL, Palette.FAINT)
@@ -203,7 +227,7 @@ class Resupply(DeckScene):
 
         def check_rows(rate_str: str, rate_fmt: str | None, ltv_str: str, ltv_fmt: str | None, cmp: str, colour: str):
             top = markup(
-                f"LTV  =  {n['borrow_tokens']} × <span foreground='{colour}'>{rate_str}</span>{stated(rate_fmt)} × 10<sup>{n['ltv_exp']}</sup>",
+                f"LTV  =  {n['borrow_tokens']} × <span foreground='{colour}'>{rate_str}</span>{stated(rate_fmt)} × {n['base']}<sup>{n['ltv_exp']}</sup>",
                 CHECK,
                 Palette.TEXT,
             )
@@ -222,9 +246,9 @@ class Resupply(DeckScene):
         verdict = words("solvent", 22, Palette.CORRECT).next_to(tick, RIGHT, buff=0.25).set_y(y_cmp)
         self.play(Create(tick, run_time=0.5))
         self.play(FadeIn(verdict, run_time=0.4))
-        self.wait(9.0)
 
         # the half, restored
+        self.section(4, hold=2.5)
         self.play(FadeOut(arrow, run_time=0.4), FadeOut(floor_lbl, run_time=0.4))
         back = dot.copy().move_to(line.n2p(x_exact)).set_color(Palette.EXACT)
         self.play(Transform(dot, back, run_time=1.0), quotient.animate.set_color(Palette.EXACT))
@@ -237,7 +261,7 @@ class Resupply(DeckScene):
         new_stored[0].set_y(y0 - 2.7)
         new_stored[1].set_y(y0 - 2.7)
         self.play(Transform(stored, new_stored[0], run_time=0.6), Transform(stored_lbl, new_stored_lbl, run_time=0.6), FadeIn(new_stored[1], run_time=0.6))
-        self.wait(2.0)
+        self.wait(1.0)
 
         # each rounded number carries its stated format; the comparison follows the LTV's
         new_t, new_b, new_r = check_rows(n["rate_short"], n["rate_label"], n["ltv_exact"], n["ltv_label"], f">  {n['max_ltv']}", Palette.EXACT)
@@ -250,8 +274,10 @@ class Resupply(DeckScene):
             Transform(tick, new_tick, run_time=0.9),
             Transform(verdict, new_verdict, run_time=0.9),
         )
-        self.wait(1.5)
+
+        # the multiplier: how far the exact LTV is over the limit
+        self.section(5, hold=2.0)
         ratio = markup(f"<span foreground='{Palette.WRONG}'>{n['ratio']}×</span> the limit", SANS, Palette.TEXT)
         ratio.move_to([-6.3 + ratio.width / 2, y_cmp - 0.62, 0])
         self.play(FadeIn(ratio, shift=UP * 0.08, run_time=0.7))
-        self.wait(12.0)
+        self.close()
