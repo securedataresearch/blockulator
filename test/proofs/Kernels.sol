@@ -19,7 +19,7 @@ pragma solidity ^0.8.31;
 ///         solver could not close them inside the op proofs: the inverse is a
 ///         chain of eleven 256-bit products.
 library Kernels {
-    /// FP127's div kernel, as fp127_div writes it (contracts/src/fp127/FP127.yul.src).
+    /// BL127's div kernel, as bl127_div writes it (contracts/src/bl127/BL127.yul.src).
     function divq(uint256 ua, uint256 ub) internal pure returns (uint256 q) {
         assembly {
             q := shr(128, ua)
@@ -41,7 +41,7 @@ library Kernels {
         }
     }
 
-    /// FP19's divh (contracts/src/fp19/FP19.yul.src).
+    /// BL19's divh (contracts/src/bl19/BL19.yul.src).
     function divh(uint256 a, uint256 b) internal pure returns (uint256 q) {
         assembly {
             let prod0 := shl(255, a)
@@ -64,7 +64,7 @@ library Kernels {
         }
     }
 
-    /// floor(m 2^60 / 5^18) for m < 2^237, as fp19_fromFixed18 writes it: two
+    /// floor(m 2^60 / 5^18) for m < 2^237, as bl19_fromFixed18 writes it: two
     /// word divisions by 5^18 < 2^42, m split at bit 100. Lemma K18, proved
     /// in test/proofs/lemmas.py (linear integer arithmetic).
     function q18(uint256 m) internal pure returns (uint256 q) {

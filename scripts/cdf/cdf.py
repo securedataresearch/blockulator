@@ -20,24 +20,24 @@ from mpmath import mp, mpf, ncdf, erfc, log10, nstr
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "ladder"))
-from gen_inputs import fp19_decode  # noqa: E402
+from gen_inputs import bl19_decode  # noqa: E402
 
-mp.dps = 150  # well past FP19's 71 digits, so its error is measured, not rounded away
+mp.dps = 150  # well past BL19's 71 digits, so its error is measured, not rounded away
 OUT_JSON = ROOT / "docs" / "benchmarks" / "cdf.json"
 OUT_MD = ROOT / "docs" / "benchmarks" / "cdf.md"
 K = 192
 
 # implementation -> (label, representation, source); the representation decodes the raw result
 IMPLS = {
-    "fp19": ("FP19", "FP19, 256-bit float", "contracts/src/fp19 (FP19Lib)"),
-    "fp127": ("FP127", "FP127, 127.128 fixed point", "contracts/src/fp127 (FP127Lib)"),
+    "bl19": ("BL19", "BL19, 256-bit float", "contracts/src/bl19 (BL19Lib)"),
+    "bl127": ("BL127", "BL127, 127.128 fixed point", "contracts/src/bl127 (BL127Lib)"),
     "solstat": ("solstat", "WAD (10^18)", "primitivefinance/solstat @ 80c603f, Gaussian.sol (lib/solstat)"),
     "lyra": ("Lyra v1", "10^27", "lyra-finance/lyra-protocol @ ea9e36a, BlackScholes._stdNormalCDF (vendored)"),
     "rmm": ("Primitive RMM-01", "ABDK 64.64", "primitivefinance/rmm-core @ 8d3ef9b, CumulativeNormalDistribution.getCDF (transcribed)"),
 }
 DECODE = {
-    "fp19": fp19_decode,
-    "fp127": lambda r: mpf(r) / mpf(2) ** 128,
+    "bl19": bl19_decode,
+    "bl127": lambda r: mpf(r) / mpf(2) ** 128,
     "solstat": lambda r: mpf(r) / mpf(10) ** 18,
     "lyra": lambda r: mpf(r) / mpf(10) ** 27,
     "rmm": lambda r: mpf(r) / mpf(2) ** 64,

@@ -17,7 +17,7 @@ operands of all 190 executions against a floored `stored * amount / totalSupply`
 model, and pins the program counters and storage slots. The forge test
 (test/replays/Thetanuts.t.sol) replays every call from those integers with no
 network, asserts it equals the chain, then reruns the 37 mints with the charge
-rounded up, in FP127 and FP19, and against exact rationals. This script scores
+rounded up, in BL127 and BL19, and against exact rationals. This script scores
 them (Python Fraction, mpmath at 200 digits for digit counts) and writes the page.
 
 Read-only: no transactions, no keys. RPC endpoints are public and keyless.
@@ -425,11 +425,11 @@ def parse(text: str) -> dict:
     return res
 
 
-def fp127(raw: int) -> Fraction:
+def bl127(raw: int) -> Fraction:
     return Fraction(raw, 1 << 128)
 
 
-def fp19(raw: int) -> Fraction:
+def bl19(raw: int) -> Fraction:
     wd = raw & ((1 << 256) - 1)
     if wd == 0:
         return Fraction(0)
@@ -493,18 +493,18 @@ def score(text: str):
     claimR = R["claim"]
     assert [d["payout"] for d in claimR] == c["payout"]
 
-    # exact rationals on the chain path, and the FP127/FP19 values the test computed
+    # exact rationals on the chain path, and the BL127/BL19 values the test computed
     exact = [Fraction(m["storedBefore"][0] * m["amount"], m["supplyBefore"]) for m in ms]
-    f127 = [fp127(d["raw"]) for d in R["fp127"]]
-    f19 = [fp19(d["raw"]) for d in R["fp19"]]
-    for d, e in zip(R["fp127"], exact):
+    f127 = [bl127(d["raw"]) for d in R["bl127"]]
+    f19 = [bl19(d["raw"]) for d in R["bl19"]]
+    for d, e in zip(R["bl127"], exact):
         assert d["floor"] == 0 and d["ceil"] == 1 and d["round"] == (1 if e >= Fraction(1, 2) else 0)
-    for d in R["fp19"]:
+    for d in R["bl19"]:
         assert d["floor"] == 0 and d["ceil"] == 1
     dig127 = [digits(v, e) for v, e in zip(f127, exact)]
     dig19 = [digits(v, e) for v, e in zip(f19, exact)]
 
-    # round up: the same 37 mints, the charge ceiled (the integer path, FP127-ceil and FP19-ceil agree in the test)
+    # round up: the same 37 mints, the charge ceiled (the integer path, BL127-ceil and BL19-ceil agree in the test)
     up = R["ceil"]
     stu = [1] * 5
     sup = S0 - A
@@ -517,7 +517,7 @@ def score(text: str):
     floor_up = -(-M // 3)
     tail = R["ceilSummary"][0]
     assert tail["paidPerComponent"] == up_paid and tail["minPerComponent"] == floor_up and tail["minted"] == M
-    for d in R["fp127ceil"] + R["fp19ceil"]:
+    for d in R["bl127ceil"] + R["bl19ceil"]:
         assert d["paidPerComponent"] == up_paid
 
     # exact rational charge (if a fraction of a raw unit could move): the ratio stays at exactly 1/3
@@ -582,8 +582,8 @@ def render(J, c, ms, exact, f127, f19, dig127, dig19, up, up_paid, floor_up, exa
     L.append(f"- **The claim was not inflated.** It paid floor(stored × {A:,} / {S0:,}) of each component, at or below the exact "
              "pro-rata share. The loss is the mints. The vault gave away its whole backing in exchange for index tokens it then "
              "recreated for nothing.")
-    L.append(f"- **The class is rounding direction, not precision.** The exact first charge is 2/3 of a raw unit. FP127 carries it "
-             f"to {dig127[0]} digits and FP19 to {dig19[0]}, but a token transfer moves whole raw units, so a rule still has to pick one. "
+    L.append(f"- **The class is rounding direction, not precision.** The exact first charge is 2/3 of a raw unit. BL127 carries it "
+             f"to {dig127[0]} digits and BL19 to {dig19[0]}, but a token transfer moves whole raw units, so a rule still has to pick one. "
              "Floor gives 0, which is the attack unchanged. Rounding up gives 1. Rounded up, the charge never lets the "
              "stored-to-supply ratio fall below 1/3, so any sequence that mints "
              f"{M:,} tokens must pay at least {floor_up:,} raw units of every component. The claim took at most {max(payout):,} "
@@ -630,16 +630,16 @@ def render(J, c, ms, exact, f127, f19, dig127, dig19, up, up_paid, floor_up, exa
     take = f"took {min(payout):,} – {max(payout):,}"
     L.append(f"| deployed: `stored * amount / totalSupply`, floored (pc {T['pcDiv']}) | 0 | 0 | 0 | {take} | **free: the attack** (matches the chain: 185 transfers of 0) |")
     L.append(f"| rounded up (ceil) | 1 | 0 | {up_paid:,} | {up_paid - max(payout):,} more than the largest take | **loses on every component** |")
-    L.append(f"| FP127 → floor to a raw unit | {fmt(f127[0], 30)} → 0 | {mn127:.2f} | 0 | {take} | free: precision without direction |")
-    L.append(f"| FP127 → ceil to a raw unit | {fmt(f127[0], 30)} → 1 | {mn127:.2f} | {up_paid:,} | as rounded up | loses on every component |")
-    L.append(f"| FP19 → floor to a raw unit | {fmt(f19[0], 30)} → 0 | {mn19:.2f} | 0 | {take} | free: precision without direction |")
-    L.append(f"| FP19 → ceil to a raw unit | {fmt(f19[0], 30)} → 1 | {mn19:.2f} | {up_paid:,} | as rounded up | loses on every component |")
+    L.append(f"| BL127 → floor to a raw unit | {fmt(f127[0], 30)} → 0 | {mn127:.2f} | 0 | {take} | free: precision without direction |")
+    L.append(f"| BL127 → ceil to a raw unit | {fmt(f127[0], 30)} → 1 | {mn127:.2f} | {up_paid:,} | as rounded up | loses on every component |")
+    L.append(f"| BL19 → floor to a raw unit | {fmt(f19[0], 30)} → 0 | {mn19:.2f} | 0 | {take} | free: precision without direction |")
+    L.append(f"| BL19 → ceil to a raw unit | {fmt(f19[0], 30)} → 1 | {mn19:.2f} | {up_paid:,} | as rounded up | loses on every component |")
     L.append(f"| exact rational, if a fraction of a raw unit could move | 2/3 | exact | {fmtc(exact_paid)} (= minted / 3) | "
              f"{fmtc(exact_paid - max(payout))} more than the largest take | loses on every component |")
     L.append(f"| nearest, the attacker's amounts | 1 | 0 | {near_paid:,} | {near_paid - max(payout):,} more than the largest take | blocked |")
     L.append(f"| nearest, re-tuned (each mint < supply / 2) | 0 | 0 | 0 in {len(nr)} mints | {take} | **free: the attack, re-tuned** |")
     L.append("")
-    L.append(f"Reading the table: FP127 and FP19 compute the 2/3 almost exactly, with at least {int(mn127)} and {int(mn19)} correct digits. That does not decide "
+    L.append(f"Reading the table: BL127 and BL19 compute the 2/3 almost exactly, with at least {int(mn127)} and {int(mn19)} correct digits. That does not decide "
              "anything, because the vault moves ERC-20 raw units and 2/3 of a unit has to become 0 or 1. Floor, the deployed "
              "choice, rounds in the minter's favour. Ceil rounds in the vault's favour and closes the attack whatever the "
              "arithmetic in front of it. Rounding to nearest only looks like a fix when the attacker's amounts were tuned to floor.\n")
@@ -663,7 +663,7 @@ def render(J, c, ms, exact, f127, f19, dig127, dig19, up, up_paid, floor_up, exa
     L.append("## Every mint, on the chain path\n")
     L.append("Supply before each mint, the exact charge per component (1 × amount / supply), and what each rule makes of it. "
              "The deployed column is the chain's: each value is a `transferFrom` amount from the call trace and a Transfer log.\n")
-    L.append("| # | amount | supply before | exact charge | deployed (floor) | FP127 | FP127 digits | FP19 digits | ceil | nearest |")
+    L.append("| # | amount | supply before | exact charge | deployed (floor) | BL127 | BL127 digits | BL19 digits | ceil | nearest |")
     L.append("|---|---|---|---|---|---|---|---|---|---|")
     for k, (m, e) in enumerate(zip(ms, exact)):
         L.append(f"| {k + 1} | {m['amount']:,} | {m['supplyBefore']:,} | {fmt(e, 14)} | {m['charge'][0]} | {fmt(f127[k], 14)} | "

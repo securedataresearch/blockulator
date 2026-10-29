@@ -1,6 +1,6 @@
 # Terminal precision ladder
 
-Generated 2026-10-28 by `make ladder`. Versions: fp127 6c2eeaf, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), fraxlend fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed), euler evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, solmate solmate@89365b8 (no tag: v6 predates SignedWadMath), openzeppelin openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored), uniswap v4-core v4.0.0 (FullMath, vendored), snekmate v0.1.2 (math module, vyper 0.4.3), forge forge Version: 1.7.1.
+Generated 2026-10-28 by `make ladder`. Versions: bl127 6c2eeaf, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), fraxlend fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed), euler evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, solmate solmate@89365b8 (no tag: v6 predates SignedWadMath), openzeppelin openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored), uniswap v4-core v4.0.0 (FullMath, vendored), snekmate v0.1.2 (math module, vyper 0.4.3), forge forge Version: 1.7.1.
 
 Each scenario is run for several inputs; the first table is the reference input in full (`digits / digitsFormat / gas per step`, where digits is against the exact truth and digitsFormat against the truth from the parameters as the library received them, both to one decimal and capped at what the format holds at that magnitude), the next two summarise all inputs (`median (min–max)` of the capped digits over the inputs every library completed at that N; `k/n` where a library completed k of n inputs). Full values, both truths, signed errors and raw words are in ladder.json; the method is in the Methodology section at the end.
 
@@ -14,7 +14,7 @@ Inputs: **reference** principal = 10000, rate = 0.1/365 ($10,000 at 10% APR, the
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `10002.7397260274` | 71.3 / 71.3 / 1,669 | 38.8 / exact / 1,335 | 38.8 / exact / 900 | 19.7 / exact / 932 | 19.5 / exact / 744 | 19.5 / exact / 1,103 | 33.9 / 33.9 / 2,930 | 19.5 / exact / 1,013 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 27.5 / exact / 610 | 19.5 / exact / 749 | 19.5 / exact / 1,136 | 19.5 / exact / 1,084 | 19.5 / exact / 1,218 | 19.5 / exact / 2,019 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `10005.48020266467` | 71.3 / 71.3 / 1,145 | 38.5 / 42.5 / 1,072 | 38.5 / 42.5 / 635 | 19.4 / 23.2 / 609 | 19.2 / 22.0 / 488 | 19.2 / 22.0 / 847 | 33.5 / 33.5 / 1,972 | 19.2 / 22.0 / 757 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 26.9 / 27.3 / 420 | 19.2 / 22.0 / 493 | 19.2 / 22.0 / 880 | 19.2 / 22.0 / 826 | 19.2 / 22.0 / 889 | 19.2 / 22.0 / 1,755 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -29,7 +29,7 @@ Inputs: **reference** principal = 10000, rate = 0.1/365 ($10,000 at 10% APR, the
 
 ### All inputs (10): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 10 | 71.3 (71.1–71.3) | 38.8 (35.5–39.1) | 38.8 (35.5–39.1) | 19.5 (16.1–20.0) | 18.8 (15.0–19.8) | 18.8 (15.0–19.8) | 33.9 (33.6–34.0) | 18.8 (15.0–19.8) | — (10 revert) | — (10 revert) | 27.4 (24.0–28.5) | 18.8 (15.0–19.8) | 18.8 (15.0–19.8) | 18.8 (15.0–19.8) | 18.8 (15.0–19.8) | 18.8 (15.0–19.8) | — (10 revert) | — (10 revert) |
 | 2 | 10 | 71.2 (71.0–71.3) | 38.5 (35.2–38.8) | 38.5 (35.2–38.8) | 19.3 (15.8–19.7) | 18.5 (14.8–19.5) | 18.5 (14.8–19.5) | 33.6 (33.3–34.0) | 18.5 (14.8–19.5) | — (10 revert) | — (10 revert) | 26.9 (24.0–27.4) | 18.5 (14.8–19.5) | 18.5 (14.8–19.5) | 18.5 (14.8–19.5) | 18.5 (14.8–19.5) | 18.5 (14.8–19.5) | — (10 revert) | — (10 revert) |
@@ -44,7 +44,7 @@ Inputs: **reference** principal = 10000, rate = 0.1/365 ($10,000 at 10% APR, the
 
 ### All inputs (10): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 10 | 71.3 (71.1–71.3) | 42.5 (35.5–46.5) | 42.5 (35.5–46.5) | 23.2 (16.2–27.2) | 22.0 (15.0–26.0) | 22.0 (15.0–26.0) | 33.9 (33.6–34.0) | 22.0 (15.0–26.0) | — (10 revert) | — (10 revert) | 31.0 (24.0–35.0) | 22.0 (15.0–26.0) | 22.0 (15.0–26.0) | 22.0 (15.0–26.0) | 22.0 (15.0–26.0) | 22.0 (15.0–26.0) | — (10 revert) | — (10 revert) |
 | 2 | 10 | 71.2 (71.0–71.3) | 42.5 (35.3–46.5) | 42.5 (35.3–46.5) | 23.2 (16.0–27.2) | 22.0 (14.8–26.0) | 22.0 (14.8–26.0) | 33.6 (33.3–34.0) | 22.0 (14.8–26.0) | — (10 revert) | — (10 revert) | 27.3 (24.0–27.4) | 22.0 (14.8–26.0) | 22.0 (14.8–26.0) | 22.0 (14.8–26.0) | 22.0 (14.8–26.0) | 22.0 (14.8–26.0) | — (10 revert) | — (10 revert) |
@@ -59,7 +59,7 @@ Inputs: **reference** principal = 10000, rate = 0.1/365 ($10,000 at 10% APR, the
 
 ### All inputs (10): digits of the interest, b − principal, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 10 | 67.6 (66.5–68.4) | 35.2 (31.9–36.0) | 35.2 (31.9–36.0) | 16.1 (12.5–16.4) | 16.0 (11.4–16.0) | 16.0 (11.4–16.0) | 30.4 (29.1–31.1) | 16.0 (11.4–16.0) | — (10 revert) | — (10 revert) | 24.0 (20.4–24.5) | 16.0 (11.4–16.0) | 16.0 (11.4–16.0) | 16.0 (11.4–16.0) | 16.0 (11.4–16.0) | 16.0 (11.4–16.0) | — (10 revert) | — (10 revert) |
 | 2 | 10 | 67.8 (66.7–68.7) | 35.2 (31.9–36.0) | 35.2 (31.9–36.0) | 16.1 (12.6–16.4) | 15.9 (11.5–15.9) | 15.9 (11.5–15.9) | 30.4 (29.0–31.4) | 15.9 (11.5–15.9) | — (10 revert) | — (10 revert) | 23.7 (20.7–24.3) | 15.9 (11.5–15.9) | 15.9 (11.5–15.9) | 15.9 (11.5–15.9) | 15.9 (11.5–15.9) | 15.9 (11.5–15.9) | — (10 revert) | — (10 revert) |
@@ -82,7 +82,7 @@ Inputs: **reference** principal = 10000, rate = 0.1/365 ($10,000 at 10% APR, the
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `10002.7397260274` | 71.3 / 71.3 / 2,584 | 38.8 / exact / 1,995 | 38.8 / exact / 1,146 | 19.1 / 19.2 / 11,494 | 17.9 / 18.0 / 2,153 | 19.5 / exact / 1,435 | 33.5 / 33.5 / 28,817 | 17.9 / 18.0 / 3,093 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 17.9 / 18.0 / 2,242 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 19.5 / exact / 1,771 | 17.9 / 18.0 / 5,676 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `10005.48020266467` | 71.3 / 71.3 / 1,541 | 38.8 / 38.8 / 1,114 | 38.8 / 38.8 / 699 | 18.7 / 18.8 / 5,747 | 17.9 / 18.0 / 1,076 | 16.6 / 16.6 / 5,365 | 33.5 / 33.5 / 14,411 | 17.9 / 18.0 / 1,546 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 17.9 / 18.0 / 1,121 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 16.6 / 16.6 / 5,280 | 17.9 / 18.0 / 2,838 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -97,7 +97,7 @@ Inputs: **reference** principal = 10000, rate = 0.1/365 ($10,000 at 10% APR, the
 
 ### All inputs (10): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 10 | 71.3 (71.1–71.3) | 38.8 (35.5–39.1) | 38.8 (35.5–39.1) | 19.0 (16.1–19.1) | 17.9 (15.0–17.9) | 18.8 (15.0–19.8) | 33.5 (33.2–33.7) | 17.9 (15.0–17.9) | — (10 revert) | — (10 revert) | — (10 revert) | 17.9 (15.0–17.9) | — (10 revert) | — (10 revert) | 18.8 (15.0–19.8) | 17.9 (15.0–17.9) | — (10 revert) | — (10 revert) |
 | 2 | 10 | 71.2 (71.0–71.3) | 38.6 (35.5–38.9) | 38.6 (35.5–38.9) | 18.7 (16.1–18.9) | 17.7 (15.0–17.9) | 16.7 (15.0–16.9) | 33.5 (33.2–34.0) | 17.7 (15.0–17.9) | — (10 revert) | — (10 revert) | — (10 revert) | 17.7 (15.0–17.9) | — (10 revert) | — (10 revert) | 16.7 (15.0–16.9) | 17.7 (15.0–17.9) | — (10 revert) | — (10 revert) |
@@ -112,7 +112,7 @@ Inputs: **reference** principal = 10000, rate = 0.1/365 ($10,000 at 10% APR, the
 
 ### All inputs (10): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 10 | 71.3 (71.1–71.3) | 42.5 (35.5–46.5) | 42.5 (35.5–46.5) | 19.2 (16.2–19.2) | 18.0 (15.0–18.0) | 22.0 (15.0–26.0) | 33.5 (33.2–33.7) | 18.0 (15.0–18.0) | — (10 revert) | — (10 revert) | — (10 revert) | 18.0 (15.0–18.0) | — (10 revert) | — (10 revert) | 22.0 (15.0–26.0) | 18.0 (15.0–18.0) | — (10 revert) | — (10 revert) |
 | 2 | 10 | 71.2 (71.0–71.3) | 38.8 (35.5–39.5) | 38.8 (35.5–39.5) | 19.0 (16.2–19.1) | 17.8 (15.0–18.0) | 16.7 (15.0–16.9) | 33.5 (33.2–34.0) | 17.8 (15.0–18.0) | — (10 revert) | — (10 revert) | — (10 revert) | 17.8 (15.0–18.0) | — (10 revert) | — (10 revert) | 16.7 (15.0–16.9) | 17.8 (15.0–18.0) | — (10 revert) | — (10 revert) |
@@ -127,7 +127,7 @@ Inputs: **reference** principal = 10000, rate = 0.1/365 ($10,000 at 10% APR, the
 
 ### All inputs (10): digits of the interest, b − principal, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 10 | 67.6 (66.5–68.4) | 35.2 (31.9–36.0) | 35.2 (31.9–36.0) | 15.5 (12.5–16.1) | 14.4 (11.4–15.0) | 16.0 (11.4–16.0) | 29.9 (28.7–30.8) | 14.4 (11.4–15.0) | — (10 revert) | — (10 revert) | — (10 revert) | 14.4 (11.4–15.0) | — (10 revert) | — (10 revert) | 16.0 (11.4–16.0) | 14.4 (11.4–15.0) | — (10 revert) | — (10 revert) |
 | 2 | 10 | 68.0 (66.7–68.7) | 35.5 (32.2–36.1) | 35.5 (32.2–36.1) | 15.4 (12.8–16.2) | 14.7 (11.7–15.1) | 13.4 (11.7–14.3) | 30.2 (28.9–31.4) | 14.7 (11.7–15.1) | — (10 revert) | — (10 revert) | — (10 revert) | 14.7 (11.7–15.1) | — (10 revert) | — (10 revert) | 13.4 (11.7–14.3) | 14.7 (11.7–15.1) | — (10 revert) | — (10 revert) |
@@ -150,7 +150,7 @@ Inputs: **reference** supply = 1000, unit = 1 (a thousand tokens out, unit buys)
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `31.62277660168379` | 71.3 / 71.3 / 3,197 | 40.0 / 40.0 / 2,047 | 40.0 / 40.0 / 1,701 | 20.7 / 20.7 / 1,810 | 19.5 / 19.5 / 1,260 | 19.5 / 19.5 / 1,752 | 34.0 / 34.0 / 3,231 | 18.6 / 18.6 / 3,204 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 19.5 / 19.5 / 1,347 | 19.5 / 19.5 / 1,576 | reverts `0x7bb9ae15` | 19.5 / 19.5 / 1,894 | 19.5 / 19.5 / 2,046 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `63.26136064079654` | 71.3 / 71.3 / 2,949 | 40.3 / 40.3 / 1,833 | 40.3 / 40.3 / 1,490 | 21.0 / 21.0 / 1,572 | 19.7 / 19.7 / 1,049 | 19.7 / 19.7 / 1,545 | 33.8 / 33.8 / 3,116 | 18.2 / 18.2 / 2,993 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 19.7 / 19.7 / 1,136 | 19.7 / 19.7 / 1,365 | reverts `0x7bb9ae15` | 19.7 / 19.7 / 1,614 | 19.7 / 19.7 / 1,833 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -165,7 +165,7 @@ Inputs: **reference** supply = 1000, unit = 1 (a thousand tokens out, unit buys)
 
 ### All inputs (7): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 7 | 71.3 (71.3–71.3) | 40.0 (38.5–43.0) | 40.0 (38.5–43.0) | 20.7 (19.2–23.7) | 19.5 (18.0–22.5) | 19.5 (18.0–22.5) | 34.0 (33.9–34.0) | 18.6 (17.8–18.9) | — (7 revert) | — (7 revert) | — (7 revert) | 19.5 (18.0–22.5) | 19.5 (18.0–22.5) | — (7 revert) | 19.5 (18.0–22.5) | 19.5 (18.0–22.5) | — (7 revert) | — (7 revert) |
 | 2 | 7 | 71.3 (71.2–71.3) | 40.3 (38.8–43.3) | 40.3 (38.8–43.3) | 20.9 (19.5–24.0) | 19.5 (18.3–22.5) | 19.5 (18.3–22.5) | 34.0 (33.8–34.0) | 18.2 (18.0–18.7) | — (7 revert) | — (7 revert) | — (7 revert) | 19.5 (18.3–22.5) | 19.5 (18.3–22.5) | — (7 revert) | 19.5 (18.3–22.5) | 19.5 (18.3–22.5) | — (7 revert) | — (7 revert) |
@@ -180,7 +180,7 @@ Inputs: **reference** supply = 1000, unit = 1 (a thousand tokens out, unit buys)
 
 ### All inputs (7): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 7 | 71.3 (71.3–71.3) | 40.0 (38.5–43.0) | 40.0 (38.5–43.0) | 20.7 (19.2–23.7) | 19.5 (18.0–22.5) | 19.5 (18.0–22.5) | 34.0 (33.9–34.0) | 18.6 (17.8–18.9) | — (7 revert) | — (7 revert) | — (7 revert) | 19.5 (18.0–22.5) | 19.5 (18.0–22.5) | — (7 revert) | 19.5 (18.0–22.5) | 19.5 (18.0–22.5) | — (7 revert) | — (7 revert) |
 | 2 | 7 | 71.3 (71.2–71.3) | 40.3 (38.8–43.3) | 40.3 (38.8–43.3) | 20.9 (19.5–24.0) | 19.5 (18.3–22.5) | 19.5 (18.3–22.5) | 34.0 (33.8–34.0) | 18.2 (18.0–18.7) | — (7 revert) | — (7 revert) | — (7 revert) | 19.5 (18.3–22.5) | 19.5 (18.3–22.5) | — (7 revert) | 19.5 (18.3–22.5) | 19.5 (18.3–22.5) | — (7 revert) | — (7 revert) |
@@ -203,7 +203,7 @@ Inputs: **reference** x0 = 1.5 (1.5 is representable in every format, so a perfe
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `1.5` | exact / exact / 7,663 | 38.7 / 38.7 / 5,599 | 38.7 / 38.7 / 5,184 | 19.1 / 19.1 / 10,889 | exact / exact / 1,441 | 16.9 / 16.9 / 10,093 | 33.5 / 33.5 / 23,586 | 17.8 / 17.8 / 2,616 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | exact / exact / 1,529 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 16.9 / 16.9 / 9,893 | exact / exact / 3,640 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `1.5` | exact / exact / 7,494 | 38.7 / 38.7 / 5,427 | 38.7 / 38.7 / 5,047 | 18.8 / 18.8 / 10,695 | exact / exact / 1,272 | 16.6 / 16.6 / 9,902 | 33.2 / 33.2 / 23,375 | 17.5 / 17.5 / 2,447 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | exact / exact / 1,360 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 16.6 / 16.6 / 9,665 | exact / exact / 3,469 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -218,7 +218,7 @@ Inputs: **reference** x0 = 1.5 (1.5 is representable in every format, so a perfe
 
 ### All inputs (10): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 7 | 71.3 (70.6–71.3) | 38.8 (38.5–39.1) | 38.8 (38.5–39.1) | 19.1 (18.9–19.3) | 18.3 (17.6–19.2) | 17.0 (16.9–18.0) | 32.9 (32.1–33.7) | 18.0 (17.6–18.9) | — (10 revert) | — (10 revert) | — (10 revert) | 18.3 (17.6–19.2) | — (10 revert) | — (10 revert) | 17.0 (16.9–18.0), 7/10 | 18.3 (17.6–19.2) | — (10 revert) | — (10 revert) |
 | 2 | 7 | 71.3 (70.6–71.3) | 38.8 (38.5–39.1) | 38.8 (38.5–39.1) | 18.7 (18.6–18.9) | 17.9 (17.5–19.2) | 16.7 (16.6–16.7) | 32.7 (31.8–33.4) | 17.6 (17.5–17.9) | — (10 revert) | — (10 revert) | — (10 revert) | 17.9 (17.5–19.2) | — (10 revert) | — (10 revert) | 16.7 (16.6–16.7), 7/10 | 17.9 (17.5–19.2) | — (10 revert) | — (10 revert) |
@@ -233,7 +233,7 @@ Inputs: **reference** x0 = 1.5 (1.5 is representable in every format, so a perfe
 
 ### All inputs (10): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 7 | 71.3 (70.6–71.3) | 38.8 (38.5–39.1) | 38.8 (38.5–39.1) | 19.1 (18.9–19.3) | 18.3 (17.9–19.2) | 17.0 (16.9–18.0) | 32.9 (32.1–33.7) | 18.0 (17.8–18.9) | — (10 revert) | — (10 revert) | — (10 revert) | 18.3 (17.9–19.2) | — (10 revert) | — (10 revert) | 17.0 (16.9–18.0), 7/10 | 18.3 (17.9–19.2) | — (10 revert) | — (10 revert) |
 | 2 | 7 | 71.3 (70.6–71.3) | 38.8 (38.5–39.1) | 38.8 (38.5–39.1) | 18.7 (18.6–18.9) | 17.9 (17.6–19.2) | 16.7 (16.6–16.7) | 32.7 (31.8–33.4) | 17.6 (17.5–17.9) | — (10 revert) | — (10 revert) | — (10 revert) | 17.9 (17.6–19.2) | — (10 revert) | — (10 revert) | 16.7 (16.6–16.7), 7/10 | 17.9 (17.6–19.2) | — (10 revert) | — (10 revert) |
@@ -256,7 +256,7 @@ Inputs: **reference** principal = 300000, rate = 0.05/365, term = 10001 (a mortg
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `299985.9979046462` | 71.1 / 71.1 / 2,700 | 39.1 / exact / 1,738 | 39.1 / exact / 1,330 | 20.0 / exact / 1,431 | 19.8 / exact / 1,147 | 19.8 / exact / 1,506 | 33.5 / 33.5 / 4,713 | 19.8 / exact / 1,416 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 19.8 / exact / 1,152 | 19.8 / exact / 1,539 | 19.8 / exact / 1,491 | 19.8 / exact / 1,694 | 19.8 / exact / 2,426 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `299971.9938911971` | 70.8 / 70.8 / 2,051 | 38.8 / 44.0 / 1,350 | 38.8 / 44.0 / 940 | 19.7 / 24.7 / 965 | 19.5 / 23.4 / 766 | 19.5 / 23.4 / 1,125 | 33.4 / 33.4 / 3,601 | 19.5 / 23.4 / 1,035 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 19.5 / 23.4 / 771 | 19.5 / 23.4 / 1,158 | 19.5 / 23.4 / 1,108 | 19.5 / 23.4 / 1,204 | 19.5 / 23.4 / 2,037 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -271,7 +271,7 @@ Inputs: **reference** principal = 300000, rate = 0.05/365, term = 10001 (a mortg
 
 ### All inputs (8): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 8 | 71.3 (71.1–71.3) | 39.1 (38.5–39.1) | 39.1 (38.5–39.1) | 20.0 (19.4–20.0) | 19.8 (18.0–19.8) | 19.8 (18.0–19.8) | 33.5 (33.3–33.7) | 19.8 (18.0–19.8) | — (8 revert) | — (8 revert) | — (8 revert) | 19.8 (18.0–19.8) | 19.8 (18.0–19.8) | 19.8 (18.0–19.8) | 19.8 (18.0–19.8) | 19.8 (18.0–19.8) | — (8 revert) | — (8 revert) |
 | 2 | 8 | 71.2 (70.8–71.3) | 38.8 (38.2–38.8) | 38.8 (38.2–38.8) | 19.7 (19.1–19.7) | 19.5 (17.7–19.5) | 19.5 (17.7–19.5) | 33.3 (33.1–33.4) | 19.5 (17.7–19.5) | — (8 revert) | — (8 revert) | — (8 revert) | 19.5 (17.7–19.5) | 19.5 (17.7–19.5) | 19.5 (17.7–19.5) | 19.5 (17.7–19.5) | 19.5 (17.7–19.5) | — (8 revert) | — (8 revert) |
@@ -286,7 +286,7 @@ Inputs: **reference** principal = 300000, rate = 0.05/365, term = 10001 (a mortg
 
 ### All inputs (8): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 8 | 71.3 (71.1–71.3) | 44.0 (41.2–44.5) | 44.0 (41.2–44.5) | 24.7 (21.9–25.2) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | 33.5 (33.3–33.7) | 23.4 (20.6–23.9) | — (8 revert) | — (8 revert) | — (8 revert) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | — (8 revert) | — (8 revert) |
 | 2 | 8 | 71.2 (70.8–71.3) | 44.0 (41.2–44.5) | 44.0 (41.2–44.5) | 24.7 (21.9–25.2) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | 33.3 (33.1–33.4) | 23.4 (20.6–23.9) | — (8 revert) | — (8 revert) | — (8 revert) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | 23.4 (20.6–23.9) | — (8 revert) | — (8 revert) |
@@ -309,7 +309,7 @@ Inputs: **reference**  (the scenario has no parameters; its inputs are the integ
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `1.5` | exact / exact / 11,634 | 38.7 / 38.7 / 7,792 | 38.7 / 38.7 / 6,538 | 19.1 / 19.1 / 12,139 | exact / exact / 2,575 | 16.9 / 16.9 / 12,059 | 33.5 / 33.5 / 28,414 | 17.8 / 17.8 / 4,348 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | exact / exact / 2,671 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 16.9 / 16.9 / 11,724 | exact / exact / 7,405 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `1.414213562373095` | 71.3 / 71.3 / 9,209 | 38.5 / 38.5 / 5,682 | 38.5 / 38.5 / 4,711 | 18.9 / 18.9 / 10,315 | 17.8 / 17.8 / 2,037 | 16.9 / 16.9 / 10,376 | 33.6 / 33.6 / 25,233 | 17.8 / 17.8 / 3,351 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 17.8 / 17.8 / 2,131 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 16.9 / 16.9 / 9,992 | 17.8 / 17.8 / 5,802 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -324,7 +324,7 @@ Inputs: **reference**  (the scenario has no parameters; its inputs are the integ
 
 ### All inputs (1): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 1 | exact | 38.7 (38.7–38.7) | 38.7 (38.7–38.7) | 19.1 (19.1–19.1) | exact | 16.9 (16.9–16.9) | 33.5 (33.5–33.5) | 17.8 (17.8–17.8) | — (1 revert) | — (1 revert) | — (1 revert) | exact | — (1 revert) | — (1 revert) | 16.9 (16.9–16.9) | exact | — (1 revert) | — (1 revert) |
 | 2 | 1 | 71.3 (71.3–71.3) | 38.5 (38.5–38.5) | 38.5 (38.5–38.5) | 18.9 (18.9–18.9) | 17.8 (17.8–17.8) | 16.9 (16.9–16.9) | 33.6 (33.6–33.6) | 17.8 (17.8–17.8) | — (1 revert) | — (1 revert) | — (1 revert) | 17.8 (17.8–17.8) | — (1 revert) | — (1 revert) | 16.9 (16.9–16.9) | 17.8 (17.8–17.8) | — (1 revert) | — (1 revert) |
@@ -339,7 +339,7 @@ Inputs: **reference**  (the scenario has no parameters; its inputs are the integ
 
 ### All inputs (1): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 1 | exact | 38.7 (38.7–38.7) | 38.7 (38.7–38.7) | 19.1 (19.1–19.1) | exact | 16.9 (16.9–16.9) | 33.5 (33.5–33.5) | 17.8 (17.8–17.8) | — (1 revert) | — (1 revert) | — (1 revert) | exact | — (1 revert) | — (1 revert) | 16.9 (16.9–16.9) | exact | — (1 revert) | — (1 revert) |
 | 2 | 1 | 71.3 (71.3–71.3) | 38.5 (38.5–38.5) | 38.5 (38.5–38.5) | 18.9 (18.9–18.9) | 17.8 (17.8–17.8) | 16.9 (16.9–16.9) | 33.6 (33.6–33.6) | 17.8 (17.8–17.8) | — (1 revert) | — (1 revert) | — (1 revert) | 17.8 (17.8–17.8) | — (1 revert) | — (1 revert) | 16.9 (16.9–16.9) | 17.8 (17.8–17.8) | — (1 revert) | — (1 revert) |
@@ -362,7 +362,7 @@ Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, 
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `0.2474873734152916` | 71.0 / 71.0 / 10,204 | 37.1 / 37.3 / 8,198 | 37.1 / 37.3 / 4,767 | 18.1 / 18.6 / 11,754 | 17.2 / 17.2 / 3,820 | 17.2 / 17.2 / 6,991 | 34.0 / 34.0 / 13,154 | 17.3 / 17.3 / 7,693 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 17.2 / 17.2 / 3,998 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 17.2 / 17.2 / 7,107 | 17.2 / 17.2 / 13,711 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `0.4956818182587876` | 70.6 / 70.6 / 9,747 | 37.0 / 37.3 / 7,196 | 37.0 / 37.3 / 4,488 | 17.7 / 17.9 / 10,628 | 17.6 / 17.6 / 2,920 | 16.0 / 16.0 / 8,431 | 32.5 / 32.5 / 19,638 | 17.0 / 17.0 / 6,374 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 17.6 / 17.6 / 3,091 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 16.0 / 16.0 / 8,240 | 17.6 / 17.6 / 10,888 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -377,7 +377,7 @@ Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, 
 
 ### All inputs (8): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 7 | 71.1 (71.0–71.3) | 37.3 (35.3–38.7) | 37.3 (35.3–38.7) | 18.1 (17.1–19.0) | 17.2 (16.5–17.6) | 17.2 (16.4–17.6) | 34.0 (33.4–34.0) | 17.3 (16.5–17.6) | — (8 revert) | — (8 revert) | — (8 revert) | 17.2 (16.5–17.6) | — (8 revert) | — (8 revert) | 17.2 (16.4–17.6), 7/8 | 17.2 (16.5–17.6) | — (8 revert) | — (8 revert) |
 | 2 | 7 | 70.6 (69.1–71.3) | 37.3 (35.3–38.7) | 37.3 (35.3–38.7) | 17.9 (16.3–18.8) | 17.6 (15.6–18.0) | 16.0 (14.3–16.7) | 32.6 (30.8–33.2) | 17.4 (15.6–18.0) | — (8 revert) | — (8 revert) | — (8 revert) | 17.6 (15.6–18.0) | — (8 revert) | — (8 revert) | 16.0 (14.3–16.7), 7/8 | 17.6 (15.6–18.0) | — (8 revert) | — (8 revert) |
@@ -392,7 +392,7 @@ Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, 
 
 ### All inputs (8): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 7 | 71.2 (71.0–71.3) | 37.3 (35.3–38.7) | 37.3 (35.3–38.7) | 18.6 (17.2–19.3) | 17.2 (16.5–17.6) | 17.2 (16.4–17.6) | 34.0 (33.4–34.0) | 17.3 (16.5–17.6) | — (8 revert) | — (8 revert) | — (8 revert) | 17.2 (16.5–17.6) | — (8 revert) | — (8 revert) | 17.2 (16.4–17.6), 7/8 | 17.2 (16.5–17.6) | — (8 revert) | — (8 revert) |
 | 2 | 7 | 70.6 (69.1–71.3) | 37.3 (35.4–39.0) | 37.3 (35.4–39.0) | 18.1 (16.3–19.0) | 17.6 (15.6–18.0) | 16.0 (14.3–16.7) | 32.6 (30.8–33.2) | 17.4 (15.6–18.0) | — (8 revert) | — (8 revert) | — (8 revert) | 17.6 (15.6–18.0) | — (8 revert) | — (8 revert) | 16.0 (14.3–16.7), 7/8 | 17.6 (15.6–18.0) | — (8 revert) | — (8 revert) |
@@ -415,7 +415,7 @@ Inputs: **reference** eps = 0.0001 (a basis point); **percent** eps = 0.01 (one 
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `1.0001` | 71.3 / 71.3 / 2,788 | 38.5 / exact / 1,826 | 38.5 / exact / 1,418 | 19.2 / exact / 1,484 | exact / exact / 1,229 | exact / exact / 1,588 | 34.0 / 34.0 / 5,682 | exact / exact / 1,498 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | exact / exact / 1,234 | exact / exact / 1,621 | exact / exact / 1,573 | exact / exact / 1,703 | exact / exact / 2,508 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `0.99999999` | 71.3 / 71.3 / 1,757 | 38.5 / 38.5 / 1,370 | 38.5 / 38.5 / 947 | 19.2 / 19.2 / 938 | exact / exact / 784 | exact / exact / 1,143 | 33.8 / 33.8 / 3,401 | exact / exact / 1,053 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | exact / exact / 789 | exact / exact / 1,176 | exact / exact / 1,124 | exact / exact / 1,185 | exact / exact / 2,053 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -430,7 +430,7 @@ Inputs: **reference** eps = 0.0001 (a basis point); **percent** eps = 0.01 (one 
 
 ### All inputs (5): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 5 | 71.3 (71.3–71.3) | 38.5 (38.5–38.5) | 38.5 (38.5–38.5) | 19.2 (19.2–19.2) | exact | exact | 34.0 (33.7–34.0) | exact | — (5 revert) | — (5 revert) | — (5 revert) | exact | exact | exact | exact | exact | — (5 revert) | — (5 revert) |
 | 2 | 5 | 71.3 (71.2–71.3) | 38.5 (38.5–38.5) | 38.5 (38.5–38.5) | 19.2 (19.2–19.2) | exact | exact | 33.8 (33.5–34.0) | exact | — (5 revert) | — (5 revert) | — (5 revert) | exact | exact | exact | exact | exact | — (5 revert) | — (5 revert) |
@@ -445,7 +445,7 @@ Inputs: **reference** eps = 0.0001 (a basis point); **percent** eps = 0.01 (one 
 
 ### All inputs (5): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 5 | 71.3 (71.3–71.3) | 38.5 (38.5–38.5) | 38.5 (38.5–38.5) | 19.2 (19.2–19.2) | exact | exact | 34.0 (33.7–34.0) | exact | — (5 revert) | — (5 revert) | — (5 revert) | exact | exact | exact | exact | exact | — (5 revert) | — (5 revert) |
 | 2 | 5 | 71.3 (71.2–71.3) | 38.5 (38.5–38.5) | 38.5 (38.5–38.5) | 19.2 (19.2–19.2) | exact | exact | 33.8 (33.5–34.0) | exact | — (5 revert) | — (5 revert) | — (5 revert) | exact | exact | exact | exact | exact | — (5 revert) | — (5 revert) |
@@ -462,13 +462,13 @@ Inputs: **reference** eps = 0.0001 (a basis point); **percent** eps = 0.01 (one 
 
 Step: `b = b * 1.1`. Result: balance after N years.
 
-Ten thousand years of annual compounding grows $10,000 to about 10^418, past every fixed-point word: at 10% 64.64 overflows by N = 365, Solady, Balancer, Maker and FP127 by N = 1,000 and PRBMath by N = 10,000 (at 50%, 64.64 by N = 100 and the rest by N = 365); only binary128 and FP19 reach N = 10,000. Until about N = 20 the balances are short decimals that WAD and RAY hold exactly. The row began as a check of an old README claim ($25,937.42 true against $25,932.38 for Solady at N = 10); Solady returns $25,937.424601 exactly.
+Ten thousand years of annual compounding grows $10,000 to about 10^418, past every fixed-point word: at 10% 64.64 overflows by N = 365, Solady, Balancer, Maker and BL127 by N = 1,000 and PRBMath by N = 10,000 (at 50%, 64.64 by N = 100 and the rest by N = 365); only binary128 and BL19 reach N = 10,000. Until about N = 20 the balances are short decimals that WAD and RAY hold exactly. The row began as a check of an old README claim ($25,937.42 true against $25,932.38 for Solady at N = 10); Solady returns $25,937.424601 exactly.
 
-Inputs: **reference** principal = 10000, rate = 0.1 (the README claim); **five-pct** principal = 10000, rate = 0.05 (5% a year); **unit** principal = 1, rate = 0.1 (one unit); **million** principal = 1000000, rate = 0.1 (a million units: ABDK overflows sooner); **fifty-pct** principal = 10000, rate = 0.5 (50% a year: 64.64 overflows by N = 100; the WAD libraries, Maker and FP127 by N = 365; binary128 and FP19 reach 10,000)
+Inputs: **reference** principal = 10000, rate = 0.1 (the README claim); **five-pct** principal = 10000, rate = 0.05 (5% a year); **unit** principal = 1, rate = 0.1 (one unit); **million** principal = 1000000, rate = 0.1 (a million units: ABDK overflows sooner); **fifty-pct** principal = 10000, rate = 0.5 (50% a year: 64.64 overflows by N = 100; the WAD libraries, Maker and BL127 by N = 365; binary128 and BL19 reach 10,000)
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `11000.0` | exact / 71.3 / 1,924 | 38.7 / exact / 1,590 | 38.7 / exact / 1,155 | 19.5 / exact / 1,187 | exact / exact / 999 | exact / exact / 1,358 | 33.8 / 33.8 / 3,185 | exact / exact / 1,268 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | exact / exact / 610 | exact / exact / 1,004 | exact / exact / 1,391 | exact / exact / 1,339 | exact / exact / 1,473 | exact / exact / 2,274 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `12100.0` | 71.2 / 71.2 / 1,272 | 38.4 / 42.6 / 1,199 | 38.4 / 42.6 / 762 | 19.2 / 23.3 / 736 | exact / exact / 616 | exact / exact / 975 | 33.5 / 33.5 / 2,100 | exact / exact / 885 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | exact / exact / 420 | exact / exact / 621 | exact / exact / 1,008 | exact / exact / 954 | exact / exact / 1,017 | exact / exact / 1,883 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -483,7 +483,7 @@ Inputs: **reference** principal = 10000, rate = 0.1 (the README claim); **five-p
 
 ### All inputs (5): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 5 | 71.3 (71.3–71.3) | 38.7 (38.5–42.7) | 38.7 (38.5–42.7) | 19.5 (19.3–23.4) | exact | exact | 33.8 (33.7–34.0) | exact | — (5 revert) | — (5 revert) | exact | exact | exact | exact | exact | exact | — (5 revert) | — (5 revert) |
 | 2 | 5 | 71.3 (71.2–71.3) | 38.4 (38.3–42.8) | 38.4 (38.3–42.8) | 19.2 (19.0–23.6) | exact | exact | 33.4 (33.3–34.0) | exact | — (5 revert) | — (5 revert) | exact | exact | exact | exact | exact | exact | — (5 revert) | — (5 revert) |
@@ -498,7 +498,7 @@ Inputs: **reference** principal = 10000, rate = 0.1 (the README claim); **five-p
 
 ### All inputs (5): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 5 | 71.3 (71.3–71.3) | 42.5 (38.5–44.5) | 42.5 (38.5–44.5) | 23.3 (19.3–25.3) | exact | exact | 33.8 (33.7–34.0) | exact | — (5 revert) | — (5 revert) | exact | exact | exact | exact | exact | exact | — (5 revert) | — (5 revert) |
 | 2 | 5 | 71.3 (71.2–71.3) | 42.6 (38.6–44.6) | 42.6 (38.6–44.6) | 23.3 (19.3–25.3) | exact | exact | 33.4 (33.3–34.0) | exact | — (5 revert) | — (5 revert) | exact | exact | exact | exact | exact | exact | — (5 revert) | — (5 revert) |
@@ -513,7 +513,7 @@ Inputs: **reference** principal = 10000, rate = 0.1 (the README claim); **five-p
 
 ### All inputs (5): digits of the interest, b − principal, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 5 | 70.3 (70.0–70.8) | 37.7 (37.3–42.2) | 37.7 (37.3–42.2) | 18.4 (18.0–22.9) | 21.0 (17.0–23.0) | 21.0 (17.0–23.0) | 32.8 (32.5–33.5) | 21.0 (17.0–23.0) | — (5 revert) | — (5 revert) | 30.0 (26.0–32.0) | 21.0 (17.0–23.0) | 21.0 (17.0–23.0) | 21.0 (17.0–23.0) | 21.0 (17.0–23.0) | 21.0 (17.0–23.0) | — (5 revert) | — (5 revert) |
 | 2 | 5 | 70.5 (70.3–71.0) | 37.7 (37.3–42.6) | 37.7 (37.3–42.6) | 18.4 (18.0–23.3) | 21.3 (17.3–23.3) | 21.3 (17.3–23.3) | 32.7 (32.3–33.7) | 21.3 (17.3–23.3) | — (5 revert) | — (5 revert) | 30.3 (26.3–32.3) | 21.3 (17.3–23.3) | 21.3 (17.3–23.3) | 21.3 (17.3–23.3) | 21.3 (17.3–23.3) | 21.3 (17.3–23.3) | — (5 revert) | — (5 revert) |
@@ -530,13 +530,13 @@ Inputs: **reference** principal = 10000, rate = 0.1 (the README claim); **five-p
 
 Step: `b = b0 * (1 + r/31536000)^(N * 86400)`. Result: balance after N days of per-second compounding.
 
-How Maker's jug and pot accrue: the rate per second, compounded every second, N days at a time. The rate is 1.6e-9 at 5% APR, which an 18-decimal grid holds to ten digits before any arithmetic; FP127 and FP19 compute the power with compound, which never forms a rounded 1 + r; the WAD and 64.64 libraries as exp(n ln(1 + r)), Maker as rpow.
+How Maker's jug and pot accrue: the rate per second, compounded every second, N days at a time. The rate is 1.6e-9 at 5% APR, which an 18-decimal grid holds to ten digits before any arithmetic; BL127 and BL19 compute the power with compound, which never forms a rounded 1 + r; the WAD and 64.64 libraries as exp(n ln(1 + r)), Maker as rpow.
 
 Inputs: **reference** principal = 10000, rateSec = 0.05/31536000 ($10,000 at 5% APR, the lending protocol's steady state); **one-pct** principal = 10000, rateSec = 0.01/31536000 (a slow rate: 1% APR is 3.2e-10 a second); **twenty-pct** principal = 10000, rateSec = 0.2/31536000 (20% APR); **fifty-pct** principal = 10000, rateSec = 0.5/31536000 (50% APR, where the three-term expansions strain); **unit** principal = 1, rateSec = 0.05/31536000 (one unit, the fraction carries everything); **huge** principal = 100000000, rateSec = 0.05/31536000 (a hundred-million-unit pool)
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `10001.36995684313` | 71.3 / 71.3 / 7,103 | 33.8 / 39.1 / 4,862 | 33.8 / 39.1 / 4,110 | 14.1 / 14.4 / 11,904 | 13.0 / 13.1 / 2,517 | 12.0 / 12.1 / 10,843 | 28.8 / 28.8 / 31,498 | 13.7 / 17.9 / 3,461 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 22.3 / 22.6 / 3,471 | 13.0 / 13.1 / 2,610 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 12.0 / 12.1 / 10,672 | 13.0 / 13.1 / 6,044 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `10002.74010136444` | 71.3 / 71.3 / 3,546 | 33.5 / 38.8 / 2,431 | 33.5 / 38.8 / 2,055 | 13.8 / 14.1 / 5,959 | 12.7 / 12.8 / 1,258 | 11.7 / 11.8 / 5,428 | 28.5 / 28.5 / 15,751 | 13.4 / 17.8 / 1,730 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 22.0 / 22.3 / 1,809 | 12.7 / 12.8 / 1,305 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 11.7 / 11.8 / 5,343 | 12.7 / 12.8 / 3,022 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -551,7 +551,7 @@ Inputs: **reference** principal = 10000, rateSec = 0.05/31536000 ($10,000 at 5% 
 
 ### All inputs (6): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 6 | 71.3 (71.3–71.3) | 33.8 (33.6–35.2) | 33.8 (33.6–35.2) | 14.1 (14.1–14.3) | 13.0 (12.8–13.0) | 12.0 (12.0–12.0) | 28.8 (28.8–29.5) | 13.4 (13.1–13.7) | — (6 revert) | — (6 revert) | 22.3 (22.0–23.5) | 13.0 (12.8–13.0) | — (6 revert) | — (6 revert) | 12.0 (12.0–12.0) | 13.0 (12.8–13.0) | — (6 revert) | — (6 revert) |
 | 2 | 6 | 71.3 (71.3–71.3) | 33.5 (33.3–34.9) | 33.5 (33.3–34.9) | 13.8 (13.8–14.0) | 12.6 (12.5–12.7) | 11.7 (11.7–11.7) | 28.6 (28.5–29.2) | 13.1 (12.8–13.4) | — (6 revert) | — (6 revert) | 22.0 (21.7–23.2) | 12.6 (12.5–12.7) | — (6 revert) | — (6 revert) | 11.7 (11.7–11.7) | 12.6 (12.5–12.7) | — (6 revert) | — (6 revert) |
@@ -566,7 +566,7 @@ Inputs: **reference** principal = 10000, rateSec = 0.05/31536000 ($10,000 at 5% 
 
 ### All inputs (6): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 6 | 71.3 (71.3–71.3) | 39.0 (38.5–39.2) | 39.0 (38.5–39.2) | 14.4 (14.2–14.6) | 13.1 (13.0–13.5) | 12.1 (12.0–12.1) | 28.8 (28.8–29.5) | 18.0 (17.9–18.5) | — (6 revert) | — (6 revert) | 22.7 (22.6–23.1) | 13.1 (13.0–13.5) | — (6 revert) | — (6 revert) | 12.1 (12.0–12.1) | 13.1 (13.0–13.5) | — (6 revert) | — (6 revert) |
 | 2 | 6 | 71.3 (71.3–71.3) | 38.8 (38.5–39.0) | 38.8 (38.5–39.0) | 14.1 (13.9–14.3) | 12.8 (12.7–13.2) | 11.8 (11.7–11.8) | 28.6 (28.5–29.2) | 17.8 (17.8–18.0) | — (6 revert) | — (6 revert) | 22.4 (22.3–22.8) | 12.8 (12.7–13.2) | — (6 revert) | — (6 revert) | 11.8 (11.7–11.8) | 12.8 (12.7–13.2) | — (6 revert) | — (6 revert) |
@@ -581,7 +581,7 @@ Inputs: **reference** principal = 10000, rateSec = 0.05/31536000 ($10,000 at 5% 
 
 ### All inputs (6): digits of the interest, b − principal, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 6 | 67.4 (66.7–68.4) | 30.0 (29.0–31.9) | 30.0 (29.0–31.9) | 10.2 (9.5–11.4) | 9.2 (8.2–10.1) | 8.2 (7.4–9.2) | 24.9 (24.9–26.6) | 9.9 (8.5–10.2) | — (6 revert) | — (6 revert) | 18.6 (18.5–19.6) | 9.2 (8.2–10.1) | — (6 revert) | — (6 revert) | 8.2 (7.4–9.2) | 9.2 (8.2–10.1) | — (6 revert) | — (6 revert) |
 | 2 | 6 | 67.7 (67.0–68.7) | 30.0 (29.0–31.9) | 30.0 (29.0–31.9) | 10.2 (9.5–11.4) | 9.2 (8.2–10.1) | 8.2 (7.4–9.2) | 24.9 (24.9–26.6) | 9.9 (8.5–10.2) | — (6 revert) | — (6 revert) | 18.6 (18.5–19.6) | 9.2 (8.2–10.1) | — (6 revert) | — (6 revert) | 8.2 (7.4–9.2) | 9.2 (8.2–10.1) | — (6 revert) | — (6 revert) |
@@ -604,7 +604,7 @@ Inputs: **reference** principal = 10000, rateAnnual = 0.05 ($10,000 at 5% APR, t
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `10001.36995684422` | 71.2 / 71.2 / 6,685 | 38.6 / 38.6 / 6,175 | 38.6 / 38.6 / 4,654 | 19.1 / 19.1 / 5,079 | 18.3 / 18.3 / 2,062 | 18.3 / 18.3 / 5,111 | 33.8 / 33.8 / 11,221 | 18.3 / 18.3 / 3,447 | 16.8 / 16.8 / 1,608 | 13.7 / 13.7 / 1,442 | reverts `0x7bb9ae15` | 18.3 / 18.3 / 2,076 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 18.3 / 18.3 / 5,366 | 18.3 / 18.3 / 6,716 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `10002.74010136661` | 71.3 / 71.3 / 3,348 | 38.8 / 38.8 / 3,093 | 38.8 / 38.8 / 2,335 | 19.0 / 19.0 / 2,539 | 18.9 / 18.9 / 1,031 | 17.9 / 17.9 / 2,562 | 33.7 / 33.7 / 5,613 | 18.9 / 18.9 / 1,723 | 15.6 / 15.6 / 804 | 13.4 / 13.4 / 721 | reverts `0x7bb9ae15` | 18.9 / 18.9 / 1,038 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 17.9 / 17.9 / 2,690 | 18.9 / 18.9 / 3,358 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -619,7 +619,7 @@ Inputs: **reference** principal = 10000, rateAnnual = 0.05 ($10,000 at 5% APR, t
 
 ### All inputs (6): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 6 | 71.3 (71.1–71.3) | 38.6 (38.4–38.7) | 38.6 (38.4–38.7) | 19.1 (18.9–19.2) | 18.3 (17.8–18.7) | 18.0 (17.8–18.3) | 33.9 (33.6–34.0) | 18.3 (17.8–18.7) | 16.8 (12.8–19.6) | 13.4 (12.6–13.7) | — (6 revert) | 18.3 (17.8–18.7) | — (6 revert) | — (6 revert) | 18.0 (17.8–18.3) | 18.3 (17.8–18.7) | — (6 revert) | — (6 revert) |
 | 2 | 6 | 71.3 (71.3–71.3) | 38.7 (38.5–38.8) | 38.7 (38.5–38.8) | 19.0 (18.9–19.1) | 18.1 (17.9–18.9) | 17.9 (17.9–18.2) | 33.8 (33.6–34.0) | 18.1 (17.9–18.9) | 15.6 (11.6–18.4) | 13.1 (11.6–13.4) | — (6 revert) | 18.1 (17.9–18.9) | — (6 revert) | — (6 revert) | 17.9 (17.9–18.2) | 18.1 (17.9–18.9) | — (6 revert) | — (6 revert) |
@@ -634,7 +634,7 @@ Inputs: **reference** principal = 10000, rateAnnual = 0.05 ($10,000 at 5% APR, t
 
 ### All inputs (6): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 6 | 71.3 (71.1–71.3) | 38.6 (38.4–38.7) | 38.6 (38.4–38.7) | 19.1 (18.9–19.2) | 18.3 (17.8–18.7) | 18.0 (17.8–18.3) | 33.9 (33.6–34.0) | 18.3 (17.8–18.7) | 16.8 (12.8–19.6) | 13.4 (12.6–13.7) | — (6 revert) | 18.3 (17.8–18.7) | — (6 revert) | — (6 revert) | 18.0 (17.8–18.3) | 18.3 (17.8–18.7) | — (6 revert) | — (6 revert) |
 | 2 | 6 | 71.3 (71.3–71.3) | 38.7 (38.5–38.8) | 38.7 (38.5–38.8) | 19.0 (18.9–19.1) | 18.1 (17.9–18.9) | 17.9 (17.9–18.2) | 33.8 (33.6–34.0) | 18.1 (17.9–18.9) | 15.6 (11.6–18.4) | 13.1 (11.6–13.4) | — (6 revert) | 18.1 (17.9–18.9) | — (6 revert) | — (6 revert) | 17.9 (17.9–18.2) | 18.1 (17.9–18.9) | — (6 revert) | — (6 revert) |
@@ -649,7 +649,7 @@ Inputs: **reference** principal = 10000, rateAnnual = 0.05 ($10,000 at 5% APR, t
 
 ### All inputs (6): digits of the interest, b − principal, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 6 | 67.4 (66.7–68.4) | 34.8 (33.9–35.7) | 34.8 (33.9–35.7) | 15.2 (14.6–16.0) | 14.4 (13.3–15.8) | 14.4 (13.3–15.0) | 30.1 (29.1–30.7) | 14.4 (13.3–15.8) | 12.9 (9.9–15.0) | 9.9 (8.5–9.9) | — (6 revert) | 14.4 (13.3–15.8) | — (6 revert) | — (6 revert) | 14.4 (13.3–15.0) | 14.4 (13.3–15.8) | — (6 revert) | — (6 revert) |
 | 2 | 6 | 67.7 (67.0–68.7) | 35.2 (34.5–36.0) | 35.2 (34.5–36.0) | 15.5 (14.7–16.6) | 15.2 (13.6–15.6) | 14.3 (13.6–15.6) | 30.1 (29.7–31.4) | 15.2 (13.6–15.6) | 12.0 (9.0–14.1) | 9.8 (8.5–9.9) | — (6 revert) | 15.2 (13.6–15.6) | — (6 revert) | — (6 revert) | 14.3 (13.6–15.6) | 15.2 (13.6–15.6) | — (6 revert) | — (6 revert) |
@@ -666,13 +666,13 @@ Inputs: **reference** principal = 10000, rateAnnual = 0.05 ($10,000 at 5% APR, t
 
 Step: `S = S (1 - tick); then C = S N(d1) - K e^(-rT) N(d2)`. Result: the Black-Scholes call price after N down-ticks of the spot.
 
-Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. FP127 and FP19 have normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives. Relative digits there say little about money: at N = 10,000 the true price of five of the six inputs is below 10^-15 wei of a $100 strike at 18 decimals, so every library is off by less than a wei; the slow walk's is 3.2 million wei ($3 × 10^-12), where the WAD libraries are off by about 94 wei. Up to N = 1,000 they are off by tens to ten thousand wei, FP127 by under 10^-16 (absErrWei in the data).
+Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. BL127 and BL19 have normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives. Relative digits there say little about money: at N = 10,000 the true price of five of the six inputs is below 10^-15 wei of a $100 strike at 18 decimals, so every library is off by less than a wei; the slow walk's is 3.2 million wei ($3 × 10^-12), where the WAD libraries are off by about 94 wei. Up to N = 1,000 they are off by tens to ten thousand wei, BL127 by under 10^-16 (absErrWei in the data).
 
 Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, tick = 0.000173 (at the money, 20% vol, six months; d1 reaches -12 at N = 10,000); **slow-walk** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, tick = 0.0001 (a slower walk: d1 reaches -7 at N = 10,000, where an 18-decimal N(d) has a few digits left); **fast-walk** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, tick = 0.0005 (a faster walk: d1 passes -12 near N = 3,500; beyond it the price is below every grid); **low-vol** spot = 100, strike = 100, sigma = 0.05, T = 0.5, r = 0.05, tick = 0.00005 (5% vol: d moves four times faster per tick); **high-vol** spot = 100, strike = 100, sigma = 0.8, T = 0.5, r = 0.05, tick = 0.0007 (80% vol: a long way to the tail); **short-dated** spot = 100, strike = 100, sigma = 0.2, T = 0.01, r = 0.05, tick = 0.00003 (ten days to expiry: sigma sqrt(T) is 0.02 and the tail comes fast)
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `6.878391866103811` | 70.5 / 70.5 / 47,732 | 37.8 / 37.7 / 28,233 | 37.8 / 37.7 / 23,237 | 18.2 / 18.2 / 103,309 | 16.7 / 16.7 / 77,500 | 16.5 / 16.5 / 141,920 | 32.6 / 32.6 / 345,171 | 16.6 / 16.6 / 126,672 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 16.7 / 16.7 / 78,741 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x36d32ef0` | 16.7 / 16.7 / 244,498 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `6.868065132714932` | 70.7 / 70.7 / 24,187 | 37.6 / 38.4 / 14,521 | 37.6 / 38.4 / 11,803 | 18.0 / 17.9 / 51,797 | 17.0 / 17.0 / 38,866 | 16.7 / 16.7 / 71,254 | 32.5 / 32.5 / 173,051 | 17.7 / 17.7 / 63,587 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 17.0 / 17.0 / 39,489 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x36d32ef0` | 17.0 / 17.0 / 122,996 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -687,7 +687,7 @@ Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, 
 
 ### All inputs (6): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 6 | 70.4 (69.4–71.2) | 37.6 (36.6–38.1) | 37.6 (36.6–38.1) | 18.2 (17.8–18.2) | 16.8 (16.2–16.9) | 16.8 (16.5–17.0) | 32.6 (31.9–32.7) | 16.6 (15.9–16.7) | — (6 revert) | — (6 revert) | — (6 revert) | 16.8 (16.2–16.9) | — (6 revert) | — (6 revert) | — (6 revert) | 16.8 (16.2–16.9) | — (6 revert) | — (6 revert) |
 | 2 | 6 | 70.5 (69.0–71.3) | 37.6 (36.7–38.7) | 37.6 (36.7–38.7) | 17.8 (17.3–18.5) | 16.8 (16.5–17.4) | 16.7 (16.1–16.8) | 32.4 (31.7–32.5) | 16.8 (16.1–17.7) | — (6 revert) | — (6 revert) | — (6 revert) | 16.8 (16.5–17.4) | — (6 revert) | — (6 revert) | — (6 revert) | 16.8 (16.5–17.4) | — (6 revert) | — (6 revert) |
@@ -702,7 +702,7 @@ Inputs: **reference** spot = 100, strike = 100, sigma = 0.2, T = 0.5, r = 0.05, 
 
 ### All inputs (6): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 6 | 70.4 (69.4–71.3) | 37.6 (36.7–38.6) | 37.6 (36.7–38.6) | 18.2 (17.6–18.3) | 16.8 (16.2–16.9) | 16.8 (16.5–17.0) | 32.6 (31.9–32.6) | 16.6 (15.9–16.7) | — (6 revert) | — (6 revert) | — (6 revert) | 16.8 (16.2–16.9) | — (6 revert) | — (6 revert) | — (6 revert) | 16.8 (16.2–16.9) | — (6 revert) | — (6 revert) |
 | 2 | 6 | 70.6 (69.0–71.2) | 38.3 (36.8–38.5) | 38.3 (36.8–38.5) | 18.0 (17.4–18.2) | 16.8 (16.5–17.4) | 16.7 (16.1–16.8) | 32.4 (31.7–32.5) | 16.8 (16.1–17.7) | — (6 revert) | — (6 revert) | — (6 revert) | 16.8 (16.5–17.4) | — (6 revert) | — (6 revert) | — (6 revert) | 16.8 (16.5–17.4) | — (6 revert) | — (6 revert) |
@@ -725,7 +725,7 @@ Inputs: **reference** eps = 1/1036800 (a one-second step against a twelve-day ti
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `9.64505707703577e-7` | 65.8 / 65.8 / 6,409 | 32.4 / 32.5 / 4,791 | 32.4 / 32.5 / 4,261 | 13.2 / 13.2 / 5,022 | 11.9 / 11.9 / 1,824 | 11.7 / 11.9 / 4,009 | 28.1 / 28.1 / 10,926 | 11.9 / 11.9 / 2,683 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 11.9 / 11.9 / 1,829 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x34d81929` | 11.9 / 11.9 / 3,915 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
 | 2 | `1.929010485135894e-6` | 65.9 / 65.9 / 5,638 | 32.4 / 32.8 / 4,383 | 32.4 / 32.8 / 3,844 | 13.5 / 13.3 / 4,571 | 12.2 / 11.9 / 1,424 | 11.8 / 12.0 / 3,609 | 27.9 / 27.9 / 9,523 | 12.2 / 12.2 / 2,283 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 12.2 / 11.9 / 1,429 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x34d81929` | 12.2 / 11.9 / 3,507 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` |
@@ -740,7 +740,7 @@ Inputs: **reference** eps = 1/1036800 (a one-second step against a twelve-day ti
 
 ### All inputs (5): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 5 | 59.9 (55.1–65.8) | 26.5 (21.5–32.4) | 26.5 (21.5–32.4) | 7.2 (2.2–13.2) | 6.0 (1.0–11.9) | 5.9 (0.8–11.7) | 22.8 (17.5–28.1) | 6.0 (1.0–11.9) | — (5 revert) | — (5 revert) | — (5 revert) | 6.0 (1.0–11.9) | — (5 revert) | — (5 revert) | — (5 revert) | 6.0 (1.0–11.9) | — (5 revert) | — (5 revert) |
 | 2 | 5 | 60.3 (54.8–65.9) | 26.8 (21.6–32.4) | 26.8 (21.6–32.4) | 7.5 (2.5–13.5) | 6.3 (1.2–12.2) | 5.9 (0.8–11.8) | 22.3 (17.4–27.9) | 6.3 (1.2–12.2) | — (5 revert) | — (5 revert) | — (5 revert) | 6.3 (1.2–12.2) | — (5 revert) | — (5 revert) | — (5 revert) | 6.3 (1.2–12.2) | — (5 revert) | — (5 revert) |
@@ -755,7 +755,7 @@ Inputs: **reference** eps = 1/1036800 (a one-second step against a twelve-day ti
 
 ### All inputs (5): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 5 | 59.9 (55.1–65.8) | 26.5 (21.5–32.5) | 26.5 (21.5–32.5) | 7.2 (2.2–13.2) | 6.0 (0.9–11.9) | 6.0 (0.9–11.9) | 22.8 (17.5–28.1) | 6.0 (0.9–11.9) | — (5 revert) | — (5 revert) | — (5 revert) | 6.0 (0.9–11.9) | — (5 revert) | — (5 revert) | — (5 revert) | 6.0 (0.9–11.9) | — (5 revert) | — (5 revert) |
 | 2 | 5 | 60.3 (54.8–65.9) | 26.7 (21.8–32.8) | 26.7 (21.8–32.8) | 7.2 (2.2–13.3) | 6.3 (1.3–11.9) | 6.0 (1.0–12.0) | 22.3 (17.4–27.9) | 6.3 (1.3–12.2) | — (5 revert) | — (5 revert) | — (5 revert) | 6.3 (1.3–11.9) | — (5 revert) | — (5 revert) | — (5 revert) | 6.3 (1.3–11.9) | — (5 revert) | — (5 revert) |
@@ -778,7 +778,7 @@ Inputs: **reference** rateAnnual = 0.04, util = 1, step = 86400, halfLife = 1728
 
 ### Reference input: reference
 
-| N | truth | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | truth | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | `1.793776715338781e-9` | 71.3 / 71.3 / 5,557 | 29.7 / 29.7 / 5,250 | 29.7 / 29.7 / 4,237 | 10.4 / 10.5 / 5,093 | 9.1 / 9.2 / 1,697 | 9.1 / 9.2 / 5,055 | 34.0 / 34.0 / 10,084 | 9.1 / 9.2 / 2,825 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 9.1 / 9.2 / 1,707 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 9.1 / 9.2 / 5,268 | 9.1 / 9.2 / 5,039 | 1.2 / 1.2 / 1,865 | 2.2 / 2.2 / 2,293 |
 | 2 | `2.536783358701167e-9` | 71.3 / 71.3 / 2,778 | 29.5 / 29.9 / 2,627 | 29.5 / 29.9 / 2,116 | 10.5 / 10.6 / 2,553 | 9.1 / 9.4 / 848 | 9.1 / 9.4 / 2,513 | 34.0 / 33.8 / 5,023 | 9.1 / 9.4 / 1,412 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 9.1 / 9.4 / 853 | reverts `0x7bb9ae15` | reverts `0x7bb9ae15` | 9.1 / 9.4 / 2,620 | 9.1 / 9.4 / 2,519 | 9.4 / 9.4 / 932 | 9.1 / 9.4 / 1,146 |
@@ -793,7 +793,7 @@ Inputs: **reference** rateAnnual = 0.04, util = 1, step = 86400, halfLife = 1728
 
 ### All inputs (11): digits, median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 9 | 71.3 (71.3–71.3) | 29.5 (29.4–29.8) | 29.5 (29.4–29.8) | 10.3 (10.3–10.9) | 9.1 (9.0–9.5) | 9.1 (9.0–9.5) | 33.8 (33.4–34.0) | 9.1 (9.0–9.5) | — (11 revert) | — (11 revert) | — (11 revert) | 9.1 (9.0–9.5) | — (11 revert) | — (11 revert) | 9.1 (9.0–9.5), 9/11 | 9.1 (9.0–9.5) | 1.4 (0.2–4.7) | 3.9 (2.2–9.1) |
 | 2 | 9 | 71.3 (70.9–71.3) | 29.5 (29.4–29.8) | 29.5 (29.4–29.8) | 10.4 (10.3–11.0) | 9.1 (9.0–9.5) | 9.1 (9.0–9.5) | 33.7 (33.1–34.0) | 9.1 (9.0–9.5) | — (11 revert) | — (11 revert) | — (11 revert) | 9.1 (9.0–9.5) | — (11 revert) | — (11 revert) | 9.1 (9.0–9.5), 9/11 | 9.1 (9.0–9.5) | 1.4 (0.0–9.4) | 5.4 (2.1–9.5) |
@@ -808,7 +808,7 @@ Inputs: **reference** rateAnnual = 0.04, util = 1, step = 86400, halfLife = 1728
 
 ### All inputs (11): digitsFormat (arithmetic alone), median (min–max)
 
-| N | inputs | fp19 | fp127 | fp127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
+| N | inputs | bl19 | bl127 | bl127lib | abdk | solady | prb | quad | balancer | aave | morpho | maker | solmate | oz | uniswap | prbud | snekmate | fraxlend | euler |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 1 | 9 | 71.3 (71.2–71.3) | 29.6 (29.6–30.6) | 29.6 (29.6–30.6) | 10.4 (10.3–11.4) | 9.1 (9.1–10.1) | 9.1 (9.1–10.1) | 33.6 (33.4–34.0) | 9.1 (9.1–10.1) | — (11 revert) | — (11 revert) | — (11 revert) | 9.1 (9.1–10.1) | — (11 revert) | — (11 revert) | 9.1 (9.1–10.1), 9/11 | 9.1 (9.1–10.1) | 1.4 (0.2–4.7) | 3.9 (2.2–9.1) |
 | 2 | 9 | 71.3 (71.2–71.3) | 29.7 (29.6–31.7) | 29.7 (29.6–31.7) | 10.4 (10.3–12.4) | 9.1 (9.1–11.2) | 9.1 (9.1–11.2) | 33.6 (33.2–33.8) | 9.1 (9.1–11.2) | — (11 revert) | — (11 revert) | — (11 revert) | 9.1 (9.1–11.2) | — (11 revert) | — (11 revert) | 9.1 (9.1–11.2), 9/11 | 9.1 (9.1–11.2) | 1.4 (0.0–9.4) | 5.4 (2.1–11.2) |
@@ -825,15 +825,15 @@ Inputs: **reference** rateAnnual = 0.04, util = 1, step = 86400, halfLife = 1728
 
 **truth.** For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 300 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual, the option walk, the decay and the adaptive rate); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.
 
-**rounding.** Inputs are floored on the grids and rounded to nearest on the floats: each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units) or, for ABDKMathQuad and FP19, the nearest float (scripts/ladder/inputs.json). truthFormat is the exact loop started from those parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic. One exception: Morpho accrues from the per-second rate, rateAnnual / 31536000 floored to WAD, while truthFormat is built from the annual rate the other libraries receive, so Morpho's digitsFormat still includes its own input's rounding. Likewise in the adaptive rate, FraxLend and Euler compute from their own inputs (utilisation, step, half-life or speed) while truthFormat is built from rate0 and x, so their digitsFormat includes the rounding of those inputs (Euler's speed floored to WAD per second, FraxLend's half-life to whole seconds).
+**rounding.** Inputs are floored on the grids and rounded to nearest on the floats: each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units) or, for ABDKMathQuad and BL19, the nearest float (scripts/ladder/inputs.json). truthFormat is the exact loop started from those parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic. One exception: Morpho accrues from the per-second rate, rateAnnual / 31536000 floored to WAD, while truthFormat is built from the annual rate the other libraries receive, so Morpho's digitsFormat still includes its own input's rounding. Likewise in the adaptive rate, FraxLend and Euler compute from their own inputs (utilisation, step, half-life or speed) while truthFormat is built from rate0 and x, so their digitsFormat includes the rounding of those inputs (Euler's speed floored to WAD per second, FraxLend's half-life to whole seconds).
 
 **inputs.** The parameters are short decimals (0.1/365, 10000, 0.05) as a protocol's governance would set them. A short decimal can sit exactly on the 10^-18 and 10^-27 grids, so WAD and RAY libraries often receive their inputs exactly while the binary formats round them; this favours WAD and RAY in digits (against exact inputs) and is visible as the gap between digits and digitsFormat. The decay scenario's eps are reciprocals of time constants in seconds (1/1036800 for twelve days), which no grid holds exactly.
 
-**powers.** Integer powers are each library's own idiom, not one algorithm: FP127 and FP19 use compound (a correctly rounded (1 + r)^n that never forms a rounded 1 + r), Maker uses rpow (binary exponentiation in RAY), the WAD and 64.64 libraries and binary128 use exp(n ln(1 + r)) or their pow. Per-second accrual and compound-pow measure those choices as much as the formats.
+**powers.** Integer powers are each library's own idiom, not one algorithm: BL127 and BL19 use compound (a correctly rounded (1 + r)^n that never forms a rounded 1 + r), Maker uses rpow (binary exponentiation in RAY), the WAD and 64.64 libraries and binary128 use exp(n ln(1 + r)) or their pow. Per-second accrual and compound-pow measure those choices as much as the formats.
 
 **digits.** digits = floor(-log10 |v - t| / |t|), the number of correct leading significant digits by relative error, an integer; a result equal to the truth is exact (exact = true, digits = 100, the one cap on this field) and is drawn as a marker, never as a number. digits1 is the same quantity floored to one decimal instead of to an integer. It is not a string comparison: a value can be correct to 36 digits while its 37th printed digit happens to agree with the truth, or while a carry makes the printed prefix differ earlier.
 
-**precision.** No format can be right to more digits than it holds at the result's magnitude: prec is 237 log10 2 = 71.3 for FP19 and 113 log10 2 = 34.0 for binary128 at any magnitude, and -log10(ulp / |t|) on the fixed grids, with ulp 2^-128 (FP127), 2^-64 (64.64), 10^-18 (WAD) or 10^-27 (RAY): 38.5 for FP127 at 1, 42.5 at 10^4. A cell may land closer to the truth than that by luck; digitsCapped = min(digits1, prec), and prec for an exact cell, is what the charts plot and the summaries aggregate, so no median or band exceeds the format's precision.
+**precision.** No format can be right to more digits than it holds at the result's magnitude: prec is 237 log10 2 = 71.3 for BL19 and 113 log10 2 = 34.0 for binary128 at any magnitude, and -log10(ulp / |t|) on the fixed grids, with ulp 2^-128 (BL127), 2^-64 (64.64), 10^-18 (WAD) or 10^-27 (RAY): 38.5 for BL127 at 1, 42.5 at 10^4. A cell may land closer to the truth than that by luck; digitsCapped = min(digits1, prec), and prec for an exact cell, is what the charts plot and the summaries aggregate, so no median or band exceeds the format's precision.
 
 **summary.** Each scenario's median, minimum and maximum at each N are taken over the inputs that every library with any completed input at that N completed, so every library's median is over the same inputs. Each library's completed count is reported, and a library that completed fewer than all inputs is shown as k/n. Where no input is common to all of them, a revert counts as 0 digits over all inputs instead (basis revertsAsZero); the dataset records the basis and the inputs per N.
 
@@ -845,7 +845,7 @@ Inputs: **reference** rateAnnual = 0.04, util = 1, step = 86400, halfLife = 1728
 
 **agree.** agree is the count of leading significant digits of the printed value (42 significant digits) that are literally equal to the printed truth. The demo page colours the rest of the value with it. It is a reading aid, not a measurement: a carry across 0.999… / 1.000… gives 0.
 
-**gas.** gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the FP127 object, so the call into the adapter and the ABI decoding are excluded. The FP127 (deployed) form includes one staticcall per op, and so does snekmate, a Vyper library that a Solidity adapter can only call; FP127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe, FraxLend and Euler only the adaptive rate, and OpenZeppelin and Uniswap FullMath, which have no exp, ln or real power (and FullMath no root), only the scenarios built from mul, div and their roots; each reports Unsupported elsewhere, which the tables and charts leave empty (a library with no model is not a revert). gasPerStep = gasTotal / N. Reverted cells carry no gas.
+**gas.** gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the BL127 object, so the call into the adapter and the ABI decoding are excluded. The BL127 (deployed) form includes one staticcall per op, and so does snekmate, a Vyper library that a Solidity adapter can only call; BL127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe, FraxLend and Euler only the adaptive rate, and OpenZeppelin and Uniswap FullMath, which have no exp, ln or real power (and FullMath no root), only the scenarios built from mul, div and their roots; each reports Unsupported elsewhere, which the tables and charts leave empty (a library with no model is not a revert). gasPerStep = gasTotal / N. Reverted cells carry no gas.
 
 **live.** LadderRunner.run(scenario, form, n, p) on Sepolia executes any cell with one eth_call and returns (ok, raw, reason, gasPerStep, gasTotal). scripts/ladder/livecap.py sends every cell's floored parameters p and compares the returned raw word with the committed one bit for bit (or the revert selector for a reverted cell). liveMaxN is the largest N per form the public RPC completed within its gas limit, measured by scripts/ladder/livecap.py.
 

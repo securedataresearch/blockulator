@@ -1,11 +1,11 @@
 // BlockulatorWad: 18-decimal (WAD) maths with Solady's names, every result
 // correct to the last wei.
 //
-// This file is the single source of truth. scripts/fp127/gen.py --lib wad
-// reads it together with contracts/src/fp19/FP19.yul.src, whose functions
+// This file is the single source of truth. scripts/bl127/gen.py --lib wad
+// reads it together with contracts/src/bl19/BL19.yul.src, whose functions
 // it calls, and emits BlockulatorWad.sol (the inline library: each export
 // with the closure of the functions it runs; an export without a leave is
-// written into its block instead of called) and ops.json. FP19.yul.src's
+// written into its block instead of called) and ops.json. BL19.yul.src's
 // rules apply: top-level functions only, scratch memory only, no identifier
 // starting with an underscore, no recursion. Reverts go through rev(sel),
 // except in the one-word mul and div exports, which write it out so their
@@ -23,16 +23,16 @@
 // 512 bits. The transcendental ones run in two stages:
 //
 //   1. A fast value with a stated bound err on its distance from the exact
-//      one: exp, ln, log2, log10 and pow on FP19's kernels (exp2frac,
+//      one: exp, ln, log2, log10 and pow on BL19's kernels (exp2frac,
 //      log2m, within 4.7 and 2.32 units of 2^-254) fed the exact input, as
 //      a 512-bit product of the integer with a constant, never a rounded
-//      x 10^-18; lambertW0 through FP19's correctly rounded lambertW0 on
+//      x 10^-18; lambertW0 through BL19's correctly rounded lambertW0 on
 //      fromFixed18(x). The value times 10^18 is cut into its integer I and
 //      the next 256 bits F; when F lies more than err (at 2^-256 wei) from 0
 //      and from 1, the exact value is strictly between I and I + 1 wei and
 //      the direction picks one (wadbad says when it does not).
 //   2. Otherwise a second stage computes the value from the exact input in
-//      two words at 2^-510, FP19's own second-stage arithmetic (wexpm1,
+//      two words at 2^-510, BL19's own second-stage arithmetic (wexpm1,
 //      wexpr, wlnw, the wide products), to within a stated bound, and cuts
 //      that (wadtie). There a fraction within the bound of 0 or 1 is taken
 //      as the integer itself: such a value is an exact one (exp(0), ln(1),
@@ -44,7 +44,7 @@
 // The fast bounds:
 //   exp     t log2 e = |x| C, C = log2(e) / 10^18 in two words, split at
 //           2^-254 (floored): 2^f within 8 units of 2^-254 (the kernel's 4.7,
-//           f's floor 1.4, as FP19's exp).
+//           f's floor 1.4, as BL19's exp).
 //   ln      (u + log2m(m)) ln 2 - 18 ln 10 at 2^-247 for x = m 2^u exactly:
 //           within 4 units of 2^-247, absolute. log2, log10: 3 units.
 //   pow     T = |ln x_t| |y| / 10^18 at 2^-247 from ln's value (4 |y_t| + 1
@@ -108,7 +108,7 @@ function wadtie(s, I, F, errF, dir) -> mag {
     if iszero(lt(F, not(errF))) { mag := add(I, 1) }
 }
 
-/// The fast path on an FP19 word v != 0 within c ulps of v plus d 2^-240 of
+/// The fast path on an BL19 word v != 0 within c ulps of v plus d 2^-240 of
 /// the exact value (c < 2^190): s, I = floor(|v| 10^18), and bad = 1 unless
 /// that exact value surely lies strictly between I and I + 1 wei in
 /// magnitude. |v| 10^18 = P 2^-sh for the exact product P = M 10^18 of the
@@ -299,7 +299,7 @@ function wadsdivw(x, y, dir) -> r {
 
 /// floor(sqrt(x 10^18)), or the ceiling when up = 1: the integer root of the
 /// exact 512-bit product n, shifted left by an even 2j to put its top bit
-/// at 252 or 253 (below 2^254: FP19's word root, isqrt, which converges
+/// at 252 or 253 (below 2^254: BL19's word root, isqrt, which converges
 /// from 2^127 only there) or at 508 or 509 (its two-word root, isqrtw),
 /// then shifted back by j: the floor of the floor of sqrt(4^j n) over 2^j
 /// is the floor of sqrt(n).
@@ -338,7 +338,7 @@ function wadsqrtw(x, up) -> r {
     }
 }
 
-/// floor(cbrt(n)) for n in [2^253, 2^256): FP19's seed (cbrtseed, within
+/// floor(cbrt(n)) for n in [2^253, 2^256): BL19's seed (cbrtseed, within
 /// 2^-7, on n as a 237-bit significand m shifted by 18 + rr, 17 for rr = 2)
 /// and its four one-word Newton steps (cbrtw).
 function wadicbrt(n) -> y {
@@ -406,10 +406,10 @@ function wadexp2(s, ax) -> k, eh, el {
 /// e^(x 10^-18) in WAD, rounded in direction dir. Zero (or one wei up) at
 /// and below -41446531673892822313, where the value is under one wei;
 /// ExpOverflow from 135305999368893231590, where it reaches 2^255. The fast
-/// path is FP19's 2^f kernel on the exact input: t log2 e = |x| C from the
+/// path is BL19's 2^f kernel on the exact input: t log2 e = |x| C from the
 /// exact three-word product with wadexp2's C, split into k and f at 2^-254
 /// (floored), 2^f by exp2frac (exp2kv): within 8 units of 2^-254, the
-/// kernel's 4.7 and f's floor 1.4 (FP19's exp bound).
+/// kernel's 4.7 and f's floor 1.4 (BL19's exp bound).
 function wadexp(x, dir) -> r {
     if iszero(x) {
         r := 1000000000000000000
@@ -518,7 +518,7 @@ function wadlogr(ng, a2, a1, a0, dir) -> r {
     if ng { r := sub(0, r) }
 }
 
-/// ln(x 10^-18) at 2^-247 as a sign and a magnitude, for x > 0 on FP19's
+/// ln(x 10^-18) at 2^-247 as a sign and a magnitude, for x > 0 on BL19's
 /// log2 kernel: x = m 2^u exactly (m = x 2^(254 - u) at 2^-254), log2m(m)
 /// within 2.32 units of 2^-254, then (u + log2 m) ln 2 - 18 ln 10, u ln 2
 /// from the 512-bit product with ln 2 at 2^-256 (within 1.5 units), log2 m
@@ -920,7 +920,7 @@ function wadpow(x, y, dir) -> r {
 /// The second stage of W0 for x != 0 from the fast value v: f = w + ln|w| -
 /// ln|t| in three words at 2^-510 (two's complement), with ln|w| = u ln 2 +
 /// wlnw(m) on v's exact significand and ln|t| from wadlnw on |x|; q = w / (1
-/// + w) in FP19; the step w - f q, cut. The step's error is (w - W)^2 / (2
+/// + w) in BL19; the step w - f q, cut. The step's error is (w - W)^2 / (2
 /// |w| (1 + w)) plus f's 2^-494 times |q| and q's two roundings times |f q|.
 function wadw0w(x, v) -> s, I, F {
     let f2, f1, f0 := wadw0f(x, v)
@@ -933,7 +933,7 @@ function wadw0w(x, v) -> s, I, F {
     I, F := wad510(w2, w1, w0)
 }
 
-/// ln|w| at 2^-510, three words in two's complement, for an FP19 word
+/// ln|w| at 2^-510, three words in two's complement, for an BL19 word
 /// w != 0: u ln 2 (u signed, kln2x within a unit) plus wlnw of the exact
 /// mantissa.
 function wadlnv(v) -> d2, d1, d0 {
@@ -944,7 +944,7 @@ function wadlnv(v) -> d2, d1, d0 {
     d2, d1, d0 := add3(d2, d1, d0, 0, lh, ll)
 }
 
-/// w 2^510 exactly, three words in two's complement, for an FP19 word w
+/// w 2^510 exactly, three words in two's complement, for an BL19 word w
 /// with 2^-274 <= |w| < 2^256: m 2^(u + 274).
 function wadv510(v) -> w2, w1, w0 {
     w2, w1, w0 := shl3(or(and(v, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000), sub(and(shr(236, v), 0x7ffff), 0x3feed))
@@ -963,29 +963,29 @@ function wadw0f(x, v) -> f2, f1, f0 {
     f2, f1, f0 := add3(f2, f1, f0, w2, w1, w0)
 }
 
-/// f q 2^510 as a sign and two words, q = w / (1 + w) in FP19 (two
+/// f q 2^510 as a sign and two words, q = w / (1 + w) in BL19 (two
 /// roundings): |f| is tiny (the fast value's error times (1 + w) / w), so
 /// its low two words; |q| = m 2^(uq - 236) with uq <= 30 near the branch
 /// point, so the product shifts right.
 function wadfq(f2, f1, f0, v) -> ng, e1, e0 {
     let a2, a1, a0, nf := abs3(f2, f1, f0)
-    let q := fp19_div(v, fp19_add(v, 0x3ffff0000000000000000000000000000000000000000000000000000000000))
+    let q := bl19_div(v, bl19_add(v, 0x3ffff0000000000000000000000000000000000000000000000000000000000))
     let z2, z1, z0 := mul3(a1, a0, or(and(q, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), 0x100000000000000000000000000000000000000000000000000000000000))
     e1, e0 := shr3(z2, z1, z0, sub(0x400eb, and(shr(236, q), 0x7ffff)))
     ng := xor(nf, shr(255, q))
 }
 
-/// W0(x 10^-18) in WAD, rounded in direction dir: FP19's lambertW0 on
+/// W0(x 10^-18) in WAD, rounded in direction dir: BL19's lambertW0 on
 /// fromFixed18(x), cut with c = 4 from w = -1/2 up and 2 + 2^(1 + k) below
 /// it for 1 + w >= 2^-k (1 + w is exact there); the second stage on a miss.
 function wadw0(x, dir) -> r {
     if slt(x, sub(0, 367879441171442321)) { rev(0xf2b402bb) }
     if iszero(x) { leave }
-    let v := fp19_lambertW0(fp19_fromFixed18(x))
+    let v := bl19_lambertW0(bl19_fromFixed18(x))
     let c := 4
     // v below -1/2: sign set and the exponent at or above -1's
     if and(shr(255, v), iszero(lt(and(shr(236, v), 0x7ffff), 0x3fffe))) {
-        let o := fp19_add(v, 0x3ffff0000000000000000000000000000000000000000000000000000000000)
+        let o := bl19_add(v, 0x3ffff0000000000000000000000000000000000000000000000000000000000)
         c := add(2, shl(add(sub(0x3ffff, and(shr(236, o), 0x7ffff)), 1), 1))
     }
     let s, I, bad := wadfast(v, c, 0)
@@ -1305,7 +1305,7 @@ function wad_sDivWadUp(x, y) -> z {
 /// @domain any x
 /// @reverts never
 /// @notice sqrt(x 10^-18) in WAD rounded down, exactly: the integer root of
-///         x 10^18, below 2^254 by FP19's word root (isqrt) on the product
+///         x 10^18, below 2^254 by BL19's word root (isqrt) on the product
 ///         shifted by an even 2j to put its top bit at 252 or 253, shifted
 ///         back by j (the floor of the floor of sqrt(4^j n) over 2^j is the
 ///         floor of sqrt(n)); above, wadsqrtw.
@@ -1352,7 +1352,7 @@ function wad_sqrtWadDown(x) -> z {
 /// @domain any x
 /// @reverts never
 /// @notice cbrt(x 10^-18) in WAD rounded down: the integer cube root of the
-///         exact x 10^36, from FP19's root and one exact cube either way.
+///         exact x 10^36, from BL19's root and one exact cube either way.
 function wad_cbrtWad(x) -> z {
     if x { z := wadcbrt(x, 0) }
 }

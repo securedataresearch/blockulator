@@ -19,7 +19,7 @@ interface ISnekmateMath {
 
 /// @title LadderSnekmate
 /// @notice snekmate's Vyper math module in signed WAD, through the deployed
-///         SnekmateMath contract (one staticcall per op, as FP127's deployed
+///         SnekmateMath contract (one staticcall per op, as BL127's deployed
 ///         form makes): wad_exp and wad_ln; mul and div are mul_div(|a|, |b|,
 ///         1e18) and mul_div(|a|, 1e18, |b|), rounding down, with the sign
 ///         restored (truncation toward zero). snekmate has no square root or

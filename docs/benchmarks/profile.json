@@ -1,9 +1,9 @@
 {
- "_doc": "Where the gas goes: a profile of FP19Lib and FP127Lib on the sweep's seeded\nrandom inputs.\n\n    uv run scripts/sweep/gasprofile.py          # inputs, the passes, the via_ir bench -> docs/benchmarks/profile.{md,json}\n    uv run scripts/sweep/gasprofile.py report   # re-write from the last outputs in cache/sweep/\n\nThree passes over the same inputs (scripts/sweep/sweep.py writes them to\ncache/sweep/, not committed), all through the inline libraries with the gas\nread inside the call's own window (test/sweep/Sweep.t.sol):\n\n  plain  the committed libraries: each op's total gas (median, p99, max);\n  count  test-only copies whose rounding-test fallbacks count themselves\n         (scripts/fp127/gen.py --count-lib): the share of inputs that left the\n         fast path. Results must equal the plain pass's word for word;\n  probe  test-only copies with a gas probe around each named helper\n         (gen.py --probe-lib, PROBES): per helper, calls per input and its gas\n         as a share of the plain total, inclusive (with the probed helpers it\n         calls) and exclusive (without them). The probes' own cost is taken\n         out (PROBE_OVH, PROBE_RESIDUAL); the residual per probe call left\n         after that is reported as the calibration error;\n  forced the probe pass again on FP19's first 4,000 inputs per op with a\n         second stage, the rounding test forced to fail (gen.py --forced),\n         against make sweep's second-stage pass (run_wide): what a fallback\n         costs and where, wexpm1's share first.\n\nThen the build-setting bench (test/profile/ViaIr.t.sol) twice, under the\ndefault profile (via_ir = false) and [profile.viair], beside the Yul objects.\nThe object's own call and dispatch cost (a flat selector switch is a linear\nchain, FP127's a binary search: it grows with the comparisons\nbefore the selector's case, gen.py dispatch_steps) is fitted on the trivial\nops, where the inline call is the same code, and taken out of the heavy ops'\nobject column.",
+ "_doc": "Where the gas goes: a profile of BL19Lib and BL127Lib on the sweep's seeded\nrandom inputs.\n\n    uv run scripts/sweep/gasprofile.py          # inputs, the passes, the via_ir bench -> docs/benchmarks/profile.{md,json}\n    uv run scripts/sweep/gasprofile.py report   # re-write from the last outputs in cache/sweep/\n\nThree passes over the same inputs (scripts/sweep/sweep.py writes them to\ncache/sweep/, not committed), all through the inline libraries with the gas\nread inside the call's own window (test/sweep/Sweep.t.sol):\n\n  plain  the committed libraries: each op's total gas (median, p99, max);\n  count  test-only copies whose rounding-test fallbacks count themselves\n         (scripts/bl127/gen.py --count-lib): the share of inputs that left the\n         fast path. Results must equal the plain pass's word for word;\n  probe  test-only copies with a gas probe around each named helper\n         (gen.py --probe-lib, PROBES): per helper, calls per input and its gas\n         as a share of the plain total, inclusive (with the probed helpers it\n         calls) and exclusive (without them). The probes' own cost is taken\n         out (PROBE_OVH, PROBE_RESIDUAL); the residual per probe call left\n         after that is reported as the calibration error;\n  forced the probe pass again on BL19's first 4,000 inputs per op with a\n         second stage, the rounding test forced to fail (gen.py --forced),\n         against make sweep's second-stage pass (run_wide): what a fallback\n         costs and where, wexpm1's share first.\n\nThen the build-setting bench (test/profile/ViaIr.t.sol) twice, under the\ndefault profile (via_ir = false) and [profile.viair], beside the Yul objects.\nThe object's own call and dispatch cost (a flat selector switch is a linear\nchain, BL127's a binary search: it grows with the comparisons\nbefore the selector's case, gen.py dispatch_steps) is fitted on the trivial\nops, where the inline call is the same code, and taken out of the heavy ops'\nobject column.",
  "seed": 20261020,
  "probeResidual": 92,
  "probes": {
-  "fp19": [
+  "bl19": [
    "log2m",
    "exp2frac",
    "wexpm1",
@@ -40,7 +40,7 @@
    "isqrtw",
    "lerp3"
   ],
-  "fp127": [
+  "bl127": [
    "expk",
    "log2m",
    "erfs",
@@ -67,7 +67,7 @@
  },
  "ops": [
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "add",
    "n": 4000,
    "median": 677,
@@ -78,7 +78,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "mul",
    "n": 4000,
    "median": 530,
@@ -89,7 +89,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "div",
    "n": 4000,
    "median": 808,
@@ -100,7 +100,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "sqrt",
    "n": 4000,
    "median": 1201,
@@ -111,7 +111,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp",
    "n": 22000,
    "median": 3299,
@@ -138,7 +138,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "ln",
    "n": 20000,
    "median": 3652,
@@ -183,7 +183,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log1p",
    "n": 22000,
    "median": 2587,
@@ -228,7 +228,7 @@
    "residualPerCall": -7.9
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "expm1",
    "n": 22000,
    "median": 2390,
@@ -255,7 +255,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "pow",
    "n": 22000,
    "median": 5965,
@@ -332,7 +332,7 @@
    "residualPerCall": -7.8
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "erf",
    "n": 4000,
    "median": 10627,
@@ -395,7 +395,7 @@
    "residualPerCall": 0.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "erfc",
    "n": 6000,
    "median": 10868,
@@ -458,7 +458,7 @@
    "residualPerCall": 3.8
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "normCdf",
    "n": 6000,
    "median": 11344,
@@ -521,7 +521,7 @@
    "residualPerCall": 3.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "compound",
    "n": 6000,
    "median": 6211,
@@ -598,7 +598,7 @@
    "residualPerCall": -5.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertW0",
    "n": 6000,
    "median": 10686,
@@ -673,7 +673,7 @@
    "residualPerCall": 3.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertWm1",
    "n": 4000,
    "median": 13213,
@@ -748,7 +748,7 @@
    "residualPerCall": 5.7
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "powu",
    "n": 6000,
    "median": 5002,
@@ -825,7 +825,7 @@
    "residualPerCall": -2.2
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "mulDown",
    "n": 4000,
    "median": 765,
@@ -836,7 +836,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "mulUp",
    "n": 4000,
    "median": 766,
@@ -847,7 +847,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "divDown",
    "n": 4000,
    "median": 979,
@@ -858,7 +858,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "divUp",
    "n": 4000,
    "median": 980,
@@ -869,7 +869,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toUintDown",
    "n": 4000,
    "median": 405,
@@ -880,7 +880,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toUintUp",
    "n": 4000,
    "median": 420,
@@ -891,7 +891,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toIntDown",
    "n": 4000,
    "median": 466,
@@ -902,7 +902,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toIntUp",
    "n": 4000,
    "median": 480,
@@ -913,7 +913,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "floor",
    "n": 4000,
    "median": 522,
@@ -924,7 +924,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "ceil",
    "n": 4000,
    "median": 523,
@@ -935,7 +935,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "fromUintDown",
    "n": 4000,
    "median": 487,
@@ -946,7 +946,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "fromUintUp",
    "n": 4000,
    "median": 488,
@@ -957,7 +957,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toFixed18Down",
    "n": 4000,
    "median": 723,
@@ -968,7 +968,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "toFixed18Up",
    "n": 4000,
    "median": 737,
@@ -979,7 +979,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp2",
    "n": 8000,
    "median": 3102,
@@ -1006,7 +1006,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp10",
    "n": 8000,
    "median": 3200,
@@ -1033,7 +1033,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log2",
    "n": 8000,
    "median": 3774,
@@ -1078,7 +1078,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log10",
    "n": 8000,
    "median": 3775,
@@ -1123,7 +1123,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log2Up",
    "n": 4000,
    "median": 693,
@@ -1134,7 +1134,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "cbrt",
    "n": 4000,
    "median": 2747,
@@ -1158,7 +1158,7 @@
    "residualPerCall": -3.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "sinh",
    "n": 8000,
    "median": 3613,
@@ -1203,7 +1203,7 @@
    "residualPerCall": -6.9
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "cosh",
    "n": 8000,
    "median": 3609,
@@ -1236,7 +1236,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "tanh",
    "n": 8000,
    "median": 3628,
@@ -1287,7 +1287,7 @@
    "residualPerCall": -6.8
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "atanh",
    "n": 8000,
    "median": 5199,
@@ -1326,7 +1326,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "min",
    "n": 4000,
    "median": 246,
@@ -1337,7 +1337,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "max",
    "n": 4000,
    "median": 247,
@@ -1348,7 +1348,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "clamp",
    "n": 4000,
    "median": 491,
@@ -1359,7 +1359,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "avg",
    "n": 4000,
    "median": 678,
@@ -1370,7 +1370,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "dist",
    "n": 4000,
    "median": 815,
@@ -1381,7 +1381,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "zeroFloorSub",
    "n": 4000,
    "median": 753,
@@ -1392,7 +1392,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "inv",
    "n": 4000,
    "median": 747,
@@ -1403,7 +1403,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lerp",
    "n": 8000,
    "median": 5910,
@@ -1421,7 +1421,7 @@
    "residualPerCall": -15.9
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "frac",
    "n": 4000,
    "median": 766,
@@ -1432,7 +1432,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "round",
    "n": 4000,
    "median": 474,
@@ -1443,7 +1443,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "factorial",
    "n": 175,
    "median": 714,
@@ -1454,7 +1454,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "gavg",
    "n": 4000,
    "median": 2095,
@@ -1472,7 +1472,7 @@
    "residualPerCall": -3.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "hypot",
    "n": 4000,
    "median": 3538,
@@ -1490,7 +1490,7 @@
    "residualPerCall": -3.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "mul",
    "n": 4000,
    "median": 263,
@@ -1501,7 +1501,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "div",
    "n": 4000,
    "median": 420,
@@ -1512,7 +1512,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "sqrt",
    "n": 4000,
    "median": 469,
@@ -1523,7 +1523,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp",
    "n": 4000,
    "median": 2828,
@@ -1550,7 +1550,7 @@
    "residualPerCall": 7.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "ln",
    "n": 4000,
    "median": 1934,
@@ -1597,7 +1597,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log2",
    "n": 4000,
    "median": 1718,
@@ -1644,7 +1644,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "pow",
    "n": 4000,
    "median": 3400,
@@ -1703,7 +1703,7 @@
    "residualPerCall": -1.6
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "cbrt",
    "n": 4000,
    "median": 1948,
@@ -1727,7 +1727,7 @@
    "residualPerCall": -1.7
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "expm1",
    "n": 4000,
    "median": 2076,
@@ -1754,7 +1754,7 @@
    "residualPerCall": 7.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "erf",
    "n": 2000,
    "median": 3775,
@@ -1787,7 +1787,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "erfc",
    "n": 2000,
    "median": 3654,
@@ -1820,7 +1820,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "normCdf",
    "n": 2000,
    "median": 3823,
@@ -1853,7 +1853,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "compound",
    "n": 4000,
    "median": 3360,
@@ -1918,7 +1918,7 @@
    "residualPerCall": -4.5
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp2",
    "n": 4000,
    "median": 2684,
@@ -1945,7 +1945,7 @@
    "residualPerCall": 7.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp10",
    "n": 4000,
    "median": 3069,
@@ -1972,7 +1972,7 @@
    "residualPerCall": 7.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log10",
    "n": 4000,
    "median": 1934,
@@ -2019,7 +2019,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "sinh",
    "n": 4000,
    "median": 4017,
@@ -2046,7 +2046,7 @@
    "residualPerCall": 2.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "cosh",
    "n": 4000,
    "median": 3970,
@@ -2073,7 +2073,7 @@
    "residualPerCall": 2.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "tanh",
    "n": 4000,
    "median": 3966,
@@ -2094,7 +2094,7 @@
    "residualPerCall": 7.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "atanh",
    "n": 4000,
    "median": 2908,
@@ -2129,7 +2129,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "powu",
    "n": 4000,
    "median": 3565,
@@ -2194,7 +2194,7 @@
    "residualPerCall": 1.9
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "mulUp",
    "n": 4000,
    "median": 382,
@@ -2205,7 +2205,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "divUp",
    "n": 4000,
    "median": 474,
@@ -2216,7 +2216,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "divDown",
    "n": 4000,
    "median": 471,
@@ -2227,7 +2227,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "toFixed18Up",
    "n": 4000,
    "median": 190,
@@ -2238,7 +2238,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "log1p",
    "n": 4000,
    "median": 2097,
@@ -2285,7 +2285,7 @@
    "residualPerCall": -8.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "gavg",
    "n": 4000,
    "median": 702,
@@ -2303,7 +2303,7 @@
    "residualPerCall": -3.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "hypot",
    "n": 4000,
    "median": 1160,
@@ -2321,7 +2321,7 @@
    "residualPerCall": -3.0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "inv",
    "n": 4000,
    "median": 242,
@@ -2332,7 +2332,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "mulDown",
    "n": 4000,
    "median": 307,
@@ -2343,7 +2343,7 @@
    "residualPerCall": null
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "lambertW0",
    "n": 2500,
    "median": 8347,
@@ -2400,7 +2400,7 @@
    "residualPerCall": 2.5
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "lambertWm1",
    "n": 2000,
    "median": 8197,
@@ -2459,7 +2459,7 @@
  ],
  "forced": [
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp",
    "stage": "forced",
    "n": 6000,
@@ -2484,7 +2484,7 @@
    "residualPerCall": -0.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "ln",
    "stage": "forced",
    "n": 4000,
@@ -2527,7 +2527,7 @@
    "residualPerCall": 4.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log1p",
    "stage": "forced",
    "n": 6000,
@@ -2570,7 +2570,7 @@
    "residualPerCall": 4.2
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "expm1",
    "stage": "forced",
    "n": 6000,
@@ -2595,7 +2595,7 @@
    "residualPerCall": -0.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "pow",
    "stage": "forced",
    "n": 6000,
@@ -2668,7 +2668,7 @@
    "residualPerCall": 0.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "erf",
    "stage": "forced",
    "n": 4000,
@@ -2729,7 +2729,7 @@
    "residualPerCall": 4.3
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "erfc",
    "stage": "forced",
    "n": 6000,
@@ -2790,7 +2790,7 @@
    "residualPerCall": 9.3
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "normCdf",
    "stage": "forced",
    "n": 6000,
@@ -2851,7 +2851,7 @@
    "residualPerCall": 8.3
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "compound",
    "stage": "forced",
    "n": 6000,
@@ -2924,7 +2924,7 @@
    "residualPerCall": 3.2
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertW0",
    "stage": "forced",
    "n": 6000,
@@ -2997,7 +2997,7 @@
    "residualPerCall": 2.8
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertWm1",
    "stage": "forced",
    "n": 4000,
@@ -3070,7 +3070,7 @@
    "residualPerCall": 4.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "powu",
    "stage": "forced",
    "n": 6000,
@@ -3143,7 +3143,7 @@
    "residualPerCall": 2.0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp2",
    "stage": "forced",
    "n": 4000,
@@ -3168,7 +3168,7 @@
    "residualPerCall": -0.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp10",
    "stage": "forced",
    "n": 4000,
@@ -3193,7 +3193,7 @@
    "residualPerCall": -0.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log2",
    "stage": "forced",
    "n": 4000,
@@ -3236,7 +3236,7 @@
    "residualPerCall": 4.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log10",
    "stage": "forced",
    "n": 4000,
@@ -3279,7 +3279,7 @@
    "residualPerCall": 4.5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "sinh",
    "stage": "forced",
    "n": 4000,
@@ -3322,7 +3322,7 @@
    "residualPerCall": 9.1
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "cosh",
    "stage": "forced",
    "n": 4000,
@@ -3353,7 +3353,7 @@
    "residualPerCall": 3.7
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "tanh",
    "stage": "forced",
    "n": 4000,
@@ -3402,7 +3402,7 @@
    "residualPerCall": 7.8
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "atanh",
    "stage": "forced",
    "n": 4000,
@@ -3441,7 +3441,7 @@
  ],
  "viaIr": [
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "mul",
    "inlineLegacy": 263,
    "inlineViaIr": 181,
@@ -3450,7 +3450,7 @@
    "selectorRank": 3
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "div",
    "inlineLegacy": 421,
    "inlineViaIr": 310,
@@ -3459,7 +3459,7 @@
    "selectorRank": 3
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "sqrt",
    "inlineLegacy": 473,
    "inlineViaIr": 378,
@@ -3468,7 +3468,7 @@
    "selectorRank": 4
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "exp",
    "inlineLegacy": 2811,
    "inlineViaIr": 2480,
@@ -3477,7 +3477,7 @@
    "selectorRank": 4
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "ln",
    "inlineLegacy": 1886,
    "inlineViaIr": 1651,
@@ -3486,7 +3486,7 @@
    "selectorRank": 4
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "pow",
    "inlineLegacy": 3353,
    "inlineViaIr": 3092,
@@ -3495,7 +3495,7 @@
    "selectorRank": 2
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "cbrt",
    "inlineLegacy": 1936,
    "inlineViaIr": 1599,
@@ -3504,7 +3504,7 @@
    "selectorRank": 5
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "sinh",
    "inlineLegacy": 4105,
    "inlineViaIr": 3435,
@@ -3513,7 +3513,7 @@
    "selectorRank": 0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "cosh",
    "inlineLegacy": 4063,
    "inlineViaIr": 3392,
@@ -3522,7 +3522,7 @@
    "selectorRank": 2
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "erf",
    "inlineLegacy": 7610,
    "inlineViaIr": 6921,
@@ -3531,7 +3531,7 @@
    "selectorRank": 0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "normCdf",
    "inlineLegacy": 6095,
    "inlineViaIr": 5403,
@@ -3540,7 +3540,7 @@
    "selectorRank": 1
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "lambertW0",
    "inlineLegacy": 8310,
    "inlineViaIr": 7092,
@@ -3549,7 +3549,7 @@
    "selectorRank": 0
   },
   {
-   "lib": "fp127",
+   "lib": "bl127",
    "op": "lambertWm1",
    "inlineLegacy": 8154,
    "inlineViaIr": 6984,
@@ -3558,7 +3558,7 @@
    "selectorRank": 1
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "add",
    "inlineLegacy": 673,
    "inlineViaIr": 545,
@@ -3567,7 +3567,7 @@
    "selectorRank": 5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "mul",
    "inlineLegacy": 526,
    "inlineViaIr": 440,
@@ -3576,7 +3576,7 @@
    "selectorRank": 4
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "div",
    "inlineLegacy": 812,
    "inlineViaIr": 686,
@@ -3585,7 +3585,7 @@
    "selectorRank": 6
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "sqrt",
    "inlineLegacy": 1207,
    "inlineViaIr": 1055,
@@ -3594,7 +3594,7 @@
    "selectorRank": 6
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp",
    "inlineLegacy": 3275,
    "inlineViaIr": 2848,
@@ -3603,7 +3603,7 @@
    "selectorRank": 4
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "ln",
    "inlineLegacy": 3104,
    "inlineViaIr": 2661,
@@ -3612,7 +3612,7 @@
    "selectorRank": 4
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "pow",
    "inlineLegacy": 5956,
    "inlineViaIr": 5288,
@@ -3621,7 +3621,7 @@
    "selectorRank": 2
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "erf",
    "inlineLegacy": 10622,
    "inlineViaIr": 9446,
@@ -3630,7 +3630,7 @@
    "selectorRank": 0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "normCdf",
    "inlineLegacy": 12353,
    "inlineViaIr": 10890,
@@ -3639,7 +3639,7 @@
    "selectorRank": 1
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertW0",
    "inlineLegacy": 10688,
    "inlineViaIr": 8964,
@@ -3648,7 +3648,7 @@
    "selectorRank": 0
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "lambertWm1",
    "inlineLegacy": 10775,
    "inlineViaIr": 9053,
@@ -3657,7 +3657,7 @@
    "selectorRank": 1
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "exp2",
    "inlineLegacy": 3093,
    "inlineViaIr": 2734,
@@ -3666,7 +3666,7 @@
    "selectorRank": 2
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "log2",
    "inlineLegacy": 2883,
    "inlineViaIr": 2532,
@@ -3675,7 +3675,7 @@
    "selectorRank": 3
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "cbrt",
    "inlineLegacy": 2724,
    "inlineViaIr": 2378,
@@ -3684,7 +3684,7 @@
    "selectorRank": 5
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "cosh",
    "inlineLegacy": 3693,
    "inlineViaIr": 3112,
@@ -3693,7 +3693,7 @@
    "selectorRank": 2
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "tanh",
    "inlineLegacy": 3714,
    "inlineViaIr": 3149,
@@ -3702,7 +3702,7 @@
    "selectorRank": 1
   },
   {
-   "lib": "fp19",
+   "lib": "bl19",
    "op": "hypot",
    "inlineLegacy": 3399,
    "inlineViaIr": 2670,
@@ -3712,12 +3712,12 @@
   }
  ],
  "objectCallFit": {
-  "fp127": {
+  "bl127": {
    "base": 503,
    "perRank": 16.9,
    "points": 10
   },
-  "fp19": {
+  "bl19": {
    "base": 411,
    "perRank": 39.4,
    "points": 8

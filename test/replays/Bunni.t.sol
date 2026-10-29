@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
+import {BL127Lib} from "../../contracts/src/bl127/BL127Lib.sol";
+import {BL19Lib} from "../../contracts/src/bl19/BL19Lib.sol";
 
 // Bunni v2 exploit replay, Ethereum tx 0x1c27c4d6...beb97b (block 23273098, index 84).
 //
@@ -379,8 +379,8 @@ contract BunniReplay is Test {
     struct Idle {
         uint256 deployed; // balance - balance.mulDiv(shares, totalSupply)   BunniHubLogic.sol:478
         uint256 up; //       balance - balance.mulDivUp(shares, totalSupply) (the fix)
-        int256 fp127; //     sub(i, div(mul(i, s), T)) in 127.128
-        int256 fp19; //     the same in FP19
+        int256 bl127; //     sub(i, div(mul(i, s), T)) in 127.128
+        int256 bl19; //     the same in BL19
         uint256 exactNum; // idle0 * T_k: the exact idle balance is exactNum / T_0
     }
 
@@ -456,8 +456,8 @@ contract BunniReplay is Test {
     function _updateIdle(Idle memory i, uint256 shares, uint256 T) internal pure {
         i.deployed = i.deployed - SoladyMath.mulDiv(i.deployed, shares, T);
         i.up = i.up - SoladyMath.mulDivUp(i.up, shares, T);
-        i.fp127 = FP127Lib.sub(i.fp127, FP127Lib.div(FP127Lib.mul(i.fp127, int256(shares) << 128), int256(T) << 128));
-        i.fp19 = FP19Lib.sub(i.fp19, FP19Lib.div(FP19Lib.mul(i.fp19, FP19Lib.fromUint(shares)), FP19Lib.fromUint(T)));
+        i.bl127 = BL127Lib.sub(i.bl127, BL127Lib.div(BL127Lib.mul(i.bl127, int256(shares) << 128), int256(T) << 128));
+        i.bl19 = BL19Lib.sub(i.bl19, BL19Lib.div(BL19Lib.mul(i.bl19, BL19Lib.fromUint(shares)), BL19Lib.fromUint(T)));
         // exact: idle * (T - s) / T; with idle = exactNum / T_0 and exactNum = idle0 * T this is exact
         require(i.exactNum % T == 0, "exactNum = idle0 * T");
         i.exactNum = i.exactNum / T * (T - shares);
@@ -479,7 +479,7 @@ contract BunniReplay is Test {
         Pool memory p = _start();
         r.idle0 = _u(".start.idle");
         r.T0 = p.totalSupply;
-        r.idle = Idle(r.idle0, r.idle0, int256(r.idle0) << 128, FP19Lib.fromUint(r.idle0), r.idle0 * r.T0);
+        r.idle = Idle(r.idle0, r.idle0, int256(r.idle0) << 128, BL19Lib.fromUint(r.idle0), r.idle0 * r.T0);
         uint256[] memory shares = _ua(".steps.shares");
         assertEq(shares.length, N);
         r.active = new uint256[](N + 1);
@@ -565,13 +565,13 @@ contract BunniReplay is Test {
         uint256 lDep = _formDeployed(r, q);
         assertLt(lDep * 100, lStart * 16, "deployed: liquidity fell below 16% of its start");
         uint256 lUp = _formUp(r, q);
-        uint256 l127 = _formFp127(r, q);
-        uint256 l19 = _formFp19(r, q);
+        uint256 l127 = _formBl127(r, q);
+        uint256 l19 = _formBl19(r, q);
         uint256 lEx = _formExact(r, q);
         // every non-deployed form leaves the pool bound by the USDT estimate, at one liquidity
         assertEq(lUp, lEx, "mulDivUp liquidity");
-        assertEq(l127, lEx, "FP127 liquidity");
-        assertEq(l19, lEx, "FP19 liquidity");
+        assertEq(l127, lEx, "BL127 liquidity");
+        assertEq(l19, lEx, "BL19 liquidity");
     }
 
     function _formStart(Run memory r, BunniMath.LdfQuery memory q) internal view returns (uint256) {
@@ -598,23 +598,23 @@ contract BunniReplay is Test {
         return x.totalLiquidity;
     }
 
-    /// FP127: active = (balance0 << 128) - idle, within 44 units of 2^-128 of exact.
-    function _formFp127(Run memory r, BunniMath.LdfQuery memory q) internal view returns (uint256) {
-        int256 a = FP127Lib.sub(int256(r.balance0) << 128, r.idle.fp127);
-        assertEq(uint256(a >> 128), 35, "FP127: floor 35");
+    /// BL127: active = (balance0 << 128) - idle, within 44 units of 2^-128 of exact.
+    function _formBl127(Run memory r, BunniMath.LdfQuery memory q) internal view returns (uint256) {
+        int256 a = BL127Lib.sub(int256(r.balance0) << 128, r.idle.bl127);
+        assertEq(uint256(a >> 128), 35, "BL127: floor 35");
         uint256 lhs = uint256(a) * r.T0;
         uint256 rhs = (r.balance0 * r.T0 - r.idle.exactNum) << 128;
-        assertLt(lhs > rhs ? lhs - rhs : rhs - lhs, N * r.T0, "FP127 within 44 ulp of exact");
+        assertLt(lhs > rhs ? lhs - rhs : rhs - lhs, N * r.T0, "BL127 within 44 ulp of exact");
         BunniMath.LdfResult memory x = BunniMath.queryLDF(q, r.balance0, r.balance1, r.balance0 - uint256(a >> 128));
-        _emit("fp127", string.concat(_kv("active0", uint256(a)), _kv("L", x.totalLiquidity)));
+        _emit("bl127", string.concat(_kv("active0", uint256(a)), _kv("L", x.totalLiquidity)));
         return x.totalLiquidity;
     }
 
-    function _formFp19(Run memory r, BunniMath.LdfQuery memory q) internal view returns (uint256) {
-        int256 a = FP19Lib.sub(FP19Lib.fromUint(r.balance0), r.idle.fp19);
-        assertEq(_fp19Floor(a), 35, "FP19: floor 35");
-        BunniMath.LdfResult memory x = BunniMath.queryLDF(q, r.balance0, r.balance1, r.balance0 - _fp19Floor(a));
-        _emit("fp19", string.concat(_kv("active0", uint256(a)), _kv("L", x.totalLiquidity)));
+    function _formBl19(Run memory r, BunniMath.LdfQuery memory q) internal view returns (uint256) {
+        int256 a = BL19Lib.sub(BL19Lib.fromUint(r.balance0), r.idle.bl19);
+        assertEq(_bl19Floor(a), 35, "BL19: floor 35");
+        BunniMath.LdfResult memory x = BunniMath.queryLDF(q, r.balance0, r.balance1, r.balance0 - _bl19Floor(a));
+        _emit("bl19", string.concat(_kv("active0", uint256(a)), _kv("L", x.totalLiquidity)));
         return x.totalLiquidity;
     }
 
@@ -628,8 +628,8 @@ contract BunniReplay is Test {
         return x.totalLiquidity;
     }
 
-    /// floor of a non-negative FP19 word (README: value = (2^236 + F) * 2^(E - 262143 - 236))
-    function _fp19Floor(int256 x) internal pure returns (uint256) {
+    /// floor of a non-negative BL19 word (README: value = (2^236 + F) * 2^(E - 262143 - 236))
+    function _bl19Floor(int256 x) internal pure returns (uint256) {
         uint256 w = uint256(x);
         require(w >> 255 == 0, "negative");
         if (w == 0) return 0;

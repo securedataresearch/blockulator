@@ -8,10 +8,10 @@ cache_path = "cache"
 # Only Solidity and Yul under contracts/src are compiled. Vyper sources and
 # archived Huff live beside them and are skipped.
 # The deployed Yul objects (contracts/src/*/*.yul) are compiled by
-# scripts/fp127/stdjson.py (make build-yul, part of make build): Foundry hands
+# scripts/bl127/stdjson.py (make build-yul, part of make build): Foundry hands
 # every Yul source to one solc call, Yul mode takes exactly one, and the objects
 # need solc 0.8.24's optimizer sequence pinned (stdjson.py STEPS_0824: 0.8.38's
-# own sequence builds the FP19 core over the 24,576-byte limit), which forge
+# own sequence builds the BL19 core over the 24,576-byte limit), which forge
 # cannot set for Yul alone.
 skip = ["contracts/src/**/*.vy", "contracts/src/**/*.yul", "contracts/src/tools/**", "contracts/src/games/**",
         "contracts/src/market/**", "contracts/src/content/**",
@@ -38,12 +38,12 @@ fs_permissions = [
   { access = "read", path = "contracts/archive" },
   { access = "read", path = "contracts/deployments" },
   { access = "read", path = "out" },
-  { access = "read", path = "contracts/src/fp127/ops.json" },
-  { access = "read", path = "contracts/src/fp19/ops.json" },
-  { access = "read", path = "test/fp127/vectors" },
-  { access = "read", path = "test/fp19/vectors" },
-  { access = "read-write", path = "docs/fp19" },
-  { access = "read-write", path = "docs/fp127" },
+  { access = "read", path = "contracts/src/bl127/ops.json" },
+  { access = "read", path = "contracts/src/bl19/ops.json" },
+  { access = "read", path = "test/bl127/vectors" },
+  { access = "read", path = "test/bl19/vectors" },
+  { access = "read-write", path = "docs/bl19" },
+  { access = "read-write", path = "docs/bl127" },
   { access = "read", path = "scripts" },
   { access = "read-write", path = "docs/benchmarks" },
   { access = "read-write", path = "cache/sweep" }

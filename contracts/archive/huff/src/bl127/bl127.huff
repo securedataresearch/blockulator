@@ -1,0 +1,822 @@
+/// @title BL127 Production Contract
+/// @notice Production contract for signed 127.128 fixed-point arithmetic
+/// @dev Exposes both Fixed18 (WAD) and Raw interfaces for maximum flexibility
+
+#include "constants.huff"
+#include "shortcut_constants.huff"
+#include "primitives.huff"
+#include "arithmetic.huff"
+#include "log2.huff"
+#include "exp.huff"
+#include "ln.huff"
+#include "sqrt.huff"
+#include "pow.huff"
+#include "utils.huff"
+#include "transcendental_utils.huff"
+#include "lambertw0.huff"
+
+#define macro MAIN() = takes(0) returns(0) {
+    // Read function selector
+    0x00 calldataload 0xe0 shr
+    
+    dup1 __FUNC_SIG(add) eq add_jump jumpi
+    dup1 __FUNC_SIG(sub) eq sub_jump jumpi
+    dup1 __FUNC_SIG(mul) eq mul_jump jumpi
+    dup1 __FUNC_SIG(div) eq div_jump jumpi
+    dup1 __FUNC_SIG(addRaw) eq add_raw_jump jumpi
+    dup1 __FUNC_SIG(subRaw) eq sub_raw_jump jumpi
+    dup1 __FUNC_SIG(mulRaw) eq mul_raw_jump jumpi
+    dup1 __FUNC_SIG(divRaw) eq div_raw_jump jumpi
+    dup1 __FUNC_SIG(fromFixed18) eq from_jump jumpi
+    dup1 __FUNC_SIG(toFixed18) eq to_jump jumpi
+    dup1 __FUNC_SIG(exp) eq exp_jump jumpi
+    dup1 __FUNC_SIG(exp2) eq exp2_jump jumpi
+    dup1 __FUNC_SIG(ln) eq ln_jump jumpi
+    dup1 __FUNC_SIG(log2) eq log2_jump jumpi
+    dup1 __FUNC_SIG(sqrt) eq sqrt_jump jumpi
+    dup1 __FUNC_SIG(sqrtRaw) eq sqrt_raw_jump jumpi
+    dup1 __FUNC_SIG(expRaw) eq exp_raw_jump jumpi
+    dup1 __FUNC_SIG(exp2Raw) eq exp2_raw_jump jumpi
+    dup1 __FUNC_SIG(lnRaw) eq ln_raw_jump jumpi
+    dup1 __FUNC_SIG(log2Raw) eq log2_raw_jump jumpi
+    dup1 __FUNC_SIG(divUnsignedRaw) eq div_unsigned_raw_jump jumpi
+    dup1 __FUNC_SIG(pow) eq pow_jump jumpi
+    dup1 __FUNC_SIG(powRaw) eq pow_raw_jump jumpi
+    dup1 __FUNC_SIG(abs) eq abs_jump jumpi
+    dup1 __FUNC_SIG(neg) eq neg_jump jumpi
+    dup1 __FUNC_SIG(inv) eq inv_jump jumpi
+    dup1 __FUNC_SIG(min) eq min_jump jumpi
+    dup1 __FUNC_SIG(max) eq max_jump jumpi
+    dup1 __FUNC_SIG(clamp) eq clamp_jump jumpi
+    dup1 __FUNC_SIG(avg) eq avg_jump jumpi
+    dup1 __FUNC_SIG(zeroFloorSub) eq zeroFloorSub_jump jumpi
+    dup1 __FUNC_SIG(dist) eq dist_jump jumpi
+    dup1 __FUNC_SIG(gavg) eq gavg_jump jumpi
+    dup1 __FUNC_SIG(log10) eq log10_jump jumpi
+    dup1 __FUNC_SIG(exp10) eq exp10_jump jumpi
+    dup1 __FUNC_SIG(absRaw) eq abs_raw_jump jumpi
+    dup1 __FUNC_SIG(negRaw) eq neg_raw_jump jumpi
+    dup1 __FUNC_SIG(invRaw) eq inv_raw_jump jumpi
+    dup1 __FUNC_SIG(minRaw) eq min_raw_jump jumpi
+    dup1 __FUNC_SIG(maxRaw) eq max_raw_jump jumpi
+    dup1 __FUNC_SIG(clampRaw) eq clamp_raw_jump jumpi
+    dup1 __FUNC_SIG(avgRaw) eq avg_raw_jump jumpi
+    dup1 __FUNC_SIG(zeroFloorSubRaw) eq zeroFloorSub_raw_jump jumpi
+    dup1 __FUNC_SIG(distRaw) eq dist_raw_jump jumpi
+    dup1 __FUNC_SIG(gavgRaw) eq gavg_raw_jump jumpi
+    dup1 __FUNC_SIG(log10Raw) eq log10_raw_jump jumpi
+    dup1 __FUNC_SIG(exp10Raw) eq exp10_raw_jump jumpi
+    dup1 __FUNC_SIG(sign) eq sign_jump jumpi
+    dup1 __FUNC_SIG(floor) eq floor_jump jumpi
+    dup1 __FUNC_SIG(ceil) eq ceil_jump jumpi
+    dup1 __FUNC_SIG(frac) eq frac_jump jumpi
+    dup1 __FUNC_SIG(cbrt) eq cbrt_jump jumpi
+    dup1 __FUNC_SIG(lerp) eq lerp_jump jumpi
+    dup1 __FUNC_SIG(hypot) eq hypot_jump jumpi
+    dup1 __FUNC_SIG(signRaw) eq sign_raw_jump jumpi
+    dup1 __FUNC_SIG(floorRaw) eq floor_raw_jump jumpi
+    dup1 __FUNC_SIG(ceilRaw) eq ceil_raw_jump jumpi
+    dup1 __FUNC_SIG(fracRaw) eq frac_raw_jump jumpi
+    dup1 __FUNC_SIG(cbrtRaw) eq cbrt_raw_jump jumpi
+    dup1 __FUNC_SIG(lerpRaw) eq lerp_raw_jump jumpi
+    dup1 __FUNC_SIG(hypotRaw) eq hypot_raw_jump jumpi
+    dup1 __FUNC_SIG(round) eq round_jump jumpi
+    dup1 __FUNC_SIG(log2Up) eq log2up_jump jumpi
+    dup1 __FUNC_SIG(gcd) eq gcd_jump jumpi
+    dup1 __FUNC_SIG(factorial) eq factorial_jump jumpi
+    dup1 __FUNC_SIG(lambertW0) eq lambertw0_jump jumpi
+    dup1 __FUNC_SIG(roundRaw) eq round_raw_jump jumpi
+    dup1 __FUNC_SIG(log2UpRaw) eq log2up_raw_jump jumpi
+    dup1 __FUNC_SIG(gcdRaw) eq gcd_raw_jump jumpi
+    dup1 __FUNC_SIG(factorialRaw) eq factorial_raw_jump jumpi
+    dup1 __FUNC_SIG(lambertW0Raw) eq lambertw0_raw_jump jumpi
+
+    // No match, revert
+    0x00 0x00 revert
+    
+    add_jump:
+        pop
+        // Read two fixed18 args, convert, add, convert back
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_ADD()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    sub_jump:
+        pop
+        // Read two fixed18 args, convert, subtract, convert back
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_SUB()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    mul_jump:
+        pop
+        // Read two fixed18 args, convert, multiply, convert back
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_MUL()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    div_jump:
+        pop
+        // Read two fixed18 args, convert, divide, convert back
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_DIV()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    add_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        add                    // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    sub_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        swap1 sub              // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    mul_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_MUL()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    div_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_DIV()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    from_jump:
+        pop
+        // Convert fixed18 to bl127
+        0x04 calldataload      // [fixed18]
+        BL127_FROM_FIXED18()   // [bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    to_jump:
+        pop
+        // Convert bl127 to fixed18
+        0x04 calldataload      // [bl127]
+        BL127_TO_FIXED18()     // [fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    exp_jump:
+        pop
+        // Compute exp(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_EXP()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    exp2_jump:
+        pop
+        // Compute exp2(x) = 2^x with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_EXP2()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    ln_jump:
+        pop
+        // Compute ln(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_LN()             // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    log2_jump:
+        pop
+        // Compute log2(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_LOG2()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    sqrt_jump:
+        pop
+        // Compute sqrt(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_SQRT()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    sqrt_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_SQRT()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    exp_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_EXP()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    ln_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_LN()             // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    log2_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_LOG2()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    exp2_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_EXP2()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    div_unsigned_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_DIV_UNSIGNED()   // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    pow_jump:
+        pop
+        // Compute pow(x, y) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        0x24 calldataload      // [y_fixed18, x_bl127]
+        BL127_FROM_FIXED18()   // [y_bl127, x_bl127]
+        BL127_POW()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    pow_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        0x24 calldataload      // [y_bl127, x_bl127]
+        BL127_POW()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    abs_jump:
+        pop
+        // Compute abs(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_ABS()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    neg_jump:
+        pop
+        // Compute neg(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_NEG()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    inv_jump:
+        pop
+        // Compute inv(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_INV()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    min_jump:
+        pop
+        // Compute min(a, b) with fixed18 I/O
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_MIN()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    max_jump:
+        pop
+        // Compute max(a, b) with fixed18 I/O
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_MAX()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    clamp_jump:
+        pop
+        // Compute clamp(x, lo, hi) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        0x24 calldataload      // [lo_fixed18, x_bl127]
+        BL127_FROM_FIXED18()   // [lo_bl127, x_bl127]
+        0x44 calldataload      // [hi_fixed18, lo_bl127, x_bl127]
+        BL127_FROM_FIXED18()   // [hi_bl127, lo_bl127, x_bl127]
+        BL127_CLAMP()          // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    avg_jump:
+        pop
+        // Compute avg(a, b) with fixed18 I/O
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_AVG()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    zeroFloorSub_jump:
+        pop
+        // Compute zeroFloorSub(a, b) with fixed18 I/O
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_ZERO_FLOOR_SUB() // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    dist_jump:
+        pop
+        // Compute dist(a, b) with fixed18 I/O
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_DIST()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    gavg_jump:
+        pop
+        // Compute gavg(a, b) with fixed18 I/O
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_GAVG()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    log10_jump:
+        pop
+        // Compute log10(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_LOG10()          // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    exp10_jump:
+        pop
+        // Compute exp10(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_EXP10()          // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    abs_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_ABS()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    neg_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_NEG()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    inv_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_INV()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    min_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_MIN()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    max_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_MAX()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    clamp_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        0x24 calldataload      // [lo_bl127, x_bl127]
+        0x44 calldataload      // [hi_bl127, lo_bl127, x_bl127]
+        BL127_CLAMP()          // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    avg_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_AVG()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    zeroFloorSub_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_ZERO_FLOOR_SUB() // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    dist_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_DIST()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    gavg_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_GAVG()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    log10_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_LOG10()          // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    exp10_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_EXP10()          // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    sign_jump:
+        pop
+        // Compute sign(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_SIGN()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    floor_jump:
+        pop
+        // Compute floor(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_FLOOR()          // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    ceil_jump:
+        pop
+        // Compute ceil(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_CEIL()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    frac_jump:
+        pop
+        // Compute frac(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_FRAC()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    cbrt_jump:
+        pop
+        // Compute cbrt(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_CBRT()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    lerp_jump:
+        pop
+        // Compute lerp(a, b, t) with fixed18 I/O
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        0x44 calldataload      // [t_fixed18, b_bl127, a_bl127]
+        BL127_FROM_FIXED18()   // [t_bl127, b_bl127, a_bl127]
+        BL127_LERP()           // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    hypot_jump:
+        pop
+        // Compute hypot(a, b) with fixed18 I/O
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_HYPOT()          // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    sign_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_SIGN()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    floor_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_FLOOR()          // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    ceil_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_CEIL()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    frac_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_FRAC()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    cbrt_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_CBRT()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    lerp_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        0x44 calldataload      // [t_bl127, b_bl127, a_bl127]
+        BL127_LERP()           // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    hypot_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_HYPOT()          // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    round_jump:
+        pop
+        // Compute round(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_ROUND()          // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    round_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_ROUND()          // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    log2up_jump:
+        pop
+        // Compute log2Up(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_LOG2_UP()        // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    log2up_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_LOG2_UP()        // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    gcd_jump:
+        pop
+        // Compute gcd(a, b) with fixed18 I/O
+        0x04 calldataload      // [a_fixed18]
+        BL127_FROM_FIXED18()   // [a_bl127]
+        0x24 calldataload      // [b_fixed18, a_bl127]
+        BL127_FROM_FIXED18()   // [b_bl127, a_bl127]
+        BL127_GCD()            // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    gcd_raw_jump:
+        pop
+        0x04 calldataload      // [a_bl127]
+        0x24 calldataload      // [b_bl127, a_bl127]
+        BL127_GCD()            // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    factorial_jump:
+        pop
+        // Compute factorial(n) with fixed18 I/O
+        0x04 calldataload      // [n_fixed18]
+        BL127_FROM_FIXED18()   // [n_bl127]
+        BL127_FACTORIAL()      // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    factorial_raw_jump:
+        pop
+        0x04 calldataload      // [n_bl127]
+        BL127_FACTORIAL()      // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+    
+    lambertw0_jump:
+        pop
+        // Compute lambertW0(x) with fixed18 I/O
+        0x04 calldataload      // [x_fixed18]
+        BL127_FROM_FIXED18()   // [x_bl127]
+        BL127_LAMBERT_W0()     // [result_bl127]
+        BL127_TO_FIXED18()     // [result_fixed18]
+        0x00 mstore
+        0x20 0x00 return
+    
+    lambertw0_raw_jump:
+        pop
+        0x04 calldataload      // [x_bl127]
+        BL127_LAMBERT_W0()     // [result_bl127]
+        0x00 mstore
+        0x20 0x00 return
+
+}
+
+#define function add(uint256,uint256) pure returns (uint256)
+#define function sub(uint256,uint256) pure returns (uint256)
+#define function mul(uint256,uint256) pure returns (uint256)
+#define function div(uint256,uint256) pure returns (uint256)
+#define function addRaw(uint256,uint256) pure returns (uint256)
+#define function subRaw(uint256,uint256) pure returns (uint256)
+#define function mulRaw(uint256,uint256) pure returns (uint256)
+#define function divRaw(uint256,uint256) pure returns (uint256)
+#define function fromFixed18(uint256) pure returns (uint256)
+#define function toFixed18(uint256) pure returns (uint256)
+#define function exp(uint256) pure returns (uint256)
+#define function exp2(uint256) pure returns (uint256)
+#define function ln(uint256) pure returns (uint256)
+#define function log2(uint256) pure returns (uint256)
+#define function sqrt(uint256) pure returns (uint256)
+#define function sqrtRaw(uint256) pure returns (uint256)
+#define function expRaw(uint256) pure returns (uint256)
+#define function exp2Raw(uint256) pure returns (uint256)
+#define function lnRaw(uint256) pure returns (uint256)
+#define function log2Raw(uint256) pure returns (uint256)
+#define function divUnsignedRaw(uint256,uint256) pure returns (uint256)
+#define function pow(uint256,uint256) pure returns (uint256)
+#define function powRaw(uint256,uint256) pure returns (uint256)
+#define function abs(uint256) pure returns (uint256)
+#define function neg(uint256) pure returns (uint256)
+#define function inv(uint256) pure returns (uint256)
+#define function min(uint256,uint256) pure returns (uint256)
+#define function max(uint256,uint256) pure returns (uint256)
+#define function clamp(uint256,uint256,uint256) pure returns (uint256)
+#define function avg(uint256,uint256) pure returns (uint256)
+#define function zeroFloorSub(uint256,uint256) pure returns (uint256)
+#define function dist(uint256,uint256) pure returns (uint256)
+#define function gavg(uint256,uint256) pure returns (uint256)
+#define function log10(uint256) pure returns (uint256)
+#define function exp10(uint256) pure returns (uint256)
+#define function absRaw(uint256) pure returns (uint256)
+#define function negRaw(uint256) pure returns (uint256)
+#define function invRaw(uint256) pure returns (uint256)
+#define function minRaw(uint256,uint256) pure returns (uint256)
+#define function maxRaw(uint256,uint256) pure returns (uint256)
+#define function clampRaw(uint256,uint256,uint256) pure returns (uint256)
+#define function avgRaw(uint256,uint256) pure returns (uint256)
+#define function zeroFloorSubRaw(uint256,uint256) pure returns (uint256)
+#define function distRaw(uint256,uint256) pure returns (uint256)
+#define function gavgRaw(uint256,uint256) pure returns (uint256)
+#define function log10Raw(uint256) pure returns (uint256)
+#define function exp10Raw(uint256) pure returns (uint256)
+#define function sign(uint256) pure returns (uint256)
+#define function floor(uint256) pure returns (uint256)
+#define function ceil(uint256) pure returns (uint256)
+#define function frac(uint256) pure returns (uint256)
+#define function cbrt(uint256) pure returns (uint256)
+#define function lerp(uint256,uint256,uint256) pure returns (uint256)
+#define function hypot(uint256,uint256) pure returns (uint256)
+#define function signRaw(uint256) pure returns (uint256)
+#define function floorRaw(uint256) pure returns (uint256)
+#define function ceilRaw(uint256) pure returns (uint256)
+#define function fracRaw(uint256) pure returns (uint256)
+#define function cbrtRaw(uint256) pure returns (uint256)
+#define function lerpRaw(uint256,uint256,uint256) pure returns (uint256)
+#define function hypotRaw(uint256,uint256) pure returns (uint256)
+#define function round(uint256) pure returns (uint256)
+#define function log2Up(uint256) pure returns (uint256)
+#define function gcd(uint256,uint256) pure returns (uint256)
+#define function factorial(uint256) pure returns (uint256)
+#define function lambertW0(uint256) pure returns (uint256)
+#define function roundRaw(uint256) pure returns (uint256)
+#define function log2UpRaw(uint256) pure returns (uint256)
+#define function gcdRaw(uint256,uint256) pure returns (uint256)
+#define function factorialRaw(uint256) pure returns (uint256)
+#define function lambertW0Raw(uint256) pure returns (uint256)

@@ -160,7 +160,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "sqrt(x 10^-18) in WAD rounded down, exactly: the integer root of x 10^18, below 2^254 by FP19's word root (isqrt) on the product shifted by an even 2j to put its top bit at 252 or 253, shifted back by j (the floor of the floor of sqrt(4^j n) over 2^j is the floor of sqrt(n)); above, wadsqrtw.",
+      "notice": "sqrt(x 10^-18) in WAD rounded down, exactly: the integer root of x 10^18, below 2^254 by BL19's word root (isqrt) on the product shifted by an even 2j to put its top bit at 252 or 253, shifted back by j (the floor of the floor of sqrt(4^j n) over 2^j is the floor of sqrt(n)); above, wadsqrtw.",
       "domain": "any x",
       "reverts": "never"
     },
@@ -193,7 +193,7 @@
       "inputs": [
         "x"
       ],
-      "notice": "cbrt(x 10^-18) in WAD rounded down: the integer cube root of the exact x 10^36, from FP19's root and one exact cube either way.",
+      "notice": "cbrt(x 10^-18) in WAD rounded down: the integer cube root of the exact x 10^36, from BL19's root and one exact cube either way.",
       "domain": "any x",
       "reverts": "never"
     },

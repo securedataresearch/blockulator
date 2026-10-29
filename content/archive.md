@@ -6,7 +6,7 @@ template = "archive.html"
 [[extra.apps]]
 kind = "calculators"
 name = "25 Vyper calculators"
-text = "One single-purpose contract each: π, e, τ, sin, cos, atan, √, 2^x, 10^x, e^x, ln, log₂, log₁₀, erf, Φ, φ, n!, ln n!, C(n,k), z-score, Gaussian tail, sinh, cosh, tanh, gcd and lcm. Each computes in its own Vyper; none calls FP127."
+text = "One single-purpose contract each: π, e, τ, sin, cos, atan, √, 2^x, 10^x, e^x, ln, log₂, log₁₀, erf, Φ, φ, n!, ln n!, C(n,k), z-score, Gaussian tail, sinh, cosh, tanh, gcd and lcm. Each computes in its own Vyper; none calls BL127."
 open = "vyper"
 source = "contracts/src/tools"
 

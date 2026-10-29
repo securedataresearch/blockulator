@@ -1,17 +1,17 @@
 # Inline size
 
-Generated 2026-10-28 by `make size-inline` ([`scripts/size/inline.py`](../../scripts/size/inline.py)); the data is [`size.json`](size.json).
+Generated 2026-10-29 by `make size-inline` ([`scripts/size/inline.py`](../../scripts/size/inline.py)); the data is [`size.json`](size.json).
 
-The runtime bytecode one op adds to a contract that calls it through `FP127Lib` or `FP19Lib`, helpers included. Each op is compiled alone in a contract with one external function `f(int256,int256,int256)` returning `Lib.op(a[, b[, c]])`; the delta is against the same contract returning `a`, so the ABI decoder and dispatch cancel. solc 0.8.38, evm osaka, optimizer 200 runs, CBOR metadata off. **legacy** is the repo's default profile (`via_ir = false`); **via_ir** is the same settings through the IR. Baseline contract: 118 bytes legacy, 63 via_ir.
+The runtime bytecode one op adds to a contract that calls it through `BL127Lib` or `BL19Lib`, helpers included. Each op is compiled alone in a contract with one external function `f(int256,int256,int256)` returning `Lib.op(a[, b[, c]])`; the delta is against the same contract returning `a`, so the ABI decoder and dispatch cancel. solc 0.8.38, evm osaka, optimizer 200 runs, CBOR metadata off. **legacy** is the repo's default profile (`via_ir = false`); **via_ir** is the same settings through the IR. Baseline contract: 118 bytes legacy, 63 via_ir.
 
 ## Headline
 
 | library | ops | smallest | median | largest | all ops, sum of singles |
 |---|---:|---|---:|---|---:|
-| FP127 legacy | 53 | `sign` 8 | 480 | `compound` 16,930 | 194,639 |
-| FP127 via_ir | 53 | `sign` 10 | 321 | `compound` 16,473 | 186,934 |
-| FP19 legacy | 65 | `abs` 108 | 544 | `normCdf` 17,159 | 225,807 |
-| FP19 via_ir | 65 | `abs` 55 | 443 | `normCdf` 17,344 | 209,090 |
+| BL127 legacy | 53 | `sign` 8 | 480 | `compound` 16,932 | 194,641 |
+| BL127 via_ir | 53 | `sign` 10 | 321 | `compound` 16,473 | 186,934 |
+| BL19 legacy | 65 | `abs` 108 | 544 | `normCdf` 17,159 | 225,807 |
+| BL19 via_ir | 65 | `abs` 55 | 443 | `normCdf` 17,344 | 209,085 |
 
 ## Shared helpers
 
@@ -19,24 +19,24 @@ Every `FP*Lib` function is one self-contained `assembly` block that carries its 
 
 | library | ops | legacy | sum of singles | via_ir | sum of singles |
 |---|---|---:|---:|---:|---:|
-| FP127 | `mul`, `div` | 582 | 599 | 372 | 389 |
-| FP127 | `mulDown`, `mulUp`, `divDown`, `divUp` | 914 | 1,368 | 592 | 900 |
-| FP127 | `exp`, `ln` | 9,765 | 14,399 | 9,116 | 13,178 |
-| FP127 | `exp`, `ln`, `pow` | 16,995 | 29,626 | 16,458 | 27,963 |
-| FP127 | `exp`, `log2`, `sqrt` | 9,816 | 14,489 | 9,095 | 13,178 |
-| FP127 | `erf`, `erfc`, `normCdf` | 11,356 | 26,655 | 16,970 | 27,588 |
-| FP127 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 17,447 | 17,556 | 16,804 | 16,845 |
-| FP19 | `add`, `sub`, `mul`, `div` | 1,113 | 2,046 | 1,031 | 1,661 |
-| FP19 | `exp`, `ln` | 11,852 | 12,764 | 10,340 | 10,833 |
-| FP19 | `exp`, `ln`, `pow` | 17,208 | 27,561 | 15,726 | 23,842 |
-| FP19 | `erf`, `erfc`, `normCdf` | 20,175 | 51,296 | 19,495 | 51,393 |
-| FP19 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 14,893 | 15,992 | 14,512 | 15,044 |
+| BL127 | `mul`, `div` | 582 | 599 | 372 | 389 |
+| BL127 | `mulDown`, `mulUp`, `divDown`, `divUp` | 914 | 1,368 | 592 | 900 |
+| BL127 | `exp`, `ln` | 9,765 | 14,399 | 9,116 | 13,178 |
+| BL127 | `exp`, `ln`, `pow` | 16,995 | 29,626 | 16,458 | 27,963 |
+| BL127 | `exp`, `log2`, `sqrt` | 9,816 | 14,489 | 9,095 | 13,178 |
+| BL127 | `erf`, `erfc`, `normCdf` | 11,356 | 26,655 | 16,970 | 27,588 |
+| BL127 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 17,448 | 17,558 | 16,804 | 16,845 |
+| BL19 | `add`, `sub`, `mul`, `div` | 1,113 | 2,046 | 1,031 | 1,661 |
+| BL19 | `exp`, `ln` | 11,852 | 12,764 | 10,340 | 10,833 |
+| BL19 | `exp`, `ln`, `pow` | 17,208 | 27,561 | 15,726 | 23,842 |
+| BL19 | `erf`, `erfc`, `normCdf` | 20,175 | 51,296 | 19,495 | 51,393 |
+| BL19 | `fromFixed18`, `toFixed18Down`, `toFixed18Up`, `mulDown`, `mulUp`, `compound` | 14,893 | 15,992 | 14,512 | 15,044 |
 
 ## Inline or call the deployed object
 
-Inlining saves the external call: about 554 gas per call to the deployed FP127 and 464 to FP19 ([`gas.json`](gas.json), [`gas19.json`](gas19.json): `add`, object median minus inline median). `staticcall` the deployed object instead (for FP19, whichever of FP19, FP19E, FP19H, FP19N and FP19S holds the op) when inlining would take the contract near the 24,576-byte limit (EIP-170), or when the op is large and called rarely. Deploying code costs at least 200 gas a byte, so inlining an op of N bytes pays for itself only after about 200N / 554 calls: a small op at once, `pow` after thousands. The deployed objects already hold every op, so calling one adds only the call site.
+Inlining saves the external call: about 554 gas per call to the deployed BL127 and 464 to BL19 ([`gas.json`](gas.json), [`gas19.json`](gas19.json): `add`, object median minus inline median). `staticcall` the deployed object instead (for BL19, whichever of BL19, BL19E, BL19H, BL19N and BL19S holds the op) when inlining would take the contract near the 24,576-byte limit (EIP-170), or when the op is large and called rarely. Deploying code costs at least 200 gas a byte, so inlining an op of N bytes pays for itself only after about 200N / 554 calls: a small op at once, `pow` after thousands. The deployed objects already hold every op, so calling one adds only the call site.
 
-## FP127
+## BL127
 
 | op | legacy | via_ir |
 |---|---:|---:|
@@ -62,7 +62,7 @@ Inlining saves the external call: about 554 gas per call to the deployed FP127 a
 | `sqrt` | 358 | 272 |
 | `pow` | 15,227 | 14,785 |
 | `powu` | 16,406 | 15,992 |
-| `compound` | 16,930 | 16,473 |
+| `compound` | 16,932 | 16,473 |
 | `cbrt` | 600 | 472 |
 | `gavg` | 566 | 483 |
 | `hypot` | 549 | 457 |
@@ -94,7 +94,7 @@ Inlining saves the external call: about 554 gas per call to the deployed FP127 a
 | `erfc` | 8,880 | 9,226 |
 | `normCdf` | 8,926 | 9,275 |
 
-## FP19
+## BL19
 
 | op | legacy | via_ir |
 |---|---:|---:|
@@ -122,8 +122,8 @@ Inlining saves the external call: about 554 gas per call to the deployed FP127 a
 | `lt` | 173 | 100 |
 | `eq` | 129 | 82 |
 | `fromUint` | 234 | 141 |
-| `fromFP127` | 244 | 158 |
-| `toFP127` | 313 | 249 |
+| `fromBL127` | 244 | 158 |
+| `toBL127` | 313 | 249 |
 | `fromFixed18` | 325 | 272 |
 | `toFixed18` | 351 | 260 |
 | `mulDown` | 449 | 364 |
@@ -148,7 +148,7 @@ Inlining saves the external call: about 554 gas per call to the deployed FP127 a
 | `zeroFloorSub` | 663 | 527 |
 | `inv` | 401 | 294 |
 | `lerp` | 2,741 | 2,684 |
-| `frac` | 980 | 877 |
+| `frac` | 980 | 872 |
 | `round` | 343 | 285 |
 | `log2Up` | 381 | 293 |
 | `factorial` | 8,211 | 6,912 |

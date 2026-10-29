@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""
+Generate minimax polynomial coefficients for log2(1+f) on [0, 2^(1/128)-1) with 128+ bit precision.
+
+Uses Chebyshev approximation as a starting point (true Remez exchange would require
+iterative refinement, but Chebyshev nodes give near-optimal results for smooth functions).
+
+The polynomial approximates log2(1+f) for f in [0, 2^(1/128)-1) ≈ [0, 0.00542),
+evaluated via Horner's method:
+    P(f) = c0 + f*(c1 + f*(c2 + ... + f*cn))
+
+Output: Huff #define constant lines for inclusion in constants.huff
+"""
+
+import mpmath
+mpmath.mp.dps = 80  # 80 decimal digits for intermediate calculations
+
+def chebyshev_nodes(n, a=0, b=1):
+    """Generate n Chebyshev nodes on [a, b]."""
+    nodes = []
+    for k in range(n):
+        # Chebyshev nodes on [-1, 1]: cos((2k+1)/(2n) * pi)
+        # Map to [a, b]: (b-a)/2 * node + (b+a)/2
+        x = mpmath.cos(mpmath.pi * (2*k + 1) / (2*n))
+        nodes.append((b - a) / 2 * x + (b + a) / 2)
+    return nodes
+
+def fit_polynomial(degree, func, a=0, b=1):
+    """
+    Fit a polynomial of given degree to func on [a, b] using Chebyshev nodes.
+    Returns coefficients [c0, c1, ..., cn] for c0 + c1*x + c2*x^2 + ...
+    """
+    n = degree + 1
+    nodes = chebyshev_nodes(n, a, b)
+    
+    # Build Vandermonde matrix
+    V = mpmath.matrix(n, n)
+    y = mpmath.matrix(n, 1)
+    
+    for i, x in enumerate(nodes):
+        for j in range(n):
+            V[i, j] = x ** j
+        y[i, 0] = func(x)
+    
+    # Solve V * coeffs = y
+    coeffs = mpmath.lu_solve(V, y)
+    return [coeffs[i, 0] for i in range(n)]
+
+def verify_precision(coeffs, func, a=0, b=1, num_points=10000):
+    """Verify max error of polynomial vs function over [a, b]."""
+    max_err = mpmath.mpf(0)
+    worst_x = None
+    
+    for i in range(num_points + 1):
+        x = a + (b - a) * i / num_points
+        
+        # Evaluate polynomial using Horner's method
+        result = coeffs[-1]
+        for c in reversed(coeffs[:-1]):
+            result = result * x + c
+        
+        true_val = func(x)
+        err = abs(result - true_val)
+        if err > max_err:
+            max_err = err
+            worst_x = x
+    
+    return max_err, worst_x
+
+def to_bl127_hex(value):
+    """Convert a decimal value to BL127 hex string (127.128 fixed-point)."""
+    # BL127 = value * 2^128
+    scaled = value * mpmath.mpf(2)**128
+    
+    # Round to nearest integer
+    int_val = int(mpmath.nint(scaled))
+    
+    # Handle negative values (two's complement)
+    if int_val < 0:
+        int_val = (1 << 256) + int_val
+    
+    # Format as 64-character hex (256 bits)
+    return f"0x{int_val:064x}"
+
+def main():
+    print("=" * 70)
+    print("Generating minimax polynomial for log2(1+f) on [0, 2^(1/128)-1)")
+    print("=" * 70)
+    
+    # Target function: log2(1+f)
+    func = lambda f: mpmath.log(1 + f, 2)
+    
+    # Upper bound of interval after 7 range-reduction stages
+    b = mpmath.power(2, mpmath.mpf(1) / mpmath.power(2, 7)) - 1
+    print(f"\nInterval: [0, {float(b):.10f})")
+    
+    # Try different degrees to find minimum that achieves 128-bit precision
+    target_bits = 130  # Aim for 130 bits to have margin
+    target_err = mpmath.mpf(2) ** (-target_bits)
+    
+    print(f"\nTarget precision: 2^-{target_bits} = {float(target_err):.2e}")
+    print()
+    
+    best_degree = None
+    best_coeffs = None
+    
+    for degree in range(8, 20):
+        coeffs = fit_polynomial(degree, func, 0, b)
+        max_err, worst_x = verify_precision(coeffs, func, 0, b, 10000)
+        bits = -mpmath.log(max_err, 2) if max_err > 0 else 999
+        
+        print(f"Degree {degree:2d}: max error = 2^-{float(bits):.1f}")
+        
+        if max_err < target_err and best_degree is None:
+            best_degree = degree
+            best_coeffs = coeffs
+            print(f"  --> Sufficient! Using degree {degree}")
+    
+    if best_coeffs is None:
+        print("\nERROR: Could not achieve target precision with degree <= 19")
+        return
+    
+    print()
+    print("=" * 70)
+    print(f"Using degree {best_degree} polynomial ({best_degree + 1} coefficients)")
+    print("=" * 70)
+    
+    # Verify final precision
+    max_err, worst_x = verify_precision(best_coeffs, func, 0, b, 100000)
+    bits = -mpmath.log(max_err, 2) if max_err > 0 else 999
+    print(f"\nFinal verification (100,000 points): max error = 2^-{float(bits):.1f}")
+    print(f"Worst point: f = {float(worst_x):.10f}")
+    
+    # Output Huff constants
+    print()
+    print("=" * 70)
+    print("Huff constants (copy to constants.huff):")
+    print("=" * 70)
+    print()
+    print("// ============================================================================")
+    print("// LOG2 Minimax Polynomial Coefficients")
+    print("// ============================================================================")
+    print(f"// Degree-{best_degree} minimax polynomial for log2(1+f) on [0, 2^(1/128)-1)")
+    print(f"// Precision: ~{int(bits)} bits (max error < 2^-{int(bits)})")
+    print("// Generated by scripts/generators/generate_log2_minimax.py")
+    print("// Evaluate via Horner: P(f) = C0 + f*(C1 + f*(C2 + ... + f*Cn))")
+    print()
+    
+    for i, c in enumerate(best_coeffs):
+        hex_val = to_bl127_hex(c)
+        print(f"#define constant LOG2_P{i} = {hex_val}")
+    
+    print()
+    print(f"// Total: {len(best_coeffs)} coefficients")
+    print()
+    print("// Note: This directly computes log2(1+f), eliminating the need for")
+    print("//       the separate f * INV_LN2 * h(f) computation in the old Taylor approach")
+
+if __name__ == "__main__":
+    main()

@@ -11,7 +11,7 @@ Input lines (test/ladder/Ladder.t.sol):
 Two truths per scenario, input and N, both the scenario's loop in exact real
 arithmetic with mpmath at 300 digits:
     truth         from the exact rational parameters in scenarios.json
-    truthFormat   per scale (2**128, 2**64, 10**18, 10**27, binary128, FP19):
+    truthFormat   per scale (2**128, 2**64, 10**18, 10**27, binary128, BL19):
                   the same loop started from the parameters as that scale
                   holds them (floored on the grids, nearest on the floats),
                   which is what the library actually received
@@ -23,7 +23,7 @@ Per cell, with v the decoded value, t the truth, tf the format truth:
                   -log10 of the relative error, floored to one decimal (a
                   decimal string), absent when exact
     prec          what the format holds at the truth's magnitude, one decimal:
-                  237 log10 2 for FP19, 113 log10 2 for binary128, and
+                  237 log10 2 for BL19, 113 log10 2 for binary128, and
                   -log10(ulp / |t|) on the grids (2^-128, 2^-64, 1e-18, 1e-27)
     digitsCapped, digitsFormatCapped
                   min(digits1, prec), and prec when exact: the only values
@@ -57,7 +57,7 @@ from mpmath import mp, mpf, log, exp, sqrt, ncdf, nstr, floor as mfloor_
 
 mp.dps = 300
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "scripts" / "fp127"))
+sys.path.insert(0, str(ROOT / "scripts" / "bl127"))
 sys.path.insert(0, str(ROOT / "scripts" / "ladder"))
 from gas_to_json import versions  # noqa: E402
 from gen_inputs import resolve, to_scaled, from_scaled, SCALES as INPUT_SCALES  # noqa: E402
@@ -69,14 +69,14 @@ RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"
 DIGITS_CAP = 100  # the integer digits of an exact cell (v == t); the only cap on `digits`
 AXIS_MAX = 80     # the charts' y axis; no plotted value is capped here (they are capped at prec)
 SIG = 42          # significant digits kept for value/truth strings
-FLOAT_BITS = {"quad": 113, "fp19": 237}
-GRID_ULP = {"fp127": mpf(2) ** -128, "abdk": mpf(2) ** -64, "wad": mpf(10) ** -18, "ray": mpf(10) ** -27}
+FLOAT_BITS = {"quad": 113, "bl19": 237}
+GRID_ULP = {"bl127": mpf(2) ** -128, "abdk": mpf(2) ** -64, "wad": mpf(10) ** -18, "ray": mpf(10) ** -27}
 # scenarios whose result is a balance grown from `principal`: digits are also measured on the interest
 INTEREST = {"compound", "compound-pow", "compound-annual", "accrual-per-second", "accrual-continuous"}
 # deep-tail-option: absolute error in the strike's smallest unit, 18 decimals
 WEI = {"deep-tail-option": mpf(10) ** 18}
-SCALE_OF_FORM = {"fp127": "fp127", "fp127lib": "fp127", "abdk": "abdk", "solady": "wad", "prb": "wad",
-                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "fp19": "fp19",
+SCALE_OF_FORM = {"bl127": "bl127", "bl127lib": "bl127", "abdk": "abdk", "solady": "wad", "prb": "wad",
+                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "bl19": "bl19",
                  "solmate": "wad", "oz": "wad", "uniswap": "wad", "prbud": "wad", "snekmate": "wad",
                  "fraxlend": "wad", "euler": "wad"}
 SCALE_INT = {k: v[1] for k, v in INPUT_SCALES.items()}
@@ -111,17 +111,17 @@ REASON_SIGS = {
 
 METHODOLOGY = {
     "truth": "For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 300 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual, the option walk, the decay and the adaptive rate); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.",
-    "rounding": "Inputs are floored on the grids and rounded to nearest on the floats: each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units) or, for ABDKMathQuad and FP19, the nearest float (scripts/ladder/inputs.json). truthFormat is the exact loop started from those parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic. One exception: Morpho accrues from the per-second rate, rateAnnual / 31536000 floored to WAD, while truthFormat is built from the annual rate the other libraries receive, so Morpho's digitsFormat still includes its own input's rounding. Likewise in the adaptive rate, FraxLend and Euler compute from their own inputs (utilisation, step, half-life or speed) while truthFormat is built from rate0 and x, so their digitsFormat includes the rounding of those inputs (Euler's speed floored to WAD per second, FraxLend's half-life to whole seconds).",
+    "rounding": "Inputs are floored on the grids and rounded to nearest on the floats: each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units) or, for ABDKMathQuad and BL19, the nearest float (scripts/ladder/inputs.json). truthFormat is the exact loop started from those parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic. One exception: Morpho accrues from the per-second rate, rateAnnual / 31536000 floored to WAD, while truthFormat is built from the annual rate the other libraries receive, so Morpho's digitsFormat still includes its own input's rounding. Likewise in the adaptive rate, FraxLend and Euler compute from their own inputs (utilisation, step, half-life or speed) while truthFormat is built from rate0 and x, so their digitsFormat includes the rounding of those inputs (Euler's speed floored to WAD per second, FraxLend's half-life to whole seconds).",
     "inputs": "The parameters are short decimals (0.1/365, 10000, 0.05) as a protocol's governance would set them. A short decimal can sit exactly on the 10^-18 and 10^-27 grids, so WAD and RAY libraries often receive their inputs exactly while the binary formats round them; this favours WAD and RAY in digits (against exact inputs) and is visible as the gap between digits and digitsFormat. The decay scenario's eps are reciprocals of time constants in seconds (1/1036800 for twelve days), which no grid holds exactly.",
-    "powers": "Integer powers are each library's own idiom, not one algorithm: FP127 and FP19 use compound (a correctly rounded (1 + r)^n that never forms a rounded 1 + r), Maker uses rpow (binary exponentiation in RAY), the WAD and 64.64 libraries and binary128 use exp(n ln(1 + r)) or their pow. Per-second accrual and compound-pow measure those choices as much as the formats.",
+    "powers": "Integer powers are each library's own idiom, not one algorithm: BL127 and BL19 use compound (a correctly rounded (1 + r)^n that never forms a rounded 1 + r), Maker uses rpow (binary exponentiation in RAY), the WAD and 64.64 libraries and binary128 use exp(n ln(1 + r)) or their pow. Per-second accrual and compound-pow measure those choices as much as the formats.",
     "digits": "digits = floor(-log10 |v - t| / |t|), the number of correct leading significant digits by relative error, an integer; a result equal to the truth is exact (exact = true, digits = 100, the one cap on this field) and is drawn as a marker, never as a number. digits1 is the same quantity floored to one decimal instead of to an integer. It is not a string comparison: a value can be correct to 36 digits while its 37th printed digit happens to agree with the truth, or while a carry makes the printed prefix differ earlier.",
-    "precision": "No format can be right to more digits than it holds at the result's magnitude: prec is 237 log10 2 = 71.3 for FP19 and 113 log10 2 = 34.0 for binary128 at any magnitude, and -log10(ulp / |t|) on the fixed grids, with ulp 2^-128 (FP127), 2^-64 (64.64), 10^-18 (WAD) or 10^-27 (RAY): 38.5 for FP127 at 1, 42.5 at 10^4. A cell may land closer to the truth than that by luck; digitsCapped = min(digits1, prec), and prec for an exact cell, is what the charts plot and the summaries aggregate, so no median or band exceeds the format's precision.",
+    "precision": "No format can be right to more digits than it holds at the result's magnitude: prec is 237 log10 2 = 71.3 for BL19 and 113 log10 2 = 34.0 for binary128 at any magnitude, and -log10(ulp / |t|) on the fixed grids, with ulp 2^-128 (BL127), 2^-64 (64.64), 10^-18 (WAD) or 10^-27 (RAY): 38.5 for BL127 at 1, 42.5 at 10^4. A cell may land closer to the truth than that by luck; digitsCapped = min(digits1, prec), and prec for an exact cell, is what the charts plot and the summaries aggregate, so no median or band exceeds the format's precision.",
     "summary": "Each scenario's median, minimum and maximum at each N are taken over the inputs that every library with any completed input at that N completed, so every library's median is over the same inputs. Each library's completed count is reported, and a library that completed fewer than all inputs is shown as k/n. Where no input is common to all of them, a revert counts as 0 digits over all inputs instead (basis revertsAsZero); the dataset records the basis and the inputs per N.",
     "interest": "For the compounding and accrual scenarios the digits are also measured on the interest, b - principal against t - principal (interestDigits1, interestCapped, with the format's precision taken against the interest's magnitude). Relative digits of a balance flatter a format when the interest is a small part of it: after one day the interest is about 10^-4 of the balance.",
     "wei": "For the deep-tail option, absErrWei is |v - t| in wei of the strike at 18 decimals ($100 = 10^20 wei). Past d1 = -8 the true price falls below one wei and every library's error with it, so relative digits there describe the format, not money.",
     "headline": "The Results page shows a single N = 10,000 per scenario; the ladder page shows every N.",
     "agree": "agree is the count of leading significant digits of the printed value (42 significant digits) that are literally equal to the printed truth. The demo page colours the rest of the value with it. It is a reading aid, not a measurement: a carry across 0.999… / 1.000… gives 0.",
-    "gas": "gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the FP127 object, so the call into the adapter and the ABI decoding are excluded. The FP127 (deployed) form includes one staticcall per op, and so does snekmate, a Vyper library that a Solidity adapter can only call; FP127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe, FraxLend and Euler only the adaptive rate, and OpenZeppelin and Uniswap FullMath, which have no exp, ln or real power (and FullMath no root), only the scenarios built from mul, div and their roots; each reports Unsupported elsewhere, which the tables and charts leave empty (a library with no model is not a revert). gasPerStep = gasTotal / N. Reverted cells carry no gas.",
+    "gas": "gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the BL127 object, so the call into the adapter and the ABI decoding are excluded. The BL127 (deployed) form includes one staticcall per op, and so does snekmate, a Vyper library that a Solidity adapter can only call; BL127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe, FraxLend and Euler only the adaptive rate, and OpenZeppelin and Uniswap FullMath, which have no exp, ln or real power (and FullMath no root), only the scenarios built from mul, div and their roots; each reports Unsupported elsewhere, which the tables and charts leave empty (a library with no model is not a revert). gasPerStep = gasTotal / N. Reverted cells carry no gas.",
     "live": "LadderRunner.run(scenario, form, n, p) on Sepolia executes any cell with one eth_call and returns (ok, raw, reason, gasPerStep, gasTotal). scripts/ladder/livecap.py sends every cell's floored parameters p and compares the returned raw word with the committed one bit for bit (or the revert selector for a reverted cell). liveMaxN is the largest N per form the public RPC completed within its gas limit, measured by scripts/ladder/livecap.py.",
     "reproduce": "make ladder regenerates ladder.json and ladder.md from the Foundry harness (test/ladder/Ladder.t.sol) and this script; make ladder-check fails CI when the committed dataset differs. Versions of every library and of forge are recorded in the dataset.",
 }
@@ -256,7 +256,7 @@ def metrics(raw: int, scale, t, tf) -> dict:
         "digitsFormat": digits_of(v, tf),
         "exact": d >= DIGITS_CAP,
         "agree": agree_count(value, truth_s),
-        "errUlps": signed((v - t) * scale) if scale and scale != "fp19" else None,
+        "errUlps": signed((v - t) * scale) if scale and scale != "bl19" else None,
         "relErr": signed((v - t) / t) if t != 0 else None,
     }
 
@@ -534,8 +534,8 @@ def fmt_cell(c: dict, key: str, exact: bool) -> str:
 
 
 def render_md(doc: dict) -> str:
-    # FP19 and FP127 first, then the rest in form-id order
-    forms = sorted((f["id"] for f in doc["forms"]), key=lambda f: (f != "fp19", f not in ("fp127", "fp127lib")))
+    # BL19 and BL127 first, then the rest in form-id order
+    forms = sorted((f["id"] for f in doc["forms"]), key=lambda f: (f != "bl19", f not in ("bl127", "bl127lib")))
     L = ["# Terminal precision ladder", "",
          f"Generated {doc['generated']} by `make ladder`. Versions: " + ", ".join(f"{k} {v}" for k, v in doc["versions"].items()) + ".", "",
          "Each scenario is run for several inputs; the first table is the reference input in full (`digits / digitsFormat / gas per step`, where digits is against the exact truth and digitsFormat against the truth from the parameters as the library received them, both to one decimal and capped at what the format holds at that magnitude), the next two summarise all inputs (`median (min–max)` of the capped digits over the inputs every library completed at that N; `k/n` where a library completed k of n inputs). Full values, both truths, signed errors and raw words are in ladder.json; the method is in the Methodology section at the end.", ""]
@@ -649,11 +649,11 @@ def invariants(doc: dict) -> list[str]:
                         c = next(x for x in s["inputs"] if x["name"] == name)["cells"].get(f, {}).get(n)
                         if row["completed"] and (c is None or c.get("reverted")):
                             bad.append(f"{s['id']}/{f}/{n}: common input {name} did not complete")
-    # FP19 per-second accrual runs on compound: correctly rounded, so ~71 digits at every N
+    # BL19 per-second accrual runs on compound: correctly rounded, so ~71 digits at every N
     for i in scn["accrual-per-second"]["inputs"]:
-        for n, c in i["cells"]["fp19"].items():
+        for n, c in i["cells"]["bl19"].items():
             if c.get("reverted") or D(c["digitsCapped"]) < 69:
-                bad.append(f"accrual-per-second/{i['name']}/fp19/{n}: {c.get('digitsCapped', 'reverted')} digits, compound gives about 71")
+                bad.append(f"accrual-per-second/{i['name']}/bl19/{n}: {c.get('digitsCapped', 'reverted')} digits, compound gives about 71")
     # amortise never runs past payoff: every balance positive
     for i in scn["amortise"]["inputs"]:
         for n, t in i["truth"].items():
@@ -706,14 +706,14 @@ def selftest() -> int:
         if h != sel or sig.split("(")[0] not in REASONS[sel]:
             bad += 1
             print(f"selector {sel}: {sig} hashes to {h}; REASONS says {REASONS[sel]!r}")
-    # the format's precision: 71.3 (FP19), 34.0 (binary128), 38.5 (FP127 at 1), 42.5 (FP127 at 10^4), 22.0 (WAD at 10^4)
-    want = {("fp19", 1): "71.3", ("quad", 10 ** 30): "34.0", ("fp127", 1): "38.5", ("fp127", 10 ** 4): "42.5", ("wad", 10 ** 4): "22.0", ("ray", 1): "27.0"}
+    # the format's precision: 71.3 (BL19), 34.0 (binary128), 38.5 (BL127 at 1), 42.5 (BL127 at 10^4), 22.0 (WAD at 10^4)
+    want = {("bl19", 1): "71.3", ("quad", 10 ** 30): "34.0", ("bl127", 1): "38.5", ("bl127", 10 ** 4): "42.5", ("wad", 10 ** 4): "22.0", ("ray", 1): "27.0"}
     for (sc, mag), w in want.items():
         if tenths(precision(sc, mpf(mag))) != w:
             bad += 1
             print(f"precision({sc}, {mag}) = {tenths(precision(sc, mpf(mag)))}, want {w}")
     # exact is prec, a lucky cell is capped at prec, a decimal is floored to one place
-    f = ladder_fields(3 * 2 ** 127, "fp127", mpf("1.5"), mpf("1.5"))
+    f = ladder_fields(3 * 2 ** 127, "bl127", mpf("1.5"), mpf("1.5"))
     if f["digitsCapped"] != "38.7" or "digits1" in f:
         bad += 1
         print("exact cell:", f)
@@ -722,20 +722,20 @@ def selftest() -> int:
         bad += 1
         print("lucky WAD cell:", f)
     # interest digits: 1e4 + 1 against 1e4 + 1 + 1e-10 has 14 balance digits but 10 interest digits
-    f = ladder_fields(int((mpf(10 ** 4) + 1) * 2 ** 128), "fp127", mpf(10 ** 4) + 1 + mpf(10) ** -10, mpf(10 ** 4) + 1, principal=mpf(10 ** 4))
+    f = ladder_fields(int((mpf(10 ** 4) + 1) * 2 ** 128), "bl127", mpf(10 ** 4) + 1 + mpf(10) ** -10, mpf(10 ** 4) + 1, principal=mpf(10 ** 4))
     if f["digits1"][:2] != "14" or f["interestDigits1"] != "10.0":
         bad += 1
         print("interest digits:", f)
     if dmedian(["1.0", "2.0", "3.0"]) != "2.0" or dmedian(["1.0", "2.0", "3.0", "4.0"]) != "2.5" or dmedian(["32.6", "32.9"]) != "32.8":
         bad += 1
         print("median")
-    # fair medians: deep-tail at N = 10,000, Balancer completing 1 of 6 inputs and FP127 all 6, is
+    # fair medians: deep-tail at N = 10,000, Balancer completing 1 of 6 inputs and BL127 all 6, is
     # compared on that one input; with nothing in common, reverts count as 0
     names = ["a", "b", "c", "d", "e", "f"]
-    if common_inputs({"fp127": set(names), "balancer": {"b"}, "aave": set()}, names) != ("common", ["b"]):
+    if common_inputs({"bl127": set(names), "balancer": {"b"}, "aave": set()}, names) != ("common", ["b"]):
         bad += 1
         print("common inputs")
-    if common_inputs({"fp127": {"a"}, "balancer": {"b"}}, names) != ("revertsAsZero", names):
+    if common_inputs({"bl127": {"a"}, "balancer": {"b"}}, names) != ("revertsAsZero", names):
         bad += 1
         print("reverts as zero")
     print("selftest ok" if not bad else f"selftest: {bad} failure(s)")

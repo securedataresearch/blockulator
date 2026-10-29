@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
+import {BL127Lib} from "../../contracts/src/bl127/BL127Lib.sol";
+import {BL19Lib} from "../../contracts/src/bl19/BL19Lib.sol";
 
 /// @title IdealAccrual
 /// @notice The formulas Aave v3 and Morpho Blue say they approximate,
@@ -93,30 +93,30 @@ abstract contract IdealAccrual {
     }
 }
 
-contract IdealFP127 is IdealAccrual {
+contract IdealBL127 is IdealAccrual {
     function _u(uint256 x) internal pure override returns (int256) { return int256(x) << 128; }
-    function _add(int256 a, int256 b) internal pure override returns (int256) { return FP127Lib.add(a, b); }
-    function _sub(int256 a, int256 b) internal pure override returns (int256) { return FP127Lib.sub(a, b); }
-    function _mul(int256 a, int256 b) internal pure override returns (int256) { return FP127Lib.mul(a, b); }
-    function _div(int256 a, int256 b) internal pure override returns (int256) { return FP127Lib.div(a, b); }
-    function _exp(int256 x) internal pure override returns (int256) { return FP127Lib.exp(x); }
-    function _expm1(int256 x) internal pure override returns (int256) { return FP127Lib.expm1(x); }
-    function _ln(int256 x) internal pure override returns (int256) { return FP127Lib.ln(x); }
+    function _add(int256 a, int256 b) internal pure override returns (int256) { return BL127Lib.add(a, b); }
+    function _sub(int256 a, int256 b) internal pure override returns (int256) { return BL127Lib.sub(a, b); }
+    function _mul(int256 a, int256 b) internal pure override returns (int256) { return BL127Lib.mul(a, b); }
+    function _div(int256 a, int256 b) internal pure override returns (int256) { return BL127Lib.div(a, b); }
+    function _exp(int256 x) internal pure override returns (int256) { return BL127Lib.exp(x); }
+    function _expm1(int256 x) internal pure override returns (int256) { return BL127Lib.expm1(x); }
+    function _ln(int256 x) internal pure override returns (int256) { return BL127Lib.ln(x); }
     function _gt(int256 a, int256 b) internal pure override returns (bool) { return a > b; }
-    function _compound(int256 r, uint256 n) internal pure override returns (int256) { return FP127Lib.compound(r, int256(n) << 128); }
+    function _compound(int256 r, uint256 n) internal pure override returns (int256) { return BL127Lib.compound(r, int256(n) << 128); }
 }
 
-contract IdealFP19 is IdealAccrual {
-    function _u(uint256 x) internal pure override returns (int256) { return FP19Lib.fromUint(x); }
-    function _add(int256 a, int256 b) internal pure override returns (int256) { return FP19Lib.add(a, b); }
-    function _sub(int256 a, int256 b) internal pure override returns (int256) { return FP19Lib.sub(a, b); }
-    function _mul(int256 a, int256 b) internal pure override returns (int256) { return FP19Lib.mul(a, b); }
-    function _div(int256 a, int256 b) internal pure override returns (int256) { return FP19Lib.div(a, b); }
-    function _exp(int256 x) internal pure override returns (int256) { return FP19Lib.exp(x); }
-    /// FP19 release two has no expm1; e^x - 1 by subtraction keeps about
+contract IdealBL19 is IdealAccrual {
+    function _u(uint256 x) internal pure override returns (int256) { return BL19Lib.fromUint(x); }
+    function _add(int256 a, int256 b) internal pure override returns (int256) { return BL19Lib.add(a, b); }
+    function _sub(int256 a, int256 b) internal pure override returns (int256) { return BL19Lib.sub(a, b); }
+    function _mul(int256 a, int256 b) internal pure override returns (int256) { return BL19Lib.mul(a, b); }
+    function _div(int256 a, int256 b) internal pure override returns (int256) { return BL19Lib.div(a, b); }
+    function _exp(int256 x) internal pure override returns (int256) { return BL19Lib.exp(x); }
+    /// BL19 release two has no expm1; e^x - 1 by subtraction keeps about
     /// 71 + log10(x) digits, which is still beyond anything measured here.
-    function _expm1(int256 x) internal pure override returns (int256) { return FP19Lib.sub(FP19Lib.exp(x), FP19Lib.ONE); }
-    function _ln(int256 x) internal pure override returns (int256) { return FP19Lib.ln(x); }
-    function _gt(int256 a, int256 b) internal pure override returns (bool) { return FP19Lib.cmp(a, b) > 0; }
-    function _compound(int256 r, uint256 n) internal pure override returns (int256) { return FP19Lib.pow(FP19Lib.add(FP19Lib.ONE, r), FP19Lib.fromUint(n)); }
+    function _expm1(int256 x) internal pure override returns (int256) { return BL19Lib.sub(BL19Lib.exp(x), BL19Lib.ONE); }
+    function _ln(int256 x) internal pure override returns (int256) { return BL19Lib.ln(x); }
+    function _gt(int256 a, int256 b) internal pure override returns (bool) { return BL19Lib.cmp(a, b) > 0; }
+    function _compound(int256 r, uint256 n) internal pure override returns (int256) { return BL19Lib.pow(BL19Lib.add(BL19Lib.ONE, r), BL19Lib.fromUint(n)); }
 }

@@ -1,5 +1,5 @@
 /* ============================================
-   CALCULATOR — TI-style calculator + FP127 arithmetic
+   CALCULATOR — TI-style calculator + BL127 arithmetic
    Merged from calculators.css + ti-calculator.css
    ============================================ */
 
@@ -395,60 +395,60 @@
     border-color: color-mix(in srgb, var(--sdr-particle-gold) 38%, var(--sdr-border));
 }
 
-/* Category key colors — FP127 arithmetic */
-.ti-fp127-arithmetic .ti-key[data-cat="arithmetic"],
-.ti-fp127-arithmetic .ti-key[data-cat="logarithms"] {
+/* Category key colors — BL127 arithmetic */
+.ti-bl127-arithmetic .ti-key[data-cat="arithmetic"],
+.ti-bl127-arithmetic .ti-key[data-cat="logarithms"] {
     background: color-mix(in srgb, var(--sdr-particle-emerald) 12%, transparent);
     border-color: var(--sdr-hairline-soft);
     color: var(--sdr-particle-emerald);
 }
 
-.ti-fp127-arithmetic .ti-key[data-cat="arithmetic"]:hover,
-.ti-fp127-arithmetic .ti-key[data-cat="logarithms"]:hover {
+.ti-bl127-arithmetic .ti-key[data-cat="arithmetic"]:hover,
+.ti-bl127-arithmetic .ti-key[data-cat="logarithms"]:hover {
     background: color-mix(in srgb, var(--sdr-particle-emerald) 22%, transparent);
     border-color: color-mix(in srgb, var(--sdr-particle-emerald) 35%, var(--sdr-border));
 }
 
-.ti-fp127-arithmetic .ti-key[data-cat="powers"] {
+.ti-bl127-arithmetic .ti-key[data-cat="powers"] {
     background: color-mix(in srgb, var(--sdr-particle-sapphire) 14%, transparent);
     border-color: var(--sdr-hairline-soft);
     color: var(--sdr-particle-sapphire);
 }
 
-.ti-fp127-arithmetic .ti-key[data-cat="powers"]:hover {
+.ti-bl127-arithmetic .ti-key[data-cat="powers"]:hover {
     background: color-mix(in srgb, var(--sdr-particle-sapphire) 24%, transparent);
     border-color: color-mix(in srgb, var(--sdr-particle-sapphire) 35%, var(--sdr-border));
 }
 
-.ti-fp127-arithmetic .ti-key[data-cat="statistics"] {
+.ti-bl127-arithmetic .ti-key[data-cat="statistics"] {
     background: color-mix(in srgb, var(--sdr-particle-gold) 14%, transparent);
     border-color: var(--sdr-hairline-soft);
     color: var(--sdr-particle-gold);
 }
 
-.ti-fp127-arithmetic .ti-key[data-cat="statistics"]:hover {
+.ti-bl127-arithmetic .ti-key[data-cat="statistics"]:hover {
     background: color-mix(in srgb, var(--sdr-particle-gold) 24%, transparent);
     border-color: color-mix(in srgb, var(--sdr-particle-gold) 38%, var(--sdr-border));
 }
 
-.ti-fp127-arithmetic .ti-key[data-cat="combinatorics"] {
+.ti-bl127-arithmetic .ti-key[data-cat="combinatorics"] {
     background: color-mix(in srgb, var(--sdr-primary) 10%, transparent);
     border-color: var(--sdr-hairline-soft);
     color: var(--sdr-accent);
 }
 
-.ti-fp127-arithmetic .ti-key[data-cat="combinatorics"]:hover {
+.ti-bl127-arithmetic .ti-key[data-cat="combinatorics"]:hover {
     background: color-mix(in srgb, var(--sdr-primary) 18%, transparent);
     border-color: color-mix(in srgb, var(--sdr-accent) 40%, var(--sdr-border));
 }
 
-.ti-fp127-arithmetic .ti-key[data-cat="special"] {
+.ti-bl127-arithmetic .ti-key[data-cat="special"] {
     background: color-mix(in srgb, var(--sdr-particle-red) 12%, transparent);
     border-color: var(--sdr-hairline-soft);
     color: var(--sdr-particle-red);
 }
 
-.ti-fp127-arithmetic .ti-key[data-cat="special"]:hover {
+.ti-bl127-arithmetic .ti-key[data-cat="special"]:hover {
     background: color-mix(in srgb, var(--sdr-particle-red) 20%, transparent);
     border-color: color-mix(in srgb, var(--sdr-particle-red) 38%, var(--sdr-border));
 }
@@ -510,14 +510,14 @@
 #arithmetic-contract-info { margin-top: 2rem; }
 
 /* Contract sections */
-.fp127-contracts-section { max-width: 800px; margin: 3rem auto 2rem; padding: 0 1rem; }
-.fp127-contract-header { margin-bottom: var(--sdr-space-3); }
-.fp127-contracts-section .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--sdr-text-white); }
-.fp127-contracts-section .section-subtitle { font-size: 0.8rem; color: var(--sdr-text-light); opacity: 0.6; }
+.bl127-contracts-section { max-width: 800px; margin: 3rem auto 2rem; padding: 0 1rem; }
+.bl127-contract-header { margin-bottom: var(--sdr-space-3); }
+.bl127-contracts-section .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--sdr-text-white); }
+.bl127-contracts-section .section-subtitle { font-size: 0.8rem; color: var(--sdr-text-light); opacity: 0.6; }
 
-#fp127-contract-info-row { margin-bottom: var(--sdr-space-3); padding-bottom: var(--sdr-space-2); border-bottom: none; }
-#fp127-source-viewers { border: none; background: transparent; }
-.fp127-contract-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; }
+#bl127-contract-info-row { margin-bottom: var(--sdr-space-3); padding-bottom: var(--sdr-space-2); border-bottom: none; }
+#bl127-source-viewers { border: none; background: transparent; }
+.bl127-contract-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; }
 
 .calculator-contracts-section { max-width: 800px; margin: 3rem auto 2rem; padding: 0 1rem; }
 .calculator-contracts-section .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--sdr-text-white); }
@@ -560,6 +560,6 @@
     .ti-buttons { grid-template-columns: repeat(3, 1fr); gap: 0.35rem; }
     .ti-key { padding: 0.55rem 0.2rem; min-height: 2.85rem; }
     .calc-info-grid, .arithmetic-info .info-grid { grid-template-columns: 1fr; }
-    .fp127-contract-grid { grid-template-columns: 1fr; }
+    .bl127-contract-grid { grid-template-columns: 1fr; }
 }
 

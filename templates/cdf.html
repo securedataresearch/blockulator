@@ -11,7 +11,7 @@
 <thead><tr><th scope="col">implementation</th><th scope="col" class="num wide">largest error</th><th scope="col" class="num wide">fewest digits</th><th scope="col" class="num">median digits</th><th scope="col" class="num">median gas</th></tr></thead>
 <tbody>
 {%- for i in d.implementations %}{% if i.ops[op] is defined %}{% set o = i.ops[op] %}
-<tr{% if i.id == "fp19" or i.id == "fp127" %} class="ours"{% endif %}><th scope="row" title="{{ i.source }}">{{ i.label }}<br><span class="meta">{{ i.representation }}</span></th><td class="num wide">{{ o.maxAbsErr }}</td><td class="num wide">{{ o.digitsMin }}</td><td class="num">{{ o.digitsMedian }}</td><td class="num">{{ o.gasMedian | num_format }}</td></tr>
+<tr{% if i.id == "bl19" or i.id == "bl127" %} class="ours"{% endif %}><th scope="row" title="{{ i.source }}">{{ i.label }}<br><span class="meta">{{ i.representation }}</span></th><td class="num wide">{{ o.maxAbsErr }}</td><td class="num wide">{{ o.digitsMin }}</td><td class="num">{{ o.digitsMedian }}</td><td class="num">{{ o.gasMedian | num_format }}</td></tr>
 {%- endif %}{% endfor %}
 </tbody></table></div>
 </section>

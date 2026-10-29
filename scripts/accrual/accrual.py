@@ -11,7 +11,7 @@ Core reserve and every Morpho Blue market with >= $10k borrowed, written by
 survey.py) and the stylised scenarios below, each anchored to a parameter set
 that is live in that snapshot. Every case is run by test/accrual/DeployedAccrual.t.sol
 through the deployed code (the pinned submodules whose runtime bytecode
-verify_deployed.py proves equal to mainnet) and through FP127 and FP19
+verify_deployed.py proves equal to mainnet) and through BL127 and BL19
 computing the stated ideal; this script computes the truth with mpmath at 200
 digits and splits each deployed error into the series truncation (the
 approximation) and the integer grids (the rounding).
@@ -243,11 +243,11 @@ def parse(log_text: str) -> dict:
 
 # ---------------------------------------------------------------------------- scoring
 
-def fp127(raw: int):
+def bl127(raw: int):
     return mpf(raw) / mpf(2) ** 128
 
 
-def fp19(raw: int):
+def bl19(raw: int):
     w = raw & ((1 << 256) - 1)
     if w == 0:
         return mpf(0)
@@ -304,7 +304,7 @@ def score_aave(cid: str, m: dict, c: dict, r: dict) -> dict:
                                        "indexGridTokens": amt(mpf(s) * (idx1 - F * I0) / RAY / unit),
                                        "tokenGridTokens": amt((bal1 - mpf(s) * idx1 / RAY) / unit)}
         key = "cont" if tname == "continuous" else "ps"
-        for form, dec in (("fp127", fp127), ("fp19", fp19)):
+        for form, dec in (("bl127", bl127), ("bl19", bl19)):
             fb, fi = dec(r[form][f"{key}_bal"]), dec(r[form][f"{key}_int"])
             row[form] = {"errTokens": amt((fb - bal_t) / unit), "relBalance": sci((fb - bal_t) / bal_t),
                          "digitsBalance": round(digits(fb - bal_t, bal_t), 2),
@@ -365,7 +365,7 @@ def score_morpho(cid: str, m: dict, c: dict, r: dict) -> dict:
                         "irmWExpAndRoundingTokens": amt((irm_tok - trap_tok) / unit),
                         "approximationTokens": amt(taylor_tok / unit), "roundingTokens": amt(round_tok / unit)},
            "gridDigitsInterest": round(digits(mpf("0.5"), int_t), 2) if int_t else None}
-    for form, dec in (("fp127", fp127), ("fp19", fp19)):
+    for form, dec in (("bl127", bl127), ("bl19", bl19)):
         fb, fi = dec(r[form]["bal"]), dec(r[form]["int"])
         row[form] = {"errTokens": amt((fi - int_t) / unit), "relBalance": sci((fb - bal_t) / bal_t),
                      "digitsBalance": round(digits(fb - bal_t, bal_t), 2), "digitsInterest": round(digits(fi - int_t, int_t), 2)}
@@ -392,7 +392,7 @@ def score_fixed(cid: str, m: dict, c: dict, r: dict) -> dict:
     Ea = d["interest"] - B * expm1(ya)
     row["deployedVsAnnualRate"] = {"rateQuantizationTokens": amt(B * (expm1(y) - expm1(ya)) / unit),
                                    "errTokens": amt(Ea / unit), "digitsInterest": round(digits(Ea, B * expm1(ya)), 2)}
-    for form, dec in (("fp127", fp127), ("fp19", fp19)):
+    for form, dec in (("bl127", bl127), ("bl19", bl19)):
         fb, fi = dec(r[form]["bal"]), dec(r[form]["int"])
         row[form] = {"errTokens": amt((fi - int_t) / unit), "relBalance": sci((fb - bal_t) / bal_t),
                      "digitsBalance": round(digits(fb - bal_t, bal_t), 2), "digitsInterest": round(digits(fi - int_t, int_t), 2)}
@@ -431,7 +431,7 @@ def row_line(x: dict) -> str:
     rate_s = f"{rate * 100:.4g}%" if rate is not None else f"r@t {x['rateAtTargetAnnual'] * 100:.4g}%, u {x['utilization'] * 100:.4g}%"
     return (f"| `{x['id']}` | {rate_s} | {human_t(x['t'])} | {x['principalTokens']} {x['symbol']} | "
             f"{tr['truthInterestTokens']} | {dep['errTokens']} | {dep['digitsInterest']} | {dep['digitsBalance']} | "
-            f"{tr.get('gridDigitsInterest', '—')} | {tr['fp127']['digitsInterest']} | {tr['fp19']['digitsInterest']} |")
+            f"{tr.get('gridDigitsInterest', '—')} | {tr['bl127']['digitsInterest']} | {tr['bl19']['digitsInterest']} |")
 
 
 def write_md(data: dict) -> None:
@@ -447,7 +447,7 @@ def write_md(data: dict) -> None:
              "reported for the accrued interest (the number a lender or borrower is owed) and for the whole balance. "
              "**err** is deployed − truth in token units (negative: the protocol accrues less than its stated formula). "
              "The error is split into the **approximation** (the truncated series, computed in exact arithmetic) and the "
-             "**rounding** (ray/wad grids, the rate held as an integer per second, balances in token units). FP127 and FP19 "
+             "**rounding** (ray/wad grids, the rate held as an integer per second, balances in token units). BL127 and BL19 "
              "compute the same stated formula from the same integers with their own exp/ln/pow and are not rounded to "
              "token units; *grid* is the most digits any answer rounded to token units could show.\n")
     L.append("Truths: Aave borrow — e^(rate·years) (the body comment's \"ideal formula\"); the per-second binomial "
@@ -468,7 +468,7 @@ def write_md(data: dict) -> None:
                  f"({sci(abs(mpf(dep['relInterest'])))} of the interest, {dep['digitsInterest']} digits; balance "
                  f"{dep['digitsBalance']}). Series {dep['approximationTokens']}, grids {dep['roundingTokens']}"
                  + (f", IRM rate path {dep['irmTokens']} (trapezoid {dep['irmTrapezoidTokens']})" if 'irmTokens' in dep else "")
-                 + f". FP127 {tr['fp127']['digitsInterest']} digits, FP19 {tr['fp19']['digitsInterest']}.")
+                 + f". BL127 {tr['bl127']['digitsInterest']} digits, BL19 {tr['bl19']['digitsInterest']}.")
 
     L.append("Normal operation is accurate. Under realistic rates and idle times the Aave borrow index is within the "
              "token's own decimals or a few millionths of a token per million, and Morpho at its 90% target is the "
@@ -519,7 +519,7 @@ def write_md(data: dict) -> None:
         L.append(f"- **{c['who']}**, {c['where']}: {c['text']}")
     L.append("")
     head = ("| case | rate | idle | principal | true interest | err (tokens) | digits (interest) | digits (balance) | "
-            "grid | FP127 digits (interest) | FP19 digits (interest) |\n|---|---|---|---|---|---|---|---|---|---|---|")
+            "grid | BL127 digits (interest) | BL19 digits (interest) |\n|---|---|---|---|---|---|---|---|---|---|---|")
     L.append("## Stylised cases (live parameter sets, chosen idle times)\n")
     L.append(head)
     for x in rows:
@@ -592,7 +592,7 @@ def main() -> None:
     data = {
         "generated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "description": "Aave v3 and Morpho Blue accrual as deployed on Ethereum mainnet, against a 200-digit truth of the "
-                       "formula each says it approximates, with FP127 and FP19 computing the same formula for contrast.",
+                       "formula each says it approximates, with BL127 and BL19 computing the same formula for contrast.",
         "pins": PINS, "claims": CLAIMS,
         "survey": {"block": survey["block"], "timestamp": survey["timestamp"],
                    "date": datetime.fromtimestamp(survey["timestamp"], timezone.utc).strftime("%Y-%m-%d %H:%M UTC")},

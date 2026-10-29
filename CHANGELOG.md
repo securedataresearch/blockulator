@@ -6,26 +6,44 @@ keeps its own version in its CREATE2 salt, because the salt names the address;
 
 ## Unreleased
 
-**FP127 is correctly rounded in every op.** Each transcendental's fast value
+### Renamed
+
+**BL127 and BL19 are the names** (the on-chain names FP127 and FP19 until the next deploy), everywhere: the Yul objects
+(BL127, BL127E, BL127H, BL127N, BL127S; BL19, BL19E, BL19H, BL19N, BL19S),
+the inline libraries (`BL127Lib`, `BL19Lib`), the Solidity interfaces
+(`IBL127E`, …), the npm import paths (`@blockulator/contracts/bl127/BL127Lib.sol`),
+the source, script, test and doc directories (`contracts/src/bl127`,
+`scripts/bl19`, `docs/bl127`, …), the Makefile targets (`predict-bl127`),
+the site's library ids (`bl127`, `bl19`) and the benchmark records' cell
+keys. This changelog's history carries the new names too. Two things keep
+the old spelling on purpose: the CREATE2 salts of every deployed contract
+(`FP127 v9`, `FP19 v6`, `FP127 ladder v14`, and the earlier versions), because
+the salt's bytes fix the address, so each record's `saltAscii` and the objects
+table in `scripts/bl127/gen.py` still read `FP…` (`RELEASE.json`'s component
+versions are labels and read `BL127 v9`, `BL19 v6`); and the verified names on Sourcify and Blockscout, which stay the
+on-chain names FP127 / FP127E / … / FP19S until the next deploy
+(`contracts/deployments/README.md` records both names). The bytecode is unchanged by the rename.
+
+**BL127 is correctly rounded in every op.** Each transcendental's fast value
 now carries an error bound derived in the source, measured against 120-digit
 truth (`bounds127.py`, a merge gate) and tested by `rbad127` before the one
 rounding; where the bound could reach a midpoint a wider stage decides, in
-two words on FP19's kernels (2^-497 to 2^-510) or exactly where a tie is
+two words on BL19's kernels (2^-497 to 2^-510) or exactly where a tie is
 possible (`pow`, `powu`, `cbrt`). `gavg` and `hypot` are the nearest root of
 the exact product or sum of squares; the arithmetic is exact in its stated
 direction, as before. v8 rounded each transcendental's value with no test,
 `pow` could miss by up to 1e11 ULPs at extreme exponents and rounded exact
 ties down, and `gavg` and `hypot` were the Huff's floored compositions. The
-work went in by object (the five entries below: FP127S, FP127H, the roots,
-FP127E, FP127N), and the one FP127 object became five by idea, as FP19's are,
-so each had room for its second stages. Every FP127 object takes salt v9.
+work went in by object (the five entries below: BL127S, BL127H, the roots,
+BL127E, BL127N), and the one BL127 object became five by idea, as BL19's are,
+so each had room for its second stages. Every BL127 object takes salt v9.
 
-The full release gate on this tree (2026-10-28): FP127 59 sweep rows,
+The full release gate on this tree (2026-10-28): BL127 59 sweep rows,
 212,119 inputs, misrounded 0 in the plain pass, with every rounding test
 forced (the last stage alone) and with the fast tests forced (the middle
-stage alone); FP19 76 rows, 455,082 inputs, misrounded 0; BlockulatorWad
+stage alone); BL19 76 rows, 455,082 inputs, misrounded 0; BlockulatorWad
 160,000 results wrong 0; bounds and bounds127 0 regions over their bound;
-299 tests; every object under 24,576 bytes (FP19E tightest, 955 free).
+299 tests; every object under 24,576 bytes (BL19E tightest, 955 free).
 Gas on the ladder's inputs, inline, v8 → v9: the tests cost the
 transcendentals a few percent (`exp` 2,726 → 2,845, `sinh` 3,880 → 4,029,
 `erf` 7,588 → 7,739, `lambertW0` 8,170 → 8,367, `pow` 3,028 → 3,050), the
@@ -33,8 +51,8 @@ logs and arithmetic are unchanged, `expm1` 3,106 → 2,968, `gavg` 1,079 →
 1,003, `hypot` 1,366 → 1,164; through the objects the smaller dispatchers
 take 20 to 70 gas off most ops (`add` 708 → 682, `mul` 928 → 862).
 
-The CREATE2 addresses (the same on every chain), live on Sepolia: FP19's
-since 2026-10-28 (blocks 12,015,306 to 12,015,314), FP127's since
+The CREATE2 addresses (the same on every chain), live on Sepolia: BL19's
+since 2026-10-28 (blocks 12,015,306 to 12,015,314), BL127's since
 2026-10-29 UTC (blocks 12,017,693 to 12,017,701), with ladder v14's runners
 (12,017,704 to 12,017,707); Sourcify and Blockscout verified, `make
 smoke-sepolia` passes, and the live check through the v14 runners is 1,913
@@ -42,29 +60,29 @@ ladder cells and 276 edge cells, 0 mismatches. Not on mainnet yet:
 
 | object | salt | runtime bytes | address | block |
 |---|---|---:|---|---:|
-| FP127 | `FP127 v9` | 3,728 | `0x0DF738d125677550a80A46BaF254386C66f96E0d` | 12,017,693 |
-| FP127E | `FP127E v9` | 18,808 | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` | 12,017,695 |
-| FP127H | `FP127H v9` | 13,093 | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` | 12,017,697 |
-| FP127N | `FP127N v9` | 9,088 | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` | 12,017,699 |
-| FP127S | `FP127S v9` | 11,817 | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` | 12,017,701 |
-| FP19 | `FP19 v6` | 17,221 | `0x94d9d43D6202827429a8058959eeCf6d232b8729` | 12,015,306 |
-| FP19E | `FP19E v6` | 23,621 | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` | 12,015,308 |
-| FP19H | `FP19H v6` | 13,020 | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` | 12,015,310 |
-| FP19N | `FP19N v6` | 17,962 | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` | 12,015,312 |
-| FP19S | `FP19S v6` | 11,338 | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` | 12,015,314 |
+| BL127 | `FP127 v9` | 3,728 | `0x0DF738d125677550a80A46BaF254386C66f96E0d` | 12,017,693 |
+| BL127E | `FP127E v9` | 18,808 | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` | 12,017,695 |
+| BL127H | `FP127H v9` | 13,093 | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` | 12,017,697 |
+| BL127N | `FP127N v9` | 9,088 | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` | 12,017,699 |
+| BL127S | `FP127S v9` | 11,817 | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` | 12,017,701 |
+| BL19 | `FP19 v6` | 17,221 | `0x94d9d43D6202827429a8058959eeCf6d232b8729` | 12,015,306 |
+| BL19E | `FP19E v6` | 23,621 | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` | 12,015,308 |
+| BL19H | `FP19H v6` | 13,020 | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` | 12,015,310 |
+| BL19N | `FP19N v6` | 17,962 | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` | 12,015,312 |
+| BL19S | `FP19S v6` | 11,338 | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` | 12,015,314 |
 
-FP127 v8 (`FP127 v8`, 23,797 bytes, `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`,
+BL127 v8 (`FP127 v8`, 23,797 bytes, `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`,
 Sepolia, 2026-10-28) is the one object these five replace, superseded before
-mainnet as v7 (2026-10-27) was by v8; both stay live. The FP19 salts drop the old name (2.2's salts were `FP256 v5`, `FP256E v5`, …,
+mainnet as v7 (2026-10-27) was by v8; both stay live. The BL19 salts drop the old name (2.2's salts were `FP256 v5`, `FP256E v5`, …,
 kept as bytes because they fix 2.2's addresses). The ladder's adapters name
 these addresses, so the runners took
-`FP127 ladder v14` (v13 calls FP127 v8): `LadderRunner`
+`FP127 ladder v14` (v13 calls BL127 v8): `LadderRunner`
 `0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589`, `EdgeRunner`
-`0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A`. The gate at the v8 freeze: FP19 76
-sweep rows misrounded 0, FP127 27 rows nearest everywhere, BlockulatorWad
-160,000 results wrong 0; 292 tests; FP127 tightest, 779 free.
+`0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A`. The gate at the v8 freeze: BL19 76
+sweep rows misrounded 0, BL127 27 rows nearest everywhere, BlockulatorWad
+160,000 results wrong 0; 292 tests; BL127 tightest, 779 free.
 
-FP127S: lambertW0 and lambertWm1 correctly rounded (v8 rounded their last
+BL127S: lambertW0 and lambertWm1 correctly rounded (v8 rounded their last
 value with no test):
 
 - lwfin's double-word Newton value V (2^-300) carries a derived bound,
@@ -72,33 +90,33 @@ value with no test):
   error twice over, B's top word, the floors), tested by `rbad127` at 172
   guard bits; near −1/e lwbr's W at 2^-192 is within 6 units, tested at 64. `bounds127.py` checks both
   (largest ratios 0.20 and 0.58); `precise_model.py`'s `lw_fin` models lwfin.
-- On a miss `lwwide`, FP19's `lwfix` in 127.128: one log-form Newton step at
-  2^-510 from that value on FP19's wide kernels (`w19_wrecip`, `w19_wmul`,
+- On a miss `lwwide`, BL19's `lwfix` in 127.128: one log-form Newton step at
+  2^-510 from that value on BL19's wide kernels (`w19_wrecip`, `w19_wmul`,
   `w19_wlnw`, `w19_kln2`), within 2^-290, rounded once. W is transcendental
   for every word but 0, so no ties; W(0) = 0.
 - Sweep (now 2,500 and 2,000 inputs, with 1,000 within 2^-20 of −1/e down
   to the smallest input and 500 small negative x): 0 misrounded plain and
   with the tests forced; fallback 0 of 4,500. Typical gas on v8's 1,500
   inputs: lambertW0 8,152 → 8,347, lambertWm1 7,968 → 8,163 (+2.4%);
-  through the second stage about 36,000. FP127S 7,994 → 11,817 bytes;
-  inline `FP127Lib.lambertW0` 8,427 → 12,374.
+  through the second stage about 36,000. BL127S 7,994 → 11,817 bytes;
+  inline `BL127Lib.lambertW0` 8,427 → 12,374.
 
-FP127's exp kernel and division, same words (FP127 takes a new salt at the
+BL127's exp kernel and division, same words (BL127 takes a new salt at the
 next deploy):
 
 - `expk` works in X form (H·2^-256 + L·2^-384): three 16-entry table levels
   and a degree-16 minimax corrector, never above the truth, within 2^-311
-  relative (`scripts/fp127/generators/expk.py`). `exp` 5,360 → 2,716 gas
+  relative (`scripts/bl127/generators/expk.py`). `exp` 5,360 → 2,716 gas
   (typical, inline), `exp2` 5,687 → 2,668, `exp10` 5,555 → 2,982, `expm1`,
   `sinh`, `cosh`, `tanh` about −40%, Lambert W about −28%.
 - `div`, `divDown` and `divUp` share an exact core, two 64-bit digits when
   both operands are under 2^64: `div` 649 → 412, `divDown`/`divUp` 818 → 475.
-- The FP127 object is 20,603 bytes as deployed on 2026-10-27 (2.2: 21,858): one copy of the kernel
+- The BL127 object is 20,603 bytes as deployed on 2026-10-27 (2.2: 21,858): one copy of the kernel
   where the optimizer had made three.
 
-FP19's erf, erfc and normCdf move to a fifth object, FP19N (salt "FP19N
-v6", 17,962 bytes; FP19S keeps Lambert W at 11,338), and their fast path is
-a fit (`scripts/fp19/generators/erf19.py`, coefficients in `erfcxu.json`,
+BL19's erf, erfc and normCdf move to a fifth object, BL19N (salt "BL19N
+v6", 17,962 bytes; BL19S keeps Lambert W at 11,338), and their fast path is
+a fit (`scripts/bl19/generators/erf19.py`, coefficients in `erfcxu.json`,
 checked in CI):
 
 - g(y) = e^(y²) erfc(y) on [½, 18) is h(w)·u, u = 8/(8 + y) by one
@@ -118,8 +136,8 @@ checked in CI):
   edge (`erf19.py --cf-depth`): 12% fewer. Its worst case (about 361k, the
   two-word series just below y = 7) is unchanged.
 
-FP19's pow, powu and compound gain a middle stage between the fast value and
-the second stage, the same words (`scripts/fp19/generators/mid254.py`,
+BL19's pow, powu and compound gain a middle stage between the fast value and
+the second stage, the same words (`scripts/bl19/generators/mid254.py`,
 checked in CI; `bounds.py` measures it):
 
 - When the fast bound, which grows with |y log2 x|, reaches the rounding
@@ -133,9 +151,9 @@ checked in CI; `bounds.py` measures it):
   13.5%. p99 gas: pow 54,522 → 15,079, powu 59,027 → 19,098, compound
   106,018 → 15,904; the fast path about 34 gas more (log2m's table walk is
   now the function log2lv). `compsure` is gone.
-- FP19E is 23,621 bytes (2.2: 21,598) and FP19H 13,020 (13,021): both take
+- BL19E is 23,621 bytes (2.2: 21,598) and BL19H 13,020 (13,021): both take
   new salts at the next deploy.
-- `make sweep` runs a third FP19 pass, the middle stage alone (`gen.py
+- `make sweep` runs a third BL19 pass, the middle stage alone (`gen.py
   --mid-lib`: the fast path's test forced, `rbadm` kept); `--wide-lib` forces
   both; the count pass records `rbadm` beside `rbad`.
 
@@ -144,19 +162,19 @@ wei exactly (`wadpowx`) before its second stage: half of the sweep's
 fallbacks, 54,000 → 6,900–7,700 gas. Results above about 2^175 wei still
 take the second stage.
 
-factorial is a table in both libraries (`scripts/fp19/generators/facttab.py`,
+factorial is a table in both libraries (`scripts/bl19/generators/facttab.py`,
 checked in CI):
 
-- FP19: the 169 correctly rounded words for 2 ≤ n ≤ 170, by a binary search
+- BL19: the 169 correctly rounded words for 2 ≤ n ≤ 170, by a binary search
   on n; the domain stops at 170! (the largest factorial a binary64 holds),
   `Overflow` from 171 (2.2: n ≤ 20,366 by a 512-bit running product, 1.07M
   gas at the median and 2.14M at the top; now 714 median, 762 at most).
-  factorial moves from FP19S to the FP19 core (17,221 bytes; FP19S 23,985),
+  factorial moves from BL19S to the BL19 core (17,221 bytes; BL19S 23,985),
   so both take new salts at the next deploy.
-- FP127: the 34 values two to a word, as the Huff's jump table was: about 400
+- BL127: the 34 values two to a word, as the Huff's jump table was: about 400
   gas at every n (v6's multiplication: 190 to 1,918). The same words.
 
-FP127 `compound` and the erfc tail, the same words (nearest on every sweep
+BL127 `compound` and the erfc tail, the same words (nearest on every sweep
 and vector):
 
 - `compound` for |n| ≥ 16 takes n log2(1 + rate) from the one-word log and
@@ -169,12 +187,12 @@ and vector):
   `--check` in CI), where the continued fraction ran: 7,650 gas at every x
   of the tail (the fraction: about 20,000 near 4). erf, erfc, normCdf max
   35,352 → 20,746, p99 about 25,000 → 17,430.
-- The FP127 object is 23,797 bytes; inline `FP127Lib.compound` 11.0 KB
+- The BL127 object is 23,797 bytes; inline `BL127Lib.compound` 11.0 KB
   (was 1.3 KB).
 
-FP127's hyperbolics (`FP127H`) correctly rounded: each fast value now has a
-stated bound and a rounding test, with a second stage behind it on FP19's wide
-kernels (`/// @import fp19 as w19`):
+BL127's hyperbolics (`BL127H`) correctly rounded: each fast value now has a
+stated bound and a rounding test, with a second stage behind it on BL19's wide
+kernels (`/// @import bl19 as w19`):
 
 - `sinh`, `cosh`: the one-exp value at 2^-192 is within 3 units plus 2^-299
   relative, err 2^20 units; past it e^|x| and e^−|x| in two words
@@ -191,11 +209,11 @@ kernels (`/// @import fp19 as w19`):
 - `bounds127.py` measures each err (largest ratio 0.75); `precise_model.py`
   models the fast values, with `op_tanh`. Sweep medians, inline: sinh 3,868 → 3,924, cosh 3,824 → 3,877, tanh
   3,821 → 3,873, atanh 2,750 → 2,814; no sweep input reached a second stage.
-  Plain, second-stage and middle-stage sweeps: 0 misrounded. FP127H 7,560 →
+  Plain, second-stage and middle-stage sweeps: 0 misrounded. BL127H 7,560 →
   13,234 bytes; inline (legacy) sinh 4,898 → 6,392, tanh 5,183 → 6,715,
   atanh 2,967 → 11,158 (its three stages).
 
-FP127 `gavg` and `hypot` round once, as FP19's do; the Huff's definition
+BL127 `gavg` and `hypot` round once, as BL19's do; the Huff's definition
 goes, and results change:
 
 - For raw words A and B the raw result is the root of the integer A·B or
@@ -218,21 +236,21 @@ goes, and results change:
   of gavg's vectors now return). gavg's `OutOfRange` for opposite signs is
   kept, and now also where v8 said `Overflow` first (a huge product of
   opposite signs).
-- Gas, the gas ladder's rows: inline `FP127Lib.gavg` 1,079 → 1,003 (733 →
+- Gas, the gas ladder's rows: inline `BL127Lib.gavg` 1,079 → 1,003 (733 →
   706 for a product under one), `hypot` 1,366 → 1,164 (1,020 → 867);
-  through the object gavg 1,567 → 1,615, hypot 1,832 → 1,686. The FP127
+  through the object gavg 1,567 → 1,615, hypot 1,832 → 1,686. The BL127
   object is 3,728 bytes (3,367 at the split).
 - `make sweep`: 0 misrounded of 4,000 each against the once-rounded word
-  (`scripts/fp127/oracle.py` now computes it; it encoded v4's composition,
+  (`scripts/bl127/oracle.py` now computes it; it encoded v4's composition,
   so the sweep had scored v8 as correctly rounded); half of each op's
   inputs now span the whole word. FuzzProofs checks both against a
   bit-by-bit root at 50,000 runs, next to the midpoints and at the extreme
   words (`docs/proofs.md`: fuzzed). The Huff equivalence tests assert the
   divergence: the nearest root of the exact value, at or above the Huff's.
 
-FP127's elementary functions (`FP127E`) correctly rounded: every value is
+BL127's elementary functions (`BL127E`) correctly rounded: every value is
 rounded only when its stated bound cannot change the word, with a last stage
-in two words (FP19's `wexpr`, `wexpm1`, `mratio`, `wlog2s`, …) or exact
+in two words (BL19's `wexpr`, `wexpm1`, `mratio`, `wlog2s`, …) or exact
 behind it:
 
 - `exp`, `exp2`, `exp10`: the double-word value is tested (`rbadw`, err
@@ -258,10 +276,10 @@ behind it:
   and middle sweeps of the 11 ops: 0 misrounded. Medians, inline: exp 2,697
   → 2,828 (+4.9%), exp2 2,640 → 2,684, exp10 2,970 → 3,069, expm1 2,061 →
   2,076, logs unchanged, pow 3,314 → 3,376 (shared inputs), powu 3,493 →
-  3,520, compound 3,301 → 3,360. FP127E 12,716 → 18,808 bytes.
+  3,520, compound 3,301 → 3,360. BL127E 12,716 → 18,808 bytes.
 
-FP127's error function (`FP127N`) correctly rounded: `erf`, `erfc` and
-`normCdf` test their value at 2^-192 against a derived bound, with FP19's
+BL127's error function (`BL127N`) correctly rounded: `erf`, `erfc` and
+`normCdf` test their value at 2^-192 against a derived bound, with BL19's
 wide series and continued fraction behind it:
 
 - Bounds derived in `erf_model.py --bounds` (in `--check`, CI): `erfs`
@@ -272,7 +290,7 @@ wide series and continued fraction behind it:
   second derivative, g's derivatives bounded by n!/(√π x^(n+1))), where
   2.2 sampled 6,002 points. `bounds127.py` measures both (ratios 0.41,
   0.30) and normCdf's.
-- `erfw127`: x as FP19's exact (u, m), `w19_erfser2` below y = 7,
+- `erfw127`: x as BL19's exact (u, m), `w19_erfser2` below y = 7,
   `w19_erfccf2` from 7 (2^-444 or better), one rounding; `erfc` and
   `normCdf` are 1 ∓ and ½ ± its word, exact since erf(y) is never a
   midpoint. 13 vectors whose fast value lies within the bound of a
@@ -281,8 +299,8 @@ wide series and continued fraction behind it:
 - Inline, on the sweep's inputs: `erf` 3,630 → 3,689, `erfc` 3,510 →
   3,592, `normCdf` 3,715 → 3,750 (median, old and new side by side; the sweep table reads 3,623 → 3,775, 3,497 → 3,654, 3,694 → 3,823); `make cdf`: `normCdf` 12,435 →
   12,466, `erfc` 9,140 → 9,211. The second stage about 48,000 gas at the
-  median, 355,000 at most. FP127N 5,005 → 9,013 bytes.
-- `test/fp127/Imports.t.sol`'s rbad127 fuzz no longer underflows building
+  median, 355,000 at most. BL127N 5,005 → 9,013 bytes.
+- `test/bl127/Imports.t.sol`'s rbad127 fuzz no longer underflows building
   v for g = 1 or 2.
 
 BlockulatorWad, a third library (`contracts/src/wad/`, inline, no deployed
@@ -295,8 +313,8 @@ value rounded once in the stated direction:
 - mul, div, sqrt and cbrt exactly on 512 bits, in one word where Solady's
   path applies (mulWad 107 gas, Solady 86); the domains only widen (a result
   that fits never reverts).
-- exp, ln, log2, log10 and pow on FP19's kernels fed the exact input,
-  lambertW0 on FP19's; a cut at the wei with a stated bound, and a second
+- exp, ln, log2, log10 and pow on BL19's kernels fed the exact input,
+  lambertW0 on BL19's; a cut at the wei with a stated bound, and a second
   stage at 2^-510 on the exact input where the bound reaches a wei boundary.
   expWad 2,357 gas, lnWad 2,415, powWad 4,762 (PRBMath 2,719, 6,980, 9,877).
 - `make sweep`: 27 WAD rows, 0 wrong of 108,000, and 0 of 52,000 through the
@@ -304,39 +322,39 @@ value rounded once in the stated direction:
   inputs Solady's expWad is off by a wei or more on 48%, lnWad 24%, powWad
   66%, lambertW0Wad 28%; PRBMath's exp, ln, log2, log10 and pow on 72 to 98%.
 - `gen.py --lib wad` builds it from `BlockulatorWad.yul.src` on
-  `FP19.yul.src` (a library on a base source, library only, exports without
+  `BL19.yul.src` (a library on a base source, library only, exports without
   a leave written into their blocks).
 
 ## Blockulator 2.2 (2026-10-22)
 
-The second gas pass: every result the same word (FP19 correctly rounded,
-FP127's transcendentals nearest), about half the gas, FP19 drawn into four
+The second gas pass: every result the same word (BL19 correctly rounded,
+BL127's transcendentals nearest), about half the gas, BL19 drawn into four
 objects by idea, and the first CLZ build. Deployed 2026-10-22, Sepolia
 blocks 11,974,968 to 11,974,985.
 
 | component | version | Sepolia |
 |---|---|---|
-| FP127 | FP127 v6, 53 ops, 21,858 bytes | `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4` |
-| FP19 | FP19 v5, 43 ops, 10,333 bytes | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` |
-| FP19E | FP19E v5, 12 ops, 21,598 bytes | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` |
-| FP19H | FP19H v5, 4 ops, 13,021 bytes | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` |
-| FP19S | FP19S v5, 6 ops, 24,263 bytes | `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
-| LadderRunner | FP127 ladder v10 | `0xF14Ac5DDA9C0c10C50aa4Be9D219509fAa936A9b` |
-| EdgeRunner | FP127 ladder v10 | `0x5123DaA96A96e550665401Bd56AD0770DDB9004e` |
+| BL127 | BL127 v6, 53 ops, 21,858 bytes | `0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4` |
+| BL19 | BL19 v5, 43 ops, 10,333 bytes | `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52` |
+| BL19E | BL19E v5, 12 ops, 21,598 bytes | `0x017F68A57dD53a6dF2043c24B712b287F9549AE2` |
+| BL19H | BL19H v5, 4 ops, 13,021 bytes | `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` |
+| BL19S | BL19S v5, 6 ops, 24,263 bytes | `0x73E8809F163d4358773cc5F25c134997B4b842F4` |
+| LadderRunner | BL127 ladder v10 | `0xF14Ac5DDA9C0c10C50aa4Be9D219509fAa936A9b` |
+| EdgeRunner | BL127 ladder v10 | `0x5123DaA96A96e550665401Bd56AD0770DDB9004e` |
 
-Records: `contracts/deployments/{RELEASE,FP127,FP19,Ladder}.md`. The five
+Records: `contracts/deployments/{RELEASE,BL127,BL19,Ladder}.md`. The five
 objects are verified on Sourcify and Blockscout and pass their smoke tests
 against the live contracts; the thirteen ladder contracts are
 `exact_match` on Sourcify. Checked live on 2026-10-23: 9,408 ladder cells
 through LadderRunner v10 (block 11,975,057) and 1,511 edge cells through
-EdgeRunner v10 (block 11,975,211), 0 mismatches. Blockulator 2.1 (FP127 v5,
-FP19 release four's FP19, FP19X, FP19X2 and FP19X3, ladder v9) and 2.0
+EdgeRunner v10 (block 11,975,211), 0 mismatches. Blockulator 2.1 (BL127 v5,
+BL19 release four's BL19, BL19X, BL19X2 and BL19X3, ladder v9) and 2.0
 stay live and verified at their addresses.
 
 Gas, sweep medians of the inline libraries (`docs/benchmarks/sweep.md`),
 2.1 → 2.2:
 
-| op | FP127 | FP19 |
+| op | BL127 | BL19 |
 |---|---:|---:|
 | add | 124 → 124 | 1,278 → 677 |
 | mul | 263 → 263 | 1,145 → 530 |
@@ -356,27 +374,27 @@ Gas, sweep medians of the inline libraries (`docs/benchmarks/sweep.md`),
 | lambertW0 | 18,607 → 11,308 | 34,049 → 10,623 |
 | lambertWm1 | 23,977 → 11,101 | 29,743 → 13,150 |
 
-(FP127 `add` is not in the sweep; 124 is the gas ladder's median, unchanged.)
-FP127 `sinh` is the one op dearer: its series below 1 went, and it now runs
-on the exp kernel like `cosh`. Through the deployed objects FP127's basic
+(BL127 `add` is not in the sweep; 124 is the gas ladder's median, unchanged.)
+BL127 `sinh` is the one op dearer: its series below 1 went, and it now runs
+on the exp kernel like `cosh`. Through the deployed objects BL127's basic
 ops are 140 to 215 gas cheaper (`add` 899 → 694, `mul` 1,103 → 889 on the
-gas ladder, `docs/benchmarks/gas.md`) and FP19's roughly half (`add`
+gas ladder, `docs/benchmarks/gas.md`) and BL19's roughly half (`add`
 2,423 → 1,124, `mul` 2,462 → 1,069, `exp` 7,637 → 3,369,
 `docs/benchmarks/gas19.md`).
 
 Where it came from, in order (PRs #120 to #132):
 
-- **Hyperbolics on the exp/log kernels** (#120, #121): FP127 `cosh`, `sinh`
-  and `atanh`, FP19 `sinh`, `tanh` and `atanh` from expm1/log1p in place of
+- **Hyperbolics on the exp/log kernels** (#120, #121): BL127 `cosh`, `sinh`
+  and `atanh`, BL19 `sinh`, `tanh` and `atanh` from expm1/log1p in place of
   their series.
 - **Precision-doubling Newton** from a bit-hack seed for `sqrt`, `div`,
-  `inv` and `cbrt` in both libraries (#122): FP19 `cbrt` 13.6k → 3.1k,
-  FP127 `cbrt` 6.0k → 2.2k with no fallback.
+  `inv` and `cbrt` in both libraries (#122): BL19 `cbrt` 13.6k → 3.1k,
+  BL127 `cbrt` 6.0k → 2.2k with no fallback.
 - **Lambert W without series** (#123, #126): an adaptive-precision safe
   step with a residual bound from a log-free seed; the fallback rate falls
   from 2% / 5.8% to 0.07% / 0.2% (W0 / W−1).
-- **FP19 `erfc` asymptotic tail** from y ≥ 18 (#125).
-- **FP19's basic ops** (#128): a known-position normalise, a one-compare
+- **BL19 `erfc` asymptotic tail** from y ≥ 18 (#125).
+- **BL19's basic ops** (#128): a known-position normalise, a one-compare
   pack, a lean unpack and a branchless msb, bit-identical; add 1,262 →
   705, mul 1,145 → 572, div 1,433 → 842 inline.
 - **CLZ** (#130): one osaka build, msb = 255 − clz(x) (23 gas against 243
@@ -388,29 +406,29 @@ The compile settings were measured and left alone: optimizer runs from 200
 to 2^32 − 1 build byte-identical objects, and 0.8.38's default optimizer
 sequence costs more gas as well as more bytes. Compiling the inline
 libraries with `via_ir = true` takes about 5.5× as long and makes them
-10–33% cheaper (FP127 `add` 124 → 83, `ln` 600 → 409; FP19 `add` 662 →
-506, `exp` 3,295 → 2,893): without it their heavy ops cost 5–14% (FP127)
-and 6–19% (FP19) more than the object net of its call, with it within
+10–33% cheaper (BL127 `add` 124 → 83, `ln` 600 → 409; BL19 `add` 662 →
+506, `exp` 3,295 → 2,893): without it their heavy ops cost 5–14% (BL127)
+and 6–19% (BL19) more than the object net of its call, with it within
 about −7% to +3% (`docs/benchmarks/profile.md`).
 
-### FP19 v5 and FP127 v6
+### BL19 v5 and BL127 v6
 
-FP19 deploys as four objects by idea, replacing FP19, FP19X, FP19X2 and
-FP19X3: **FP19**, the number (arithmetic, roots, comparison, rounding,
-conversions: 43 ops, salt `FP256 v5`); **FP19E**, the elementary functions
+BL19 deploys as four objects by idea, replacing BL19, BL19X, BL19X2 and
+BL19X3: **BL19**, the number (arithmetic, roots, comparison, rounding,
+conversions: 43 ops, salt `FP256 v5`); **BL19E**, the elementary functions
 on one exp/log kernel (exp, exp2, exp10, expm1, ln, log2, log10, log2Up,
-log1p, pow, powu, compound; `FP19E v5`); **FP19H**, the hyperbolic
+log1p, pow, powu, compound; `FP19E v5`); **BL19H**, the hyperbolic
 functions (sinh, cosh, tanh, atanh; `FP19H v5`), their own object because
-FP19E with them measured 27,308 bytes, over the 24,576 limit, so FP19H
-carries its own copy of the kernel; **FP19S**, the special functions (erf,
+BL19E with them measured 27,308 bytes, over the 24,576 limit, so BL19H
+carries its own copy of the kernel; **BL19S**, the special functions (erf,
 erfc, normCdf, lambertW0, lambertWm1, factorial; `FP19S v5`). In both
 libraries `pi` is now a constant and `gcd` is removed. Without the kernels
-the FP19 core is 10,333 bytes, and the room goes to the basic ops' fast
+the BL19 core is 10,333 bytes, and the room goes to the basic ops' fast
 path, bit-identical: through the object `mulDown`/`mulUp` 201 to 267 gas
 less, `divDown`/`divUp` 250 to 256, the in-place conversions up to 67, and
 add, sub, mul, div 10 to 70 (`docs/benchmarks/gas19.md`).
 
-FP19's exp/log kernels are rewritten, measured first and bit-identical in
+BL19's exp/log kernels are rewritten, measured first and bit-identical in
 every result (correct rounding fixes the word; only the gas and the
 fallback rates move): 2^f by two 16-entry table levels and a degree-19
 minimax polynomial, log2 by two additive 16-entry levels, one division and a
@@ -420,61 +438,61 @@ in line and the top polynomial steps in one word. Sweep medians, inline:
 exp 7,077 → 3,299, ln 7,640 → 3,623, log1p 8,727 → 2,558, expm1 6,523 →
 2,390, pow 14,011 → 5,902, compound 16,113 → 6,304, sinh 7,331 → 3,613,
 atanh 12,606 → 5,073, erf 16,962 → 12,990, lambertW0 14,524 → 10,623.
-FP19E is 21,598 bytes and FP19H 13,021.
+BL19E is 21,598 bytes and BL19H 13,021.
 
-FP127's one-word kernels get the same treatment (salt `FP127 v6`): 2^f by one 16-entry table and a degree-15 minimax polynomial
+BL127's one-word kernels get the same treatment (salt `FP127 v6`): 2^f by one 16-entry table and a degree-15 minimax polynomial
 (2^-146.7 relative, from 2^-145.9), log2 by two additive 16-entry levels and
 a degree-14 minimax polynomial (2^-160.5 absolute, from about 2^-150). Its
 double-word exp kernel multiplies each table factor in line instead of
 through a helper called from 23 cases. Every result is the same word; sweep
 medians: ln 3,215 → 1,934, log2 2,999 → 1,718, pow 5,861 → 3,375, exp 6,085
 → 5,651, erf 4,879 → 3,623, atanh 3,715 → 2,750, lambertW0 11,765 → 11,308.
-FP127 is 21,858 bytes (from 22,272).
+BL127 is 21,858 bytes (from 22,272).
 
 Migration: the 2.2 objects need a chain with CLZ (EIP-7939, Osaka): Ethereum,
 Sepolia, Arbitrum, OP, Base, Unichain, Polygon PoS, BNB Chain, Gnosis and
 the others listed in `contracts/deployments/README.md`, not zkSync Era,
 Avalanche C-Chain or Polygon zkEVM (there every call that counts leading
 bits fails; `make probe-clz RPC=<url>` checks a chain). `pi(terms)` →
-`FP127Lib.PI` / `FP19Lib.PI` (the format's word
+`BL127Lib.PI` / `BL19Lib.PI` (the format's word
 nearest π; an object caller copies the literal); `gcd` has no replacement;
-an FP19 caller of FP19X, FP19X2 or FP19X3 calls the object that now
-holds the op (`contracts/src/fp19/ops.json` names it), through `IFP19`,
-`IFP19E`, `IFP19H` or `IFP19S`. The inline libraries keep every other
+an BL19 caller of BL19X, BL19X2 or BL19X3 calls the object that now
+holds the op (`contracts/src/bl19/ops.json` names it), through `IBL19`,
+`IBL19E`, `IBL19H` or `IBL19S`. The inline libraries keep every other
 signature.
 
 ### Ladder v10
 
 Salt `FP127 ladder v10`, deployed 2026-10-22: the eleven adapters, with
-`LadderFP127` calling FP127 v6, `LadderFP127Lib` inlining it and
-`LadderFP19` inlining FP19 v5, and both runners. The datasets and the
+`LadderBL127` calling BL127 v6, `LadderBL127Lib` inlining it and
+`LadderBL19` inlining BL19 v5, and both runners. The datasets and the
 live runners compute the same code.
 
 ## Blockulator 2.1 (2026-10-21)
 
-Both rulers round once: every FP127 transcendental to the nearest word,
-every FP19 op correctly rounded or exact, and the directed ops for the
+Both rulers round once: every BL127 transcendental to the nearest word,
+every BL19 op correctly rounded or exact, and the directed ops for the
 token edge. Deployed 2026-10-21, Sepolia blocks 11,966,114 to 11,966,639.
 
 | component | version | Sepolia |
 |---|---|---|
-| FP127 | FP127 v5, 55 ops, 19,863 bytes | `0x619176d72D7a12390F8970802943D344c0fd3fE2` |
-| FP19 | FP19 v4, 37 ops, 24,512 bytes | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
-| FP19X | FP19X v4, 5 ops, 22,266 bytes | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
-| FP19X2 | FP19X2 v4, 10 ops, 19,889 bytes | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
-| FP19X3 | FP19X3 v4, 15 ops, 6,844 bytes | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
-| LadderRunner | FP127 ladder v9 | `0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5` |
-| EdgeRunner | FP127 ladder v9 | `0xcA89eeA1831c38B62d2d3332ECbb8A57BaF246fF` |
+| BL127 | BL127 v5, 55 ops, 19,863 bytes | `0x619176d72D7a12390F8970802943D344c0fd3fE2` |
+| BL19 | BL19 v4, 37 ops, 24,512 bytes | `0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9` |
+| BL19X | BL19X v4, 5 ops, 22,266 bytes | `0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0` |
+| BL19X2 | BL19X2 v4, 10 ops, 19,889 bytes | `0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697` |
+| BL19X3 | BL19X3 v4, 15 ops, 6,844 bytes | `0x59D51481cb2EA924EC17FE263cd05b90CEF22383` |
+| LadderRunner | BL127 ladder v9 | `0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5` |
+| EdgeRunner | BL127 ladder v9 | `0xcA89eeA1831c38B62d2d3332ECbb8A57BaF246fF` |
 
-Records: `contracts/deployments/{RELEASE,FP127,FP19,Ladder}.md`. FP127
-and the four FP19 objects are verified on Sourcify and Blockscout and pass
+Records: `contracts/deployments/{RELEASE,BL127,BL19,Ladder}.md`. BL127
+and the four BL19 objects are verified on Sourcify and Blockscout and pass
 their smoke tests against the live contracts; the thirteen ladder contracts
-are verified on Sourcify. FP127 v5's first send ran out of gas under the
+are verified on Sourcify. BL127 v5's first send ran out of gas under the
 old 20M deploy limit and created nothing; `DEPLOY_GAS` is now 40M and every
-deploy target rejects a reverted receipt. The earlier objects (FP127 v1 to
-v4, FP19 releases one to three, ladder v1 to v8) stay deployed.
+deploy target rejects a reverted receipt. The earlier objects (BL127 v1 to
+v4, BL19 releases one to three, ladder v1 to v8) stay deployed.
 
-### FP127 v5
+### BL127 v5
 
 Salt `FP127 v5`, 55 ops, 19,863 bytes of runtime, deployed 2026-10-21 at
 `0x619176d72D7a12390F8970802943D344c0fd3fE2`.
@@ -508,7 +526,7 @@ Salt `FP127 v5`, 55 ops, 19,863 bytes of runtime, deployed 2026-10-21 at
   `lambertW0` 24,690 (+3,752), `sqrt` 2,175 (−2,104), `mul` 1,103 (+99).
   The object dispatches by binary search on the selector, not a linear
   chain.
-- A gas-only pass (`fp127-faster`), every result the same word, checked on
+- A gas-only pass (`bl127-faster`), every result the same word, checked on
   the sweep, the vectors and dense extra sets. Sweep medians:
   - Lambert W uses Halley steps, as many as the seed needs: `lambertW0`
     46,170 → 18,607 and `lambertWm1` 35,250 → 23,977.
@@ -522,12 +540,12 @@ Salt `FP127 v5`, 55 ops, 19,863 bytes of runtime, deployed 2026-10-21 at
     ~12,600 → ~9,760.
   - `exp2frac` runs inline throughout.
 
-### FP19 release four
+### BL19 release four
 
 Correctly rounded, and the edge. Four objects, deployed 2026-10-21 at the
 addresses in the table above.
 
-- Every FP19 op is correctly rounded or exact: 0 misrounded of 364,658
+- Every BL19 op is correctly rounded or exact: 0 misrounded of 364,658
   random inputs (281,821 before #79's ops), and 0 when every input is
   forced through the second stage (`docs/benchmarks/sweep.md`); release
   three had pow 8 in 20,000 off by one ULP, ln 1, normCdf 1 in 4,000,
@@ -535,64 +553,64 @@ addresses in the table above.
   bound; when it reaches the rounding boundary a second stage recomputes the
   value in two words at 2^−510. pow, compound and powu compute exact ties
   exactly. The bounds are measured against the models in
-  `scripts/fp19/generators/bounds.py`: none reaches 0.67 of its value.
+  `scripts/bl19/generators/bounds.py`: none reaches 0.67 of its value.
 - The edge, rounding toward minus or plus infinity once from the exact
   value: `mulDown`, `mulUp`, `divDown`, `divUp`, `toUintDown`, `toUintUp`,
   `toIntDown`, `toIntUp`, `toFixed18Down`, `toFixed18Up`, `floor`, `ceil`,
   `fromUintDown`, `fromUintUp`; a positive Up result never underflows to
   zero.
-- Two objects from one source: FP19 (arithmetic, the edge, exp, ln, log1p,
-  expm1, pow, powu, compound, conversions) and FP19X (erf, erfc, normCdf,
+- Two objects from one source: BL19 (arithmetic, the edge, exp, ln, log1p,
+  expm1, pow, powu, compound, conversions) and BL19X (erf, erfc, normCdf,
   lambertW0, lambertWm1), salts `FP256 v4` and `FP256X v4`; the inline
-  library holds all of them. `make predict-fp19x`, `deploy-fp19x-sepolia`,
-  `verify-fp19x-sepolia`.
+  library holds all of them. `make predict-bl19x`, `deploy-bl19x-sepolia`,
+  `verify-bl19x-sepolia`.
 - Gas: the fast paths cost a few hundred gas more; the second stage, when it
   runs, 29k (exp) to 430k (erfc's continued fraction). The optimisation
-  pass (fp19-faster, results unchanged word for word): Lambert W by
+  pass (bl19-faster, results unchanged word for word): Lambert W by
   fourth-order steps at word precision with a stated bound and the rounding
   test, the wide step only on a miss, 34k / 30k at the median (W0 / W−1;
   151k / 156k before, 109k in release three); `wexpm1` 27k → 21k, so every
   second stage is about 6k cheaper; pow, powu and compound fallbacks
   shorter (p99 80k → 68k, 92k → 73k, 167k → 116k), the pow bound tighter,
   `wln1ps`'s length set by |d|.
-- The ops FP127 has and FP19 lacked (#79), each correctly rounded or exact:
+- The ops BL127 has and BL19 lacked (#79), each correctly rounded or exact:
   `exp2`, `exp10`, `log2`, `log10`, `log2Up`, `cbrt`, `sinh`, `cosh`,
-  `tanh`, `atanh` in FP19X2 (on the same kernels, each with a stated bound
+  `tanh`, `atanh` in BL19X2 (on the same kernels, each with a stated bound
   and a two-word second stage) and `min`, `max`, `clamp`, `avg`, `dist`,
   `zeroFloorSub`, `inv`, `lerp`, `frac`, `round`, `gcd`, `factorial`, `pi`,
-  `gavg`, `hypot` in FP19X3 (exact values, or one rounding of an exact
+  `gavg`, `hypot` in BL19X3 (exact values, or one rounding of an exact
   sum, product or root). `lerp` rounds a + t (b - a) once from the exact
   value, summed in a 1,024-bit window just past the free memory pointer;
   `hypot` rounds Pythagorean ties away from zero; `factorial` runs to 20,366
   and is checked against the exact factorial at every n; `pi(terms)` is the
   correctly rounded Ramanujan partial sum; `round` takes halves away from
-  zero. Salts `FP256X2 v4` and `FP256X3 v4`; `make predict-fp19x2`,
-  `-fp19x3` and their deploy and verify targets. 67 ops in all.
+  zero. Salts `FP256X2 v4` and `FP256X3 v4`; `make predict-bl19x2`,
+  `-bl19x3` and their deploy and verify targets. 67 ops in all.
 
 ### Ladder v9
 
 Salt `FP127 ladder v9`, deployed 2026-10-21: the eleven adapters, with
-`LadderFP127` calling FP127 v5, `LadderFP127Lib` inlining it and
-`LadderFP19` inlining release four, and both runners. The datasets and the
+`LadderBL127` calling BL127 v5, `LadderBL127Lib` inlining it and
+`LadderBL19` inlining release four, and both runners. The datasets and the
 live runners now compute the same code again.
 
 ## Blockulator 2.0 (2026-10-16)
 
-Two rulers in one word: FP127 for the money range, FP19 for everything.
+Two rulers in one word: BL127 for the money range, BL19 for everything.
 
 | component | version | Sepolia |
 |---|---|---|
-| FP127 | FP127 v4, 49 ops | `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` |
-| FP19 | FP19 v3, 28 ops | `0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be` |
-| LadderRunner | FP127 ladder v8 | `0xEf689d3782490066fE911a6dD33357f59caE40fE` |
-| EdgeRunner | FP127 ladder v8 | `0x09b8fC41E872279A749a0221AE23D124079AcB44` |
+| BL127 | BL127 v4, 49 ops | `0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1` |
+| BL19 | BL19 v3, 28 ops | `0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be` |
+| LadderRunner | BL127 ladder v8 | `0xEf689d3782490066fE911a6dD33357f59caE40fE` |
+| EdgeRunner | BL127 ladder v8 | `0x09b8fC41E872279A749a0221AE23D124079AcB44` |
 
-- FP19, a 256-bit binary float: sign, 19-bit exponent, 236-bit fraction,
+- BL19, a 256-bit binary float: sign, 19-bit exponent, 236-bit fraction,
   about 71 digits from 10^−78,913 to 10^78,913, no NaN or infinity.
   Release three adds log1p, expm1, erf, erfc, normCdf, both Lambert branches,
   powu and compound; exp, ln, log1p, expm1 and the erf family return the
   correctly rounded word at every committed vector.
-  In detail (moved here from the site's FP19 page): `exp`, `ln`, `log1p`,
+  In detail (moved here from the site's BL19 page): `exp`, `ln`, `log1p`,
   `expm1`, `erf`, `erfc`, `normCdf` and every non-transcendental op return
   the correctly rounded word at every committed vector. `pow`, `powu` and
   `compound` are within one unit in the last place while |y log2 x| stays
@@ -603,10 +621,10 @@ Two rulers in one word: FP127 for the money range, FP19 for everything.
   4,000 and 2,500. The kernels run at 2^−254 with 512-bit products: 2^f from
   a 16-entry table and a degree-26 polynomial, log2 from twelve reduction
   stages and a degree-17 polynomial, `erfc` as e^(−y²) times a scaled series
-  or continued fraction (never 1 − erf). FP19 v1 borrowed FP127's kernels
+  or continued fraction (never 1 − erf). BL19 v1 borrowed BL127's kernels
   (146, 149 and 123 bits on exp, ln and pow); v2 refit them for the wide
   word; v3 added nine ops.
-- FP127 v4: 49 ops, adding powu, compound, log1p, expm1, the hyperbolics,
+- BL127 v4: 49 ops, adding powu, compound, log1p, expm1, the hyperbolics,
   erf, erfc and normCdf.
 - The ladder (13 scenarios × 10 libraries, N to 10,000) and the edges (139
   one-shot probes) re-run through the live runners with 0 mismatches: the
@@ -615,10 +633,10 @@ Two rulers in one word: FP127 for the money range, FP19 for everything.
 - The site: four-item navigation, one results overview, one live-check
   stamp per page.
 
-Records: `contracts/deployments/{FP127,FP19,Ladder}.md`.
+Records: `contracts/deployments/{BL127,BL19,Ladder}.md`.
 
 ## Blockulator 1.0
 
-FP127 as a Huff contract (`0xfae694D0c2c44181791F838c54Ed64C3151FfE30`): 127.128 fixed point on Sepolia, the original
-library this release replaces. Its address and the later FP127 versions
-stay live and are listed in `contracts/deployments/FP127.md`.
+BL127 as a Huff contract (`0xfae694D0c2c44181791F838c54Ed64C3151FfE30`): 127.128 fixed point on Sepolia, the original
+library this release replaces. Its address and the later BL127 versions
+stay live and are listed in `contracts/deployments/BL127.md`.

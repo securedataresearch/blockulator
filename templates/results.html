@@ -7,7 +7,7 @@
 {{ <plot chart="ladder" src="home" label="Median correct digits after the last step of each scenario, every library; the numbers are in the table below." /> }}
 
 {{ <libtable t={h.ladder.table} first="scenario · median digits" heat={true} /> }}
-<p class="small">Median correct digits at N = {{ page.extra.n | num_format }} over each scenario's inputs, each capped at what the library's format holds at that size (FP19 71.3, binary128 34.0, a fixed-point library its last place). A dash means the library has no model for the scenario or reverted on every input. Per-second accrual is FP127's lowest score because a per-second rate rounded to 2<sup>−128</sup> holds about 29 digits; against the rate as stored, FP127 keeps 40. FP127Lib returns the same words as FP127, so it is not shown. Hover a cell for detail; <a href="/results/ladder/">the ladder</a> has every N from 1.</p>
+<p class="small">Median correct digits at N = {{ page.extra.n | num_format }} over each scenario's inputs, each capped at what the library's format holds at that size (BL19 71.3, binary128 34.0, a fixed-point library its last place). A dash means the library has no model for the scenario or reverted on every input. Per-second accrual is BL127's lowest score because a per-second rate rounded to 2<sup>−128</sup> holds about 29 digits; against the rate as stored, BL127 keeps 40. BL127Lib returns the same words as BL127, so it is not shown. Hover a cell for detail; <a href="/results/ladder/">the ladder</a> has every N from 1.</p>
 {{ <stamp d={d} script="livecap.py" /> }}
 
 {% set_global probes = 0 %}{% for op in e.ops %}{% set_global probes = probes + op.probes | length %}{% endfor -%}

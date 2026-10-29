@@ -1,0 +1,276 @@
+"""Slide 9, "The cliff": where exp stops drifting and disappears.
+
+A chart on a faint grid: one column per probe, exp(−40) through exp(−100)
+in the order edges.json holds them; correct digits on the other axis.
+Columns arrive left to right. In each, a dot per library at its
+correct-digit height, colour by family, the libraries spread a little
+within the column so coincident values stay visible. A cell whose result
+was zero is a dot that snaps down to 0 and turns WRONG (red), labelled
+"0"; a cell that reverted is a hollow red marker in a band under the
+axis, labelled "revert". BL127 and BL19 draw last in every column, on
+top, each under a halo. Then the margins: a glow along BL19's row with
+its least digits on any probe ("71 digits on every probe"), and BL127's
+last standing point, the last probe where it still had a digit, named.
+The chart's axes and a legend at the right are on the first frame; the
+legend names the libraries drawn and, under them, those with no dot
+and why: "no exp" (unsupported on every probe) and "rejects negative
+inputs" (ParamOutOfRange on every probe: the representation is
+unsigned). None of the talk's 17 is dropped silently. The closing line
+says where the 18-decimal grid is zero from, the last probe where BL127
+still has a digit (−88: it has 0 digits at −89 and a zero value by −100;
+claim V28), and BL19's least digits.
+
+Five sections, one per click: the columns arrive (every value); the
+zeros snap red and the reverts appear; BL127's last digit and BL19's
+row; the legend lit; the closing line.
+
+Numbers from docs/benchmarks/edges.json: op "exp", the probes whose
+single argument lies in [−100, −40] (.args, .truth, .cells[lib].digits /
+.zero / .reverted / .reasonName / .unsupported); bl127lib is skipped as
+a duplicate of bl127 and BlockulatorWad is not in the talk. Labels from
+static/data/libraries.json.
+"""
+
+from __future__ import annotations
+
+import textwrap
+
+from manim import (
+    DOWN,
+    LEFT,
+    RIGHT,
+    UP,
+    Circle,
+    Create,
+    FadeIn,
+    LaggedStart,
+    VGroup,
+)
+
+from vocab import DUPLICATES, WAD_DECIMALS, Chart, DeckScene, GridLine, Palette, colour_of, edges, glow_bar, glow_line, halo, snap, talk_libs, words
+
+OP = "exp"
+ARG_LO, ARG_HI = -100, -40
+SKIP = DUPLICATES
+RANGE_REASON = "ParamOutOfRange"  # the argument does not fit the representation: nothing was called
+REASONS = {"unsupported": "no exp", "range": "rejects negative inputs"}
+WIDTH, HEIGHT = 10.2, 5.2
+ORIGIN_XY = (-5.9, -2.3)
+Y_STEP = 20
+REVERT_BAND = -6.0  # digits axis position of the "revert" band, under 0
+SPREAD = 0.1  # scene units between libraries within a column
+LEGEND_X, LEGEND_TOP = 4.75, 2.55
+CLOSE_Y = 3.3  # the closing line, on two lines between the two marks (one line is 13.9 units wide)
+
+LITERALS: dict[str, str] = {}  # every digit on the slide is a value of numbers()
+
+
+def minus(arg: str) -> str:
+    return arg.replace("-", "−")
+
+
+def numbers() -> dict:
+    op = edges(OP)
+    lib = talk_libs()
+    probes = [p for p in op["probes"] if len(p["args"]) == 1 and ARG_LO <= float(p["args"][0]) <= ARG_HI]
+    assert probes, (OP, ARG_LO, ARG_HI)
+
+    def out_of_range(c):
+        return bool(c.get("reverted")) and str(c.get("reasonName", "")).startswith(RANGE_REASON)
+
+    lids, absent = [], {}
+    for lid in lib:
+        if lid in SKIP:
+            continue
+        cells = [p["cells"][lid] for p in probes]
+        if all(c.get("unsupported") for c in cells):
+            absent[lid] = REASONS["unsupported"]
+        elif all(c.get("unsupported") or out_of_range(c) for c in cells):
+            absent[lid] = REASONS["range"]
+        else:
+            lids.append(lid)
+    # family order as the site's legends: ours first, then the rest in libraries.json order
+    lids.sort(key=lambda lid: (not lib[lid].get("ours"), list(lib).index(lid)))
+    columns = []
+    for p in probes:
+        cells = {}
+        for lid in lids:
+            c = p["cells"][lid]
+            if c.get("unsupported"):
+                cells[lid] = {"kind": "unsupported"}
+            elif c.get("reverted"):
+                cells[lid] = {"kind": "revert", "reason": c.get("reasonName")}
+            elif c.get("zero"):
+                cells[lid] = {"kind": "zero", "digits": 0}
+            else:
+                cells[lid] = {"kind": "value", "digits": float(c["digits"])}
+        columns.append({"arg": p["args"][0], "cells": cells})
+    y_max = max(c["digits"] for col in columns for c in col["cells"].values() if "digits" in c)
+    bl19 = [col["cells"]["bl19"] for col in columns]
+    assert all(c["kind"] == "value" for c in bl19)
+    standing = [col for col in columns if col["cells"]["bl127"]["kind"] == "value" and col["cells"]["bl127"]["digits"] >= 1]
+    first_zero = next(col["arg"] for col in columns if any(c["kind"] == "zero" and lib[lid]["family"] == "wad" for lid, c in col["cells"].items()))
+    return {
+        "libs": [{"id": lid, "label": lib[lid]["label"], "family": lib[lid]["family"], "ours": bool(lib[lid].get("ours"))} for lid in lids],
+        "absent": {lid: {"label": lib[lid]["label"], "reason": why} for lid, why in absent.items()},
+        "columns": columns,
+        "axisMax": int(-(-y_max // Y_STEP) * Y_STEP),
+        "y_ticks": list(range(0, int(-(-y_max // Y_STEP) * Y_STEP) + 1, Y_STEP)),
+        "wad_decimals": WAD_DECIMALS,
+        "bl19_min": min(c["digits"] for c in bl19),
+        "bl127_last": {"arg": standing[-1]["arg"], "digits": standing[-1]["cells"]["bl127"]["digits"]},
+        "wad_first_zero": first_zero,
+    }
+
+
+def absent_text(absent: dict) -> str:
+    by_reason: dict[str, list[str]] = {}
+    for rec in absent.values():
+        by_reason.setdefault(rec["reason"], []).append(rec["label"])
+    lines = []
+    for why, names in by_reason.items():
+        lines += textwrap.wrap(f"{why}: {' · '.join(names)}", 23)
+    return "\n".join(lines)
+
+
+def fmt(d: float) -> str:
+    return str(int(d)) if float(d).is_integer() else str(d)
+
+
+class Cliff(DeckScene):
+    SECTIONS = ("columns", "zeros", "bl19", "legend", "closing")
+
+    def construct(self):
+        n = numbers()
+        cols, lids = n["columns"], [r["id"] for r in n["libs"]]
+        fam = {r["id"]: r for r in n["libs"]}
+        y_max = n["axisMax"]
+        self.section(0)
+        # the chrome, on the first frame: the caption, the chart (axes, gridlines, tick
+        # labels, the axis title, the revert band's name) and the legend at the right:
+        # every library drawn, in its family colour, then those with no dot and why
+        chart = Chart((0, len(cols) - 1, 1), (0, y_max, Y_STEP), WIDTH, HEIGHT, origin=(*ORIGIN_XY, 0))
+        for i, col in enumerate(cols):
+            chart.x_label(i, f"exp({minus(col['arg'])})", use_markup=True, buff=0.55)
+        for y in n["y_ticks"]:
+            chart.y_label(y, str(y), mono=True)
+        revert_lbl = words("revert", 18, Palette.WRONG).next_to(chart.c2p(0, REVERT_BAND), LEFT, buff=0.18)
+        chart.y_title("correct digits")
+        grid = chart.grid()
+        legend = VGroup()
+        for r in n["libs"]:
+            colour = colour_of(r)
+            item = VGroup(chart.dot(0, 0, colour, radius=0.07), words(r["label"], 17, colour))
+            item[1].next_to(item[0], RIGHT, buff=0.15)
+            legend.add(item)
+        legend.arrange(DOWN, aligned_edge=LEFT, buff=0.13).move_to([5.9, 0, 0]).align_to([LEGEND_X, 0, 0], LEFT).align_to([0, LEGEND_TOP, 0], UP)
+        absent = words("no dot:\n" + absent_text(n["absent"]), 15, Palette.FAINT, line_spacing=0.6)
+        absent.next_to(legend, DOWN, buff=0.32).align_to(legend, LEFT)
+        self.caption_now(f"docs/benchmarks/edges.json · {OP}")
+        self.fix(chart, revert_lbl, legend, absent)
+        self.wait(0.8)
+
+        offsets = {lid: (k - (len(lids) - 1) / 2) * SPREAD for k, lid in enumerate(lids)}
+        hero_dots = {lid: {} for lid in lids if fam[lid]["ours"]}  # lid → {column: dot}
+
+        def x_of(i: int, lid: str) -> float:
+            return chart.c2p(i, 0)[0] + offsets[lid]
+
+        # ---- the columns arrive, left to right: every value, ours last with a halo
+        for i, col in enumerate(cols):
+            plain, ours = [], []
+            for lid in lids:  # ours first in lids, so draw them last
+                c = col["cells"][lid]
+                if c["kind"] != "value":
+                    continue
+                colour = colour_of(fam[lid])
+                d = chart.dot(i, c["digits"], colour, radius=0.075 if fam[lid]["ours"] else 0.065).set_x(x_of(i, lid))
+                if fam[lid]["ours"]:
+                    ours.append((d, colour))
+                    hero_dots[lid][i] = d
+                else:
+                    plain.append(d)
+            if plain:
+                self.play(LaggedStart(*[FadeIn(d, scale=0.4) for d in reversed(plain)], lag_ratio=0.08, run_time=0.6))
+            for d, colour in reversed(ours):
+                self.add(halo(d.get_center(), colour, radius=0.075))
+                self.play(FadeIn(d, scale=0.4, run_time=0.35))
+            self.wait(0.4)
+
+        # ---- the zeros snap down and turn red; the reverts appear in the band under the axis
+        self.section(1, hold=1.0)
+        last_digits = {lid: None for lid in lids}
+        seen_zero = seen_revert = False  # the labels name the first column where each appears
+        for i, col in enumerate(cols):
+            snaps, reverts, labels = [], [], []
+            x_lbl = chart.c2p(i, 0)[0] + (len(lids) - 1) / 2 * SPREAD + 0.12
+            for lid in lids:
+                c = col["cells"][lid]
+                colour = colour_of(fam[lid])
+                x = x_of(i, lid)
+                if c["kind"] == "value":
+                    last_digits[lid] = c["digits"]
+                elif c["kind"] == "zero":
+                    start = last_digits[lid] if last_digits[lid] else Y_STEP / 4
+                    d = chart.dot(i, start, colour, radius=0.075 if fam[lid]["ours"] else 0.065).set_x(x)
+                    line = GridLine((0, 1, 1), length=abs(chart.c2p(0, start)[1] - chart.c2p(0, 0)[1]), rotation=-1.5707963, tick_size=0)
+                    line.move_to([x, (chart.c2p(0, start)[1] + chart.c2p(0, 0)[1]) / 2, 0])
+                    snaps.append((d, line))
+                    if not seen_zero:
+                        labels.append(words("0", 16, Palette.WRONG).move_to([x_lbl + 0.1, chart.c2p(0, 0)[1] + 0.12, 0]))
+                        seen_zero = True
+                    last_digits[lid] = 0
+                elif c["kind"] == "revert":
+                    m = Circle(radius=0.065, color=Palette.WRONG, stroke_width=2).move_to([x, chart.c2p(0, REVERT_BAND)[1], 0])
+                    reverts.append(m)
+                    if not seen_revert:
+                        labels.append(words("revert", 16, Palette.WRONG).move_to([x_lbl + 0.32, chart.c2p(0, REVERT_BAND)[1], 0]))
+                        seen_revert = True
+            if snaps:
+                for d, _ in snaps:
+                    self.add(d)
+                self.play(LaggedStart(*[snap(d, line, 1, Palette.WRONG, run_time=0.7) for d, line in snaps], lag_ratio=0.12))
+            if reverts:
+                self.play(*[Create(m, run_time=0.4) for m in reverts])
+            if labels:
+                self.play(*[FadeIn(t, run_time=0.3) for t in labels])
+            if snaps or reverts:
+                self.wait(0.6)
+
+        # ---- the margins: BL127's last standing point, then the king's row
+        self.section(2, hold=1.0)
+        last = n["bl127_last"]
+        i_last = next(i for i, col in enumerate(cols) if col["arg"] == last["arg"])
+        d_last = hero_dots["bl127"][i_last]
+        last_lbl = words(f"BL127 · {fmt(last['digits'])} digit{'' if last['digits'] == 1 else 's'} still at exp({minus(last['arg'])})", 16, Palette.EMERALD)
+        last_lbl.next_to(d_last, UP, buff=0.5)
+        self.play(FadeIn(last_lbl, shift=UP * 0.08, run_time=0.5))
+        self.wait(1.0)
+        bl19_dots = [hero_dots["bl19"][i] for i in range(len(cols))]
+        row = [d.get_center() for d in bl19_dots]
+        glow = glow_line(row, Palette.TEXT, width=16.0, opacity=0.22)
+        self.add(glow)
+        self.bring_to_front(*bl19_dots)
+        row_lbl = words(f"BL19 · {fmt(n['bl19_min'])} digits on every probe", 20, Palette.TEXT).move_to([chart.c2p(len(cols) / 2 - 0.5, 0)[0], row[0][1] + 0.38, 0])
+        self.play(Create(glow, run_time=1.4), FadeIn(row_lbl, shift=UP * 0.06, run_time=0.8))
+
+        # ---- the legend (static, at the right since the first frame) is lit: a panel behind it
+        self.section(3, hold=1.5)
+        panel = glow_bar(VGroup(legend, absent), Palette.MUTED, pad=0.2, opacity=0.08)
+        self.add(panel)
+        self.bring_to_back(panel)
+        self.play(FadeIn(panel, run_time=0.8))
+
+        # ---- the closing line (V28)
+        self.section(4, hold=1.5)
+        close = words(
+            f"the {n['wad_decimals']}-decimal grid is zero from exp({minus(n['wad_first_zero'])}) · BL127 has digits to exp({minus(last['arg'])})\nBL19: {fmt(n['bl19_min'])} digits on every probe",
+            22,
+            Palette.TEXT,
+            line_spacing=0.9,
+        ).move_to([0, CLOSE_Y, 0])
+        # Text sets its lines flush left; centre the second (spaces are not glyphs, so count the rest)
+        k = len(close.original_text.split("\n")[0].replace(" ", ""))
+        close[k:].shift(RIGHT * (close.get_center()[0] - close[k:].get_center()[0]))
+        self.play(FadeIn(close, shift=UP * 0.08, run_time=0.8))
+        self.close()

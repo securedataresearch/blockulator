@@ -173,7 +173,7 @@ export class CalculatorApp {
 
         // Create header with contract links
         const headerSection = document.createElement('div');
-        headerSection.className = 'fp127-contract-header';
+        headerSection.className = 'bl127-contract-header';
         headerSection.innerHTML = `
             <h2 class="section-title">Source Code</h2>
             <p class="section-subtitle">Vyper 0.4 • ${sourceFiles.size} Modules</p>

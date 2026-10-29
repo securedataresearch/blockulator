@@ -2,8 +2,8 @@
 pragma solidity ^0.8.31;
 
 import "forge-std/Test.sol";
-import {LibUser} from "../base/FP127Harness.sol";
-import {LibUser19} from "../base/FP19Harness.sol";
+import {LibUser} from "../base/BL127Harness.sol";
+import {LibUser19} from "../base/BL19Harness.sol";
 
 /// @title ObjectsEqLib
 /// @notice Every deployed object returns exactly what its inline library
@@ -17,8 +17,8 @@ import {LibUser19} from "../base/FP19Harness.sol";
 ///         the same return or revert bytes. Each fuzz run calls every export
 ///         once, so N runs are N inputs per op. The inputs: raw words, tiny
 ///         values, 2^k and its neighbours, all-ones masks, values across the
-///         scales near one, the ends of FP19's exponent range, small integers,
-///         exact powers of two in FP19, and a second argument a few units from
+///         scales near one, the ends of BL19's exponent range, small integers,
+///         exact powers of two in BL19, and a second argument a few units from
 ///         the first (or from its negation), so add and sub cancel. The sweeps
 ///         walk 2^k - 1, 2^k and 2^k + 1 for every k through every argument.
 ///
@@ -34,7 +34,7 @@ contract ObjectsEqLib is Test {
         address ref;   // zero unless FP_REF_DIR is set
     }
 
-    /// The two libraries: 0 is FP127, 1 is FP19.
+    /// The two libraries: 0 is BL127, 1 is BL19.
     Op[][2] internal ops;
     address[2] internal lib;
     mapping(bytes32 => address) internal deployed;
@@ -49,8 +49,8 @@ contract ObjectsEqLib is Test {
         lib[0] = address(new LibUser());
         lib[1] = address(new LibUser19());
         string memory ref = vm.envOr("FP_REF_DIR", string(""));
-        _load(0, "contracts/src/fp127/ops.json", "FP127", ref);
-        _load(1, "contracts/src/fp19/ops.json", "FP19", ref);
+        _load(0, "contracts/src/bl127/ops.json", "BL127", ref);
+        _load(1, "contracts/src/bl19/ops.json", "BL19", ref);
     }
 
     function _load(uint256 l, string memory path, string memory single, string memory ref) internal {
@@ -170,18 +170,18 @@ contract ObjectsEqLib is Test {
     }
 
     /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_fp127(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
+    function testFuzz_bl127(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
         _run(0, s0, s1, s2, m, 2);
     }
 
-    // FP19's exports in two halves, so the two run in parallel
+    // BL19's exports in two halves, so the two run in parallel
     /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_fp19_even(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
+    function testFuzz_bl19_even(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
         _run(1, s0, s1, s2, m, 0);
     }
 
     /// forge-config: default.fuzz.runs = 10000
-    function testFuzz_fp19_odd(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
+    function testFuzz_bl19_odd(uint256 s0, uint256 s1, uint256 s2, uint256 m) public view {
         _run(1, s0, s1, s2, m, 1);
     }
 
@@ -205,11 +205,11 @@ contract ObjectsEqLib is Test {
         }
     }
 
-    function test_powersOfTwo_fp127() public view {
+    function test_powersOfTwo_bl127() public view {
         _sweep(0);
     }
 
-    function test_powersOfTwo_fp19() public view {
+    function test_powersOfTwo_bl19() public view {
         _sweep(1);
     }
 

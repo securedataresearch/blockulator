@@ -7,7 +7,7 @@ path = "results/wad"
 group = "results"
 +++
 
-Every library is scored in its own rounding direction: a result is wrong if it is not the integer that direction gives, if it reverts where the value fits, or if it returns a value where none fits. BlockulatorWad computes each function in FP19 and decides the last wei exactly.
+Every library is scored in its own rounding direction: a result is wrong if it is not the integer that direction gives, if it reverts where the value fits, or if it returns a value where none fits. BlockulatorWad computes each function in BL19 and decides the last wei exactly.
 
 {{ <plot chart="wad" src="home" label="Share of results off by at least one wei, per function and library; BlockulatorWad is at 0 on every function. The numbers are in the tables below." /> }}
 

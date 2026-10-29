@@ -8,7 +8,7 @@ Generated 2026-10-20 by `uv run scripts/replays/balancer_v1.py score` (offline) 
 - **Every attack join paid one token unit for about one and a half.** Across the 438 joins (`joinswapPoolAmountOut`, `maxAmountIn = 1`), the exact price was 1.5007879 to 1.5274949 units. The deployed maths charged 1 every time. In the opposite direction, each of the 489 dust exits (`exitswapPoolAmountIn`, `minAmountOut = 1`) was worth 0.491 to 0.499738 units, and the pool paid 1.
 - **The loss is one rounding step.** `bmul(tokenInRatio, tokenBalanceIn)` (BMath.sol:156-182, line 174) multiplies an 18-decimal ratio by a balance held in raw token units: satoshi for WBTC and renBTC, 10^-6 for USDC. `bmul` rounds half up (BNum.sol:63-73). At a balance of 3 units, 3 × 1.499999999999999997 = 4.499999999999999991 rounds to 4 rather than 5, so the attacker pays 1. On an exit, 3.4999… rounds down, so the pool pays out 1.
 - **The binomial series is not involved.** In every attacked pool the attacked token's normalized weight is 1/4, 1/8 or 1/10. So `boo = 1/w` is a whole number, and `bpow` returns from `bpowi` (BNum.sol:108-126). `bpowApprox` is never called in any join or exit. Where it did run (in 109 swap calculations), it stopped at a term below 1e-10, and its residual against the exact power was at most 4.2e-11 relative.
-- **Direction closes the loop; precision does not.** FP127, FP19 and 200-digit mpmath, each rounded toward the pool (ceil in, floor out), give 2 for every join and 0 for every dust exit, so every one of them reverts on the attacker's own limits. BNum's own 18-decimal ratio, kept on a 10^-18 grid and rounded up once at the end, gives the same answers. But the same exact formula rounded once *to nearest* only blocks these calls because the attacker tuned them to the deployed rounding. Re-tuned to nearest-once from the same state, one join/exit cycle in pool 1 still nets 6.987% of the BPT supply (deployed: 7.035%). Toward the pool it nets -0.0548%, a loss. The deployed ratio had 18 correct digits. What it lacked was a rounding direction at the token grid.
+- **Direction closes the loop; precision does not.** BL127, BL19 and 200-digit mpmath, each rounded toward the pool (ceil in, floor out), give 2 for every join and 0 for every dust exit, so every one of them reverts on the attacker's own limits. BNum's own 18-decimal ratio, kept on a 10^-18 grid and rounded up once at the end, gives the same answers. But the same exact formula rounded once *to nearest* only blocks these calls because the attacker tuned them to the deployed rounding. Re-tuned to nearest-once from the same state, one join/exit cycle in pool 1 still nets 6.987% of the BPT supply (deployed: 7.035%). Toward the pool it nets -0.0548%, a loss. The deployed ratio had 18 correct digits. What it lacked was a rounding direction at the token grid.
 
 ## What happened
 
@@ -72,9 +72,9 @@ The attacker sized `poolAmountOut` so that BNum's ratio landed 3 × 10^-18 below
 
 ## Every join and exit: deployed, toward the pool, and exact
 
-Each column computes the same `calcSingleInGivenPoolOut` / `calcSingleOutGivenPoolIn` from the same on-chain state (the replay's state at that call). Every column except *deployed* converts to token units once, toward the pool: ceil for an amount in, floor for an amount out. *BNum, one rounding* keeps BNum's own 18-decimal `tokenInRatio`, holds the amount on a 10^-18 grid, and rounds once at the end. FP127 and FP19 evaluate `b·expm1((tW/w)·log1p(±pA/pS))` with the fee factor. *Digits* is −log10 of the relative error against 200-digit mpmath before rounding. *Pays?* asks whether the attacker's own limit (maxAmountIn = 1, minAmountOut = 1) would still be met. The last column rounds the exact value to the nearest unit once, for the section after this one.
+Each column computes the same `calcSingleInGivenPoolOut` / `calcSingleOutGivenPoolIn` from the same on-chain state (the replay's state at that call). Every column except *deployed* converts to token units once, toward the pool: ceil for an amount in, floor for an amount out. *BNum, one rounding* keeps BNum's own 18-decimal `tokenInRatio`, holds the amount on a 10^-18 grid, and rounds once at the end. BL127 and BL19 evaluate `b·expm1((tW/w)·log1p(±pA/pS))` with the fee factor. *Digits* is −log10 of the relative error against 200-digit mpmath before rounding. *Pays?* asks whether the attacker's own limit (maxAmountIn = 1, minAmountOut = 1) would still be met. The last column rounds the exact value to the nearest unit once, for the section after this one.
 
-| # | call | n | balance (units) | deployed | exact (range) | BNum, one rounding | FP127 | FP19 | exact, rounded | FP127 digits (min) | FP19 digits (min) | pays? | exact, nearest once |
+| # | call | n | balance (units) | deployed | exact (range) | BNum, one rounding | BL127 | BL19 | exact, rounded | BL127 digits (min) | BL19 digits (min) | pays? | exact, nearest once |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | join, max in 1 | 100 | 3, 4, 5, 7 | 1 | 1.5056462 – 1.5056462 | 2 | 2 | 2 | 2 | 37.24 | 70.89 | no | 2 |
 | 1 | exit, min out 1 | 104 | 4, 5, 6, 7, 8 | 1 | 0.498125 – 0.498125 | 0 | 0 | 0 | 0 | 36.89 | 70.96 | no | 0 |
@@ -96,22 +96,22 @@ The last column of the table above also blocks these calls: 1.5056 rounds to 2, 
 | # | rule | BPT for 1 unit in (% of supply) | BPT for 1 unit out (% of supply) | net per cycle (% of supply) |
 |---|---|---|---|---|
 | 1 | deployed (the attacker's own amounts) | 0.689647 (10.67%) | 0.234884 (3.283%) | **7.035%** |
-| 1 | exact formula, nearest once (FP127 / FP19 / mpmath) | 0.687410 (10.63%) | 0.235741 (3.296%) | **6.987%** |
+| 1 | exact formula, nearest once (BL127 / BL19 / mpmath) | 0.687410 (10.63%) | 0.235741 (3.296%) | **6.987%** |
 | 1 | exact formula, toward the pool (ceil in, floor out) | 0.480430 (7.432%) | 0.483974 (6.969%) | **-0.05482%** |
 | 2 | deployed (the attacker's own amounts) | 3447.439201 (5.199%) | 1154.692308 (1.655%) | **3.458%** |
-| 2 | exact formula, nearest once (FP127 / FP19 / mpmath) | 3421.974184 (5.161%) | 1165.086654 (1.671%) | **3.404%** |
+| 2 | exact formula, nearest once (BL127 / BL19 / mpmath) | 3421.974184 (5.161%) | 1165.086654 (1.671%) | **3.404%** |
 | 2 | exact formula, toward the pool (ceil in, floor out) | 2409.114426 (3.633%) | 2451.677323 (3.568%) | **-0.06419%** |
 | 3 | deployed (the attacker's own amounts) | 0.827210 (10.67%) | 0.281736 (3.283%) | **7.035%** |
-| 3 | exact formula, nearest once (FP127 / FP19 / mpmath) | 0.826834 (10.66%) | 0.281879 (3.285%) | **7.028%** |
+| 3 | exact formula, nearest once (BL127 / BL19 / mpmath) | 0.826834 (10.66%) | 0.281879 (3.285%) | **7.028%** |
 | 3 | exact formula, toward the pool (ceil in, floor out) | 0.577940 (7.453%) | 0.578534 (6.944%) | **-0.007659%** |
 | 4 | deployed (the attacker's own amounts) | 270.261461 (4.138%) | 90.217846 (1.326%) | **2.757%** |
-| 4 | exact formula, nearest once (FP127 / FP19 / mpmath) | 266.169494 (4.075%) | 91.921979 (1.352%) | **2.668%** |
+| 4 | exact formula, nearest once (BL127 / BL19 / mpmath) | 266.169494 (4.075%) | 91.921979 (1.352%) | **2.668%** |
 | 4 | exact formula, toward the pool (ceil in, floor out) | 187.590142 (2.872%) | 194.534964 (2.895%) | **-0.1063%** |
 | 5 | deployed (the attacker's own amounts) | 18.503229 (4.138%) | 6.176691 (1.326%) | **2.757%** |
-| 5 | exact formula, nearest once (FP127 / FP19 / mpmath) | 18.363342 (4.107%) | 6.234465 (1.339%) | **2.712%** |
+| 5 | exact formula, nearest once (BL127 / BL19 / mpmath) | 18.363342 (4.107%) | 6.234465 (1.339%) | **2.712%** |
 | 5 | exact formula, toward the pool (ceil in, floor out) | 12.947067 (2.895%) | 13.183299 (2.865%) | **-0.05283%** |
 
-With full precision and round-to-nearest, the loop is almost exactly as profitable as it was on chain. 38 or 71 digits do not help when the last step can round half a unit in the caller's favour. Rounded toward the pool, the loop runs backwards: each cycle leaves the swap fee in the pool. `test_precision_without_direction_still_pays` and `test_direction_closes_the_loop` assert pool 1's row in FP127 and FP19 (`score` checks the test's literals against these solutions).
+With full precision and round-to-nearest, the loop is almost exactly as profitable as it was on chain. 38 or 71 digits do not help when the last step can round half a unit in the caller's favour. Rounded toward the pool, the loop runs backwards: each cycle leaves the swap fee in the pool. `test_precision_without_direction_still_pays` and `test_direction_closes_the_loop` assert pool 1's row in BL127 and BL19 (`score` checks the test's literals against these solutions).
 
 ## Where the half unit goes
 
@@ -138,7 +138,7 @@ The 18-decimal maths in front of the grid (the ratio and `bpowi`) is off by at m
 
 - **In the 438 joins and 522 single-token exits: zero calls.** The exponent is tW/wI = 4, 8 or 10 (`boo % BONE == 0`, asserted on every call in the Foundry replay). The decisive ratio comes from two or three `bmul` squarings, each rounding half up at 10^-18.
 - **In the swaps that built the dust balance: 109 calls** (pools 3, 4, 5, where weight ratios such as 12.5/17.5 are not whole). |x| = |base − 1| ranged 0.000548 – 0.355. The loop ran 3 – 17 iterations (median 15); 0 of them ended on a term that rounded to zero rather than on the tolerance. The relative residual against the exact power (base^frac at 200 digits) is 1.5e-16 – 4.2e-11. Times the balance it multiplies, that is at most 3.58e+12 raw units of DAI (3.58e-6 DAI, in calcInGivenOut). For an 18-decimal token with a large balance, this is more than one raw unit: the stopping rule does show in swap amounts. It is not what moved this attack.
-- **The same series, run in exact arithmetic to each ruler's tolerance**, needs 3 – 17 terms to reach 10^-10 (BNum's own rule without BNum's rounding), 12 – 78 terms to reach 2^-128 (FP127's ulp at 1), and 22 – 150 to reach 2^-237 (FP19's relative ulp). The series does converge, and a finer ruler only means more terms. Had the series run at the decisive join, the largest residual measured here (4.2e-11) times a 3-unit balance would be 1.3e-10 units, about nine orders of magnitude below the half-unit grid step that decided the outcome.
+- **The same series, run in exact arithmetic to each ruler's tolerance**, needs 3 – 17 terms to reach 10^-10 (BNum's own rule without BNum's rounding), 12 – 78 terms to reach 2^-128 (BL127's ulp at 1), and 22 – 150 to reach 2^-237 (BL19's relative ulp). The series does converge, and a finer ruler only means more terms. Had the series run at the decisive join, the largest residual measured here (4.2e-11) times a 3-unit balance would be 1.3e-10 units, about nine orders of magnitude below the half-unit grid step that decided the outcome.
 
 For the talk: in this incident the stopping ruler did not decide the answer, because the series never ran where it mattered. What decided it was a coarser ruler: whole token units, applied in the middle of the computation, rounding to nearest, against a balance that the attacker had made three units long.
 

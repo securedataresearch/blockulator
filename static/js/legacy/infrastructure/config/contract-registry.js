@@ -396,7 +396,7 @@ export const CONTRACT_REGISTRY = {
     // ========== ARITHMETIC (HUFF) ==========
     'fixedpoint127': {
         type: 'arithmetic',
-        name: 'FP127',
+        name: 'BL127',
         symbol: '+−×÷',
         emoji: '0x',
         category: 'huff',
@@ -405,7 +405,7 @@ export const CONTRACT_REGISTRY = {
             sepolia: '0xfae694D0c2c44181791F838c54Ed64C3151FfE30',
             mainnet: '0x0000000000000000000000000000000000000000'
         },
-        source: 'contracts/archive/huff/src/fp127/fp127.huff',
+        source: 'contracts/archive/huff/src/bl127/bl127.huff',
         abi: 'contracts/build/abis/fixedpoint127.json'
     },
     

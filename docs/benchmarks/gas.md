@@ -1,10 +1,10 @@
-# FP127 gas ladder
+# BL127 gas ladder
 
-Generated 2026-10-28 by `make bench`. Versions: fp127 6c2eeaf, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), fraxlend fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed), euler evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, solmate solmate@89365b8 (no tag: v6 predates SignedWadMath), openzeppelin openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored), uniswap v4-core v4.0.0 (FullMath, vendored), snekmate v0.1.2 (math module, vyper 0.4.3), forge forge Version: 1.7.1.
+Generated 2026-10-28 by `make bench`. Versions: bl127 6c2eeaf, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), fraxlend fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed), euler evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, solmate solmate@89365b8 (no tag: v6 predates SignedWadMath), openzeppelin openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored), uniswap v4-core v4.0.0 (FullMath, vendored), snekmate v0.1.2 (math module, vyper 0.4.3), forge forge Version: 1.7.1.
 
-Each cell is min / median / max gas over the op's input ladder. The first two FP127 columns and the Caller column include the `staticcall` (and the object's own selector dispatch); the inline columns are the internal library call alone, timed inside the harness's entry point with the dispatch outside the window (the same cost for every op, whatever its place in the harness's list). An empty cell means the library does not offer the op; `rev` means it does, but reverted (or the input was outside its domain or format) on every ladder input. What each library cell calls is listed at the end; [coverage.md](coverage.md) maps every function of every comparison library.
+Each cell is min / median / max gas over the op's input ladder. The first two BL127 columns and the Caller column include the `staticcall` (and the object's own selector dispatch); the inline columns are the internal library call alone, timed inside the harness's entry point with the dispatch outside the window (the same cost for every op, whatever its place in the harness's list). An empty cell means the library does not offer the op; `rev` means it does, but reverted (or the input was outside its domain or format) on every ladder input. What each library cell calls is listed at the end; [coverage.md](coverage.md) maps every function of every comparison library.
 
-| op | Huff (Sepolia, staticcall) | Yul object (staticcall) | FP127Caller | FP127Lib (inline) | ABDKMath64x64 | Solady | PRBMath SD59x18 | ABDKMathQuad | Balancer LogExpMath | Solmate | OpenZeppelin Math | Uniswap FullMath | PRBMath UD60x18 | snekmate (Vyper) |
+| op | Huff (Sepolia, staticcall) | Yul object (staticcall) | BL127Caller | BL127Lib (inline) | ABDKMath64x64 | Solady | PRBMath SD59x18 | ABDKMathQuad | Balancer LogExpMath | Solmate | OpenZeppelin Math | Uniswap FullMath | PRBMath UD60x18 | snekmate (Vyper) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | abs | 1,281 / 1,286 / 1,291 | 672 / 681 / 695 |  | 140 / 140 / 140 | 106 / 120 / 120 | 18 / 18 / 18 | 121 / 121 / 190 | 21 / 21 / 21 |  |  | 18 / 18 / 18 |  |  |  |
 | add | 585 / 590 / 596 | 663 / 682 / 696 | 1,762 / 1,778 / 1,795 | 128 / 128 / 128 | 162 / 162 / 162 | 3 / 3 / 3 | 189 / 189 / 189 | 704 / 765 / 1,268 |  |  |  |  | 150 / 150 / 150 |  |
@@ -64,7 +64,7 @@ Each cell is min / median / max gas over the op's input ladder. The first two FP
 
 The ladder sits mostly on integers, powers of two and one, where several ops take a shortcut. These rows are the same forms on random inputs drawn per op from `keccak256("typical", op, i)`: non-integer, not a power of two, across the op's usual range (`test_ladder_typical`). Min / median / max over the inputs.
 
-| op | Huff (Sepolia, staticcall) | Yul object (staticcall) | FP127Caller | FP127Lib (inline) | ABDKMath64x64 | Solady | PRBMath SD59x18 | ABDKMathQuad | Balancer LogExpMath | Solmate | OpenZeppelin Math | Uniswap FullMath | PRBMath UD60x18 | snekmate (Vyper) |
+| op | Huff (Sepolia, staticcall) | Yul object (staticcall) | BL127Caller | BL127Lib (inline) | ABDKMath64x64 | Solady | PRBMath SD59x18 | ABDKMathQuad | Balancer LogExpMath | Solmate | OpenZeppelin Math | Uniswap FullMath | PRBMath UD60x18 | snekmate (Vyper) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | atanh |  | 3,255 / 3,268 / 3,296 |  | 2,910 / 2,944 / 2,994 |  |  |  |  |  |  |  |  |  |  |
 | cbrt | 10,013 / 10,402 / 10,879 | 2,428 / 2,452 / 2,588 |  | 1,932 / 1,936 / 1,936 |  | 619 / 619 / 1,186 |  |  | 2,301 / 2,313 / 2,315 |  |  |  |  | 1,407 / 1,424 / 1,462 |
@@ -97,7 +97,7 @@ The competitor function behind each cell, on the inputs converted once to its re
 |---|---|---|---|---|---|---|---|---|---|---|
 | abs | `abs(x)` | `abs(int256)` | `abs(x)` | `abs(x)` |  |  | `SignedMath.abs(int256)` |  |  |  |
 | add | `add(a, b)` | `rawAdd(int256, int256) (unchecked)` | `add(a, b)` | `add(a, b)` |  |  |  |  | `add(a, b) (a, b >= 0)` |  |
-| avg | `avg(a, b)` | `avg(int256, int256)` | `avg(a, b)` |  |  |  | `SignedMath.average(a, b) (toward zero; FP127's avg floors)` |  | `avg(a, b) (a, b >= 0)` | `_int256_average(a, b)` |
+| avg | `avg(a, b)` | `avg(int256, int256)` | `avg(a, b)` |  |  |  | `SignedMath.average(a, b) (toward zero; BL127's avg floors)` |  | `avg(a, b) (a, b >= 0)` | `_int256_average(a, b)` |
 | cbrt |  | `cbrtWad(x) (x >= 0)` |  |  | `pow(x, 333333333333333333) (composed; x >= 0)` |  |  |  |  | `_wad_cbrt(x) (x >= 0)` |
 | ceil |  |  | `ceil(x)` |  |  |  |  |  | `ceil(x) (x >= 0)` |  |
 | clamp |  | `clamp(int256, int256, int256)` |  |  |  |  |  |  |  |  |

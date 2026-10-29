@@ -26,6 +26,6 @@
 {{ <libtable t={tb.edges[op.id]} first="probe" heat={true} cls="edges" /> }}
 </section>
 {%- endfor %}
-<p class="note">A cell is the correct significant digits against the exact value; hover it for the value and its error in ULP. <span class="rev">zero</span>: below the format's floor; <span class="rev">range</span>: the argument does not fit the word; any other red word is a revert, named by its error (hover for the full reason). A — is an op the library does not offer. FP19's digits are shown to 71, its precision: a 72 or 73 is where the truth happens to sit near the grid. The last row is each library's fewest digits on the op, with a zero, revert or range counted as 0. Full dataset: <a href="/data/edges.json">edges.json</a>. Regenerate with <code>make edges</code>.</p>
+<p class="note">A cell is the correct significant digits against the exact value; hover it for the value and its error in ULP. <span class="rev">zero</span>: below the format's floor; <span class="rev">range</span>: the argument does not fit the word; any other red word is a revert, named by its error (hover for the full reason). A — is an op the library does not offer. BL19's digits are shown to 71, its precision: a 72 or 73 is where the truth happens to sit near the grid. The last row is each library's fewest digits on the op, with a zero, revert or range counted as 0. Full dataset: <a href="/data/edges.json">edges.json</a>. Regenerate with <code>make edges</code>.</p>
 <script src="/js/islands/tabs.js"></script>
 {% endblock body %}

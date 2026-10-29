@@ -29,7 +29,7 @@
 <nav class="tabs" id="scenario-tabs" aria-label="Scenario">
 {%- for sc in d.scenarios %}<a href="#{{ sc.id }}" data-tab="{{ sc.id }}"{% if loop.first %} class="on"{% endif %}>{{ sc.title }}</a>{% endfor %}
 </nav>
-{%- for sc in d.scenarios %}{% set id = sc.id %}{% set si = sc.index %}{% set ref = sc.inputs[0] %}{% set hasint = sc.summary.fp127["1"].interest is defined %}
+{%- for sc in d.scenarios %}{% set id = sc.id %}{% set si = sc.index %}{% set ref = sc.inputs[0] %}{% set hasint = sc.summary.bl127["1"].interest is defined %}
 <section class="scenario" id="{{ id }}" data-index="{{ si }}"{% if not loop.first %} hidden{% endif %}>
 <h2>{{ sc.title }}</h2>
 <p class="lead">Step: <code>{{ sc.step }}</code>. Result: {{ sc.result }}.</p>
@@ -45,13 +45,13 @@
   {%- endif %}
 </div>
 {{ <plot chart="steps" arg={id} label="Median correct digits against N per library over the inputs every library completed, for the truth chosen above; the numbers are in the table below." /> }}
-<p class="note">Median correct digits over the inputs every library with a result at that N completed, each capped at what its format holds at that magnitude (FP19 71.3, binary128 34.0, the fixed grids by their last place), so no line passes its format's precision. The WAD libraries are the gold lines, labelled once. FP127Lib coincides with FP127 and is not drawn; Aave, Morpho and Maker appear only on the accrual scenarios their models describe. Hover a point for the library, the range over the inputs and N.</p>
+<p class="note">Median correct digits over the inputs every library with a result at that N completed, each capped at what its format holds at that magnitude (BL19 71.3, binary128 34.0, the fixed grids by their last place), so no line passes its format's precision. The WAD libraries are the gold lines, labelled once. BL127Lib coincides with BL127 and is not drawn; Aave, Morpho and Maker appear only on the accrual scenarios their models describe. Hover a point for the library, the range over the inputs and N.</p>
 </div>
 
 {%- for key, t in tb.ladder[id].summary %}
 <div data-key="{{ key }}"{% if key != "digits" %} hidden{% endif %}>{{ <libtable t={t} first="steps N" heat={true} cls="summary" /> }}</div>
 {%- endfor %}
-<p class="note">Median correct digits over the inputs every library completed at that N (hover a cell for the range), each capped at what its format holds; "exact" when every one of them is exact. <span class="rev">k/n</span>: the library completed k of n inputs and the rest reverted; <span class="rev">rev</span>: every input reverted. —: no model for this scenario. FP127Lib equals FP127 and is left out.</p>
+<p class="note">Median correct digits over the inputs every library completed at that N (hover a cell for the range), each capped at what its format holds; "exact" when every one of them is exact. <span class="rev">k/n</span>: the library completed k of n inputs and the rest reverted; <span class="rev">rev</span>: every input reverted. —: no model for this scenario. BL127Lib equals BL127 and is left out.</p>
 
 <details class="inputs">
 <summary>The inputs and the ops</summary>
@@ -63,7 +63,7 @@
 {%- endfor %}
 </tbody>
 </table>
-<p>Library calls per step: {% for l in reg.libraries %}{% if sc.ops[l.id] is defined %}<strong>{{ l.short }}</strong> {{ sc.ops[l.id] | join(sep=", ") }}; {% endif %}{% endfor %}<strong>FP127Lib</strong> {{ sc.ops.fp127lib | join(sep=", ") }}. Parameters reach each adapter floored into its representation on the grids and rounded to nearest on the floats (<a href="/data/ladder-inputs.json">ladder-inputs.json</a>).</p>
+<p>Library calls per step: {% for l in reg.libraries %}{% if sc.ops[l.id] is defined %}<strong>{{ l.short }}</strong> {{ sc.ops[l.id] | join(sep=", ") }}; {% endif %}{% endfor %}<strong>BL127Lib</strong> {{ sc.ops.bl127lib | join(sep=", ") }}. Parameters reach each adapter floored into its representation on the grids and rounded to nearest on the floats (<a href="/data/ladder-inputs.json">ladder-inputs.json</a>).</p>
 </details>
 
 <h3>The reference input, step by step: {% for k, v in ref.params %}{{ k }} = {{ v }}{% if not loop.last %}, {% endif %}{% endfor %}</h3>

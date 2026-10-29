@@ -2,7 +2,7 @@
  "generated": "2026-10-28",
  "description": "Terminal precision: each scenario is N identical steps run through each library in its native representation for several inputs, against the same loop in exact arithmetic (mpmath, 300 digits), twice: from the exact parameters (digits) and from the parameters as the library received them (digitsFormat). See methodology.",
  "versions": {
-  "fp127": "6c2eeaf",
+  "bl127": "6c2eeaf",
   "huff": "sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
@@ -45,13 +45,13 @@
  },
  "forms": [
   {
-   "id": "fp127",
-   "label": "FP127 (deployed, staticcall)",
+   "id": "bl127",
+   "label": "BL127 (deployed, staticcall)",
    "scale": "2**128"
   },
   {
-   "id": "fp127lib",
-   "label": "FP127Lib (inline)",
+   "id": "bl127lib",
+   "label": "BL127Lib (inline)",
    "scale": "2**128"
   },
   {
@@ -95,9 +95,9 @@
    "scale": "10**27"
   },
   {
-   "id": "fp19",
-   "label": "FP19 (float, inline)",
-   "scale": "fp19"
+   "id": "bl19",
+   "label": "BL19 (float, inline)",
+   "scale": "bl19"
   },
   {
    "id": "solmate",
@@ -139,17 +139,17 @@
  "axisMax": 80,
  "methodology": {
   "truth": "For every scenario, input and N the same loop is run in exact real arithmetic with mpmath at 300 decimal digits (scripts/ladder/ladder.py), from the exact rational parameters in scenarios.json. Closed forms are used where the loop has one (compounding, the cumulative product, the geometric mean, the round trip, per-second and continuous accrual, the option walk, the decay and the adaptive rate); the bonding curve, the amortising loan and the Black-Scholes chain are stepped.",
-  "rounding": "Inputs are floored on the grids and rounded to nearest on the floats: each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units) or, for ABDKMathQuad and FP19, the nearest float (scripts/ladder/inputs.json). truthFormat is the exact loop started from those parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic. One exception: Morpho accrues from the per-second rate, rateAnnual / 31536000 floored to WAD, while truthFormat is built from the annual rate the other libraries receive, so Morpho's digitsFormat still includes its own input's rounding. Likewise in the adaptive rate, FraxLend and Euler compute from their own inputs (utilisation, step, half-life or speed) while truthFormat is built from rate0 and x, so their digitsFormat includes the rounding of those inputs (Euler's speed floored to WAD per second, FraxLend's half-life to whole seconds).",
+  "rounding": "Inputs are floored on the grids and rounded to nearest on the floats: each library receives the parameters floored into its own representation (2^-128, 2^-64, 10^-18 or 10^-27 units) or, for ABDKMathQuad and BL19, the nearest float (scripts/ladder/inputs.json). truthFormat is the exact loop started from those parameters, so digitsFormat measures the library's arithmetic alone, while digits measures what a protocol sees: the format's rounding of the inputs plus the arithmetic. One exception: Morpho accrues from the per-second rate, rateAnnual / 31536000 floored to WAD, while truthFormat is built from the annual rate the other libraries receive, so Morpho's digitsFormat still includes its own input's rounding. Likewise in the adaptive rate, FraxLend and Euler compute from their own inputs (utilisation, step, half-life or speed) while truthFormat is built from rate0 and x, so their digitsFormat includes the rounding of those inputs (Euler's speed floored to WAD per second, FraxLend's half-life to whole seconds).",
   "inputs": "The parameters are short decimals (0.1/365, 10000, 0.05) as a protocol's governance would set them. A short decimal can sit exactly on the 10^-18 and 10^-27 grids, so WAD and RAY libraries often receive their inputs exactly while the binary formats round them; this favours WAD and RAY in digits (against exact inputs) and is visible as the gap between digits and digitsFormat. The decay scenario's eps are reciprocals of time constants in seconds (1/1036800 for twelve days), which no grid holds exactly.",
-  "powers": "Integer powers are each library's own idiom, not one algorithm: FP127 and FP19 use compound (a correctly rounded (1 + r)^n that never forms a rounded 1 + r), Maker uses rpow (binary exponentiation in RAY), the WAD and 64.64 libraries and binary128 use exp(n ln(1 + r)) or their pow. Per-second accrual and compound-pow measure those choices as much as the formats.",
+  "powers": "Integer powers are each library's own idiom, not one algorithm: BL127 and BL19 use compound (a correctly rounded (1 + r)^n that never forms a rounded 1 + r), Maker uses rpow (binary exponentiation in RAY), the WAD and 64.64 libraries and binary128 use exp(n ln(1 + r)) or their pow. Per-second accrual and compound-pow measure those choices as much as the formats.",
   "digits": "digits = floor(-log10 |v - t| / |t|), the number of correct leading significant digits by relative error, an integer; a result equal to the truth is exact (exact = true, digits = 100, the one cap on this field) and is drawn as a marker, never as a number. digits1 is the same quantity floored to one decimal instead of to an integer. It is not a string comparison: a value can be correct to 36 digits while its 37th printed digit happens to agree with the truth, or while a carry makes the printed prefix differ earlier.",
-  "precision": "No format can be right to more digits than it holds at the result's magnitude: prec is 237 log10 2 = 71.3 for FP19 and 113 log10 2 = 34.0 for binary128 at any magnitude, and -log10(ulp / |t|) on the fixed grids, with ulp 2^-128 (FP127), 2^-64 (64.64), 10^-18 (WAD) or 10^-27 (RAY): 38.5 for FP127 at 1, 42.5 at 10^4. A cell may land closer to the truth than that by luck; digitsCapped = min(digits1, prec), and prec for an exact cell, is what the charts plot and the summaries aggregate, so no median or band exceeds the format's precision.",
+  "precision": "No format can be right to more digits than it holds at the result's magnitude: prec is 237 log10 2 = 71.3 for BL19 and 113 log10 2 = 34.0 for binary128 at any magnitude, and -log10(ulp / |t|) on the fixed grids, with ulp 2^-128 (BL127), 2^-64 (64.64), 10^-18 (WAD) or 10^-27 (RAY): 38.5 for BL127 at 1, 42.5 at 10^4. A cell may land closer to the truth than that by luck; digitsCapped = min(digits1, prec), and prec for an exact cell, is what the charts plot and the summaries aggregate, so no median or band exceeds the format's precision.",
   "summary": "Each scenario's median, minimum and maximum at each N are taken over the inputs that every library with any completed input at that N completed, so every library's median is over the same inputs. Each library's completed count is reported, and a library that completed fewer than all inputs is shown as k/n. Where no input is common to all of them, a revert counts as 0 digits over all inputs instead (basis revertsAsZero); the dataset records the basis and the inputs per N.",
   "interest": "For the compounding and accrual scenarios the digits are also measured on the interest, b - principal against t - principal (interestDigits1, interestCapped, with the format's precision taken against the interest's magnitude). Relative digits of a balance flatter a format when the interest is a small part of it: after one day the interest is about 10^-4 of the balance.",
   "wei": "For the deep-tail option, absErrWei is |v - t| in wei of the strike at 18 decimals ($100 = 10^20 wei). Past d1 = -8 the true price falls below one wei and every library's error with it, so relative digits there describe the format, not money.",
   "headline": "The Results page shows a single N = 10,000 per scenario; the ladder page shows every N.",
   "agree": "agree is the count of leading significant digits of the printed value (42 significant digits) that are literally equal to the printed truth. The demo page colours the rest of the value with it. It is a reading aid, not a measurement: a carry across 0.999\u2026 / 1.000\u2026 gives 0.",
-  "gas": "gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the FP127 object, so the call into the adapter and the ABI decoding are excluded. The FP127 (deployed) form includes one staticcall per op, and so does snekmate, a Vyper library that a Solidity adapter can only call; FP127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe, FraxLend and Euler only the adaptive rate, and OpenZeppelin and Uniswap FullMath, which have no exp, ln or real power (and FullMath no root), only the scenarios built from mul, div and their roots; each reports Unsupported elsewhere, which the tables and charts leave empty (a library with no model is not a revert). gasPerStep = gasTotal / N. Reverted cells carry no gas.",
+  "gas": "gasTotal is measured inside the adapter around the scenario function (the parameter reads and the loop), after the runner has warmed the adapter and the BL127 object, so the call into the adapter and the ABI decoding are excluded. The BL127 (deployed) form includes one staticcall per op, and so does snekmate, a Vyper library that a Solidity adapter can only call; BL127Lib and the other libraries are internal calls. Aave, Morpho and Maker answer only the accrual scenarios their models describe, FraxLend and Euler only the adaptive rate, and OpenZeppelin and Uniswap FullMath, which have no exp, ln or real power (and FullMath no root), only the scenarios built from mul, div and their roots; each reports Unsupported elsewhere, which the tables and charts leave empty (a library with no model is not a revert). gasPerStep = gasTotal / N. Reverted cells carry no gas.",
   "live": "LadderRunner.run(scenario, form, n, p) on Sepolia executes any cell with one eth_call and returns (ok, raw, reason, gasPerStep, gasTotal). scripts/ladder/livecap.py sends every cell's floored parameters p and compares the returned raw word with the committed one bit for bit (or the revert selector for a reverted cell). liveMaxN is the largest N per form the public RPC completed within its gas limit, measured by scripts/ladder/livecap.py.",
   "reproduce": "make ladder regenerates ladder.json and ladder.md from the Foundry harness (test/ladder/Ladder.t.sol) and this script; make ladder-check fails CI when the committed dataset differs. Versions of every library and of forge are recorded in the dataset."
  },
@@ -168,10 +168,10 @@
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul"
     ],
     "abdk": [
@@ -199,7 +199,7 @@
      "rpow",
      "rmul"
     ],
-    "fp19": [
+    "bl19": [
      "mul"
     ],
     "solmate": [
@@ -310,7 +310,7 @@
        "1000": "13151.2942008121758666272801482974150935609",
        "10000": "154769.340691441128061907640643187450464637"
       },
-      "fp19": {
+      "bl19": {
        "1": "10002.7397260273972602739726027397260273973",
        "2": "10005.4802026646650403452805404391067742541",
        "5": "10013.7061382924386210524857642965155424808",
@@ -324,7 +324,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10002.7397260273972602739726027397260273831",
         "digits": 38,
@@ -525,7 +525,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10002.7397260273972602739726027397260273831",
         "digits": 38,
@@ -2047,7 +2047,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10002.7397260273972602739726027397260273973",
         "digits": 71,
@@ -3455,7 +3455,7 @@
        "1000": "1.02777563053412560308480821215520231593119",
        "10000": "1.31517383361865842799273655468998387273634"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.00002739726027397260273972602739726027397",
        "2": "1.0000547952711578157252767873897541752674",
        "5": "1.00013699380767421756863174575370296919601",
@@ -3469,7 +3469,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00002739726027397260273972602739726027148",
         "digits": 38,
@@ -3670,7 +3670,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00002739726027397260273972602739726027148",
         "digits": 38,
@@ -5192,7 +5192,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.00002739726027397260273972602739726027397",
         "digits": 71,
@@ -6600,7 +6600,7 @@
        "1000": "3.93112485408836235402134536495170905784268",
        "10000": "881390.517973497975352751623721768309328068"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.00136986301369863013698630136986301369863",
        "2": "1.00274160255207355976731094013886282604616",
        "5": "1.00686810603868517723690597114848411315817",
@@ -6614,7 +6614,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00136986301369863013698630136986301369744",
         "digits": 38,
@@ -6815,7 +6815,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00136986301369863013698630136986301369744",
         "digits": 38,
@@ -8337,7 +8337,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.00136986301369863013698630136986301369863",
         "digits": 71,
@@ -9745,7 +9745,7 @@
        "1000": "10277.7563053412560308480821215520231593119",
        "10000": "13151.7383361865842799273655468998387273634"
       },
-      "fp19": {
+      "bl19": {
        "1": "10000.2739726027397260273972602739726027397",
        "2": "10000.547952711578157252767873897541752674",
        "5": "10001.3699380767421756863174575370296919601",
@@ -9759,7 +9759,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10000.2739726027397260273972602739726027148",
         "digits": 38,
@@ -9960,7 +9960,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10000.2739726027397260273972602739726027148",
         "digits": 38,
@@ -11482,7 +11482,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10000.2739726027397260273972602739726027397",
         "digits": 71,
@@ -12890,7 +12890,7 @@
        "1000": "11468.0167957718897994021162923728839621006",
        "10000": "39344.4250572754437484663324063719484367354"
       },
-      "fp19": {
+      "bl19": {
        "1": "10001.3698630136986301369863013698630136986",
        "2": "10002.7399136798648902233064364796397072622",
        "5": "10006.8511918502452322204966898121014386019",
@@ -12904,7 +12904,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10001.3698630136986301369863013698630136916",
         "digits": 39,
@@ -13105,7 +13105,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10001.3698630136986301369863013698630136916",
         "digits": 39,
@@ -14627,7 +14627,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10001.3698630136986301369863013698630136986",
         "digits": 71,
@@ -16035,7 +16035,7 @@
        "1000": "39311.2485408836235402134536495170905784268",
        "10000": "8813905179.73497975352751623721768309328068"
       },
-      "fp19": {
+      "bl19": {
        "1": "10013.6986301369863013698630136986301369863",
        "2": "10027.4160255207355976731094013886282604616",
        "5": "10068.6810603868517723690597114848411315817",
@@ -16049,7 +16049,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10013.6986301369863013698630136986301369744",
         "digits": 38,
@@ -16250,7 +16250,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10013.6986301369863013698630136986301369744",
         "digits": 38,
@@ -17772,7 +17772,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10013.6986301369863013698630136986301369863",
         "digits": 71,
@@ -19180,7 +19180,7 @@
        "1000": "1315129.42008121758666272801482974150935609",
        "10000": "15476934.0691441128061907640643187450464637"
       },
-      "fp19": {
+      "bl19": {
        "1": "1000273.97260273972602739726027397260273973",
        "2": "1000548.02026646650403452805404391067742541",
        "5": "1001370.61382924386210524857642965155424808",
@@ -19194,7 +19194,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1000273.97260273972602739726027397260273831",
         "digits": 38,
@@ -19395,7 +19395,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1000273.97260273972602739726027397260273831",
         "digits": 38,
@@ -20917,7 +20917,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1000273.97260273972602739726027397260273973",
         "digits": 71,
@@ -22325,7 +22325,7 @@
        "1000": "131512942.008121758666272801482974150935609",
        "10000": "1547693406.91441128061907640643187450464637"
       },
-      "fp19": {
+      "bl19": {
        "1": "100027397.260273972602739726027397260273973",
        "2": "100054802.026646650403452805404391067742541",
        "5": "100137061.382924386210524857642965155424808",
@@ -22339,7 +22339,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "100027397.260273972602739726027397260273831",
         "digits": 38,
@@ -22540,7 +22540,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "100027397.260273972602739726027397260273831",
         "digits": 38,
@@ -24062,7 +24062,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "100027397.260273972602739726027397260273973",
         "digits": 71,
@@ -25470,7 +25470,7 @@
        "1000": "393112485.408836235402134536495170905784268",
        "10000": "88139051797349.7975352751623721768309328068"
       },
-      "fp19": {
+      "bl19": {
        "1": "100136986.301369863013698630136986301369863",
        "2": "100274160.255207355976731094013886282604616",
        "5": "100686810.603868517723690597114848411315817",
@@ -25484,7 +25484,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "100136986.301369863013698630136986301369744",
         "digits": 38,
@@ -25685,7 +25685,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "100136986.301369863013698630136986301369744",
         "digits": 38,
@@ -27207,7 +27207,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "100136986.301369863013698630136986301369863",
         "digits": 71,
@@ -28615,7 +28615,7 @@
        "1000": "0.00131512942008121758666272801482974143416219",
        "10000": "0.0154769340691441128061907640643187441615538"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00100027397260273972602739726027397260273973",
        "2": "0.00100054802026646650403452805404391067742541",
        "5": "0.00100137061382924386210524857642965155424808",
@@ -28629,7 +28629,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00100027397260273972602739726027397259969966",
         "digits": 35,
@@ -28831,7 +28831,7 @@
         "gasPerStep": 828
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00100027397260273972602739726027397259969966",
         "digits": 35,
@@ -30359,7 +30359,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00100027397260273972602739726027397260273973",
         "digits": 71,
@@ -31689,7 +31689,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 10,
       "completed": 10,
@@ -31921,7 +31921,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 10,
       "completed": 10,
@@ -33689,7 +33689,7 @@
       }
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 10,
       "completed": 10,
@@ -35379,8 +35379,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 10000
+    "bl127": 10000,
+    "bl19": 10000
    }
   },
   {
@@ -35397,11 +35397,11 @@
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "pow",
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "pow",
      "mul"
     ],
@@ -35435,7 +35435,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "pow",
      "mul"
     ],
@@ -35550,7 +35550,7 @@
        "1000": "13151.2942008121758666272801482974150935609",
        "10000": "154769.340691441128061907640643187450464637"
       },
-      "fp19": {
+      "bl19": {
        "1": "10002.7397260273972602739726027397260273973",
        "2": "10005.4802026646650403452805404391067742541",
        "5": "10013.7061382924386210524857642965155424808",
@@ -35564,7 +35564,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10002.7397260273972602739726027397260273831",
         "digits": 38,
@@ -35765,7 +35765,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10002.7397260273972602739726027397260273831",
         "digits": 38,
@@ -37151,7 +37151,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10002.7397260273972602739726027397260273973",
         "digits": 71,
@@ -38283,7 +38283,7 @@
        "1000": "1.02777563053412560308480821215520231593119",
        "10000": "1.31517383361865842799273655468998387273634"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.00002739726027397260273972602739726027397",
        "2": "1.0000547952711578157252767873897541752674",
        "5": "1.00013699380767421756863174575370296919601",
@@ -38297,7 +38297,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00002739726027397260273972602739726027148",
         "digits": 38,
@@ -38498,7 +38498,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00002739726027397260273972602739726027148",
         "digits": 38,
@@ -39884,7 +39884,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.00002739726027397260273972602739726027397",
         "digits": 71,
@@ -41016,7 +41016,7 @@
        "1000": "3.93112485408836235402134536495170905784268",
        "10000": "881390.517973497975352751623721768309328068"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.00136986301369863013698630136986301369863",
        "2": "1.00274160255207355976731094013886282604616",
        "5": "1.00686810603868517723690597114848411315817",
@@ -41030,7 +41030,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00136986301369863013698630136986301369744",
         "digits": 38,
@@ -41231,7 +41231,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00136986301369863013698630136986301369744",
         "digits": 38,
@@ -42617,7 +42617,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.00136986301369863013698630136986301369863",
         "digits": 71,
@@ -43749,7 +43749,7 @@
        "1000": "10277.7563053412560308480821215520231593119",
        "10000": "13151.7383361865842799273655468998387273634"
       },
-      "fp19": {
+      "bl19": {
        "1": "10000.2739726027397260273972602739726027397",
        "2": "10000.547952711578157252767873897541752674",
        "5": "10001.3699380767421756863174575370296919601",
@@ -43763,7 +43763,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10000.2739726027397260273972602739726027148",
         "digits": 38,
@@ -43964,7 +43964,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10000.2739726027397260273972602739726027148",
         "digits": 38,
@@ -45350,7 +45350,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10000.2739726027397260273972602739726027397",
         "digits": 71,
@@ -46482,7 +46482,7 @@
        "1000": "11468.0167957718897994021162923728839621006",
        "10000": "39344.4250572754437484663324063719484367354"
       },
-      "fp19": {
+      "bl19": {
        "1": "10001.3698630136986301369863013698630136986",
        "2": "10002.7399136798648902233064364796397072622",
        "5": "10006.8511918502452322204966898121014386019",
@@ -46496,7 +46496,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10001.3698630136986301369863013698630136916",
         "digits": 39,
@@ -46697,7 +46697,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10001.3698630136986301369863013698630136916",
         "digits": 39,
@@ -48083,7 +48083,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10001.3698630136986301369863013698630136986",
         "digits": 71,
@@ -49215,7 +49215,7 @@
        "1000": "39311.2485408836235402134536495170905784268",
        "10000": "8813905179.73497975352751623721768309328068"
       },
-      "fp19": {
+      "bl19": {
        "1": "10013.6986301369863013698630136986301369863",
        "2": "10027.4160255207355976731094013886282604616",
        "5": "10068.6810603868517723690597114848411315817",
@@ -49229,7 +49229,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10013.6986301369863013698630136986301369744",
         "digits": 38,
@@ -49430,7 +49430,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10013.6986301369863013698630136986301369744",
         "digits": 38,
@@ -50816,7 +50816,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10013.6986301369863013698630136986301369863",
         "digits": 71,
@@ -51948,7 +51948,7 @@
        "1000": "1315129.42008121758666272801482974150935609",
        "10000": "15476934.0691441128061907640643187450464637"
       },
-      "fp19": {
+      "bl19": {
        "1": "1000273.97260273972602739726027397260273973",
        "2": "1000548.02026646650403452805404391067742541",
        "5": "1001370.61382924386210524857642965155424808",
@@ -51962,7 +51962,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1000273.97260273972602739726027397260273831",
         "digits": 38,
@@ -52163,7 +52163,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1000273.97260273972602739726027397260273831",
         "digits": 38,
@@ -53549,7 +53549,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1000273.97260273972602739726027397260273973",
         "digits": 71,
@@ -54681,7 +54681,7 @@
        "1000": "131512942.008121758666272801482974150935609",
        "10000": "1547693406.91441128061907640643187450464637"
       },
-      "fp19": {
+      "bl19": {
        "1": "100027397.260273972602739726027397260273973",
        "2": "100054802.026646650403452805404391067742541",
        "5": "100137061.382924386210524857642965155424808",
@@ -54695,7 +54695,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "100027397.260273972602739726027397260273831",
         "digits": 38,
@@ -54896,7 +54896,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "100027397.260273972602739726027397260273831",
         "digits": 38,
@@ -56282,7 +56282,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "100027397.260273972602739726027397260273973",
         "digits": 71,
@@ -57414,7 +57414,7 @@
        "1000": "393112485.408836235402134536495170905784268",
        "10000": "88139051797349.7975352751623721768309328068"
       },
-      "fp19": {
+      "bl19": {
        "1": "100136986.301369863013698630136986301369863",
        "2": "100274160.255207355976731094013886282604616",
        "5": "100686810.603868517723690597114848411315817",
@@ -57428,7 +57428,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "100136986.301369863013698630136986301369744",
         "digits": 38,
@@ -57629,7 +57629,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "100136986.301369863013698630136986301369744",
         "digits": 38,
@@ -59015,7 +59015,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "100136986.301369863013698630136986301369863",
         "digits": 71,
@@ -60147,7 +60147,7 @@
        "1000": "0.00131512942008121758666272801482974143416219",
        "10000": "0.0154769340691441128061907640643187441615538"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00100027397260273972602739726027397260273973",
        "2": "0.00100054802026646650403452805404391067742541",
        "5": "0.00100137061382924386210524857642965155424808",
@@ -60161,7 +60161,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00100027397260273972602739726027397259969966",
         "digits": 35,
@@ -60363,7 +60363,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00100027397260273972602739726027397259969966",
         "digits": 35,
@@ -61751,7 +61751,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00100027397260273972602739726027397260273973",
         "digits": 71,
@@ -62801,7 +62801,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 10,
       "completed": 10,
@@ -63033,7 +63033,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 10,
       "completed": 10,
@@ -64641,7 +64641,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 10,
       "completed": 10,
@@ -66011,8 +66011,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 10000
+    "bl127": 10000,
+    "bl19": 10000
    }
   },
   {
@@ -66029,11 +66029,11 @@
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "sqrt",
      "add"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "sqrt",
      "add"
     ],
@@ -66066,7 +66066,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "sqrt",
      "add"
     ],
@@ -66182,7 +66182,7 @@
        "1000": "38540.0786548103528040149168003592993412283",
        "10000": "748008.007615874676777707582886478609217336"
       },
-      "fp19": {
+      "bl19": {
        "1": "31.6227766016837933199889354443271853371956",
        "2": "63.2613606407965424630952270291281684242756",
        "5": "158.271878503221320234300570350652186729491",
@@ -66196,7 +66196,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "31.6227766016837933199889354443271853371954",
         "digits": 41,
@@ -66378,7 +66378,7 @@
         "gasPerStep": 1638
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "31.6227766016837933199889354443271853371954",
         "digits": 41,
@@ -67646,7 +67646,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "31.6227766016837933199889354443271853371956",
         "digits": 71,
@@ -68819,7 +68819,7 @@
        "1000": "21097.4558874807353553852737018523021602413",
        "10000": "666716.459197108355926683982801781546723756"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.0",
        "2": "2.41421356237309504880168872420969807856967",
        "5": "8.3823323474417620387383087344468466809531",
@@ -68833,7 +68833,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.0",
         "digits": 100,
@@ -69013,7 +69013,7 @@
         "gasPerStep": 1638
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.0",
         "digits": 100,
@@ -70269,7 +70269,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.0",
         "digits": 100,
@@ -71432,7 +71432,7 @@
        "1000": "35292.4111392462605056786360019754219258766",
        "10000": "577490.714422596411250146664258828771374886"
       },
-      "fp19": {
+      "bl19": {
        "1": "31.6227766016837933199889354443271853371956",
        "2": "63.2534579095532145508568303051812515221756",
        "5": "158.192910328248111071386951333019087563481",
@@ -71446,7 +71446,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "31.6227766016837933199889354443271853371954",
         "digits": 41,
@@ -71628,7 +71628,7 @@
         "gasPerStep": 1638
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "31.6227766016837933199889354443271853371954",
         "digits": 41,
@@ -72896,7 +72896,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "31.6227766016837933199889354443271853371956",
         "digits": 71,
@@ -74069,7 +74069,7 @@
        "1000": "1000249.70841139847718394291368051767718652",
        "10000": "10024955.9950253486998424093893482186736528"
       },
-      "fp19": {
+      "bl19": {
        "1": "1000.0",
        "2": "2000.00049999987500006249996093752734372949",
        "5": "5000.0049999962500062499861719105467747171",
@@ -74083,7 +74083,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1000.0",
         "digits": 100,
@@ -74263,7 +74263,7 @@
         "gasPerStep": 1638
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1000.0",
         "digits": 100,
@@ -75521,7 +75521,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1000.0",
         "digits": 100,
@@ -76684,7 +76684,7 @@
        "1000": "1218.74429751238982907936512611768169254702",
        "10000": "23654.0901211073944038604972842165818095245"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.0",
        "2": "2.00049987506246096482325828770010975302759",
        "5": "5.00499625623620732189217104293221404993533",
@@ -76698,7 +76698,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.0",
         "digits": 100,
@@ -76878,7 +76878,7 @@
         "gasPerStep": 1638
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.0",
         "digits": 100,
@@ -78134,7 +78134,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.0",
         "digits": 100,
@@ -79297,7 +79297,7 @@
        "1000": "31630673.074993008714912017115627155215974",
        "10000": "317016943.872397267209823681012841997622855"
       },
-      "fp19": {
+      "bl19": {
        "1": "31622.7766016837933199889354443271853371956",
        "2": "63245.5690147519346367757427112984849849286",
        "5": "158114.041122183389804296879419303290621004",
@@ -79311,7 +79311,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "31622.7766016837933199889354443271853371955",
         "digits": 43,
@@ -79493,7 +79493,7 @@
         "gasPerStep": 1638
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "31622.7766016837933199889354443271853371955",
         "digits": 43,
@@ -80761,7 +80761,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "31622.7766016837933199889354443271853371956",
         "digits": 72,
@@ -81934,7 +81934,7 @@
        "1000": "3854.00786548103528040149168003592994526157",
        "10000": "74800.8007615874676777707582886478614647381"
       },
-      "fp19": {
+      "bl19": {
        "1": "3.16227766016837933199889354443271853371956",
        "2": "6.32613606407965424630952270291281684242756",
        "5": "15.8271878503221320234300570350652186729491",
@@ -81948,7 +81948,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "3.16227766016837933199889354443271853371748",
         "digits": 39,
@@ -82130,7 +82130,7 @@
         "gasPerStep": 1638
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "3.16227766016837933199889354443271853371748",
         "digits": 39,
@@ -83398,7 +83398,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "3.16227766016837933199889354443271853371956",
         "digits": 71,
@@ -84488,7 +84488,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 7,
       "completed": 7,
@@ -84670,7 +84670,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 7,
       "completed": 7,
@@ -85978,7 +85978,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 7,
       "completed": 7,
@@ -87228,8 +87228,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 1000
+    "bl127": 10000,
+    "bl19": 1000
    }
   },
   {
@@ -87245,11 +87245,11 @@
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "ln",
      "exp"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "ln",
      "exp"
     ],
@@ -87282,7 +87282,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "ln",
      "exp"
     ],
@@ -87395,7 +87395,7 @@
        "1000": "1.5",
        "10000": "1.5"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.5",
        "2": "1.5",
        "5": "1.5",
@@ -87409,7 +87409,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.49999999999999999999999999999999999999706",
         "digits": 38,
@@ -87591,7 +87591,7 @@
         "gasPerStep": 5334
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.49999999999999999999999999999999999999706",
         "digits": 38,
@@ -88839,7 +88839,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.5",
         "digits": 100,
@@ -89830,7 +89830,7 @@
        "1000": "0.0100000000000000000000000000000000001805559",
        "10000": "0.0100000000000000000000000000000000001805559"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.01",
        "2": "0.01",
        "5": "0.01",
@@ -89844,7 +89844,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00999999999999999999999999999999999999835431",
         "digits": 36,
@@ -90016,7 +90016,7 @@
         "gasPerStep": 5323
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00999999999999999999999999999999999999835431",
         "digits": 36,
@@ -91214,7 +91214,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.01",
         "digits": 72,
@@ -92095,7 +92095,7 @@
        "1000": "0.100000000000000000000000000000000004814825",
        "10000": "0.100000000000000000000000000000000004814825"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.1",
        "2": "0.1",
        "5": "0.1",
@@ -92109,7 +92109,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.0999999999999999999999999999999999999982368",
         "digits": 37,
@@ -92281,7 +92281,7 @@
         "gasPerStep": 5337
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.0999999999999999999999999999999999999982368",
         "digits": 37,
@@ -93519,7 +93519,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.1",
         "digits": 71,
@@ -94440,7 +94440,7 @@
        "1000": "0.699999999999999999999999999999999961481401",
        "10000": "0.699999999999999999999999999999999961481401"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.7",
        "2": "0.7",
        "5": "0.7",
@@ -94454,7 +94454,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.699999999999999999999999999999999999999412",
         "digits": 39,
@@ -94626,7 +94626,7 @@
         "gasPerStep": 5337
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.699999999999999999999999999999999999999412",
         "digits": 39,
@@ -95864,7 +95864,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.7",
         "digits": 71,
@@ -96785,7 +96785,7 @@
        "1000": "1.00009999999999999999999999999999999815111",
        "10000": "1.00009999999999999999999999999999999815111"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.0001",
        "2": "1.0001",
        "5": "1.0001",
@@ -96799,7 +96799,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00009999999999999999999999999999999999957",
         "digits": 39,
@@ -96971,7 +96971,7 @@
         "gasPerStep": 5298
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00009999999999999999999999999999999999957",
         "digits": 39,
@@ -98229,7 +98229,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.0001",
         "digits": 71,
@@ -99270,7 +99270,7 @@
        "1000": "2.0",
        "10000": "2.0"
       },
-      "fp19": {
+      "bl19": {
        "1": "2.0",
        "2": "2.0",
        "5": "2.0",
@@ -99284,7 +99284,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.99999999999999999999999999999999999999706",
         "digits": 38,
@@ -99466,7 +99466,7 @@
         "gasPerStep": 5330
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.99999999999999999999999999999999999999706",
         "digits": 38,
@@ -100734,7 +100734,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "2.0",
         "digits": 100,
@@ -101765,7 +101765,7 @@
        "1000": "10.0",
        "10000": "10.0"
       },
-      "fp19": {
+      "bl19": {
        "1": "10.0",
        "2": "10.0",
        "5": "10.0",
@@ -101779,7 +101779,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10.0000000000000000000000000000000000000147",
         "digits": 38,
@@ -101961,7 +101961,7 @@
         "gasPerStep": 5330
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10.0000000000000000000000000000000000000147",
         "digits": 38,
@@ -103229,7 +103229,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10.0",
         "digits": 100,
@@ -104260,7 +104260,7 @@
        "1000": "1000.0",
        "10000": "1000.0"
       },
-      "fp19": {
+      "bl19": {
        "1": "1000.0",
        "2": "1000.0",
        "5": "1000.0",
@@ -104274,7 +104274,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1000.00000000000000000000000000000000000112",
         "digits": 38,
@@ -104456,7 +104456,7 @@
         "gasPerStep": 5341
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1000.00000000000000000000000000000000000112",
         "digits": 38,
@@ -105724,7 +105724,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1000.0",
         "digits": 100,
@@ -106755,7 +106755,7 @@
        "1000": "1000000.0",
        "10000": "1000000.0"
       },
-      "fp19": {
+      "bl19": {
        "1": "1000000.0",
        "2": "1000000.0",
        "5": "1000000.0",
@@ -106769,7 +106769,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "999999.999999999999999999999999999999999294",
         "digits": 39,
@@ -106951,7 +106951,7 @@
         "gasPerStep": 5355
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "999999.999999999999999999999999999999999294",
         "digits": 39,
@@ -108219,7 +108219,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1000000.0",
         "digits": 71,
@@ -109270,7 +109270,7 @@
        "1000": "123456.788999999999999999999999999998687335",
        "10000": "123456.788999999999999999999999999998687335"
       },
-      "fp19": {
+      "bl19": {
        "1": "123456.789",
        "2": "123456.789",
        "5": "123456.789",
@@ -109284,7 +109284,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "123456.788999999999999999999999999999999904",
         "digits": 39,
@@ -109466,7 +109466,7 @@
         "gasPerStep": 5351
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "123456.788999999999999999999999999999999904",
         "digits": 39,
@@ -110734,7 +110734,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "123456.789",
         "digits": 70,
@@ -111704,7 +111704,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 10,
       "completed": 10,
@@ -111886,7 +111886,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 10,
       "completed": 10,
@@ -113194,7 +113194,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 10,
       "completed": 10,
@@ -114334,8 +114334,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 1000,
-    "fp19": 1000
+    "bl127": 1000,
+    "bl19": 1000
    }
   },
   {
@@ -114355,11 +114355,11 @@
     "payment": "principal * rate / (1 - (1 + rate)^(-term))"
    },
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul",
      "sub"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul",
      "sub"
     ],
@@ -114392,7 +114392,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul",
      "sub"
     ],
@@ -114512,7 +114512,7 @@
        "1000": "284994.622856566482740245123103607432073452",
        "10000": "55.0904391292688543764782926735460727495408"
       },
-      "fp19": {
+      "bl19": {
        "1": "299985.997904646192889616072874683554206187",
        "2": "299971.993891197131833052641101815695200622",
        "5": "299929.970339650717268569168352961440273312",
@@ -114526,7 +114526,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "299985.997904646192889616072874683554205975",
         "digits": 39,
@@ -114707,7 +114707,7 @@
         "gasPerStep": 981
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "299985.997904646192889616072874683554205975",
         "digits": 39,
@@ -115970,7 +115970,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "299985.997904646192889616072874683554206187",
         "digits": 71,
@@ -117261,7 +117261,7 @@
        "1000": "9499.82076188554942467483743678691452628403",
        "10000": "1.83634797097562847921594308912067779542773"
       },
-      "fp19": {
+      "bl19": {
        "1": "9999.53326348820642965386909582278514020624",
        "2": "9999.06646303990439443508803672718984002072",
        "5": "9997.66567798835724228563894509871467577708",
@@ -117275,7 +117275,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "9999.53326348820642965386909582278514019917",
         "digits": 39,
@@ -117456,7 +117456,7 @@
         "gasPerStep": 981
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "9999.53326348820642965386909582278514019917",
         "digits": 39,
@@ -118719,7 +118719,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "9999.53326348820642965386909582278514020624",
         "digits": 71,
@@ -120010,7 +120010,7 @@
        "1000": "293471.605002309353805211359040682258842301",
        "10000": "87.8434817682970388017080453303859141473836"
       },
-      "fp19": {
+      "bl19": {
        "1": "299994.324232346286989406839431917094038922",
        "2": "299988.646909687737345112146491075809199498",
        "5": "299971.60560742219775339721857708216745183",
@@ -120024,7 +120024,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "299994.324232346286989406839431917094038498",
         "digits": 38,
@@ -120205,7 +120205,7 @@
         "gasPerStep": 981
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "299994.324232346286989406839431917094038498",
         "digits": 38,
@@ -121468,7 +121468,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "299994.324232346286989406839431917094038922",
         "digits": 71,
@@ -122759,7 +122759,7 @@
        "1000": "287349.149448776135682899084942809564312775",
        "10000": "47120.1031347975750399287511443062200265202"
       },
-      "fp19": {
+      "bl19": {
        "1": "299988.195004095414083362862225365544353962",
        "2": "299976.388391068101511120705664734563440027",
        "5": "299940.958847034415516215125226288796845221",
@@ -122773,7 +122773,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "299988.19500409541408336286222536554435375",
         "digits": 39,
@@ -122954,7 +122954,7 @@
         "gasPerStep": 981
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "299988.19500409541408336286222536554435375",
         "digits": 39,
@@ -124217,7 +124217,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "299988.195004095414083362862225365544353962",
         "digits": 71,
@@ -125508,7 +125508,7 @@
        "1000": "932813.767369504814211963929603549150435239",
        "10000": "146.645460563194736490519671125333813137292"
       },
-      "fp19": {
+      "bl19": {
        "1": "999935.534267207169932435248231367463722696",
        "2": "999871.063235860959632262203469438875456109",
        "5": "999677.618346146892980547209222666337987932",
@@ -125522,7 +125522,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "999935.534267207169932435248231367463721097",
         "digits": 38,
@@ -125703,7 +125703,7 @@
         "gasPerStep": 981
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "999935.534267207169932435248231367463721097",
         "digits": 38,
@@ -126966,7 +126966,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "999935.534267207169932435248231367463722696",
         "digits": 71,
@@ -128257,7 +128257,7 @@
        "1000": "299082.420911813803678745248360947247519499",
        "10000": "164.982437101681661362693057609388347469653"
       },
-      "fp19": {
+      "bl19": {
        "1": "299999.310723206755773343409576330144731094",
        "2": "299998.621068727597440261253897633621048342",
        "5": "299996.549837104558892657984708611872855176",
@@ -128271,7 +128271,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "299999.310723206755773343409576330144730246",
         "digits": 38,
@@ -128452,7 +128452,7 @@
         "gasPerStep": 981
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "299999.310723206755773343409576330144730246",
         "digits": 38,
@@ -129715,7 +129715,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "299999.310723206755773343409576330144731094",
         "digits": 71,
@@ -131006,7 +131006,7 @@
        "1000": "474.991038094277471233741871839345726314201",
        "10000": "0.0918173985487814239607971544560338897713865"
       },
-      "fp19": {
+      "bl19": {
        "1": "499.976663174410321482693454791139257010312",
        "2": "499.953323151995219721754401836359492001036",
        "5": "499.883283899417862114281947254935733788854",
@@ -131020,7 +131020,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "499.97666317441032148269345479113925700996",
         "digits": 39,
@@ -131201,7 +131201,7 @@
         "gasPerStep": 981
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "499.97666317441032148269345479113925700996",
         "digits": 39,
@@ -132464,7 +132464,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "499.976663174410321482693454791139257010312",
         "digits": 72,
@@ -133755,7 +133755,7 @@
        "1000": "299701.141403739743782714739000609376502324",
        "10000": "294026.067204448836036265342019621501588314"
       },
-      "fp19": {
+      "bl19": {
        "1": "299999.721123533108110772043275195168382714",
        "2": "299999.442208863960482929123816592418295344",
        "5": "299998.605235590647726062422945446471341387",
@@ -133769,7 +133769,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "299999.721123533108110772043275195168382502",
         "digits": 39,
@@ -133950,7 +133950,7 @@
         "gasPerStep": 981
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "299999.721123533108110772043275195168382502",
         "digits": 39,
@@ -135213,7 +135213,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "299999.721123533108110772043275195168382714",
         "digits": 71,
@@ -136418,7 +136418,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 8,
       "completed": 8,
@@ -136600,7 +136600,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 8,
       "completed": 8,
@@ -137908,7 +137908,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 8,
       "completed": 8,
@@ -139278,8 +139278,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 1000
+    "bl127": 10000,
+    "bl19": 1000
    }
   },
   {
@@ -139293,13 +139293,13 @@
    "order": [],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "div",
      "ln",
      "add",
      "exp"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "div",
      "ln",
      "add",
@@ -139344,7 +139344,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "div",
      "ln",
      "add",
@@ -139461,7 +139461,7 @@
        "1000": "1.00623596930045890152123699191085464878457",
        "10000": "1.00085210215007978718759617264671502942782"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.5",
        "2": "1.41421356237309504880168872420969807856967",
        "5": "1.28473515712343933867943306541867483181504",
@@ -139475,7 +139475,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.49999999999999999999999999999999999999706",
         "digits": 38,
@@ -139657,7 +139657,7 @@
         "gasPerStep": 3638
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.49999999999999999999999999999999999999706",
         "digits": 38,
@@ -140923,7 +140923,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.5",
         "digits": 100,
@@ -141887,7 +141887,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 1,
       "completed": 1,
@@ -142069,7 +142069,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 1,
       "completed": 1,
@@ -143377,7 +143377,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 1,
       "completed": 1,
@@ -144457,8 +144457,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 1000,
-    "fp19": 1000
+    "bl127": 1000,
+    "bl19": 1000
    }
   },
   {
@@ -144479,14 +144479,14 @@
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "div",
      "ln",
      "add",
      "sqrt",
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "div",
      "ln",
      "add",
@@ -144537,7 +144537,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "div",
      "ln",
      "add",
@@ -144672,7 +144672,7 @@
        "1000": "589.474773952864477005737983804430855673172",
        "10000": "29787.5592875314291664765495822016502170247"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.247487373415291633540295526736697163749693",
        "2": "0.495681818258787601119016496784504841607013",
        "5": "1.24450687446379156294859558697855008088958",
@@ -144686,7 +144686,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.247487373415291633540295526736697163730619",
         "digits": 37,
@@ -144868,7 +144868,7 @@
         "gasPerStep": 6692
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.247487373415291633540295526736697163730619",
         "digits": 37,
@@ -146136,7 +146136,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.247487373415291633540295526736697163749693",
         "digits": 71,
@@ -147197,7 +147197,7 @@
        "1000": "2092.73405286650258637263529942840502019364",
        "10000": "116498.586720676163449403031970913416843108"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.724784450716211212510865471157470265266957",
        "2": "1.45239718714523976117543271555938258696442",
        "5": "3.65220228313038964354279916896760837489924",
@@ -147211,7 +147211,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.724784450716211212510865471157470265301361",
         "digits": 37,
@@ -147393,7 +147393,7 @@
         "gasPerStep": 6692
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.724784450716211212510865471157470265301361",
         "digits": 37,
@@ -148661,7 +148661,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.724784450716211212510865471157470265266957",
         "digits": 71,
@@ -149722,7 +149722,7 @@
        "1000": "412.533736433171440901751131740426116417339",
        "10000": "10098.5402513324105081223037534435965792466"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.327036886298778230035390517473492680669237",
        "2": "0.65425054045460754358038739577476298986538",
        "5": "1.63695193334072449898873207569122946888146",
@@ -149736,7 +149736,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.327036886298778230035390517473492680661036",
         "digits": 37,
@@ -149918,7 +149918,7 @@
         "gasPerStep": 6692
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.327036886298778230035390517473492680661036",
         "digits": 37,
@@ -151186,7 +151186,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.327036886298778230035390517473492680669237",
         "digits": 71,
@@ -152247,7 +152247,7 @@
        "1000": "1823.18103518428412676618056289345840855806",
        "10000": "38946.7356414381067654752901442471523888834"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.53669546507022734419475891739532831322862",
        "2": "3.07398016124048861925881668236263214884666",
        "5": "7.6893691454278324805803358078764214175559",
@@ -152261,7 +152261,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.53669546507022734419475891739532831322674",
         "digits": 38,
@@ -152443,7 +152443,7 @@
         "gasPerStep": 6691
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.53669546507022734419475891739532831322674",
         "digits": 38,
@@ -153711,7 +153711,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.53669546507022734419475891739532831322862",
         "digits": 71,
@@ -154772,7 +154772,7 @@
        "1000": "-906.193565750747829224376345587727414927065",
        "10000": "19197.2625640853148299459583508517142222776"
       },
-      "fp19": {
+      "bl19": {
        "1": "-1.33037580970796893688350167370623781761852",
        "2": "-2.65986779117756884132775259085910461395089",
        "5": "-6.64304187059632799355433435595592253374926",
@@ -154786,7 +154786,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "-1.3303758097079689368835016737062378176732",
         "digits": 37,
@@ -154968,7 +154968,7 @@
         "gasPerStep": 6692
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "-1.3303758097079689368835016737062378176732",
         "digits": 37,
@@ -156236,7 +156236,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "-1.33037580970796893688350167370623781761852",
         "digits": 70,
@@ -157177,7 +157177,7 @@
        "1000": "2453.2161000047770584243010489239262914225",
        "10000": "193479.851672097977572691134715159949619631"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.035",
        "2": "0.0749997500166654167666583340475565531741032",
        "5": "0.224992501666224296625930019288966810953088",
@@ -157191,7 +157191,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.0349999999999999999999999999999999998531808",
         "digits": 35,
@@ -157373,7 +157373,7 @@
         "gasPerStep": 6692
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.0349999999999999999999999999999999998531808",
         "digits": 35,
@@ -158635,7 +158635,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.035",
         "digits": 71,
@@ -159690,7 +159690,7 @@
        "1000": "665.968447099369688813312282007261178568018",
        "10000": "18606.0902449950890863427076921512826158267"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.494974746830583267080591053473394327499385",
        "2": "0.990303029375268701180394828602343912052584",
        "5": "2.47840873784658303302651424401450376856748",
@@ -159704,7 +159704,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.49497474683058326708059105347339432748181",
         "digits": 37,
@@ -159886,7 +159886,7 @@
         "gasPerStep": 6985
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.49497474683058326708059105347339432748181",
         "digits": 37,
@@ -161154,7 +161154,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.494974746830583267080591053473394327499385",
         "digits": 71,
@@ -162215,7 +162215,7 @@
        "1000": "11819.1844523398689403031300516304311338301",
        "10000": "261349.557224849655970078597469329667865706"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.247487373415291633540295526736697163749693",
        "2": "0.565334211043832030104298258499575120773268",
        "5": "1.93416666917814987050239142802344211577838",
@@ -162229,7 +162229,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.247487373415291633540295526736697163730619",
         "digits": 37,
@@ -162411,7 +162411,7 @@
         "gasPerStep": 6691
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.247487373415291633540295526736697163730619",
         "digits": 37,
@@ -163679,7 +163679,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.247487373415291633540295526736697163749693",
         "digits": 71,
@@ -164649,7 +164649,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 8,
       "completed": 8,
@@ -164831,7 +164831,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 8,
       "completed": 8,
@@ -166139,7 +166139,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 8,
       "completed": 8,
@@ -167279,8 +167279,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 1000,
-    "fp19": 1000
+    "bl127": 1000,
+    "bl19": 1000
    }
   },
   {
@@ -167296,10 +167296,10 @@
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul"
     ],
     "abdk": [
@@ -167326,7 +167326,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul"
     ],
     "solmate": [
@@ -167435,7 +167435,7 @@
        "1000": "0.999995000012474979291525730285725552298009",
        "10000": "0.999950001249729179425101682297158079012258"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.0001",
        "2": "0.99999999",
        "5": "1.00009997999800010001",
@@ -167449,7 +167449,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00009999999999999999999999999999999999957",
         "digits": 39,
@@ -167630,7 +167630,7 @@
         "gasPerStep": 935
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00009999999999999999999999999999999999957",
         "digits": 39,
@@ -168884,7 +168884,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.0001",
         "digits": 71,
@@ -170155,7 +170155,7 @@
        "1000": "0.95122704627157561443294812328344788213199",
        "10000": "0.606515495624744878711655593186508345939829"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.01",
        "2": "0.9999",
        "5": "1.0097980101",
@@ -170169,7 +170169,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00999999999999999999999999999999999999835",
         "digits": 38,
@@ -170350,7 +170350,7 @@
         "gasPerStep": 935
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00999999999999999999999999999999999999835",
         "digits": 38,
@@ -171598,7 +171598,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.01",
         "digits": 71,
@@ -172859,7 +172859,7 @@
        "1000": "0.999500124729294072775901368600747539444583",
        "10000": "0.995012476705149460124900849229003888599888"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.001",
        "2": "0.999999",
        "5": "1.000997998001001",
@@ -172873,7 +172873,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00099999999999999999999999999999999999866",
         "digits": 38,
@@ -173054,7 +173054,7 @@
         "gasPerStep": 935
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00099999999999999999999999999999999999866",
         "digits": 38,
@@ -174302,7 +174302,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.001",
         "digits": 71,
@@ -175563,7 +175563,7 @@
        "1000": "0.999999999500000000124749999979291500002573",
        "10000": "0.999999995000000012497499979179165026010429"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.000001",
        "2": "0.999999999999",
        "5": "1.000000999997999998000001000001",
@@ -175577,7 +175577,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00000099999999999999999999999999999999938",
         "digits": 39,
@@ -175758,7 +175758,7 @@
         "gasPerStep": 935
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00000099999999999999999999999999999999938",
         "digits": 39,
@@ -177012,7 +177012,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.000001",
         "digits": 71,
@@ -178283,7 +178283,7 @@
        "1000": "0.286056736330361283669471894541267520998588",
        "10000": "0.00000366878104794578872829402721334524809121638"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.05",
        "2": "0.9975",
        "5": "1.0447565625",
@@ -178297,7 +178297,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.04999999999999999999999999999999999999765",
         "digits": 38,
@@ -178478,7 +178478,7 @@
         "gasPerStep": 935
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.04999999999999999999999999999999999999765",
         "digits": 38,
@@ -179726,7 +179726,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.05",
         "digits": 71,
@@ -180906,7 +180906,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 5,
       "completed": 5,
@@ -181088,7 +181088,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 5,
       "completed": 5,
@@ -182396,7 +182396,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 5,
       "completed": 5,
@@ -183736,8 +183736,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 10000
+    "bl127": 10000,
+    "bl19": 10000
    }
   },
   {
@@ -183747,17 +183747,17 @@
    "title": "Annual compounding at 10% for 10,000 years",
    "step": "b = b * 1.1",
    "result": "balance after N years",
-   "why": "Ten thousand years of annual compounding grows $10,000 to about 10^418, past every fixed-point word: at 10% 64.64 overflows by N = 365, Solady, Balancer, Maker and FP127 by N = 1,000 and PRBMath by N = 10,000 (at 50%, 64.64 by N = 100 and the rest by N = 365); only binary128 and FP19 reach N = 10,000. Until about N = 20 the balances are short decimals that WAD and RAY hold exactly. The row began as a check of an old README claim ($25,937.42 true against $25,932.38 for Solady at N = 10); Solady returns $25,937.424601 exactly.",
+   "why": "Ten thousand years of annual compounding grows $10,000 to about 10^418, past every fixed-point word: at 10% 64.64 overflows by N = 365, Solady, Balancer, Maker and BL127 by N = 1,000 and PRBMath by N = 10,000 (at 50%, 64.64 by N = 100 and the rest by N = 365); only binary128 and BL19 reach N = 10,000. Until about N = 20 the balances are short decimals that WAD and RAY hold exactly. The row began as a check of an old README claim ($25,937.42 true against $25,932.38 for Solady at N = 10); Solady returns $25,937.424601 exactly.",
    "order": [
     "principal",
     "rate"
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul"
     ],
     "abdk": [
@@ -183785,7 +183785,7 @@
      "rpow",
      "rmul"
     ],
-    "fp19": [
+    "bl19": [
      "mul"
     ],
     "solmate": [
@@ -183896,7 +183896,7 @@
        "1000": "2.46993291800582633412408838508523228888648e+45",
        "10000": "8.44990025120034795728149043293509280661346e+417"
       },
-      "fp19": {
+      "bl19": {
        "1": "11000.0",
        "2": "12100.0",
        "5": "16105.1",
@@ -183910,7 +183910,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10999.9999999999999999999999999999999999824",
         "digits": 38,
@@ -184083,7 +184083,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10999.9999999999999999999999999999999999824",
         "digits": 38,
@@ -185381,7 +185381,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "11000.0",
         "digits": 100,
@@ -186633,7 +186633,7 @@
        "1000": "15463189207319272389845680.1716297878137217",
        "10000": "7.81611065842881037880539077588569807699936e+215"
       },
-      "fp19": {
+      "bl19": {
        "1": "10500.0",
        "2": "11025.0",
        "5": "12762.815625",
@@ -186647,7 +186647,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10499.9999999999999999999999999999999999765",
         "digits": 38,
@@ -186834,7 +186834,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10499.9999999999999999999999999999999999765",
         "digits": 38,
@@ -188200,7 +188200,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10500.0",
         "digits": 100,
@@ -189479,7 +189479,7 @@
        "1000": "246993291800582633412408838508523228888648.0",
        "10000": "8.44990025120034795728149043293509280661346e+413"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.1",
        "2": "1.21",
        "5": "1.61051",
@@ -189493,7 +189493,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.09999999999999999999999999999999999999824",
         "digits": 38,
@@ -189666,7 +189666,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.09999999999999999999999999999999999999824",
         "digits": 38,
@@ -190987,7 +190987,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.1",
         "digits": 71,
@@ -192256,7 +192256,7 @@
        "1000": "2.46993291800582633412408838508523228888648e+47",
        "10000": "8.44990025120034795728149043293509280661346e+419"
       },
-      "fp19": {
+      "bl19": {
        "1": "1100000.0",
        "2": "1210000.0",
        "5": "1610510.0",
@@ -192270,7 +192270,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1099999.99999999999999999999999999999999824",
         "digits": 38,
@@ -192443,7 +192443,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1099999.99999999999999999999999999999999824",
         "digits": 38,
@@ -193741,7 +193741,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1100000.0",
         "digits": 100,
@@ -194909,7 +194909,7 @@
     {
      "name": "fifty-pct",
      "reference": false,
-     "why": "50% a year: 64.64 overflows by N = 100; the WAD libraries, Maker and FP127 by N = 365; binary128 and FP19 reach 10,000",
+     "why": "50% a year: 64.64 overflows by N = 100; the WAD libraries, Maker and BL127 by N = 365; binary128 and BL19 reach 10,000",
      "params": {
       "principal": "10000",
       "rate": "0.5"
@@ -194991,7 +194991,7 @@
        "1000": "1.23384059690617347922743909948678005742187e+180",
        "10000": "8.1769352134242726840918687840451866696436e+1764"
       },
-      "fp19": {
+      "bl19": {
        "1": "15000.0",
        "2": "22500.0",
        "5": "75937.5",
@@ -195005,7 +195005,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "15000.0",
         "digits": 100,
@@ -195144,7 +195144,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "15000.0",
         "digits": 100,
@@ -196289,7 +196289,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "15000.0",
         "digits": 100,
@@ -197313,7 +197313,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 5,
       "completed": 5,
@@ -197529,7 +197529,7 @@
       "count": 0
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 5,
       "completed": 5,
@@ -199169,7 +199169,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 5,
       "completed": 5,
@@ -200721,8 +200721,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 10000
+    "bl127": 10000,
+    "bl19": 10000
    }
   },
   {
@@ -200732,18 +200732,18 @@
    "title": "Per-second accrual",
    "step": "b = b0 * (1 + r/31536000)^(N * 86400)",
    "result": "balance after N days of per-second compounding",
-   "why": "How Maker's jug and pot accrue: the rate per second, compounded every second, N days at a time. The rate is 1.6e-9 at 5% APR, which an 18-decimal grid holds to ten digits before any arithmetic; FP127 and FP19 compute the power with compound, which never forms a rounded 1 + r; the WAD and 64.64 libraries as exp(n ln(1 + r)), Maker as rpow.",
+   "why": "How Maker's jug and pot accrue: the rate per second, compounded every second, N days at a time. The rate is 1.6e-9 at 5% APR, which an 18-decimal grid holds to ten digits before any arithmetic; BL127 and BL19 compute the power with compound, which never forms a rounded 1 + r; the WAD and 64.64 libraries as exp(n ln(1 + r)), Maker as rpow.",
    "order": [
     "principal",
     "rateSec"
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "compound",
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "compound",
      "mul"
     ],
@@ -200779,7 +200779,7 @@
      "rpow",
      "rmul"
     ],
-    "fp19": [
+    "bl19": [
      "compound",
      "mul"
     ],
@@ -200894,7 +200894,7 @@
        "1000": "11468.1243852882470306069512046958528508368",
        "10000": "39348.1163898331886255451916114813274137406"
       },
-      "fp19": {
+      "bl19": {
        "1": "10001.3699568431307942024761884151451229546",
        "2": "10002.7401013644367924940998199373753631246",
        "5": "10006.851661254534624362262641758190829368",
@@ -200908,7 +200908,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10001.3699568431307942024761884151438388605",
         "digits": 33,
@@ -201110,7 +201110,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10001.3699568431307942024761884151438388605",
         "digits": 33,
@@ -202638,7 +202638,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10001.3699568431307942024761884151451229546",
         "digits": 71,
@@ -203771,7 +203771,7 @@
        "1000": "10277.760162519548633896356164269270491245",
        "10000": "13151.7876939294465411171139539188113170207"
       },
-      "fp19": {
+      "bl19": {
        "1": "10000.2739763557799140231510548579417720614",
        "2": "10000.5479602178641806905049258047967716752",
        "5": "10001.3699568439996746421526886631454588596",
@@ -203785,7 +203785,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10000.2739763557799140231510548579394839761",
         "digits": 33,
@@ -203987,7 +203987,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10000.2739763557799140231510548579394839761",
         "digits": 33,
@@ -205515,7 +205515,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10000.2739763557799140231510548579417720614",
         "digits": 71,
@@ -206648,7 +206648,7 @@
        "1000": "17296.951926068246323647443513631952502407",
        "10000": "2397153.16355476697599674190377009549585258"
       },
-      "fp19": {
+      "bl19": {
        "1": "10005.4809535313837600696060153403464587219",
        "2": "10010.9649111479288389502298581869837222631",
        "5": "10027.434824978295920424493357888404737087",
@@ -206662,7 +206662,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10005.480953531383760069606015340346401186",
         "digits": 35,
@@ -206864,7 +206864,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10005.480953531383760069606015340346401186",
         "digits": 35,
@@ -208392,7 +208392,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10005.4809535313837600696060153403464587219",
         "digits": 71,
@@ -209525,7 +209525,7 @@
        "1000": "39348.1160052617815833982085558494764217258",
        "10000": "8896914786.35017261672602920363409808764943"
       },
-      "fp19": {
+      "bl19": {
        "1": "10013.7080169373943025277214486086592244364",
        "2": "10027.4348248476241939627854742706759207718",
        "5": "10068.7282521789000352332330666787181238249",
@@ -209539,7 +209539,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10013.7080169373943025277214486086590804788",
         "digits": 34,
@@ -209741,7 +209741,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10013.7080169373943025277214486086590804788",
         "digits": 34,
@@ -211269,7 +211269,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10013.7080169373943025277214486086592244364",
         "digits": 72,
@@ -212402,7 +212402,7 @@
        "1000": "1.14681243852882470306069512046958528508368",
        "10000": "3.93481163898331886255451916114813274137406"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.00013699568431307942024761884151451229546",
        "2": "1.00027401013644367924940998199373753631246",
        "5": "1.0006851661254534624362262641758190829368",
@@ -212416,7 +212416,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00013699568431307942024761884151438388605",
         "digits": 33,
@@ -212618,7 +212618,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00013699568431307942024761884151438388605",
         "digits": 33,
@@ -214146,7 +214146,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.00013699568431307942024761884151451229546",
         "digits": 71,
@@ -215279,7 +215279,7 @@
        "1000": "114681243.852882470306069512046958528508368",
        "10000": "393481163.898331886255451916114813274137406"
       },
-      "fp19": {
+      "bl19": {
        "1": "100013699.568431307942024761884151451229546",
        "2": "100027401.013644367924940998199373753631246",
        "5": "100068516.61254534624362262641758190829368",
@@ -215293,7 +215293,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "100013699.568431307942024761884151438388605",
         "digits": 33,
@@ -215495,7 +215495,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "100013699.568431307942024761884151438388605",
         "digits": 33,
@@ -217023,7 +217023,7 @@
         "gasPerStep": 0
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "100013699.568431307942024761884151451229546",
         "digits": 72,
@@ -218073,7 +218073,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 6,
       "completed": 6,
@@ -218305,7 +218305,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 6,
       "completed": 6,
@@ -220073,7 +220073,7 @@
       }
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 6,
       "completed": 6,
@@ -221403,8 +221403,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 10000
+    "bl127": 10000,
+    "bl19": 10000
    }
   },
   {
@@ -221424,12 +221424,12 @@
     "rateSec": "rateAnnual / 31536000"
    },
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul",
      "div",
      "exp"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul",
      "div",
      "exp"
@@ -221470,7 +221470,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul",
      "div",
      "exp"
@@ -221590,7 +221590,7 @@
        "1000": "11468.1243865336300386096785282459267924933",
        "10000": "39348.1164325633456472307592365680405690625"
       },
-      "fp19": {
+      "bl19": {
        "1": "10001.3699568442168947523014256696449249239",
        "2": "10002.740101366609291175926524648192624907",
        "5": "10006.8516612599681035447190899643916635711",
@@ -221604,7 +221604,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10001.3699568442168947523014256696449249036",
         "digits": 38,
@@ -221806,7 +221806,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10001.3699568442168947523014256696449249036",
         "digits": 38,
@@ -223474,7 +223474,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10001.3699568442168947523014256696449249239",
         "digits": 71,
@@ -224608,7 +224608,7 @@
        "1000": "10277.760162564193241669551949616037282778",
        "10000": "13151.7876945007348314048312748901971620781"
       },
-      "fp19": {
+      "bl19": {
        "1": "10000.2739763558233532844529536124145204311",
        "2": "10000.5479602179510615933748253555720854914",
        "5": "10001.3699568442168947523014256696449249239",
@@ -224622,7 +224622,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10000.2739763558233532844529536124145203975",
         "digits": 38,
@@ -224824,7 +224824,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10000.2739763558233532844529536124145203975",
         "digits": 38,
@@ -226492,7 +226492,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10000.2739763558233532844529536124145204311",
         "digits": 71,
@@ -227626,7 +227626,7 @@
        "1000": "17296.9519561220954023505184757876480128217",
        "10000": "2397153.20520585109026340029473340568641499"
       },
-      "fp19": {
+      "bl19": {
        "1": "10005.4809535487685117623653760232597850629",
        "2": "10010.9649111827173993390153343556698674894",
        "5": "10027.4348250654104056540386919480208485404",
@@ -227640,7 +227640,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10005.4809535487685117623653760232597850458",
         "digits": 38,
@@ -227842,7 +227842,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10005.4809535487685117623653760232597850458",
         "digits": 38,
@@ -229510,7 +229510,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10005.4809535487685117623653760232597850629",
         "digits": 71,
@@ -230644,7 +230644,7 @@
        "1000": "39348.1164325633456472307592365680379737982",
        "10000": "8896915752.51225997583803059963989679878136"
       },
-      "fp19": {
+      "bl19": {
        "1": "10013.7080170461383418594567841237800085191",
        "2": "10027.4348250654104056540386919480208485404",
        "5": "10068.7282527256076979927807360904191194169",
@@ -230658,7 +230658,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "10013.7080170461383418594567841237800084967",
         "digits": 38,
@@ -230860,7 +230860,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "10013.7080170461383418594567841237800084967",
         "digits": 38,
@@ -232528,7 +232528,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "10013.7080170461383418594567841237800085191",
         "digits": 72,
@@ -233662,7 +233662,7 @@
        "1000": "1.14681243865336300386096785282459267924933",
        "10000": "3.93481164325633456472307592365680405690625"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.00013699568442168947523014256696449249239",
        "2": "1.0002740101366609291175926524648192624907",
        "5": "1.00068516612599681035447190899643916635711",
@@ -233676,7 +233676,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.00013699568442168947523014256696449249036",
         "digits": 38,
@@ -233878,7 +233878,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.00013699568442168947523014256696449249036",
         "digits": 38,
@@ -235546,7 +235546,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.00013699568442168947523014256696449249239",
         "digits": 71,
@@ -236680,7 +236680,7 @@
        "1000": "114681243.865336300386096785282459267924933",
        "10000": "393481164.325633456472307592365680405690625"
       },
-      "fp19": {
+      "bl19": {
        "1": "100013699.568442168947523014256696449249239",
        "2": "100027401.01366609291175926524648192624907",
        "5": "100068516.612599681035447190899643916635711",
@@ -236694,7 +236694,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "100013699.568442168947523014256696449249036",
         "digits": 38,
@@ -236896,7 +236896,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "100013699.568442168947523014256696449249036",
         "digits": 38,
@@ -238564,7 +238564,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "100013699.568442168947523014256696449249239",
         "digits": 71,
@@ -239614,7 +239614,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 6,
       "completed": 6,
@@ -239846,7 +239846,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 6,
       "completed": 6,
@@ -241774,7 +241774,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 6,
       "completed": 6,
@@ -243104,8 +243104,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 10000
+    "bl127": 10000,
+    "bl19": 10000
    }
   },
   {
@@ -243115,7 +243115,7 @@
    "title": "An option walking out of the money",
    "step": "S = S (1 - tick); then C = S N(d1) - K e^(-rT) N(d2)",
    "result": "the Black-Scholes call price after N down-ticks of the spot",
-   "why": "Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. FP127 and FP19 have normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives. Relative digits there say little about money: at N = 10,000 the true price of five of the six inputs is below 10^-15 wei of a $100 strike at 18 decimals, so every library is off by less than a wei; the slow walk's is 3.2 million wei ($3 \u00d7 10^-12), where the WAD libraries are off by about 94 wei. Up to N = 1,000 they are off by tens to ten thousand wei, FP127 by under 10^-16 (absErrWei in the data).",
+   "why": "Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. BL127 and BL19 have normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives. Relative digits there say little about money: at N = 10,000 the true price of five of the six inputs is below 10^-15 wei of a $100 strike at 18 decimals, so every library is off by less than a wei; the slow walk's is 3.2 million wei ($3 \u00d7 10^-12), where the WAD libraries are off by about 94 wei. Up to N = 1,000 they are off by tens to ten thousand wei, BL127 by under 10^-16 (absErrWei in the data).",
    "order": [
     "spot",
     "strike",
@@ -243126,7 +243126,7 @@
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul",
      "sqrt",
      "ln",
@@ -243136,7 +243136,7 @@
      "sub",
      "normCdf"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul",
      "sqrt",
      "ln",
@@ -243199,7 +243199,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul",
      "sqrt",
      "ln",
@@ -243340,7 +243340,7 @@
        "1000": "0.974187219763713465710122175526671949131913",
        "10000": "4.26395835385621571476498764907019114448619e-34"
       },
-      "fp19": {
+      "bl19": {
        "1": "6.87839186610381111236482092683425007076306",
        "2": "6.86806513271493210766538832843009014451141",
        "5": "6.83714479479769759938000331844859304685863",
@@ -243354,7 +243354,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "6.87839186610381111236482092683425007066222",
         "digits": 37,
@@ -243546,7 +243546,7 @@
         "gasPerStep": 831
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "6.87839186610381111236482092683425007066222",
         "digits": 37,
@@ -244861,7 +244861,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "6.87839186610381111236482092683425007076306",
         "digits": 70,
@@ -245844,7 +245844,7 @@
        "1000": "2.50221132153314945229568600987104432552976",
        "10000": "0.00000000000318276622044738943723439989883944376302261"
       },
-      "fp19": {
+      "bl19": {
        "1": "6.88275260104981013089120846041998432353715",
        "2": "6.87677995822374760422256978784666079833304",
        "5": "6.85888203126533288165414934864130325914403",
@@ -245858,7 +245858,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "6.88275260104981013089120846041998432323843",
         "digits": 37,
@@ -246050,7 +246050,7 @@
         "gasPerStep": 831
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "6.88275260104981013089120846041998432323843",
         "digits": 37,
@@ -247378,7 +247378,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "6.88275260104981013089120846041998432353715",
         "digits": 70,
@@ -248361,7 +248361,7 @@
        "1000": "0.00109943969984998026533527558027752182836207",
        "10000": "5.05223923467524791730898955780873951267227e-273"
       },
-      "fp19": {
+      "bl19": {
        "1": "6.85887606820432120856146544421474803266252",
        "2": "6.82910692390292427416772196645165389197211",
        "5": "6.74029950493990719945829704327395847635567",
@@ -248375,7 +248375,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "6.85887606820432120856146544421474803251892",
         "digits": 37,
@@ -248567,7 +248567,7 @@
         "gasPerStep": 830
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "6.85887606820432120856146544421474803251892",
         "digits": 37,
@@ -249882,7 +249882,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "6.85887606820432120856146544421474803266252",
         "digits": 70,
@@ -250865,7 +250865,7 @@
        "1000": "0.480661541880745829466273887951749873430205",
        "10000": "3.75465604958019777913972630043482510987703e-42"
       },
-      "fp19": {
+      "bl19": {
        "1": "2.9580407925462725431673187977559499195729",
        "2": "2.95421570115641918029662731845011884746988",
        "5": "2.94275462411467794841925692740429106028653",
@@ -250879,7 +250879,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "2.95804079254627254316731879775594991949712",
         "digits": 37,
@@ -251071,7 +251071,7 @@
         "gasPerStep": 830
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "2.95804079254627254316731879775594991949712",
         "digits": 37,
@@ -252386,7 +252386,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "2.9580407925462725431673187977559499195729",
         "digits": 70,
@@ -253369,7 +253369,7 @@
        "1000": "2.17785861592460764550060124442583801536094",
        "10000": "3.82757744406509619613785626700074432598199e-36"
       },
-      "fp19": {
+      "bl19": {
        "1": "23.2067881208054535628349110216617047943689",
        "2": "23.1628954332581098223624030487060040261113",
        "5": "23.0315979981485719209322408114946678926433",
@@ -253383,7 +253383,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "23.2067881208054535628349110216617047942126",
         "digits": 38,
@@ -253575,7 +253575,7 @@
         "gasPerStep": 831
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "23.2067881208054535628349110216617047942126",
         "digits": 38,
@@ -254890,7 +254890,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "23.2067881208054535628349110216617047943689",
         "digits": 71,
@@ -255873,7 +255873,7 @@
        "1000": "0.0610917243562970284956068090626065434817466",
        "10000": "6.07195588997278369198932958225754177777347e-52"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.821373863871485017109799354054663662049926",
        "2": "0.819834721013245887265899400292139937870684",
        "5": "0.815228334822009081734896821099605008677086",
@@ -255887,7 +255887,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.821373863871485017109799354054663661873",
         "digits": 36,
@@ -256079,7 +256079,7 @@
         "gasPerStep": 830
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.821373863871485017109799354054663661873",
         "digits": 36,
@@ -257394,7 +257394,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.821373863871485017109799354054663662049926",
         "digits": 69,
@@ -258286,7 +258286,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 6,
       "completed": 6,
@@ -258468,7 +258468,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 6,
       "completed": 6,
@@ -259776,7 +259776,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 6,
       "completed": 6,
@@ -260791,8 +260791,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 10000
+    "bl127": 10000,
+    "bl19": 10000
    }
   },
   {
@@ -260808,12 +260808,12 @@
    ],
    "derived": {},
    "ops": {
-    "fp127": [
+    "bl127": [
      "exp",
      "mul",
      "sub"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "exp",
      "mul",
      "sub"
@@ -260849,7 +260849,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "exp",
      "mul",
      "sub"
@@ -260963,7 +260963,7 @@
        "1000": "0.000964041186266938155990091780957413301161189",
        "10000": "0.00959869730283767091480041833488410436242364"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.000000964505707703576992254149583098240592634702",
        "2": "0.00000192901048513589379173040098513176249602616",
        "5": "0.00000482251923581425554856642918841047391821331",
@@ -260977,7 +260977,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.000000964505707703576992254149583098237338384831",
         "digits": 32,
@@ -261159,7 +261159,7 @@
         "gasPerStep": 4054
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.000000964505707703576992254149583098237338384831",
         "digits": 32,
@@ -262427,7 +262427,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.000000964505707703576992254149583098240592634702",
         "digits": 65,
@@ -263358,7 +263358,7 @@
        "1000": "0.0000010569925075085121162389297151572307895121",
        "10000": "0.0000105698747997345879389526912816179772414381"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00000000105699306556686904608855764331255920377655",
        "2": "0.0000000021139861300165037515206677603462362824715",
        "5": "0.00000000528496531666200183568740245440329338726079",
@@ -263372,7 +263372,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.0000000010569930655668690460885576433125493790292",
         "digits": 32,
@@ -263554,7 +263554,7 @@
         "gasPerStep": 4054
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.0000000010569930655668690460885576433125493790292",
         "digits": 32,
@@ -264822,7 +264822,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00000000105699306556686904608855764331255920377655",
         "digits": 62,
@@ -265753,7 +265753,7 @@
        "1000": "0.00000000105699306556686904608855764331255927464815",
        "10000": "0.0000000105699306053931452730545115708958350734748"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00000000000105699306612492759963949924223883649442793",
        "2": "0.0000000000021139861322487379649371623089085154323532",
        "5": "0.0000000000052849653306134656547791462645921324757188",
@@ -265767,7 +265767,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00000000000105699306612492759963949924260248286965139",
         "digits": 27,
@@ -265949,7 +265949,7 @@
         "gasPerStep": 4054
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00000000000105699306612492759963949924260248286965139",
         "digits": 27,
@@ -267217,7 +267217,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00000000000105699306612492759963949924223883649442793",
         "digits": 59,
@@ -268148,7 +268148,7 @@
        "1000": "0.00000000000105699306612492759963949924223883651466668",
        "10000": "0.0000000000105699306611990004510125062308505817400848"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.05699306612548565819324680498169055525408e-15",
        "2": "2.11398613225097019915215177260808390934558e-15",
        "5": "5.28496533062741711862281565136728985417026e-15",
@@ -268162,7 +268162,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.05699306612548565819324626930850271721314e-15",
         "digits": 24,
@@ -268344,7 +268344,7 @@
         "gasPerStep": 4054
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.05699306612548565819324626930850271721314e-15",
         "digits": 24,
@@ -269612,7 +269612,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.05699306612548565819324680498169055525408e-15",
         "digits": 57,
@@ -270543,7 +270543,7 @@
        "1000": "1.05699306612548063063870853689702408303749e-14",
        "10000": "0.000000000000105699306612543035509332585780400889957946"
       },
-      "fp19": {
+      "bl19": {
        "1": "1.05699306612548621122424601447295042128412e-17",
        "2": "2.11398613225097241127614861057233617955799e-17",
        "5": "5.28496533062743094439779588862910665722701e-17",
@@ -270557,7 +270557,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "1.05699306612548621122392694434758097208026e-17",
         "digits": 21,
@@ -270739,7 +270739,7 @@
         "gasPerStep": 4054
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "1.05699306612548621122392694434758097208026e-17",
         "digits": 21,
@@ -272007,7 +272007,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "1.05699306612548621122424601447295042128412e-17",
         "digits": 55,
@@ -272857,7 +272857,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 5,
       "completed": 5,
@@ -273039,7 +273039,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 5,
       "completed": 5,
@@ -274347,7 +274347,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 5,
       "completed": 5,
@@ -275357,8 +275357,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 1000,
-    "fp19": 1000
+    "bl127": 1000,
+    "bl19": 1000
    }
   },
   {
@@ -275384,12 +275384,12 @@
     "x": "speed * err * step, err the documented deviation at util (1 at 100%, -1 at 0%, 0.25 at 92.5%)"
    },
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul",
      "div",
      "exp"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul",
      "div",
      "exp"
@@ -275428,7 +275428,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul",
      "div",
      "exp"
@@ -275556,7 +275556,7 @@
        "1000": "4.15194141031981464994062620094826331619795e+141",
        "10000": "1.79156143092266113246475097287696207950188e+1496"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00000000179377671533878113749580000533954601543591",
        "2": "0.00000000253678335870116692034500253678335870116692",
        "5": "0.00000000717510686135512454998320002135818406174364",
@@ -275570,7 +275570,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00000000179377671533878113749580000533695574618821",
         "digits": 29,
@@ -275716,7 +275716,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00000000179377671533878113749580000533695574618821",
         "digits": 29,
@@ -276816,7 +276816,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00000000179377671533878113749580000533954601543591",
         "digits": 72,
@@ -278032,7 +278032,7 @@
        "1000": "3.87485586440842805942666082345713744217774e-160",
        "10000": "8.97997369488606404412178482837875425198704e-1515"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.000000000896888357669390568747900002669773007717955",
        "2": "0.00000000063419583967529173008625063419583967529173",
        "5": "0.000000000224222089417347642186975000667443251929489",
@@ -278046,7 +278046,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.000000000896888357669390568747900002668477873094104",
         "digits": 29,
@@ -278228,7 +278228,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.000000000896888357669390568747900002668477873094104",
         "digits": 29,
@@ -279460,7 +279460,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.000000000896888357669390568747900002669773007717955",
         "digits": 71,
@@ -280640,7 +280640,7 @@
        "1000": "53951415354030070944852645774.9506164152125",
        "10000": "2.45894018466721863953311633415153929424752e+367"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.0000000013831909343800832815918450732632013939532",
        "2": "0.00000000150838040969396380862189240304474367743908",
        "5": "0.00000000195612737875182752868124284892279913915121",
@@ -280654,7 +280654,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.0000000013831909343800832815918450732597123467272",
         "digits": 29,
@@ -280824,7 +280824,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.0000000013831909343800832815918450732597123467272",
         "digits": 29,
@@ -282020,7 +282020,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.0000000013831909343800832815918450732632013939532",
         "digits": 71,
@@ -283284,7 +283284,7 @@
        "1000": "0.00000000133093928803640146837915681633556206336492",
        "10000": "0.00000000205258897797047580791975781049576750576794"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.0000000012684527351336764980597026880663545493559",
        "2": "0.00000000126851379385577387490056954056226758699952",
        "5": "0.00000000126869698765750680347439071791705348595031",
@@ -283298,7 +283298,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.0000000012684527351336764980597026880621692741503",
         "digits": 29,
@@ -283480,7 +283480,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.0000000012684527351336764980597026880621692741503",
         "digits": 29,
@@ -284748,7 +284748,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.0000000012684527351336764980597026880663545493559",
         "digits": 71,
@@ -286048,7 +286048,7 @@
        "1000": "0.00236979963032147241706567081114479307513789",
        "10000": "6.5740925591924543931567813260748418965421e+53"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00000000128684086115870578571013173219549587789846",
        "2": "0.00000000130555839249555051849615905729822678382838",
        "5": "0.00000000136336040071118268442314143968396291175371",
@@ -286062,7 +286062,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00000000128684086115870578571013173219305194290777",
         "digits": 29,
@@ -286232,7 +286232,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00000000128684086115870578571013173219305194290777",
         "digits": 29,
@@ -287440,7 +287440,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00000000128684086115870578571013173219549587789846",
         "digits": 71,
@@ -288704,7 +288704,7 @@
        "1000": "5.10785086191808529029617716330975069628976e+1044",
        "10000": "1.42266164715566417921926606443919246432026e+10527"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.0000000143502137227102490999664000427163681234873",
        "2": "0.000000162354134956874682902080162354134956874683",
        "5": "0.000235113901632884721253849498299864975335216",
@@ -288718,7 +288718,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.0000000143502137227102490999664000426956459695057",
         "digits": 29,
@@ -288840,7 +288840,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.0000000143502137227102490999664000426956459695057",
         "digits": 29,
@@ -289797,7 +289797,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.0000000143502137227102490999664000427163681234873",
         "digits": 71,
@@ -290942,7 +290942,7 @@
        "1000": "1.22473730626886048397581610668811178755555e+110",
        "10000": "8.93612036226654235939679579061037113620516e+1180"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00000000166816180802901253569315465181255670941396",
        "2": "0.00000000219393099392720641836003532163719527606331",
        "5": "0.0000000049908823481181311069546878788138049180363",
@@ -290956,7 +290956,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00000000166816180802901253569315465180732035566746",
         "digits": 29,
@@ -291102,7 +291102,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00000000166816180802901253569315465180732035566746",
         "digits": 29,
@@ -292226,7 +292226,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00000000166816180802901253569315465181255670941396",
         "digits": 71,
@@ -293455,7 +293455,7 @@
        "1000": "1.31360206307998071387828832588875834027698e-128",
        "10000": "1.80035338270414210054388851303007395816169e-1199"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.000000000964425300053274511268147183091488417069484",
        "2": "0.000000000733303580057437814974574019545025611611562",
        "5": "0.000000000322351307850888576316696005695614535230694",
@@ -293469,7 +293469,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.000000000964425300053274511268147183087309936421683",
         "digits": 29,
@@ -293651,7 +293651,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.000000000964425300053274511268147183087309936421683",
         "digits": 29,
@@ -294883,7 +294883,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.000000000964425300053274511268147183091488417069484",
         "digits": 72,
@@ -296064,7 +296064,7 @@
        "1000": "707051055656176449426.367266079022409649238",
        "10000": "3.67474570292298818131083805669571179832767e+288"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00000000135831213855950231861465436961689111653388",
        "2": "0.00000000145460735496367707237565684021384154196519",
        "5": "0.00000000178642328691978396804174066780982465619047",
@@ -296078,7 +296078,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00000000135831213855950231861465436961334922628222",
         "digits": 29,
@@ -296248,7 +296248,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00000000135831213855950231861465436961334922628222",
         "digits": 29,
@@ -297444,7 +297444,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00000000135831213855950231861465436961689111653388",
         "digits": 71,
@@ -298709,7 +298709,7 @@
        "1000": "9.92613830562408551381387502440046537607864e+823",
        "10000": "1.09275489810735494783566936628975577947036e+8320"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00000000863270521940571445578819173433081142708286",
        "2": "0.0000000587544057710239375398746919893991446464509",
        "5": "0.0000185234133911330513526186571381144909832931",
@@ -298723,7 +298723,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00000000863270521940571445578819173431761623678577",
         "digits": 29,
@@ -298845,7 +298845,7 @@
         "gas": null
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00000000863270521940571445578819173431761623678577",
         "digits": 29,
@@ -299838,7 +299838,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00000000863270521940571445578819173433081142708286",
         "digits": 71,
@@ -300995,7 +300995,7 @@
        "1000": "0.00000000131758623668948838170793474032174156984872",
        "10000": "0.00000000185570969446301702501822639391612998204892"
       },
-      "fp19": {
+      "bl19": {
        "1": "0.00000000126843994479243728291448864540666266495466",
        "2": "0.00000000126848821207091059415507225880954141954406",
        "5": "0.0000000012686330249267463513254491351059480587496",
@@ -301009,7 +301009,7 @@
       }
      },
      "cells": {
-      "fp127": {
+      "bl127": {
        "1": {
         "value": "0.00000000126843994479243728291448864540299245958161",
         "digits": 29,
@@ -301191,7 +301191,7 @@
         "gasPerStep": 0
        }
       },
-      "fp127lib": {
+      "bl127lib": {
        "1": {
         "value": "0.00000000126843994479243728291448864540299245958161",
         "digits": 29,
@@ -302459,7 +302459,7 @@
         "gas": null
        }
       },
-      "fp19": {
+      "bl19": {
        "1": {
         "value": "0.00000000126843994479243728291448864540666266495466",
         "digits": 72,
@@ -303669,7 +303669,7 @@
     }
    ],
    "summary": {
-    "fp127": {
+    "bl127": {
      "1": {
       "inputs": 11,
       "completed": 11,
@@ -303851,7 +303851,7 @@
       }
      }
     },
-    "fp127lib": {
+    "bl127lib": {
      "1": {
       "inputs": 11,
       "completed": 11,
@@ -305159,7 +305159,7 @@
       "count": 0
      }
     },
-    "fp19": {
+    "bl19": {
      "1": {
       "inputs": 11,
       "completed": 11,
@@ -306517,8 +306517,8 @@
     }
    },
    "liveMaxN": {
-    "fp127": 10000,
-    "fp19": 10000
+    "bl127": 10000,
+    "bl19": 10000
    }
   }
  ],

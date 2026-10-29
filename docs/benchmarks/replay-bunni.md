@@ -17,11 +17,11 @@ Token transfers out are unchanged in every row (raw and vault withdrawals floor 
 |---|---|---|---|---|
 | deployed (`mulDiv`, floor on the subtrahend) | 4 | -31.63 | 9114083388149667 | -84.3677833% |
 | the fix (`mulDivUp`) | 48 | +12.37 | 58303204633997825 | -0.0000009% |
-| FP127 idle balance | 35.6278053051404733807526976078415462767862 | -9.72e-38 | 58303204633997825 | -0.0000009% |
-| FP19 idle balance | 35.6278053051404733807526976078415462768833 | +1.17e-59 | 58303204633997825 | -0.0000009% |
+| BL127 idle balance | 35.6278053051404733807526976078415462767862 | -9.72e-38 | 58303204633997825 | -0.0000009% |
+| BL19 idle balance | 35.6278053051404733807526976078415462768833 | +1.17e-59 | 58303204633997825 | -0.0000009% |
 | exact rational | 35.627805305140… (= 28436079632320287342378/798142893977739769501) | 0 | 58303204633997825 | -0.0000009% |
 
-Start: active 28 wei, liquidity 58303205157163981. Liquidity takes integer balances, so for FP127, FP19 and exact the active balance is floored before `queryLDF` (the idle balance rounded up: the same direction as the deployed code, applied once instead of 44 times).
+Start: active 28 wei, liquidity 58303205157163981. Liquidity takes integer balances, so for BL127, BL19 and exact the active balance is floored before `queryLDF` (the idle balance rounded up: the same direction as the deployed code, applied once instead of 44 times).
 
 Per step (active USDC, wei; deployed / mulDivUp / exact):
 
@@ -117,11 +117,11 @@ Vendored expressions (each line checked against that source on fetch):
 ## Notes
 
 - **The fix.** `mulDivUp` rounds the idle balance down, so each withdrawal can only raise the active balance. Here it ends at 48 wei against an exact 35.63: wrong by 12.37 wei (+35%), in the other direction. That is harmless in this state because liquidity is bound by the USDT side; when the USDC side binds, liquidity follows the overstated balance. The post-mortem says of the change that "it's unclear if this change will introduce new attack vectors".
-- **FP127.** The transliteration is `sub(idle, div(mul(idle, s), T))` with the idle balance stored as a 127.128 word. FP127's `div` truncates, so it rounds the idle balance up exactly as the deployed code does; the grid is 2^-128 wei instead of 1 wei, so 44 steps move it by under 44·2^-128 ≈ 1.3e-37 wei. A non-negative 127.128 word is below 2^255, so it fits the 255 bits `IdleBalance` already gives the balance (IdleBalance.sol:36). It only helps if the stored state is FP127: rounding to a wei before storing it brings back the deployed bug, one wei per step.
+- **BL127.** The transliteration is `sub(idle, div(mul(idle, s), T))` with the idle balance stored as a 127.128 word. BL127's `div` truncates, so it rounds the idle balance up exactly as the deployed code does; the grid is 2^-128 wei instead of 1 wei, so 44 steps move it by under 44·2^-128 ≈ 1.3e-37 wei. A non-negative 127.128 word is below 2^255, so it fits the 255 bits `IdleBalance` already gives the balance (IdleBalance.sol:36). It only helps if the stored state is BL127: rounding to a wei before storing it brings back the deployed bug, one wei per step.
 - **Why exact rises to 35.63, not 28.** The token transfers still floor in the pool's favour, so each withdrawal leaves a fraction of a wei of raw USDC and vault shares behind; that is real USDC in the pool and not idle, so it counts as active. Exact idle arithmetic telescopes to idle₀·T₄₄/T₀ (asserted).
 - **Not modelled.** The sandwich itself, the LDF (`CarpetedDoubleGeometricDistribution`; its outputs are taken from the trace), and the Unichain transaction.
 
-**Caveat:** FP127 fixes this only if the idle balance is *stored* as an FP127 word and updated in FP127 (token transfers still round to whole wei), and `mulDivUp` alone also stops this 44-step sequence, ending 12.37 wei high where the deployed code ended 31.63 wei low.
+**Caveat:** BL127 fixes this only if the idle balance is *stored* as an BL127 word and updated in BL127 (token transfers still round to whole wei), and `mulDivUp` alone also stops this 44-step sequence, ending 12.37 wei high where the deployed code ended 31.63 wei low.
 
 ## Reproduce
 

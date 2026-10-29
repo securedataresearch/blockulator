@@ -12,11 +12,11 @@ pi, the replays and the accrual are not diffed in CI.
   annual compounding, per-second accrual, continuous accrual, an option
   walking out of the money priced with N(d), a decay chain measured as
   the share released, and an adaptive interest rate after an idle period),
-  each for several documented inputs (98 in all), run through FP127 (deployed object
+  each for several documented inputs (98 in all), run through BL127 (deployed object
   and inline library), ABDKMath64x64, Solady, PRBMath SD59x18, ABDKMathQuad
   (binary128), Balancer LogExpMath, and the accrual formulas of Aave v3,
   Morpho Blue and Maker (which answer only the accrual scenarios their
-  models describe), and FP19, the 256-bit float, for N = 1 to 10,000, against the same loop in exact
+  models describe), and BL19, the 256-bit float, for N = 1 to 10,000, against the same loop in exact
   arithmetic (mpmath, 300 digits) twice: from the exact parameters (`digits`)
   and from the parameters as the library received them (`digitsFormat`, the
   arithmetic alone). Each cell gives both digit counts, the signed error in
@@ -50,15 +50,15 @@ pi, the replays and the accrual are not diffed in CI.
   Produced by `make wad` (`scripts/sweep/wad.py`); BlockulatorWad's gate rows
   (both passes, 0 wrong wei) are in `sweep.md`.
 - [`size.md`](size.md) / [`size.json`](size.json): **inline size.** The
-  runtime bytecode each FP127 and FP19 op adds when inlined through
-  `FP127Lib` or `FP19Lib`, helpers included, under the default profile and
+  runtime bytecode each BL127 and BL19 op adds when inlined through
+  `BL127Lib` or `BL19Lib`, helpers included, under the default profile and
   under via_ir; a few common bundles against the sum of their ops; and when to
   `staticcall` the deployed object instead. Produced by `make size-inline`
   (`scripts/size/inline.py`, one throwaway contract per op against a
   baseline); CI checks it with `make size-inline-check`.
 - [`sweep.md`](sweep.md) / [`sweep.json`](sweep.json): **per-op accuracy on
-  random inputs.** Every FP19 and FP127 op against its correctly rounded
-  word (FP127 also against the real truth, in ULPs), 1,500 to 20,000 seeded
+  random inputs.** Every BL19 and BL127 op against its correctly rounded
+  word (BL127 also against the real truth, in ULPs), 1,500 to 20,000 seeded
   inputs each, three times: plain, with every rounding test forced (the
   last stage alone) and with the fast tests forced (the middle stage
   alone); with each op's gas and the share of inputs whose rounding test
@@ -67,14 +67,14 @@ pi, the replays and the accrual are not diffed in CI.
   gas goes.** On the sweep's inputs: each op's gas (median, p99, max), its
   fallback rate, and the share of its gas spent in each named helper,
   measured by test-only probed copies of the libraries that are generated,
-  run and removed (`scripts/fp127/gen.py --count-lib`, `--probe-lib`);
+  run and removed (`scripts/bl127/gen.py --count-lib`, `--probe-lib`);
   and whether compiling the caller with `via_ir` closes the gap between the
   inline libraries and the Yul objects (`test/profile/ViaIr.t.sol`). `make
   profile`.
 - **Replays: five exploits, bit-exact.** Each one reproduces the deployed
   arithmetic from integers pinned out of the attack transaction and asserted
   against the chain, then prices the decisive step again under the
-  protocol's own fix, FP127, FP19 and exact rationals (`make replays`;
+  protocol's own fix, BL127, BL19 and exact rationals (`make replays`;
   `make replays-fetch` re-pins, read-only).
   - [`replay-resupply.md`](replay-resupply.md): Resupply, 26 Jun 2025. `1e36 / price` floors 0.5 to 0, and 1 wei of collateral borrows 10M reUSD.
   - [`replay-bunni.md`](replay-bunni.md): Bunni v2, 2 Sep 2025. 44 withdrawals take active USDC from 28 wei to 4 and liquidity falls 84%.
@@ -89,44 +89,44 @@ pi, the replays and the accrual are not diffed in CI.
   pending accrual at a pinned block (`scripts/accrual/survey.json`), against
   mpmath at 200 digits of the formula each protocol says it approximates,
   with each error split into series truncation and integer rounding, and
-  FP127 / FP19 computing the same formula for contrast. `make
+  BL127 / BL19 computing the same formula for contrast. `make
   accrual-deployed` from `test/accrual/DeployedAccrual.t.sol` via
   `scripts/accrual/accrual.py`. Not in CI (it needs solc 0.8.19 for the IRM).
 - [`pi.md`](pi.md): **the same recipe, six grids.** Ramanujan's series for
-  1/pi evaluated through each library's own sqrt, mul and div: FP127 reaches
-  36 digits at five terms, FP19 39 (70 at nine), Quad 33, ABDK 17, Balancer, Solady and PRBMath 16. `make pi-compare`
-  from `test/fp127/PiCompare.t.sol`.
-- [`gas.md`](gas.md) / [`gas.json`](gas.json): gas for every FP127 op across
-  an input ladder, for the Huff baseline, the Yul object, `FP127Caller`,
-  `FP127Lib` and the five competitor libraries, and a second table on
+  1/pi evaluated through each library's own sqrt, mul and div: BL127 reaches
+  36 digits at five terms, BL19 39 (70 at nine), Quad 33, ABDK 17, Balancer, Solady and PRBMath 16. `make pi-compare`
+  from `test/bl127/PiCompare.t.sol`.
+- [`gas.md`](gas.md) / [`gas.json`](gas.json): gas for every BL127 op across
+  an input ladder, for the Huff baseline, the Yul object, `BL127Caller`,
+  `BL127Lib` and the five competitor libraries, and a second table on
   typical inputs (random, non-integer, no shortcut) for the transcendentals.
   The inline forms are the library call alone, timed inside the harness's
   entry point after its dispatch. `make bench`.
-- [`gas19.md`](gas19.md) / [`gas19.json`](gas19.json): gas for every FP19
-  op (object, inline, the same op in FP127Lib on the same value, and
-  ABDKMathQuad), the same way. `make bench-fp19`.
+- [`gas19.md`](gas19.md) / [`gas19.json`](gas19.json): gas for every BL19
+  op (object, inline, the same op in BL127Lib on the same value, and
+  ABDKMathQuad), the same way. `make bench-bl19`.
 - [`coverage.md`](coverage.md): every function of every comparison library
   mapped to the op it is benched against, or why it is not compared. An empty
   gas cell means only "not offered"; `rev` means offered but reverted on every
   input. The bench checks the harness against its list of calls.
-- [`../fp19/precision.md`](../fp19/precision.md) / [`../fp19/precision.json`](../fp19/precision.json):
-  correct bits of every FP19 op on the decoded values. `make test` then
-  `make precision-report-fp19`.
-- [`../fp127/precision.md`](../fp127/precision.md) / [`../fp127/precision.json`](../fp127/precision.json):
+- [`../bl19/precision.md`](../bl19/precision.md) / [`../bl19/precision.json`](../bl19/precision.json):
+  correct bits of every BL19 op on the decoded values. `make test` then
+  `make precision-report-bl19`.
+- [`../bl127/precision.md`](../bl127/precision.md) / [`../bl127/precision.json`](../bl127/precision.json):
   correct bits of every op against mpmath over the committed vectors.
   `make test` then `make precision-report`.
 
 Library versions: Solady v0.1.26, PRBMath v4.2.0, ABDK v3.2 (64.64 and
 Quad), Balancer v3 LogExpMath and the Aave/Morpho/Maker formulas pinned in
 `contracts/src/ladder/vendor/README.md` (the `versions` block in each JSON
-records the exact tags and the FP127 commit). To rerun after a bump, update
+records the exact tags and the BL127 commit). To rerun after a bump, update
 the submodule or the vendored file, then `make bench ladder`.
 
 ## Reading the ladder
 
 "Terminal precision" is the precision a calculation ends with after all its
 steps, as opposed to the headline precision of one op. A WAD library keeps
-about 60 fractional bits, 18 decimal digits; ABDK 64 bits. FP127 keeps 128.
+about 60 fractional bits, 18 decimal digits; ABDK 64 bits. BL127 keeps 128.
 The ladder shows the digits that survive N steps. Where a library reverts
 at some N, the cell says so with the revert selector; that is a result,
 not a gap.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {ILadderAdapter, Form, FP127_ADDRESS} from "./ILadder.sol";
+import {ILadderAdapter, Form, BL127_ADDRESS} from "./ILadder.sol";
 
 /// @title EdgeRunner
 /// @notice One eth_call re-verifies any cell of the edges dataset
@@ -14,8 +14,8 @@ import {ILadderAdapter, Form, FP127_ADDRESS} from "./ILadder.sol";
 contract EdgeRunner {
     error UnknownForm(uint8 form);
 
-    address public immutable fp127;
-    address public immutable fp127lib;
+    address public immutable bl127;
+    address public immutable bl127lib;
     address public immutable abdk;
     address public immutable solady;
     address public immutable prb;
@@ -24,7 +24,7 @@ contract EdgeRunner {
     address public immutable aave;
     address public immutable morpho;
     address public immutable maker;
-    address public immutable fp19;
+    address public immutable bl19;
     address public immutable solmate;
     address public immutable oz;
     address public immutable uniswap;
@@ -35,8 +35,8 @@ contract EdgeRunner {
 
     /// The adapters in form-id order (ILadder.sol `Form`).
     constructor(address[18] memory adapters) {
-        fp127 = adapters[0];
-        fp127lib = adapters[1];
+        bl127 = adapters[0];
+        bl127lib = adapters[1];
         abdk = adapters[2];
         solady = adapters[3];
         prb = adapters[4];
@@ -45,7 +45,7 @@ contract EdgeRunner {
         aave = adapters[7];
         morpho = adapters[8];
         maker = adapters[9];
-        fp19 = adapters[10];
+        bl19 = adapters[10];
         solmate = adapters[11];
         oz = adapters[12];
         uniswap = adapters[13];
@@ -56,8 +56,8 @@ contract EdgeRunner {
     }
 
     function adapter(uint8 form) public view returns (address) {
-        if (form == Form.FP127) return fp127;
-        if (form == Form.FP127LIB) return fp127lib;
+        if (form == Form.BL127) return bl127;
+        if (form == Form.BL127LIB) return bl127lib;
         if (form == Form.ABDK) return abdk;
         if (form == Form.SOLADY) return solady;
         if (form == Form.PRB) return prb;
@@ -66,7 +66,7 @@ contract EdgeRunner {
         if (form == Form.AAVE) return aave;
         if (form == Form.MORPHO) return morpho;
         if (form == Form.MAKER) return maker;
-        if (form == Form.FP19) return fp19;
+        if (form == Form.BL19) return bl19;
         if (form == Form.SOLMATE) return solmate;
         if (form == Form.OZ) return oz;
         if (form == Form.UNISWAP) return uniswap;
@@ -81,14 +81,14 @@ contract EdgeRunner {
     /// @return raw     the result in the library's representation (0 when !ok)
     /// @return reason  the first four bytes of the revert data (0 when ok)
     /// @return gasUsed gas the op consumed inside the adapter, after the
-    ///                 adapter and the FP127 object are warm (0 when !ok)
+    ///                 adapter and the BL127 object are warm (0 when !ok)
     function run(uint8 op, uint8 form, int256[] calldata args)
         external
         view
         returns (bool ok, int256 raw, bytes4 reason, uint256 gasUsed)
     {
         ILadderAdapter a = ILadderAdapter(adapter(form));
-        uint256 warm = address(a).code.length + FP127_ADDRESS.code.length;
+        uint256 warm = address(a).code.length + BL127_ADDRESS.code.length;
         try a.op(op, args) returns (int256 r, uint256 g) {
             ok = true;
             raw = r;

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {FP127Lib} from "fp127/FP127Lib.sol";
-import {FP19Lib} from "fp19/FP19Lib.sol";
+import {BL127Lib} from "bl127/BL127Lib.sol";
+import {BL19Lib} from "bl19/BL19Lib.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-// The snippets of the "Integrating" sections (README, /library/, /library/fp19/),
+// The snippets of the "Integrating" sections (README, /library/, /library/bl19/),
 // compiled and run against the replays in test/examples/Integrating.t.sol.
 //
 // Two rules. Store the state in the format. Round toward the protocol at the token
@@ -14,15 +14,15 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 // Two moves that take roundings out: divide last (one 512-bit mulDiv, one rounding), and
 // keep an index as its logarithm (each accrual an exact add, one exp when it is read).
 //
-// The directed ops (FP127 mulUp, mulDown, divUp, divDown, toFixed18Up, toFixed18Down;
-// FP19 mulUp, mulDown, divUp, divDown, toUintUp, toUintDown, toIntUp, toIntDown,
-// toFixed18Up, toFixed18Down, floor, ceil) are in FP127 v9 and FP19 v6, deployed
-// (Blockulator 3.0; also FP127 v5 to v8, FP19 release four and v5, Blockulator 2.1 and 2.2) and inline; the older FP127 v4 and FP19 release three objects do not
-// have them, except FP127's floor and ceil.
+// The directed ops (BL127 mulUp, mulDown, divUp, divDown, toFixed18Up, toFixed18Down;
+// BL19 mulUp, mulDown, divUp, divDown, toUintUp, toUintDown, toIntUp, toIntDown,
+// toFixed18Up, toFixed18Down, floor, ceil) are in BL127 v9 and BL19 v6, deployed
+// (Blockulator 3.0; also BL127 v5 to v8, BL19 release four and v5, Blockulator 2.1 and 2.2) and inline; the older BL127 v4 and BL19 release three objects do not
+// have them, except BL127's floor and ceil.
 
-/// FP127 has no fromUint: an integer below 2^127 is `int256(x) << 128`.
+/// BL127 has no fromUint: an integer below 2^127 is `int256(x) << 128`.
 function q(uint256 x) pure returns (int256) {
-    require(x < 1 << 127, "FP127 range");
+    require(x < 1 << 127, "BL127 range");
     return int256(x) << 128;
 }
 
@@ -36,45 +36,45 @@ contract IdleBalance127 {
     }
 
     function withdraw(uint256 shares, uint256 totalSupply) external {
-        idle = FP127Lib.sub(idle, FP127Lib.div(FP127Lib.mul(idle, q(shares)), q(totalSupply)));
+        idle = BL127Lib.sub(idle, BL127Lib.div(BL127Lib.mul(idle, q(shares)), q(totalSupply)));
     }
 
     /// The edge: what the pool may price with, in whole wei, rounded down.
     function active(uint256 balanceWei) external view returns (uint256) {
-        return uint256(FP127Lib.floor(FP127Lib.sub(q(balanceWei), idle)) >> 128);
+        return uint256(BL127Lib.floor(BL127Lib.sub(q(balanceWei), idle)) >> 128);
     }
 }
 
-/// Rule 1 in FP19: the same state as an FP19 word.
+/// Rule 1 in BL19: the same state as an BL19 word.
 contract IdleBalance19 {
     int256 public idle;
 
     constructor(uint256 idleWei) {
-        idle = FP19Lib.fromUint(idleWei); // exact below 2^237
+        idle = BL19Lib.fromUint(idleWei); // exact below 2^237
     }
 
     function withdraw(uint256 shares, uint256 totalSupply) external {
-        idle = FP19Lib.sub(idle, FP19Lib.div(FP19Lib.mul(idle, FP19Lib.fromUint(shares)), FP19Lib.fromUint(totalSupply)));
+        idle = BL19Lib.sub(idle, BL19Lib.div(BL19Lib.mul(idle, BL19Lib.fromUint(shares)), BL19Lib.fromUint(totalSupply)));
     }
 
     function active(uint256 balanceWei) external view returns (uint256) {
-        return FP19Lib.toUintDown(FP19Lib.sub(FP19Lib.fromUint(balanceWei), idle));
+        return BL19Lib.toUintDown(BL19Lib.sub(BL19Lib.fromUint(balanceWei), idle));
     }
 }
 
-/// Rule 2 (Resupply): ResupplyPairCore.sol:573 and :282 in FP127.
+/// Rule 2 (Resupply): ResupplyPairCore.sol:573 and :282 in BL127.
 /// The LTV is held against the borrower, so every step rounds up.
 /// The most a position may borrow is paid out, so every step rounds down.
 library Solvency127 {
     /// collateral wei per 1e18 debt wei, never below the true rate
     function rateUp(uint256 price) internal pure returns (int256) {
-        return FP127Lib.divUp(q(1e36), q(price));
+        return BL127Lib.divUp(q(1e36), q(price));
     }
 
     /// LTV in units of 1e-5, never below the true LTV
     function ltv(uint256 debt, uint256 price, uint256 collateral) internal pure returns (int256) {
-        int256 x = FP127Lib.mulUp(FP127Lib.mulUp(q(debt), rateUp(price)), q(1e5));
-        return FP127Lib.divUp(FP127Lib.divUp(x, q(1e18)), q(collateral));
+        int256 x = BL127Lib.mulUp(BL127Lib.mulUp(q(debt), rateUp(price)), q(1e5));
+        return BL127Lib.divUp(BL127Lib.divUp(x, q(1e18)), q(collateral));
     }
 
     function isSolvent(uint256 debt, uint256 price, uint256 collateral, uint256 maxLTV) internal pure returns (bool) {
@@ -83,51 +83,51 @@ library Solvency127 {
 
     /// The edge, charged: the LTV on the protocol's integer grid, rounded up.
     function ltvOnGrid(uint256 debt, uint256 price, uint256 collateral) internal pure returns (uint256) {
-        return uint256(FP127Lib.ceil(ltv(debt, price, collateral)) >> 128);
+        return uint256(BL127Lib.ceil(ltv(debt, price, collateral)) >> 128);
     }
 
     /// The edge, paid out: the most the position may borrow, in debt-token wei, rounded down.
     function maxBorrow(uint256 collateral, uint256 maxLTV, uint256 price) internal pure returns (uint256) {
-        int256 tokens = FP127Lib.divDown(FP127Lib.mulDown(q(collateral), q(maxLTV)), FP127Lib.mulUp(rateUp(price), q(1e5)));
-        return uint256(FP127Lib.toFixed18Down(tokens)); // whole tokens -> 18-decimal wei, down
+        int256 tokens = BL127Lib.divDown(BL127Lib.mulDown(q(collateral), q(maxLTV)), BL127Lib.mulUp(rateUp(price), q(1e5)));
+        return uint256(BL127Lib.toFixed18Down(tokens)); // whole tokens -> 18-decimal wei, down
     }
 }
 
-/// Rule 2 (Resupply) in FP19.
+/// Rule 2 (Resupply) in BL19.
 library Solvency19 {
     function rateUp(uint256 price) internal pure returns (int256) {
-        return FP19Lib.divUp(FP19Lib.fromUint(1e36), FP19Lib.fromUint(price));
+        return BL19Lib.divUp(BL19Lib.fromUint(1e36), BL19Lib.fromUint(price));
     }
 
     function ltv(uint256 debt, uint256 price, uint256 collateral) internal pure returns (int256) {
-        int256 x = FP19Lib.mulUp(FP19Lib.mulUp(FP19Lib.fromUint(debt), rateUp(price)), FP19Lib.fromUint(1e5));
-        return FP19Lib.divUp(FP19Lib.divUp(x, FP19Lib.fromUint(1e18)), FP19Lib.fromUint(collateral));
+        int256 x = BL19Lib.mulUp(BL19Lib.mulUp(BL19Lib.fromUint(debt), rateUp(price)), BL19Lib.fromUint(1e5));
+        return BL19Lib.divUp(BL19Lib.divUp(x, BL19Lib.fromUint(1e18)), BL19Lib.fromUint(collateral));
     }
 
     function isSolvent(uint256 debt, uint256 price, uint256 collateral, uint256 maxLTV) internal pure returns (bool) {
-        return FP19Lib.cmp(ltv(debt, price, collateral), FP19Lib.fromUint(maxLTV)) <= 0;
+        return BL19Lib.cmp(ltv(debt, price, collateral), BL19Lib.fromUint(maxLTV)) <= 0;
     }
 
     function ltvOnGrid(uint256 debt, uint256 price, uint256 collateral) internal pure returns (uint256) {
-        return FP19Lib.toUintUp(ltv(debt, price, collateral));
+        return BL19Lib.toUintUp(ltv(debt, price, collateral));
     }
 
     function maxBorrow(uint256 collateral, uint256 maxLTV, uint256 price) internal pure returns (uint256) {
-        int256 tokens = FP19Lib.divDown(
-            FP19Lib.mulDown(FP19Lib.fromUint(collateral), FP19Lib.fromUint(maxLTV)),
-            FP19Lib.mulUp(rateUp(price), FP19Lib.fromUint(1e5))
+        int256 tokens = BL19Lib.divDown(
+            BL19Lib.mulDown(BL19Lib.fromUint(collateral), BL19Lib.fromUint(maxLTV)),
+            BL19Lib.mulUp(rateUp(price), BL19Lib.fromUint(1e5))
         );
-        return uint256(FP19Lib.toFixed18Down(tokens));
+        return uint256(BL19Lib.toFixed18Down(tokens));
     }
 }
 
 /// Rule 2 (Balancer V1): calcSingleInGivenPoolOut and calcSingleOutGivenPoolIn
-/// (BMath.sol:146-155, :184-194) in FP19. The formula is evaluated once, in the
+/// (BMath.sol:146-155, :184-194) in BL19. The formula is evaluated once, in the
 /// format; the direction is chosen only where it lands on whole token units.
 library JoinExit19 {
     function _fee(uint256 weight, uint256 totalWeight, uint256 feeWad) private pure returns (int256) {
-        int256 share = FP19Lib.div(FP19Lib.fromUint(weight), FP19Lib.fromUint(totalWeight));
-        return FP19Lib.mul(FP19Lib.sub(FP19Lib.ONE, share), FP19Lib.fromFixed18(int256(feeWad)));
+        int256 share = BL19Lib.div(BL19Lib.fromUint(weight), BL19Lib.fromUint(totalWeight));
+        return BL19Lib.mul(BL19Lib.sub(BL19Lib.ONE, share), BL19Lib.fromFixed18(int256(feeWad)));
     }
 
     /// Tokens the pool takes in for `poolOut` BPT: rounded up.
@@ -136,11 +136,11 @@ library JoinExit19 {
         pure
         returns (uint256)
     {
-        int256 x = FP19Lib.div(FP19Lib.fromUint(poolOut), FP19Lib.fromUint(supply));
-        int256 y = FP19Lib.div(FP19Lib.fromUint(totalWeight), FP19Lib.fromUint(weight));
-        int256 g = FP19Lib.expm1(FP19Lib.mul(y, FP19Lib.log1p(x))); // (1 + x)^y - 1
-        int256 cost = FP19Lib.div(FP19Lib.mul(FP19Lib.fromUint(balance), g), FP19Lib.sub(FP19Lib.ONE, _fee(weight, totalWeight, feeWad)));
-        return FP19Lib.toUintUp(cost);
+        int256 x = BL19Lib.div(BL19Lib.fromUint(poolOut), BL19Lib.fromUint(supply));
+        int256 y = BL19Lib.div(BL19Lib.fromUint(totalWeight), BL19Lib.fromUint(weight));
+        int256 g = BL19Lib.expm1(BL19Lib.mul(y, BL19Lib.log1p(x))); // (1 + x)^y - 1
+        int256 cost = BL19Lib.div(BL19Lib.mul(BL19Lib.fromUint(balance), g), BL19Lib.sub(BL19Lib.ONE, _fee(weight, totalWeight, feeWad)));
+        return BL19Lib.toUintUp(cost);
     }
 
     /// Tokens the pool pays out for `poolIn` BPT: rounded down.
@@ -149,27 +149,27 @@ library JoinExit19 {
         pure
         returns (uint256)
     {
-        int256 x = FP19Lib.div(FP19Lib.fromUint(poolIn), FP19Lib.fromUint(supply));
-        int256 y = FP19Lib.div(FP19Lib.fromUint(totalWeight), FP19Lib.fromUint(weight));
-        int256 g = FP19Lib.neg(FP19Lib.expm1(FP19Lib.mul(y, FP19Lib.log1p(FP19Lib.neg(x))))); // 1 - (1 - x)^y
-        int256 pays = FP19Lib.mul(FP19Lib.mul(FP19Lib.fromUint(balance), g), FP19Lib.sub(FP19Lib.ONE, _fee(weight, totalWeight, feeWad)));
-        return FP19Lib.toUintDown(pays);
+        int256 x = BL19Lib.div(BL19Lib.fromUint(poolIn), BL19Lib.fromUint(supply));
+        int256 y = BL19Lib.div(BL19Lib.fromUint(totalWeight), BL19Lib.fromUint(weight));
+        int256 g = BL19Lib.neg(BL19Lib.expm1(BL19Lib.mul(y, BL19Lib.log1p(BL19Lib.neg(x))))); // 1 - (1 - x)^y
+        int256 pays = BL19Lib.mul(BL19Lib.mul(BL19Lib.fromUint(balance), g), BL19Lib.sub(BL19Lib.ONE, _fee(weight, totalWeight, feeWad)));
+        return BL19Lib.toUintDown(pays);
     }
 }
 
 /// Rule 2 (Balancer V2): a GIVEN_OUT swap charges amountIn / (1 - fee)
 /// (BasePool.sol:618-621), then converts to token wei (_downscaleUp). Here the
-/// amount in comes from the solver as an FP19 word, the given-out amount and the
+/// amount in comes from the solver as an BL19 word, the given-out amount and the
 /// balances were never truncated, and the only step onto the wei grid is the last.
 library SwapCharge19 {
     function chargeIn(int256 amountIn, uint256 feeWad) internal pure returns (uint256) {
-        int256 gross = FP19Lib.divUp(FP19Lib.mulUp(amountIn, FP19Lib.fromUint(1e18)), FP19Lib.fromUint(1e18 - feeWad));
-        return FP19Lib.toUintUp(gross);
+        int256 gross = BL19Lib.divUp(BL19Lib.mulUp(amountIn, BL19Lib.fromUint(1e18)), BL19Lib.fromUint(1e18 - feeWad));
+        return BL19Lib.toUintUp(gross);
     }
 
     /// amount x rate / 1e18 kept in the format (BasePool.sol:680-686 truncates it to wei)
     function upscale(uint256 amount, uint256 rateWad) internal pure returns (int256) {
-        return FP19Lib.div(FP19Lib.mul(FP19Lib.fromUint(amount), FP19Lib.fromUint(rateWad)), FP19Lib.fromUint(1e18));
+        return BL19Lib.div(BL19Lib.mul(BL19Lib.fromUint(amount), BL19Lib.fromUint(rateWad)), BL19Lib.fromUint(1e18));
     }
 }
 
@@ -190,13 +190,13 @@ library DivideLast {
         return FixedPointMathLib.fullMulDiv(collateral * maxLTV, price, 1e23);
     }
 
-    /// The same move on FP127 words a, b >= 0, c > 0: the 2^128 scales cancel, so the word
+    /// The same move on BL127 words a, b >= 0, c > 0: the 2^128 scales cancel, so the word
     /// a * b / c is fullMulDiv on the raw integers, rounded once, down.
-    /// FP127Lib.div(FP127Lib.mul(a, b), c) rounds twice.
+    /// BL127Lib.div(BL127Lib.mul(a, b), c) rounds twice.
     function mulDiv127(int256 a, int256 b, int256 c) internal pure returns (int256) {
         require(a >= 0 && b >= 0 && c > 0, "a, b >= 0, c > 0");
         uint256 r = FixedPointMathLib.fullMulDiv(uint256(a), uint256(b), uint256(c));
-        require(r < 1 << 255, "FP127 range");
+        require(r < 1 << 255, "BL127 range");
         return int256(r);
     }
 }
@@ -206,28 +206,28 @@ contract Index127 {
     int256 public index = 1 << 128; // 1.0
 
     function accrue(int256 ratePerSecond, uint256 dt) external {
-        index = FP127Lib.mul(index, FP127Lib.exp(ratePerSecond * int256(dt)));
+        index = BL127Lib.mul(index, BL127Lib.exp(ratePerSecond * int256(dt)));
     }
 }
 
 /// The index stored as its logarithm: every accrual is an add, which never rounds.
-/// ratePerSecond is a continuous rate (ln of the growth per second) as an FP127 word.
+/// ratePerSecond is a continuous rate (ln of the growth per second) as an BL127 word.
 contract LogIndex127 {
     int256 public logIndex; // ln(index); 0 is an index of 1
 
     function accrue(int256 ratePerSecond, uint256 dt) external {
         // a word times a whole number is an integer product; add only checks overflow
-        logIndex = FP127Lib.add(logIndex, ratePerSecond * int256(dt));
+        logIndex = BL127Lib.add(logIndex, ratePerSecond * int256(dt));
     }
 
     /// The one rounding, at the read: e^L to the nearest word (since v5). Reverts above L = 88.
     function index() external view returns (int256) {
-        return FP127Lib.exp(logIndex);
+        return BL127Lib.exp(logIndex);
     }
 
-    /// The same read in FP19: fromFP127 is exact below 2^109 and exp is correctly rounded,
+    /// The same read in BL19: fromBL127 is exact below 2^109 and exp is correctly rounded,
     /// so this is e^L rounded once, and it is not capped at 88.
     function index19() external view returns (int256) {
-        return FP19Lib.exp(FP19Lib.fromFP127(logIndex));
+        return BL19Lib.exp(BL19Lib.fromBL127(logIndex));
     }
 }

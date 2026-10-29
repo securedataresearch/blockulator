@@ -1,0 +1,233 @@
+/// @title BL127 - 127.128 Fixed-Point Arithmetic Library
+/// @notice Signed fixed-point operations using two's complement
+/// @dev Format: 128 integer bits + 128 fractional bits
+///      All operations preserve sign via two's complement
+/// @dev Requires: constants.huff must be included before this file
+
+/// @notice Add two 127.128 fixed-point numbers
+/// @dev takes(2) returns(1)
+/// Stack input: [a, b]
+/// Stack output: [a + b]
+#define macro BL127_ADD() = takes(2) returns(1) {
+    add
+}
+
+/// @notice Subtract two 127.128 fixed-point numbers
+/// @dev takes(2) returns(1)
+/// Stack input: [a, b] (b on top)
+/// Stack output: [a - b]
+#define fn BL127_SUB() = takes(2) returns(1) {
+    swap1     // [a, b] -> [b, a]
+    sub       // b - a
+}
+
+/// @notice Convert signed fixed18 to 127.128 format
+/// @dev takes(1) returns(1)
+/// Stack input: [fixed18_value] (signed int256 representing value * 1e18)
+/// Stack output: [bl127_value] (signed int256 representing value * 2^128)
+/// Formula: bl127 = (fixed18 * 2^128) / 1e18
+/// Gas: ~100 (optimized)
+#define fn BL127_FROM_FIXED18() = takes(1) returns(1) {
+    // Input: [fixed18]
+    // We need: (fixed18 * 2^128) / 1e18
+    // For typical calculator use (values up to ~10^20), we're safe:
+    // 10^20 * 2^128 ≈ 2^195, well within 256 bits.
+
+    0x80 shl              // [fixed18 << 128] (PUSH1 + SHL = 6 gas)
+    [FIXED18_SCALE]       // [1e18, fixed18 << 128]
+    swap1 sdiv            // [result] (SDIV pops dividend then divisor)
+}
+
+/// @notice Convert 127.128 format to signed fixed18
+/// @dev takes(1) returns(1)
+/// Stack input: [bl127_value] (signed int256 representing value * 2^128)
+/// Stack output: [fixed18_value] (signed int256 representing value * 1e18)
+/// Formula: fixed18 = (bl127_hi * 1e18) + ((bl127_lo * 1e18) >> 128)
+///          Split to avoid overflow: bl127 * 1e18 can exceed 256 bits
+/// Gas: ~120 (prevents overflow for all valid bl127 values)
+#define fn BL127_TO_FIXED18() = takes(1) returns(1) {
+    // Input: [bl127]
+    // Split: bl127 = (bl127_hi << 128) + bl127_lo
+    // Result: (bl127_hi * 1e18) + ((bl127_lo * 1e18) >> 128)
+    
+    dup1                      // [bl127, bl127]
+    0x80 sar                  // [bl127_hi, bl127]
+    [FIXED18_SCALE]           // [1e18, bl127_hi, bl127]
+    mul                       // [bl127_hi * 1e18, bl127]
+    
+    swap1                     // [bl127, bl127_hi * 1e18]
+    [MASK128] and             // [bl127_lo, bl127_hi * 1e18]
+    [FIXED18_SCALE]           // [1e18, bl127_lo, bl127_hi * 1e18]
+    mul                       // [bl127_lo * 1e18, bl127_hi * 1e18]
+    0x80 shr                  // [(bl127_lo * 1e18) >> 128, bl127_hi * 1e18]
+    
+    add                       // [result]
+}
+
+/// @notice Multiply two 127.128 fixed-point numbers
+/// @dev takes(2) returns(1)
+/// Stack input: [b, a] (b on top)
+/// Stack output: [a * b]
+/// Formula: result = (a * b) / 2^128
+///          Optimized: push MASK128 once and reuse via dup
+/// Gas: ~110-130 (reduced PUSH32 operations)
+#define fn BL127_MUL() = takes(2) returns(1) {
+    // Input: [b, a]
+    // Split both: a = a_hi * 2^128 + a_lo, b = b_hi * 2^128 + b_lo
+    // Result = a_hi * b_hi * 2^128 + a_hi * b_lo + a_lo * b_hi + (a_lo * b_lo) >> 128
+    
+    // Push MASK128 once for reuse
+    [MASK128]             // [MASK, b, a]
+    
+    // Term1: (a_hi * b_hi) << 128
+    // Stack: [MASK, b, a]
+    dup3 0x80 sar         // [a_hi, MASK, b, a]
+    dup3 0x80 sar         // [b_hi, a_hi, MASK, b, a]
+    mul                   // [a_hi*b_hi, MASK, b, a]
+    0x80 shl              // [term1, MASK, b, a]
+    
+    // Term2: a_hi * b_lo
+    // Stack: [term1, MASK, b, a]
+    dup4 0x80 sar         // [a_hi, term1, MASK, b, a]
+    dup4 dup4 and         // [b_lo, a_hi, term1, MASK, b, a]
+    mul                   // [a_hi*b_lo, term1, MASK, b, a]
+    add                   // [sum12, MASK, b, a]
+    
+    // Term3: a_lo * b_hi
+    // Stack: [sum12, MASK, b, a]
+    dup4 dup3 and         // [a_lo, sum12, MASK, b, a]
+    dup4 0x80 sar         // [b_hi, a_lo, sum12, MASK, b, a]
+    mul                   // [a_lo*b_hi, sum12, MASK, b, a]
+    add                   // [sum123, MASK, b, a]
+    
+    // Term4: (a_lo * b_lo) >> 128
+    // Stack: [sum123, MASK, b, a]
+    dup4 dup3 and         // [a_lo, sum123, MASK, b, a]
+    dup4 dup4 and         // [b_lo, a_lo, sum123, MASK, b, a]
+    mul                   // [a_lo*b_lo, sum123, MASK, b, a]
+    0x80 shr              // [(a_lo*b_lo)>>128, sum123, MASK, b, a]
+    add                   // [result, MASK, b, a]
+    
+    // Clean stack
+    swap3 pop pop pop     // [result]
+}
+
+/// @notice Divide two unsigned 127.128 fixed-point numbers (full precision)
+/// @dev takes(2) returns(1)
+/// Stack input: [b, a] (b on top, both must be positive/unsigned)
+/// Stack output: [a * 2^128 / b]
+/// Formula: result = (a * 2^128) / b using Remco Bloemen mulDiv algorithm
+/// Gas: ~450-550 (mulmod + modular inverse via Newton-Raphson)
+/// Precision: Full 128 fractional bits (exact for all inputs)
+#define fn BL127_DIV_UNSIGNED() = takes(2) returns(1) {
+    // Input: [b, a]
+    // We want to compute (a * 2^128) / b
+    // Using Remco Bloemen's mulDiv algorithm from Uniswap V3
+    
+    // Step 1: Compute 512-bit product [prod1:prod0] = a * 2^128
+    // For multiplier = 2^128, this simplifies to:
+    // prod0 = a << 128
+    // prod1 = a >> 128
+    dup2 0x80 shl              // [prod0, b, a]
+    dup3 0x80 shr              // [prod1, prod0, b, a]
+    
+    // Step 2: Make division exact by subtracting remainder
+    // remainder = mulmod(a, 2^128, b)
+    // mulmod pops [a, b, N] and pushes (a * b) % N
+    // We need [a, 2^128, b] on top so it computes (a * 2^128) % b
+    dup3 [ONE_BL127] dup6      // [a, 2^128, b, prod1, prod0, b, a]
+    mulmod                     // [remainder, prod1, prod0, b, a]
+    
+    // Subtract remainder from [prod1:prod0]
+    // Solidity: prod1 := sub(prod1, gt(remainder, prod0))
+    //           prod0 := sub(prod0, remainder)
+    dup3 dup2 gt               // [remainder>prod0, remainder, prod1, prod0, b, a]
+    dup3 sub                   // [prod1-borrow, remainder, prod1, prod0, b, a]
+    swap2 pop                  // [remainder, prod1_new, prod0, b, a]
+    dup3 sub                   // [prod0-remainder, prod1_new, prod0, b, a]
+    swap2 pop                  // [prod1_new, prod0_new, b, a]
+    swap1                      // [prod0, prod1, b, a]
+    
+    // Step 3: Factor powers of two out of denominator
+    // twos = -b & b (largest power of 2 dividing b)
+    dup3 dup1 0x00 sub and     // [twos, prod0, prod1, b, a]
+    
+    // Divide b by twos
+    dup1 dup5 div              // [b/twos, twos, prod0, prod1, b, a]
+    swap4 pop                  // [twos, prod0, prod1, b_new, a]
+    
+    // Divide prod0 by twos
+    dup1 dup3 div              // [prod0/twos, twos, prod0, prod1, b, a]
+    swap2 pop                  // [twos, prod0_new, prod1, b, a]
+    
+    // Shift in bits from prod1 into prod0
+    // Solidity: twos := add(div(sub(0, twos), twos), 1)
+    //           prod0 |= prod1 * twos  (where twos is now the new value)
+    // Stack: [twos, prod0, prod1, b, a]
+    dup1 0x00 sub              // [-twos, twos, prod0, prod1, b, a]
+    div                        // [(-twos)/twos, prod0, prod1, b, a]
+    0x01 add                   // [twos_flipped, prod0, prod1, b, a]
+    dup3 mul                   // [prod1*twos_flipped, prod0, prod1, b, a]
+    dup2 or                    // [prod0_final, prod0, prod1, b, a]
+    swap1 pop swap1 pop        // [prod0_final, b, a]
+    
+    // Step 4: Compute modular inverse of b mod 2^256
+    // inv = (3 * b) ^ 2
+    dup2 0x03 mul 0x02 xor     // [inv, prod0, b, a]
+    
+    // Newton-Raphson: inv *= 2 - b * inv (6 iterations for 256-bit precision)
+    dup3 dup2 mul 0x02 sub mul
+    dup3 dup2 mul 0x02 sub mul
+    dup3 dup2 mul 0x02 sub mul
+    dup3 dup2 mul 0x02 sub mul
+    dup3 dup2 mul 0x02 sub mul
+    dup3 dup2 mul 0x02 sub mul
+    
+    // Step 5: result = prod0 * inv
+    swap1 mul swap2 pop pop    // [result]
+}
+
+/// @notice Divide two signed 127.128 fixed-point numbers
+/// @dev takes(2) returns(1)
+/// Stack input: [b, a] (b on top)
+/// Stack output: [a / b]
+/// Formula: result = (a * 2^128) / b (signed)
+/// Gas: ~500-600 (sign handling + unsigned div)
+/// Precision: Full 128 fractional bits
+/// @dev Converted to function to save ~228 bytes (4 call sites)
+#define fn BL127_DIV() = takes(2) returns(1) {
+    // Input: [b, a]
+    // Strategy: compute sign, abs both, unsigned div, conditionally negate
+    
+    // result_sign = (a sar 255) ^ (b sar 255)
+    // 0 = same sign (positive result), nonzero = different signs (negative result)
+    dup2 0xff sar              // [a_sign, b, a]
+    dup2 0xff sar              // [b_sign, a_sign, b, a]
+    xor                        // [result_sign, b, a]
+    
+    // abs(b): mask = b sar 255; abs = (b ^ mask) - mask
+    dup2                       // [b, result_sign, b, a]
+    dup1 0xff sar              // [mask, b, result_sign, b, a]
+    dup1 dup3 xor              // [b^mask, mask, b, result_sign, b, a]
+    sub                        // [abs_b, b, result_sign, b, a]
+    swap1 pop                  // [abs_b, result_sign, b, a]
+    
+    // abs(a): mask = a sar 255; abs = (a ^ mask) - mask
+    dup4                       // [a, abs_b, result_sign, b, a]
+    dup1 0xff sar              // [mask, a, abs_b, result_sign, b, a]
+    dup1 dup3 xor              // [a^mask, mask, a, abs_b, result_sign, b, a]
+    sub                        // [abs_a, a, abs_b, result_sign, b, a]
+    swap1 pop                  // [abs_a, abs_b, result_sign, b, a]
+    
+    // BL127_DIV_UNSIGNED expects [b, a] (b on top)
+    swap1                      // [abs_b, abs_a, result_sign, b, a]
+    BL127_DIV_UNSIGNED()       // [result, result_sign, b, a]
+    
+    // Apply sign: result = (result ^ sign_mask) - sign_mask
+    // This negates if sign_mask is all-ones, identity if zero
+    swap1                      // [result_sign, result, b, a]
+    dup1 dup3 xor              // [result^sign, result_sign, result, b, a]
+    sub                        // [(result^sign)-sign, result, b, a]
+    swap1 pop                  // [signed_result, b, a]
+    swap2 pop pop              // [signed_result]
+}

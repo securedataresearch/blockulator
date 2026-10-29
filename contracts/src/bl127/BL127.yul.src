@@ -1,0 +1,3856 @@
+// BL127: signed 127.128 fixed-point arithmetic for the EVM.
+//
+// This file is the single source of truth. It contains only Yul function
+// definitions. scripts/bl127/gen.py reads it and emits:
+//   BL127.yul      a deployable object with a selector dispatcher, and one
+//                  more per `@object` (BL127E.yul, BL127H.yul, ...)
+//   BL127Lib.sol   a Solidity library with one assembly block per export
+//   IBL127.sol     the interface of each deployed object (IBL127E.sol, ...)
+//   abi.json       the ABI of each deployed object (abiE.json, ...)
+//
+// Rules (enforced by the generator):
+//   * Top level holds only comments and `function` definitions.
+//   * No object/data*/codecopy/calldataload/return/pc/jump/storage/external
+//     calls. The dispatcher and the library wrapper own calldata and
+//     returndata.
+//   * The only literal memory addresses allowed are 0x00 and 0x20 (the
+//     Solidity scratch space). Anything larger must be mload(0x40)-relative.
+//   * Yul identifiers never start with an underscore. The library wrapper
+//     uses underscore-prefixed Solidity names so nothing can shadow.
+//   * Every exported function has an `/// @export` line giving its Solidity
+//     signature. Helpers have none and are not dispatched.
+//   * Every export also carries `/// @domain` and `/// @reverts` lines; they
+//     feed contracts/src/bl127/ops.json (the site op table) and are not
+//     emitted into the Solidity natspec.
+//   * Reverts go through rev(sel) with a selector declared by `/// @error`.
+//
+// Representation: one int256, value = raw / 2^128. ONE = 2^128.
+// Range: about +/- 1.7e38. Fraction: 128 bits, about 38 decimal digits.
+//
+// Rounding conventions. The arithmetic core is inherited from the Huff and
+// preserved exactly; v5 adds the directed forms for the token edge:
+//   mul, mulDown floor toward -inf (middle 256 bits of the exact product)
+//   mulUp        ceil toward +inf
+//   div          truncate toward 0 (strip signs, floor, re-sign)
+//   divDown      floor toward -inf; divUp ceil toward +inf
+//   fromFixed18  truncate toward 0
+//   toFixed18, toFixed18Down floor toward -inf; toFixed18Up ceil toward +inf
+//   sqrt         floor
+//   gavg, hypot  nearest, once, from the exact two-word product or sum of
+//                squares (3.0; up to v8 the floored root of a floored value)
+//   transcendentals  round to nearest, ties up, once at the end. v5: exp,
+//                exp2, exp10, expm1, sinh, cosh and tanh go through a
+//                double-word kernel good to about 2^-300 relative (expk,
+//                l2p); ln, log2, log10, pow and cbrt run the one-word kernel
+//                at 2^-192 and fall back to the double word when its error
+//                bound straddles a rounding midpoint; powu and compound do
+//                the same with a two-word mantissa. 3.0: every such value
+//                carries a rounding test, and a last stage in two words
+//                (BL19's kernels at 2^-503) or exact decides the rest
+//
+// The tie rule. To nearest is floor(v + 1/2) on the grid, ties toward +inf
+// (round64, rnd192, rndw): ties up. powu and compound, cbrt and the odd
+// sinh, tanh, atanh and erf round the magnitude and apply the sign, so
+// their ties go away from zero (scripts/bl127/oracle.py rounds each op the
+// same way).
+// rbad127 is the rounding test under this rule.
+//
+// Guard policy: every op reverts where the Huff wrapped, returned a sentinel
+// (MAX_UINT256 / 0) or read garbage. Underflow of exp/exp2 to 0 is kept,
+// because 0 is the correct rounded answer there.
+//
+// Deployed objects (Blockulator 3.0), one idea each, as BL19's; the inline
+// library holds every export. An untagged export is in BL127, the number:
+// arithmetic and its directed forms, conversions, sqrt, cbrt, gavg, hypot,
+// inv, factorial and the small ops. `@object BL127E` is the elementary
+// functions on the exp/log kernels (exp, exp2, exp10, expm1, ln, log2,
+// log10, log2Up, log1p, pow, powu, compound); `@object BL127H` the
+// hyperbolic functions (sinh, cosh, tanh, atanh); `@object BL127N` the
+// normal distribution (erf, erfc, normCdf); `@object BL127S` Lambert W
+// (lambertW0, lambertWm1). Each object carries only its exports and their
+// callees, so a kernel two objects share (expk, log2m) is copied into each:
+// bytes, not gas. Up to v8 everything was one object; the split leaves room
+// in each for the wide second stage of its rounding tests.
+
+/// @error Overflow() 0x35278d12
+/// @error DivisionByZero() 0x23d359a3
+/// @error OutOfRange() 0x7db3aba7
+
+// BL19's wide kernels, two words at 2^-497 to 2^-510 and already tested by
+// BL19's forced sweeps, for the second stage behind each rounding test. The
+// generator takes each named function of BL19.yul.src and every function it
+// calls, renamed w19_<name> (w19_wexpm1, w19_msb, ...), so nothing collides
+// with this file's own helpers; an import enters an object's bytes only when
+// one of its exports calls it (scripts/bl127/gen.py, "Imports").
+/// @import bl19 as w19: wexp, wexpm1, wlnw, wmul, wrecip, wln1ps, em1w, erfw, lwfix
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Revert with a 4-byte custom error selector. Uses scratch space only.
+function rev(sel) {
+    mstore(0x00, shl(224, sel))
+    revert(0x00, 0x04)
+}
+
+/// |x| as an unsigned word. absw(-2^255) = 2^255, which is a valid uint.
+function absw(x) -> r {
+    let m := sar(255, x)
+    r := sub(xor(x, m), m)
+}
+
+/// Index of the most significant set bit of x > 0, 0..255; msb(0) = 0. On
+/// the CLZ opcode (EIP-7939, Osaka): 255 - clz(x), guarded because
+/// 255 - clz(0) wraps. Every leading-bit count in this file goes through it
+/// but lwfin's rounding bound, which takes clz itself (about 110 gas less there);
+/// none of its call sites passes zero. v1 to v5 ran the Huff's binary
+/// search here, 250 to 300 gas more.
+function msb(x) -> r {
+    if x { r := sub(255, clz(x)) }
+}
+
+/// Unchecked floor(a * b / 2^128). Same arithmetic as bl127_mul without the
+/// overflow test. Used only inside polynomial and iteration kernels where the
+/// operands are bounded by construction.
+function mulraw(a, b) -> r {
+    let p0 := mul(a, b)
+    let mm := mulmod(a, b, not(0))
+    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    p1 := sub(p1, mul(slt(a, 0), b))
+    p1 := sub(p1, mul(slt(b, 0), a))
+    r := or(shl(128, p1), shr(128, p0))
+}
+
+/// Unchecked floor(a * b / 2^192) on signed words: the kernel multiply of the
+/// transcendentals, which keep 64 guard bits below the format's 2^-128. The
+/// 512-bit product is formed as in mulraw and bits 192..447 are kept.
+function mulg(a, b) -> r {
+    let p0 := mul(a, b)
+    let mm := mulmod(a, b, not(0))
+    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    p1 := sub(p1, mul(slt(a, 0), b))
+    p1 := sub(p1, mul(slt(b, 0), a))
+    r := or(shl(64, p1), shr(192, p0))
+}
+
+/// 2^-192 -> 2^-128, rounded to nearest (half up), signed.
+function round64(r) -> q {
+    q := sar(64, add(r, 0x8000000000000000))
+}
+
+/// Unsigned floor(a * 2^128 / b) for b != 0, requires (a >> 128) < b.
+/// Remco Bloemen's mulDiv specialised to a constant multiplier of 2^128.
+/// Verbatim port of BL127_DIV_UNSIGNED in arithmetic.huff.
+function divu(a, b) -> q {
+    let prod0 := shl(128, a)
+    let prod1 := shr(128, a)
+    let remainder := mulmod(a, 0x100000000000000000000000000000000, b)
+    prod1 := sub(prod1, gt(remainder, prod0))
+    prod0 := sub(prod0, remainder)
+    let twos := and(sub(0, b), b)
+    b := div(b, twos)
+    prod0 := div(prod0, twos)
+    prod0 := or(prod0, mul(prod1, add(div(sub(0, twos), twos), 1)))
+    let iv := xor(mul(3, b), 2)
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    iv := mul(iv, sub(2, mul(b, iv)))
+    q := mul(prod0, iv)
+}
+
+/// Unsigned 512-bit product a * b as (h, l).
+function mul512(a, b) -> h, l {
+    l := mul(a, b)
+    let mm := mulmod(a, b, not(0))
+    h := sub(sub(mm, l), lt(mm, l))
+}
+
+/// floor(a * b / 2^256), unsigned.
+function hmul(a, b) -> h {
+    let l := mul(a, b)
+    let mm := mulmod(a, b, not(0))
+    h := sub(sub(mm, l), lt(mm, l))
+}
+
+/// The signed 512-bit product of a signed a and an unsigned b, as (h, l):
+/// the unsigned product less b 2^256 when a < 0.
+function smul512(a, b) -> h, l {
+    l := mul(a, b)
+    let mm := mulmod(a, b, not(0))
+    h := sub(sub(sub(mm, l), lt(mm, l)), mul(slt(a, 0), b))
+}
+
+/// floor(sqrt(z)) for any unsigned z, by Newton from above.
+function isqrt(z) -> y {
+    if iszero(z) { leave }
+    y := shl(shr(1, add(msb(z), 2)), 1)
+    for {} 1 {} {
+        let t := shr(1, add(y, div(z, y)))
+        if iszero(lt(t, y)) { break }
+        y := t
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Conversions
+// ---------------------------------------------------------------------------
+
+/// @export fromFixed18(int256 x) returns (int256 r)
+/// @domain |x| < 2^127
+/// @reverts OutOfRange() if |x| >= 2^127
+/// @notice Convert an 18-decimal fixed-point value to 127.128.
+/// @dev r = sdiv(x << 128, 1e18), rounding toward zero (matches Huff).
+///      Reverts with OutOfRange if |x| >= 2^127, where the shift would
+///      lose bits. The Huff silently wrapped here.
+function bl127_fromFixed18(x) -> r {
+    if iszero(eq(sar(127, x), sar(255, x))) { rev(0x7db3aba7) }
+    r := sdiv(shl(128, x), 1000000000000000000)
+}
+
+/// @export toFixed18(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice Convert a 127.128 value to 18-decimal fixed-point.
+/// @dev r = floor(x * 1e18 / 2^128), rounding toward negative infinity
+///      (matches Huff: signed high word times 1e18 plus the truncated
+///      unsigned low word product). Cannot overflow for any int256 input.
+function bl127_toFixed18(x) -> r {
+    let hi := sar(128, x)
+    let lo := and(x, 0xffffffffffffffffffffffffffffffff)
+    r := add(mul(hi, 1000000000000000000), shr(128, mul(lo, 1000000000000000000)))
+}
+
+/// @export toFixed18Down(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice Convert a 127.128 value to 18-decimal fixed-point, rounding toward
+///         negative infinity: toFixed18 under the name that says its
+///         direction. For an amount a protocol pays out.
+function bl127_toFixed18Down(x) -> r {
+    r := bl127_toFixed18(x)
+}
+
+/// @export toFixed18Up(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice Convert a 127.128 value to 18-decimal fixed-point, rounding toward
+///         positive infinity: ceil(x * 1e18 / 2^128). For an amount a
+///         protocol charges.
+/// @dev The remainder of x * 1e18 modulo 2^128 is the low 128 bits of
+///      (x mod 2^128) * 1e18, a product below 2^188.
+function bl127_toFixed18Up(x) -> r {
+    r := bl127_toFixed18(x)
+    if and(mul(and(x, 0xffffffffffffffffffffffffffffffff), 1000000000000000000), 0xffffffffffffffffffffffffffffffff) {
+        r := add(r, 1)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Arithmetic
+// ---------------------------------------------------------------------------
+
+/// @export add(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts Overflow() on signed overflow
+/// @notice a + b. Reverts with Overflow on signed overflow.
+function bl127_add(a, b) -> r {
+    r := add(a, b)
+    if xor(slt(r, a), slt(b, 0)) { rev(0x35278d12) }
+}
+
+/// @export sub(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts Overflow() on signed overflow
+/// @notice a - b. Reverts with Overflow on signed overflow.
+function bl127_sub(a, b) -> r {
+    r := sub(a, b)
+    if xor(sgt(r, a), slt(b, 0)) { rev(0x35278d12) }
+}
+
+/// @export mul(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts Overflow() when a·b / 2^128 does not fit in int256
+/// @notice floor(a * b / 2^128), the 127.128 product.
+/// @dev The full 512-bit signed product is formed as [p1:p0]. The unsigned
+///      high word from mulmod is corrected to the signed high word by
+///      subtracting b when a < 0 and a when b < 0. The result is the middle
+///      256 bits of the 512-bit product, which is a floor toward negative
+///      infinity, bit-identical to the Huff 4-term schoolbook on every
+///      input where the Huff did not wrap. Reverts with Overflow when the
+///      true result does not fit in int256; the Huff silently wrapped.
+function bl127_mul(a, b) -> r {
+    let p0 := mul(a, b)
+    let mm := mulmod(a, b, not(0))
+    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    p1 := sub(p1, mul(slt(a, 0), b))
+    p1 := sub(p1, mul(slt(b, 0), a))
+    if iszero(eq(sar(127, p1), sar(255, p1))) { rev(0x35278d12) }
+    r := or(shl(128, p1), shr(128, p0))
+}
+
+/// floor(a 2^128 / b) for unsigned a, b with b != 0, by the cheapest exact
+/// route. When a and b are both below 2^192 (|a|, |b| under 2^64), long
+/// division in two 64-bit digits: a 2^64 fits a word, every remainder is
+/// below b < 2^192, so shifted by 64 it fits too; three `div`s and a `mod`.
+/// When only b is below 2^192, the same with a third digit from floor(a / b).
+/// Otherwise Bloemen's mulDiv (divu). Overflow wherever the quotient would
+/// pass 2^255 + 1 (no caller's word holds it); below that the exact
+/// quotient is returned, and the callers test it against their bound.
+/// Blockulator 2.2 ran the mulDiv on every |a| >= 1: div 601 -> 365 gas on
+/// the gas ladder's inputs (inline library, timed alone).
+function divw(a, b) -> q {
+    switch shr(192, or(a, b))
+    case 0 {
+        let n := shl(64, a)
+        q := div(n, b)
+        if gt(q, 0x800000000000000000000000000000000000000000000000) { rev(0x35278d12) }
+        q := or(shl(64, q), div(shl(64, mod(n, b)), b))
+    }
+    default {
+        switch shr(128, a)
+        case 0 { q := div(shl(128, a), b) }
+        default {
+            switch shr(192, b)
+            case 0 {
+                q := div(a, b)
+                if gt(q, 0x80000000000000000000000000000000) { rev(0x35278d12) }
+                let n := shl(64, mod(a, b))
+                q := or(or(shl(128, q), shl(64, div(n, b))), div(shl(64, mod(n, b)), b))
+            }
+            default {
+                if iszero(lt(shr(128, a), b)) { rev(0x35278d12) }
+                q := divu(a, b)
+            }
+        }
+    }
+}
+
+/// @export div(int256 a, int256 b) returns (int256 r)
+/// @domain b != 0
+/// @reverts DivisionByZero() when b == 0; Overflow() when the quotient does not fit
+/// @notice a / b in 127.128, truncated toward zero.
+/// @dev Signs are stripped, the unsigned quotient floor(|a| * 2^128 / |b|)
+///      is formed exactly (divw: 64-bit digits when |a| and |b| are under
+///      2^64, a 512-by-256 division otherwise), and the sign is restored.
+///      That is truncation toward zero, matching the Huff. Reverts with
+///      DivisionByZero when b == 0 (the Huff returned garbage) and with
+///      Overflow when the quotient does not fit in int256 (the Huff wrapped).
+function bl127_div(a, b) -> r {
+    if iszero(b) { rev(0x23d359a3) }
+    let ng := xor(slt(a, 0), slt(b, 0))
+    let q := divw(absw(a), absw(b))
+    if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+    r := sub(xor(q, sub(0, ng)), sub(0, ng))
+}
+
+// ---------------------------------------------------------------------------
+// Directed rounding: the token edge, where a protocol rounds toward itself
+// ---------------------------------------------------------------------------
+
+/// @export mulDown(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts Overflow() when a·b / 2^128 does not fit
+/// @notice floor(a * b / 2^128), toward negative infinity: mul under the
+///         name that says its direction.
+function bl127_mulDown(a, b) -> r {
+    r := bl127_mul(a, b)
+}
+
+/// @export mulUp(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts Overflow() when the rounded product does not fit
+/// @notice ceil(a * b / 2^128), toward positive infinity.
+/// @dev The floor plus one when the low 128 bits of the 512-bit product
+///      (the same in two's complement as unsigned) are not all zero.
+function bl127_mulUp(a, b) -> r {
+    let p0 := mul(a, b)
+    let mm := mulmod(a, b, not(0))
+    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    p1 := sub(p1, mul(slt(a, 0), b))
+    p1 := sub(p1, mul(slt(b, 0), a))
+    r := or(shl(128, p1), shr(128, p0))
+    let up := iszero(iszero(and(p0, 0xffffffffffffffffffffffffffffffff)))
+    // the floor F fits iff bits 127..255 of p1 agree; the ceiling also fits at
+    // F = -2^255 - 1 (p1 all ones above bit 127, low word 2^255 - 1), #159
+    switch eq(sar(127, p1), sar(255, p1))
+    case 1 {
+        if up {
+            if eq(r, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) { rev(0x35278d12) }
+            r := add(r, 1)
+        }
+    }
+    default {
+        if iszero(and(up, and(eq(sar(128, p1), not(0)), eq(r, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)))) { rev(0x35278d12) }
+        r := 0x8000000000000000000000000000000000000000000000000000000000000000
+    }
+}
+
+/// @export divDown(int256 a, int256 b) returns (int256 r)
+/// @domain b != 0
+/// @reverts DivisionByZero() when b == 0; Overflow() when the quotient does not fit
+/// @notice a / b in 127.128, rounded toward negative infinity. div truncates
+///         toward zero, which rounds a negative quotient up; this does not.
+function bl127_divDown(a, b) -> r {
+    if iszero(b) { rev(0x23d359a3) }
+    let ng := xor(slt(a, 0), slt(b, 0))
+    let ua := absw(a)
+    let ub := absw(b)
+    // a negative inexact quotient is one more in magnitude
+    let q := add(divw(ua, ub), and(ng, iszero(iszero(mulmod(ua, 0x100000000000000000000000000000000, ub)))))
+    if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+    r := sub(xor(q, sub(0, ng)), sub(0, ng))
+}
+
+/// @export divUp(int256 a, int256 b) returns (int256 r)
+/// @domain b != 0
+/// @reverts DivisionByZero() when b == 0; Overflow() when the quotient does not fit
+/// @notice a / b in 127.128, rounded toward positive infinity.
+function bl127_divUp(a, b) -> r {
+    if iszero(b) { rev(0x23d359a3) }
+    let ng := xor(slt(a, 0), slt(b, 0))
+    let ua := absw(a)
+    let ub := absw(b)
+    // a positive inexact quotient is one more
+    let q := add(divw(ua, ub), and(iszero(ng), iszero(iszero(mulmod(ua, 0x100000000000000000000000000000000, ub)))))
+    if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+    r := sub(xor(q, sub(0, ng)), sub(0, ng))
+}
+
+// ---------------------------------------------------------------------------
+// Exponentials
+// ---------------------------------------------------------------------------
+
+/// 2^f for f in [0, 1) given at 2^-192, result at 2^-192 in [1, 2): f = j/16 +
+/// r, 2^f = T[j] 2^r. 2^r on [0, 1/16) is the degree-15 minimax polynomial
+/// (kernel192.py; certified sup norm 2^-147.7 relative), Horner at 2^-192 on
+/// r at 2^-256 with each product's high word in line, the top 10 steps in
+/// one word; the table level adds hi(v, (T - 1) 2^256), T - 1 rounded at
+/// 2^-256. Within 2^45.3 units of 2^-192 (2^-146.7 relative). The
+/// one-word kernel: the erf family, the Lambert W iterations and pow's
+/// first try (pow2t) run on it; v5's was a degree-24 fit on [0, 1).
+function exp2frac(f) -> r {
+    let x := shl(64, and(f, 0xfffffffffffffffffffffffffffffffffffffffffffffff))
+    let xs := shr(118, x)
+    r := 0xe6a823b1ca6185f22f486ff3574c55f1a5b5
+    r := add(shr(115, mul(shr(23, r), xs)), 0x131376dce88ced8d815c68b5ef87939e0679cd)
+    r := add(shr(110, mul(shr(28, r), xs)), 0x18161ba28735f978033c5099253edf557e8d388)
+    r := add(shr(106, mul(shr(32, r), xs)), 0x1c3bd64d70e4b90253e5dba61b91f58d7ae2700b)
+    r := add(shr(102, mul(shr(36, r), xs)), 0x1e8cac73555a748a7597509bfb6b6ebc7aee0b614)
+    r := add(shr(98, mul(shr(40, r), xs)), 0x1e4cf5158b8c1badc09d97a67c8cebf0ab6244a367)
+    r := add(shr(94, mul(shr(44, r), xs)), 0x1b5253d395e7c54e9d6d953b20e898a3a5b4acd0954)
+    r := add(shr(90, mul(shr(48, r), xs)), 0x162c0223a5c823fcfbc396a40543f772a1748de99af3)
+    r := add(shr(86, mul(shr(52, r), xs)), 0xffe5fe2c458634358d3d2c792520c7d0ea94c40e89f0)
+    r := add(shr(82, mul(shr(56, r), xs)), 0xa184897c363c3b7a5853be5447f71910414095d379445)
+    r := add(shr(79, mul(shr(59, r), xs)), 0x5761ff9e299cc441c5fda6a89111466135782e66958340)
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0x276556df749cee539977c16a7bf06e0ba0962ea6c8c2cb3) }
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0xe35846b82505fc599d3b15d995eb26a9a93df33ae3200d9) }
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0x3d7f7bff058b1d50de2d60dd92e6bf883b420e2d8eb3a834) }
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0xb17217f7d1cf79abc9e3b39803f2f6af43669e4d920ff940) }
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), 0xffffffffffffffffffffffffffffffffffffec717ea441e3) }
+    let j := shr(188, f)
+    switch and(j, 8)
+    case 0 {
+        switch and(j, 4)
+        case 0 {
+            switch and(j, 2)
+            case 0 {
+                switch and(j, 1)
+                case 0 {
+                }
+                default {
+                    { let pl := mul(r, 0xb5586cf9890f6298b92b71842a98364291408b3ceb0a2a2ba8566c55e3dd0b3) let ph := mulmod(r, 0xb5586cf9890f6298b92b71842a98364291408b3ceb0a2a2ba8566c55e3dd0b3, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+            }
+            default {
+                switch and(j, 1)
+                case 0 {
+                    { let pl := mul(r, 0x172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f23c26bdd0947ee67) let ph := mulmod(r, 0x172b83c7d517adcdf7c8c50eb14a792035509ff7d758693f23c26bdd0947ee67, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+                default {
+                    { let pl := mul(r, 0x2387a6e75623866c1fadb1c15cb593b0328566902df69e4de240795ecb7f7373) let ph := mulmod(r, 0x2387a6e75623866c1fadb1c15cb593b0328566902df69e4de240795ecb7f7373, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+            }
+        }
+        default {
+            switch and(j, 2)
+            case 0 {
+                switch and(j, 1)
+                case 0 {
+                    { let pl := mul(r, 0x306fe0a31b7152de8d5a46305c85edecbc27343629f502f1af16cb97df4f76df) let ph := mulmod(r, 0x306fe0a31b7152de8d5a46305c85edecbc27343629f502f1af16cb97df4f76df, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+                default {
+                    { let pl := mul(r, 0x3dea64c12342235b41223e13d773fba2cb82b8244267c54443f2effcf8ff4230) let ph := mulmod(r, 0x3dea64c12342235b41223e13d773fba2cb82b8244267c54443f2effcf8ff4230, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+            }
+            default {
+                switch and(j, 1)
+                case 0 {
+                    { let pl := mul(r, 0x4bfdad5362a271d4397afec42e20e0363ba2e159c579f82e4b1393150521a7e1) let ph := mulmod(r, 0x4bfdad5362a271d4397afec42e20e0363ba2e159c579f82e4b1393150521a7e1, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+                default {
+                    { let pl := mul(r, 0x5ab07dd48542958c93015191eb345d88d7c81280e069fbdb62cbe2830674cfb5) let ph := mulmod(r, 0x5ab07dd48542958c93015191eb345d88d7c81280e069fbdb62cbe2830674cfb5, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+            }
+        }
+    }
+    default {
+        switch and(j, 4)
+        case 0 {
+            switch and(j, 2)
+            case 0 {
+                switch and(j, 1)
+                case 0 {
+                    { let pl := mul(r, 0x6a09e667f3bcc908b2fb1366ea957d3e3adec17512775099da2f590b0667322b) let ph := mulmod(r, 0x6a09e667f3bcc908b2fb1366ea957d3e3adec17512775099da2f590b0667322b, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+                default {
+                    { let pl := mul(r, 0x7a11473eb0186d7d51023f6cda1f5ef42b66977960531e821b3497c047d9c063) let ph := mulmod(r, 0x7a11473eb0186d7d51023f6cda1f5ef42b66977960531e821b3497c047d9c063, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+            }
+            default {
+                switch and(j, 1)
+                case 0 {
+                    { let pl := mul(r, 0x8ace5422aa0db5ba7c55a192c9bb3e6ed61f2733304a346d8ed0c00dc9cd8125) let ph := mulmod(r, 0x8ace5422aa0db5ba7c55a192c9bb3e6ed61f2733304a346d8ed0c00dc9cd8125, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+                default {
+                    { let pl := mul(r, 0x9c49182a3f0901c7c46b071f2be58ddade50c217186c90b4577a7315e6b80f3e) let ph := mulmod(r, 0x9c49182a3f0901c7c46b071f2be58ddade50c217186c90b4577a7315e6b80f3e, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+            }
+        }
+        default {
+            switch and(j, 2)
+            case 0 {
+                switch and(j, 1)
+                case 0 {
+                    { let pl := mul(r, 0xae89f995ad3ad5e8734d1773205a7fbc3ae675ea440b162d6b8275b41cef0534) let ph := mulmod(r, 0xae89f995ad3ad5e8734d1773205a7fbc3ae675ea440b162d6b8275b41cef0534, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+                default {
+                    { let pl := mul(r, 0xc199bdd85529c2220cb12a091ba6679444964a366612400439733a7e3fe53144) let ph := mulmod(r, 0xc199bdd85529c2220cb12a091ba6679444964a366612400439733a7e3fe53144, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+            }
+            default {
+                switch and(j, 1)
+                case 0 {
+                    { let pl := mul(r, 0xd5818dcfba48725da05aeb66e0dca9f589f559c0876ff2382fb1a3d194631015) let ph := mulmod(r, 0xd5818dcfba48725da05aeb66e0dca9f589f559c0876ff2382fb1a3d194631015, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+                default {
+                    { let pl := mul(r, 0xea4afa2a490d9858f73a18f5db301f86dea20610ceee13eb7bb006526c954540) let ph := mulmod(r, 0xea4afa2a490d9858f73a18f5db301f86dea20610ceee13eb7bb006526c954540, not(0)) r := add(sub(sub(ph, pl), lt(ph, pl)), r) }
+                }
+            }
+        }
+    }
+}
+
+/// 2^t for t at 2^-192 in [-128, 127) without range checks, rounded to
+/// nearest at 2^-128, through the one-word kernel. Positive t splits into
+/// integer k and fraction f; when k >= 64 the guard bits of 2^f become
+/// result bits and the shift is exact. Negative t computes 2^(1-f) and
+/// shifts it right by k + 1 with rounding.
+function exp2core(t) -> r {
+    if iszero(t) { r := 0x100000000000000000000000000000000 leave }
+    if slt(t, 0) {
+        let at := sub(0, t)
+        let k := shr(192, at)
+        let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+        if iszero(f) { r := shr(k, 0x100000000000000000000000000000000) leave }
+        let sh := add(65, k)
+        r := shr(sh, add(exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)), shl(sub(sh, 1), 1)))
+        leave
+    }
+    let k := shr(192, t)
+    let v := exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff))
+    if iszero(lt(k, 64)) { r := shl(sub(k, 64), v) leave }
+    let sh := sub(64, k)
+    r := shr(sh, add(v, shl(sub(sh, 1), 1)))
+}
+
+/// e^x through the one-word kernel (the v4 exp, within 2^-145 relative
+/// before its rounding): the iteration step of Lambert W, which the final
+/// double-word step corrects.
+function expf(x) -> r {
+    if iszero(x) { r := 0x100000000000000000000000000000000 leave }
+    if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+    if slt(x, sub(0, 0x5800000000000000000000000000000000)) { r := 0 leave }
+    r := exp2core(mulg(shl(64, x), 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+}
+
+// ---------------------------------------------------------------------------
+// v5 double-word kernels
+// ---------------------------------------------------------------------------
+//
+// A double word (DW) is a pair (h, l) read as (h 2^256 + l) 2^-512: a value
+// in [0, 1) held to 2^-512. An exponential is reduced exactly to 2^n 2^f with
+// f a DW (y2nf), 2^f = e^(f ln 2) (lnmul), and e^r - 1 is evaluated by expk
+// to about 2^-300 relative; the result is formed at 2^-192 in two words
+// (sc192) and rounded to nearest once (rnd192). The logarithm l2p refines the
+// one-word log2 by one Newton step through expk. expk and l2p, and exp, pow
+// and cbrt built on them, are modelled in integers and measured against
+// mpmath by scripts/bl127/generators/precise_model.py.
+
+/// e^r - 1 for r in [0, ln 2) given in X form, rh 2^-256 + rx 2^-384 with rx
+/// under 3 2^128 (as lnmul and expr give it), as a DW (sh, sl). X form
+/// throughout: a value H 2^-256 + L 2^-384 with L a small word, so a
+/// product's cross terms are one-word multiplies and the carry waits for the
+/// end (expk.py). r = j1/16 + j2/256 + j3/4096 + u: three 16-entry levels
+/// pick e^(j 16^-i) - 1 (at 2^-384, floored), multiplied in the expm1 form
+/// s + c + s c; e^u - 1 = u + u^2 g(u), g the degree-16 minimax polynomial of
+/// (e^u - 1 - u)/u^2 on [0, 2^-12] (certified sup norm 2^-292.8 relative),
+/// its top 5 steps in one word, the next 8 at 2^-256 (the high word less its
+/// borrow, one unit over at most, against a constant one unit lower), the
+/// last three in X form; the bits of u below 2^-256 add rx (1 + s). Every
+/// constant and product floors and g's constant is lowered by the fit's
+/// bound, so s is never above e^r - 1 and never reaches 1. Within 2^-311.2
+/// relative, below. Blockulator 2.2's eight 2-bit groups and degree-16 tail
+/// held s to 2^-512 at 4,046 gas.
+function expk(rh, rx) -> sh, sl {
+    let t := and(rh, 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+    {
+        let ts := shr(101, t)
+        sh := 0xb418cc295618d414e165a7d98fca893e61a35f0a8f41aeaa003
+        sh := add(shr(63, mul(shr(92, sh), ts)), 0xca963b6e0247035a182837333d54a9e46c400e41e0249992d7d9)
+        sh := add(shr(59, mul(shr(96, sh), ts)), 0xd73f9f399dee9ad49cd5fb86f3275162d37874eac70da14bfddfe)
+        sh := add(shr(55, mul(shr(100, sh), ts)), 0xd73f9f399dc0f846e382a020f90e3a145dc0306aba7302a8d021be)
+        sh := add(shr(51, mul(shr(104, sh), ts)), 0xc9cba54603e4e905d7492f4adbb3c24dcfa46326233bcad6502d5c9)
+        sh := add(shr(47, mul(shr(108, sh), ts)), 0xb092309d43684be51c198e4fad88f859339eeb2cf4a0e40d8975c3fa)
+        sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x8f76c77fc6c4bdaa26d4c3d67f6ace7b622e40c6dd8fc8a199ca38c68)
+        sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x6b99159fd5138e3f9d1f92e0df71c7759331c2c4eb0e429d448c39adb1)
+        sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x49f93edde27d71cbbc05b4fa999e392d877e08d8a3927455fcaf7c43358)
+        sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x2e3bc74aad8e671f5583911ca002e3bc74aad8e4e01b799c4ca222154afb)
+        sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x1a01a01a01a01a01a01a01a01a01a01a01a01a01a01a49e51b48917b39163)
+        sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0xd00d00d00d00d00d00d00d00d00d00d00d00d00d00d00d003f830f5c2aa02)
+        sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x5b05b05b05b05b05b05b05b05b05b05b05b05b05b05b05b05b05bc44a0572c)
+        sh := add(sub(mulmod(sh, t, not(0)), mul(sh, t)), 0x222222222222222222222222222222222222222222222222222222222189a73)
+        // g's last three steps in X form: (sh, sl) := c + t (sh, sl)
+        let pl := mul(t, sh)
+        let ph := mulmod(t, sh, not(0))
+        sh := add(sub(sub(ph, pl), lt(ph, pl)), 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaae)
+        sl := add(shr(128, pl), 0xade566d72bd4cb3f4e80179ffa2c0000)
+        let th := shr(128, t)
+        pl := mul(t, sh)
+        ph := mulmod(t, sh, not(0))
+        sl := add(add(shr(128, pl), shr(128, mul(th, sl))), 0xaaa9ff765c2b89e5432d1069ad06c000)
+        sh := add(sub(sub(ph, pl), lt(ph, pl)), 0x2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)
+        pl := mul(t, sh)
+        ph := mulmod(t, sh, not(0))
+        sl := add(add(shr(128, pl), shr(128, mul(th, sl))), 0xfffffffffff9f8deb513d42eeafec000)
+        sh := add(sub(sub(ph, pl), lt(ph, pl)), 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+        // u + u^2 g, u^2 = (qh, ql) to 2^-512
+        let ql := mul(t, t)
+        let qh := mulmod(t, t, not(0))
+        qh := sub(sub(qh, ql), lt(qh, ql))
+        pl := mul(qh, sh)
+        ph := mulmod(qh, sh, not(0))
+        sl := add(add(shr(128, pl), shr(128, mul(shr(128, qh), sl))), shr(128, mul(shr(128, ql), shr(128, sh))))
+        sh := add(sub(sub(ph, pl), lt(ph, pl)), t)
+        sl := add(add(sl, rx), shr(128, mul(rx, shr(128, sh))))
+    }
+    // level 3: e^(j 4096^-1) - 1
+    {
+        let j := and(shr(244, rh), 15)
+        let ch := 0
+        let cl := 0
+        switch and(j, 8)
+        case 0 {
+            switch and(j, 4)
+            case 0 {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                    }
+                    default {
+                        ch := 0x10008002aab5557777d27df7e11e14c4df26269e70cc5f593ae718dc7de726 cl := 0xfb2b0aa954c722fbb00599de15435977
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x20020015560004445b06186326382ab19a3e5c922e8086da9f95cf2e94c476 cl := 0xe15d6eae0597f42aebf829ba43320348
+                    }
+                    default {
+                        ch := 0x300480480360206769a08b2258a3ac6502165c217f6289cb0e5047b13167d7 cl := 0xa5f3969bc5a9a3b953062e106075409e
+                    }
+                }
+            }
+            default {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x400800aab555dde38e6ce86e9277aa54811d5145a7542458df0c6b24e6e541 cl := 0xa1c30e2f0a3983530dbd925bf0f964a5
+                    }
+                    default {
+                        ch := 0x500c814d6f61a0c05f30f14ef8aab49f165151d2ff56569732685dab0f7ef3 cl := 0x3fdc74e6aef5cea5e66fd56d8c0e1aef
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x6012024036040d0d9d1272ce89353c8b966e82a48e0a7948b22dfa3a08fb7a cl := 0x63ddfd733f1baccecdf53215ed873033
+                    }
+                    default {
+                        ch := 0x701883930ebe16e7b53cab72a3eb5388d393c20aa9d28a761ea2e2f319768e cl := 0x20044397c8047211c21f11bb4a32c6d1
+                    }
+                }
+            }
+        }
+        default {
+            switch and(j, 4)
+            case 0 {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x802005560011127d41d5bd72f4c8f39bae49a2157e9d0d4405a6beeba52138 cl := 0xa3f09509ffb9baea7fafb8e557e76556
+                    }
+                    default {
+                        ch := 0x90288799117ec4158b543333b678d3e48672bef63730c460e8595f5f277318 cl := 0x35b3cae4365afce42bb26275443004da
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0xa0320a6c4b8970180a449c83a3f0239b14142810b0cecde699d7101e5c770d cl := 0xe30db28695f5a8da624458474307419a
+                    }
+                    default {
+                        ch := 0xb03c8ddfb7b3eb14e98f4c1f60125eed7186b85c4d436048740e9243d04a53 cl := 0x2304751f233a4bcf8336564294b18e8d
+                    }
+                }
+            }
+            default {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0xc04812036081a9ce894e3dfc9a70cc052b6d48cb0a9c1f20ed5fc91840b245 cl := 0x4450743a574ae21ee9e83f5e12d6e408
+                    }
+                    default {
+                        ch := 0xd05496e75176d14402432fdfc8620b939f2fd3a7feb7b45aee246e5abeb37f cl := 0xa689cf3b5310d05700e28a675c386f46
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0xe0621c9b971846bca9fdf6bfe9e0883df7ab6a06d1b7993184f01a0549c49a cl := 0xaa7617d34e21d9b7013d9042f81c68d0
+                    }
+                    default {
+                        ch := 0xf070a3303eebbfd497c31c7c81db73b0e3b79e2aa2dffe851188686d0ef573 cl := 0x7cef3528f822dc43209ac097e506ec5e
+                    }
+                }
+            }
+        }
+        let pl := mul(sh, ch)
+        let ph := mulmod(sh, ch, not(0))
+        sl := add(add(add(sl, cl), shr(128, pl)), add(shr(128, mul(shr(128, sh), cl)), shr(128, mul(sl, shr(128, ch)))))
+        sh := add(add(sh, ch), sub(sub(ph, pl), lt(ph, pl)))
+    }
+    // level 2: e^(j 256^-1) - 1
+    {
+        let j := and(shr(248, rh), 15)
+        let ch := 0
+        let cl := 0
+        switch and(j, 8)
+        case 0 {
+            switch and(j, 4)
+            case 0 {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                    }
+                    default {
+                        ch := 0x100802ab55777d28a2a42d26aa9ee67bcf00c930cec0ede3d72020ba06e5484 cl := 0xaeb7a527f5f42403d05e6e4a041a691f
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x202015600445b0c326382bc73689d326f63923ddae1f48d0156896180904c29 cl := 0xb42ff665682d86678a9e2460843f5134
+                    }
+                    default {
+                        ch := 0x304848362076a08d9411a1cee76ca2d65b11db81591418b4e8e6e3e58bab7d2 cl := 0x5124f75a4faea8807380b45aecf4ad31
+                    }
+                }
+            }
+            default {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x4080ab55de3917ab864b3e9044e6b456f21041f46276ecb06a421c8bd85d6b8 cl := 0xce700e8f16fe0318b3274ff9356675fd
+                    }
+                    default {
+                        ch := 0x50c94ef7a206dc2da1f7b86de3f8e864ef6a65a3035e9a78cf59e9c25533bd8 cl := 0x34ebf8422d47bb2c83b52ca485b36dfc
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x6122436410dd14e5659d75e95b76e1a857a4e668c209c142e74888d917e5ba7 cl := 0x1156d5164e24c3f0dc7e295d1722b6b4
+                    }
+                    default {
+                        ch := 0x718b98f42084efbdb328b919e6909847ec98c18610614cd4ef8851e1743f887 cl := 0x1534c0bdf52ce9e1b56d3abc0e8dd3e8
+                    }
+                }
+            }
+        }
+        default {
+            switch and(j, 4)
+            case 0 {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x8205601127ec98e0bd083aba80c97a6aa5017852446806b13fdf317f61860ec cl := 0xb8ee41e5f3d3439956fcd31c6db4bdda
+                    }
+                    default {
+                        ch := 0x928fa934ef9093044ef6e13adf7cd6eba2f7587278574706e41acdcec44cb53 cl := 0xd3f0e54ea5a01c4ff4926d120f00cfdb
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0xa32a84e9c1f58145cc1cf959b1b11093f5f980f94f78166ed662eb5841a4ed2 cl := 0x97789caf421ede23cf9293b1dfeaff1d
+                    }
+                    default {
+                        ch := 0xb3d603ca7c32730fadc469f215fd20bf82fea58131ae73a78bb75b5221f0d56 cl := 0x34351067f1e0488e478ee4b8c6bc1985
+                    }
+                }
+            }
+            default {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0xc49236829e8bc292cfe63d64b295ea1da758b460877c903650604546d3fa723 cl := 0xd534ea04e63e3fdd6d3f1128dc70daf6
+                    }
+                    default {
+                        ch := 0xd55f2dce5d1e966e6b6d0a6a8e24e20c45fa36583ea5db5c3c99e6184606adf cl := 0x94f504a1914665aad50d4782bc77c7dd
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0xe63cfa7ab09d17324137d6c341c1d5cfb16053cd100bb6cffc908b29d281038 cl := 0x9b67ff6fb0b9a11588460289f3250080
+                    }
+                    default {
+                        ch := 0xf72bad65671b69772cc4a342d0e03a3deef5af2022a8fe14e89c95a1f189159 cl := 0x939e550749537de86982ef6a88a6fbb6
+                    }
+                }
+            }
+        }
+        let pl := mul(sh, ch)
+        let ph := mulmod(sh, ch, not(0))
+        sl := add(add(add(sl, cl), shr(128, pl)), add(shr(128, mul(shr(128, sh), cl)), shr(128, mul(sl, shr(128, ch)))))
+        sh := add(add(sh, ch), sub(sub(ph, pl), lt(ph, pl)))
+    }
+    // level 1: e^(j 16^-1) - 1
+    {
+        let j := shr(252, rh)
+        let ch := 0
+        let cl := 0
+        switch and(j, 8)
+        case 0 {
+            switch and(j, 4)
+            case 0 {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                    }
+                    default {
+                        ch := 0x1082b577d34ed7d5b1a019e225c9a951ba29557587c246f8c497d80dde7f9e47 cl := 0xa5e9dc384baf5430ade65eea82195eea
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x2216045b6f5ccf9ced688384e06b8d4278bf0c84a957057d776b61e502312cd9 cl := 0x787700747515eb769de3228859c3c304
+                    }
+                    default {
+                        ch := 0x34cb8170b58352d4e0c48cb7c664934508e6b0a713048f18461b695be2e8d011 cl := 0x8e77200d60439f0820dcaf6c3efe2008
+                    }
+                }
+            }
+            default {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x48b5e3c3e81866767bc3b69baabe534ec43887164bbe2b0a993e8cf15a620beb cl := 0xaf42e6764e4dcdd2ea54de5e35c4e753
+                    }
+                    default {
+                        ch := 0x5de9176045ff53b513246531754403c29db2c2f00cf3270be2032d5f422f830a cl := 0x6abeea8a026f5222eeed016c06418499
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0x747a513dbef6a623478b659b092405c578fa421f34b8db7db86d76f073a87a83 cl := 0xcc39d681fb6bd4b2f85abcc351bcd711
+                    }
+                    default {
+                        ch := 0x8c802477b000fdc24db40ed853110bef137e20cf0aa4fdf2760ec30aed6184b8 cl := 0xad1d96eb92c60014e582ad0807021ad3
+                    }
+                }
+            }
+        }
+        default {
+            switch and(j, 4)
+            case 0 {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0xa61298e1e069bc972dfefab6df33f9b1f651f16c130b4759c44bfc906367f2cc cl := 0x2ef57279a9122e213e6edbf797159917
+                    }
+                    default {
+                        ch := 0xc14b4312564464432aa513ba422005eb74c2ffc3e7e9ea8f25454f5fc9691912 cl := 0x51407b37175e987cce3dee1c7a692f1
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                        ch := 0xde455df80e3c05ca897b072f6daa5bc5942e1ee80a070fe14280cff85855265a cl := 0xa359ba5b9fc3dff9b06c76664e5cc3f9
+                    }
+                    default {
+                        ch := 0xfd1de6182f8c89d2c3b6d08c6597224224e114f55b04c763a54143ba8e9369fb cl := 0x6d9a6bbbc3cb9ccc39acb191818fbdc7
+                    }
+                }
+            }
+            default {
+                switch and(j, 2)
+                case 0 {
+                    switch and(j, 1)
+                    case 0 {
+                    }
+                    default {
+                    }
+                }
+                default {
+                    switch and(j, 1)
+                    case 0 {
+                    }
+                    default {
+                    }
+                }
+            }
+        }
+        let pl := mul(sh, ch)
+        let ph := mulmod(sh, ch, not(0))
+        sl := add(add(add(sl, cl), shr(128, pl)), add(shr(128, mul(shr(128, sh), cl)), shr(123, mul(sl, shr(133, ch)))))
+        sh := add(add(sh, ch), sub(sub(ph, pl), lt(ph, pl)))
+    }
+    sh := add(sh, shr(128, sl))
+    sl := shl(128, sl)
+}
+
+/// f ln 2 for a DW f in X form, rh 2^-256 + rx 2^-384 with rx under 3 2^128:
+/// the argument of expk for 2^f. The high words' full product and the two
+/// cross terms in one word each, all floored, with ln 2 floored at 2^-512:
+/// within 2^-382 below f ln 2, so never past ln 2.
+function lnmul(fh, fl) -> rh, rx {
+    let pl := mul(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+    let ph := mulmod(fh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
+    rh := sub(sub(ph, pl), lt(ph, pl))
+    rx := add(add(shr(128, pl), shr(128, mul(shr(128, fh), 0xe7b876206debac98559552fb4afa1b10))), shr(128, mul(shr(128, fl), 0xb17217f7d1cf79abc9e3b39803f2f6af)))
+}
+
+/// For y in 127.128 and L = lh 2^256 + ll a signed 512-bit value at 2^-384
+/// (a log2), n = floor(y L) and the fraction f = y L - n as a DW, exactly:
+/// y L at 2^-512 is the signed product y (lh 2^256 + ll), whose low 512 bits
+/// are f and whose bits above are n.
+function y2nf(y, lh, ll) -> n, fh, fl {
+    fl := mul(y, ll)
+    let mm := mulmod(y, ll, not(0))
+    let ng := slt(y, 0)
+    let b1 := sub(sub(sub(mm, fl), lt(mm, fl)), mul(ng, ll))
+    let c0 := mul(y, lh)
+    mm := mulmod(y, lh, not(0))
+    fh := add(c0, b1)
+    n := add(sub(sub(sub(sub(mm, c0), lt(mm, c0)), mul(ng, lh)), mul(slt(lh, 0), y)), sub(lt(fh, c0), slt(b1, 0)))
+}
+
+/// The reduction of e^x for |x| < 177: x = n ln 2 + r, r in [0, ln 2) in X
+/// form (rh 2^-256 + rx 2^-384, rx at most 2^129). n from log2 e at 2^-119
+/// (floored, one word) is floor(x log2 e) or one off, since |x| 2^-119 is under
+/// 2^-111; one test of r corrects it. ln 2 is floored at 2^-384, so r is within
+/// 2^-377 of x - n ln 2. On the 2^-128 grid x - m ln 2 stays 2^-137 from 0 for
+/// every 0 < |m| <= 300, so r is that far inside [0, ln 2) and the test
+/// cannot be fooled.
+function expr(x) -> n, rh, rx {
+    n := sar(247, mul(x, 0xb8aa3b295c17f0bbbe87fed0691d3e))
+    // n ln 2 = (n A + floor(v 2^-128)) 2^-256 + (v mod 2^128) 2^-384, v = n B
+    let v := mul(n, 0xe7b876206debac98559552fb4afa1b10)
+    rh := sub(sub(sub(shl(128, x), mul(n, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)), sar(128, v)), 1)
+    rx := sub(0x100000000000000000000000000000000, and(v, 0xffffffffffffffffffffffffffffffff))
+    if gt(rh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b) {
+        // r below 0 wraps rh to within 2^145 of 2^256; past ln 2 it is within
+        // 2^145 above ln 2 2^256 (itself above 2^255, so no sign test)
+        switch gt(rh, 0xc000000000000000000000000000000000000000000000000000000000000000)
+        case 1 {
+            n := sub(n, 1)
+            rh := add(rh, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+            rx := add(rx, 0xe7b876206debac98559552fb4afa1b10)
+        }
+        default {
+            n := add(n, 1)
+            rh := sub(rh, add(0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, 1))
+            rx := add(rx, sub(0x100000000000000000000000000000000, 0xe7b876206debac98559552fb4afa1b10))
+        }
+    }
+}
+
+/// e^x = 2^n (1 + s): n and the DW s, for |x| < 177.
+function expx(x) -> n, sh, sl {
+    let rh := 0
+    let rx := 0
+    n, rh, rx := expr(x)
+    sh, sl := expk(rh, rx)
+}
+
+/// floor(2^n (1 + s) 2^192) as a 512-bit integer (vh, vl), for a DW s and
+/// -192 <= n <= 318: the value at 2^-192 before the one rounding.
+function sc192(n, sh, sl) -> vh, vl {
+    let e := add(n, 192)
+    switch lt(e, 256)
+    case 1 { vl := add(shr(sub(256, e), sh), shl(e, 1)) }
+    default {
+        let k := sub(512, e)
+        vh := add(shr(k, sh), shl(sub(e, 256), 1))
+        vl := or(shl(sub(e, 256), sh), shr(k, sl))
+    }
+}
+
+/// A non-negative 512-bit value (vh, vl) at 2^-192, rounded to nearest (ties
+/// up) at 2^-128. Overflow when the result does not fit.
+function rnd192(vh, vl) -> r {
+    let l := add(vl, 0x8000000000000000)
+    let h := add(vh, lt(l, vl))
+    if gt(h, 0x7fffffffffffffff) { rev(0x35278d12) }
+    r := or(shl(192, h), shr(64, l))
+}
+
+/// 2^t rounded to nearest through the one-word kernel, for an exponent t at
+/// 2^-192 within ay 2^-145 + 2^-192 of the true one (ay a bound on |y| in
+/// 127.128, y the exponent's multiplier: log2g is within 2^-145). ok = 1 when
+/// the rounding is certain. With P below 2^e the true value, v = 2^t 2^192
+/// here is within P 2^192 (0.7 ay 2^-145 + 0.7 2^-192 + 2^-145 (exp2frac))
+/// + 1 of P 2^192, and v5's double word (l2p, then 2^t) within P (1 + |y|)
+/// 2^-107 + 1 (precise_model.py); eb, in units of 2^-192, bounds the two
+/// together (v5 kept the two words equal), and a v whose bits below the
+/// 2^-128 grid are more than eb from the midpoint rounds as the truth. Out of reach (ok = 0, nothing computed) when eb > 2^61:
+/// results from about 2^12 up, or a large |y|.
+function pow2t(t, ay) -> r, ok {
+    let at := t
+    let e := 0
+    if slt(t, 0) { at := sub(0, t) }
+    let k := shr(192, at)
+    switch slt(t, 0)
+    case 0 { e := add(k, 1) }
+    default { e := sub(0, k) }
+    // ay 2^(e+48) / 2^128 + 2^(e+48) + 6 (the shl is 0 for e < -48)
+    let eb := add(add(shr(sub(80, e), ay), shl(add(e, 48), 1)), 6)
+    if gt(eb, 0x2000000000000000) { leave }
+    let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+    let v := 0
+    switch slt(t, 0)
+    case 0 { v := shl(k, exp2frac(f)) }
+    default {
+        switch f
+        case 0 { v := shr(k, 0x1000000000000000000000000000000000000000000000000) }
+        default { v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f))) }
+    }
+    ok := gt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), eb)
+    r := shr(64, add(v, 0x8000000000000000))
+}
+
+// BL127E's second stages: the exponentials' (expw), the logs' (l2w, logw)
+// and pow's (tnear's relative log near one, powslow) take these from BL19.
+/// @import bl19 as w19: wexpr, wexpm1, wmul, mul3, shr3, wadd, wsub, mratio, tsplit, wlog2s, wlog2u
+
+/// 2^k (1 + E) rounded to nearest at 2^-128 (ties up), for a wide E = (eh
+/// 2^256 + el) 2^-510 in [0, 1) and -130 <= k <= 126: half of V + 1 for
+/// V = floor(2^(k + 129) (1 + E)), the value in units of 2^-129, whose E part
+/// is (eh, el) shifted right by 381 - k. The second stages' rounding. At
+/// k = 126 the sum reaches 2^256 (and r wraps to 0) exactly when the word
+/// would be 2^255.
+function rndw(k, eh, el) -> r {
+    let v := or(or(shr(sub(125, k), eh), shl(sub(k, 125), eh)), shr(sub(381, k), el))
+    r := shr(1, add(add(shl(add(k, 129), 1), v), 1))
+}
+
+/// e^(x c) rounded to nearest in two words: the exponentials' second stage.
+/// c is given as C = floor(c 2^638) in three words, c2 2^512 + c1 2^256 + c0
+/// (2^638 for e^x, ln 2 for 2^x, ln 10 for 10^x), and n = floor(x c log2 e)
+/// within one, n >= 0 for x >= 0 and n <= 0 for x < 0, with |x| < 2^7 and the
+/// result's exponent in [-130, 126]. |x| c at 2^-510 modulo 2^512 is bits
+/// 256..767 of the product |x| 2^128 C (at 2^-766), within |x| 2^-638 +
+/// 2^-510 below; BL19's wexpr takes x c - n ln 2 into [0, ln 2) (ln 2 to a
+/// unit of 2^-510) and wexpm1 e^r - 1 within 2^-503 absolute, so 2^k (1 + E)
+/// is within 2^(k - 502.9) of e^(x c): under 2^-248 ULP for any result in the
+/// format.
+function expw(x, n, c2, c1, c0) -> r {
+    let ax := absw(x)
+    let p1 := hmul(ax, c0)
+    let q1, q0 := mul512(ax, c1)
+    let w1 := add(p1, q0)
+    let k, eh, el := w19_wexpr(slt(x, 0), n, add(add(q1, lt(w1, p1)), mul(ax, c2)), w1)
+    r := rndw(k, eh, el)
+}
+
+/// @object BL127E
+/// @export exp2(int256 x) returns (int256 r)
+/// @domain x < 127; returns 0 below -129
+/// @reverts Overflow() for x >= 127
+/// @notice 2^x, rounded to nearest.
+/// @dev Reverts with Overflow for x >= 127 (2^127 is 2^255 raw, which does
+///      not fit; the Huff returned MAX_UINT256 above 127 and wrapped at 127
+///      exactly). floor(x) and the fraction are split exactly, the fraction
+///      goes through the double-word kernel and the result is rounded once
+///      when its error bound clears the rounding boundary (3.0), else e^(x
+///      ln 2) in two words decides (expw): correctly rounded, ties up
+///      (2^-129 is one ULP). Exact for integer x.
+function bl127_exp2(x) -> r {
+    if iszero(slt(x, 0x7f00000000000000000000000000000000)) { rev(0x35278d12) }
+    if slt(x, sub(0, 0x8100000000000000000000000000000000)) { r := 0 leave }
+    // n and the fraction exactly; 2^n (1 + s) halved as pow2rt halves it,
+    // without an Overflow test, which x < 127 cannot reach
+    let n := sar(128, x)
+    // f ln 2 in X form as lnmul forms it, for f = x's fraction (nothing below 2^-256)
+    let f := shl(128, x)
+    let pl := mul(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b)
+    let ph := mulmod(f, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, not(0))
+    let sh, sl := expk(sub(sub(ph, pl), lt(ph, pl)), add(shr(128, pl), shr(128, mul(shr(128, f), 0xe7b876206debac98559552fb4afa1b10))))
+    let e := add(n, 129)
+    r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+    // the fraction's f ln 2 within 2^-382 below and expk within 2^-311.2:
+    // V = 2^n (1 + s) within 2^(n - 311.1), under 2^200 units of 2^-384
+    // (n <= 126), whose 256 bits below the grid are (sh, sl) shifted right by
+    // 257 - e. At e = 0 (x in [-129, -128)) that shift leaves 0, which the
+    // test passes, and the word is 1: the value is above 2^-129, or the tie
+    // 2^-129 itself at x = -129, which rounds up. An integer x is exact (s =
+    // 0, the bits below the grid 0)
+    if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+        r := expw(x, n, 0x2c5c85fdf473de6af278ece600fcbdab, 0xd03cd0c99ca62d8b628345d6e2eabe8af9ee1d881b7aeb26156554bed2be86c4, 0x3b4bab8d704e085109d5ceca445a6e094fa5b2858892ba3146b2f6844c5f0e1f)
+    }
+}
+
+/// @object BL127E
+/// @export exp(int256 x) returns (int256 r)
+/// @domain x <= 88; returns 0 below -90
+/// @reverts Overflow() for x > 88
+/// @notice e^x, rounded to nearest.
+/// @dev Reverts with Overflow for x > 88 (the Huff returned MAX_UINT256).
+///      exp(0) is exactly ONE. 2^(x log2 e): x = n ln 2 + r exactly enough
+///      (expr), e^r - 1 through the double-word kernel, rounded once when
+///      its error bound clears the rounding boundary (3.0), else in two words
+///      (expw): correctly rounded. v4's one-word polynomial (2^-145
+///      relative) was 4e32 ULPs off near e^88. Below about -89.4 the value is
+///      under half an ULP and the result is 0; v4 returned 0 from -88, two
+///      ULPs early.
+function bl127_exp(x) -> r {
+    if iszero(x) { r := 0x100000000000000000000000000000000 leave }
+    if sgt(x, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+    if slt(x, sub(0, 0x5a00000000000000000000000000000000)) { r := 0 leave }
+    let n, rh, rx := expr(x)
+    if slt(n, sub(0, 129)) { leave }
+    let sh, sl := expk(rh, rx)
+    // as exp2; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
+    // 1.95). r within 2^-377 of x - n ln 2 and expk within 2^-311.2: within
+    // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-137 or more above
+    // 0, so the value is above 2^-129)
+    let e := add(n, 129)
+    r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+    if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) { r := expw(x, n, 0x40000000000000000000000000000000, 0, 0) }
+}
+
+/// @object BL127E
+/// @export exp10(int256 x) returns (int256 r)
+/// @domain 10^x < 2^127 (x below about 38.23)
+/// @reverts Overflow() above that
+/// @notice 10^x, rounded to nearest.
+/// @dev 2^(x log2 10) with log2 10 to 2^-384: the integer part of the
+///      exponent is formed exactly, so it alone decides Overflow (from 2^127)
+///      and underflow to 0 (below 2^-129), for any x; the fraction through
+///      the double-word kernel, rounded once when its error bound clears the
+///      rounding boundary (3.0), else e^(x ln 10) in two words (expw).
+function bl127_exp10(x) -> r {
+    let n, fh, fl := y2nf(x, 0x35269e12f346e2bf924afdbfd36bf6d33, 0x65b157f8deceb53a46dab2020b9e167419943f7a77547ce8f892faad8eb42f58)
+    if sgt(n, 126) { rev(0x35278d12) }
+    if slt(n, sub(0, 129)) { leave }
+    let rh, rx := lnmul(fh, fl)
+    let sh, sl := expk(rh, rx)
+    // x log2 10 within |x| 2^-385 < 2^-379, f ln 2 within 2^-382 and expk
+    // within 2^-311.2: tested as exp2. x log2 10 on the grid stays 2^-125.9
+    // or more from -129 (and from 127; the nearest x computed), so n alone
+    // decides Overflow and 0, and at n = -129 the value is above 2^-129. 10^x
+    // is no tie: an integer from x = 0, not dyadic below
+    let e := add(n, 129)
+    r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+    if rbadw(or(shl(sub(e, 1), sh), shr(sub(257, e), sl)), 0x100000000000000000000000000000000000000000000000000) {
+        r := expw(x, n, 0x935d8dddaaa8ac16ea56d62b82d30a28, 0xe28fecf9da5df90e83c61e8201f02d72962f02d7b1a8105ccc70cbc02c5f0d68, 0x2c622418410be2dafb8f788402e516d6782cf8a28a8c911e765aa6c3b0d831fb)
+    }
+    if iszero(r) { rev(0x35278d12) }
+}
+
+// ---------------------------------------------------------------------------
+// Logarithms
+// ---------------------------------------------------------------------------
+
+/// log2(m) at 2^-192 for m = mm 2^-192 in [1, 2), unrounded. Two additive
+/// levels by word-only operations (kernel192.py, as BL19's log2m): i =
+/// floor(16 w) for mm = 1 + w, 1 + w1 = (1 + w)/(1 + i/16) as w1 = 16 (w -
+/// i/16)/(16 + i) by one shift and one div, floored at 2^-256, and
+/// log2(1 + i/16) (at 2^-255, rounded) added from a table; then the same
+/// by 1 + i/256, leaving w2 in [0, 2^-8). log2(1 + w2) = w2 P(w2), P the
+/// degree-14 minimax polynomial of log2(1 + w)/w (certified 2^-153.0
+/// relative) at 2^-255, the top 9 steps in one word. Within 3014374577.95 units of
+/// 2^-192; v5's seven stages and degree-14 fit were about 2^-150.
+function log2m(mm) -> r {
+    let x := sub(mm, 0x1000000000000000000000000000000000000000000000000)
+    let i := shr(188, x)
+    x := div(shl(68, sub(x, shl(188, i))), add(16, i))
+    let acc := 0
+    switch and(i, 8)
+    case 0 {
+        switch and(i, 4)
+        case 0 {
+            switch and(i, 2)
+            case 0 {
+                switch and(i, 1)
+                case 0 {
+                }
+                default {
+                    acc := 0xb31fb7d64898b3e6629c130a22bad61e5283e7d58e93fcc24922424ff28c6bb
+                }
+            }
+            default {
+                switch and(i, 1)
+                case 0 {
+                    acc := 0x15c01a39fbd6879fa00b120a068badd124f3e6a3a259b0407be5904d25fa41f7
+                }
+                default {
+                    acc := 0x1fbc16b902680a23a8d998a784ef35f24cf56edad4a906b559f6388ebb212fb4
+                }
+            }
+        }
+        default {
+            switch and(i, 2)
+            case 0 {
+                switch and(i, 1)
+                case 0 {
+                    acc := 0x2934f0979a3715fc9257edfe9b5fb699b2d8abfc6f675a9d236d590105cf0b3a
+                }
+                default {
+                    acc := 0x323775123e2e1169656a0ad70d38ab0c2edd45f5d1e58c059bdddb3561833c99
+                }
+            }
+            default {
+                switch and(i, 1)
+                case 0 {
+                    acc := 0x3acea7c065d41dfc7d7c3320aaaa6b5f9f3985dba08744adc52bceee7d6eae8b
+                }
+                default {
+                    acc := 0x4304140358ea9962095d4a6d897785541f9434eeb5f0e8e616e23af554bca557
+                }
+            }
+        }
+    }
+    default {
+        switch and(i, 4)
+        case 0 {
+            switch and(i, 2)
+            case 0 {
+                switch and(i, 1)
+                case 0 {
+                    acc := 0x4ae00d1cfdeb43cfd00589050345d6e89279f351d12cd8203df2c82692fd20fc
+                }
+                default {
+                    acc := 0x5269e12f346e2bf924afdbfd36bf6d3365b157f8deceb53a46dab2020b9e1674
+                }
+            }
+            default {
+                switch and(i, 1)
+                case 0 {
+                    acc := 0x59a802391e232f34bb6d0e4394c1a88f0e7a41e948033b63cbaad25837415d81
+                }
+                default {
+                    acc := 0x60a02756f9c1cb6f70109b0f09d184b9b76dd9f573868860b9d85873b8f762f3
+                }
+            }
+        }
+        default {
+            switch and(i, 2)
+            case 0 {
+                switch and(i, 1)
+                case 0 {
+                    acc := 0x675767f54042cd99956481d209f2d4239c6352a400b8b3e55deb130ece861b9d
+                }
+                default {
+                    acc := 0x6dd2523d54cb692d2dc50cd8e31bb38f82ec26371756ff839004ba7ff729e09a
+                }
+            }
+            default {
+                switch and(i, 1)
+                case 0 {
+                    acc := 0x7414fdb4982259cc625d77039ea58d8245529f4e409432bd6160212798cc2c36
+                }
+                default {
+                    acc := 0x7a231acd89a9caa8868f1fc07de38a2a0360f8e9363884395c5e1e6a201d2dc5
+                }
+            }
+        }
+    }
+    i := shr(248, x)
+    x := div(shl(8, sub(x, shl(248, i))), add(256, i))
+    switch and(i, 8)
+    case 0 {
+        switch and(i, 4)
+        case 0 {
+            switch and(i, 2)
+            case 0 {
+                switch and(i, 1)
+                case 0 {
+                }
+                default {
+                    acc := add(acc, 0xb84e236bd563ba56cde92497c21d6f044ff1f978abf5506eaa4a93db4258ac)
+                }
+            }
+            default {
+                switch and(i, 1)
+                case 0 {
+                    acc := add(acc, 0x16fe50b6ef08517f8e37b001794f4441ccdf648f265a41e57d756421e138187)
+                }
+                default {
+                    acc := add(acc, 0x226c622f52f618976834d92222908d8bce6118e14f7c55e08e13960e1258fd1)
+                }
+            }
+        }
+        default {
+            switch and(i, 2)
+            case 0 {
+                switch and(i, 1)
+                case 0 {
+                    acc := add(acc, 0x2dcf2d0b85a45314dc4fc4230215f28c152ede5b76a9600ef182b593d1068bb)
+                }
+                default {
+                    acc := add(acc, 0x3926c7750a1f0cccdd01ee2e9a76160a7e00cdab9b0afc40bea4acd1d242291)
+                }
+            }
+            default {
+                switch and(i, 1)
+                case 0 {
+                    acc := add(acc, 0x447347544cd04bb6051413ea4d1d4bcdabff7514be985cca6a894b95ee67676)
+                }
+                default {
+                    acc := add(acc, 0x4fb4c251a16898809d2dc0fe24a3d4a19174c74f129ef35c63ad512936c5f42)
+                }
+            }
+        }
+    }
+    default {
+        switch and(i, 4)
+        case 0 {
+            switch and(i, 2)
+            case 0 {
+                switch and(i, 1)
+                case 0 {
+                    acc := add(acc, 0x5aeb4dd63bf61cc4d81bc25adf0424831b3792d71b41cce031e9715106bcf87)
+                }
+                default {
+                    acc := add(acc, 0x6616ff0d25465182838ed43de842b8f925fa9efe567193ab43f9e756fd94371)
+                }
+            }
+            default {
+                switch and(i, 1)
+                case 0 {
+                    acc := add(acc, 0x7137eae42aad7bd3e3e1a798ee20a15e958c17ed561ba9ab7e14b9d89a74b51)
+                }
+                default {
+                    acc := add(acc, 0x7c4e260cc94e7e87341aeede56c3d97d795a2a579d8a3d626f7eb3f3c76c227)
+                }
+            }
+        }
+        default {
+            switch and(i, 2)
+            case 0 {
+                switch and(i, 1)
+                case 0 {
+                    acc := add(acc, 0x8759c4fd14fcd59e7ba5d5ccc90b8335c8a879e3eee911a8bdf35c07d56af5e)
+                }
+                default {
+                    acc := add(acc, 0x925adbf09ad1e44d1679a8afb2d05b6dce48ee52e2ee9669801fecf7d206316)
+                }
+            }
+            default {
+                switch and(i, 1)
+                case 0 {
+                    acc := add(acc, 0x9d517ee93f8e16c0268890da5313b536a4685f1e2ede2fddd45b174bec66e2d)
+                }
+                default {
+                    acc := add(acc, 0xa83dc1b019ddb6a7969bdb4d16a214f63ca4d4f86091cf70c31c3c6b7edfcc6)
+                }
+            }
+        }
+    }
+    let xs := shr(120, x)
+    r := 0xbfa5abc5c2ba21f73d0e05923d6adaf53fc4e1733ffedc3fc0215629cfee68f
+    r := add(sar(10, mul(sar(126, r), xs)), 0xf2d06337cecc2d89cda46065870e5e3fa2fe607993846a7637917ef4fd785619)
+    r := add(sar(10, mul(sar(126, r), xs)), 0xe3478777f2f3c9aa9d872d36e19779bce13105e98c45816ee2a3c076dab1189)
+    r := add(sar(10, mul(sar(126, r), xs)), 0xf09c7b14da0d8d7d9c9c84e7273eb711b50d4c76b634f67c3cc3a3faecc71a8e)
+    r := add(sar(10, mul(sar(126, r), xs)), 0x10c9a84991458369bd9828e4cc71823f6f63e3e73d1e82ad32527eaa0b42b282)
+    r := add(sar(9, mul(sar(127, r), xs)), 0xed8893af1065cf6fb63bd416e812ab274566d618a35aa6861e4bc58195d562e8)
+    r := add(sar(9, mul(sar(127, r), xs)), 0x1484b13d7c02a81d0e3e6f0e616f52b0bdd04746b58088b7c6272ddd9da52c48)
+    r := add(sar(9, mul(sar(127, r), xs)), 0xe8eab89ad47d01e8d2ef2a1a40bab98080614da7dfdb153aa83b4e68291f08c6)
+    r := add(sar(9, mul(sar(127, r), xs)), 0x1a61762a7aded93f644a94ccd793e2f25a1edc0247d311000a371d1145d7fe4e)
+    r := add(sar(9, mul(sar(127, r), xs)), 0xe138f623c5fc028b603eadd4ef71b08f946e48b2c5d5a4a9bb8e568631bb83ed)
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0x24eed8a1df37fcf2594e66295cdbcc9e76ef3c7e001462107e6acaff595ad672) }
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0xd1d57135a8fa03d1105e004be5bdfcca42a284f2b6a20a5356b0370dc665eac5) }
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0x3d8e13b87407fae93f82aa45785f14aa4807d36efcfa67d70474d75c4f89df12) }
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0xa3aae26b51f407a220bc0097cb7160bb8af209f2f3c2105e36602a6ec9b0e22a) }
+    { let pl := mul(r, x) let ph := mulmod(r, x, not(0)) r := add(sub(sub(sub(ph, pl), lt(ph, pl)), mul(slt(r, 0), x)), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577a4f1dff7767dabf50321424a4eb) }
+    { let pl := mul(x, r) let ph := mulmod(x, r, not(0)) x := sub(sub(ph, pl), lt(ph, pl)) }
+    r := shr(63, add(acc, x))
+}
+
+/// log2(x) for x > 0 at 2^-192, unrounded: the integer part from the MSB and
+/// log2m of the mantissa. v5 normalises the mantissa at 2^-192 directly; v4
+/// normalised it at 2^-128 first and dropped up to 127 bits of x, which put
+/// log2 1.9 ULPs off for large x. ln and log10 scale this before rounding.
+function log2g(x) -> r {
+    let m := msb(x)
+    if iszero(and(x, sub(x, 1))) { r := shl(192, sub(m, 128)) leave }
+    let mm := shl(sub(192, m), x)
+    if gt(m, 192) { mm := shr(sub(m, 192), x) }
+    r := add(shl(192, sub(m, 128)), log2m(mm))
+}
+
+/// True when a value v at 2^-192 is within 2^-145 of a rounding midpoint of
+/// the 2^-128 grid, where the one-word log's error could decide the rounding.
+function nearmid(v) -> b {
+    b := lt(absw(sub(and(v, 0xffffffffffffffff), 0x8000000000000000)), 0x800000000000)
+}
+
+/// The rounding test of a correctly rounded op: 1 when a value V within err
+/// of v may round to another word than v does. v carries g guard bits below
+/// the 2^-128 grid (1 <= g <= 256): its low g bits are V's offset above the
+/// grid point floor(v) in units of 2^-(128 + g), v may be two's complement
+/// (a signed one-word value at 2^-192 is g = 64), and for a two-word value
+/// (lh, ll) at 2^-384 v is ll and g = 256. err is in units of v's last bit.
+/// The rounding is BL127's: to nearest, ties up, floor(v 2^-g + 1/2) (an op
+/// that rounds the magnitude passes the magnitude, and its ties go away from
+/// zero). With half = 2^(g - 1), the low bits at or above half round up, so
+/// the word can change when they are within err below half (v rounds up and
+/// V may be under the midpoint: low - half < err) or at most err above it
+/// (v rounds down and V may reach the midpoint, which rounds up:
+/// half - low <= err); always when err reaches half, as V may then cross the
+/// next midpoint. A v exactly on the midpoint with err = 0 is not bad: it is
+/// the tie, and rounds up. Together: low in [half - err, half + err), one
+/// unsigned comparison of (low - (half - err)) mod 2^g with 2 err, without a
+/// branch, so solc inlines a call whose g and err are constants (about 40
+/// gas; the branching form cost about 190).
+function rbad127(v, g, err) -> b {
+    let half := shl(sub(g, 1), 1)
+    b := or(iszero(lt(err, half)), lt(and(sub(v, sub(half, err)), sub(shl(g, 1), 1)), shl(1, err)))
+}
+
+/// rbad127(v, 256, err) for err < 2^255 in four operations: the fast paths'
+/// test where the caller is too large for the optimizer to inline rbad127
+/// into (exp, exp2, exp10, expm1's series), so a call's arguments and its
+/// general g cost a few percent of the op. v is the 256 bits of a value below
+/// the 2^-128 grid (a one-word value at 2^-192 is passed shifted left by
+/// 192, its err with it), err in units of 2^-384. With d = v - 2^255, the
+/// offset from the midpoint, the word may change exactly when -err <= d <
+/// err (rbad127's two cases, ties up): when d + err, modulo 2^256, is below
+/// 2 err.
+function rbadw(v, err) -> b {
+    b := lt(add(add(v, 0x8000000000000000000000000000000000000000000000000000000000000000), err), shl(1, err))
+}
+
+/// A middle stage's rounding test: rbad127's body under its own name, so
+/// make sweep can force a fast path's test and keep this one (gen.py's
+/// mid_forced), and count the two apart.
+function rbadm127(v, g, err) -> b {
+    let half := shl(sub(g, 1), 1)
+    b := or(iszero(lt(err, half)), lt(and(sub(v, sub(half, err)), sub(shl(g, 1), 1)), shl(1, err)))
+}
+
+/// log2(x) for x > 0 as a signed 512-bit value at 2^-384, (lh, ll): lh is
+/// the 127.128 word, ll the 256 bits below it. One Newton step from the
+/// one-word kernel: m in [1, 2) the mantissa, y0 = log2m(m) (2^-150) and
+/// d = m 2^-y0 - 1 through expk, log2(m) = y0 + (d - d^2/2) log2(e). About
+/// 2^-299 absolute (precise_model.py). Exact for powers of two.
+/// ms is msb(x) and y0 the one-word log2m of its mantissa (not read for a
+/// power of two), as the one-word log before it computed them: log2g's
+/// mantissa, x shifted to 2^-192, is shr(63, m) for the m below.
+function l2p(x, ms, y0) -> lh, ll {
+    let m := shl(sub(255, ms), x)
+    lh := shl(128, sub(ms, 128))
+    if eq(m, 0x8000000000000000000000000000000000000000000000000000000000000000) { leave }
+    if slt(y0, 1) { y0 := 1 }
+    if iszero(lt(y0, 0x1000000000000000000000000000000000000000000000000)) { y0 := 0xffffffffffffffffffffffffffffffffffffffffffffffff }
+    // 2^-y0 = (1 + s) / 2 with 1 + s = 2^(1 - y0)
+    let rh, rx := lnmul(shl(64, sub(0x1000000000000000000000000000000000000000000000000, y0)), 0)
+    let sh, sl := expk(rh, rx)
+    // m 2^-y0 = m 2^-256 (1 + s), at 2^-512 modulo 2^512: m 2^256 + m sh + hi(m sl)
+    let qh, ql := mul512(m, sh)
+    let c := hmul(m, sl)
+    ql := add(ql, c)
+    qh := add(add(qh, m), lt(ql, c))
+    // d = m 2^-y0 - 1, |d| < 2^-140, as a signed word at 2^-384
+    let d := or(shl(128, qh), shr(128, ql))
+    let ad := absw(d)
+    let ph, pl := smul512(sub(d, shr(129, hmul(ad, ad))), 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+    let corr := or(shl(1, ph), shr(255, pl))
+    // log2(x) = (ms - 128) + y0 + corr
+    let y1 := shl(192, y0)
+    ll := add(y1, corr)
+    lh := add(add(lh, shr(64, y0)), sub(lt(ll, y1), slt(corr, 0)))
+}
+
+/// A signed 512-bit value (lh, ll) at 2^-384 times an unsigned c at 2^-256,
+/// rounded to nearest (ties up) at 2^-128, and v, the product's 256 bits
+/// below the grid for the rounding test: ln and log10 from l2p.
+function x384mul(lh, ll, c) -> r, v {
+    let ph, pl := smul512(lh, c)
+    let a := hmul(ll, c)
+    v := add(pl, a)
+    ph := add(ph, lt(v, a))
+    r := add(ph, shr(255, v))
+}
+
+/// log2 of x's mantissa m = x 2^(128 - ms) in [1, 2), ms = msb(x), as a wide
+/// F = (fh 2^256 + fl) 2^-510, from l2p's (lh, ll) (within 2^-299): the logs'
+/// second stage, one Newton step as BL19's wlnw; 0 for a power of two.
+/// f0 = l2p - (ms - 128) lies in (0, 1), as log2 m is at least 2^-254.5 from
+/// both ends; F = f0 + log2(1 + d) for d = m 2^-f0 - 1, |d| < 2^-299, with
+/// 2^-f0 = (1 + E)/2, 1 + E = e^((1 - f0) ln 2) by BL19's wexpm1 (within
+/// 2^-503 absolute; (1 - f0) ln 2 within 4 units of 2^-510), m (1 + E) the
+/// exact three-word product at 2^-765, whose middle word is d at 2^-510
+/// (floored, signed: the top word is 2^254 or one less), and log2(1 + d) =
+/// d log2 e within d^2 < 2^-597. F within 2^-502.4 of log2 m.
+function l2w(x, ms, lh, ll) -> fh, fl {
+    if iszero(and(x, sub(x, 1))) { leave }
+    let f0 :=sub(lh, shl(128, sub(ms, 128)))
+    // 1 - f0 at 2^-384, then at 2^-510
+    let gh := sub(sub(0x100000000000000000000000000000000, f0), iszero(iszero(ll)))
+    let gl := sub(0, ll)
+    let eh, el := w19_wmul(or(shl(126, gh), shr(130, gl)), shl(126, gl), 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+    eh, el := w19_wexpm1(eh, el)
+    let z2, z1, z0 := w19_mul3(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, shl(sub(255, ms), x))
+    // d log2 e at 2^-510: z1 (signed) times log2 e at 2^-255, floored
+    let ph, pl := smul512(z1, 0xb8aa3b295c17f0bbbe87fed0691d3e88eb577aa8dd695a588b25166cd1a13248)
+    let c := or(shl(1, ph), shr(255, pl))
+    fh := or(shl(126, f0), shr(130, ll))
+    fl := add(shl(126, ll), c)
+    fh := add(fh, sub(lt(fl, c), slt(c, 0)))
+}
+
+/// c (a + F) rounded to nearest at 2^-128 (ties up), for an integer a with
+/// |a| <= 128, a wide F = (fh 2^256 + fl) 2^-510 in (0, 1) and c = (ch 2^256 +
+/// cl) 2^-510 at most one (ln 2, log10 2; 2^510 for log2): the logs' second
+/// stage, from l2w's F for a = ms - 128. Summed at 2^-500, where |c (a + F)|
+/// < 2^7 fits a signed two-word value: a c from the three-word product of |a|
+/// and (ch, cl), c F by BL19's wmul (3 units of 2^-510), each floored once at
+/// 2^-500. With F's 2^-502.4 and c's floor (|a| units of 2^-510), within
+/// 2^-497.8 of c log2 x.
+function logw(a, fh, fl, ch, cl) -> r {
+    let n2, n1, n0 := w19_mul3(ch, cl, absw(a))
+    let ah, al := w19_shr3(n2, n1, n0, 10)
+    if slt(a, 0) { ah, al := w19_wsub(0, 0, ah, al) }
+    let bh, bl := w19_wmul(fh, fl, ch, cl)
+    ah, al := w19_wadd(ah, al, shr(10, bh), or(shl(246, bh), shr(10, bl)))
+    r := sar(1, add(sar(115, ah), 1))
+}
+
+/// @object BL127E
+/// @export log2(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts OutOfRange() for x <= 0
+/// @notice log2(x) for x > 0, rounded to nearest.
+/// @dev Reverts with OutOfRange for x <= 0 (the Huff returned 0). Exact for
+///      powers of two. v5: log2g at 2^-192 (error under 2^-145) is rounded
+///      when that cannot change the rounding; within 2^-145 of a midpoint
+///      (about one input in 2^17) the double-word l2p decides.
+function bl127_log2(x) -> r {
+    if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
+    // log2g, its msb and log2m kept for l2py
+    let ms := msb(x)
+    let y0 := 0
+    let v := shl(192, sub(ms, 128))
+    if and(x, sub(x, 1)) {
+        let mm := shl(sub(192, ms), x)
+        if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+        y0 := log2m(mm)
+        v := add(v, y0)
+    }
+    if nearmid(v) {
+        let lh, ll := l2p(x, ms, y0)
+        r := add(lh, shr(255, ll))
+        // l2p within 2^-299, 2^85 units of ll: else the second stage
+        if rbadm127(ll, 256, 0x2000000000000000000000) {
+            let fh, fl := l2w(x, ms, lh, ll)
+            r := logw(sub(ms, 128), fh, fl, 0x4000000000000000000000000000000000000000000000000000000000000000, 0)
+        }
+        leave
+    }
+    r := round64(v)
+}
+
+/// @object BL127E
+/// @export ln(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts OutOfRange() for x <= 0
+/// @notice ln(x) = log2(x) * ln(2) for x > 0, rounded to nearest. Reverts
+///         with OutOfRange otherwise.
+/// @dev The one-word log2 scaled at 2^-192, with the double-word fallback
+///      near a midpoint, as log2.
+function bl127_ln(x) -> r {
+    if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
+    if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
+    // log2g, its msb and log2m kept for l2py
+    let ms := msb(x)
+    let y0 := 0
+    let v := shl(192, sub(ms, 128))
+    if and(x, sub(x, 1)) {
+        let mm := shl(sub(192, ms), x)
+        if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+        y0 := log2m(mm)
+        v := add(v, y0)
+    }
+    v := mulg(v, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e)
+    if nearmid(v) {
+        let lh, ll := l2p(x, ms, y0)
+        let w := 0
+        r, w := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
+        // l2p's 2^-299 times ln 2, ln 2's rounding at 2^-256 times |log2 x|
+        // <= 2^7 and two floors: under 2^135 units of w
+        if rbadm127(w, 256, 0x800000000000000000000000000000000) {
+            let fh, fl := l2w(x, ms, lh, ll)
+            r := logw(sub(ms, 128), fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+        }
+        leave
+    }
+    r := round64(v)
+}
+
+/// @object BL127E
+/// @export log10(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts OutOfRange() for x <= 0
+/// @notice log10(x) = log2(x) / log2(10) for x > 0, rounded to nearest.
+///         Reverts with OutOfRange otherwise.
+function bl127_log10(x) -> r {
+    if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
+    if eq(x, 0x100000000000000000000000000000000) { r := 0 leave }
+    // log2g, its msb and log2m kept for l2py
+    let ms := msb(x)
+    let y0 := 0
+    let v := shl(192, sub(ms, 128))
+    if and(x, sub(x, 1)) {
+        let mm := shl(sub(192, ms), x)
+        if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+        y0 := log2m(mm)
+        v := add(v, y0)
+    }
+    v := mulg(v, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a5)
+    if nearmid(v) {
+        let lh, ll := l2p(x, ms, y0)
+        let w := 0
+        r, w := x384mul(lh, ll, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e6)
+        // as ln
+        if rbadm127(w, 256, 0x800000000000000000000000000000000) {
+            let fh, fl := l2w(x, ms, lh, ll)
+            r := logw(sub(ms, 128), fh, fl, 0x134413509f79fef311f12b35816f922f04d5a618a87a3e69314bcde4d6f98c79, 0x650d45b03233f57a13cb978e668e37a25228e692b6317243cb16a4fea4aa5a59)
+        }
+        leave
+    }
+    r := round64(v)
+}
+
+/// The one-word ln, rounded: the iteration step of Lambert W, which the final
+/// double-word step corrects.
+function lnf(x) -> r {
+    if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
+    r := round64(mulg(log2g(x), 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62e))
+}
+
+/// @object BL127E
+/// @export log2Up(int256 x) returns (int256 r)
+/// @domain x > 0
+/// @reverts OutOfRange() for x <= 0
+/// @notice ceil(log2(x)) for x > 0: msb(x) - 128, plus one unless x is a
+///         power of two. Exact.
+/// @dev Reverts with OutOfRange for x <= 0 (the Huff read garbage). v4 took
+///      ceil of the rounded log2, which is one low for x just above a power
+///      of two.
+function bl127_log2Up(x) -> r {
+    if iszero(sgt(x, 0)) { rev(0x7db3aba7) }
+    r := shl(128, add(sub(msb(x), 128), iszero(iszero(and(x, sub(x, 1))))))
+}
+
+// ---------------------------------------------------------------------------
+// Roots and powers
+// ---------------------------------------------------------------------------
+
+/// floor(sqrt(z)) for z >= 2^16 (both callers pass z >= 2^128). The exact
+/// bit length t = msb(z) normalises z = m 4^e, m = z >> 2e in [2^16, 2^18),
+/// e = (t - 16) / 2; a linear fit of sqrt on m, ((m + 2^17) C) >> 32, shifted
+/// by e, seeds within a factor 0.9675..1.0287 of the root, so five Newton
+/// steps leave it less than 2^-60 above the root (s E_5 < 2^-60.4 for every
+/// z < 2^256, scripts/bl127/generators/isqrt_seed.py, which also checks the
+/// model against math.isqrt), and the last line steps back from ceil to
+/// floor. v5 ran Solady's sqrt here: a seed within a factor 2.84 from four
+/// comparisons, and seven steps.
+function isqrtw(z) -> y {
+    let e := shr(1, sub(msb(z), 16))
+    y := shl(e, shr(32, mul(add(shr(shl(1, e), z), 0x20000), 0x57d1c0)))
+    y := shr(1, add(y, div(z, y)))
+    y := shr(1, add(y, div(z, y)))
+    y := shr(1, add(y, div(z, y)))
+    y := shr(1, add(y, div(z, y)))
+    y := shr(1, add(y, div(z, y)))
+    y := sub(y, lt(div(z, y), y))
+}
+
+/// @export sqrt(int256 x) returns (int256 r)
+/// @domain x >= 0
+/// @reverts OutOfRange() for x < 0
+/// @notice sqrt(x) for x >= 0.
+/// @dev Reverts with OutOfRange for x < 0 (the Huff read garbage). The
+///      floor of sqrt(N), N = x 2^128: for x < 2^128, N fits a word and
+///      isqrtw takes it whole; above, Y = isqrtw(z) is the 128-bit root of
+///      z = x 2^sh (sh even, z in [2^254, 2^256)), N = z 2^(2k) exactly for
+///      k = 64 - sh/2, y0 = Y 2^k is under the root R by less than 2^k, and
+///      the Newton step y0 + (N - y0^2) / (2 y0) = y0 + (z - Y^2) 2^(k-1) / Y
+///      has a word numerator (z - Y^2 <= 2Y) and a word quotient: one mul
+///      and one div where v5 ran the 512-bit divu. The step is at or above
+///      R (AM-GM) and under R + (R - y0)^2 / (2 y0) <= R + 2^(k - 128), so
+///      its floor is floor(R) or floor(R) + 1, and a 512-bit compare steps
+///      back from floor + 1, so the result is floor(sqrt(x 2^128)) on every
+///      input (proven, test/proofs). v4..v6 kept the Huff's sqrt where its
+///      seventh Newton step could stop on floor + 1 (#159); that is gone.
+function bl127_sqrt(x) -> r {
+    if slt(x, 0) { rev(0x7db3aba7) }
+    if iszero(x) { leave }
+    switch shr(128, x)
+    case 0 { r := isqrtw(shl(128, x)) }
+    default {
+        let sh := and(sub(255, msb(x)), not(1))
+        let z := shl(sh, x)
+        let y := isqrtw(z)
+        let k := sub(64, shr(1, sh))
+        r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
+        let h, l := mul512(r, r)
+        if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
+    }
+}
+
+/// x^2 for x >= 0, rounded to nearest (ties up): the pow(x, 2) shortcut.
+function sqrn(x) -> r {
+    let p1, p0 := mul512(x, x)
+    if gt(p1, 0x7fffffffffffffffffffffffffffffff) { rev(0x35278d12) }
+    r := add(or(shl(128, p1), shr(128, p0)), and(shr(127, p0), 1))
+    if slt(r, 0) { rev(0x35278d12) }
+}
+
+/// @object BL127E
+/// @export pow(int256 x, int256 y) returns (int256 r)
+/// @domain x >= 0
+/// @reverts OutOfRange() for x < 0; Overflow() when the result does not fit
+/// @notice x^y = 2^(y * log2(x)) for x >= 0, rounded to nearest.
+/// @dev Special cases in Huff order: y == 0 gives 1 (including 0^0); x == 0
+///      gives 0; x == 1 gives 1; x < 0 reverts with OutOfRange. Shortcuts
+///      y == 1 (x itself), y == 2 (the 512-bit square, rounded), x == 2
+///      (exp2) and x == 10 (exp10), all correctly rounded. The one-word
+///      log2 and 2^t go first (pow2t) and decide when their error bound
+///      cannot change the rounding, as the logs do; else the middle stage
+///      (powmid): log2(x) in the double word, relative near one (3.0: d =
+///      x - 1 exactly and BL19's mratio, where v5's absolute 2^-299 missed
+///      by up to 1e11 ULPs for a base within 2^-88 of one raised past
+///      2^90), y log2(x) split exactly into integer and fraction, the
+///      fraction through the double-word kernel, one rounding when its bound
+///      clears the rounding boundary; else an exact tie (powtie) or the
+///      second stage in two words (powslow): correctly rounded, ties up.
+///      v4's shortcuts y in {3, 4, 1/2, 1/4, -1} floored or truncated; they
+///      take the general path, which is nearest.
+function bl127_pow(x, y) -> r {
+    if iszero(y) { r := 0x100000000000000000000000000000000 leave }
+    if iszero(x) { r := 0 leave }
+    if eq(x, 0x100000000000000000000000000000000) { r := 0x100000000000000000000000000000000 leave }
+    if slt(x, 0) { rev(0x7db3aba7) }
+    switch y
+    case 0x100000000000000000000000000000000 { r := x }
+    case 0x200000000000000000000000000000000 { r := sqrn(x) }
+    default {
+        switch x
+        case 0x200000000000000000000000000000000 { r := bl127_exp2(y) }
+        case 0xa00000000000000000000000000000000 { r := bl127_exp10(y) }
+        default {
+            // log2(x) at 2^-192 in one word (log2g), its msb and log2m kept for l2p
+            let ms := msb(x)
+            let y0 := 0
+            let v := shl(192, sub(ms, 128))
+            if and(x, sub(x, 1)) {
+                let mm := shl(sub(192, ms), x)
+                if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+                y0 := log2m(mm)
+                v := add(v, y0)
+            }
+            // t = y log2(x) at 2^-192, the floor of the 512-bit product, while |t| < 2^198
+            let ok := 0
+            let p0 := mul(y, v)
+            let pm := mulmod(y, v, not(0))
+            let p1 := sub(sub(sub(sub(pm, p0), lt(pm, p0)), mul(slt(y, 0), v)), mul(slt(v, 0), y))
+            if eq(sar(70, p1), sar(255, p1)) { r, ok := pow2t(or(shl(128, p1), shr(128, p0)), absw(y)) }
+            if iszero(ok) { r := powmid(x, y, ms, y0) }
+        }
+    }
+}
+
+/// t = y log2 x for x within 2^-8 of one (x != 1), split as y2nf splits it:
+/// n = floor(t) and the fraction at 2^-512. log2 x = d ln(1 + d)/d log2 e for
+/// d = x - 1, exact, so its error is relative however small d is: BL19's
+/// mratio (ln(1 + d)/d within 2^-272.1 relative) times log2 e (wmul, 3 units
+/// of 2^-510) and |d| 2^128, the three-word product shifted right by j =
+/// msb(|d| 2^128) + 1 into a 512-bit M with |log2 x| = M 2^(j - 638); then
+/// |t| = |y| 2^128 M 2^(j - 766), whose integer part and fraction at 2^-510
+/// BL19's tsplit takes, and the sign. Within |t| 2^-271.9 + 2^-510.
+function tnear(x, y) -> n, fh, fl {
+    let sg := lt(x, 0x100000000000000000000000000000000)
+    let ad := absw(sub(x, 0x100000000000000000000000000000000))
+    let qh, ql := w19_mratio(sg, shl(128, ad), 0)
+    qh, ql := w19_wmul(qh, ql, 0x5c551d94ae0bf85ddf43ff68348e9f4475abbd546eb4ad2c45928b3668d09923, 0xef0e21fbaa8bb66b126c97bae0b5f059f5485cf30625484fe25fd781a9ef9cd9)
+    let j := add(msb(ad), 1)
+    let z2, z1, z0 := w19_mul3(qh, ql, ad)
+    let mh, ml := w19_shr3(z2, z1, z0, j)
+    z2, z1, z0 := w19_mul3(mh, ml, absw(y))
+    let k := 0
+    k, fh, fl := w19_tsplit(z2, z1, z0, sub(256, j))
+    fh := or(shl(2, fh), shr(254, fl))
+    fl := shl(2, fl)
+    n := k
+    if xor(sg, slt(y, 0)) {
+        // -(k + f) = -(k + 1) + (1 - f)
+        n := sub(0, k)
+        if or(fh, fl) {
+            n := sub(n, 1)
+            fh := add(not(fh), iszero(fl))
+            fl := sub(0, fl)
+        }
+    }
+}
+
+/// pow's middle stage, where pow2t could not decide: n = floor(t) and the
+/// fraction f of t = y log2 x, 2^f by the double-word kernel, rounded once
+/// when its bound clears the rounding boundary, else powslow. l2p and y2nf
+/// (log2 x within 2^-299 absolute) while |y| <= 2^14, or off the near-one
+/// band, where |log2 x| >= 2^-7.48 bounds |y| by 2^14.52 for |t| <= 131: t
+/// within 2^-284.4 either way. Within 2^-8 of one with |y| > 2^14 the
+/// absolute error would grow with y, and tnear's relative log takes over (t
+/// within |t| 2^-271.9). From n = 127 the value is past 2^127 (1 - 2^-264),
+/// Overflow; under n = -130 it is below 2^-130 (1 + 2^-264), 0. Else V =
+/// 2^n (1 + s), with f ln 2 within 2^-382 and expk's 2^-311.2, is within
+/// 2^(n - 136.4) of x^y near one (|t| 2^-271.9 ln 2), 2^(n - 156) elsewhere:
+/// eb = 121 or 102 in err = 2^(n + eb) + 3 units of v, its 256 bits below
+/// the grid ((sh, sl) shifted right by 128 - n, with the one's 2^(n + 384)
+/// for n <= -129, where the value is under one ULP).
+function powmid(x, y, ms, y0) -> r {
+    let n := 0
+    let fh := 0
+    let fl := 0
+    let lh := 0
+    let ll := 0
+    let eb := 102
+    switch and(lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff), gt(absw(y), 0x400000000000000000000000000000000000))
+    case 1 {
+        n, fh, fl := tnear(x, y)
+        eb := 121
+    }
+    default {
+        lh, ll := l2p(x, ms, y0)
+        n, fh, fl := y2nf(y, lh, ll)
+    }
+    if sgt(n, 126) { rev(0x35278d12) }
+    if slt(n, sub(0, 130)) { leave }
+    let rh, rx := lnmul(fh, fl)
+    let sh, sl := expk(rh, rx)
+    let e := add(n, 129)
+    r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
+    let v := or(or(or(shl(sub(e, 1), sh), shr(sub(1, e), sh)), shr(sub(257, e), sl)), shl(add(e, 255), 1))
+    if rbadm127(v, 256, add(shl(add(n, eb), 1), 3)) {
+        r := powslow(x, y, ms, lh, ll)
+        leave
+    }
+    // at n = 126 the halving's sum reaches 2^256 (r wraps to 0) exactly when
+    // the word would be 2^255
+    if and(eq(n, 126), iszero(r)) { rev(0x35278d12) }
+}
+
+/// x^y exactly when it is a midpoint of the 2^-128 grid, which no error bound
+/// can round: hit = 1 and the word, the tie rounded up. With x = c 2^a, c
+/// odd, x^y = c^y 2^(a y) is an odd multiple of 2^-129 only when a y = -129
+/// and c^y is an odd integer: c = 1 (x a power of two, and x^y = 2^-129), or
+/// y > 0 and c = b^(2^j) for y = p/2^j in lowest terms; |a| = 129/y <= 128
+/// leaves p one of 3, 43 and 129 and j at most 7 (y = 3, 3/2; 43/2^j, j <=
+/// 5; 129/2^j, j <= 7). The value b^p 2^-129 is in the format while b^p <
+/// 2^256 - 1; the word is (b^p + 1)/2. A negative y with c > 1 gives no
+/// dyadic value.
+function powtie(x, y) -> hit, r {
+    if gt(absw(y), 0x8100000000000000000000000000000000) { leave }
+    let tz := msb(and(x, sub(0, x)))
+    if iszero(eq(mul(sub(tz, 128), y), sub(0, 0x8100000000000000000000000000000000))) { leave }
+    let b := shr(tz, x)
+    if eq(b, 1) {
+        hit := 1
+        r := 1
+        leave
+    }
+    if slt(y, 0) { leave }
+    // y = p 2^(ty - 128) with p odd; a y = -129 makes ty >= 121 and p <= 129
+    let ty := msb(and(y, sub(0, y)))
+    let p := shr(ty, y)
+    for {} lt(ty, 128) { ty := add(ty, 1) } {
+        let q := isqrt(b)
+        if iszero(eq(mul(q, q), b)) { leave }
+        b := q
+    }
+    let w := b
+    for { let i := 1 } lt(i, p) { i := add(i, 1) } {
+        if gt(w, div(not(0), b)) { leave }
+        w := mul(w, b)
+    }
+    hit := 1
+    r := add(shr(1, w), 1)
+    if slt(r, 0) { rev(0x35278d12) }
+}
+
+/// 2^(+-(k + f)) rounded to nearest at 2^-128 (ties up) for an integer k >= 0
+/// and a wide fraction f = (fh 2^256 + fl) 2^-510 in [0, 1), the sign in s:
+/// pow's second stage after the split, as BL19's pow2wf: 2^f = e^(f ln 2) by
+/// wexpm1 (f ln 2 within 4 units of 2^-510, e^r - 1 within 2^-503), rounded
+/// once by rndw. Overflow from 2^127, 0 below 2^-130.
+function pow2wr(s, k, fh, fl) -> r {
+    if s {
+        k := sub(0, k)
+        if or(fh, fl) {
+            k := sub(k, 1)
+            fh, fl := w19_wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, fh, fl)
+        }
+    }
+    if sgt(k, 126) { rev(0x35278d12) }
+    if slt(k, sub(0, 130)) { leave }
+    fh, fl := w19_wmul(fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
+    fh, fl := w19_wexpm1(fh, fl)
+    r := rndw(k, fh, fl)
+    if and(eq(k, 126), iszero(r)) { rev(0x35278d12) }
+}
+
+/// pow's second stage: an exact tie (powtie), else t = y log2 x from log2 x
+/// in two words, as a 512-bit mantissa M and a scale, |log2 x| = M 2^le:
+/// within 2^-8 of one BL19's wlog2s (the series in two words and log2 e:
+/// 2^-504 relative), elsewhere l2w's log2 of the mantissa (2^-502.4
+/// absolute) with ms - 128 by BL19's wlog2u (|log2 x| >= 2^-7.48: 2^-494.9
+/// relative). |t| = |y| 2^128 M 2^(le - 128), split at 2^-510 by tsplit,
+/// within |t| 2^-494.9 + 2^-510; pow2wr's 2^(+-t) is then within 2^-487.5
+/// relative of x^y for |t| <= 131: under 2^-232 ULP. lh, ll are l2p's value
+/// off the near-one band.
+function powslow(x, y, ms, lh, ll) -> r {
+    let hit := 0
+    hit, r := powtie(x, y)
+    if hit { leave }
+    let sg := lt(x, 0x100000000000000000000000000000000)
+    let mh := 0
+    let ml := 0
+    let le := 0
+    switch lt(add(sub(x, 0x100000000000000000000000000000000), 0xffffffffffffffffffffffffffffff), 0x1ffffffffffffffffffffffffffffff)
+    case 1 {
+        let ad := absw(sub(x, 0x100000000000000000000000000000000))
+        let u := msb(ad)
+        mh, ml, le := w19_wlog2s(sg, sub(u, 128), shl(sub(236, u), ad))
+    }
+    default {
+        let fh, fl := l2w(x, ms, lh, ll)
+        mh, ml, le := w19_wlog2u(sub(ms, 128), fh, fl)
+    }
+    let z2, z1, z0 := w19_mul3(mh, ml, absw(y))
+    let k, fh, fl := w19_tsplit(z2, z1, z0, sub(sub(0, le), 382))
+    r := pow2wr(xor(sg, slt(y, 0)), k, fh, fl)
+}
+
+/// @object BL127E
+/// @export powu(int256 x, int256 n) returns (int256 r)
+/// @domain any x, any integer n = floor(n); the result must fit
+/// @reverts Overflow() when x^n does not fit; DivisionByZero() for 0^n with n < 0
+/// @notice x^floor(n) for an integer exponent, rounded to nearest: binary
+///         exponentiation on a 256-bit mantissa with a separate binary
+///         exponent, rounded once; when that mantissa's error bound
+///         (k + 5) 2^-255, k = |n|, straddles a rounding midpoint, the same
+///         product on a 512-bit mantissa decides (within (3k + 2) 2^-510
+///         relative, under 2^-237 ULP below k = 2^16; exact at every tie). From k =
+///         2^16, pow(|x|, n) with the sign restored. Correctly rounded, the
+///         magnitude's ties away from zero. Exact whenever the true value is
+///         representable. Negative n inverts the mantissa, so x^-n is as
+///         accurate as x^n.
+/// @dev Maker's rpow and PRBMath's powu square at the format's own
+///      precision and floor on every step, so each squaring loses a bit of
+///      the fraction; here |x| is written as m 2^(e-255) with m in
+///      [2^255, 2^256), every product keeps the top 256 bits of the 512-bit
+///      result, and the word is formed from (m, e) with one rounding. v4
+///      stopped there and was up to 1.3e6 ULPs off for results near 2^127
+///      with n near 2^25. 0^0 = 1.
+function bl127_powu(x, n) -> r {
+    let k := sar(128, n)
+    if iszero(k) { r := 0x100000000000000000000000000000000 leave }
+    let recip := slt(k, 0)
+    k := absw(k)
+    if iszero(x) {
+        if recip { rev(0x23d359a3) }
+        r := 0
+        leave
+    }
+    let ux := absw(x)
+    if gt(k, 0xffff) {
+        // each squaring doubles the mantissas' error, k 2^-510 in all: from
+        // 2^16 pow's 2^(n log2 |x|) is the better road (and no tie: a tie
+        // needs k <= 129). |x| = 2^127 (x = -2^127, no positive word) puts
+        // x^n past the format, or under 2^-130 for n < 0
+        if shr(255, ux) {
+            if iszero(recip) { rev(0x35278d12) }
+            leave
+        }
+        r := bl127_pow(ux, and(n, not(0xffffffffffffffffffffffffffffffff)))
+        if and(slt(x, 0), and(k, 1)) { r := sub(0, r) }
+        leave
+    }
+    let am, ae := powum(ux, k, recip)
+    // am carries a relative error below (k + 5) 2^-255: under 2k + 10 units
+    let eb := add(shl(2, k), 16)
+    let slow := 0
+    let sh := sub(127, ae)
+    switch slt(sh, 1)
+    case 1 {
+        if or(sgt(ae, 127), gt(sub(am, 0x8000000000000000000000000000000000000000000000000000000000000000), eb)) { rev(0x35278d12) }
+        slow := 1
+    }
+    default {
+        switch gt(sh, 256)
+        case 1 { if and(eq(sh, 257), lt(sub(0, am), eb)) { slow := 1 } }
+        default {
+            r := add(shr(sh, am), and(shr(sub(sh, 1), am), 1))
+            slow := rbad127(am, sh, eb)
+        }
+    }
+    if slow { r := powus(ux, k, recip) }
+    if gt(r, 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff) { rev(0x35278d12) }
+    if and(slt(x, 0), and(k, 1)) { r := sub(0, r) }
+}
+
+/// |x|^k (or |x|^-k) on a 256-bit mantissa: (am, ae) with the value
+/// am 2^(ae - 255), am in [2^255, 2^256).
+function powum(ux, k, recip) -> am, ae {
+    let s := msb(ux)
+    let m := shl(sub(255, s), ux)
+    let e := sub(s, 128)
+    am := 0x8000000000000000000000000000000000000000000000000000000000000000
+    for {} 1 {} {
+        if and(k, 1) {
+            let pm, pk := mant(am, m)
+            am := pm
+            ae := add(add(ae, e), pk)
+        }
+        k := shr(1, k)
+        if iszero(k) { break }
+        let qm, qc := mant(m, m)
+        m := qm
+        e := add(add(e, e), qc)
+    }
+    if recip {
+        // 1 / (am 2^(ae-255)) = (2^511 / am) 2^(-ae-256): the reciprocal
+        // mantissa by two 2^128 stages of long division
+        switch eq(am, 0x8000000000000000000000000000000000000000000000000000000000000000)
+        case 1 { ae := sub(0, ae) }
+        default {
+            let qh := divu(0x8000000000000000000000000000000000000000000000000000000000000000, am)
+            let ql := divu(sub(0, mul(qh, am)), am)
+            am := or(shl(128, qh), ql)
+            ae := sub(sub(0, ae), 1)
+        }
+    }
+}
+
+/// |x|^k (or |x|^-k) on a 512-bit mantissa, rounded to nearest at 2^-128:
+/// the decider when the 256-bit mantissa's error straddles a midpoint. Each
+/// product keeps the top 512 bits of the 1,024-bit product (the low-by-low
+/// term and two floors dropped: under 3 units, 6 after the renormalising
+/// shift, 3 2^-510 relative), and squaring doubles the relative error
+/// carried in, so x^k is within (3k + 2) 2^-510 relative (the reciprocal
+/// adds two units; bounds127.py): under 2^-492.4 for k < 2^16, where powu
+/// uses it, under 2^-237 ULP of any word.
+/// A tie, x^k = odd 2^-129, has k <= 129 and c^k < 2^256 for x's odd part
+/// c, so every partial product has at most 256 significant bits and is
+/// exact. The rounding reads only the top word: the bits below it cannot
+/// carry into the rounding bit. Overflow when the result does not fit.
+function powus(ux, k, recip) -> r {
+    let s := msb(ux)
+    let mh := shl(sub(255, s), ux)
+    let ml := 0
+    let e := sub(s, 128)
+    if recip {
+        switch eq(mh, 0x8000000000000000000000000000000000000000000000000000000000000000)
+        case 1 { e := sub(0, e) }
+        default {
+            // 2^767 / mh in four 2^128 stages of long division
+            let q3 := divu(0x8000000000000000000000000000000000000000000000000000000000000000, mh)
+            let t := sub(0, mul(q3, mh))
+            let q2 := divu(t, mh)
+            t := sub(shl(128, t), mul(q2, mh))
+            let q1 := divu(t, mh)
+            t := sub(shl(128, t), mul(q1, mh))
+            let q0 := divu(t, mh)
+            mh := or(shl(128, q3), q2)
+            ml := or(shl(128, q1), q0)
+            e := sub(sub(0, e), 1)
+        }
+    }
+    let ah := 0x8000000000000000000000000000000000000000000000000000000000000000
+    let al := 0
+    let ae := 0
+    for {} 1 {} {
+        if and(k, 1) {
+            let ph, pl, cy := mant2(ah, al, mh, ml)
+            ah := ph
+            al := pl
+            ae := add(add(ae, e), cy)
+        }
+        k := shr(1, k)
+        if iszero(k) { break }
+        let qh, ql, qc := mant2(mh, ml, mh, ml)
+        mh := qh
+        ml := ql
+        e := add(add(e, e), qc)
+    }
+    if sgt(ae, 126) { rev(0x35278d12) }
+    let sh := sub(127, ae)
+    if gt(sh, 256) { leave }
+    r := add(shr(sh, ah), and(shr(sub(sh, 1), ah), 1))
+}
+
+/// Normalised product of two 512-bit mantissas in [2^511, 2^512): the top
+/// 512 bits of the product (the low-by-low term dropped), renormalised, and
+/// the carry c in {0, 1} the exponent gains.
+function mant2(ah, al, bh, bl) -> rh, rl, c {
+    rh, rl := mul512(ah, bh)
+    let a := hmul(ah, bl)
+    rl := add(rl, a)
+    rh := add(rh, lt(rl, a))
+    a := hmul(al, bh)
+    rl := add(rl, a)
+    rh := add(rh, lt(rl, a))
+    c := shr(255, rh)
+    if iszero(c) {
+        rh := or(shl(1, rh), shr(255, rl))
+        rl := shl(1, rl)
+    }
+}
+
+/// Normalised product of two mantissas in [2^255, 2^256): the top 256 bits
+/// of the 512-bit product, renormalised so the top bit is set, and the
+/// carry c in {0, 1} the exponent gains.
+function mant(a, b) -> m, c {
+    let p0 := mul(a, b)
+    let mm := mulmod(a, b, not(0))
+    let p1 := sub(sub(mm, p0), lt(mm, p0))
+    c := shr(255, p1)
+    m := p1
+    if iszero(c) { m := or(shl(1, p1), shr(255, p0)) }
+}
+
+/// @object BL127E
+/// @export compound(int256 rate, int256 n) returns (int256 r)
+/// @domain rate > -1 and 1 + rate fits; any integer n = floor(n)
+/// @reverts Overflow() when 1 + rate or the result does not fit; DivisionByZero() for rate == -1 with n < 0
+/// @notice (1 + rate)^floor(n): n periods of compounding at rate, rounded
+///         to nearest, so a per-second rate over years keeps every bit the
+///         format holds. 1 + rate is exact in 127.128 (the sum of two grid
+///         values), so nothing is lost before the exponentiation; on an
+///         18-decimal grid the rate itself would have been the first loss.
+/// @dev For |n| >= 16 the logarithm goes first: t = n log2(1 + rate)
+///      exactly from log2m (within 2^-160.5, kernel192.py), 2^t by pow2t,
+///      which decides when its bound cannot change the rounding; then
+///      log2 at 2^-299 (l2p) and 2^t in the double word with a test.
+///      Otherwise, and for exact ties, powu, whose 512-bit decider is the
+///      nearest word.
+function bl127_compound(rate, n) -> r {
+    let x := bl127_add(0x100000000000000000000000000000000, rate)
+    let k := sar(128, n)
+    if and(sgt(x, 0), gt(absw(k), 15)) {
+        let ok := 0
+        r, ok := compt(x, k)
+        if ok { leave }
+    }
+    r := bl127_powu(x, n)
+}
+
+/// x^k rounded to nearest through the one-word kernels, for x > 0 and an
+/// integer k: ok = 1 when the rounding is certain. log2(x) at 2^-192 is
+/// within 2^-160 (log2m's 2^-160.5 and the mantissa's floor above 2^64), so
+/// t = k log2(x), exact, is within |k| 2^-160; pow2t takes |k| 2^113 + 1 for
+/// ay, which it reads as a bound of ay 2^-273 on t's error. Where pow2t
+/// cannot decide (a result from about 2^3 with a large k, or near a
+/// midpoint) l2p and pow2rt try again at 2^-299 (precise_model.py
+/// fastcompound).
+function compt(x, k) -> r, ok {
+    let ms := msb(x)
+    let y0 := 0
+    let v := shl(192, sub(ms, 128))
+    if and(x, sub(x, 1)) {
+        let mm := shl(sub(192, ms), x)
+        if gt(ms, 192) { mm := shr(sub(ms, 192), x) }
+        y0 := log2m(mm)
+        v := add(v, y0)
+    }
+    let t := mul(k, v)
+    let wide := iszero(eq(sdiv(t, k), v))
+    if or(wide, iszero(eq(sar(199, t), sar(255, t)))) {
+        // |t| from 128 (t within |k| 2^-160 of the truth): x^k is from
+        // 2^127, Overflow, or under 2^-130 from t = -130, where the
+        // nearest word is 0; between -130 and -128, powu
+        if iszero(xor(slt(k, 0), slt(v, 0))) { rev(0x35278d12) }
+        ok := or(wide, slt(t, sub(0, shl(192, 130))))
+        leave
+    }
+    r, ok := pow2t(t, add(shl(113, absw(k)), 1))
+    if ok { leave }
+    // out of pow2t's reach or near a midpoint: log2(x) to 2^-299 (l2p) and
+    // the double-word 2^t, with a test
+    let lh, ll := l2p(x, ms, y0)
+    r, ok := pow2rt(shl(128, k), lh, ll, add(shr(42, absw(k)), 3))
+}
+
+/// 2^(y L) rounded to nearest for L = (lh, ll) a log2 at 2^-384, with a
+/// rounding test (compound's middle stage): ok = 1 when 2^(y L) is certainly
+/// nearest r. With n = floor(y L) and e = n + 129 the word is half of 2^e +
+/// floor(sh 2^(e - 256)) + 1 (the bits of s below sh cannot move the
+/// halving). V = 2^e + sh 2^(e - 256), the value halved, is within (1 + |y|)
+/// 2^-299 relative of the truth (l2p's 2^-299, expk's 2^-311) plus sh's one
+/// unit, under eb units of sh's last bit for eb = |y| 2^-42 + 3: the word
+/// is certain when V's bits below the halving are more than eb from the
+/// midpoint, an odd integer. ok = 0 where the result overflows or
+/// is 0 within reach of 2^-129: the caller decides those.
+function pow2rt(y, lh, ll, eb) -> r, ok {
+    let n, fh, fl := y2nf(y, lh, ll)
+    if sgt(n, 126) { leave }
+    if slt(n, sub(0, 129)) {
+        ok := slt(n, sub(0, 130))
+        leave
+    }
+    let rh, rx := lnmul(fh, fl)
+    let sh, sl := expk(rh, rx)
+    let e := add(n, 129)
+    let sb := sub(256, e)
+    let w := add(add(shl(e, 1), shr(sb, sh)), 1)
+    r := shr(1, w)
+    if iszero(r) { leave }
+    let d := and(sh, sub(shl(sb, 1), 1))
+    if and(w, 1) { d := sub(shl(sb, 1), d) }
+    ok := gt(d, eb)
+}
+
+/// floor(cbrt(z)) for z in [2^253, 2^256) from a seed y within 2^-7 of
+/// the 85-bit root: four Newton steps (2y + z / y^2) / 3 in one word, which
+/// square the relative error (7, 14, 28, 56, 112 bits) and never land under
+/// the floor (AM-GM, and the floors lose under 4/3 while an iterate at or
+/// above the floor F satisfies z / y^2 >= F - 2 (y - F)), so the last
+/// iterate is the floor or one above, and y^3 > z, tested as y^2 > z / y
+/// without overflow, steps it back.
+function cbrtw(z, y) -> r {
+    r := div(add(shl(1, y), div(z, mul(y, y))), 3)
+    r := div(add(shl(1, r), div(z, mul(r, r))), 3)
+    r := div(add(shl(1, r), div(z, mul(r, r))), 3)
+    r := div(add(shl(1, r), div(z, mul(r, r))), 3)
+    r := sub(r, gt(mul(r, r), div(z, r)))
+}
+
+/// y^3 as two words for y < 2^171.
+function cube(y) -> h, l {
+    let p1, p0 := mul512(y, y)
+    let a1 := 0
+    a1, l := mul512(p0, y)
+    h := add(a1, mul(p1, y))
+}
+
+/// @export cbrt(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts Overflow() only at -2^255
+/// @notice Cube root, defined for all x: cbrt(-x) = -cbrt(x). Rounded to
+///         nearest (decided exactly); exact for perfect cubes.
+/// @dev The result is cbrt(N) for N = |x| 2^256, a 512-bit integer whose
+///      root has up to 171 bits, by Newton with precision doubling and an
+///      exact finish. z = |x| 2^sh with sh = 1 mod 3 puts z in [2^253,
+///      2^256) and N = z 2^(3j) exactly, j = (256 - sh)/3 in 1..85. The
+///      seed is the minimax line through cbrt(t) on [1, 2) in the top 65
+///      bits of z (within 2^-7.07) times 2^((253 + e)/3 - 22) for e = msb(z)
+///      - 253 from a packed word; cbrtw takes it to Y = floor(cbrt(z)) in
+///      four word steps. From y0 = Y 2^j, under the root R by less than
+///      2^j, the Newton step y0 + (z - Y^3) 2^j / (3 Y^2) has a word
+///      numerator (z - Y^3 <= 3Y^2 + 3Y; both sides are taken at 2^-2 so
+///      the shifted numerator fits), lands at or above R and under
+///      R + (R - y0)^2 / y0 < R + 2^(j - 84) <= R + 1.6, and with the floor
+///      and one added the iterate is in [floor(R), floor(R) + 3]: exact
+///      two-word cubes step it down to the floor. The midpoint test is
+///      exact too: round up iff 8 (N - y^3) >= 12 y^2 + 6 y + 1, the cube of
+///      2y + 1 against 8N on the residual (never a tie: one side is odd).
+///      v5 was 2^(log2|x| / 3) through the one-word kernel with the
+///      double-word fallback (l2p) on 37% of inputs; this is 8 to 20 times
+///      cheaper and differs from it only where that kernel's 2^-299 bound
+///      would have straddled a midpoint, which no vector or sweep input does.
+///      v4 was pow(|x|, 1/3) with the exponent 1/3 floored to 128 bits,
+///      which put large results 1.6e14 ULPs off.
+function bl127_cbrt(x) -> r {
+    if iszero(x) { leave }
+    let ax := bl127_abs(x)
+    let ms := msb(ax)
+    let sh := sub(255, ms)
+    sh := sub(sh, mod(sub(sh, 1), 3))
+    let z := shl(sh, ax)
+    let j := div(sub(256, sh), 3)
+    let e := sub(add(ms, sh), 253)
+    let l := add(0xbf5da1f0001eb537, shr(64, mul(0x428a2f98d728ae22, shr(add(189, e), z))))
+    let y := cbrtw(z, shr(42, mul(l, and(shr(shl(6, e), 0x80000000000000006597fa94f5b8f20b50a28be635ca2b89), 0xffffffffffffffff))))
+    let y2 := mul(y, y)
+    y := add(add(shl(j, y), div(shl(j, shr(2, sub(z, mul(y2, y)))), shr(2, mul(3, y2)))), 1)
+    let h := 0
+    h, l := cube(y)
+    for {} or(gt(h, ax), and(eq(h, ax), iszero(iszero(l)))) {} {
+        y := sub(y, 1)
+        h, l := cube(y)
+    }
+    // E = N - y^3 = (ax - h, -l) in two words; 8E against 12 y^2 + 6 y + 1
+    let eh := sub(sub(ax, h), iszero(iszero(l)))
+    let el := sub(0, l)
+    let p1, p0 := mul512(y, y)
+    let t1, t0 := mul512(p0, 12)
+    t1 := add(mul(12, p1), t1)
+    let u := add(mul(6, y), 1)
+    t0 := add(t0, u)
+    t1 := add(t1, lt(t0, u))
+    eh := or(shl(3, eh), shr(253, el))
+    el := shl(3, el)
+    r := add(y, or(gt(eh, t1), and(eq(eh, t1), iszero(lt(el, t0)))))
+    if slt(x, 0) { r := sub(0, r) }
+}
+
+/// 1 when N = h 2^256 + l > r (r + 1): sqrt(N) is past r + 1/2 (it is
+/// never exactly r + 1/2, which would need N = r^2 + r + 1/4). r < 2^255.
+function pastmid(r, h, l) -> t {
+    let p1, p0 := mul512(r, add(r, 1))
+    t := or(gt(h, p1), and(eq(h, p1), gt(l, p0)))
+}
+
+/// The nearest integer to sqrt(N), N = h 2^256 + l: gavg's and hypot's raw
+/// result, for raw words A, B, is sqrt(A B) or sqrt(A^2 + B^2) exactly, so
+/// N is their exact product or sum of squares and one rounding remains. The
+/// nearest is r with r (r - 1) < N <= r (r + 1); there are no ties.
+/// Overflow when it passes 2^255 - 1, that is N > 2^510 - 2^255. isqrtw is
+/// sqrt's kernel, unchanged (proven, test/proofs/isqrt.py).
+/// Below 2^256: floor(sqrt(N)) = isqrtw(N), or isqrtw(N 2^128) / 2^64 below
+/// 2^128 (isqrtw takes 2^16 and up), then one up iff N > r (r + 1), in a
+/// word (r < 2^128).
+/// Above: z, the top word of N 4^k with its msb at 254 or 255, has k >= 1
+/// (N < 2^510) and a root Y = isqrtw(z) in [2^127, 2^128). One Newton step
+/// from Y 2^128 for the root R of N 4^k, y = Y 2^128 + q, q = floor((z -
+/// Y^2) 2^127 / Y) (z - Y^2 <= 2Y, so the shifted numerator fits), is in
+/// (R - 2, R + 1): the exact step is in [R, R + 1), as R - Y 2^128 < 2^128
+/// and 2 Y 2^128 >= 2^256, and the floor and the dropped low word take
+/// under one each. So (y - 1) / 2^k rounded to nearest, formed as
+/// Y 2^(128 - k) + (q + 2^(k-1) - 1) >> k (y itself can reach 2^256), is
+/// at most the nearest root of N = R^2 / 4^k and at most one below it (two
+/// for k = 1): the exact product test steps it up. Fuzzed against a
+/// bit-by-bit root (test/proofs/Fuzz.t.sol).
+function rootw(h, l) -> r {
+    if iszero(h) {
+        if l {
+            let c := iszero(shr(128, l))
+            r := shr(shl(6, c), isqrtw(shl(shl(7, c), l)))
+            r := add(r, gt(l, mul(r, add(r, 1))))
+        }
+        leave
+    }
+    if or(shr(254, h), and(eq(h, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(l, shl(255, 1)))) { rev(0x35278d12) }
+    let s := and(sub(255, msb(h)), not(1))
+    let k := shr(1, s)
+    let z := or(shl(s, h), shr(sub(256, s), l))
+    let Y := isqrtw(z)
+    r := add(shl(sub(128, k), Y), shr(k, add(div(shl(127, sub(z, mul(Y, Y))), Y), sub(shl(sub(k, 1), 1), 1))))
+    let p0 := mul(r, add(r, 1))
+    let p1 := mulmod(r, add(r, 1), not(0))
+    p1 := sub(sub(p1, p0), lt(p1, p0))
+    if or(gt(h, p1), and(eq(h, p1), gt(l, p0))) {
+        r := add(r, 1)
+        if pastmid(r, h, l) { r := add(r, 1) }
+    }
+}
+
+/// @export gavg(int256 a, int256 b) returns (int256 r)
+/// @domain a·b >= 0
+/// @reverts OutOfRange() if a and b have opposite signs (both nonzero); Overflow() only for a = b = -2^255
+/// @notice The geometric mean sqrt(a b), rounded once to nearest from the
+///         exact 512-bit product; two negatives give the positive root.
+/// @dev rootw(|A| |B|) for the raw words. Up to v8 this was sqrt(mul(a,
+///      b)), the floored root of the floored product: low by up to 2^64 ULPs
+///      where a b is under one ULP (a = 2^-78, b = 2^-60: the product floors
+///      to zero, the root is 2^-69, 2^59 ULPs), and Overflow wherever a b
+///      passed 2^127 though its root fits.
+function bl127_gavg(a, b) -> r {
+    if slt(xor(a, b), 0) {
+        if and(iszero(iszero(a)), iszero(iszero(b))) { rev(0x7db3aba7) }
+        leave
+    }
+    a := absw(a)
+    b := absw(b)
+    let l := mul(a, b)
+    let h := mulmod(a, b, not(0))
+    r := rootw(sub(sub(h, l), lt(h, l)), l)
+}
+
+/// @export hypot(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b; the result must fit
+/// @reverts Overflow() when sqrt(a^2 + b^2) rounds past the largest word
+/// @notice sqrt(a^2 + b^2), rounded once to nearest from the exact sum of
+///         squares (two words); no intermediate overflows.
+/// @dev rootw(A^2 + B^2) for the raw words. Up to v8 this was the floored
+///      root of the sum of floored squares: low by up to 2^64 ULPs where
+///      both squares are under one ULP, and Overflow wherever a^2 + b^2
+///      passed 2^127 though its root fits.
+function bl127_hypot(a, b) -> r {
+    let u := absw(a)
+    let h, l := mul512(u, u)
+    u := absw(b)
+    let h2, l2 := mul512(u, u)
+    l := add(l, l2)
+    r := rootw(add(add(h, h2), lt(l, l2)), l)
+}
+
+/// @export inv(int256 x) returns (int256 r)
+/// @domain x != 0
+/// @reverts DivisionByZero() for x == 0; Overflow() when 1/x does not fit
+/// @notice 1 / x. Reverts with DivisionByZero for x == 0.
+/// @dev div(2^128, x) in one word: floor(2^256 / |x|) is
+///      floor((2^256 - |x|) / |x|) + 1, and |x| = 1 overflows.
+function bl127_inv(x) -> r {
+    if iszero(x) { rev(0x23d359a3) }
+    let ng := slt(x, 0)
+    let ux := absw(x)
+    if eq(ux, 1) { rev(0x35278d12) }
+    let q := add(div(sub(0, ux), ux), 1)
+    if gt(q, add(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, ng)) { rev(0x35278d12) }
+    r := sub(xor(q, sub(0, ng)), sub(0, ng))
+}
+
+// ---------------------------------------------------------------------------
+// Sign, comparison, selection
+// ---------------------------------------------------------------------------
+
+/// @export abs(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts Overflow() at -2^255
+/// @notice |x|. Reverts with Overflow for x == -2^255, which has no positive.
+function bl127_abs(x) -> r {
+    if eq(x, 0x8000000000000000000000000000000000000000000000000000000000000000) { rev(0x35278d12) }
+    r := absw(x)
+}
+
+/// @export neg(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts Overflow() at -2^255
+/// @notice -x. Reverts with Overflow for x == -2^255.
+function bl127_neg(x) -> r {
+    if eq(x, 0x8000000000000000000000000000000000000000000000000000000000000000) { rev(0x35278d12) }
+    r := sub(0, x)
+}
+
+/// @export sign(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice -1, 0 or 1 in 127.128.
+function bl127_sign(x) -> r {
+    r := shl(128, sub(sgt(x, 0), slt(x, 0)))
+}
+
+/// @export min(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts never
+/// @notice Signed minimum.
+function bl127_min(a, b) -> r {
+    r := b
+    if slt(a, b) { r := a }
+}
+
+/// @export max(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts never
+/// @notice Signed maximum.
+function bl127_max(a, b) -> r {
+    r := b
+    if sgt(a, b) { r := a }
+}
+
+/// @export clamp(int256 x, int256 lo, int256 hi) returns (int256 r)
+/// @domain any x, lo, hi
+/// @reverts never
+/// @notice min(hi, max(lo, x)). If lo > hi the result is hi, as in the Huff.
+function bl127_clamp(x, lo, hi) -> r {
+    r := bl127_min(hi, bl127_max(lo, x))
+}
+
+/// @export avg(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts never
+/// @notice floor((a + b) / 2) without intermediate overflow.
+function bl127_avg(a, b) -> r {
+    r := add(add(sar(1, a), sar(1, b)), and(and(a, b), 1))
+}
+
+/// @export zeroFloorSub(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts Overflow() if a - b does not fit
+/// @notice max(0, a - b), with the subtraction checked.
+function bl127_zeroFloorSub(a, b) -> r {
+    r := bl127_sub(a, b)
+    if slt(r, 0) { r := 0 }
+}
+
+/// @export dist(int256 a, int256 b) returns (int256 r)
+/// @domain any a, b
+/// @reverts Overflow() if a - b does not fit
+/// @notice |a - b|, checked.
+function bl127_dist(a, b) -> r {
+    r := bl127_abs(bl127_sub(a, b))
+}
+
+/// @export lerp(int256 a, int256 b, int256 t) returns (int256 r)
+/// @domain any a, b, t
+/// @reverts Overflow() on any intermediate that does not fit
+/// @notice a + t * (b - a), checked. t is not clamped to [0, 1].
+function bl127_lerp(a, b, t) -> r {
+    r := bl127_add(a, bl127_mul(t, bl127_sub(b, a)))
+}
+
+// ---------------------------------------------------------------------------
+// Rounding
+// ---------------------------------------------------------------------------
+
+/// @export floor(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice Largest integer <= x. Clearing the fraction bits of a two's
+///         complement word is a floor for both signs.
+function bl127_floor(x) -> r {
+    r := and(x, 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000)
+}
+
+/// @export ceil(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts Overflow() when the result is 2^127
+/// @notice Smallest integer >= x, as -floor(-x). Reverts with Overflow when
+///         that integer is 2^127, which does not fit.
+function bl127_ceil(x) -> r {
+    r := sub(0, and(sub(0, x), 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000))
+    if slt(r, x) { rev(0x35278d12) }
+}
+
+/// @export frac(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice x - floor(x), always in [0, 1).
+function bl127_frac(x) -> r {
+    r := and(x, 0xffffffffffffffffffffffffffffffff)
+}
+
+/// @export round(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts Overflow() when the result is 2^127
+/// @notice Nearest integer, halves rounded up: floor(x + 1/2). Checked.
+function bl127_round(x) -> r {
+    r := bl127_floor(bl127_add(x, 0x80000000000000000000000000000000))
+}
+
+// ---------------------------------------------------------------------------
+// Integer functions
+// ---------------------------------------------------------------------------
+
+/// (2i)! and (2i + 1)! for 0 <= i <= 16, the even one in the high
+/// 128 bits, by a binary search on i (facttab.py).
+function facttab(i) -> w {
+    switch lt(i, 8)
+    case 0 {
+        switch lt(i, 12)
+        case 0 {
+            switch lt(i, 14)
+            case 0 {
+                switch lt(i, 15)
+                case 0 {
+                    switch lt(i, 16)
+                    case 0 {
+                        w := 0x0032ad5a155c6748ac18b9a5800000000688589cc0e9505e2f2fee5580000000
+                    }
+                    default {
+                        w := 0x00000d13f6370f96865df5dd540000000001956ad0aae33a4560c5cd2c000000
+                    }
+                }
+                default {
+                    w := 0x00000003d925ba47ad2cd59dae0000000000006f99461a1e9e1432dcb6000000
+                }
+            }
+            default {
+                switch lt(i, 13)
+                case 0 {
+                    w := 0x00000000014d9849ea37eeac9180000000000000232f0fcbb3e62c3358800000
+                }
+                default {
+                    w := 0x00000000000083629343d3dcd1c0000000000000000cd4a0619fb0907bc00000
+                }
+            }
+        }
+        default {
+            switch lt(i, 10)
+            case 0 {
+                switch lt(i, 11)
+                case 0 {
+                    w := 0x000000000000003ceea4c2b3e0d80000000000000000057970cd7e2933680000
+                }
+                default {
+                    w := 0x000000000000000021c3677c82b400000000000000000002c5077d36b8c40000
+                }
+            }
+            default {
+                switch lt(i, 9)
+                case 0 {
+                    w := 0x00000000000000000016beecca730000000000000000000001b02b9306890000
+                }
+                default {
+                    w := 0x0000000000000000000013077775800000000000000000000001437eeecd8000
+                }
+            }
+        }
+    }
+    default {
+        switch lt(i, 4)
+        case 0 {
+            switch lt(i, 6)
+            case 0 {
+                switch lt(i, 7)
+                case 0 {
+                    w := 0x0000000000000000000000144c3b280000000000000000000000013077775800
+                }
+                default {
+                    w := 0x0000000000000000000000001c8cfc000000000000000000000000017328cc00
+                }
+            }
+            default {
+                switch lt(i, 5)
+                case 0 {
+                    w := 0x00000000000000000000000000375f0000000000000000000000000002611500
+                }
+                default {
+                    w := 0x00000000000000000000000000009d8000000000000000000000000000058980
+                }
+            }
+        }
+        default {
+            switch lt(i, 2)
+            case 0 {
+                switch lt(i, 3)
+                case 0 {
+                    w := 0x000000000000000000000000000002d0000000000000000000000000000013b0
+                }
+                default {
+                    w := 0x0000000000000000000000000000001800000000000000000000000000000078
+                }
+            }
+            default {
+                switch lt(i, 1)
+                case 0 {
+                    w := 0x0000000000000000000000000000000200000000000000000000000000000006
+                }
+                default {
+                    w := 0x0000000000000000000000000000000100000000000000000000000000000001
+                }
+            }
+        }
+    }
+}
+
+/// @export factorial(int256 n) returns (int256 r)
+/// @domain 0 <= n < 34
+/// @reverts OutOfRange() outside that
+/// @notice floor(n)! for 0 <= n < 34. 33! is the largest that fits.
+/// @dev Reverts with OutOfRange outside that domain (the Huff returned
+///      MAX_UINT256). A table of the 34 values, two to a word, as the Huff's
+///      jump table was (facttab.py); the values are identical.
+function bl127_factorial(n) -> r {
+    if slt(n, 0) { rev(0x7db3aba7) }
+    let k := shr(128, n)
+    if gt(k, 33) { rev(0x7db3aba7) }
+    r := and(shl(shl(7, and(k, 1)), facttab(shr(1, k))), not(0xffffffffffffffffffffffffffffffff))
+}
+
+// ---------------------------------------------------------------------------
+// Lambert W, both branches (v6: seed -> fast -> safe). Near -1/e a fit seed
+// in q = 1 + W on (q - 1) e^q + 1 = 1 + e x and one step on the double-word
+// exp kernel, whose error is a few units whatever q; elsewhere a seed from
+// a crude logarithm, fourth-order log-form steps in one word at 2^-126 on
+// a table-driven logarithm, and the double-word step lwfin last. No
+// series: the kernels and fits only.
+// ---------------------------------------------------------------------------
+
+/// W(i) for integer i in 1..5, rounded to nearest (v5 corrects W(4), which
+/// v4 held one ULP low). Shortcuts for the inputs people actually type;
+/// everything else iterates.
+function lw(i) -> w {
+    switch i
+    case 1 { w := 0x91304d7c74b2ba5eafddaa6286dc28e1 }
+    case 2 { w := 0xda445aab89e28ccbe8ac8e1abd5cd1db }
+    case 3 { w := 0x10cc6d44fa669b9692193f0dda5206864 }
+    case 4 { w := 0x133c14613aee484452ac550f2b1a0300e }
+    case 5 { w := 0x153a43a4803052f93079ab9ede1d51097 }
+    default { w := 0 }
+}
+
+/// k ln 2 + ln r at 2^-128 for a mantissa r in [2^126, 2^127) ([1, 2) at
+/// 2^-126) and a signed integer k: six reduction stages by 2^(1/2) ...
+/// 2^(1/64) (a floored product by the tabled reciprocal each, as log2m's)
+/// leave r in [1, 2^(1/64)), then ln r = 2 atanh s, s = (r - 1)/(r + 1) in
+/// [0, 0.00542), atanh(s)/s by a degree-7 Chebyshev fit in s^2 (max error
+/// 2^-139.5 on [0, 2^-15.1], precise_model.py's lncfit) at 2^-126; within about
+/// 2^-124. The table-free logarithm behind the fast steps.
+function lnc(r, k) -> L {
+    let j := shl(6, k)
+    if iszero(lt(r, 0x5a827999fcef32422cbec4d9baa55f50)) {
+        r := shr(126, mul(r, 0x2d413cccfe779921165f626cdd52afa8))
+        j := add(j, 32)
+    }
+    if iszero(lt(r, 0x4c1bf828c6dc54b7a356918c17217b7b)) {
+        r := shr(126, mul(r, 0x35d13f32b5a75abd0e69a2ee640b4ff8))
+        j := add(j, 16)
+    }
+    if iszero(lt(r, 0x45cae0f1f545eb737df23143ac529e48)) {
+        r := shr(126, mul(r, 0x3ab031b9f7490e4bb40b5d6cdc1b953f))
+        j := add(j, 8)
+    }
+    if iszero(lt(r, 0x42d561b3e6243d8a62e4adc610aa60d9)) {
+        r := shr(126, mul(r, 0x3d495f454921b30b1ee7431ebb6603f1))
+        j := add(j, 4)
+    }
+    if iszero(lt(r, 0x4166c34c5615d0eb9f1523ada3290600)) {
+        r := shr(126, mul(r, 0x3ea0ecb6dc8a80ce9f096ec50c575ff3))
+        j := add(j, 2)
+    }
+    if iszero(lt(r, 0x40b268f9de0183b9bdf2b293de8a6f7a)) {
+        r := shr(126, mul(r, 0x3f4f83033d21b05d214fce964c783b81))
+        j := add(j, 1)
+    }
+    let s := sdiv(shl(126, sub(r, 0x40000000000000000000000000000000)), add(r, 0x40000000000000000000000000000000))
+    let s2 := sar(126, mul(s, s))
+    let A := 0x4446135483304695b31cd2087781804
+    A := add(0x4ec4ec491eccde6dc9ec3dc71cf3623, sar(126, mul(s2, A)))
+    A := add(0x5d1745d1746646dc577e7d058db642b, sar(126, mul(s2, A)))
+    A := add(0x71c71c71c71c71bed60c1d9b8a55f08, sar(126, mul(s2, A)))
+    A := add(0x92492492492492492496556bf318f39, sar(126, mul(s2, A)))
+    A := add(0xcccccccccccccccccccccccbd3dcdb3, sar(126, mul(s2, A)))
+    A := add(0x155555555555555555555555555556c2, sar(126, mul(s2, A)))
+    A := add(0x40000000000000000000000000000000, sar(126, mul(s2, A)))
+    L := add(mul(j, 0x2c5c85fdf473de6af278ece600fcbdb), shl(2, sar(125, mul(s, A))))
+}
+
+/// k ln 2 + ln r as lnc but crude, for the seeds: a degree-3 fit of
+/// ln(1 + t) on [0, 1) at 2^-126 (within 2^-10.8), which is all a seed
+/// within 2^-5 needs.
+function lnc0(r, k) -> L {
+    let t := sub(r, 0x40000000000000000000000000000000)
+    let P := add(sub(0, 0x193a803a4689b1e7d4fe8cc4f525bca5), sar(126, mul(0x6c624f4ace937ad74c72c1900aebb69, t)))
+    P := add(0x3ecce60a25db5c9757959e657fdbf429, sar(126, mul(P, t)))
+    P := add(0x95fd7e22848b1d16f2f2bb6adf6c7, sar(126, mul(P, t)))
+    L := add(mul(k, 0xb17217f7d1cf79abc9e3b39803f2f6af), shl(2, P))
+}
+
+/// The mantissa (in [2^126, 2^127)) and exponent of v > 0 at 2^-128, for
+/// lnc and lnc0.
+function lnm(v) -> r, k {
+    let n := msb(v)
+    r := shr(sub(n, 126), v)
+    if lt(n, 126) { r := shl(sub(126, n), v) }
+    k := sub(n, 128)
+}
+
+
+/// One fourth-order step on f(w) = w + ln(w / x) = 0 (W e^W = x, so W and x
+/// share a sign) from w, both at 2^-128: with h = w + 1, u = f / h and v =
+/// u / h, w (1 - u + uv/2 - uv^2/2 + u^2 v/3), the series reversion of f to
+/// third order (truncation w u v^3 (6w^2 - 8w + 1)/24). ln(w / x) is lnc of
+/// the ratio of the leading 127 bits plus the exponent difference; the
+/// quotients by h truncated to 100 bits, which leaves the step's own error
+/// under 2^-124 relative. Returns the new w and |u| 2^128, the step's size:
+/// from within 2^-32 the step lands within about 2^-127 relative, where
+/// lwfin's double-word step takes it to the nearest word.
+function lwf127(x, w) -> wn, au {
+    let aw := absw(w)
+    let ax := absw(x)
+    let nw := msb(aw)
+    let nx := msb(ax)
+    let k := sub(nw, nx)
+    let r := div(shr(3, shl(sub(255, nw), aw)), shr(129, shl(sub(255, nx), ax)))
+    if lt(r, 0x40000000000000000000000000000000) {
+        r := shl(1, r)
+        k := sub(k, 1)
+    }
+    let hs := sar(28, add(w, 0x100000000000000000000000000000000))
+    let u := sdiv(shl(100, add(w, lnc(r, k))), hs)
+    let v := sdiv(shl(100, u), hs)
+    let uv := sar(128, mul(u, v))
+    wn := mulraw(w, add(sub(add(sub(0x100000000000000000000000000000000, u), sar(1, uv)), sar(1, sar(128, mul(uv, v)))), sdiv(sar(128, mul(sar(128, mul(u, u)), v)), 3)))
+    au := absw(u)
+}
+
+/// The fast stage of the log form: lwf127 steps until one starts within
+/// 2^-22 (at most four; two from the seeds, precise_model.py).
+function lwfast(x, w) -> r {
+    r := w
+    for { let i := 0 } lt(i, 4) { i := add(i, 1) } {
+        let au := 0
+        r, au := lwf127(x, r)
+        if lt(au, 0x400000000000000000000000000) { break }
+    }
+}
+
+/// b3 + tau (b4 + tau b5) at 2^-112 for q and tau at 2^-126, the tail of
+/// the reversion's S that tau^3 makes needs only 128 bits of.
+function lwb3(qa, tau) -> R {
+    R := sdiv(add(shl(112, 1890), sar(126, mul(qa, add(shl(112, 4410), sar(126, mul(qa, add(shl(112, 4760), sar(126, mul(qa, add(shl(112, 3052), sar(126, mul(qa, add(shl(112, 1200), sar(126, mul(qa, shl(112, 240)))))))))))))))), 1440)
+    R := add(sdiv(add(shl(112, 105), sar(126, mul(qa, add(shl(112, 210), sar(126, mul(qa, add(shl(112, 190), sar(126, mul(qa, add(shl(112, 96), sar(126, mul(qa, shl(112, 24))))))))))))), 120), sar(126, mul(tau, R)))
+    R := add(sdiv(add(shl(112, 15), sar(126, mul(qa, add(shl(112, 25), sar(126, mul(qa, add(shl(112, 18), sar(126, mul(qa, shl(112, 6)))))))))), 24), sar(126, mul(tau, R)))
+}
+
+
+
+/// S(p) = (1 + W)/p for p = +-sqrt(2 (1 + e x)) (+ on W0, - on W-1), the
+/// seed's factor, by a degree-16 Chebyshev fit on [-1/2, 1/2] (BL19's
+/// lwsp; relative error under 2^-44.8, the constant term exactly 1),
+/// Horner at 2^-192 on p at 2^-192.
+function lwsp(p) -> S {
+    S := 0x14ee40204d4fb035a5072487f3ebf9656803310925c907
+    S := add(sub(0, 0x1f689a9e4896ed7ed43aa3bf322ba75095393713e51a82), mulg(p, S))
+    S := add(0x19116160251533ddbbc5974e7b5acc887a6e822094400f, mulg(p, S))
+    S := add(sub(0, 0x262e2db8c1d1bea453d23382925ade80dc41701aec1b27), mulg(p, S))
+    S := add(0x443610ed26c86e9469406eeddfb43c95e526e73084ea1d, mulg(p, S))
+    S := add(sub(0, 0x68c4d166bc1d92ae554a1e7ec7843e6fc88993ed4e286b), mulg(p, S))
+    S := add(0x9fd601efbb37e7bee31c27eb50a58607c67ab61f19523b, mulg(p, S))
+    S := add(sub(0, 0xf9958e639d31740ed2d77de17707109b73263b0c788e82), mulg(p, S))
+    S := add(0x18a2dd0dc238b49099b4561e947671ca2207e5ff508079a, mulg(p, S))
+    S := add(sub(0, 0x27644709e3c72decfb5dba4ca0029e14c5e45dc00ebc22b), mulg(p, S))
+    S := add(0x400b2486add336f9345d3d436084597a1e9ab4653831233, mulg(p, S))
+    S := add(sub(0, 0x6a6ef05dc692903294e2aa085f839905fc3baf4ed004887), mulg(p, S))
+    S := add(0xb6480f3313346deb8eebb899ed985e1bd1b6200184fb985, mulg(p, S))
+    S := add(sub(0, 0x14629b7fbf47c3693c9ad15d08b56556e66efac971ea4325), mulg(p, S))
+    S := add(0x271c71c71bd24011b07579148ff1ca9f9fbaf354cfd0ba4c, mulg(p, S))
+    S := add(sub(0, 0x5555555554676edb5ce69c2b3038f63b108e8248e60966e3), mulg(p, S))
+    S := add(0x1000000000000000000000000000000000000000000000000, mulg(p, S))
+}
+
+/// One sixth-order step on Phi(q) = (q - 1) e^q + 1 = y in q = 1 + W, |q|
+/// = q192 at 2^-192 (sg the sign, - for W-1), y = 1 + e x = q256 at 2^-256
+/// (floored): e^q - 1 from the double-word kernel, expk(|q|) for W0 and
+/// e^(ln 2 - |q|)/2 for W-1 (|q| < ln 2), E1 at 2^-256 absolute (relative
+/// 2^-256/|q|, under 2^-192 for |q| >= 2^-64, the smallest input); T =
+/// E1/|q| by divu, N = 1 - T (1 - q) (W0) or T (1 + |q|) - 1 (W-1), about
+/// |q|/2, so Phi = |q| N; tau = (Phi - y)/(q^2 (1 + E1)) by divg from the
+/// difference at 2^-256 and the product's top word; then |q| (1 - tau S),
+/// S = 1 + b1 tau + ... + b5 tau^5 (b1, b2 at 2^-192, the rest at 2^-112 by
+/// lwb3, which tau^3 makes enough). Returns the new |q| at 2^-192 and |tau| 2^192. Error (precise
+/// model.py's lambertw measures it): y's floor 2^-256/y relative, so q
+/// within 2^-256/|q| <= 2^-192; E1's 2^-256 through T and N, N's own
+/// floors and the difference's, each under 2^-192/|q| relative to tau's
+/// scale, so under a unit of 2^-192 in q: about 5 units in all.
+function lwqs(q192, sg, q256) -> qn, at {
+    // one call with the argument chosen first: a literal argument would have
+    // the optimizer specialise a copy of the kernel for each
+    let ah := shl(64, q192)
+    let ax := 0
+    if sg {
+        ah := sub(0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2b, ah)
+        ax := 0xe7b876206debac98559552fb4afa1b10
+    }
+    let E1, xl := expk(ah, ax)
+    if sg { E1 := shr(1, sub(0, E1)) }
+    let T := divu(E1, q192)
+    let N := 0
+    switch sg
+    case 0 { N := sub(0x1000000000000000000000000000000000000000000000000, mulg(T, sub(0x1000000000000000000000000000000000000000000000000, q192))) }
+    default { N := sub(mulg(T, add(0x1000000000000000000000000000000000000000000000000, q192)), 0x1000000000000000000000000000000000000000000000000) }
+    // Phi - y at 2^-256, its sign
+    let ph, pl := smul512(q192, N)
+    let d := sub(or(shl(128, ph), shr(128, pl)), q256)
+    let ng := slt(d, 0)
+    if ng { d := sub(0, d) }
+    let E := add(0x1000000000000000000000000000000000000000000000000, shr(64, E1))
+    if sg { E := sub(0x1000000000000000000000000000000000000000000000000, shr(64, E1)) }
+    let den := mulg(or(shl(128, hmul(q192, q192)), shr(128, mul(q192, q192))), E)
+    let tau := divg(d, den)
+    if ng { tau := sub(0, tau) }
+    // S = 1 + tau (b1 + tau (b2 + tau R)), b1 and b2 at 2^-192, R = b3 + tau (b4 + tau b5) at 2^-112 (lwb3)
+    let qa := shr(66, q192)
+    if sg { qa := sub(0, qa) }
+    let S := shl(80, lwb3(qa, sar(66, tau)))
+    let qs := q192
+    if sg { qs := sub(0, qs) }
+    S := add(sdiv(add(shl(192, 3), mulg(qs, add(shl(192, 4), mulg(qs, shl(192, 2))))), 6), mulg(tau, S))
+    S := add(sar(1, add(0x1000000000000000000000000000000000000000000000000, qs)), mulg(tau, S))
+    S := add(0x1000000000000000000000000000000000000000000000000, mulg(tau, S))
+    qn := sub(q192, mulg(q192, mulg(tau, S)))
+    at := absw(tau)
+}
+
+/// W near -1/e, both branches (sg = 1 for W-1), for -1/e <= x with 1 + e x
+/// = q256 at 2^-256 (lwq; 0 < q256 < 2^253, y < 1/8; y = Y 2^ey, Y in
+/// [2^254, 2^255)): the seed p S(+-p), p = sqrt(2y) by isqrt, S the fit
+/// lwsp (within 2^-44.8); one lwqs step (a second only if the first started
+/// outside 2^-44); then W = -1 +- q at 2^-192, within 6 units (lwqs's 5,
+/// bounds127.py measures it), rounded to the nearest word when rbad127 says
+/// 6 units cannot cross a midpoint, else from lwwide's Newton step at
+/// 2^-510 (3.0; v8 rounded blind).
+function lwbr(x, sg) -> w {
+    let q256 := lwq(x)
+    let nb := msb(q256)
+    let Y := shl(sub(254, nb), q256)
+    let ey := sub(nb, 510)
+    let k := sub(2, and(ey, 1))
+    let ep := add(sar(1, add(sub(ey, 254), k)), 128)
+    let P := isqrt(shr(add(1, k), Y))
+    let p := shl(add(ep, 192), P)
+    if slt(add(ep, 192), 0) { p := shr(sub(sub(0, ep), 192), P) }
+    if sg { p := sub(0, p) }
+    let q := mulg(absw(p), lwsp(p))
+    for { let i := 0 } lt(i, 2) { i := add(i, 1) } {
+        let at := 0
+        q, at := lwqs(q, sg, q256)
+        if lt(at, 0x10000000000000000000000000000000000000) { break }
+    }
+    // W at 2^-192: q - 1 on W0, -1 - q on W-1
+    q := sub(q, 0x1000000000000000000000000000000000000000000000000)
+    if sg { q := sub(sub(0, q), 0x2000000000000000000000000000000000000000000000000) }
+    w := sar(64, add(q, 0x8000000000000000))
+    if rbad127(q, 64, 6) { w := lwwide(x, w, shl(108, sub(q, shl(64, w)))) }
+}
+
+/// The final step of both branches, in the double word: Newton on
+///   F(w) = w + ln|w| - ln|x| = ln(1 + y),  y = |w| e^w / |x| - 1,
+///   w' = w - F w / (w + 1),
+/// with e^w = 2^n (1 + s) from the double-word kernel: A = |w| (1 + s) and
+/// B = |x| 2^-n at 2^-384, y = (A - B) / B and F = y - y^2/2 to about
+/// 2^-300, and the correction d at 2^-300, so the step's value is
+/// V = w + v 2^-300, v = -d. The one-word stages leave w within about 2^-88
+/// of W (relative, precise_model.py's lambertw; within 2^-120 or so typically),
+/// so V is within (3.0, bounds127.py checks it)
+///   err = 2^(2 msb|y| + msb|w| - 421) + |y| 2^-124 + 16
+/// units of 2^-300: Newton's own error, y^2 |w| / (2 |1 + w|^3) to first
+/// order, under 6.5 y^2 |w| (|1 + w| >= 0.43 away from -1/e, so |w| /
+/// |1 + w|^3 <= 13 |w|), the first term with room for twice that; B's top
+/// word, which y divides by, within 2^-128 of B, |y| 2^-128 / |1 + w| in
+/// d, the second; and the floors (the residual's, y's, F's, F w's, d's, each
+/// times at most |w| / |1 + w| <= 2.64 or 1 / |1 + w| <= 2.32) and the
+/// kernel's 2^-311 relative, under 14 units, the 16 (the exponent from clz:
+/// 2 msb|y| + msb|w| - 421 = 344 - 2 clz|y| - clz|w|, and 0 when negative,
+/// as shl gives). When rbad127 (172 guard bits) says err cannot cross a
+/// midpoint, V rounds to the nearest word,
+/// ties up; else lwwide's Newton step at 2^-510 decides (3.0; v8 rounded V
+/// blind). v4 was 1,153 ULPs off near -1/e and 2 ULPs elsewhere.
+function lwfin(x, w) -> r {
+    let n, sh, sl := expx(w)
+    let aw := absw(w)
+    // A = |w| (1 + s) at 2^-384
+    let ah, al := mul512(aw, sh)
+    let c := hmul(aw, sl)
+    al := add(al, c)
+    ah := add(add(ah, aw), lt(al, c))
+    // B = |x| 2^-n at 2^-384
+    let ax := absw(x)
+    let k := sub(256, n)
+    let bh := 0
+    let bl := 0
+    switch slt(k, 256)
+    case 1 {
+        bh := shr(sub(256, k), ax)
+        bl := shl(k, ax)
+    }
+    default { bh := shl(sub(k, 256), ax) }
+    // B y = A - B, small: at 2^-300 in one word; y to the 2^-128 of B's top
+    let pl := sub(al, bl)
+    let p := or(shl(172, sub(sub(ah, bh), lt(al, bl))), shr(84, pl))
+    let y := bl127_div(p, bh)
+    let ay := absw(y)
+    let f := sub(y, shr(45, hmul(ay, ay)))
+    let v := sub(0, bl127_div(mulraw(f, w), add(w, 0x100000000000000000000000000000000)))
+    r := add(w, sar(172, add(v, 0x8000000000000000000000000000000000000000000)))
+    if rbad127(v, 172, add(add(shl(sub(344, add(shl(1, clz(ay)), clz(aw))), 1), shr(124, ay)), 16)) {
+        r := lwwide(x, r, sub(v, shl(172, sub(r, w))))
+    }
+}
+
+// Lambert W's second stage takes BL19's ln 2 in three words as well
+/// @import bl19 as w19: kln2
+
+/// Lambert W's second stage (3.0), BL19's lwfix in 127.128: one log-form
+/// Newton step at 2^-510 from W0 = r + e 2^-300 (r a word, |e| <= 2^171),
+///   W1 = W0 - (W0 + ln(|W0| / |x|)) W0 / (1 + W0),
+/// rounded once to the nearest word, ties up. The ratio of the two
+/// significands in two words (w19_wrecip, w19_wmul: within 2^-503), its log
+/// by w19_wlnw (within 2^-497) plus its exponent times ln 2 (w19_kln2), and
+/// W0 at 2^-510, all modulo 2^512, which holds the residual R (under
+/// 2^-105: W0 is within 2^-120 of W relative) whole; R at 2^-360 times
+/// W0 / (1 + W0) (at 2^-128 from W0 at 2^-192) is the correction. W1's
+/// error: Newton's (W0 - W)^2 / (2 |W| |1 + W|), with W0 within lwfin's err
+/// (or lwbr's 6 units of 2^-192: 2^-315 near -1/e, where |1 + W| >=
+/// 2^-64), R's floor times |W0 / (1 + W0)| <= 2^64 (2^-296), the log's
+/// 2^-497 likewise, and the floors at 2^-330: within 2^-290 (2^-162 ULP)
+/// whatever x. W is transcendental for every word x but 0, so it is never a
+/// midpoint; the sweep's forced pass runs every input through here (make
+/// sweep, gen.py's forced rbad127).
+function lwwide(x, r, e) -> rr {
+    // |W0| 2^300 = |r| 2^172 +- e in two words (W0 has r's sign: |r| >= 2^63)
+    let ar := absw(r)
+    let es := e
+    if slt(r, 0) { es := sub(0, e) }
+    let lo := shl(172, ar)
+    let hi := add(shr(84, ar), sar(255, es))
+    let l2 := add(lo, es)
+    hi := add(hi, lt(l2, lo))
+    // as a wide significand in [1, 2) (top bit 510): |W0| = m 2^(210 - t)
+    let nb := 0
+    switch hi
+    case 0 { nb := msb(l2) }
+    default { nb := add(msb(hi), 256) }
+    let t := sub(510, nb)
+    let mh := shl(sub(t, 256), l2)
+    let ml := 0
+    if lt(t, 256) {
+        mh := or(shl(t, hi), shr(sub(256, t), l2))
+        ml := shl(t, l2)
+    }
+    // |x| = mx 2^(nx - 128 - 254), Q = |W0| / |x| = (m / mx) 2^kq
+    let ax := absw(x)
+    let nx := msb(ax)
+    let qh, ql := w19_wrecip(shl(sub(254, nx), ax), 0)
+    qh, ql := w19_wmul(mh, ml, qh, ql)
+    let kq := sub(sub(338, t), nx)
+    if lt(qh, 0x4000000000000000000000000000000000000000000000000000000000000000) {
+        qh := or(shl(1, qh), shr(255, ql))
+        ql := shl(1, ql)
+        kq := sub(kq, 1)
+    }
+    let lh, ll := w19_wlnw(qh, ql, 0)
+    // R = W0 + ln Q + kq ln 2 at 2^-510, modulo 2^512
+    let ph, pl := w19_kln2(absw(kq))
+    switch slt(kq, 0)
+    case 0 {
+        ll := add(ll, pl)
+        lh := add(add(lh, ph), lt(ll, pl))
+    }
+    default {
+        lh := sub(sub(lh, ph), lt(ll, pl))
+        ll := sub(ll, pl)
+    }
+    let zl := shl(210, e)
+    ll := add(ll, zl)
+    lh := add(add(add(lh, shl(126, r)), sar(46, e)), lt(ll, zl))
+    // the correction R W0 / (1 + W0) at 2^-360, applied at 2^-330
+    let w192 := add(shl(64, r), sar(108, e))
+    let c := mulraw(or(shl(106, lh), shr(150, ll)), bl127_div(w192, add(w192, 0x1000000000000000000000000000000000000000000000000)))
+    rr := add(r, sar(202, add(sub(shl(30, e), sar(30, c)), 0x200000000000000000000000000000000000000000000000000)))
+}
+
+/// q = 1 + e x at 2^-256 for -1/e <= x < 0, with e to 2^-254: the distance to
+/// the branch point, to 2^-254 (the one is 2^256, which the word drops).
+function lwq(x) -> q {
+    let ph, pl := smul512(x, 0xadf85458a2bb4a9aafdc5620273d3cf1d8b9c583ce2d3695a9e13641146433fb)
+    q := or(shl(130, ph), shr(126, pl))
+}
+
+/// @object BL127S
+/// @export lambertW0(int256 x) returns (int256 r)
+/// @domain x >= -1/e
+/// @reverts OutOfRange() below -1/e
+/// @notice Principal branch of the Lambert W function, W(x) e^W(x) = x, for
+///         x >= -1/e, rounded to nearest.
+/// @dev Reverts with OutOfRange below -1/e (the Huff returned 0). W(x) = x
+///      for |x| < 2^-65 (the nearest word), and W(1..5) come from the table.
+///      Below 1 + e x = 1/8 (x < -0.322) the unknown is q = 1 + W on
+///      (q - 1) e^q + 1 = 1 + e x (to 2^-256): the seed p S(p), p =
+///      sqrt(2 (1 + e x)) and S a degree-16 fit, one sixth-order step at
+///      2^-192 on the double-word exp kernel (q within about 5 units of
+///      2^-192 whatever q, so the branch point costs none) and one
+///      rounding, nearest unless within 5 2^-64 ULP of a midpoint.
+///      Elsewhere the
+///      origin cubic x (1 - x + 3x^2/2) for |x| < 1/8 (no step below 2^-40,
+///      one to 2^-11, two beyond) or Winitzki's L (1 - ln(1 + L) / (2 + L)),
+///      L = ln(1 + x), from the crude logarithm (two steps), then
+///      fourth-order log-form steps at 2^-126 until one starts within 2^-22,
+///      and the double-word Newton step lwfin. v5 ran up to three one-word
+///      Halley steps with a one-word exp and three divisions each, and the
+///      branch-point series below 2^-40. The Huff used a 64-entry
+///      interpolation table with two steps, which gave 50 to 100 bits on
+///      (0, 64), read past the table above 64 and ran out of gas below 0.
+function bl127_lambertW0(x) -> r {
+    if slt(x, sub(0, 0x5e2d58d8b3bcdf1abadec7829054f90d)) { rev(0x7db3aba7) }
+    // W(x) = x - x^2 + ...: below 2^-65 the x^2 is under a quarter ULP
+    if lt(absw(x), 0x8000000000000000) { r := x leave }
+    let idx := sar(128, x)
+    if and(iszero(and(x, 0xffffffffffffffffffffffffffffffff)), and(sgt(idx, 0), slt(idx, 6))) {
+        r := lw(idx)
+        leave
+    }
+    let w := 0
+    switch slt(x, 0x20000000000000000000000000000000)
+    case 1 {
+        if slt(x, sub(0, 0x5267adbd9d4543376382ee923e4a59ec)) {
+            // sg as a value of x (0 here, x < 0), not the literal 0, so the
+            // optimizer keeps one copy of lwbr, lwqs and the exp kernel
+            r := lwbr(x, sgt(x, 0))
+            leave
+        }
+        // the origin cubic, |x| < 0.184; its error is about 8/3 x^3 relative
+        let x2 := mulraw(x, x)
+        w := add(sub(x, x2), mulraw(x2, add(x, sar(1, x))))
+        if lt(absw(x), 0x8000000000000000000000) { r := lwfin(x, w) leave }
+    }
+    default {
+        let rr, kk := lnm(add(0x100000000000000000000000000000000, x))
+        let L := lnc0(rr, kk)
+        rr, kk := lnm(add(0x100000000000000000000000000000000, L))
+        let l1 := lnc0(rr, kk)
+        let t := sdiv(shl(100, l1), shr(28, add(0x200000000000000000000000000000000, L)))
+        w := sub(L, shr(110, mul(shr(18, L), t)))
+    }
+    r := lwfin(x, lwfast(x, w))
+}
+
+/// @object BL127S
+/// @export lambertWm1(int256 x) returns (int256 r)
+/// @domain -1/e <= x < 0
+/// @reverts OutOfRange() outside that
+/// @notice Secondary real branch of the Lambert W function, W(x) e^W(x) = x
+///         with W(x) <= -1, for -1/e <= x < 0, rounded to nearest.
+/// @dev Reverts with OutOfRange below -1/e and for x >= 0. Below 1 + e x =
+///      1/8 (x < -0.322) as lambertW0 in q = 1 + W (negative here); above,
+///      the asymptotic L - ln(-L) + ln(-L) / L with L = ln(-x) from the
+///      table-free logarithm, then fourth-order log-form steps at 2^-126
+///      until one starts within 2^-22 (two), and the double-word
+///      step lwfin. The smallest input, -floor(2^128 / e), is 2^-128 inside
+///      -1/e and its W is -1 - 2^-63.3, not -1, which v4 returned. The
+///      archived Huff lambertwm1 was never functional and is not the
+///      reference for this routine.
+function bl127_lambertWm1(x) -> r {
+    if slt(x, sub(0, 0x5e2d58d8b3bcdf1abadec7829054f90d)) { rev(0x7db3aba7) }
+    if iszero(slt(x, 0)) { rev(0x7db3aba7) }
+    if slt(x, sub(0, 0x5267adbd9d4543376382ee923e4a59ec)) {
+        // sg = 1 as a value of x (x < 0): see lambertW0
+        r := lwbr(x, slt(x, 0))
+        leave
+    }
+    let rr, kk := lnm(sub(0, x))
+    let lx := lnc0(rr, kk)
+    rr, kk := lnm(sub(0, lx))
+    let ll := lnc0(rr, kk)
+    r := lwfin(x, lwfast(x, add(sub(lx, ll), sdiv(shl(100, ll), sar(28, lx)))))
+}
+
+// ---------------------------------------------------------------------------
+// Guard-scale helpers: 2^-192 in, 2^-192 out, no rounding
+// ---------------------------------------------------------------------------
+
+/// 2^t at 2^-192 for t at 2^-192 with t < 63, unrounded: the exp2core split
+/// without its final rounding, for kernels that keep working at 2^-192.
+function exp2g(t) -> v {
+    if slt(t, 0) {
+        let at := sub(0, t)
+        let k := shr(192, at)
+        let f := and(at, 0xffffffffffffffffffffffffffffffffffffffffffffffff)
+        if iszero(f) { v := shr(k, 0x1000000000000000000000000000000000000000000000000) leave }
+        v := shr(add(k, 1), exp2frac(sub(0x1000000000000000000000000000000000000000000000000, f)))
+        leave
+    }
+    v := shl(shr(192, t), exp2frac(and(t, 0xffffffffffffffffffffffffffffffffffffffffffffffff)))
+}
+
+/// e^x at 2^-192 for x at 2^-192 with x < 43, unrounded.
+function expg(xg) -> v {
+    v := exp2g(mulg(xg, 0x171547652b82fe1777d0ffda0d23a7d11d6aef551bad2b4b1))
+}
+
+/// floor(a * 2^192 / b) for unsigned a, b with (a >> 128) < b: two stages
+/// of divu in base 2^128.
+function divg(a, b) -> r {
+    let qh := divu(a, b)
+    let ql := divu(sub(shl(128, a), mul(qh, b)), b)
+    r := add(shl(64, qh), shr(64, ql))
+}
+
+/// e^x - 1 at 2^-192 for x at 2^-128 with |x| <= 1/16, by the series
+/// x (1 + x/2 (1 + x/3 (1 + ... x/K))) in Horner form. K = 27 at
+/// |x| = 1/16 puts the truncation below 2^-200 relative to the result; a
+/// smaller |x| needs fewer terms for the same (K = 22, 18, 14, 11, 8, 6, 5
+/// below 2^-6, 2^-8, 2^-12, 2^-16, 2^-24, 2^-32, 2^-48: |x|^K / (K + 1)!
+/// <= 2^-200). ax is |x|. The Horner mulg is inline; v stays near one, so
+/// only x's sign corrects the product.
+function expm1s(x, ax) -> v {
+    let xs := shl(64, x)
+    let k := 27
+    if lt(ax, 0x4000000000000000000000000000000) {
+        k := 22
+        if lt(ax, 0x1000000000000000000000000000000) { k := 18 }
+        if lt(ax, 0x100000000000000000000000000000) { k := 14 }
+        if lt(ax, 0x10000000000000000000000000000) { k := 11 }
+        if lt(ax, 0x100000000000000000000000000) { k := 8 }
+        if lt(ax, 0x1000000000000000000000000) { k := 6 }
+        if lt(ax, 0x100000000000000000000) { k := 5 }
+    }
+    v := 0x1000000000000000000000000000000000000000000000000
+    let l := 0
+    let h := 0
+    for {} gt(k, 1) { k := sub(k, 1) } {
+        l := mul(xs, v)
+        h := mulmod(xs, v, not(0))
+        v := add(0x1000000000000000000000000000000000000000000000000, sdiv(or(shl(64, sub(sub(sub(h, l), lt(h, l)), mul(slt(xs, 0), v))), shr(192, l)), k))
+    }
+    v := mulg(xs, v)
+}
+
+/// e^-x / 2 at 2^-192 for 0 <= x <= 88 from e^x = 2^n (1 + s) as expx gives
+/// it: 2^(191-n) / (1 + s) through one divg, floor(2^(254-n) 2^192 / (2^255 +
+/// sh/2)), the top 255 bits of s in the divisor; at most 2^191, one word.
+/// With u = e^x - 1 this is (1 - u/(1+u)) / 2. Within one unit of 2^-192
+/// plus 2^-63 unit: the quotient floors once, the bits of s dropped below
+/// 2^-255 move it by under 2^-255 e^-x / 2, the kernel's 2^-300 relative by
+/// less.
+function einvhalf(n, sh) -> v {
+    v := divg(shl(sub(254, n), 1), or(0x8000000000000000000000000000000000000000000000000000000000000000, shr(1, sh)))
+}
+
+// ---------------------------------------------------------------------------
+// Near one: log1p and expm1
+// ---------------------------------------------------------------------------
+
+/// @object BL127E
+/// @export log1p(int256 x) returns (int256 r)
+/// @domain x > -1
+/// @reverts OutOfRange() at or below -1; Overflow() if 1 + x does not fit
+/// @notice ln(1 + x), rounded to nearest. The sum 1 + x is exact in 127.128,
+///         so this is ln of an exact argument, rounded once; it exists
+///         because on an 18-decimal grid the sum is where a small x loses
+///         its digits.
+function bl127_log1p(x) -> r {
+    if iszero(sgt(x, sub(0, 0x100000000000000000000000000000000))) { rev(0x7db3aba7) }
+    r := bl127_ln(bl127_add(0x100000000000000000000000000000000, x))
+}
+
+/// @object BL127E
+/// @export expm1(int256 x) returns (int256 r)
+/// @domain x <= 88; returns -1 below -90
+/// @reverts Overflow() for x > 88
+/// @notice e^x - 1, rounded to nearest: on the 2^-128 grid the one is
+///         exact, so this is exp(x) - 1 word for word, a small x by its own
+///         series for gas: 27 terms at 2^-192 for |x| <= 1/16.
+/// @dev Below 2^-65, x itself: x^2/2 is under a quarter ULP and the series'
+///      value is x 2^192 plus less than 2^62 units, which rounds to x. The
+///      series' value is within 2 units of 2^-192 (each Horner step's floor
+///      and truncation under 1 + 1/k, damped by |x|/k <= 1/32, then the last
+///      product's floor; the tail under 2^-200 relative); when that bound
+///      reaches the rounding boundary (3.0) the exponentials' second stage
+///      decides (expw, less one). Beyond 1/16, exp(x) - 1.
+function bl127_expm1(x) -> r {
+    if iszero(x) { r := 0 leave }
+    let ax := absw(x)
+    if iszero(gt(ax, 0x10000000000000000000000000000000)) {
+        r := x
+        if iszero(lt(ax, 0x8000000000000000)) {
+            let v := expm1s(x, ax)
+            r := round64(v)
+            if rbadw(shl(192, v), 0x2000000000000000000000000000000000000000000000000) { r := sub(expw(x, 0, 0x40000000000000000000000000000000, 0, 0), 0x100000000000000000000000000000000) }
+        }
+        leave
+    }
+    r := sub(bl127_exp(x), 0x100000000000000000000000000000000)
+}
+
+// ---------------------------------------------------------------------------
+// Hyperbolic
+// ---------------------------------------------------------------------------
+//
+// 3.0: each op is correctly rounded. Its fast value carries a stated bound,
+// rbad127 tests it against the rounding boundary, and when the bound reaches
+// the boundary a second stage decides in two words on BL19's wide kernels
+// (w19_wexpr, w19_wrecip, w19_wlnw: 2^-497 to 2^-505), whose absolute error
+// is far below anything the 2^-128 grid can see.
+
+/// @import bl19 as w19: wexpr, wshr
+
+/// sinh (c = 0) or cosh (c = 1) of ax = |x| <= 88 in two words, rounded
+/// once: e^ax = 2^k (1 + E) by w19_wexpr from kk = n (expx's floor(ax log2 e),
+/// within one), e^-ax = 2^-k / (1 + E) by w19_wrecip, subtracted or added at
+/// 2^-510 (BL19's hypw). The value is (eh 2^256 + el) 2^(k - 511), within
+/// about 2^(k - 500); times 2^128 it is (eh + el 2^-256) 2^(k - 127), and
+/// with k <= 126 the bits of el cannot reach the half.
+function hypwide(ax, n, c) -> r {
+    let k, eh, el := w19_wexpr(0, n, shl(126, ax), 0)
+    eh := add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000)
+    let qh, ql := w19_wrecip(eh, el)
+    qh, ql := w19_wshr(qh, ql, shl(1, k))
+    switch c
+    case 1 { eh, el := w19_wadd(eh, el, qh, ql) }
+    default { eh, el := w19_wsub(eh, el, qh, ql) }
+    let s := sub(127, k)
+    r := shr(s, add(eh, shl(sub(s, 1), 1)))
+}
+
+/// @object BL127H
+/// @export sinh(int256 x) returns (int256 r)
+/// @domain |x| <= 88
+/// @reverts Overflow() beyond that
+/// @notice sinh(x), correctly rounded (to nearest, ties away from zero):
+///         (u + u/(1+u)) / 2 with u = e^|x| - 1 from one double-word exp at
+///         2^-192, u/(1+u) = 1 - e^-|x| by one division, the difference
+///         taken before the one rounding; when that value's bound reaches
+///         the rounding boundary, e^|x| and e^-|x| in two words.
+/// @dev e^|x| = 2^n (1 + s) from expx; e^|x| / 2 is sc192(n - 1) (floors
+///      once, the kernel within 2^-299 relative), e^-|x| / 2 is einvhalf
+///      (floors once, plus 2^-63 unit); the subtraction is exact. So V, the
+///      value at 2^-192, is within 3 units plus 2^-299 (e^|x| / 2) 2^192 <
+///      (vh + 1) 2^-43 units of sinh: err = 4 + vh / 2^43, at most 2^20 at
+///      the top of the range (precise_model.py measure, bounds127.py). Below
+///      2^-65, x itself: x^3/6 is under one unit of 2^-192. v5 ran an odd
+///      series below 1 and two exps beyond.
+function bl127_sinh(x) -> r {
+    if iszero(x) { r := 0 leave }
+    let ax := absw(x)
+    if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+    if lt(ax, 0x8000000000000000) { r := x leave }
+    let n, sh, sl := expx(ax)
+    let vh, vl := sc192(sub(n, 1), sh, sl)
+    let w := einvhalf(n, sh)
+    vh := sub(vh, lt(vl, w))
+    vl := sub(vl, w)
+    r := rnd192(vh, vl)
+    if rbad127(vl, 64, 0x100000) { r := hypwide(ax, n, 0) }
+    if slt(x, 0) { r := sub(0, r) }
+}
+
+/// @object BL127H
+/// @export cosh(int256 x) returns (int256 r)
+/// @domain |x| <= 88
+/// @reverts Overflow() beyond that
+/// @notice cosh(x), correctly rounded (to nearest, ties up): 1 + u (u/(1+u))
+///         / 2 with u = e^|x| - 1 from one double-word exp at 2^-192 and
+///         u/(1+u) = 1 - e^-|x| by one division, which is (e^|x| + e^-|x|)
+///         / 2 summed before the one rounding; when that value's bound
+///         reaches the rounding boundary, e^|x| and e^-|x| in two words.
+///         cosh(0) is exactly one.
+/// @dev e^|x| / 2 is sc192(n - 1) (floors once, kernel 2^-299 relative),
+///      e^-|x| / 2 is einvhalf (floors once, plus 2^-63 unit); the sum is
+///      exact, so V is within 4 + vh / 2^43 units of 2^-192, as sinh's
+///      (precise_model.py measure, bounds127.py). Below 2^-64, exactly one:
+///      cosh - 1 < x^2 / 2 (1 + x^2 / 12) < 2^-129, half an ULP. v5 ran two
+///      exps at every x.
+function bl127_cosh(x) -> r {
+    let ax := absw(x)
+    if gt(ax, 0x5800000000000000000000000000000000) { rev(0x35278d12) }
+    if lt(ax, 0x10000000000000000) { r := 0x100000000000000000000000000000000 leave }
+    let n, sh, sl := expx(ax)
+    let vh, vl := sc192(sub(n, 1), sh, sl)
+    let l := add(vl, einvhalf(n, sh))
+    vh := add(vh, lt(l, vl))
+    r := rnd192(vh, l)
+    if rbad127(l, 64, 0x100000) { r := hypwide(ax, n, 1) }
+}
+
+/// tanh(ax) for 2^-65 <= ax < 46 in two words, rounded once: w = e^-2ax =
+/// 2^k (1 + E) by w19_wexpr from kk (floor(-2ax log2 e) within one), then
+/// (1 - w) / (1 + w) by w19_wrecip and w19_wmul (BL19's tanhw2). The value
+/// is (eh 2^256 + el) 2^-510 within about 2^-500, and the word nearest it
+/// (eh + 2^125) / 2^126: the bits of el cannot reach the half.
+function tanhwide(ax, kk) -> r {
+    let k, eh, el := w19_wexpr(1, kk, shl(127, ax), 0)
+    eh, el := w19_wshr(add(eh, 0x4000000000000000000000000000000000000000000000000000000000000000), el, sub(0, k))
+    let dh, dl := w19_wadd(0x4000000000000000000000000000000000000000000000000000000000000000, 0, eh, el)
+    dh, dl := w19_wrecip(dh, dl)
+    eh, el := w19_wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, eh, el)
+    eh, el := w19_wmul(eh, el, dh, dl)
+    r := shr(126, add(eh, shl(125, 1)))
+}
+
+/// @object BL127H
+/// @export tanh(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice tanh(x), correctly rounded (to nearest, ties away from zero). For
+///         |x| < 1/4, u / (u + 2) with u = e^(2|x|) - 1 at 2^-192; up to
+///         |x| < 46, (1 - w) / (1 + w) with w = e^(-2|x|) at 2^-192; one
+///         division and one rounding, or, when the value's bound reaches the
+///         rounding boundary, (1 - w) / (1 + w) in two words. Beyond, exactly
+///         +-1, the nearest word.
+/// @dev Below 1/4: u from the double-word kernel (from 2^-5) or expm1s, each
+///      under 1.1 units of 2^-192 below e^(2|x|) - 1, and u / (u + 2) has
+///      slope 2 / (u + 2)^2 <= 1/2 in u: V within 0.55 + 1 (the quotient's
+///      floor), err 2. From 1/4: w floors once at 2^-192 (one unit plus the
+///      kernel's 2^-299 relative), and (1 - w) / (1 + w) has slope at most 2
+///      in w: within 2 + 1, err 3 (bounds127.py). At |x| >= 46, 1 - tanh =
+///      2 / (e^(2|x|) + 1) < 2^-131.7, under half an ULP. Below 2^-65, x
+///      itself: x^3/3 is under one unit of 2^-192. v4 subtracted a rounded
+///      quotient from one and returned +-1 from |x| = 44, where 1 - tanh is
+///      still four ULPs.
+function bl127_tanh(x) -> r {
+    if iszero(x) { r := 0 leave }
+    let ax := absw(x)
+    r := 0x100000000000000000000000000000000
+    switch lt(ax, 0x40000000000000000000000000000000)
+    case 1 {
+        if lt(ax, 0x8000000000000000) {
+            r := x
+            leave
+        }
+        let u := 0
+        switch gt(ax, 0x8000000000000000000000000000000)
+        case 1 {
+            let n, sh, sl := expx(shl(1, ax))
+            let vh, vl := sc192(n, sh, sl)
+            u := sub(vl, 0x1000000000000000000000000000000000000000000000000)
+        }
+        default { u := expm1s(shl(1, ax), shl(1, ax)) }
+        let v := divg(u, add(u, 0x2000000000000000000000000000000000000000000000000))
+        r := round64(v)
+        if rbad127(v, 64, 2) { r := tanhwide(ax, sub(0, 1)) }
+    }
+    default {
+        if lt(ax, 0x2e00000000000000000000000000000000) {
+            let n, sh, sl := expx(sub(0, shl(1, ax)))
+            let vh, vl := sc192(n, sh, sl)
+            let v := divg(sub(0x1000000000000000000000000000000000000000000000000, vl), add(0x1000000000000000000000000000000000000000000000000, vl))
+            r := round64(v)
+            if rbad127(v, 64, 3) { r := tanhwide(ax, n) }
+        }
+    }
+    if slt(x, 0) { r := sub(0, r) }
+}
+
+/// l2p(x) for 0 < x < 2^192 with its one-word start, log2m of the mantissa
+/// at 2^-192 (not read for a power of two).
+function l2px(x) -> lh, ll {
+    let ms := msb(x)
+    let y0 := 0
+    if and(x, sub(x, 1)) { y0 := log2m(shl(sub(192, ms), x)) }
+    lh, ll := l2p(x, ms, y0)
+}
+
+/// atanh's middle stage for 0 < ax < 1: (log2(1 + ax) - log2(1 - ax)) ln 2 / 2
+/// from l2p of the two exact words, at 2^-384, ok when that value rounds
+/// certainly. Each l2p is within 2^-299 and ln 2 / 2 floors at 2^-256 under
+/// a log of at most 129: within 2^-248 + 2^-299 + 2 units of 2^-384, err
+/// 2^137 units (bounds127.py).
+function atanhmid(ax) -> r, ok {
+    let ah, al := l2px(add(0x100000000000000000000000000000000, ax))
+    let bh, bl := l2px(sub(0x100000000000000000000000000000000, ax))
+    let lh := sub(sub(ah, bh), lt(al, bl))
+    let ll := sub(al, bl)
+    let ph, pl := mul512(lh, 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b16c5068badc5d57d15)
+    let a := hmul(ll, 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b16c5068badc5d57d15)
+    pl := add(pl, a)
+    ph := add(ph, lt(pl, a))
+    ok := iszero(rbadm127(pl, 256, 0x20000000000000000000000000000000000))
+    r := add(ph, shr(255, pl))
+}
+
+/// atanh(ax) for 0 < ax < 1 in two words, rounded once: 2 atanh = ln(1 + ax)
+/// - ln m + j ln 2 for 1 - ax = 2^-j m, m in [1, 2), both arguments exact,
+/// each logarithm by w19_wlnw (within 2^-497); their difference, under ln 2,
+/// goes to 2^-384 (floored) and j ln 2 is added there (ln 2 floored at
+/// 2^-384). Halved in the one rounding: within about 2^-377.
+function atanhwide(ax) -> r {
+    let b := sub(0x100000000000000000000000000000000, ax)
+    let mb := msb(b)
+    let ah, al := w19_wlnw(shl(126, add(0x100000000000000000000000000000000, ax)), 0, 0)
+    let bh, bl := w19_wlnw(shl(sub(254, mb), b), 0, 0)
+    let dh := sub(sub(ah, bh), lt(al, bl))
+    let dl := or(shl(130, dh), shr(126, sub(al, bl)))
+    let j := sub(128, mb)
+    let ph, pl := mul512(j, 0x40f343267298b62d8a0d175b8baafa2be7b876206debac98559552fb4afa1b10)
+    pl := add(pl, dl)
+    ph := add(add(add(ph, mul(j, 0xb17217f7d1cf79abc9e3b39803f2f6af)), sar(126, dh)), lt(pl, dl))
+    r := shr(1, add(ph, 1))
+}
+
+/// @object BL127H
+/// @export atanh(int256 x) returns (int256 r)
+/// @domain |x| < 1
+/// @reverts OutOfRange() at or beyond +-1
+/// @notice atanh(x) = log1p(2|x| / (1 - |x|)) / 2, correctly rounded (to
+///         nearest, ties away from zero): the quotient at 2^-192 by one
+///         division, one unrounded logarithm of 1 + it, scaled by ln2/2;
+///         when that value's bound reaches the rounding boundary, the
+///         double-word l2p of 1 + |x| and 1 - |x|, and when that one's does,
+///         their logarithms in two words.
+/// @dev q = floor(2|x| 2^192 / (1 - |x|)) floors once, which moves the log by
+///      under 1.5 units; 2^192 + q read as a 127.128 word is 2^64 (1 + q), so
+///      log2g of it less 64 is log2((1 + |x|) / (1 - |x|)); the final mulg
+///      floors once. Within 2^-62 of +-1 the quotient would pass 2^255 and
+///      the difference of the two logs of the exact words 1 + |x| and
+///      1 - |x| runs instead. log2g is within 2^-145, so V is within 2^-145
+///      (one log, scaled, plus 2 units) or 2^-144.5 (two) of atanh: err 2^47
+///      units of 2^-192 (precise_model.py measure, bounds127.py), about one
+///      input in 2^16 to the l2p stage.
+function bl127_atanh(x) -> r {
+    let one := 0x100000000000000000000000000000000
+    let ax := absw(x)
+    if iszero(lt(ax, one)) { rev(0x7db3aba7) }
+    if iszero(x) { r := 0 leave }
+    switch lt(ax, 0xfffffffffffffffc0000000000000000)
+    case 1 {
+        let q := add(0x1000000000000000000000000000000000000000000000000, divg(shl(1, ax), sub(one, ax)))
+        r := sub(log2g(q), 0x40000000000000000000000000000000000000000000000000)
+    }
+    default { r := sub(log2g(add(one, ax)), log2g(sub(one, ax))) }
+    r := mulg(r, 0x58b90bfbe8e7bcd5e4f1d9cc01f97b57a079a193394c5b17)
+    switch rbad127(r, 64, 0x800000000000)
+    case 0 { r := round64(r) }
+    default {
+        let ok := 0
+        r, ok := atanhmid(ax)
+        if iszero(ok) { r := atanhwide(ax) }
+    }
+    if slt(x, 0) { r := sub(0, r) }
+}
+
+// ---------------------------------------------------------------------------
+// The error function and the normal distribution
+// ---------------------------------------------------------------------------
+
+// The second stage behind their rounding tests (erfw127, 3.0): BL19's
+// two-word series and continued fraction, erfw's pieces, 2^-444 or better.
+/// @import bl19 as w19: erfser2, erfccf2, shr3, wshr, wsub
+
+/// erf(x) at 2^-192 for 0 <= x <= 4 given at 2^-192, by the all-positive
+/// series (2/sqrt(pi)) e^(-x^2) x sum_k (2x^2)^k / (2k+1)!!, summed forward
+/// until the term floors to zero: at most about 125 terms at x = 4, within
+/// 2^45.3 units of 2^-192 (exp2frac's 2^-146.7 times erf, and the floors:
+/// erf_model.py --bounds), the rounding tests' 3 2^44. The term's
+/// mulg is inline and unsigned (term and 2 x^2 are non-negative and below
+/// 2^255), the divisor 2k + 1 counted directly: the same floors.
+function erfs(xg) -> v {
+    let x2 := mulg(xg, xg)
+    let d := shl(1, x2)
+    let term := 0x1000000000000000000000000000000000000000000000000
+    let s := term
+    let l := 0
+    let h := 0
+    for { let k := 3 } term { k := add(k, 2) } {
+        l := mul(term, d)
+        h := mulmod(term, d, not(0))
+        term := div(or(shl(64, sub(sub(h, l), lt(h, l))), shr(192, l)), k)
+        s := add(s, term)
+    }
+    v := mulg(mulg(mulg(xg, expg(sub(0, x2))), s), 0x120dd750429b6d11ae3a914fed7fd8688281341d7587cea2e)
+}
+
+/// erfc(x) at 2^-192 for 4 < x <= 9.5 given at 2^-192: e^(-x^2) g(x),
+/// g(x) = e^(x^2) erfc(x) by the degree-43 minimax polynomial in
+/// t = (2x - 13.5) / 5.5 on [4, 9.5], fitted to the tolerance 2^-175 e^(x^2)
+/// (erf_model.py: within 0.244 of it on all of [-1, 1] after the
+/// coefficients' rounding, certified by a dense grid and a bound on the
+/// error's second derivative), so erfc is within 2^-175 before e^(-x^2)'s
+/// own error; signed Horner at 2^-192, the 43 floors under 43 units of g,
+/// the product written in line (mulg's words, t's sign once). e^(-x^2) is
+/// taken unrounded, so a result far below one keeps its bits: erfc(9.3)
+/// is the last value above half an ULP and comes out as one ULP. In all
+/// within 2^19.4 units of 2^-192, e^(-x^2)'s error at x = 4 the most of it
+/// (erf_model.py --bounds): the rounding tests' 2^20. Release 2.2's
+/// continued fraction cost about 20,000 gas at x = 4.
+function erfct(xg) -> v {
+    let t := sub(mulg(xg, 0x5d1745d1745d1745d1745d1745d1745d1745d1745d1745d1), 0x2745d1745d1745d1745d1745d1745d1745d1745d1745d1746)
+    let tn := slt(t, 0)
+    let p := sub(0, 0x7e2a9339ca52a4c78ee31bc306cd88f95)
+    let l := 0
+    let h := 0
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x78dfef1317e566eca1d529cc995f2aeff2))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x37d9d24bb7e93a43550e91c8bf4fca67d21))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x1043472d59369235297a156b37c2f4691c40))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x34f2b4c78e9e8cc6b83b542c049779533640))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x7deb73cf55c41d617c47cd6edef652651259))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xdd5c8f59dc9a2ff0d1dd3803131924479866))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x116b458baf217511807765a5e3b5f4f906cf3))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xdbd2bd29703e2fde17d56d6382b8daf04a48))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x154523aa3edf52de17189faa14e9b8f4f704))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xce9b5aa8879e8c3eee6b374dcd7cb9fd9219)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x15d8f6bd4791d475eb3631d27ed1358a27f84)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xc3d6c24e7503157d520fa17dff2394742a5c)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xf3b87046034f16eebc0954019d3f55925bfa)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x29dbc46eda78017993d952d37728cb63b6462))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x65f2d5f27272108225c73774f2b931cffff11)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x157f298f33a10f32bffdbc61621c42e26a3484))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x40c81024b083b2a46130597f06f040a924580c)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xc4d1f982d76c96039ee300f446944225686bdc))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x252d12c767b3b041d0409e00c0ba8beb164c4cc)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x6f944930ea383c35dc2063e872b4c81eb7210a3))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x14cdcbbe7d619c7212aa1d1e8f0f3c0b69f6d036)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x3dab40fbbf2fde372877ddc5569bae21706f6716))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xb5a1205808a51b7d87198aef9b262357ea1a2f2a)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x21370ccfb9287989b4d9a440f48bc62b98b173492))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x6089dc5f2e3f692f726418865451e6abc0f45c6bb)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x116aecfe3721c7a24529e97473ccbb4d69f46fa6e1))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x31eedb640d39e6e5758978d026eb391eeef6c21c64)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x8e23c9e6eb8a5ce056f542791765467f57ed434424))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x191b5d7a916d3c1ff3f2809c4afd9ad2b5a8e13a4e4)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x466fb38c9de8b0620c5337ac6d507bd27742264be7e))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0xc420ed62eeb56fc4b5565d3b92205d6cbe80e71636f)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x21df26a851557b281e29540e35160bdacf968062a07a))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x5cdd6ee3a2d03f7a0a38e320f2609f96bd5ce5ad6842)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0xfc934391e20ec6eca65b9c94814bf8b89b13a99efb88))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x2a95b1322a98e3830e8d70cf291f04aaf9c9bc6603e20)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x71eb61e0d358161a285dcae5ed4388839ef545b8ee689))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x12e250826dfedd6c937ce5a2b81b1ea75e88bba89ac3f6)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x31a59d12d0665f9b211136ba61792fd1614bfe057f5781))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x815a119d290bc172f359fc2f74891e18cdd257f124970c)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x14de983204eaa991cc5cd50d2b9672c9212bf371966e03b))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x355cfb26a0d883ad9633a0ff14a5f864aea4a8286515262)
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), sub(0, 0x871f2fe7ada132110b75a266664936671b1e4853fd070d2))
+    l := mul(p, t)
+    h := mulmod(p, t, not(0))
+    p := add(or(shl(64, sub(sub(sub(sub(h, l), lt(h, l)), mul(slt(p, 0), t)), mul(tn, p))), shr(192, l)), 0x152b80d463c46f83418b76f03a108cebbf3ca83ee1d8a559)
+    v := mulg(expg(sub(0, mulg(xg, xg))), p)
+}
+
+/// The second stage of erf, erfc and normCdf (3.0): erf(y) for y = |x| /
+/// sqrt(2^h), x = ax 2^-128 > 0, to nearest on the grid 2^-(128 - h), from
+/// BL19's wide kernels on x as BL19's (u, m), exact: below y = 7 the series
+/// in two words (erfser2), from 7 one minus the continued fraction
+/// (erfccf2), each 2^-444 or better, then one rounding of the value at
+/// 2^-510. erf(y) is transcendental for x != 0, never a midpoint, so
+/// 1 +- erf(y) rounds to 1 +- this word: the ops add it to or subtract it
+/// from one (normCdf from one half) under any tie rule.
+function erfw127(ax, h) -> r {
+    let b := msb(ax)
+    let u := sub(b, 128)
+    let m := shl(sub(236, b), ax)
+    let fh := 0
+    let fl := 0
+    let lim := 0x700000000000000000000000000000000
+    if h { lim := 0x9e6454cd7aa297f3ce4dd87d06a166cb4 }
+    switch lt(ax, lim)
+    case 1 {
+        let n2, n1, n0, e := w19_erfser2(u, m, h)
+        fh, fl := w19_shr3(n2, n1, n0, sub(sub(0, 510), e))
+    }
+    default {
+        let vh, vl, ve := w19_erfccf2(u, m, h)
+        vh, vl := w19_wshr(vh, vl, sub(0, ve))
+        fh, fl := w19_wsub(0x4000000000000000000000000000000000000000000000000000000000000000, 0, vh, vl)
+    }
+    r := shr(add(126, h), add(fh, shl(add(125, h), 1)))
+}
+
+/// @object BL127N
+/// @export erf(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice The error function. |x| <= 4 by the series, |x| > 4 as
+///         1 - erfc(x) by the tail polynomial, both at 2^-192; one rounding
+///         when the value's bound (2^45.6 and 2^20 units of 2^-192,
+///         erf_model.py) clears the rounding boundary, else BL19's wide
+///         second stage (erfw127): correctly rounded. +-1 exactly from
+///         |x| >= 9.375, where 1 - erf is below 2^-130.8 and the subtraction
+///         rounds to one.
+function bl127_erf(x) -> r {
+    if iszero(x) { r := 0 leave }
+    let ax := absw(x)
+    r := 0x100000000000000000000000000000000
+    if lt(ax, 0x960000000000000000000000000000000) {
+        let xg := shl(64, ax)
+        let v := 0
+        let b := 0
+        switch gt(ax, 0x400000000000000000000000000000000)
+        case 0 {
+            v := erfs(xg)
+            b := rbad127(v, 64, 0x300000000000)
+        }
+        default {
+            v := sub(0x1000000000000000000000000000000000000000000000000, erfct(xg))
+            b := rbad127(v, 64, 0x100000)
+        }
+        switch b
+        case 0 { r := round64(v) }
+        default { r := erfw127(ax, 0) }
+    }
+    if slt(x, 0) { r := sub(0, r) }
+}
+
+/// @object BL127N
+/// @export erfc(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice The complementary error function 1 - erf(x), computed directly
+///         for x > 4 so the tail keeps its digits down to the format's
+///         floor (erfc(9.3) is one ULP; zero from 9.375, where it is below
+///         2^-130.8); 2 - erfc(-x) for x < 0. One rounding, or erf's second
+///         stage when the bound reaches the boundary: correctly rounded.
+function bl127_erfc(x) -> r {
+    let one := 0x100000000000000000000000000000000
+    if iszero(x) { r := one leave }
+    let ax := absw(x)
+    let v := 0
+    let b := 0
+    if lt(ax, 0x960000000000000000000000000000000) {
+        let xg := shl(64, ax)
+        switch gt(ax, 0x400000000000000000000000000000000)
+        case 0 {
+            v := sub(0x1000000000000000000000000000000000000000000000000, erfs(xg))
+            b := rbad127(v, 64, 0x300000000000)
+        }
+        default {
+            v := erfct(xg)
+            b := rbad127(v, 64, 0x100000)
+        }
+    }
+    // tested before 2 - v: the test of 2 - v with err one less, which still
+    // covers the bound (erf_model.py), and err a constant in each branch
+    if slt(x, 0) { v := sub(0x2000000000000000000000000000000000000000000000000, v) }
+    r := round64(v)
+    if b {
+        switch slt(x, 0)
+        case 1 { r := add(one, erfw127(ax, 0)) }
+        default { r := sub(one, erfw127(ax, 0)) }
+    }
+}
+
+/// @object BL127N
+/// @export normCdf(int256 x) returns (int256 r)
+/// @domain any x
+/// @reverts never
+/// @notice The standard normal distribution function
+///         Phi(x) = erfc(-x / sqrt2) / 2, the argument scaled at 2^-192. The
+///         tail keeps its digits to the format's floor: Phi(-13) is about
+///         two ULPs, Phi(-14) rounds to zero, and Phi(x) is exactly one from
+///         x = 14. One rounding, or erf's second stage at y = |x| / sqrt 2
+///         (exact, as BL19's) when the bound reaches the boundary: correctly
+///         rounded. This is the N(d) of Black-Scholes; on an 18-decimal grid
+///         it is zero from about d = -8.3.
+function bl127_normCdf(x) -> r {
+    if iszero(x) { r := 0x80000000000000000000000000000000 leave }
+    let ax := absw(x)
+    let v := 0
+    let b := 0
+    // from |x| = 13.3125 (|x| / sqrt2 > 9.41) erfc is below 2^-130.8: Phi is 0 or 1
+    if lt(ax, 0xd50000000000000000000000000000000) {
+        let yg := mulg(shl(64, ax), 0xb504f333f9de6484597d89b3754abe9f1d6f60ba893ba84d)
+        switch gt(yg, 0x4000000000000000000000000000000000000000000000000)
+        case 0 {
+            v := shr(1, sub(0x1000000000000000000000000000000000000000000000000, erfs(yg)))
+            b := rbad127(v, 64, 0x300000000000)
+        }
+        default {
+            v := shr(1, erfct(yg))
+            b := rbad127(v, 64, 0x100000)
+        }
+    }
+    // Phi(-|x|) tested before 1 - v, as erfc's
+    if iszero(slt(x, 0)) { v := sub(0x1000000000000000000000000000000000000000000000000, v) }
+    r := round64(v)
+    if b {
+        switch slt(x, 0)
+        case 1 { r := sub(0x80000000000000000000000000000000, erfw127(ax, 1)) }
+        default { r := add(0x80000000000000000000000000000000, erfw127(ax, 1)) }
+    }
+}

@@ -7,10 +7,10 @@ Stages dist/contracts/ from packages/contracts/ (package.json, README.md), the
 root LICENSE and the sources under contracts/src, laid out so that one import
 path works in every install:
 
-    @blockulator/contracts/fp127/FP127Lib.sol    fp127/  <- contracts/src/fp127
-    @blockulator/contracts/fp19/FP19Lib.sol    fp19/  <- contracts/src/fp19
+    @blockulator/contracts/bl127/BL127Lib.sol    bl127/  <- contracts/src/bl127
+    @blockulator/contracts/bl19/BL19Lib.sol    bl19/  <- contracts/src/bl19
     @blockulator/contracts/wad/BlockulatorWad.sol wad/   <- contracts/src/wad
-    @blockulator/contracts/deployments/FP127.json        <- contracts/deployments
+    @blockulator/contracts/deployments/BL127.json        <- contracts/deployments
 
 Then it runs `npm pack --dry-run` and `forge soldeer push --dry-run` on the
 staged directory and fails unless both file lists hold only the package's own
@@ -37,31 +37,31 @@ SOLDEER_NAME = "blockulator"
 # staged dir -> (source dir, globs). A new Solidity file in a source dir (the
 # typed values, say) joins the package without an edit here.
 LAYOUT = {
-    "fp127": (ROOT / "contracts/src/fp127", ["*.sol", "*.yul", "abi*.json"]),
-    "fp19": (ROOT / "contracts/src/fp19", ["*.sol", "*.yul", "abi*.json"]),
+    "bl127": (ROOT / "contracts/src/bl127", ["*.sol", "*.yul", "abi*.json"]),
+    "bl19": (ROOT / "contracts/src/bl19", ["*.sol", "*.yul", "abi*.json"]),
     "wad": (ROOT / "contracts/src/wad", ["*.sol"]),
     "deployments": (ROOT / "contracts/deployments", ["*.json"]),
 }
 
 REQUIRED = [
     "package.json", "README.md", "LICENSE",
-    "fp127/FP127Lib.sol", "fp127/IFP127.sol", "fp127/IFP127E.sol", "fp127/IFP127H.sol",
-    "fp127/IFP127N.sol", "fp127/IFP127S.sol", "fp127/FP127.yul", "fp127/FP127E.yul",
-    "fp127/FP127H.yul", "fp127/FP127N.yul", "fp127/FP127S.yul", "fp127/abi.json",
-    "fp127/abiE.json", "fp127/abiH.json", "fp127/abiN.json", "fp127/abiS.json",
-    "fp19/FP19Lib.sol", "fp19/IFP19.sol", "fp19/IFP19E.sol", "fp19/IFP19H.sol",
-    "fp19/IFP19N.sol", "fp19/IFP19S.sol", "fp19/FP19.yul", "fp19/FP19E.yul",
-    "fp19/FP19H.yul", "fp19/FP19N.yul", "fp19/FP19S.yul", "fp19/abi.json",
-    "fp19/abiE.json", "fp19/abiH.json", "fp19/abiN.json", "fp19/abiS.json",
+    "bl127/BL127Lib.sol", "bl127/IBL127.sol", "bl127/IBL127E.sol", "bl127/IBL127H.sol",
+    "bl127/IBL127N.sol", "bl127/IBL127S.sol", "bl127/BL127.yul", "bl127/BL127E.yul",
+    "bl127/BL127H.yul", "bl127/BL127N.yul", "bl127/BL127S.yul", "bl127/abi.json",
+    "bl127/abiE.json", "bl127/abiH.json", "bl127/abiN.json", "bl127/abiS.json",
+    "bl19/BL19Lib.sol", "bl19/IBL19.sol", "bl19/IBL19E.sol", "bl19/IBL19H.sol",
+    "bl19/IBL19N.sol", "bl19/IBL19S.sol", "bl19/BL19.yul", "bl19/BL19E.yul",
+    "bl19/BL19H.yul", "bl19/BL19N.yul", "bl19/BL19S.yul", "bl19/abi.json",
+    "bl19/abiE.json", "bl19/abiH.json", "bl19/abiN.json", "bl19/abiS.json",
     "wad/BlockulatorWad.sol",
-    "deployments/FP127.json", "deployments/FP19.json", "deployments/RELEASE.json",
+    "deployments/BL127.json", "deployments/BL19.json", "deployments/RELEASE.json",
 ]
 
 # every published path must match one of these
 ALLOWED = re.compile(
     r"^(package\.json|README\.md|LICENSE"
-    r"|(fp127|fp19|wad)/[A-Za-z0-9_]+\.(sol|yul)"
-    r"|(fp127|fp19)/abi[A-Z]?\.json"
+    r"|(bl127|bl19|wad)/[A-Za-z0-9_]+\.(sol|yul)"
+    r"|(bl127|bl19)/abi[A-Z]?\.json"
     r"|deployments/[A-Za-z0-9_.]+\.json)$"
 )
 # and none of these, wherever they sit

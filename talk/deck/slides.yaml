@@ -1,0 +1,395 @@
+# The deck's single source: one entry per slide of "The End of Rounding
+# Errors". `scene` is the manim module and class under talk/scenes/;
+# `sections` names the scene's SECTIONS in order (build.py asserts they
+# equal the class's SECTIONS and the rendered index), each with the
+# sentence of research_notes/talk/script-v2.md spoken over it, verbatim
+# (a section with no sentence has cue ""). `notes` are the script's [you]
+# lines. Only the title loops; every other section plays once and holds.
+# Text is never paraphrased here: change script-v2 first.
+
+- slide: 1
+  title: THE END OF ROUNDING ERRORS
+  scene: s01_title.Title
+  loop: true
+  sections:
+    - name: title
+      cue: "Computers round. That will never end. What can end is the rounding *error*: the wrong answer, or the wrong direction."
+  notes:
+    - "[you: who you are, one line]"
+
+
+- slide: 2
+  title: What is e⁴⁰?
+  scene: s02_exp40.Exp40
+  sections:
+    - name: exact
+      cue: "Ask a mathematician what e to the forty is and you get one answer."
+    - name: libraries
+      cue: "Ask Ethereum and you get three. All three are good."
+    - name: blockulator
+      cue: "None is the closest value an 18-decimal word can hold. Blockulator's is."
+    - name: closing
+      cue: ""
+
+
+- slide: 3
+  title: exp is under everything
+  scene: s03_under.Under
+  sections:
+    - name: four
+      cue: "Every rate, every discount, every option price runs through exp."
+    - name: resolve
+      cue: ""
+    - name: alone
+      cue: "If exp has no canonical value on chain, nothing built on it has one. That is an attack vector."
+
+
+- slide: 4
+  title: Computers round
+  scene: s04_grid.Grid
+  sections:
+    - name: human
+      cue: "A 256-bit word holds finitely many numbers."
+    - name: decimal
+      cue: "e to the forty is not one of them."
+    - name: binary
+      cue: ""
+    - name: half
+      cue: "Half a unit is the gap that stays."
+    - name: snaps
+      cue: "The wrong tick, or the wrong direction, is the error we can end."
+
+
+- slide: 5
+  title: $130 million
+  scene: s05_cost.Cost
+  sections:
+    - name: resupply
+      cue: "Since June 2025: more than a hundred and thirty million dollars, before recoveries."
+    - name: bunni
+      cue: ""
+    - name: balancer-v2
+      cue: ""
+    - name: thetanuts
+      cue: ""
+    - name: balancer-v1
+      cue: "Five incidents."
+    - name: closing
+      cue: "One rounding step each."
+
+
+- slide: 6
+  title: Resupply
+  scene: s06_resupply.Resupply
+  sections:
+    - name: price
+      cue: "One in full. A donation into an empty vault."
+    - name: division
+      cue: "An exchange rate just under one half."
+    - name: floor
+      cue: "Integer division floors it to zero."
+    - name: check
+      cue: "Ten million times zero is zero, so one wei of collateral borrows ten million."
+    - name: half
+      cue: "The exact rate fails that check five million times over."
+    - name: multiplier
+      cue: ""
+
+
+- slide: 7
+  title: Bunni v2, 2 Sep 2025
+  scene: s06b_bunni.Bunni
+  sections:
+    - name: before
+      cue: "Forty-four withdrawals, each rounding the idle balance the way the team believed safe."
+    - name: step
+      cue: ""
+    - name: round
+      cue: ""
+    - name: repeat
+      cue: "Active USDC 28 base units to 4; liquidity down 84%."
+    - name: take
+      cue: ""
+    - name: exact
+      cue: ""
+  notes:
+    - "[you: Bunni's \"safe in isolation\", if you want it]"
+
+- slide: 8
+  title: Balancer V2, 3 Nov 2025
+  scene: s06c_balancer_v2.BalancerV2
+  sections:
+    - name: before
+      cue: ""
+    - name: step
+      cue: "17 × 1.0581 = 17.988, rounded down to 17."
+    - name: round
+      cue: ""
+    - name: repeat
+      cue: "A swap undercharged by 34.7%, repeated 55 times in one transaction."
+    - name: take
+      cue: "$121.1M across five chains."
+    - name: exact
+      cue: ""
+
+- slide: 9
+  title: Thetanuts, 15 Jun 2026
+  scene: s06d_thetanuts.Thetanuts
+  sections:
+    - name: before
+      cue: "Supply redeemed down to 3 raw units,"
+    - name: step
+      cue: "then 37 mints, each charged less than one raw unit, floored to 0."
+    - name: round
+      cue: ""
+    - name: repeat
+      cue: ""
+    - name: take
+      cue: "About $105,000 in USDC, plus the rest of the vault."
+    - name: exact
+      cue: ""
+
+- slide: 10
+  title: Balancer V1, 31 Aug 2026
+  scene: s06e_balancer_v1.BalancerV1
+  sections:
+    - name: before
+      cue: ""
+    - name: step
+      cue: "3 × 1.4999… = 4.4999…, rounded to 4."
+    - name: round
+      cue: ""
+    - name: repeat
+      cue: "One token unit paid for one and a half, 438 times."
+    - name: take
+      cue: "120 pools, $1.39M."
+    - name: exact
+      cue: ""
+
+- slide: 11
+  title: Two failures, one decision
+  scene: s07_two.Two
+  sections:
+    - name: bands
+      cue: ""
+    - name: resupply
+      cue: "Resupply rounded too early."
+    - name: bunni
+      cue: "Bunni"
+    - name: balancer-v2
+      cue: "and Balancer V2 rounded too often:"
+    - name: round-once
+      cue: "carry the exact value and round once, and the attack stops."
+    - name: thetanuts
+      cue: "Thetanuts"
+    - name: balancer-v1
+      cue: "and Balancer V1 rounded at a unit, where no precision helps"
+    - name: direction
+      cue: "and only the direction decides who pays."
+    - name: box
+      cue: "Inside a calculation, precision shrinks error. At a unit, direction decides who pays."
+  notes:
+    - "[you: Bunni's \"safe in isolation\", if you want it]"
+
+
+- slide: 12
+  title: Measure it
+  scene: s08_ladder.Ladder
+  sections:
+    - name: compound
+      cue: "We measure gas on every change. Almost nobody measures digits. Ten thousand dollars at ten percent, compounded daily: every library loses a digit each time the steps grow tenfold."
+    - name: blockulator
+      cue: "BL127 and BL19 start nineteen and fifty-two digits higher and keep the gap."
+    - name: accrual
+      cue: ""
+    - name: adaptive
+      cue: ""
+    - name: closing
+      cue: ""
+
+
+- slide: 13
+  title: The cliff
+  scene: s09_cliff.Cliff
+  sections:
+    - name: columns
+      cue: "Then the cliffs."
+    - name: zeros
+      cue: "exp of minus forty-two is zero on an 18-decimal grid. Every probability below ten to the minus eighteen is gone."
+    - name: bl19
+      cue: "BL19 never falls off."
+    - name: legend
+      cue: ""
+    - name: closing
+      cue: ""
+
+
+- slide: 14
+  title: Real markets, today
+  scene: s10_live.Live
+  sections:
+    - name: deployed
+      cue: "Three hundred and twenty-six live Aave and Morpho markets. The same interest, measured three times: seven correct digits as deployed,"
+    - name: bl127
+      cue: "thirty in BL127,"
+    - name: bl19
+      cue: "sixty-seven in BL19."
+    - name: closing
+      cue: ""
+
+
+- slide: 15
+  title: Precision is a budget
+  scene: s11_budget.Budget
+  sections:
+    - name: title
+      cue: "Not every protocol should change libraries. Spend precision where it pays:"
+    - name: horizons
+      cue: "long horizons,"
+    - name: cancellation
+      cue: "cancellation,"
+    - name: tails
+      cue: "tails,"
+    - name: iteration
+      cue: "iteration."
+    - name: direction
+      cue: "And decide the direction of every rounding at a unit."
+
+
+- slide: 16
+  title: There is no reference
+  scene: s12_reference.Reference
+  sections:
+    - name: address
+      cue: "No standard says what exp should return on chain. A correctly rounded library can be that reference:"
+    - name: chains
+      cue: "one right word for every input, the same address on every chain,"
+    - name: call
+      cue: ""
+    - name: properties
+      cue: "no owner, no upgrade path,"
+    - name: closing
+      cue: "one call to check."
+
+
+- slide: 17
+  title: Not switch. Measure.
+  scene: s13_not_switch.NotSwitch
+  sections:
+    - name: not
+      cue: "Not \"switch libraries\"."
+    - name: measure
+      cue: "\"Measure yourself against the reference.\""
+
+
+- slide: 18
+  title: What institutions buy
+  scene: s14_institutions.Institutions
+  sections:
+    - name: scales
+      cue: "Fees scale with the computation; errors scale with the amount."
+    - name: not-cents
+      cue: "What an institution buys is not fewer cents."
+    - name: reproducible
+      cue: "It is a result that can be reproduced,"
+    - name: declared
+      cue: "declared"
+    - name: checked
+      cue: "and checked."
+    - name: precedent
+      cue: ""
+
+
+- slide: 19
+  title: Two formats
+  scene: s15_formats.Formats
+  sections:
+    - name: bar
+      cue: "Two ways to spend 256 bits."
+    - name: fixed
+      cue: "Fixed point: thirty-eight digits in a known range."
+    - name: floating
+      cue: "Floating point, binary256: seventy-one digits at any magnitude."
+    - name: revert
+      cue: "Overflow reverts, because a revert can't be ignored."
+    - name: rule
+      cue: ""
+
+
+- slide: 20
+  title: What correct costs
+  scene: s16_ziv.Ziv
+  sections:
+    - name: prices
+      cue: "On the EVM a multiply is five gas and a wide division four hundred."
+    - name: fast
+      cue: "Ziv's technique: a fast value with a derived bound; test whether the bound could change the rounding;"
+    - name: crosses
+      cue: "only then recompute."
+    - name: recompute
+      cue: ""
+    - name: counters
+      cue: "For exp, that happens once in twenty-two thousand calls."
+    - name: closing
+      cue: ""
+
+
+- slide: 21
+  title: Knowing it's right
+  scene: s17_proofs.Proofs
+  sections:
+    - name: test-proof
+      cue: "A test checks the inputs it was given. A proof covers every input."
+    - name: proven
+      cue: "The core arithmetic of both libraries is proven."
+    - name: fuzzed
+      cue: ""
+    - name: tested
+      cue: "Every transcendental is swept against a 300-digit reference with every fallback forced: zero misrounded."
+    - name: limits
+      cue: "Two things no check covers, and they are on the slide."
+    - name: closing
+      cue: "State your own guarantees this specifically."
+
+
+- slide: 22
+  title: Decide. Measure. Declare.
+  scene: s18_habits.Habits
+  sections:
+    - name: title
+      cue: "Rounding is a design decision, like access control."
+    - name: decide
+      cue: "Decide which way."
+    - name: measure
+      cue: "Measure your digits like your gas."
+    - name: declare
+      cue: "Declare what you guarantee, and check it."
+    - name: block
+      cue: ""
+
+
+- slide: 23
+  title: The reference
+  scene: s19_address.Address
+  sections:
+    - name: addresses
+      cue: "Open source. One address on every chain that has it."
+    - name: objects
+      cue: ""
+    - name: use
+      cue: ""
+    - name: links
+      cue: "Today, Sepolia. Measure yourself against it."
+  notes:
+    - "[you: thanks]"
+
+- slide: 24
+  title: Thank you
+  scene: s20_thanks.Thanks
+  sections:
+    - name: thanks
+      cue: ""
+    - name: links
+      cue: ""
+  notes:
+    - "[you: thanks]"
