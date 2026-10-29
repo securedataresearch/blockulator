@@ -444,6 +444,102 @@ def expect_s06_resupply(mod) -> dict:
     }
 
 
+def expect_s06b_bunni(mod) -> dict:
+    """The decisive step by a second route (Decimal), the chain's own reads
+    for the start and the end, the replay table cross-checked against the
+    JSON and the module where both have a figure."""
+    d = vocab._load("scripts/replays/bunni.json")
+    st, steps = d["start"], d["steps"]
+    raw0, idle0, T0, s0 = int(st["raw0"]), int(st["idle"]), int(st["totalSupply"]), int(steps["shares"][0])
+    inc = next(i for i in vocab.incidents()["incidents"] if i["protocol"].startswith("Bunni"))
+    with localcontext() as ctx:
+        ctx.prec = 120
+
+        def dec(x: Decimal, places: int) -> str:
+            return format(x.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP), "f")
+
+        sub = Decimal(idle0) * Decimal(s0) / Decimal(T0)
+        sub_str = dec(sub, mod.SUB_DECIMALS)
+        floor = int(sub.to_integral_value(rounding=ROUND_FLOOR))
+        kept = dec(sub - floor, mod.SUB_DECIMALS)
+    # the first withdrawal, with Fraction: 23.659 floors to 23 and the chain's idle balance fell by exactly that
+    assert Fraction(idle0 * s0, T0) > floor and floor == idle0 * s0 // T0 == idle0 - int(d["snapshots"]["idle"][0]) and int(d["snapshots"]["after"][0]) == 1
+    # the end of it, from the chain's own reads (C2): active USDC after 44 = raw + redeem − idle at the last snapshot
+    hk, last = d["hookAfter"], {k: int(v[-1]) for k, v in d["snapshots"].items() if k != "trace"}
+    assert last["after"] == len(steps["shares"]) == 44
+    # the vault shares' redeem value by the EVK formula from the cited lines (ConversionHelpers.sol:22, Shares.sol:25):
+    # shares × (cash + totalBorrows + 1e6) / (totalShares + 1e6), floored
+    v0 = st["vault0"]
+    redeem0 = int(st["reserve0"]) * (int(v0["cash"]) + int(v0["totalBorrows"]) + 10**6) // (int(v0["totalShares"]) + 10**6)
+    assert int(d["observed"]["swap3"]["idle"]) == idle0
+    active_start = raw0 + redeem0 - idle0
+    active_end = last["raw0"] + int(hk["previewRedeem0"]) - last["idle"]
+    assert (active_start, active_end) == (28, 4), (active_start, active_end)
+    r = vocab.bunni_replay()
+    active = [int(a) for a in r["seq"]["deployed"]]
+    assert active[0] == active_start and active[-1] == active_end and len(active) == 45
+    L0, L1 = int(d["observed"]["swap3"]["totalLiquidity"]), int(d["observed"]["afterWithdrawals"]["totalLiquidity"])
+    with localcontext() as ctx:
+        ctx.prec = 60
+        pct = dec((Decimal(L1) / Decimal(L0) - 1) * 100, mod.PCT_DECIMALS).replace("-", "−") + "%"
+    assert pct == "−84.37%", pct
+    # the replay table against the JSON and the module where both have a figure
+    lq = vocab.bunni_liquidity()
+    table = {row["idle balance"]: row for row in vocab.replay_table("bunni", mod.TABLE_HEADING)}
+    dep = next(v for k, v in table.items() if k.startswith("deployed"))
+    assert int(dep["active USDC after 44 (wei)"]) == active_end and int(dep["total liquidity after"]) == L1 == lq["forms"]["deployed"]
+    fix = next(v for k, v in table.items() if "mulDivUp" in k)
+    assert int(fix["active USDC after 44 (wei)"]) == r["seq"]["mulDivUp"][-1] == 48 and int(fix["total liquidity after"]) == lq["forms"]["mulDivUp"]
+    fp127 = table["FP127 idle balance"]
+    assert fp127["active USDC after 44 (wei)"] == vocab.to_decimals(r["seq"]["fp127"][-1], mod.WORD_DECIMALS) and int(fp127["total liquidity after"]) == lq["forms"]["fp127"]
+    with localcontext() as ctx:
+        ctx.prec = 60
+        fix_pct = dec((Decimal(lq["forms"]["mulDivUp"]) / Decimal(lq["start"]) - 1) * 100, mod.PCT_FIX_DECIMALS).replace("-", "−") + "%"
+        assert fix_pct == fix["change"].replace("-", "−") == fp127["change"].replace("-", "−"), (fix_pct, fix["change"])
+        assert dec((Decimal(L1) / Decimal(lq["start"]) - 1) * 100, 7).replace("-", "−") + "%" == dep["change"].replace("-", "−")
+    fp19 = table["FP19 idle balance"]["active USDC after 44 (wei)"]  # the forge run's; the table alone carries it (REPORT)
+    cite = next(c for c in d["cites"] if c["id"] == "idle")
+    assert cite["file"] == "src/lib/BunniHubLogic.sol" and cite["line"] == 478
+    for k, v in mod.numbers().items():
+        assert "…" not in str(v), (k, v)
+    return {
+        "protocol": inc["protocol"],
+        "date": inc["date"],
+        "chain": "Ethereum",
+        "block": f"{int(d['tx']['block']):,}",
+        "tx_short": d["tx"]["hash"][: 2 + mod.TX_SHORT],
+        "tx_short_len": mod.TX_SHORT,
+        "tx_len": 64,
+        "raw": f"{raw0:,}",
+        "redeem": f"{redeem0:,}",
+        "idle": f"{idle0:,}",
+        "active_start": active_start,
+        "active_end": active_end,
+        "active": active,
+        "withdrawals": 44,
+        "shares": f"{s0:,}",
+        "supply": f"{T0:,}",
+        "sub": sub_str,
+        "sub_label": f"(to {mod.SUB_DECIMALS} decimals)",
+        "floor": str(floor),
+        "kept": kept,
+        "grid_ticks": [floor, floor + 1],
+        "idle_after": f"{int(d['snapshots']['idle'][0]):,}",
+        "cite_file": "BunniHubLogic.sol",
+        "cite_line": 478,
+        "cite_text": cite["text"],
+        "liq_start": f"{L0:,}",
+        "liq_end": f"{L1:,}",
+        "liq_pct": pct,
+        "loss": inc["loss"],
+        "up": "48",
+        "fp127": fp127["active USDC after 44 (wei)"],
+        "fp19": fp19,
+        "word_label": f"(to {mod.WORD_DECIMALS} decimals)",
+        "fix_pct": fix_pct,
+    }
+
+
 def expect_s08_ladder(mod) -> dict:
     lib = {lid: rec for lid, rec in vocab.libs().items() if lid != "blockulator"}
     assert len(lib) == 17, len(lib)  # the registry's 18 less BlockulatorWad: every one is drawn or listed
@@ -1064,6 +1160,7 @@ EXPECT = {
     "s04_grid": expect_s04_grid,
     "s05_cost": expect_s05_cost,
     "s06_resupply": expect_s06_resupply,
+    "s06b_bunni": expect_s06b_bunni,
     "s07_two": expect_s07_two,
     "s08_ladder": expect_s08_ladder,
     "s09_cliff": expect_s09_cliff,
