@@ -2,9 +2,8 @@
  * Network Configuration
  * Infrastructure layer - centralizes network-specific settings
  * 
- * Network is now dynamic and user-switchable at runtime.
- * Default: Sepolia testnet (safe for exploration)
- * User can switch via the network badge in the header
+ * Sepolia only: the archived apps are testnet history, and nothing here may point a
+ * wallet at mainnet. A stored preference for any other network falls back to Sepolia.
  */
 
 import { eventBus, EVENTS } from '../events/event-bus.js';
@@ -20,19 +19,6 @@ const NETWORKS = {
         blockExplorer: 'https://sepolia.etherscan.io',
         nativeCurrency: {
             name: 'Sepolia ETH',
-            symbol: 'ETH',
-            decimals: 18
-        }
-    },
-    mainnet: {
-        chainId: 1,
-        chainIdHex: '0x1',
-        rpcUrl: 'https://eth.llamarpc.com', // Free, reliable public RPC
-        name: 'Ethereum Mainnet',
-        displayName: 'MAINNET',
-        blockExplorer: 'https://etherscan.io',
-        nativeCurrency: {
-            name: 'Ether',
             symbol: 'ETH',
             decimals: 18
         }

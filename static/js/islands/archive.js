@@ -17,7 +17,7 @@ async function app(key) {
         const { CalculatorApp } = await import('../legacy/application/calculator-app.js');
         apps.vyper = new CalculatorApp(ctx.web3Provider, ctx.walletComponent, ctx.toastComponent);
     } else if (key === 'futures') {
-        await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', 'Chart');
+        await loadScript('/vendor/chart.js@4.4.0/chart.umd.js', 'Chart');
         const { FuturesApp } = await import('../legacy/application/futures-app.js');
         apps.futures = new FuturesApp(ctx.web3Provider, ctx.walletComponent, ctx.toastComponent);
     }

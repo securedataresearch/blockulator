@@ -1,6 +1,9 @@
 +++
 title = "Why WAD loses digits"
 description = "WAD keeps about 60 bits of fraction and rounds on every step: where the digits go, and what 128 bits buy."
+
+[extra]
+group = "writeup"
 +++
 
 Each figure links to its scenario on the [ladder](/results/ladder/): 14 calculations protocols really run, repeated up to 10,000 times and checked against 300-digit arithmetic ([`ladder.json`](/data/ladder.json)).

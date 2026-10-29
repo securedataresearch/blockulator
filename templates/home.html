@@ -89,7 +89,7 @@
     <div class="banner-inner">
     <h2>{{ x.ask_title }}</h2>
     <p>{{ x.ask_text | safe }}</p>
-    <p class="actions"><a class="btn primary" href="{{ x.ask_primary_href }}">{{ x.ask_primary_text }}</a> <a class="btn ghost" href="{{ x.ask_secondary_href }}">{{ x.ask_secondary_text }}</a></p>
+    <p class="actions"><!--email_off--><a class="btn primary" href="{{ x.ask_primary_href }}">{{ x.ask_primary_text }}</a><!--/email_off--> <a class="btn ghost" href="{{ x.ask_secondary_href }}">{{ x.ask_secondary_text }}</a></p>
     </div>
   </div>
 </section>

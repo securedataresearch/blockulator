@@ -2,8 +2,9 @@
     (hero.js), drifting slowly. The banner is first on every page and the same element, so nothing moves between pages;
     each group has its own cloth (seeds). -#}
 {%- set groups = {
-  "results": [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/ops/", "Per op"], ["/results/wad/", "WAD"], ["/results/deployed/", "Deployed"], ["/results/incidents/", "Incidents"], ["/results/cdf/", "Normal CDF"], ["/vs/", "Versus"]],
-  "library": [["/library/", "FP127"], ["/library/fp19/", "FP19"], ["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]]
+  "results": [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/ops/", "Per op"], ["/results/wad/", "WAD"], ["/results/deployed/", "Deployed"], ["/results/incidents/", "Incidents"], ["/results/cdf/", "Normal CDF"], ["/vs/", "Versus"], ["/proofs/", "Proofs"]],
+  "library": [["/library/", "FP127"], ["/library/fp19/", "FP19"], ["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]],
+  "writeup": [["/writeup/", "Write-up"], ["/why/", "Why WAD loses digits"]]
 } -%}
 {%- set seeds = {"results": "3.1", "library": "5.7"} -%}
 {%- set g = page.extra.group | default(value="") %}

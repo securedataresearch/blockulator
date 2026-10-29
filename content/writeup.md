@@ -1,6 +1,9 @@
 +++
 title = "Why the digits hold"
 description = "What FP127 and FP19 are, why 18-decimal maths loses digits, and how every result here is checked."
+
+[extra]
+group = "writeup"
 +++
 
 ## Two formats in one 256-bit value

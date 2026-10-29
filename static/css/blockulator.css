@@ -16,6 +16,12 @@
 .doc .mono { font-family: var(--mono); }
 .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .scroll table { min-width: 640px; }
+/* a long table scrolls inside its own box, which is then the scroll container its header row sticks to; the corner
+   cell sits over both the sticky header and the sticky first column (.datatable th:first-child, phones) */
+.scroll.long, .tablewrap.long { max-height: min(80vh, 960px); overflow: auto; }
+.scroll.long thead th, .tablewrap.long thead tr:last-child th { position: sticky; top: 0; z-index: 2; background: linear-gradient(var(--tint), var(--tint)), var(--surface-solid); box-shadow: inset 0 -1px 0 var(--line-2); }
+.tablewrap.long thead tr:last-child th:first-child { z-index: 3; }
+.doc .scroll.long table { overflow: visible; }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; font-size: 15px; margin: 0 0 1.4em; }
 .kv dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding-top: 3px; }
 .kv dd { margin: 0; font-family: var(--mono); font-size: 13.5px; word-break: break-all; }
@@ -104,7 +110,11 @@
 /* the banner holds still between pages (site.css .banner): its old and new pictures cross-fade in place, dark to dark */
 ::view-transition-group(banner) { animation-duration: var(--t-in); animation-timing-function: var(--ease-out); }
 ::view-transition-old(banner), ::view-transition-new(banner) { animation-duration: var(--t-in); }
-@media (max-width: 640px) { .links { gap: 2px; font-size: 14px; } .links a { padding: 6px 9px; } .links .cta { margin-left: 2px; } .brand span { display: none; } .brand img { width: 32px; height: 32px; } }
+/* phones: the wordmark stays (smaller), so the home link reads as Blockulator; on narrow phones the mark gives way to it */
+@media (max-width: 640px) { .top { gap: 8px; } .links { gap: 2px; font-size: 14px; flex-wrap: nowrap; } .links a { padding: 6px 8px; white-space: nowrap; } .links .cta { margin-left: 2px; } .brand { gap: 8px; font-size: 16px; } .brand img { width: 28px; height: 28px; } }
+@media (max-width: 439px) { .brand img { display: none; } }
+@media (max-width: 399px) { .brand { font-size: 15px; } .links { font-size: 13px; } .links a { padding: 6px 6px; } }
+@media (max-width: 359px) { .top { padding-inline: 10px; gap: 4px; } .brand { font-size: 13.5px; } .links { font-size: 12.5px; } .links a { padding: 5px 4px; } }
 
 /* the shader stays hidden until hero.js has drawn its first frame (it adds .on), then fades in over the page background */
 canvas.cloth { opacity: 0; transition: opacity var(--t-slow) var(--ease-out); }
@@ -207,7 +217,19 @@ sup.t { font-family: var(--mono); font-size: 10px; text-transform: none; color: 
 .pitchblock .doc table { margin-top: 0; }
 .pitchblock .doc .note { margin: 12px 0 0; font-size: 14.5px; max-width: none; }
 /* op tables: the method folds away under a one-line summary */
-.optable details.what summary { cursor: pointer; }
+.optable details.what summary, .scroll details.what summary { cursor: pointer; }
+.scroll details.what[open] { white-space: normal; overflow-wrap: anywhere; }
+/* what hover shows, written out under a table for screens without hover: the call per cell, the revert reasons, and
+   the note of a tapped cell (notes.js) */
+details.calls { margin: 8px auto 0; max-width: var(--measure); font-size: 13.5px; color: var(--muted); }
+details.calls summary { cursor: pointer; font-size: 13px; }
+details.calls dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 8px 0 0; }
+details.calls dt { font-weight: 600; color: var(--text); }
+details.calls dd { margin: 0; }
+details.calls ul { margin: 8px 0 0; padding-left: 1.2em; }
+details.calls code { font-size: 12px; }
+@media (max-width: 640px) { details.calls dl { grid-template-columns: 1fr; } details.calls dd { margin-bottom: 6px; } }
+.cellnote { margin: 8px auto 0; max-width: var(--measure); font: 12.5px/1.5 var(--mono); color: var(--muted); white-space: pre-line; overflow-wrap: anywhere; }
 .optable details.what[open] summary { margin-bottom: 4px; }
 /* edges: digits only, the detail in each cell's title; the last row is the fewest digits per library */
 .edges td.val { font-size: 14px; white-space: nowrap; }
