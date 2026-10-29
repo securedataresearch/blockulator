@@ -92,8 +92,9 @@ two objects share is copied into each: bytes, not gas) and has its own
 interface and ABI; `FP127Lib.sol` holds every export. Runtime sizes at the
 split: 3,367, 12,716, 7,560, 5,005 and 7,994 bytes, where v8's one object
 had 779 bytes free, so each now has room for the second stage behind its
-rounding tests. The words are v8's, op for op (`test/objects/ObjectsEqLib.t.sol`
-with `FP_REF_DIR` set to v8's artifact under every name). Salts `"FP127 v9"`,
+rounding tests. The split kept v8's words, op for op (`test/objects/ObjectsEqLib.t.sol`
+with `FP_REF_DIR` set to v8's artifact under every name); since then `gavg`
+and `hypot` round once (see Rounding), and `FP127` is 3,728 bytes. Salts `"FP127 v9"`,
 `"FP127E v9"`, `"FP127H v9"`, `"FP127N v9"`, `"FP127S v9"`; not deployed yet.
 
 Each object wraps its bodies in a dispatcher that finds the 4-byte selector
@@ -233,7 +234,9 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `abs`, `neg` | | `Overflow` at −2^255 |
 | `sign`, `min`, `max`, `clamp`, `avg`, `floor`, `frac` | exact, never revert | |
 | `ceil`, `round` | exact | `Overflow` at the top of the range |
-| `zeroFloorSub`, `dist`, `lerp`, `hypot`, `gavg` | checked compositions | `Overflow`, `OutOfRange` |
+| `zeroFloorSub`, `dist`, `lerp` | checked compositions | `Overflow` |
+| `gavg(a, b)` | √(a·b) to nearest, rounded once from the exact 512-bit product (never a tie); two negatives give the positive root | `OutOfRange` for opposite signs, `Overflow` only at a = b = −2^255 |
+| `hypot(a, b)` | √(a² + b²) to nearest, rounded once from the exact sum of squares (never a tie); no intermediate overflow | `Overflow` where the root passes the largest word |
 | `factorial(n)` | floor(n)! for 0 ≤ n < 34 | `OutOfRange` |
 | `lambertW0(x)` | W(x) for x ≥ −1/e, correctly rounded: the double-word Newton step's value tested by `rbad127`, a log-form step at 2^-510 on a miss; W(0) = 0 the one exact point | `OutOfRange` |
 | `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0, correctly rounded as `lambertW0` | `OutOfRange` |
@@ -274,17 +277,23 @@ stated bound against 120-digit truth (CI runs it).
 `exp`, `exp2`, `exp10`, `expm1`, `sinh`, `cosh`, `tanh`, `atanh`, `pow`,
 `cbrt`, `ln`, `log2`, `log10`, `log1p`, `powu`, `compound`, `lambertW0`,
 `lambertWm1`, and, through the one-word kernel, `erf`, `erfc` and
-`normCdf` (no misrounding at any vector or random input). `add`, `sub`,
+`normCdf` (no misrounding at any vector or random input). `gavg` and `hypot`
+return the nearest word too, decided exactly (3.0): for raw words A and B the
+raw result is the root of the integer A·B or A² + B², taken in two words and
+rounded once, and an integer's root is never a tie. `add`, `sub`,
 `log2Up` and the integer ops are exact. `mul`, `mulDown`, `divDown`,
 `sqrt`, `toFixed18`, `toFixed18Down` floor; `mulUp`, `divUp`, `toFixed18Up`
 ceil; `div`, `inv`, `fromFixed18` truncate. The exception is `pow` with an
 extreme exponent: its error is below 2^-299 (1 + |y|) relative before the
 rounding, so it is the nearest word while |y| x^y < 2^140 or so and
 faithful to |y| x^y < 2^170; a base within 2^-88 of one raised past 2^90
-(results near 2^120) misses by up to 1e11 ULPs. `gavg` and `hypot` are the
-v4 compositions (floored root of a floored product or sum), kept
-bit-identical to the Huff: within one ULP when the product is 1 or more,
-but a small product's 2^-128 is amplified by the root.
+(results near 2^120) misses by up to 1e11 ULPs. Up to v8, `gavg` and
+`hypot` were the Huff's compositions, kept bit-identical to it: the floored
+root of a floored product or sum of squares. A product under one ULP floored
+to zero, so they were low by up to 2^64 ULPs (gavg(2^-78, 2^-60) returned 0
+for 2^-69), and they reverted with `Overflow` wherever a·b or a² + b² passed
+2^127 though the root fits. 3.0 drops that definition for FP19's: one
+rounding of the exact value.
 
 **At the token edge.** The replays
 ([`docs/benchmarks/replay-*.md`](../../../docs/benchmarks/)) put every loss

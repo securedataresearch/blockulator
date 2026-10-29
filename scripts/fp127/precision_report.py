@@ -89,8 +89,6 @@ def fp127(data: dict) -> int:
         "Every vector carries the real truth, and the error is the true distance |got − truth| in ULPs "
         "(2^-128), measured to 2^-64 ULP. Each op is held to its rounding contract: *exact* 0, "
         "*floor*, *ceil* and *trunc* under 1 ULP in their direction, *nearest* at most 0.5 ULP (a directed op shows 1.0000 where its distance is within 2^-65 of one ULP). "
-        "*sqrt of floors* (gavg, hypot, kept bit-identical to the Huff) must equal its definition, the "
-        "floored root of a floored product or sum; its distance from the real root is shown, not bounded. "
         "*nearest* counts results within 0.5 ULP. "
         "*min bits* is the fewest relative correct bits, msb(|truth|) − msb(|got − truth|), over results "
         "of magnitude 1 or more (\"exact\" when every such result is the truth itself). "

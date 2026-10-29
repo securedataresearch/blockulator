@@ -22,7 +22,7 @@
       "op": "sign",
       "bytes": 8
      },
-     "median": 457,
+     "median": 480,
      "max": {
       "op": "lambertW0",
       "bytes": 12374
@@ -41,8 +41,8 @@
     }
    },
    "sum": {
-    "legacy": 147980,
-    "viaIr": 139269
+    "legacy": 148130,
+    "viaIr": 139488
    },
    "ops": {
     "fromFixed18": {
@@ -142,12 +142,12 @@
      "viaIr": 472
     },
     "gavg": {
-     "legacy": 457,
-     "viaIr": 343
+     "legacy": 566,
+     "viaIr": 483
     },
     "hypot": {
-     "legacy": 508,
-     "viaIr": 378
+     "legacy": 549,
+     "viaIr": 457
     },
     "inv": {
      "legacy": 135,

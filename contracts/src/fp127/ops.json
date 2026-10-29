@@ -313,9 +313,9 @@
         "a",
         "b"
       ],
-      "notice": "Geometric mean sqrt(a * b). Reverts with OutOfRange if a * b < 0.",
+      "notice": "The geometric mean sqrt(a b), rounded once to nearest from the exact 512-bit product; two negatives give the positive root.",
       "domain": "a·b >= 0",
-      "reverts": "OutOfRange() if a·b < 0; Overflow() if a·b does not fit"
+      "reverts": "OutOfRange() if a and b have opposite signs (both nonzero); Overflow() only for a = b = -2^255"
     },
     {
       "object": "FP127",
@@ -326,9 +326,9 @@
         "a",
         "b"
       ],
-      "notice": "sqrt(a^2 + b^2), checked.",
-      "domain": "any a, b",
-      "reverts": "Overflow() if a^2 + b^2 does not fit"
+      "notice": "sqrt(a^2 + b^2), rounded once to nearest from the exact sum of squares (two words); no intermediate overflows.",
+      "domain": "any a, b; the result must fit",
+      "reverts": "Overflow() when sqrt(a^2 + b^2) rounds past the largest word"
     },
     {
       "object": "FP127",

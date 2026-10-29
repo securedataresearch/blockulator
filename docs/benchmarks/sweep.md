@@ -103,7 +103,7 @@ The first 4,000 inputs of each op again, through a test-only copy of FP19Lib who
 
 ## FP127
 
-*correctly rounded*: the word scripts/fp127/oracle.py gives, the rounding the op promises: to nearest with FP127's tie rule (ties up; powu, compound, cbrt, sinh, tanh and erf round the magnitude, so their ties go away from zero), the directed ops in their direction, gavg and hypot their v4 composition; a revert where the oracle reverts counts as correct, so *inputs* includes the reverts; the ULP columns are over the results that returned. *nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, median / p99 / largest; *fallback* is the share of inputs that took the double-word decider (ln, log2, log10 and pow near a midpoint or, for pow, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).
+*correctly rounded*: the word scripts/fp127/oracle.py gives, the rounding the op promises: to nearest with FP127's tie rule (ties up; powu, compound, cbrt, sinh, tanh and erf round the magnitude, so their ties go away from zero), the directed ops in their direction; a revert where the oracle reverts counts as correct, so *inputs* includes the reverts; the ULP columns are over the results that returned. *nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the result, over results of magnitude 1 or more (below 1 a fixed point's absolute grid sets the bits; for Lambert W the 2^-20 neighbourhood of -1/e is shown separately). The directed ops (mulUp, divUp, divDown, toFixed18Up) are under one ULP in their direction by design: *below / above truth* shows the direction; toFixed18Up is measured in its own unit, 10^-18. Gas is FP127Lib's own cost, median / p99 / largest; *fallback* is the share of inputs that took the double-word decider (ln, log2, log10 and pow near a midpoint or, for pow, beyond the one-word reach; powu and compound on a 512-bit mantissa; a dash: the op has none).
 
 | op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max | fallback |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|
@@ -135,8 +135,8 @@ The first 4,000 inputs of each op again, through a test-only copy of FP19Lib who
 | lambertW0 | 2,500 | 2,500 | 0 | 2,500 | 2,500 | 0.5 | 0.236 | 129.1 (129.0 near −1/e) | 1,173 / 1,230 | 8,347 / 11,333 / 11,404 | 0 |
 | lambertWm1 | 2,000 | 2,000 | 0 | 2,000 | 2,000 | 0.5 | 0.242 | 129.1 (129.0 near −1/e) | 981 / 1,019 | 8,197 / 11,346 / 11,346 | 0 |
 | log1p | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.176 | 129.1 | 1,507 / 1,743 | 2,097 / 2,137 / 2,147 | 0 |
-| gavg | 4,000 | 4,000 | 0 | 451 | 888 | 1.84e+19 | 9.2e+07 | 128.0 | 4,000 / 0 | 725 / 1,072 / 1,072 | — |
-| hypot | 4,000 | 4,000 | 0 | 766 | 2,149 | 1.8e+19 | 1 | 128.1 | 3,945 / 0 | 1,359 / 1,359 / 1,371 | — |
+| gavg | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.247 | 129.3 | 2,028 / 1,972 | 702 / 999 / 999 | — |
+| hypot | 4,000 | 4,000 | 0 | 4,000 | 4,000 | 0.5 | 0.00943 | 129.6 | 1,492 / 948 | 1,160 / 1,160 / 1,388 | — |
 | inv | 4,000 | 4,000 | 0 | 2,040 | 3,999 | 1 | 0.487 | 128.3 | 1,962 / 2,021 | 242 / 242 / 242 | — |
 | mulDown | 4,000 | 4,000 | 0 | 1,940 | 4,000 | 1 | 0.514 | 128.2 | 4,000 / 0 | 307 / 307 / 307 | — |
 

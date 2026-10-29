@@ -5827,22 +5827,23 @@ library FP127Lib {
             _r := fp127_cbrt(_x)
         }
     }
-    /// @notice Geometric mean sqrt(a * b). Reverts with OutOfRange if a * b < 0.
+    /// @notice The geometric mean sqrt(a b), rounded once to nearest from the
+    ///         exact 512-bit product; two negatives give the positive root.
+    /// @dev rootw(|A| |B|) for the raw words. Up to v8 this was sqrt(mul(a,
+    ///      b)), the floored root of the floored product: low by up to 2^64 ULPs
+    ///      where a b is under one ULP (a = 2^-78, b = 2^-60: the product floors
+    ///      to zero, the root is 2^-69, 2^59 ULPs), and Overflow wherever a b
+    ///      passed 2^127 though its root fits.
     function gavg(int256 _a, int256 _b) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
+            }
+
             function rev(sel) {
                 mstore(0x00, shl(224, sel))
                 revert(0x00, 0x04)
-            }
-
-            function fp127_mul(a, b) -> r {
-                let p0 := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                if iszero(eq(sar(127, p1), sar(255, p1))) { rev(0x35278d12) }
-                r := or(shl(128, p1), shr(128, p0))
             }
 
             function msb(x) -> r {
@@ -5866,50 +5867,67 @@ library FP127Lib {
                 h := sub(sub(mm, l), lt(mm, l))
             }
 
-            function fp127_sqrt(x) -> r {
-                if slt(x, 0) { rev(0x7db3aba7) }
-                if iszero(x) { leave }
-                switch shr(128, x)
-                case 0 { r := isqrtw(shl(128, x)) }
-                default {
-                    let sh := and(sub(255, msb(x)), not(1))
-                    let z := shl(sh, x)
-                    let y := isqrtw(z)
-                    let k := sub(64, shr(1, sh))
-                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
-                    let h, l := mul512(r, r)
-                    if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
+            function pastmid(r, h, l) -> t {
+                let p1, p0 := mul512(r, add(r, 1))
+                t := or(gt(h, p1), and(eq(h, p1), gt(l, p0)))
+            }
+
+            function rootw(h, l) -> r {
+                if iszero(h) {
+                    if l {
+                        let c := iszero(shr(128, l))
+                        r := shr(shl(6, c), isqrtw(shl(shl(7, c), l)))
+                        r := add(r, gt(l, mul(r, add(r, 1))))
+                    }
+                    leave
+                }
+                if or(shr(254, h), and(eq(h, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(l, shl(255, 1)))) { rev(0x35278d12) }
+                let s := and(sub(255, msb(h)), not(1))
+                let k := shr(1, s)
+                let z := or(shl(s, h), shr(sub(256, s), l))
+                let Y := isqrtw(z)
+                r := add(shl(sub(128, k), Y), shr(k, add(div(shl(127, sub(z, mul(Y, Y))), Y), sub(shl(sub(k, 1), 1), 1))))
+                let p0 := mul(r, add(r, 1))
+                let p1 := mulmod(r, add(r, 1), not(0))
+                p1 := sub(sub(p1, p0), lt(p1, p0))
+                if or(gt(h, p1), and(eq(h, p1), gt(l, p0))) {
+                    r := add(r, 1)
+                    if pastmid(r, h, l) { r := add(r, 1) }
                 }
             }
 
             function fp127_gavg(a, b) -> r {
-                r := fp127_sqrt(fp127_mul(a, b))
+                if slt(xor(a, b), 0) {
+                    if and(iszero(iszero(a)), iszero(iszero(b))) { rev(0x7db3aba7) }
+                    leave
+                }
+                a := absw(a)
+                b := absw(b)
+                let l := mul(a, b)
+                let h := mulmod(a, b, not(0))
+                r := rootw(sub(sub(h, l), lt(h, l)), l)
             }
 
             _r := fp127_gavg(_a, _b)
         }
     }
-    /// @notice sqrt(a^2 + b^2), checked.
+    /// @notice sqrt(a^2 + b^2), rounded once to nearest from the exact sum of
+    ///         squares (two words); no intermediate overflows.
+    /// @dev rootw(A^2 + B^2) for the raw words. Up to v8 this was the floored
+    ///      root of the sum of floored squares: low by up to 2^64 ULPs where
+    ///      both squares are under one ULP, and Overflow wherever a^2 + b^2
+    ///      passed 2^127 though its root fits.
     function hypot(int256 _a, int256 _b) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
-            function rev(sel) {
-                mstore(0x00, shl(224, sel))
-                revert(0x00, 0x04)
+            function absw(x) -> r {
+                let m := sar(255, x)
+                r := sub(xor(x, m), m)
             }
 
-            function fp127_add(a, b) -> r {
-                r := add(a, b)
-                if xor(slt(r, a), slt(b, 0)) { rev(0x35278d12) }
-            }
-
-            function fp127_mul(a, b) -> r {
-                let p0 := mul(a, b)
+            function mul512(a, b) -> h, l {
+                l := mul(a, b)
                 let mm := mulmod(a, b, not(0))
-                let p1 := sub(sub(mm, p0), lt(mm, p0))
-                p1 := sub(p1, mul(slt(a, 0), b))
-                p1 := sub(p1, mul(slt(b, 0), a))
-                if iszero(eq(sar(127, p1), sar(255, p1))) { rev(0x35278d12) }
-                r := or(shl(128, p1), shr(128, p0))
+                h := sub(sub(mm, l), lt(mm, l))
             }
 
             function msb(x) -> r {
@@ -5927,30 +5945,47 @@ library FP127Lib {
                 y := sub(y, lt(div(z, y), y))
             }
 
-            function mul512(a, b) -> h, l {
-                l := mul(a, b)
-                let mm := mulmod(a, b, not(0))
-                h := sub(sub(mm, l), lt(mm, l))
+            function pastmid(r, h, l) -> t {
+                let p1, p0 := mul512(r, add(r, 1))
+                t := or(gt(h, p1), and(eq(h, p1), gt(l, p0)))
             }
 
-            function fp127_sqrt(x) -> r {
-                if slt(x, 0) { rev(0x7db3aba7) }
-                if iszero(x) { leave }
-                switch shr(128, x)
-                case 0 { r := isqrtw(shl(128, x)) }
-                default {
-                    let sh := and(sub(255, msb(x)), not(1))
-                    let z := shl(sh, x)
-                    let y := isqrtw(z)
-                    let k := sub(64, shr(1, sh))
-                    r := add(shl(k, y), div(shl(sub(k, 1), sub(z, mul(y, y))), y))
-                    let h, l := mul512(r, r)
-                    if or(gt(h, shr(128, x)), and(eq(h, shr(128, x)), gt(l, shl(128, x)))) { r := sub(r, 1) }
+            function rev(sel) {
+                mstore(0x00, shl(224, sel))
+                revert(0x00, 0x04)
+            }
+
+            function rootw(h, l) -> r {
+                if iszero(h) {
+                    if l {
+                        let c := iszero(shr(128, l))
+                        r := shr(shl(6, c), isqrtw(shl(shl(7, c), l)))
+                        r := add(r, gt(l, mul(r, add(r, 1))))
+                    }
+                    leave
+                }
+                if or(shr(254, h), and(eq(h, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(l, shl(255, 1)))) { rev(0x35278d12) }
+                let s := and(sub(255, msb(h)), not(1))
+                let k := shr(1, s)
+                let z := or(shl(s, h), shr(sub(256, s), l))
+                let Y := isqrtw(z)
+                r := add(shl(sub(128, k), Y), shr(k, add(div(shl(127, sub(z, mul(Y, Y))), Y), sub(shl(sub(k, 1), 1), 1))))
+                let p0 := mul(r, add(r, 1))
+                let p1 := mulmod(r, add(r, 1), not(0))
+                p1 := sub(sub(p1, p0), lt(p1, p0))
+                if or(gt(h, p1), and(eq(h, p1), gt(l, p0))) {
+                    r := add(r, 1)
+                    if pastmid(r, h, l) { r := add(r, 1) }
                 }
             }
 
             function fp127_hypot(a, b) -> r {
-                r := fp127_sqrt(fp127_add(fp127_mul(a, a), fp127_mul(b, b)))
+                let u := absw(a)
+                let h, l := mul512(u, u)
+                u := absw(b)
+                let h2, l2 := mul512(u, u)
+                l := add(l, l2)
+                r := rootw(add(add(h, h2), lt(l, l2)), l)
             }
 
             _r := fp127_hypot(_a, _b)

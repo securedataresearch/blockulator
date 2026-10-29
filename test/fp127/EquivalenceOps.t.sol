@@ -63,16 +63,58 @@ contract EquivalenceOps is FP127Harness {
         assertEq(o.value, h.value, string.concat(what, ": obj != huff"));
     }
 
-    /// For the ops built on the square root (sqrt, gavg, hypot): equal to the
-    /// Huff, or exactly one below it. The Huff's sqrt could stop one above the
-    /// floor near a perfect square; since #159 the Yul returns the floor there
-    /// (sqrt's floor is proven in test/proofs and fuzzed in FuzzProofs).
+    /// For sqrt: equal to the Huff, or exactly one below it. The Huff's sqrt
+    /// could stop one above the floor near a perfect square; since #159 the
+    /// Yul returns the floor there (proven in test/proofs, fuzzed in FuzzProofs).
     function _objHuffRoot(bytes memory newCall, bytes memory huffCall, string memory what) internal view {
         Res memory o = _try(_objOf(newCall), newCall);
         Res memory h = _try(address(huff), huffCall);
         assertTrue(h.ok, string.concat(what, ": huff reverted"));
         assertTrue(o.ok, string.concat(what, ": obj reverted"));
         if (o.value != h.value) assertEq(o.value + 1, h.value, string.concat(what, ": obj neither huff nor huff - 1"));
+    }
+
+    /// gavg and hypot diverge from the Huff by design (3.0). The Huff, and
+    /// FP127 to v8, took the floored root of the floored product or sum of
+    /// squares; FP127 now rounds once, from the exact N = |A| |B| or A^2 + B^2
+    /// of the raw words. The object must return the nearest root of that N
+    /// (r (r - 1) < N <= r (r + 1)); it is at or above the Huff's word, low
+    /// by one only where the Huff's sqrt stopped one above its floor near a
+    /// perfect square (#159), and above it by up to 2^64 ULPs where the
+    /// floors drop most of a small product.
+    function _objHuffRounded(bytes memory newCall, bytes memory huffCall, uint256 nh, uint256 nl, string memory what)
+        internal
+        view
+    {
+        Res memory o = _try(_objOf(newCall), newCall);
+        Res memory h = _try(address(huff), huffCall);
+        assertTrue(h.ok, string.concat(what, ": huff reverted"));
+        assertTrue(o.ok, string.concat(what, ": obj reverted"));
+        assertGe(o.value + 1, h.value, string.concat(what, ": obj below the huff's floored root"));
+        assertTrue(_nearestRoot(nh, nl, uint256(o.value)), string.concat(what, ": obj is not the nearest root of the exact value"));
+    }
+
+    /// The 512-bit product of two words.
+    function _mul512(uint256 a, uint256 b) internal pure returns (uint256 h, uint256 l) {
+        unchecked {
+            l = a * b;
+            uint256 mm = mulmod(a, b, type(uint256).max);
+            h = mm - l - (mm < l ? 1 : 0);
+        }
+    }
+
+    /// r is the nearest integer to sqrt(nh 2^256 + nl): r (r - 1) < N <= r (r + 1), for r < 2^255.
+    function _nearestRoot(uint256 nh, uint256 nl, uint256 r) internal pure returns (bool) {
+        if (r >= 1 << 255) return false;
+        (uint256 ph, uint256 pl) = _mul512(r, r + 1);
+        bool le = nh < ph || (nh == ph && nl <= pl);
+        if (r == 0) return le;
+        (uint256 qh, uint256 ql) = _mul512(r, r - 1);
+        return le && (nh > qh || (nh == qh && nl > ql));
+    }
+
+    function _abs(int256 x) internal pure returns (uint256) {
+        unchecked { return x < 0 ? uint256(-x) : uint256(x); }
     }
 
     function _u(int256 x) internal pure returns (uint256) { return uint256(x); }
@@ -307,13 +349,31 @@ contract EquivalenceOps is FP127Harness {
         _objHuff(abi.encodeCall(IFP127.zeroFloorSub, (a, b)), abi.encodeCall(IHuffOps.zeroFloorSubRaw, (_u(a), _u(b))), "zeroFloorSub");
         _objHuff(abi.encodeCall(IFP127.dist, (a, b)), abi.encodeCall(IHuffOps.distRaw, (_u(a), _u(b))), "dist");
         _objHuff(abi.encodeCall(IFP127.lerp, (a, b, t)), abi.encodeCall(IHuffOps.lerpRaw, (_u(a), _u(b), _u(t))), "lerp");
-        _objHuffRoot(abi.encodeCall(IFP127.hypot, (a, b)), abi.encodeCall(IHuffOps.hypotRaw, (_u(a), _u(b))), "hypot");
+        (uint256 ah, uint256 al) = _mul512(_abs(a), _abs(a));
+        (uint256 bh, uint256 bl) = _mul512(_abs(b), _abs(b));
+        unchecked {
+            al += bl;
+            ah += bh + (al < bl ? 1 : 0);
+        }
+        _objHuffRounded(abi.encodeCall(IFP127.hypot, (a, b)), abi.encodeCall(IHuffOps.hypotRaw, (_u(a), _u(b))), ah, al, "hypot");
     }
 
     function testFuzz_huff_gavg(int256 a, int256 b) public view {
         a = bound(a, 0, B190);
         b = bound(b, 0, B190);
-        _objHuffRoot(abi.encodeCall(IFP127.gavg, (a, b)), abi.encodeCall(IHuffOps.gavgRaw, (_u(a), _u(b))), "gavg");
+        (uint256 nh, uint256 nl) = _mul512(uint256(a), uint256(b));
+        _objHuffRounded(abi.encodeCall(IFP127.gavg, (a, b)), abi.encodeCall(IHuffOps.gavgRaw, (_u(a), _u(b))), nh, nl, "gavg");
+    }
+
+    /// The divergence pinned: a = 2^-78, b = 2^-60. The Huff (and FP127 to
+    /// v8) floored the product 2^-138 to zero and returned 0; the root is
+    /// 2^-69 exactly, 2^59 ULPs.
+    function test_huff_gavg_divergence() public view {
+        int256 a = int256(1) << 50;
+        int256 b = int256(1) << 68;
+        assertEq(IHuffOps(address(huff)).gavgRaw(_u(a), _u(b)), 0);
+        assertEq(obj.gavg(a, b), int256(1) << 59);
+        assertEq(obj.hypot(a, 0), a);
     }
 
     function testFuzz_huff_factorial(int256 n) public view {
