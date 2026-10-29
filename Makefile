@@ -1,4 +1,4 @@
-.PHONY: rates-verify home-data gates proofs build-yul talk sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-thetanuts replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch replay-thetanuts-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp19 predict-fp19 deploy-fp19-sepolia verify-fp19-sepolia smoke-fp19-sepolia bench-fp19 precision-report-fp19 gen-fp19 vectors-fp19 size-fp19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
+.PHONY: rates-verify home-data gates proofs build-yul talk anim talk-fonts sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-thetanuts replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch replay-thetanuts-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-fp19 predict-fp19 deploy-fp19-sepolia verify-fp19-sepolia smoke-fp19-sepolia bench-fp19 precision-report-fp19 gen-fp19 vectors-fp19 size-fp19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
 
 PY := uv run
 
@@ -13,6 +13,7 @@ SEPOLIA_RPC ?= https://ethereum-sepolia-rpc.publicnode.com
 MAINNET_RPC ?= https://ethereum-rpc.publicnode.com
 
 help:
+	@echo "  make anim             - render the talk's manim scenes to talk/build/ (SCENE=s02_exp40 for one); make talk-fonts regenerates talk/fonts/ from static/fonts/"
 	@echo "  make gates            - Run every merge gate and print one line each (OPS=a,b sweeps only those ops; QUICK=1 skips the sweep); logs in cache/gates/"
 	@echo "  make proofs           - Halmos proofs of the core arithmetic and directed rounding, lemmas, fuzz (CI subset; PROOFS_FULL=1 runs all and rewrites docs/benchmarks/proofs.json); docs/proofs.md"
 	@echo "Blockulator / FP127"
@@ -273,6 +274,14 @@ profile: build
 	@$(PY) scripts/sweep/gasprofile.py
 talk:
 	@uv run --with matplotlib --with weasyprint --with mpmath python scripts/talk/deck.py
+
+# The talk's manim scenes (talk/scenes/*.py, see talk/scenes/README.md): one with SCENE=s02_exp40, all without; 1080p30 into talk/build/
+SCENES := $(basename $(notdir $(wildcard talk/scenes/s[0-9][0-9]_*.py)))
+anim:
+	@$(PY) talk/scenes/check.py
+	@for s in $(if $(SCENE),$(SCENE),$(SCENES)); do $(PY) manim -qh -a talk/scenes/$$s.py || exit 1; done
+talk-fonts:
+	@uv run --with fonttools --with brotli python talk/scenes/fonts.py
 
 pi-compare: build
 	@forge test --match-contract PiCompare -vv | $(PY) scripts/fp127/pi_compare.py

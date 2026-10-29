@@ -41,3 +41,7 @@ cache-proofs-fuzz/
 
 # make pack stages the npm and Soldeer package here
 dist/
+
+# the talk's rendered scenes (make anim) and manim's default output folder
+talk/build/
+media/
