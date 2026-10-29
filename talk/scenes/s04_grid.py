@@ -88,6 +88,7 @@ LINE_DECIMALS = 40  # an 80-decimal number wraps after this many decimals
 DECIMAL_BASE, BINARY_BASE = 10, 2
 L = 1.3  # screen units per tick
 Y_LINE = 0.35
+LABEL_Y = 2.3  # the grid's name (left) and the counter (right), under the two-line header
 HALF = config.frame_width / 2 + 0.5
 CAPTION = "docs/benchmarks/edges.json · exp(40)"
 FOOTER = "a 256-bit word holds 2<sup>256</sup> numbers; e<sup>40</sup> is not one of them"
@@ -229,7 +230,7 @@ class Grid(DeckScene):
 
     def counter(self, text: str):
         c = markup(text, 24, Palette.MUTED)
-        c.move_to([6.4 - c.width / 2, 2.55, 0])
+        c.move_to([6.4 - c.width / 2, LABEL_Y, 0])
         return c
 
     def header(self, value: str, precision: str, lit: int, size: float = 26):
@@ -240,7 +241,7 @@ class Grid(DeckScene):
         num = digits(wrap_decimals(value), size, Palette.FAINT, line_spacing=0.7)
         tag = words(precision, SIZE_CAPTION, Palette.FAINT)
         g = VGroup(eq, num, tag).arrange(RIGHT, buff=0.22)
-        g.move_to([0, 3.2 if num.height < 0.5 else 3.05, 0])
+        g.move_to([0, 3.2 if num.height < 0.5 else 3.15, 0])
         self.light(num, lit)
         return g
 
@@ -322,7 +323,7 @@ class Grid(DeckScene):
             pause=0.0,
         )
         layer1 = markup(f"the 18-decimal libraries' grid: one tick = 10<sup>−{WORD_DECIMALS}</sup>, a whole wei", 24, Palette.GOLD)
-        layer1.move_to([-6.4 + layer1.width / 2, 2.55, 0])
+        layer1.move_to([-6.4 + layer1.width / 2, LABEL_Y, 0])
         self.play(FadeIn(layer1, shift=RIGHT * 0.1, run_time=0.5))
         self.wait(1.2)
         wad = dot.copy()
@@ -349,7 +350,7 @@ class Grid(DeckScene):
         g2, majors2, minors2, base2 = self.level(*bit_grids[0])
         lbls2 = bit_labels(0, majors2, base2)
         counter2 = bit_counter(0)
-        head2 = self.header(n["truth"], f"(to {EXPANSION_DECIMALS} decimals)", WORD_DECIMALS, size=21)
+        head2 = self.header(n["truth"], f"(to {EXPANSION_DECIMALS} decimals)", WORD_DECIMALS, size=19)
         self.play(FadeOut(g, run_time=0.5), FadeOut(lbls, run_time=0.3), FadeIn(g2, run_time=0.5), FadeIn(lbls2, run_time=0.4), FadeOut(head, run_time=0.4), FadeIn(head2, run_time=0.4))
         self.remove(counter)
         self.add(counter2)
@@ -370,7 +371,7 @@ class Grid(DeckScene):
             settle=0.07,
         )
         layer2 = markup(f"FP127's grid: one tick = 2<sup>−{FRACTION_BITS}</sup> ≈ {n['tick_128'].split('e')[0]} × 10<sup>−{abs(int(n['tick_128'].split('e')[1]))}</sup>", 24, Palette.EMERALD)
-        layer2.move_to([-6.4 + layer2.width / 2, 2.55, 0])
+        layer2.move_to([-6.4 + layer2.width / 2, LABEL_Y, 0])
         self.play(FadeIn(layer2, shift=RIGHT * 0.1, run_time=0.5))
         # the two words' decimal readings, to as many decimals as the truth has: they part at the 39th
         lo_x, hi_x = majors[0].get_x(), majors[1].get_x()

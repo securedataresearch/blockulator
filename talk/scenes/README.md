@@ -9,14 +9,35 @@ screen is read from the repo's JSON at render time; nothing is typed in.
 ```sh
 make anim                   # every scene, 1080p 30 fps, into talk/build/videos/<scene>/1080p30/
 make anim SCENE=s02_exp40   # one scene
+make contact                # the last frame of every section, tiled into talk/build/contact.png
 uv run manim -ql talk/scenes/s04_grid.py Grid     # a 480p preview while editing
 uv run manim -qh -s talk/scenes/s02_exp40.py      # the last frame only, as PNG
 ```
 
-`make anim` runs `talk/scenes/check.py` first (below). manim is a dev
-dependency (`uv add --dev manim`, pinned in `pyproject.toml`); it needs
-cairo, pango and ffmpeg from the system. `talk/build/` and manim's default
-`media/` are git-ignored; rendered mp4s are build outputs, like the tables.
+`make anim` runs `talk/scenes/check.py` first (below) and renders with
+`--save_sections` (`vocab.py` also sets `config.save_sections`, so a
+`-ql` preview writes them too): beside the scene's mp4, one mp4 per
+section and an index, `talk/build/videos/<scene>/<quality>/sections/
+<Scene>_<nnnn>_<name>.mp4` and `<Scene>.json` (a list of `{name, type,
+video, width, height, nb_frames, duration, avg_frame_rate, codec_name,
+pix_fmt}`). `make contact` (`contact.py`) extracts each section's last
+frame to `talk/build/frames/<scene>_<nn>_<name>.png`, checks the index's
+names against the scene's `SECTIONS`, and tiles them labelled. manim is
+a dev dependency (`uv add --dev manim`, pinned in `pyproject.toml`); it
+needs cairo, pango and ffmpeg from the system. `talk/build/` and manim's
+default `media/` are git-ignored; rendered mp4s are build outputs, like
+the tables.
+
+## Sections: one click, one beat
+
+A scene declares `SECTIONS = ("price", "division", …)` and calls
+`self.section(i)` at each beat, in order, `section(0)` before anything
+is played. `section()` closes the previous section with a hold (manim
+drops a section with no play/wait silently, which would shift every
+later name in the index) and the scene ends with `self.close()`, a long
+hold whose last frame is the slide's poster. Nothing fades to the
+background at the end: the last frame reads as a finished slide. The
+deck plays one section per click and holds its last frame.
 
 ## Fonts
 
@@ -38,7 +59,11 @@ Pango per process; every text helper calls it.
   violet, the protocols slate.
 - `words(s, size, colour)` is Instrument Sans; `digits(s, …)` is JetBrains
   Mono with ligatures off so `text[i]` is character `i`; `markup(s, …)` is
-  Pango markup (`<sup>`, `<sub>`).
+  Pango markup (`<sup>`, `<sub>`). Each appends the raw string to
+  `vocab.DRAWN` (`reset_drawn()` clears it) so `check.py` can read what a
+  scene drew. Sizes: `SIZE_CAPTION` 20, `SIZE_BODY` 32, `SIZE_HERO` 48;
+  a mono string is at most `MAX_MONO_CHARS` (46) per line at `SIZE_BODY`
+  (an 80-decimal number wraps).
 - `GridLine`: a `NumberLine` drawn as the grid of representable values
   (faint, ticks, no numbers). `dot_at(x, colour)`, `nearest_tick(x)`.
 - `snap(dot, line, to_tick, colour)`: the one verb. The dot slides to the
@@ -48,7 +73,8 @@ Pango per process; every text helper calls it.
   a chart names the margin between two line ends in its own units.
 - `DeckScene`: dark background, fonts registered, 30 fps, output under
   `talk/build/`; `self.caption(text)` returns the animation that puts the
-  source of the numbers in the bottom-left corner.
+  source of the numbers in the bottom-left corner; `SECTIONS`,
+  `section(i, hold)`, `close()` as above.
 - Loaders, all by path from the repo root: `libs()` (static/data/libraries.json
   → `{id: record}`) and `talk_libs()` (the same less BlockulatorWad: the 17
   every comparison accounts for), `edges(op)` and `probe(op, *args)`
@@ -57,7 +83,20 @@ Pango per process; every text helper calls it.
   or a bare `.digits` in older files) and `ladder_reason(scenario, lib)` ("not
   offered" when `.ops[lib]` is `["unsupported"]`), `live()`
   (docs/benchmarks/accrual-deployed.json, the 326 `group == "live"` cases),
-  `resupply()` (scripts/replays/resupply.json).
+  `resupply()` (scripts/replays/resupply.json), `sweep(lib, op, stage)`
+  (docs/benchmarks/sweep.json, one row), `gas(op)` (docs/benchmarks/gas.json
+  `.ops[op]` with `inlineMedian` per form over its `typical` inputs),
+  `proofs()` (docs/benchmarks/proofs.json summary and ops), `release()`
+  (contracts/deployments/RELEASE.json), `chains()` (talk/scenes/data/
+  chains.json, a dated hand copy of contracts/deployments/README.md's chain
+  table, to re-probe before the talk), `bunni_replay()` (runs
+  scripts/replays/bunni.py's `replay` on bunni.json: the per-withdrawal
+  chain), `thetanuts()`, `balancer()`, `balancer_v1()` (the raw replay
+  JSONs), and `truth80()`: e^40 to 80 decimals by mpmath, its first 24
+  decimals asserted against edges.json's truth.
+- The words: `fp127_value(raw)` and `fp19_value(raw)` decode a cell's
+  `.raw` word (FP127: 128 fraction bits; FP19: binary256's layout) to a
+  Fraction; `to_decimals(q, places)` writes it, nearest, half-up.
 - `correctly_rounded_18(truth)`: the nearest 18-decimal value, ties away
   from zero (no probe in edges.json is a tie). `correct_digits(value, truth)`
   = floor(−log10(|value − truth| / truth)), the measure edges.json reports as
@@ -77,18 +116,27 @@ chart's own units.
 
 | file | slide | numbers from |
 |---|---|---|
-| `s02_exp40.py` | What is e^40? | edges.json op `exp`, probe `["40"]`: `.truth`, `.cells[solady|balancer|prb|fp19|fp127].value`, `.cells[fp19|fp127].digits` (the three counted in decimals of 18; FP127's decimals beyond 18 from its `.digits`); labels from libraries.json |
-| `s04_grid.py` | Computers round | edges.json op `exp`, probe `["40"]`: `.truth`, `.cells.fp127.value`; the 10^-18 and 2^-128 neighbours computed from the truth with Fraction |
-| `s05_cost.py` | $130 million | `talk/scenes/data/incidents.json` (`.incidents[]`, `.total`, `.since`; the rounding lines are essay-v6 §2 verbatim, the sum adds `.lossUsd`) |
+| `s02_exp40.py` | What is e^40? | edges.json op `exp`, probe `["40"]`: `.truth` (extended to 80 decimals by `truth80()`), `.cells[solady|balancer|prb].value` (counted in decimals of 18), `.cells[fp19|fp127].raw` decoded and written to 80 decimals, their matching digits against the truth counted by eye; labels from libraries.json |
+| `s04_grid.py` | Computers round | edges.json op `exp`, probe `["40"]`: `.truth` to 80 decimals (`truth80()`), `.cells.fp127.value`; the neighbours at every decimal and binary level, the 2^-128 words' readings to 80 decimals (they part at the 39th), computed from the truth with Fraction |
+| `s05_cost.py` | $130 million | `talk/scenes/data/incidents.json` (`.incidents[]`, `.total`, `.since`; the rounding lines are essay-v6 §2's, listed, not summed) |
 | `s06_resupply.py` | Resupply, 26 June 2025 | scripts/replays/resupply.json `.pins` (price, borrowAmount, collateral, maxLTV, ltvPrecision, exchangePrecision, block) and `.citations` (the two Solidity lines); every value computed from the pins |
 | `s08_ladder.py` | Measure it | ladder.json `.ladder`, `.ladderLog10`, `.axisMax`; one chart morphing across scenarios `compound`, `accrual-continuous`, `adaptive-rate`: `.summary[lib][N].digits.median` per library (one line each; those without a median at every N listed with `.ops[lib]`'s reason), the margins FP19 − best 18-decimal and FP127 − best 18-decimal at N = 10,000; fp127lib skipped |
 | `s09_cliff.py` | The cliff | edges.json op `exp`, the probes with one argument in [−100, −40]: `.cells[lib].digits/zero/reverted/reasonName/unsupported` (every library with a value drawn; unsupported on every probe listed as "no exp", ParamOutOfRange on every probe as "rejects negative inputs"; fp127lib skipped); FP19's least digits, FP127's last probe with a digit |
 | `s10_live.py` | Real markets, today | accrual-deployed.json `.cases[group == "live"]` `.truth[primaryTruth].deployed.digitsInterest`, `.fp127.digitsInterest` and `.fp19.digitsInterest`; the three medians and the margins between them computed; `.survey.block/.date` |
 
-Each scene module exposes `numbers()`, the values it draws.
-`uv run talk/scenes/check.py [scene…]` recomputes them from the loaders
-(by a second route where there is one) and fails if a scene has drifted
-from the JSON.
+Each scene module exposes `numbers()`, the values it draws, and
+`LITERALS`, the digit-bearing fixed strings (captions, "to 18 decimals",
+a closing line) each mapped to a claim id in research_notes/talk/claims.md
+or to `"REPORT"` while unverified. `uv run talk/scenes/check.py [scene…]`
+recomputes `numbers()` from the loaders (by a second route where there is
+one) and fails if a scene has drifted from the JSON; then it runs the
+scene's `construct` under manim's dry run and reads `vocab.DRAWN`: every
+drawn string with a digit must have each of its numbers in `numbers()`
+(as a value, or as the scenes format one: thousands separators, one
+decimal, rounded; the libraries' names, "FP127", count as names) or be a
+key of `LITERALS`; anything else prints as `UNSUPPORTED` and fails, and
+`REPORT` literals are listed. No drawn string may carry "…" or "½". It
+also asserts the scene called every one of its `SECTIONS`, in order.
 
 The hero of every comparison is Blockulator's own answer: `halo()` behind
 a hero dot, `glow_line()` under a hero line, `glow_bar()` behind a hero

@@ -70,8 +70,8 @@ BRACKET_X = {"fp19": 5.2, "fp127": 5.5}  # where each margin bracket stands
 CLUSTER_XY = (0.35, 1.1)  # the 18-decimal names: chart x in log10 N, scene y
 CLUSTER_WIDTH = 60  # characters per line of the 18-decimal names
 TITLE_Y, LEGEND_Y = 3.5, 3.1  # the top strip: the scenario, then who has no line
-CLOSE_XY = (6.9, -2.78)  # the closing lines, right-aligned, bottom right
-CLOSE_PITCH = 0.36
+CLOSE_XY = (6.9, -3.0)  # the closing lines, right-aligned, bottom right, under the x labels
+CLOSE_PITCH = 0.33
 Y_STEP = 20
 CLOSE_FIRST = "Blockulator's lines start higher and keep the gap"  # V14
 
