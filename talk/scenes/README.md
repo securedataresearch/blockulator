@@ -62,9 +62,20 @@ Pango per process; every text helper calls it.
 
 | file | slide | numbers from |
 |---|---|---|
-| `s02_exp40.py` | What is e^40? | edges.json op `exp`, probe `["40"]`: `.truth`, `.cells[solady|balancer|prb].value`; labels from libraries.json |
-| `s04_grid.py` | Computers round | none: the vocabulary itself |
+| `s02_exp40.py` | What is e^40? | edges.json op `exp`, probe `["40"]`: `.truth`, `.cells[solady|balancer|prb|fp19|fp127].value`, `.cells[fp19|fp127].digits`; labels from libraries.json |
+| `s04_grid.py` | Computers round | edges.json op `exp`, probe `["40"]`: `.truth`, `.cells.fp127.value`; the 10^-18 and 2^-128 neighbours computed from the truth with Fraction |
+| `s05_cost.py` | $130 million | `talk/scenes/data/incidents.json` (`.incidents[]`, `.total`, `.since`; the rounding lines are essay-v6 §2 verbatim, the sum adds `.lossUsd`) |
+| `s06_resupply.py` | Resupply, 26 June 2025 | scripts/replays/resupply.json `.pins` (price, borrowAmount, collateral, maxLTV, ltvPrecision, exchangePrecision, block) and `.citations` (the two Solidity lines); every value computed from the pins |
+| `s08_ladder.py` | Measure it | ladder.json `.ladder`, `.ladderLog10`, `.axisMax`, scenario `compound` `.summary[lib][N].digits.median` (libraries with a median at every N; fp127lib skipped) |
+| `s09_cliff.py` | The cliff | edges.json op `exp`, the probes with one argument in [−100, −40]: `.cells[lib].digits/zero/reverted/reasonName` (libraries unsupported or ParamOutOfRange on every probe are dropped; fp127lib skipped) |
+| `s10_live.py` | Real markets, today | accrual-deployed.json `.cases[group == "live"]` `.truth[primaryTruth].deployed.digitsInterest` and `.fp127.digitsInterest`, `.survey.block/.date` |
 
 Each scene module exposes `numbers()`, the values it draws.
 `uv run talk/scenes/check.py [scene…]` recomputes them from the loaders
-and fails if a scene has drifted from the JSON.
+(by a second route where there is one) and fails if a scene has drifted
+from the JSON.
+
+The hero of every comparison is Blockulator's own answer: `halo()` behind
+a hero dot, `glow_line()` under a hero line, `glow_bar()` behind a hero
+row of text; `Chart` (two GridLines at right angles, `grid()` for the
+faint rules behind the data) is the deck's plot.

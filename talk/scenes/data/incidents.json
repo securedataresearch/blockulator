@@ -1,0 +1,47 @@
+{
+  "_doc": "Slide 5, '$130 million': the five incidents of research_notes/talk/essay-v6.txt §2, oldest first. 'rounding' is §2's one-line wording verbatim (the scene sets its ' x ' as ' × ' and '...' as '…'); 'loss' is the figure the slide shows; 'lossUsd' is what the running sum adds (the lower Resupply bound, the realised Thetanuts figure); 'source' says where each figure comes from. 'total' is the slide's phrase for the sum.",
+  "since": "June 2025",
+  "total": "more than $130 million, before recoveries",
+  "incidents": [
+    {
+      "date": "26 Jun 2025",
+      "protocol": "Resupply",
+      "rounding": "The exchange rate, 1e36 divided by that price, came out just under one half. Integer division floored it to zero.",
+      "loss": "$9.5M–$10M",
+      "lossUsd": 9500000,
+      "source": "about $9.5M–$10M, reported"
+    },
+    {
+      "date": "2 Sep 2025",
+      "protocol": "Bunni v2",
+      "rounding": "Forty-four withdrawals, each rounding the idle balance the way the team believed safe. Active USDC 28 base units to 4; liquidity down 84%.",
+      "loss": "$8.4M",
+      "lossUsd": 8400000,
+      "source": "$8.4M, Bunni's post-mortem"
+    },
+    {
+      "date": "3 Nov 2025",
+      "protocol": "Balancer V2",
+      "rounding": "17 x 1.0581 = 17.988, rounded down to 17. A swap undercharged by 34.7%, repeated 55 times in one transaction.",
+      "loss": "$121.1M",
+      "lossUsd": 121100000,
+      "source": "$121.1M total losses, Balancer's post-mortem"
+    },
+    {
+      "date": "15 Jun 2026",
+      "protocol": "Thetanuts",
+      "rounding": "Supply redeemed down to 3 raw units, then 37 mints, each charged less than one raw unit, floored to 0.",
+      "loss": "$105,000",
+      "lossUsd": 105000,
+      "source": "about $105,000 USDC realised; PeckShield estimate $2.1M"
+    },
+    {
+      "date": "31 Aug 2026",
+      "protocol": "Balancer V1",
+      "rounding": "3 x 1.4999... = 4.4999..., rounded to 4. One token unit paid for one and a half, 438 times.",
+      "loss": "$1.39M",
+      "lossUsd": 1390000,
+      "source": "$1.39M, BIP-930"
+    }
+  ]
+}

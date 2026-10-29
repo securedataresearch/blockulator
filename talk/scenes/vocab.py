@@ -24,15 +24,20 @@ from pathlib import Path
 
 from manim import (
     DOWN,
+    PI,
     UP,
     LEFT,
+    RIGHT,
     AnimationGroup,
+    Arrow,
+    Circle,
     Dot,
     FadeIn,
     FadeOut,
     Line,
     MarkupText,
     NumberLine,
+    RoundedRectangle,
     Scene,
     Succession,
     Transform,
@@ -41,6 +46,7 @@ from manim import (
     config,
 )
 import manimpango
+import numpy as np
 from manim.utils.rate_functions import ease_in_out_cubic, ease_out_cubic
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -200,12 +206,159 @@ def measure(line: GridLine, a: float, b: float, label: str, scale: float = 1.0, 
     return VGroup(bar, caps, text)
 
 
+def direction(line: GridLine, x_from: float, x_to: float, colour: str, lift: float = 0.3) -> Arrow:
+    """The direction a rounding took, drawn just above the line; the tip and
+    stroke are fixed so a short arrow reads like a long one."""
+    return Arrow(
+        line.n2p(x_from) + UP * lift,
+        line.n2p(x_to) + UP * lift,
+        buff=0.05,
+        color=colour,
+        stroke_width=2.5,
+        tip_length=0.11,
+        max_tip_length_to_length_ratio=1.0,
+        max_stroke_width_to_length_ratio=100.0,
+    )
+
+
+def check_mark(colour: str = Palette.CORRECT, size: float = 0.32, stroke_width: float = 4.0) -> VGroup:
+    """A tick, drawn (no font carries one): the short stroke down, the long
+    stroke up. Centred on the origin."""
+    a = np.array([-0.5, 0.05, 0]) * size
+    b = np.array([-0.15, -0.35, 0]) * size
+    c = np.array([0.55, 0.5, 0]) * size
+    return VGroup(Line(a, b, color=colour, stroke_width=stroke_width), Line(b, c, color=colour, stroke_width=stroke_width))
+
+
+def cross_mark(colour: str = Palette.WRONG, size: float = 0.32, stroke_width: float = 4.0) -> VGroup:
+    """A cross, drawn, the same size as check_mark."""
+    s = 0.42 * size
+    return VGroup(
+        Line([-s, -s, 0], [s, s, 0], color=colour, stroke_width=stroke_width),
+        Line([-s, s, 0], [s, -s, 0], color=colour, stroke_width=stroke_width),
+    )
+
+
+# --------------------------------------------------------------- the chart --
+class Chart(VGroup):
+    """Two GridLines at right angles: the deck's plot. Values are dots on
+    it, as on the grid. x_range and y_range are (min, max, step) in data
+    units; the ticks are the steps. c2p maps data to the scene; x_label /
+    y_label put a small faint label at a tick; x_title / y_title name the
+    axes. Everything added through these methods is part of the group."""
+
+    def __init__(self, x_range, y_range, width: float, height: float, origin=(0.0, 0.0, 0.0), tick_size: float = 0.1):
+        super().__init__()
+        self.origin = np.array(origin, dtype=float)
+        self.x_range, self.y_range, self.width, self.height = x_range, y_range, width, height
+        self.x_axis = GridLine(x_range, length=width, colour=Palette.RULE, tick_size=tick_size)
+        self.x_axis.shift(self.origin - self.x_axis.n2p(x_range[0]))
+        self.y_axis = GridLine(y_range, length=height, colour=Palette.RULE, tick_size=tick_size, rotation=PI / 2)
+        self.y_axis.shift(self.origin - self.y_axis.n2p(y_range[0]))
+        self.labels = VGroup()
+        self.titles = VGroup()
+        self.add(self.x_axis, self.y_axis, self.labels, self.titles)
+
+    def c2p(self, x: float, y: float):
+        return self.origin + RIGHT * (self.x_axis.n2p(x) - self.origin)[0] + UP * (self.y_axis.n2p(y) - self.origin)[1]
+
+    def x_label(self, x: float, text: str, size: float = 20, colour: str = Palette.FAINT, buff: float = 0.18, use_markup: bool = False, mono: bool = False):
+        make = markup if use_markup else (digits if mono else words)
+        t = make(text, size, colour).next_to(self.c2p(x, self.y_range[0]), DOWN, buff=buff)
+        self.labels.add(t)
+        return t
+
+    def y_label(self, y: float, text: str, size: float = 20, colour: str = Palette.FAINT, buff: float = 0.18, mono: bool = False):
+        t = (digits if mono else words)(text, size, colour).next_to(self.c2p(self.x_range[0], y), LEFT, buff=buff)
+        self.labels.add(t)
+        return t
+
+    def x_title(self, text: str, size: float = 22, colour: str = Palette.MUTED, drop: float = 0.72):
+        t = words(text, size, colour).move_to(self.c2p((self.x_range[0] + self.x_range[1]) / 2, self.y_range[0]) + DOWN * drop)
+        self.titles.add(t)
+        return t
+
+    def y_title(self, text: str, size: float = 22, colour: str = Palette.MUTED, gap: float = 0.95):
+        t = words(text, size, colour).rotate(PI / 2).move_to(self.c2p(self.x_range[0], (self.y_range[0] + self.y_range[1]) / 2) + LEFT * gap)
+        self.titles.add(t)
+        return t
+
+    def dot(self, x: float, y: float, colour: str, radius: float = 0.07, **kw) -> Dot:
+        return Dot(self.c2p(x, y), radius=radius, color=colour, **kw)
+
+    def grid(self, opacity: float = 0.22) -> VGroup:
+        """Faint rules across the plot at every tick, behind the data
+        (depth: the grid is the background, the values are crisp)."""
+        g = VGroup()
+        x0, x1, xs = self.x_range
+        y0, y1, ys = self.y_range
+        for y in np.arange(y0 + ys, y1 + ys / 2, ys):
+            g.add(Line(self.c2p(x0, y), self.c2p(x1, y), color=Palette.RULE, stroke_width=1, stroke_opacity=opacity))
+        for x in np.arange(x0 + xs, x1 + xs / 2, xs):
+            g.add(Line(self.c2p(x, y0), self.c2p(x, y1), color=Palette.RULE, stroke_width=1, stroke_opacity=opacity))
+        self.add_to_back(g)
+        return g
+
+
+# --------------------------------------------------------------- the hero --
+def halo(point, colour: str = Palette.EMERALD, radius: float = 0.11, layers: int = 4, spread: float = 2.6, opacity: float = 0.24) -> VGroup:
+    """A soft glow behind a hero dot: concentric discs fading outward.
+    Put it behind the dot (add it first)."""
+    g = VGroup()
+    for i in range(layers, 0, -1):
+        r = radius * (1 + spread * i / layers)
+        g.add(Circle(radius=r, color=colour, fill_color=colour, fill_opacity=opacity * (1 - (i - 1) / layers) * 0.6, stroke_width=0).move_to(point))
+    return g
+
+
+def glow_line(points, colour: str = Palette.EMERALD, width: float = 14.0, opacity: float = 0.18):
+    """The glow under a hero line: the same polyline, wide and faint.
+    Draw it with the line (Create both) and keep it behind."""
+    from manim import VMobject
+
+    return VMobject(color=colour, stroke_width=width, stroke_opacity=opacity).set_points_as_corners(points)
+
+
+def glow_bar(mobj, colour: str = Palette.EMERALD, pad: float = 0.18, opacity: float = 0.09) -> RoundedRectangle:
+    """A soft panel behind a hero row of text."""
+    return RoundedRectangle(
+        width=mobj.width + 2 * pad,
+        height=mobj.height + 2 * pad,
+        corner_radius=0.12,
+        color=colour,
+        fill_color=colour,
+        fill_opacity=opacity,
+        stroke_width=0,
+    ).move_to(mobj)
+
+
 # ---------------------------------------------------------------- numbers --
+def thousands(n: int | str) -> str:
+    """An integer with thousands separators: 95000 → "95,000"."""
+    return f"{int(n):,}"
+
+
+def millions(usd: int | float) -> str:
+    """A dollar amount in millions to one decimal: 9500000 → "$9.5M"."""
+    return f"${usd / 1e6:,.1f}M"
+
+
+def typographic(s: str) -> str:
+    """The essay's plain-text operators set as glyphs: ' x ' → ' × ', '...' → '…'.
+    The words stay verbatim."""
+    return s.replace(" x ", " × ").replace("...", "…")
+
+
 def _load(rel: str):
     with open(ROOT / rel, encoding="utf-8") as f:
         return json.load(f)
 
 
+def incidents() -> dict:
+    """talk/scenes/data/incidents.json: the five incidents of essay-v6 §2,
+    oldest first (.incidents[] with date, protocol, rounding, loss,
+    lossUsd, source) and the slide's .total phrase."""
+    return _load("talk/scenes/data/incidents.json")
 def libs() -> dict[str, dict]:
     """static/data/libraries.json → {id: record}, in file order."""
     return {lib["id"]: lib for lib in _load("static/data/libraries.json")["libraries"]}
@@ -230,11 +383,12 @@ def probe(op: str, *args: str) -> dict:
 
 def ladder(scenario: str) -> dict:
     """docs/benchmarks/ladder.json → {"N": [1, 2, …, 10000], "log10": {…},
-    "scenario": the scenario record (its .summary[lib][N].digits)}."""
+    "axisMax": the digits axis the site's charts use, "scenario": the
+    scenario record (its .summary[lib][N].digits)}."""
     d = _load("docs/benchmarks/ladder.json")
     for s in d["scenarios"]:
         if s["id"] == scenario:
-            return {"N": d["ladder"], "log10": d["ladderLog10"], "scenario": s}
+            return {"N": d["ladder"], "log10": d["ladderLog10"], "axisMax": d["axisMax"], "scenario": s}
     raise KeyError(scenario)
 
 
@@ -274,6 +428,23 @@ def correct_digits(value: str, truth: str) -> int:
             return 10**9
         rel = abs(v - t) / abs(t)
         return int((-rel.log10()).to_integral_value(rounding="ROUND_FLOOR"))
+
+
+def matching_digits(value: str, truth: str) -> int:
+    """How many leading digits of value equal truth's, the decimal point
+    ignored (both strings aligned on the point; if the integer parts differ
+    in length no leading digit lines up and the count is 0). This is the
+    count a reader makes by eye; correct_digits is the measure."""
+    vi, _, vf = value.partition(".")
+    ti, _, tf = truth.partition(".")
+    if len(vi) != len(ti):
+        return 0
+    n = 0
+    for a, b in zip(vi + vf, ti + tf):
+        if a != b:
+            break
+        n += 1
+    return n
 
 
 def first_wrong_index(value: str, truth: str) -> int | None:
