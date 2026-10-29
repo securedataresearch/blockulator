@@ -128,6 +128,7 @@ chart's own units.
 | `s09_cliff.py` | The cliff | edges.json op `exp`, the probes with one argument in [−100, −40]: `.cells[lib].digits/zero/reverted/reasonName/unsupported` (every library with a value drawn; unsupported on every probe listed as "no exp", ParamOutOfRange on every probe as "rejects negative inputs"; fp127lib skipped); FP19's least digits, FP127's last probe with a digit |
 | `s10_live.py` | Real markets, today | accrual-deployed.json `.cases[group == "live"]` `.truth[primaryTruth].deployed.digitsInterest`, `.fp127.digitsInterest` and `.fp19.digitsInterest`; the three medians and the margins between them computed; `.survey.block/.date` |
 | `s16_ziv.py` | What correct costs | sweep.json rows `lib=fp19 op=exp` and `lib=fp127 op=exp` (plain pass): `.n`, `.fallback`, FP127's `.inputs`; gas.json `.ops.exp.typical.gas.lib`'s median through `gas("exp")` (2,835); the pre-test figure 2,716 is a module constant (contracts/deployments/FP127.md, claim V19) and the percentage is computed; the opcode prices (MUL 5, divh 393) are `LITERALS` (V32); the grid of the middle sections carries no numbers |
+| `s12_reference.py` | There is no reference | contracts/deployments/RELEASE.json `.components.FP127.address/.version` (the address, typed in; it fits the frame only below SIZE_HERO); talk/scenes/data/chains.json `.chains[]` (chain, clz_since, status, deployed, proxy; `.probed`, the caption): one row per chain in the README's order, "deployed" on the `deployed` row alone, "has CLZ · proxy present · not yet deployed" where `proxy` is true, "no CLZ" with a cross on the unsupported; the exp(40) word to 18 decimals from `correctly_rounded_18(truth80())`, typed twice (the reference's and your contract's, the same string); `box()` for the two contracts |
 
 Each scene module exposes `numbers()`, the values it draws, and
 `LITERALS`, the digit-bearing fixed strings (captions, "to 18 decimals",
@@ -145,7 +146,9 @@ also asserts the scene called every one of its `SECTIONS`, in order.
 
 The hero of every comparison is Blockulator's own answer: `halo()` behind
 a hero dot, `glow_line()` under a hero line, `glow_bar()` behind a hero
-row of text; `Chart` (two GridLines at right angles, `grid()` for the
+row of text; `box(label, *content)` a named thing (a contract, a caller):
+a rounded rectangle, filled with the background, around a label and
+whatever is stacked beneath it; `Chart` (two GridLines at right angles, `grid()` for the
 faint rules behind the data) is the deck's plot.
 
 ## The deck
