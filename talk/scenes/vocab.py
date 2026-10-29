@@ -598,6 +598,19 @@ def bunni_replay() -> dict:
     return mod.replay(_load("scripts/replays/bunni.json"))
 
 
+def balancer_v1_replay() -> list[list[dict]]:
+    """scripts/replays/balancer_v1.py:replay on each pool of balancer_v1.json
+    (five, in tx order): every logged call rerun through the BNum
+    transcription from the pinned state, each logged amount asserted. One
+    list per pool of its joins and single-token exits: {kind, token,
+    balance, weight, totalWeight, supply, poolAmount, limit, fee, deployed,
+    steps{normalizedWeight, poolRatio, boo, tokenInRatio, newTokenBalanceIn,
+    …}} (integers on BNum's 10^-18 grid); the module's JOIN_POOL_OUT /
+    EXIT_POOL_IN name the kinds and BONE the grid."""
+    mod = _import_script("scripts/replays/balancer_v1.py")
+    return [mod.replay(p) for p in _load("scripts/replays/balancer_v1.json")["pools"]]
+
+
 TRUTH_DECIMALS = 80
 
 
