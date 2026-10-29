@@ -240,7 +240,14 @@ class Grid(DeckScene):
         eq = markup("e<sup>40</sup> =", size, Palette.TEXT)
         num = digits(wrap_decimals(value), size, Palette.FAINT, line_spacing=0.7)
         tag = words(precision, SIZE_CAPTION, Palette.FAINT)
-        g = VGroup(eq, num, tag).arrange(RIGHT, buff=0.22)
+        if num.height < 0.5:
+            g = VGroup(eq, num, tag).arrange(RIGHT, buff=0.22)
+        else:
+            # two lines: the tag sits after the shorter second line, so the header stays between the two marks
+            g = VGroup(eq, num).arrange(RIGHT, buff=0.22)
+            k = len(wrap_decimals(value).partition("\n")[0]) + 1  # the first line's glyphs and the newline's zero-width placeholder
+            tag.next_to(num[k:], RIGHT, buff=0.22)
+            g.add(tag)
         g.move_to([0, 3.2 if num.height < 0.5 else 3.15, 0])
         self.light(num, lit)
         return g

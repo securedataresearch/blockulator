@@ -69,7 +69,7 @@ TICK_HALF = 0.3  # the median tick: 1.5x the band height
 LABEL_LIFT = 0.36  # the median label's bottom above the row centre
 BRACKET_LIFT = 1.0  # the margin bracket above the lower row's centre, in the gap
 SEED = 40
-Y_FACET, Y_AXIS_TITLE, Y_CLOSE = 2.94, -2.55, -2.97
+Y_FACET, Y_AXIS_TITLE, Y_CLOSE = 2.78, -2.55, -2.97  # the facet titles under the right mark (was 2.94)
 SIZE_TICK = SIZE_CAPTION + 4  # the axis labels, per the brief
 SIZE_CLOSE = 28  # the closing line does not fit the safe width at BODY (reported)
 
