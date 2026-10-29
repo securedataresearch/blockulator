@@ -30,7 +30,7 @@ COLUMNS = 4
 
 
 def scenes() -> list[str]:
-    return sorted(p.stem for p in HERE.glob("s[0-9][0-9]_*.py"))
+    return sorted(p.stem for p in HERE.glob("s[0-9][0-9]*_*.py"))
 
 
 def sections_of(scene: str) -> list[str]:

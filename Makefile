@@ -281,7 +281,7 @@ deck-pdf:
 talk: anim contact deck deck-pdf
 
 # The talk's manim scenes (talk/scenes/*.py, see talk/scenes/README.md): one with SCENE=s02_exp40, all without; 1080p30 into talk/build/
-SCENES := $(basename $(notdir $(wildcard talk/scenes/s[0-9][0-9]_*.py)))
+SCENES := $(basename $(notdir $(wildcard talk/scenes/s[0-9][0-9]*_*.py)))
 anim:
 	@$(PY) talk/scenes/check.py
 	@for s in $(if $(SCENE),$(SCENE),$(SCENES)); do $(PY) manim -qh -a --save_sections talk/scenes/$$s.py || exit 1; done
