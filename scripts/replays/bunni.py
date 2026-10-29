@@ -2,7 +2,7 @@
 """Bunni v2 exploit replay (Ethereum, 2 Sep 2025): the 44 withdrawals that took
 the pool's active USDC balance from 28 wei to 4, replayed from integers pinned
 out of the attack transaction, and the same withdrawals with the idle balance
-held in mulDivUp (the protocol's fix), FP127, FP19 and exact rationals.
+held in mulDivUp (the protocol's fix), BL127, BL19 and exact rationals.
 
     uv run scripts/replays/bunni.py fetch     # network: trace + receipt + Sourcify -> scripts/replays/bunni.json
     uv run scripts/replays/bunni.py           # offline: replay + forge test -> docs/benchmarks/replay-bunni.md
@@ -24,7 +24,7 @@ the hook's own reads after the last one).
 The offline mode needs no network: it replays from bunni.json, runs
 test/replays/Bunni.t.sol (which asserts the same observations in Solidity
 and prints REPLAY| lines), checks the forge numbers equal the Python ones, and
-scores FP127 and FP19 against exact rational arithmetic.
+scores BL127 and BL19 against exact rational arithmetic.
 """
 from __future__ import annotations
 
@@ -269,10 +269,10 @@ def replay(d: dict) -> dict:
     v1 = Vault(*(int(st["vault1"][k]) for k in ("cash", "totalBorrows", "totalShares")))
     n = len(steps["shares"])
     T0 = int(st["totalSupply"])
-    idle = {"deployed": idle0, "mulDivUp": idle0, "fp127": idle0 << 128}
+    idle = {"deployed": idle0, "mulDivUp": idle0, "bl127": idle0 << 128}
     exact = Fraction(idle0)
     snaps = {int(k): i for i, k in enumerate(d["snapshots"]["after"])}
-    seq = {f: [] for f in ("deployed", "mulDivUp", "fp127", "exact")}
+    seq = {f: [] for f in ("deployed", "mulDivUp", "bl127", "exact")}
     bal0s, bal1s = [], []
     T = T0
 
@@ -281,7 +281,7 @@ def replay(d: dict) -> dict:
         bal0s.append(b0), bal1s.append(b1)
         seq["deployed"].append(b0 - idle["deployed"])
         seq["mulDivUp"].append(b0 - idle["mulDivUp"])
-        seq["fp127"].append(Fraction((b0 << 128) - idle["fp127"], 1 << 128))
+        seq["bl127"].append(Fraction((b0 << 128) - idle["bl127"], 1 << 128))
         seq["exact"].append(b0 - exact)
 
     record()
@@ -302,8 +302,8 @@ def replay(d: dict) -> dict:
         idle["deployed"] = i - i * s // T                    # BunniHubLogic.sol:478
         i = idle["mulDivUp"]
         idle["mulDivUp"] = i - cdiv(i * s, T)                # the fix
-        i = idle["fp127"]
-        idle["fp127"] = i - (i * s) // T                     # FP127: sub(i, div(mul(i, s), T)), floor/trunc at 2^-128
+        i = idle["bl127"]
+        idle["bl127"] = i - (i * s) // T                     # BL127: sub(i, div(mul(i, s), T)), floor/trunc at 2^-128
         exact = exact - exact * s / T
         T -= s
         if k + 1 in snaps:
@@ -327,7 +327,7 @@ def liquidity_table(d: dict, r: dict) -> dict:
     b0s, b1s = r["bal0"], r["bal1"]
     idle0 = int(d["start"]["idle"])
     out = {"start": query_ldf(*args, b0s[0], b1s[0], idle0, True)}
-    for f in ("deployed", "mulDivUp", "fp127", "exact"):
+    for f in ("deployed", "mulDivUp", "bl127", "exact"):
         a = r["seq"][f][-1]
         a_int = a if isinstance(a, int) else (a.numerator // a.denominator)
         out[f] = query_ldf(*args, b0s[-1], b1s[-1], b0s[-1] - a_int, True)
@@ -658,7 +658,7 @@ def parse_forge(text: str) -> dict:
     return res
 
 
-def fp19_value(raw: int) -> Fraction:
+def bl19_value(raw: int) -> Fraction:
     w = raw & ((1 << 256) - 1)
     if w == 0:
         return Fraction(0)
@@ -668,7 +668,7 @@ def fp19_value(raw: int) -> Fraction:
     return -v if s else v
 
 
-def fp127_value(raw: int) -> Fraction:
+def bl127_value(raw: int) -> Fraction:
     return Fraction(raw - (1 << 256) if raw >> 255 else raw, 1 << 128)
 
 
@@ -703,18 +703,18 @@ def main() -> None:
         # the forge replay must agree with this one, integer for integer
         assert f["deployed"]["active0"] == r["seq"]["deployed"][-1] and f["deployed"]["L"] == liq["deployed"]["L"]
         assert f["mulDivUp"]["active0"] == r["seq"]["mulDivUp"][-1] and f["mulDivUp"]["L"] == liq["mulDivUp"]["L"]
-        assert fp127_value(f["fp127"]["active0"]) == r["seq"]["fp127"][-1], "forge FP127 differs from the Python FP127 model"
+        assert bl127_value(f["bl127"]["active0"]) == r["seq"]["bl127"][-1], "forge BL127 differs from the Python BL127 model"
         assert f["start"]["L"] == liq["start"]["L"] and f["exact"]["L"] == liq["exact"]["L"]
         assert Fraction(f["exact"]["num"], f["exact"]["den"]) == r["seq"]["exact"][-1]
     ex = r["seq"]["exact"]
     rows = []
     for form, label in (("deployed", "deployed (`mulDiv`, floor on the subtrahend)"), ("mulDivUp", "the fix (`mulDivUp`)"),
-                        ("fp127", "FP127 idle balance"), ("fp19", "FP19 idle balance"), ("exact", "exact rational")):
-        if form == "fp19":
+                        ("bl127", "BL127 idle balance"), ("bl19", "BL19 idle balance"), ("exact", "exact rational")):
+        if form == "bl19":
             if not forge:
                 continue
-            a = fp19_value(forge["fp19"]["active0"])
-            lq = forge["fp19"]["L"]
+            a = bl19_value(forge["bl19"]["active0"])
+            lq = forge["bl19"]["L"]
         else:
             a = Fraction(r["seq"][form][-1])
             lq = liq[form]["L"]
@@ -722,7 +722,7 @@ def main() -> None:
                          dL=Fraction(lq, liq["start"]["L"]) - 1))
     write_md(d, r, liq, rows, forge)
     for x in rows:
-        print(f"{x['form']:9s} active0 {fmt(x['active'], 40) if x['form'] in ('fp127', 'fp19') else fmt(x['active'])}"
+        print(f"{x['form']:9s} active0 {fmt(x['active'], 40) if x['form'] in ('bl127', 'bl19') else fmt(x['active'])}"
               f"  err {sci(x['err'])}  L {x['L']}  dL {float(x['dL']):+.6%}")
 
 
@@ -767,11 +767,11 @@ def write_md(d: dict, r: dict, liq: dict, rows: list, forge: dict | None) -> Non
     L.append("| idle balance | active USDC after 44 (wei) | error vs exact (wei) | total liquidity after | change |")
     L.append("|---|---|---|---|---|")
     for x in rows:
-        a = fmt(x["active"], 40 if x["form"] in ("fp127", "fp19") else 6)
+        a = fmt(x["active"], 40 if x["form"] in ("bl127", "bl19") else 6)
         if x["form"] == "exact":
             a = f"{fmt(x['active'], 12)}… (= {x['active'].numerator}/{x['active'].denominator})"
         L.append(f"| {x['label']} | {a} | {sci(x['err'])} | {x['L']} | {float(x['dL']):+.7%} |")
-    L.append(f"\nStart: active {seqd[0]} wei, liquidity {L0}. Liquidity takes integer balances, so for FP127, FP19 and "
+    L.append(f"\nStart: active {seqd[0]} wei, liquidity {L0}. Liquidity takes integer balances, so for BL127, BL19 and "
              f"exact the active balance is floored before `queryLDF` (the idle balance rounded up: the same direction "
              f"as the deployed code, applied once instead of {n} times).\n")
     L.append("Per step (active USDC, wei; deployed / mulDivUp / exact):\n")
@@ -844,11 +844,11 @@ def write_md(d: dict, r: dict, liq: dict, rows: list, forge: dict | None) -> Non
              f"({float((up - ex[-1]) / ex[-1]):+.0%}), in the other direction. That is harmless in this state because "
              f"liquidity is bound by the USDT side; when the USDC side binds, liquidity follows the overstated balance. "
              f"The post-mortem says of the change that \"it's unclear if this change will introduce new attack vectors\".")
-    L.append(f"- **FP127.** The transliteration is `sub(idle, div(mul(idle, s), T))` with the idle balance stored as a "
-             f"127.128 word. FP127's `div` truncates, so it rounds the idle balance up exactly as the deployed code does; "
+    L.append(f"- **BL127.** The transliteration is `sub(idle, div(mul(idle, s), T))` with the idle balance stored as a "
+             f"127.128 word. BL127's `div` truncates, so it rounds the idle balance up exactly as the deployed code does; "
              f"the grid is 2^-128 wei instead of 1 wei, so {n} steps move it by under {n}·2^-128 ≈ "
              f"{n / 2 ** 128:.1e} wei. A non-negative 127.128 word is below 2^255, so it fits the 255 bits `IdleBalance` "
-             f"already gives the balance ({c('idleUnpack')}). It only helps if the stored state is FP127: rounding to a wei "
+             f"already gives the balance ({c('idleUnpack')}). It only helps if the stored state is BL127: rounding to a wei "
              f"before storing it brings back the deployed bug, one wei per step.")
     L.append(f"- **Why exact rises to {fmt(ex[-1], 2)}, not 28.** The token transfers still floor in the pool's favour, "
              f"so each withdrawal leaves a fraction of a wei of raw USDC and vault shares behind; that is real USDC in "
@@ -857,7 +857,7 @@ def write_md(d: dict, r: dict, liq: dict, rows: list, forge: dict | None) -> Non
     L.append("- **Not modelled.** The sandwich itself, the LDF (`CarpetedDoubleGeometricDistribution`; its outputs are "
              "taken from the trace), and the Unichain transaction.\n")
     dep_err = ex[-1] - seqd[-1]
-    L.append(f"**Caveat:** FP127 fixes this only if the idle balance is *stored* as an FP127 word and updated in FP127 "
+    L.append(f"**Caveat:** BL127 fixes this only if the idle balance is *stored* as an BL127 word and updated in BL127 "
              f"(token transfers still round to whole wei), and `mulDivUp` alone also stops this {n}-step sequence, ending "
              f"{fmt(up - ex[-1], 2)} wei high where the deployed code ended {fmt(dep_err, 2)} wei low.\n")
     L.append("## Reproduce\n")

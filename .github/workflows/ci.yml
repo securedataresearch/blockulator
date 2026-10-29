@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-  fp127:
+  bl127:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -43,37 +43,37 @@ jobs:
 
       - name: The exp/log kernels, the middle stage and the factorial tables are their generators' Yul (fits, models, bounds)
         run: |
-          uv run scripts/fp19/generators/kernel254.py --check
-          uv run scripts/fp19/generators/mid254.py --check
-          uv run scripts/fp127/generators/kernel192.py --check
-          uv run scripts/fp127/generators/expk.py --check
-          uv run scripts/fp19/generators/facttab.py --check
-          uv run scripts/fp19/generators/erf19.py --check
-          uv run scripts/fp127/generators/erf_model.py --check
+          uv run scripts/bl19/generators/kernel254.py --check
+          uv run scripts/bl19/generators/mid254.py --check
+          uv run scripts/bl127/generators/kernel192.py --check
+          uv run scripts/bl127/generators/expk.py --check
+          uv run scripts/bl19/generators/facttab.py --check
+          uv run scripts/bl19/generators/erf19.py --check
+          uv run scripts/bl127/generators/erf_model.py --check
 
-      - name: FP19's fast-path error bounds hold on their samples (bounds.py, the release gate's check)
-        run: uv run scripts/fp19/generators/bounds.py
+      - name: BL19's fast-path error bounds hold on their samples (bounds.py, the release gate's check)
+        run: uv run scripts/bl19/generators/bounds.py
 
-      - name: FP127's fast-path error bounds hold on their samples (bounds127.py)
-        run: uv run scripts/fp127/generators/bounds127.py
+      - name: BL127's fast-path error bounds hold on their samples (bounds127.py)
+        run: uv run scripts/bl127/generators/bounds127.py
 
       - name: Build (forge for Solidity; stdjson.py for the Yul objects, pinned solc and optimizer sequence)
         run: make build
 
       - name: Equivalence, behaviour and precision suites
-        run: FOUNDRY_FUZZ_RUNS=5000 forge test --match-path "test/fp127/*" -vv | grep -E "PREC|Suite result|tests passed"
+        run: FOUNDRY_FUZZ_RUNS=5000 forge test --match-path "test/bl127/*" -vv | grep -E "PREC|Suite result|tests passed"
 
       - name: Precision report is current
         run: |
-          uv run scripts/fp127/precision_report.py
-          git diff --exit-code docs/fp127/precision.json docs/fp127/precision.md
+          uv run scripts/bl127/precision_report.py
+          git diff --exit-code docs/bl127/precision.json docs/bl127/precision.md
 
-      - name: FP19 tests and precision report
+      - name: BL19 tests and precision report
         run: |
-          FOUNDRY_FUZZ_RUNS=2000 forge test --match-path "test/fp19/*" -vv | grep -E "PREC|Suite result|tests passed"
-          uv run scripts/fp127/precision_report.py --lib fp19
-          git diff --exit-code docs/fp19/precision.json docs/fp19/precision.md
-          make size-fp19
+          FOUNDRY_FUZZ_RUNS=2000 forge test --match-path "test/bl19/*" -vv | grep -E "PREC|Suite result|tests passed"
+          uv run scripts/bl127/precision_report.py --lib bl19
+          git diff --exit-code docs/bl19/precision.json docs/bl19/precision.md
+          make size-bl19
 
       - name: Library-page examples
         run: forge test --match-path "test/examples/*"
@@ -84,14 +84,14 @@ jobs:
       - name: BlockulatorWad to the last wei (known values, Solady's reverts, fuzzing against exact roots and fullMulDiv)
         run: FOUNDRY_FUZZ_RUNS=5000 forge test --match-path "test/wad/*"
 
-      - name: Typed API (FP127Type, FP19Type) equals the raw libraries; gas both ways, default profile and via_ir
+      - name: Typed API (BL127Type, BL19Type) equals the raw libraries; gas both ways, default profile and via_ir
         run: FOUNDRY_FUZZ_RUNS=5000 make typed
 
       - name: Gas ladder
         run: make bench && cat docs/benchmarks/gas.md
 
-      - name: FP19 gas ladder
-        run: make bench-fp19
+      - name: BL19 gas ladder
+        run: make bench-bl19
 
       - name: Terminal-precision ladder is current
         run: make ladder-check
@@ -109,10 +109,10 @@ jobs:
 
       - uses: actions/upload-artifact@v6
         with:
-          name: fp127-reports
+          name: bl127-reports
           path: |
-            docs/fp127/precision.json
-            docs/fp127/precision.md
+            docs/bl127/precision.json
+            docs/bl127/precision.md
             docs/benchmarks/gas.json
             docs/benchmarks/gas.md
             docs/benchmarks/ladder.json

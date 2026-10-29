@@ -12,13 +12,17 @@ words, bytes of headroom, cells checked). On a failure the log's last lines
 follow, so the cause is visible without reading the whole log. The exit code
 is 1 if any gate failed.
 
-The names gate fails on the library's old name anywhere outside lib/, in a
-file or a path, except the salt literals of contracts already deployed (on a
-line that says salt), whose bytes fix their addresses, and the site's redirects
-from old URLs (Zola `aliases`).
+The names gate fails on the libraries' old names (OLD below: the one before
+BL19 and, since the 2026-10-29 rename, the two before BL127 and BL19)
+anywhere outside lib/, in a file or a path,
+except the salt literals of contracts already deployed, whose bytes fix their
+addresses (a quoted or backticked `FP… vN`, or any such literal on a line that
+says salt), the on-chain verified names (a line that says onChainName or
+on-chain name), the CHANGELOG's own entry about the rename, and the site's
+redirects from old URLs (Zola `aliases`).
 
 The sweep gate compares the fresh sweep.json with the committed one (git HEAD):
-FP19 must have 0 misrounded in both passes, and no FP127 row may have fewer
+BL19 must have 0 misrounded in both passes, and no BL127 row may have fewer
 nearest results than before.
 """
 from __future__ import annotations
@@ -62,19 +66,32 @@ def sizes(out: str) -> tuple[bool, str]:
                       + (f"; OVER: {', '.join(over)}" if over else ""))
 
 
-OLD = "fp" "256"  # split, so this file passes its own gate
-SALT_LITERAL = re.compile(OLD.upper() + r"[A-Z0-9]* v\d+")
+OLD = ("fp" "256", "fp" "127", "fp" "19")  # split, so this file passes its own gate
+OLD_RE = re.compile("(?i)" + "|".join(OLD))
+# a deployed salt: `FP127 v9`, "FP19E v6", "FP127 ladder v14", FP256X v4
+SALT_LITERAL = re.compile("(?:" + "|".join(o.upper() for o in OLD) + r")[A-Z0-9]*(?: ladder)? v\d+")
+SALT_QUOTED = re.compile(r'(["`])' + SALT_LITERAL.pattern + r"\1")
+ON_CHAIN = re.compile(r"(?i)onChainNames?|on-chain (?:verified )?names?")
 
 
 def names_check() -> tuple[bool, str, str]:
-    """Every use of the old name that is not a deployed salt, as git grep lines."""
-    grep = subprocess.run(["git", "grep", "-n", "-i", "-I", OLD, "--", ".", ":!lib"], cwd=ROOT, capture_output=True, text=True).stdout
-    bad = [l for l in grep.splitlines()
-           if not (re.search(r"(?i)salt", l) and not re.search(rf"(?i){OLD}", SALT_LITERAL.sub("", l)))
-           and not re.search(r"^content/[^:]+:\d+:aliases = ", l)]
+    """Every use of an old name that is not a deployed salt or an on-chain name, as git grep lines."""
+    grep = subprocess.run(["git", "grep", "-n", "-i", "-I", "-E", "|".join(OLD), "--", ".", ":!lib"],
+                          cwd=ROOT, capture_output=True, text=True).stdout
+    bad = []
+    for l in grep.splitlines():
+        if re.search(r"^content/[^:]+:\d+:aliases = ", l) or l.startswith("CHANGELOG.md:") and "### Renamed" in l:
+            continue
+        rest = SALT_QUOTED.sub("", l)
+        if re.search(r"(?i)salt", rest):
+            rest = SALT_LITERAL.sub("", rest)
+        if ON_CHAIN.search(rest):
+            continue
+        if OLD_RE.search(rest.split(":", 1)[1] if ":" in rest else rest):
+            bad.append(l)
     files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True).stdout.splitlines()
-    bad += [f"path {f}" for f in files if OLD in f.lower() and not f.startswith("lib/")]
-    return not bad, f"{len(bad)} uses of the old name" if bad else "no old names", "\n".join(bad)
+    bad += [f"path {f}" for f in files if OLD_RE.search(f) and not f.startswith("lib/")]
+    return not bad, f"{len(bad)} uses of the old names" if bad else "no old names", "\n".join(bad)
 
 
 def sweep_check() -> tuple[bool, str]:
@@ -87,17 +104,17 @@ def sweep_check() -> tuple[bool, str]:
     key = lambda r: (r["lib"], r["op"], r.get("stage"))  # noqa: E731
     before = {key(r): r for r in old}
     mis = [f"{r['op']}{'/' + r['stage'] if r.get('stage') else ''}={r['misrounded']}"
-           for r in new if r["lib"] == "fp19" and r.get("misrounded")]
-    worse = [r["op"] for r in new if r["lib"] == "fp127" and key(r) in before
+           for r in new if r["lib"] == "bl19" and r.get("misrounded")]
+    worse = [r["op"] for r in new if r["lib"] == "bl127" and key(r) in before
              and r.get("nearest", 0) < before[key(r)].get("nearest", 0)]
-    n19 = sum(1 for r in new if r["lib"] == "fp19")
-    n127 = sum(1 for r in new if r["lib"] == "fp127")
+    n19 = sum(1 for r in new if r["lib"] == "bl19")
+    n127 = sum(1 for r in new if r["lib"] == "bl127")
     # BlockulatorWad: every row, both passes, at 0 wrong wei (and its rows present)
     wad = [r for r in new if r["lib"] == "wad"]
     wrong = [f"{r['op']}{'/' + r['stage'] if r.get('stage') else ''}={r['wrong']}" for r in wad if r.get("wrong")]
     mis += wrong
     ok = not mis and not worse and bool(wad)
-    msg = (f"FP19 {n19} rows, misrounded {len(mis) - len(wrong)}; FP127 {n127} rows, nearest fell on {len(worse)}; "
+    msg = (f"BL19 {n19} rows, misrounded {len(mis) - len(wrong)}; BL127 {n127} rows, nearest fell on {len(worse)}; "
            f"WAD {len(wad)} rows, {sum(r['n'] for r in wad):,} results, wrong {len(wrong)}")
     if mis:
         msg += f" [{', '.join(mis[:8])}]"
@@ -120,9 +137,9 @@ def main() -> int:
         ("gen-check", "make gen-check vectors-check gen-inputs-check gen-edges-check"),
         ("build", "make build"),
         ("test", "make test"),
-        ("bounds", "uv run scripts/fp19/generators/bounds.py"),
-        ("bounds127", "uv run scripts/fp127/generators/bounds127.py"),
-        ("size", "make size size-fp19 size-inline-check"),
+        ("bounds", "uv run scripts/bl19/generators/bounds.py"),
+        ("bounds127", "uv run scripts/bl127/generators/bounds127.py"),
+        ("size", "make size size-bl19 size-inline-check"),
         ("ladder", "make ladder-check"),
         ("edges", "make edges-check"),
         ("cdf", "make cdf-check"),

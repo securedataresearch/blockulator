@@ -13,8 +13,8 @@ abstract contract Harness {
 
     /// Lemma L3 (test/proofs/lemmas.py), handed to the solver as an
     /// assumption because multiplication is uninterpreted in the proofs: the
-    /// product of two FP19 exponent fields, each below 2^19, is zero iff one
-    /// of them is (it cannot wrap). FP19's binary ops test their two
+    /// product of two BL19 exponent fields, each below 2^19, is zero iff one
+    /// of them is (it cannot wrap). BL19's binary ops test their two
     /// exponents with one MUL; the term here is the same product.
     function assumeL3(int256 a, int256 b) internal view {
         uint256 p;

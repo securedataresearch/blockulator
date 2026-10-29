@@ -5,12 +5,12 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Four contracts, salt "FP127 ladder v14": the adapters of our two deployed forms (LadderFP127 and
-LadderFP19Deployed) and LadderRunner and EdgeRunner, whose constructor is the eighteen form slots as one array in
+Four contracts, salt "FP127 ladder v14": the adapters of our two deployed forms (LadderBL127 and
+LadderBL19Deployed) and LadderRunner and EdgeRunner, whose constructor is the eighteen form slots as one array in
 form-id order, the zero address for every library that is not on chain (see ONCHAIN), so their init code depends
 on them. Each transaction is sent with the node's
 own gas estimate plus 25%, because Sepolia's code-deposit pricing is not
-what forge's local EVM models (see contracts/deployments/FP127.md).
+what forge's local EVM models (see contracts/deployments/BL127.md).
 
 The key is read from the environment and passed to `cast send` only; it
 is never printed or written.
@@ -28,25 +28,25 @@ from pathlib import Path
 from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
-# scripts/fp127/deploy.py, the library objects' table and CREATE2 prediction (by path: this file is deploy.py too)
-_spec = importlib.util.spec_from_file_location("fp127_deploy", ROOT / "scripts" / "fp127" / "deploy.py")
+# scripts/bl127/deploy.py, the library objects' table and CREATE2 prediction (by path: this file is deploy.py too)
+_spec = importlib.util.spec_from_file_location("bl127_deploy", ROOT / "scripts" / "bl127" / "deploy.py")
 objects = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(objects)
 PROXY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
 SALT_ASCII = "FP127 ladder v14"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
-ADAPTERS = ["LadderFP127", "LadderFP127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
-            "LadderQuad", "LadderBalancer", "LadderAave", "LadderMorpho", "LadderMaker", "LadderFP19",
+ADAPTERS = ["LadderBL127", "LadderBL127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
+            "LadderQuad", "LadderBalancer", "LadderAave", "LadderMorpho", "LadderMaker", "LadderBL19",
             "LadderSolmate", "LadderOZ", "LadderUniswap", "LadderPRBUD", "LadderSnekmate",
             "LadderFraxlend", "LadderEuler"]
-# Only our deployed objects' forms go on chain: the runners' live check proves that the bytecode at FP127's and FP19's
-# addresses gives the published numbers. FP127Lib is compiled into its users' contracts and never runs from an
+# Only our deployed objects' forms go on chain: the runners' live check proves that the bytecode at BL127's and BL19's
+# addresses gives the published numbers. BL127Lib is compiled into its users' contracts and never runs from an
 # address of its own, so a deployed copy would prove nothing make ladder does not. The other libraries' adapters run the same Solidity locally (make ladder) and would prove
-# nothing more on chain, so their slots in the runners are the zero address. The FP19 form on chain is
-# LadderFP19Deployed (staticcalls to FP19's objects, 5.5 KB) in place of the 43 KB inline LadderFP19; the
-# Fp19Deployed test shows the two return the same word on every cell.
-ONCHAIN = {"LadderFP127": "LadderFP127", "LadderFP19": "LadderFP19Deployed"}
+# nothing more on chain, so their slots in the runners are the zero address. The BL19 form on chain is
+# LadderBL19Deployed (staticcalls to BL19's objects, 5.5 KB) in place of the 43 KB inline LadderBL19; the
+# Bl19Deployed test shows the two return the same word on every cell.
+ONCHAIN = {"LadderBL127": "LadderBL127", "LadderBL19": "LadderBL19Deployed"}
 ZERO = "0x0000000000000000000000000000000000000000"
 # Vyper contracts the adapters call, deployed first: name -> the adapter that takes its address (none on chain now)
 VYPER = {}
@@ -120,7 +120,7 @@ def cmd_deploy(rpc: str) -> int:
             continue
         data = SALT + c["init"].hex()
         # Public RPCs cap eth_estimateGas (50M on some; publicnode answers "reverted" past its cap),
-        # and LadderFP19's 43 KB deposit needs about 67M. When the estimate fails, send with
+        # and LadderBL19's 43 KB deposit needs about 67M. When the estimate fails, send with
         # LADDER_GAS (default 90M, under Sepolia's 200M block limit); a short limit only reverts.
         try:
             est = int(cast("estimate", PROXY, data, "--rpc-url", rpc))
@@ -145,12 +145,12 @@ def cmd_deploy(rpc: str) -> int:
     return 0
 
 
-def fp127_objects() -> dict[str, str]:
-    """The addresses LadderFP127 calls (ILadder.sol's FP127*_ADDRESS): each FP127 object's CREATE2 address from
-    its built artifact and its salt in gen.py's objects table. From 3.0 FP127 is five objects."""
+def bl127_objects() -> dict[str, str]:
+    """The addresses LadderBL127 calls (ILadder.sol's BL127*_ADDRESS): each BL127 object's CREATE2 address from
+    its built artifact and its salt in gen.py's objects table. From 3.0 BL127 is five objects."""
     out = {}
     for key, (name, lib, _) in objects.DEPLOYED.items():
-        if lib == "fp127":
+        if lib == "bl127":
             o = objects.obj(key)
             out[name] = objects.predicted(o, objects.artifact(o)[0])
     return out
@@ -158,7 +158,7 @@ def fp127_objects() -> dict[str, str]:
 
 def cmd_record(rpc: str) -> int:
     rec = {"chainId": 11155111, "network": "sepolia", "proxy": PROXY, "salt": SALT, "saltAscii": SALT_ASCII,
-           "fp127": fp127_objects(), "contracts": {}}
+           "bl127": bl127_objects(), "contracts": {}}
     for c in plan():
         code = cast("code", c["address"], "--rpc-url", rpc)
         rec["contracts"][c["name"]] = {

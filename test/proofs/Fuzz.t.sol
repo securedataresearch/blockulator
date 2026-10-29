@@ -2,8 +2,8 @@
 pragma solidity ^0.8.31;
 
 import "forge-std/Test.sol";
-import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
+import {BL127Lib} from "../../contracts/src/bl127/BL127Lib.sol";
+import {BL19Lib} from "../../contracts/src/bl19/BL19Lib.sol";
 import {Kernels} from "./Kernels.sol";
 import {Ref127} from "./Ref127.sol";
 import {Ref19} from "./Ref19.sol";
@@ -43,26 +43,26 @@ library LongDiv {
 }
 
 contract Lib127 {
-    function sqrt(int256 x) external pure returns (int256) { return FP127Lib.sqrt(x); }
-    function gavg(int256 a, int256 b) external pure returns (int256) { return FP127Lib.gavg(a, b); }
-    function hypot(int256 a, int256 b) external pure returns (int256) { return FP127Lib.hypot(a, b); }
+    function sqrt(int256 x) external pure returns (int256) { return BL127Lib.sqrt(x); }
+    function gavg(int256 a, int256 b) external pure returns (int256) { return BL127Lib.gavg(a, b); }
+    function hypot(int256 a, int256 b) external pure returns (int256) { return BL127Lib.hypot(a, b); }
 }
 
 contract Lib19 {
-    function sqrt(int256 x) external pure returns (int256) { return FP19Lib.sqrt(x); }
-    function add(int256 a, int256 b) external pure returns (int256) { return FP19Lib.add(a, b); }
-    function sub(int256 a, int256 b) external pure returns (int256) { return FP19Lib.sub(a, b); }
+    function sqrt(int256 x) external pure returns (int256) { return BL19Lib.sqrt(x); }
+    function add(int256 a, int256 b) external pure returns (int256) { return BL19Lib.add(a, b); }
+    function sub(int256 a, int256 b) external pure returns (int256) { return BL19Lib.sub(a, b); }
     function toFixed18(int256 x, uint256 mode) external pure returns (int256) {
-        if (mode == 0) return FP19Lib.toFixed18(x);
-        if (mode == 1) return FP19Lib.toFixed18Down(x);
-        return FP19Lib.toFixed18Up(x);
+        if (mode == 0) return BL19Lib.toFixed18(x);
+        if (mode == 1) return BL19Lib.toFixed18Down(x);
+        return BL19Lib.toFixed18Up(x);
     }
 }
 
 /// @title FuzzProofs
 /// @notice The fuzzed half of docs/proofs.md: the division kernels the proofs
 ///         take as lemmas (K127, K19) against a long division, and both
-///         square roots, and FP127's gavg and hypot, against exact integer
+///         square roots, and BL127's gavg and hypot, against exact integer
 ///         roots. Inputs are spread over
 ///         bit lengths, so short and long operands are as likely as random words.
 contract FuzzProofs is Test {
@@ -101,7 +101,7 @@ contract FuzzProofs is Test {
         assertEq(Kernels.divh(a, b), LongDiv.div(a >> 1, a << 255, b));
     }
 
-    /// K19 where FP19 uses it: two significands in [2^236, 2^237).
+    /// K19 where BL19 uses it: two significands in [2^236, 2^237).
     function testFuzz_K19_significands(uint256 a, uint256 b) public pure {
         a = (a >> 20) | (uint256(1) << 236);
         b = (b >> 20) | (uint256(1) << 236);
@@ -110,8 +110,8 @@ contract FuzzProofs is Test {
         assertEq(Kernels.divh(a, b), LongDiv.div(a >> 1, a << 255, b));
     }
 
-    /// FP127 sqrt: r = floor(sqrt(x 2^128)), by the exact squares (Ref127.isSqrt).
-    function testFuzz_fp127_sqrt(uint256 x, uint256 sx) public view {
+    /// BL127 sqrt: r = floor(sqrt(x 2^128)), by the exact squares (Ref127.isSqrt).
+    function testFuzz_bl127_sqrt(uint256 x, uint256 sx) public view {
         int256 v = int256(spread(x, sx) >> 1);
         int256 r = l127.sqrt(v);
         assertTrue(Ref127.isSqrt(v, r), "sqrt is not the floor of the root");
@@ -120,7 +120,7 @@ contract FuzzProofs is Test {
     /// Regression for #159: where x 2^128 + 1 is a perfect square (s + 1)^2 the
     /// Huff's sqrt (kept bit for bit until #159) returned s + 1; it now returns
     /// the floor s: x = 2^126 k^2 + k, k = 1..4.
-    function test_fp127_sqrt_regression_159() public view {
+    function test_bl127_sqrt_regression_159() public view {
         for (uint256 k = 1; k <= 4; k++) {
             int256 x = int256((uint256(1) << 126) * k * k + k);
             int256 r = l127.sqrt(x);
@@ -131,7 +131,7 @@ contract FuzzProofs is Test {
 
     /// Regression for #159: a b / 2^128 = -2^255 - (2^127 + 1) / 2^128 has the
     /// ceiling -2^255, which fits; mulUp returns it (it reverted Overflow).
-    function test_fp127_mulUp_regression_159() public view {
+    function test_bl127_mulUp_regression_159() public view {
         int256 a = -int256(0x7fffffffffffffffffffffffffffffff80000000000000000000000000000001);
         int256 b = int256(uint256(1 << 128) + 1);
         (bytes4 se, int256 sr) = Ref127.mulUp(a, b);
@@ -141,13 +141,13 @@ contract FuzzProofs is Test {
     }
 
     function mulUp127(int256 a, int256 b) external pure returns (int256) {
-        return FP127Lib.mulUp(a, b);
+        return BL127Lib.mulUp(a, b);
     }
 
-    /// FP127 sqrt below zero: OutOfRange.
-    function testFuzz_fp127_sqrt_negative(int256 x) public {
+    /// BL127 sqrt below zero: OutOfRange.
+    function testFuzz_bl127_sqrt_negative(int256 x) public {
         vm.assume(x < 0);
-        vm.expectRevert(FP127Lib.OutOfRange.selector);
+        vm.expectRevert(BL127Lib.OutOfRange.selector);
         l127.sqrt(x);
     }
 
@@ -175,7 +175,7 @@ contract FuzzProofs is Test {
         }
     }
 
-    /// FP127 gavg (3.0): the nearest root of the exact product |a| |b| of the
+    /// BL127 gavg (3.0): the nearest root of the exact product |a| |b| of the
     /// raw words; 0 when either is zero; OutOfRange for opposite signs.
     function checkGavg127(int256 a, int256 b) internal view {
         bytes4 se;
@@ -191,7 +191,7 @@ contract FuzzProofs is Test {
         catch (bytes memory err) { check127(false, 0, err, se, sr, "gavg"); }
     }
 
-    /// FP127 hypot (3.0): the nearest root of the exact A^2 + B^2.
+    /// BL127 hypot (3.0): the nearest root of the exact A^2 + B^2.
     function checkHypot127(int256 a, int256 b) internal view {
         (uint256 ah, uint256 al) = Wide.umul(abs127(a), abs127(a));
         (uint256 bh, uint256 bl) = Wide.umul(abs127(b), abs127(b));
@@ -211,18 +211,18 @@ contract FuzzProofs is Test {
         if ((seed >> 10) & 63 == 0) v = type(int256).min;
     }
 
-    function testFuzz_fp127_gavg(uint256 a, uint256 b, uint256 sa, uint256 sb) public view {
+    function testFuzz_bl127_gavg(uint256 a, uint256 b, uint256 sa, uint256 sb) public view {
         checkGavg127(spreadSigned(a, sa), spreadSigned(b, sb));
     }
 
-    function testFuzz_fp127_hypot(uint256 a, uint256 b, uint256 sa, uint256 sb) public view {
+    function testFuzz_bl127_hypot(uint256 a, uint256 b, uint256 sa, uint256 sb) public view {
         checkHypot127(spreadSigned(a, sa), spreadSigned(b, sb));
     }
 
     /// Next to the midpoints: gavg(x, x + d) has N = x^2 + d x, whose root
     /// is just under x + 1/2 for d = 1 (N = x (x + 1), rounds down) and just
     /// over it for d = 2; hypot(x, small) sits just above x.
-    function testFuzz_fp127_roots_near_mid(uint256 x, uint256 sx, uint8 d) public view {
+    function testFuzz_bl127_roots_near_mid(uint256 x, uint256 sx, uint8 d) public view {
         int256 v = int256(spread(x, sx) >> 2);
         int256 dd = int256(uint256(d % 5)) - 2;
         checkGavg127(v, v + dd);
@@ -232,7 +232,7 @@ contract FuzzProofs is Test {
     }
 
     /// The edges: zero, one ULP, the extreme words, and the old floors' worst case.
-    function test_fp127_roots_edges() public view {
+    function test_bl127_roots_edges() public view {
         int256[8] memory w = [int256(0), 1, -1, type(int256).max, type(int256).min, type(int256).min + 1,
             int256(1) << 50, int256(1) << 68];
         for (uint256 i; i < w.length; i++) {
@@ -244,7 +244,7 @@ contract FuzzProofs is Test {
         assertEq(l127.gavg(int256(1) << 50, int256(1) << 68), int256(1) << 59);
     }
 
-    /// The reference square root of an FP19 word: the exact integer root of
+    /// The reference square root of an BL19 word: the exact integer root of
     /// the significand scaled to an even exponent and 479+ bits, rounded once
     /// to nearest with the root's remainder as the sticky part.
     function refSqrt19(int256 x) internal pure returns (bytes4, int256) {
@@ -276,22 +276,22 @@ contract FuzzProofs is Test {
         }
     }
 
-    /// FP19 sqrt on random words: every exponent, both signs, non-numbers.
-    function testFuzz_fp19_sqrt(int256 x) public view {
+    /// BL19 sqrt on random words: every exponent, both signs, non-numbers.
+    function testFuzz_bl19_sqrt(int256 x) public view {
         checkSqrt19(x);
     }
 
-    /// FP19 sqrt next to exact squares, where a root lies near a rounding
+    /// BL19 sqrt next to exact squares, where a root lies near a rounding
     /// boundary: (y^2 + d) as a number, y up to 118 bits, d in [-2, 2].
-    function testFuzz_fp19_sqrt_near_squares(uint256 y, uint256 sy, int8 d) public view {
+    function testFuzz_bl19_sqrt_near_squares(uint256 y, uint256 sy, int8 d) public view {
         y = spread(y >> 138, sy) | 1;
         (, uint256 sq) = Wide.umul(y, y);
         int256 dd = int256(d) % 3;
         uint256 v = dd < 0 && sq < uint256(-dd) ? sq : uint256(int256(sq) + dd);
-        checkSqrt19(FP19Lib.fromUint(v));
+        checkSqrt19(BL19Lib.fromUint(v));
     }
 
-    /// The FP19 ops whose Halmos checks run out of time (add, sub, the three
+    /// The BL19 ops whose Halmos checks run out of time (add, sub, the three
     /// toFixed18 roundings), against the same exact specs (Ref19): the word,
     /// or the same revert. Operands share nearby exponents so that every
     /// alignment, cancellation and rounding path is reached, not only the
@@ -314,7 +314,7 @@ contract FuzzProofs is Test {
         }
     }
 
-    function testFuzz_fp19_add(int256 a, uint256 bb, uint256 d, bool flip) public view {
+    function testFuzz_bl19_add(int256 a, uint256 bb, uint256 d, bool flip) public view {
         int256 b = nearExp(a, bb, d);
         if (flip) b = int256(uint256(b) ^ (uint256(1) << 255));
         (bytes4 se, int256 sr) = Ref19.add(a, b);
@@ -322,7 +322,7 @@ contract FuzzProofs is Test {
         catch (bytes memory err) { checkWord19(false, 0, err, se, sr, "add"); }
     }
 
-    function testFuzz_fp19_sub(int256 a, uint256 bb, uint256 d, bool flip) public view {
+    function testFuzz_bl19_sub(int256 a, uint256 bb, uint256 d, bool flip) public view {
         int256 b = nearExp(a, bb, d);
         if (flip) b = int256(uint256(b) ^ (uint256(1) << 255));
         (bytes4 se, int256 sr) = Ref19.sub(a, b);
@@ -332,7 +332,7 @@ contract FuzzProofs is Test {
 
     /// toFixed18, Down and Up, with exponents across the whole range where the
     /// result is a nonzero integer up to int256 and a little beyond.
-    function testFuzz_fp19_toFixed18(int256 x, uint256 e, uint256 mode) public view {
+    function testFuzz_bl19_toFixed18(int256 x, uint256 e, uint256 mode) public view {
         mode = mode % 3;
         x = int256((uint256(x) & ~(uint256(0x7ffff) << 236)) | ((0x400eb - 300 + e % 310) << 236));
         (bytes4 se, int256 sr) = Ref19.toFixed18(x, mode);

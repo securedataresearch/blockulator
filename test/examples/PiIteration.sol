@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {FP127Lib as F} from "fp127/FP127Lib.sol";
+import {BL127Lib as F} from "bl127/BL127Lib.sol";
 
 /// @notice Pi from nothing but square roots, on the inline library: two
 ///         quadratically and quartically convergent iterations that need

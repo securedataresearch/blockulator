@@ -18,9 +18,9 @@ on 66% and `lambertW0Wad` on 28% (by up to 1.5 · 10⁹ wei near −1/e), and
 PRBMath's `exp`, `ln`, `log2`, `log10` and `pow` on 72 to 98%. BlockulatorWad:
 0 wrong of 108,000, every function, every direction.
 
-It uses the CLZ opcode, as FP19 does: compile with `evm_version = "osaka"`
+It uses the CLZ opcode, as BL19 does: compile with `evm_version = "osaka"`
 (solc ≥ 0.8.31) and run only on a chain that has CLZ (EIP-7939; see
-[FP19's chain list](../fp19/README.md#chains-clz-osaka-required)). There is
+[BL19's chain list](../bl19/README.md#chains-clz-osaka-required)). There is
 no deployed object; the library is inlined into its caller.
 
 ## Functions
@@ -86,18 +86,18 @@ names follow its pattern.
 Products, quotients and roots are exact integer arithmetic: the 512-bit
 product with 10¹⁸ (or 10³⁶) and one division (by 2^18 and the inverse of
 5^18 modulo 2^256, or Remco Bloemen's mulDiv), the integer square root of
-x · 10¹⁸ (FP19's word and two-word roots), the integer cube root of
-x · 10³⁶ (FP19's seed and Newton steps, one wide step and an exact cube).
+x · 10¹⁸ (BL19's word and two-word roots), the integer cube root of
+x · 10³⁶ (BL19's seed and Newton steps, one wide step and an exact cube).
 The one-word cases take the one-word path Solady takes.
 
 The transcendental functions run in two stages
 ([`BlockulatorWad.yul.src`](BlockulatorWad.yul.src) states every bound):
 
-1. **A fast value with a bound.** exp, ln, log2, log10 and pow run FP19's
+1. **A fast value with a bound.** exp, ln, log2, log10 and pow run BL19's
    kernels (`exp2frac`, 2^f within 4.7 units of 2^-254; `log2m`, within
    2.32) on the exact input: x · log2(e) / 10¹⁸ is the exact three-word
    product of the integer x with a two-word constant, and x = m · 2^u is
-   split exactly, so the input is never rounded. lambertW0 runs FP19's
+   split exactly, so the input is never rounded. lambertW0 runs BL19's
    correctly rounded lambertW0 on `fromFixed18(x)`, with the input's
    rounding in its bound (|W(X) − W(t)| ≤ 2^-237 |W| / (1 + W)). The value
    times 10¹⁸ is cut, exactly, into its integer I and the next 256 bits F.
@@ -115,7 +115,7 @@ The transcendental functions run in two stages
    second stage is the stage that has it.
 2. **The second stage**, when the bound reaches a wei boundary (or the
    value is above about 2^240 wei, where 2^-254 is too coarse): the value
-   from the exact input in two words at 2^-510, with FP19's own
+   from the exact input in two words at 2^-510, with BL19's own
    second-stage arithmetic (`wexpm1`, `wexpr`, `wlnw` and the wide
    products), within 2^-500 relative for exp, 2^-495 absolute for the logs,
    2^-428 relative for pow and 2^-380 absolute for lambertW0 (one log-form
@@ -133,7 +133,7 @@ number of wei and yet lies within the second stage's bound of one: under
 Lambert W no such value is known and none is expected (Lindemann–Weierstrass
 rules out exact values other than the listed ones; a non-exact value that
 close would be a one-in-2^170 event per input). The same argument stands
-behind FP19's correct rounding. It is not a proof for every input, which
+behind BL19's correct rounding. It is not a proof for every input, which
 for transcendental functions would need an exhaustive worst-case search
 over about 2^67 inputs per function.
 
@@ -174,11 +174,11 @@ medians and the 99th percentiles):
 
 The second stage costs 26,000 to 66,000 gas when it runs.
 
-## Built from FP19's source
+## Built from BL19's source
 
 [`BlockulatorWad.yul.src`](BlockulatorWad.yul.src) is Yul function bodies,
-as FP19's source is; `scripts/fp127/gen.py --lib wad` (`make gen-wad`)
-reads it with `FP19.yul.src`, whose functions it calls, and writes
+as BL19's source is; `scripts/bl127/gen.py --lib wad` (`make gen-wad`)
+reads it with `BL19.yul.src`, whose functions it calls, and writes
 `BlockulatorWad.sol` and `ops.json`. `make gen-check` fails when they are
 stale. An export without a `leave` is written into its assembly block
 rather than called: a call inside a block costs about 50 gas and a block
@@ -186,8 +186,8 @@ that defines any function about 25, as much as a one-word mulWad, so the
 mul and div exports define none.
 
 Measured before choosing (median gas, the same harness): composing the
-inline FP19Lib in Solidity, `toFixed18Down(exp(fromFixed18(x)))`, costs
+inline BL19Lib in Solidity, `toFixed18Down(exp(fromFixed18(x)))`, costs
 4,476 for exp, 4,309 for ln and 8,513 for pow, without the last-wei
-guarantee (it rounds the input, and FP19Lib does not expose the wide
+guarantee (it rounds the input, and BL19Lib does not expose the wide
 stage); the generated library's kernels on the exact input cost 2,231,
 2,424 and 4,680 with it.

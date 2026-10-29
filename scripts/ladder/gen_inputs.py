@@ -25,36 +25,36 @@ OUT = ROOT / "scripts" / "ladder" / "inputs.json"
 
 # scale name -> (exponent form, integer scale, int range the adapter accepts)
 SCALES = {
-    "fp127": ("2**128", 2 ** 128, (-(2 ** 255), 2 ** 255 - 1)),
+    "bl127": ("2**128", 2 ** 128, (-(2 ** 255), 2 ** 255 - 1)),
     "abdk": ("2**64", 2 ** 64, (-(2 ** 127), 2 ** 127 - 1)),
     "wad": ("10**18", 10 ** 18, (-(2 ** 255), 2 ** 255 - 1)),
     "ray": ("10**27", 10 ** 27, (-(2 ** 255), 2 ** 255 - 1)),
     # binary128 is not a grid: the value is encoded to nearest as the bit
     # pattern of a bytes16 (scale None marks it; see quad_encode)
     "quad": ("binary128", None, (0, 2 ** 128 - 1)),
-    # FP19, the 256-bit float: the word from scripts/fp19/oracle.py
-    "fp19": ("fp19", "fp19", (-(2 ** 255), 2 ** 255 - 1)),
+    # BL19, the 256-bit float: the word from scripts/bl19/oracle.py
+    "bl19": ("bl19", "bl19", (-(2 ** 255), 2 ** 255 - 1)),
 }
 
 import sys as _sys
-_sys.path.insert(0, str(ROOT / "scripts" / "fp19"))
-import oracle as _fp19  # noqa: E402
+_sys.path.insert(0, str(ROOT / "scripts" / "bl19"))
+import oracle as _bl19  # noqa: E402
 from fractions import Fraction as _Fraction  # noqa: E402
 
 
-def fp19_encode(v) -> int:
-    """The FP19 word nearest to an mpf value (exact rational of its binary form)."""
+def bl19_encode(v) -> int:
+    """The BL19 word nearest to an mpf value (exact rational of its binary form)."""
     if v == 0:
         return 0
     m, e = mp.frexp(abs(v))
     T = int(mp.floor(m * mpf(2) ** 238))
-    w = _fp19.encode_tm(1 if v < 0 else 0, int(e) - 1, T)
+    w = _bl19.encode_tm(1 if v < 0 else 0, int(e) - 1, T)
     # as a signed int256 (the harness parses the column with vm.parseInt)
     return w - 2 ** 256 if w >= 2 ** 255 else w
 
 
-def fp19_decode(w: int):
-    q = _fp19.decode(w)
+def bl19_decode(w: int):
+    q = _bl19.decode(w)
     return mpf(q.numerator) / q.denominator
 
 
@@ -97,8 +97,8 @@ def to_scaled(x, scale) -> int:
     """x into a representation: floor(x * scale) on a grid, nearest for the floats."""
     if scale is None:
         return quad_encode(x)
-    if scale == "fp19":
-        return fp19_encode(x)
+    if scale == "bl19":
+        return bl19_encode(x)
     return int(mp.floor(x * scale))
 
 
@@ -106,8 +106,8 @@ def from_scaled(raw: int, scale):
     """The exact value a representation holds."""
     if scale is None:
         return quad_decode(raw)
-    if scale == "fp19":
-        return fp19_decode(raw)
+    if scale == "bl19":
+        return bl19_decode(raw)
     return mpf(raw) / scale
 
 
@@ -170,7 +170,7 @@ def build(spec: dict) -> dict:
             for name, (_, scale, (lo, hi)) in SCALES.items():
                 ints = [to_scaled(p[k], scale) for k in scn["order"]]
                 cell[name] = [str(i) for i in ints]
-                unrep[name] = any(i < lo or i > hi for i in ints) if scale != "fp19" else False
+                unrep[name] = any(i < lo or i > hi for i in ints) if scale != "bl19" else False
             cell["unrepresentable"] = unrep
             cells.append(cell)
     return {

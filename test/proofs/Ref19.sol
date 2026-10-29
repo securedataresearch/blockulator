@@ -5,8 +5,8 @@ import {Wide} from "./Wide.sol";
 import {Kernels} from "./Kernels.sol";
 
 /// @title Ref19
-/// @notice Reference specifications of FP19's core ops, written from the
-///         format and the documented semantics (contracts/src/fp19/README.md
+/// @notice Reference specifications of BL19's core ops, written from the
+///         format and the documented semantics (contracts/src/bl19/README.md
 ///         and each op's notice), not from the library's code.
 ///
 ///         The format. A word is sign s (bit 255), biased exponent e (bits

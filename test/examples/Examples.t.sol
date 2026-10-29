@@ -23,7 +23,7 @@ contract ExamplesTest is Test {
 
     function test_staticcallExample() public {
         // the deployed object's runtime, installed at its Sepolia address
-        bytes memory initCode = vm.parseJsonBytes(vm.readFile("out/FP127.yul/FP127.json"), ".bytecode.object");
+        bytes memory initCode = vm.parseJsonBytes(vm.readFile("out/BL127.yul/BL127.json"), ".bytecode.object");
         address deployed;
         assembly ("memory-safe") { deployed := create(0, add(initCode, 0x20), mload(initCode)) }
         vm.etch(0x0DF738d125677550a80A46BaF254386C66f96E0d, deployed.code);

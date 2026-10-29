@@ -32,9 +32,9 @@ abstract contract LadderBase is ILadderAdapter {
 
     /// Touch, outside the timed window, any contract the ops call, so the
     /// measurement does not include a cold-account surcharge. The Vyper
-    /// adapter (LadderSnekmate) touches its library and LadderFP127 FP127's
+    /// adapter (LadderSnekmate) touches its library and LadderBL127 BL127's
     /// other objects; the inline adapters call nothing, and the runner warms
-    /// the FP127 object itself.
+    /// the BL127 object itself.
     function _warm() internal view virtual {}
 
     // ---- composite ops a library may have natively -------------------------
@@ -45,8 +45,8 @@ abstract contract LadderBase is ILadderAdapter {
 
     /// pi, by Ramanujan's series through the library's own mul, div and
     /// sqrt (nine terms, eight digits each, so a 71-digit form is not bounded
-    /// by it; the recipe of docs/benchmarks/pi.md). FP127 overrides it with
-    /// its constant, FP127Lib.PI.
+    /// by it; the recipe of docs/benchmarks/pi.md). BL127 overrides it with
+    /// its constant, BL127Lib.PI.
     function _pi() internal view virtual returns (int256) {
         int256 one = _one();
         int256 c = one;
@@ -61,7 +61,7 @@ abstract contract LadderBase is ILadderAdapter {
     }
 
     /// The standard normal distribution function Phi(x) = erfc(-x / sqrt2) / 2,
-    /// by the same recipe FP127's normCdf uses, through the library's own
+    /// by the same recipe BL127's normCdf uses, through the library's own
     /// ops: the all-positive series (2/sqrt(pi)) e^(-y^2) y sum (2y^2)^k/(2k+1)!!
     /// for y <= 4, summed until a term no longer changes the sum, and the
     /// continued fraction e^(-y^2) / (sqrt(pi) K), K = y + (1/2)/(y + 1/(y + ...)),
@@ -158,7 +158,7 @@ abstract contract LadderBase is ILadderAdapter {
     }
 
     /// b (1 + rs)^steps, discrete compounding over `steps` periods. Default:
-    /// the real-exponent pow. FP127 overrides with compound (an exact
+    /// the real-exponent pow. BL127 overrides with compound (an exact
     /// integer power); Maker answers with rpow.
     function _accrue(int256 b, int256 rs, uint256 steps) internal view virtual returns (int256) {
         return _mul(b, _pow(_add(_one(), rs), _fromUint(steps)));

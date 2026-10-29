@@ -11,8 +11,8 @@ on:
     branches: [master]
     paths:
       - "test/proofs/**"
-      - "contracts/src/fp127/FP127.yul.src"
-      - "contracts/src/fp19/FP19.yul.src"
+      - "contracts/src/bl127/BL127.yul.src"
+      - "contracts/src/bl19/BL19.yul.src"
 
 concurrency:
   group: proofs

@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// @notice FP127's Yul objects (3.0, salts "FP127 v9", "FP127E v9", "FP127H v9", "FP127N v9", "FP127S v9"): the
+// @notice BL127's Yul objects (3.0, salts "FP127 v9", "FP127E v9", "FP127H v9", "FP127N v9", "FP127S v9"): the
 //         number, the elementary, hyperbolic, normal and special functions, at their CREATE2 addresses, live on
-//         Sepolia since 2026-10-29 (contracts/deployments/FP127.md). Tests etch the artifacts' runtimes
+//         Sepolia since 2026-10-29 (contracts/deployments/BL127.md). Tests etch the artifacts' runtimes
 //         here, so the same adapter code runs in the harness and on chain; the adapters that call them are deployed
 //         after them.
-address constant FP127_ADDRESS = 0x0DF738d125677550a80A46BaF254386C66f96E0d;
-address constant FP127E_ADDRESS = 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808;
-address constant FP127H_ADDRESS = 0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B;
-address constant FP127N_ADDRESS = 0xAA7Cd9635aE8630379636F533f23DBf2C193d296;
-address constant FP127S_ADDRESS = 0xB9C2583a7Ad2251444DC7752658B6C1107C25036;
-// @notice FP19's Yul objects (contracts/deployments/FP19.md; 3.0, salts "FP19 v6", "FP19E v6", "FP19H v6",
-//         "FP19S v6"): the number, the elementary, hyperbolic and special functions. LadderFP19 is inline (FP19Lib) and calls none of them; LadderFP19Deployed, the form
+address constant BL127_ADDRESS = 0x0DF738d125677550a80A46BaF254386C66f96E0d;
+address constant BL127E_ADDRESS = 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808;
+address constant BL127H_ADDRESS = 0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B;
+address constant BL127N_ADDRESS = 0xAA7Cd9635aE8630379636F533f23DBf2C193d296;
+address constant BL127S_ADDRESS = 0xB9C2583a7Ad2251444DC7752658B6C1107C25036;
+// @notice BL19's Yul objects (contracts/deployments/BL19.md; 3.0, salts "FP19 v6", "FP19E v6", "FP19H v6",
+//         "FP19S v6"): the number, the elementary, hyperbolic and special functions. LadderBL19 is inline (BL19Lib) and calls none of them; LadderBL19Deployed, the form
 //         the on-chain runners use, calls these, and tests etch the artifacts' runtimes here.
-address constant FP19_ADDRESS = 0x94d9d43D6202827429a8058959eeCf6d232b8729;
-address constant FP19E_ADDRESS = 0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092;
-address constant FP19H_ADDRESS = 0xF059611C1c42543DE6EE82353Eb082Fd8999081f;
-address constant FP19S_ADDRESS = 0xf74ba90535224870830e6e89D2b328d4cc09DE48;
-// @notice FP19N (erf, erfc, normCdf; 3.0, salt "FP19N v6"): its predicted CREATE2 address, deployed with 3.0.
-address constant FP19N_ADDRESS = 0xCe9F09D646B37a9100F05ED1FFD14E9f43180214;
+address constant BL19_ADDRESS = 0x94d9d43D6202827429a8058959eeCf6d232b8729;
+address constant BL19E_ADDRESS = 0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092;
+address constant BL19H_ADDRESS = 0xF059611C1c42543DE6EE82353Eb082Fd8999081f;
+address constant BL19S_ADDRESS = 0xf74ba90535224870830e6e89D2b328d4cc09DE48;
+// @notice BL19N (erf, erfc, normCdf; 3.0, salt "FP19N v6"): its predicted CREATE2 address, deployed with 3.0.
+address constant BL19N_ADDRESS = 0xCe9F09D646B37a9100F05ED1FFD14E9f43180214;
 
 /// @notice Scenario ids. Mirrors "index" in scripts/ladder/scenarios.json.
 library Scenario {
@@ -42,13 +42,13 @@ library Scenario {
 
 /// @notice Library (form) ids, in the order of LadderRunner's constructor.
 ///         Ids 0 to 4 are the v4 runner's and keep their numbers; 5 to 9 were
-///         added with the v5 runner, 10 (FP19, the float) with v6, 11 to 15
+///         added with the v5 runner, 10 (BL19, the float) with v6, 11 to 15
 ///         (Solmate, OpenZeppelin, Uniswap FullMath, PRBMath UD60x18,
 ///         snekmate) with v12, and 16 and 17 (the FraxLend and Euler v2
 ///         adaptive rate models) in the same v12 runner, before its deploy.
 library Form {
-    uint8 constant FP127 = 0;
-    uint8 constant FP127LIB = 1;
+    uint8 constant BL127 = 0;
+    uint8 constant BL127LIB = 1;
     uint8 constant ABDK = 2;
     uint8 constant SOLADY = 3;
     uint8 constant PRB = 4;
@@ -57,7 +57,7 @@ library Form {
     uint8 constant AAVE = 7;
     uint8 constant MORPHO = 8;
     uint8 constant MAKER = 9;
-    uint8 constant FP19 = 10;
+    uint8 constant BL19 = 10;
     uint8 constant SOLMATE = 11;
     uint8 constant OZ = 12;
     uint8 constant UNISWAP = 13;

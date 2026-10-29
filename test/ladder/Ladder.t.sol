@@ -2,10 +2,10 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import {FP127_ADDRESS, FP127E_ADDRESS, FP127H_ADDRESS, FP127N_ADDRESS, FP127S_ADDRESS, Scenario, Form} from "../../contracts/src/ladder/ILadder.sol";
+import {BL127_ADDRESS, BL127E_ADDRESS, BL127H_ADDRESS, BL127N_ADDRESS, BL127S_ADDRESS, Scenario, Form} from "../../contracts/src/ladder/ILadder.sol";
 import {LadderRunner} from "../../contracts/src/ladder/LadderRunner.sol";
-import {LadderFP127} from "../../contracts/src/ladder/LadderFP127.sol";
-import {LadderFP127Lib} from "../../contracts/src/ladder/LadderFP127Lib.sol";
+import {LadderBL127} from "../../contracts/src/ladder/LadderBL127.sol";
+import {LadderBL127Lib} from "../../contracts/src/ladder/LadderBL127Lib.sol";
 import {LadderABDK} from "../../contracts/src/ladder/LadderABDK.sol";
 import {LadderSolady} from "../../contracts/src/ladder/LadderSolady.sol";
 import {LadderPRB} from "../../contracts/src/ladder/LadderPRB.sol";
@@ -14,7 +14,7 @@ import {LadderBalancer} from "../../contracts/src/ladder/LadderBalancer.sol";
 import {LadderAave} from "../../contracts/src/ladder/LadderAave.sol";
 import {LadderMorpho} from "../../contracts/src/ladder/LadderMorpho.sol";
 import {LadderMaker} from "../../contracts/src/ladder/LadderMaker.sol";
-import {LadderFP19} from "../../contracts/src/ladder/LadderFP19.sol";
+import {LadderBL19} from "../../contracts/src/ladder/LadderBL19.sol";
 import {LadderSolmate} from "../../contracts/src/ladder/LadderSolmate.sol";
 import {LadderOZ} from "../../contracts/src/ladder/LadderOZ.sol";
 import {LadderUniswap} from "../../contracts/src/ladder/LadderUniswap.sol";
@@ -33,12 +33,12 @@ import {LadderEuler} from "../../contracts/src/ladder/LadderEuler.sol";
 ///         docs/benchmarks/ladder.json. One test per scenario so forge runs
 ///         them in parallel.
 ///
-/// The five FP127 objects' runtimes from the build artifacts are etched at their
-/// CREATE2 addresses, so the "fp127" form exercises the deployed bytecode exactly
+/// The five BL127 objects' runtimes from the build artifacts are etched at their
+/// CREATE2 addresses, so the "bl127" form exercises the deployed bytecode exactly
 /// as the chain does.
 contract Ladder is Test {
     string constant INPUTS = "scripts/ladder/inputs.json";
-    string[18] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"];
+    string[18] FORMS = ["bl127", "bl127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "bl19", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"];
 
     LadderRunner runner;
     string json;
@@ -57,14 +57,14 @@ contract Ladder is Test {
     }
 
     function setUp() public {
-        _etch(FP127_ADDRESS, "FP127");
-        _etch(FP127E_ADDRESS, "FP127E");
-        _etch(FP127H_ADDRESS, "FP127H");
-        _etch(FP127N_ADDRESS, "FP127N");
-        _etch(FP127S_ADDRESS, "FP127S");
+        _etch(BL127_ADDRESS, "BL127");
+        _etch(BL127E_ADDRESS, "BL127E");
+        _etch(BL127H_ADDRESS, "BL127H");
+        _etch(BL127N_ADDRESS, "BL127N");
+        _etch(BL127S_ADDRESS, "BL127S");
         runner = new LadderRunner([
-            address(new LadderFP127()),
-            address(new LadderFP127Lib()),
+            address(new LadderBL127()),
+            address(new LadderBL127Lib()),
             address(new LadderABDK()),
             address(new LadderSolady()),
             address(new LadderPRB()),
@@ -73,7 +73,7 @@ contract Ladder is Test {
             address(new LadderAave()),
             address(new LadderMorpho()),
             address(new LadderMaker()),
-            address(new LadderFP19()),
+            address(new LadderBL19()),
             address(new LadderSolmate()),
             address(new LadderOZ()),
             address(new LadderUniswap()),
@@ -88,10 +88,10 @@ contract Ladder is Test {
 
     /// The inputs.json key holding a form's floored parameters (the scale).
     function _scaleKey(uint8 f) internal pure returns (string memory) {
-        if (f == Form.FP127 || f == Form.FP127LIB) return "fp127";
+        if (f == Form.BL127 || f == Form.BL127LIB) return "bl127";
         if (f == Form.ABDK) return "abdk";
         if (f == Form.QUAD) return "quad";
-        if (f == Form.FP19) return "fp19";
+        if (f == Form.BL19) return "bl19";
         if (f == Form.AAVE || f == Form.MAKER) return "ray";
         return "wad";
     }
@@ -102,13 +102,13 @@ contract Ladder is Test {
         for (uint256 i; i < s.length; i++) p[i] = vm.parseInt(s[i]);
     }
 
-    struct Inp { string id; string input; int256[] fp; int256[] abdk; int256[] wad; int256[] quad; int256[] ray; int256[] fp19; }
+    struct Inp { string id; string input; int256[] fp; int256[] abdk; int256[] wad; int256[] quad; int256[] ray; int256[] bl19; }
 
     function _of(Inp memory x, uint8 f) internal pure returns (int256[] memory) {
-        if (f == Form.FP127 || f == Form.FP127LIB) return x.fp;
+        if (f == Form.BL127 || f == Form.BL127LIB) return x.fp;
         if (f == Form.ABDK) return x.abdk;
         if (f == Form.QUAD) return x.quad;
-        if (f == Form.FP19) return x.fp19;
+        if (f == Form.BL19) return x.bl19;
         if (f == Form.AAVE || f == Form.MAKER) return x.ray;
         return x.wad;
     }
@@ -128,10 +128,10 @@ contract Ladder is Test {
     function _input(Inp memory x, uint8 s) internal view {
         for (uint256 i; i < ladder.length; i++) {
             uint32 n = uint32(ladder[i]);
-            (bool ok0, int256 r0) = _cell(x, s, Form.FP127, n);
-            (bool ok1, int256 r1) = _cell(x, s, Form.FP127LIB, n);
-            assertEq(ok0, ok1, string.concat(x.id, "/", x.input, ": fp127/fp127lib ok differ"));
-            assertEq(r0, r1, string.concat(x.id, "/", x.input, ": fp127/fp127lib raw differ"));
+            (bool ok0, int256 r0) = _cell(x, s, Form.BL127, n);
+            (bool ok1, int256 r1) = _cell(x, s, Form.BL127LIB, n);
+            assertEq(ok0, ok1, string.concat(x.id, "/", x.input, ": bl127/bl127lib ok differ"));
+            assertEq(r0, r1, string.concat(x.id, "/", x.input, ": bl127/bl127lib raw differ"));
             for (uint8 f = Form.ABDK; f < Form.COUNT; f++) _cell(x, s, f, n);
         }
     }
@@ -145,12 +145,12 @@ contract Ladder is Test {
             Inp memory x = Inp({
                 id: vm.parseJsonString(json, string.concat(base, ".id")),
                 input: vm.parseJsonString(json, string.concat(base, ".input")),
-                fp: _params(c, "fp127"),
+                fp: _params(c, "bl127"),
                 abdk: _params(c, "abdk"),
                 wad: _params(c, "wad"),
                 quad: _params(c, "quad"),
                 ray: _params(c, "ray"),
-                fp19: _params(c, "fp19")
+                bl19: _params(c, "bl19")
             });
             _input(x, s);
         }
@@ -171,7 +171,7 @@ contract Ladder is Test {
     function test_ladder_decay() public view { _scenario(Scenario.DECAY); }
     function test_ladder_adaptiveRate() public view { _scenario(Scenario.ADAPTIVE_RATE); }
 
-    /// The generic normCdf through Solady's primitives agrees with FP127's op
+    /// The generic normCdf through Solady's primitives agrees with BL127's op
     /// near the money (the price at N = 0 of the reference input).
     function test_generic_normCdf_near_money() public view {
         int256[] memory w = new int256[](6);
@@ -179,13 +179,13 @@ contract Ladder is Test {
         (bool okS, int256 rawS,,,) = runner.run(Scenario.DEEP_TAIL_OPTION, Form.SOLADY, 0, w);
         int256[] memory f = new int256[](6);
         for (uint256 i; i < 6; i++) f[i] = (w[i] << 128) / 1e18;
-        (bool okF, int256 rawF,,,) = runner.run(Scenario.DEEP_TAIL_OPTION, Form.FP127LIB, 0, f);
+        (bool okF, int256 rawF,,,) = runner.run(Scenario.DEEP_TAIL_OPTION, Form.BL127LIB, 0, f);
         assertTrue(okS && okF);
         int256 fp18 = rawF * 1e18 / (int256(1) << 128);
         // Black-Scholes at the money, 20% vol, six months, 5%: 6.8887...; WAD agrees to ~1e-16
         assertGt(fp18, 6.8e18); assertLt(fp18, 6.95e18);
         int256 diff = fp18 > rawS ? fp18 - rawS : rawS - fp18;
-        assertLt(diff, 1e4, "generic normCdf through WAD within 1e-14 of FP127's");
+        assertLt(diff, 1e4, "generic normCdf through WAD within 1e-14 of BL127's");
     }
 
     function test_runner_catches_reverts() public view {

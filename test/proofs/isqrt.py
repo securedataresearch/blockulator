@@ -1,8 +1,8 @@
-"""Lemmas R1 and R2: FP127's sqrt is floor(sqrt(x 2^128)) on every input.
+"""Lemmas R1 and R2: BL127's sqrt is floor(sqrt(x 2^128)) on every input.
 
     python test/proofs/isqrt.py      # one line per step, exits 1 on any failure
 
-The code (FP127.yul.src, the same in FP127.yul and FP127Lib.sol):
+The code (BL127.yul.src, the same in BL127.yul and BL127Lib.sol):
 
     isqrtw(z): e = (msb(z) - 16) >> 1
                y0 = ((((z >> 2e) + 2^17) 0x57d1c0) >> 32) << e
@@ -148,7 +148,7 @@ def main():
     bad = [x for x in xs if 0 < x < 2**255 and sqrt127(x) != math.isqrt(x << 128)]
     ok &= step("R-cross", not bad, f"the transcription equals math.isqrt on {len(xs):,} inputs" + (f"; first miss {bad[0]}" if bad else ""))
     print(f"{'PROVED' if ok else 'FAILED'}  R1  isqrtw(z) = floor(sqrt z) for 2^128 <= z < 2^256  ({time.time() - t0:.1f}s)")
-    print(f"{'PROVED' if ok else 'FAILED'}  R2  FP127 sqrt(x) = floor(sqrt(x 2^128)) for 0 < x < 2^255  ({time.time() - t0:.1f}s)")
+    print(f"{'PROVED' if ok else 'FAILED'}  R2  BL127 sqrt(x) = floor(sqrt(x 2^128)) for 0 < x < 2^255  ({time.time() - t0:.1f}s)")
     sys.exit(0 if ok else 1)
 
 

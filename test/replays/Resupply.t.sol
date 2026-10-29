@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
+import {BL127Lib} from "../../contracts/src/bl127/BL127Lib.sol";
+import {BL19Lib} from "../../contracts/src/bl19/BL19Lib.sol";
 
 /// @notice The deployed arithmetic of the Resupply exploit, vendored line by line
 ///         from the Sourcify-verified sources (scripts/replays/resupply.py fetch
@@ -80,7 +80,7 @@ library ResupplyDeployed {
 ///         block 22785461, index 0. Replays the decisive step from the integers
 ///         pinned in scripts/replays/resupply.json (no network), asserts it equals
 ///         what happened on chain, then runs the same step with divUp, with the
-///         division by the price moved to the end, in FP127 and in FP19. Prints
+///         division by the price moved to the end, in BL127 and in BL19. Prints
 ///             RSP|<form>|k=v;k=v;...
 ///         for scripts/replays/resupply.py, which scores each against exact rationals.
 contract ResupplyReplay is Test {
@@ -198,43 +198,43 @@ contract ResupplyReplay is Test {
             _line("divlast", string.concat("ltv=", vm.toString(ltvUp), ";ltvFloor=", vm.toString(ltvFloor), ";solvent=", _b(ok),
                 ";maxBorrow=", vm.toString(maxBorrow)));
         }
-        // FP127: same integers, same formula, the inline library
+        // BL127: same integers, same formula, the inline library
         {
-            int256 rate = FP127Lib.div(_q(1e36), _q(P));
-            int256 ltv = FP127Lib.div(FP127Lib.div(FP127Lib.mul(FP127Lib.mul(_q(B), rate), _q(LP)), _q(EP)), _q(COLLATERAL));
+            int256 rate = BL127Lib.div(_q(1e36), _q(P));
+            int256 ltv = BL127Lib.div(BL127Lib.div(BL127Lib.mul(BL127Lib.mul(_q(B), rate), _q(LP)), _q(EP)), _q(COLLATERAL));
             bool ok = ltv <= _q(MAX_LTV);
             assertGt(rate, 0);
             assertFalse(ok);
-            int256 ltvCeil = FP127Lib.ceil(ltv) >> 128;
-            int256 mb = FP127Lib.div(FP127Lib.mul(FP127Lib.mul(_q(COLLATERAL), _q(MAX_LTV)), _q(EP)), FP127Lib.mul(rate, _q(LP)));
-            int256 maxBorrow = FP127Lib.floor(mb) >> 128;
-            _line("fp127", string.concat("rate=", vm.toString(rate), ";ltv=", vm.toString(ltv), ";solvent=", _b(ok),
+            int256 ltvCeil = BL127Lib.ceil(ltv) >> 128;
+            int256 mb = BL127Lib.div(BL127Lib.mul(BL127Lib.mul(_q(COLLATERAL), _q(MAX_LTV)), _q(EP)), BL127Lib.mul(rate, _q(LP)));
+            int256 maxBorrow = BL127Lib.floor(mb) >> 128;
+            _line("bl127", string.concat("rate=", vm.toString(rate), ";ltv=", vm.toString(ltv), ";solvent=", _b(ok),
                 ";ltvCeil=", vm.toString(ltvCeil), ";maxBorrow=", vm.toString(maxBorrow)));
         }
-        // FP19: same
+        // BL19: same
         {
-            int256 rate = FP19Lib.div(FP19Lib.fromUint(1e36), FP19Lib.fromUint(P));
-            int256 ltv = FP19Lib.div(
-                FP19Lib.div(FP19Lib.mul(FP19Lib.mul(FP19Lib.fromUint(B), rate), FP19Lib.fromUint(LP)), FP19Lib.fromUint(EP)),
-                FP19Lib.fromUint(COLLATERAL)
+            int256 rate = BL19Lib.div(BL19Lib.fromUint(1e36), BL19Lib.fromUint(P));
+            int256 ltv = BL19Lib.div(
+                BL19Lib.div(BL19Lib.mul(BL19Lib.mul(BL19Lib.fromUint(B), rate), BL19Lib.fromUint(LP)), BL19Lib.fromUint(EP)),
+                BL19Lib.fromUint(COLLATERAL)
             );
-            bool ok = FP19Lib.cmp(ltv, FP19Lib.fromUint(MAX_LTV)) <= 0;
-            assertGt(FP19Lib.cmp(rate, 0), 0);
+            bool ok = BL19Lib.cmp(ltv, BL19Lib.fromUint(MAX_LTV)) <= 0;
+            assertGt(BL19Lib.cmp(rate, 0), 0);
             assertFalse(ok);
-            int256 ltvCeil = FP127Lib.ceil(FP19Lib.toFP127(ltv)) >> 128;
-            int256 mb = FP19Lib.div(
-                FP19Lib.mul(FP19Lib.mul(FP19Lib.fromUint(COLLATERAL), FP19Lib.fromUint(MAX_LTV)), FP19Lib.fromUint(EP)),
-                FP19Lib.mul(rate, FP19Lib.fromUint(LP))
+            int256 ltvCeil = BL127Lib.ceil(BL19Lib.toBL127(ltv)) >> 128;
+            int256 mb = BL19Lib.div(
+                BL19Lib.mul(BL19Lib.mul(BL19Lib.fromUint(COLLATERAL), BL19Lib.fromUint(MAX_LTV)), BL19Lib.fromUint(EP)),
+                BL19Lib.mul(rate, BL19Lib.fromUint(LP))
             );
-            int256 maxBorrow = FP127Lib.floor(FP19Lib.toFP127(mb)) >> 128;
-            _line("fp19", string.concat("rate=", vm.toString(rate), ";ltv=", vm.toString(ltv), ";solvent=", _b(ok),
+            int256 maxBorrow = BL127Lib.floor(BL19Lib.toBL127(mb)) >> 128;
+            _line("bl19", string.concat("rate=", vm.toString(rate), ";ltv=", vm.toString(ltv), ";solvent=", _b(ok),
                 ";ltvCeil=", vm.toString(ltvCeil), ";maxBorrow=", vm.toString(maxBorrow)));
         }
     }
 
-    /// FP127 holds integers below 2^127 (about 1.7e38) exactly; the price here is 2.0e36.
+    /// BL127 holds integers below 2^127 (about 1.7e38) exactly; the price here is 2.0e36.
     function _q(uint256 x) internal pure returns (int256) {
-        require(x < 1 << 127, "FP127 range");
+        require(x < 1 << 127, "BL127 range");
         return int256(x) << 128;
     }
 

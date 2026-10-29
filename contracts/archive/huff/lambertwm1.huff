@@ -1,7 +1,7 @@
-/// @title FP127 Lambert W_{-1} Function (ARCHIVED)
+/// @title BL127 Lambert W_{-1} Function (ARCHIVED)
 /// @notice Lambert W_{-1}(x) for 127.128 fixed-point arithmetic (secondary branch)
 /// @dev Archived: Removed from build due to huffc expanded-source limit (~115KB).
-///     Restore by moving back to fp127/ and adding include to fp127.huff/test_fp127.huff.
+///     Restore by moving back to bl127/ and adding include to bl127.huff/test_bl127.huff.
 /// @dev Requires: constants.huff, primitives.huff, arithmetic.huff, ln.huff, exp.huff, lambertw0.huff
 ///
 /// The Lambert W function satisfies: W(x) * exp(W(x)) = x
@@ -16,7 +16,7 @@
 /// Precision: ~100+ bits
 
 // ============================================================================
-// FP127_LAMBERT_WM1: Compute Lambert W_{-1}(x)
+// BL127_LAMBERT_WM1: Compute Lambert W_{-1}(x)
 // ============================================================================
 
 /// @notice Compute Lambert W_{-1}(x) for 127.128 fixed-point x
@@ -25,7 +25,7 @@
 /// Stack output: [W_{-1}(x)] (127.128 format, negative)
 /// Domain: [-1/e, 0) where -1/e ≈ -0.36787944117
 /// Returns 0 for out-of-domain inputs
-#define fn FP127_LAMBERT_WM1() = takes(1) returns(1) {
+#define fn BL127_LAMBERT_WM1() = takes(1) returns(1) {
     // Stack: [x]
     
     // Domain check: x must be in [-1/e, 0)
@@ -33,14 +33,14 @@
     dup1 [SIGN_MASK] and iszero lambertwm1_domain_error jumpi
     
     // Check x >= -1/e
-    dup1 [INV_E_FP127] NEGATE()     // [-1/e, x]
+    dup1 [INV_E_BL127] NEGATE()     // [-1/e, x]
     slt lambertwm1_domain_error jumpi
     
     // Special case: x very close to -1/e
     // At x = -1/e, W_{-1}(-1/e) = -1
-    dup1 [INV_E_FP127] NEGATE()     // [-1/e, x]
-    FP127_SUB()                     // [x - (-1/e), x]
-    FP127_ABS()                     // [|x + 1/e|, x]
+    dup1 [INV_E_BL127] NEGATE()     // [-1/e, x]
+    BL127_SUB()                     // [x - (-1/e), x]
+    BL127_ABS()                     // [|x + 1/e|, x]
     
     // If |x + 1/e| < 0.001, return -1 (close enough to branch point)
     dup1 0x0000000000000000000000000000000000418937d5b73c0000000000000000 slt lambertwm1_branch_point jumpi
@@ -51,16 +51,16 @@
     dup1 NEGATE()                   // [-x, x]
     
     // Compute ln(-x)
-    dup1 FP127_LN()                 // [ln(-x), -x, x]
+    dup1 BL127_LN()                 // [ln(-x), -x, x]
     
     // Compute -ln(-x)
     dup1 NEGATE()                   // [-ln(-x), ln(-x), -x, x]
     
     // Compute ln(-ln(-x))
-    FP127_LN()                      // [ln(-ln(-x)), ln(-x), -x, x]
+    BL127_LN()                      // [ln(-ln(-x)), ln(-x), -x, x]
     
     // w0 = ln(-x) - ln(-ln(-x))
-    swap1 FP127_SUB()               // [w0, -x, x]
+    swap1 BL127_SUB()               // [w0, -x, x]
     swap1 pop                       // [w0, x]
     
     // Newton-Raphson refinement: 3 iterations
@@ -73,7 +73,7 @@
     lambertwm1_branch_point:
     // x ≈ -1/e, return -1
     pop pop                         // []
-    [ONE_FP127] NEGATE()            // [-1]
+    [ONE_BL127] NEGATE()            // [-1]
     lambertwm1_done jump
     
     lambertwm1_domain_error:

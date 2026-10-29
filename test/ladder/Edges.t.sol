@@ -2,10 +2,10 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import {FP127_ADDRESS, FP127E_ADDRESS, FP127H_ADDRESS, FP127N_ADDRESS, FP127S_ADDRESS, Form, Op} from "../../contracts/src/ladder/ILadder.sol";
+import {BL127_ADDRESS, BL127E_ADDRESS, BL127H_ADDRESS, BL127N_ADDRESS, BL127S_ADDRESS, Form, Op} from "../../contracts/src/ladder/ILadder.sol";
 import {EdgeRunner} from "../../contracts/src/ladder/EdgeRunner.sol";
-import {LadderFP127} from "../../contracts/src/ladder/LadderFP127.sol";
-import {LadderFP127Lib} from "../../contracts/src/ladder/LadderFP127Lib.sol";
+import {LadderBL127} from "../../contracts/src/ladder/LadderBL127.sol";
+import {LadderBL127Lib} from "../../contracts/src/ladder/LadderBL127Lib.sol";
 import {LadderABDK} from "../../contracts/src/ladder/LadderABDK.sol";
 import {LadderSolady} from "../../contracts/src/ladder/LadderSolady.sol";
 import {LadderPRB} from "../../contracts/src/ladder/LadderPRB.sol";
@@ -14,7 +14,7 @@ import {LadderBalancer} from "../../contracts/src/ladder/LadderBalancer.sol";
 import {LadderAave} from "../../contracts/src/ladder/LadderAave.sol";
 import {LadderMorpho} from "../../contracts/src/ladder/LadderMorpho.sol";
 import {LadderMaker} from "../../contracts/src/ladder/LadderMaker.sol";
-import {LadderFP19} from "../../contracts/src/ladder/LadderFP19.sol";
+import {LadderBL19} from "../../contracts/src/ladder/LadderBL19.sol";
 import {LadderSolmate} from "../../contracts/src/ladder/LadderSolmate.sol";
 import {LadderOZ} from "../../contracts/src/ladder/LadderOZ.sol";
 import {LadderUniswap} from "../../contracts/src/ladder/LadderUniswap.sol";
@@ -32,8 +32,8 @@ import {LadderEuler} from "../../contracts/src/ladder/LadderEuler.sol";
 ///         computes the truth and writes docs/benchmarks/edges.json.
 contract Edges is Test {
     string constant INPUTS = "scripts/ladder/edge-inputs.json";
-    string[18] FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"];
-    string[18] SCALE = ["fp127", "fp127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray", "fp19", "wad", "wad", "wad", "wad", "wad", "wad", "wad"];
+    string[18] FORMS = ["bl127", "bl127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "bl19", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"];
+    string[18] SCALE = ["bl127", "bl127", "abdk", "wad", "wad", "quad", "wad", "ray", "wad", "ray", "bl19", "wad", "wad", "wad", "wad", "wad", "wad", "wad"];
 
     EdgeRunner runner;
     string json;
@@ -51,14 +51,14 @@ contract Edges is Test {
     }
 
     function setUp() public {
-        _etch(FP127_ADDRESS, "FP127");
-        _etch(FP127E_ADDRESS, "FP127E");
-        _etch(FP127H_ADDRESS, "FP127H");
-        _etch(FP127N_ADDRESS, "FP127N");
-        _etch(FP127S_ADDRESS, "FP127S");
+        _etch(BL127_ADDRESS, "BL127");
+        _etch(BL127E_ADDRESS, "BL127E");
+        _etch(BL127H_ADDRESS, "BL127H");
+        _etch(BL127N_ADDRESS, "BL127N");
+        _etch(BL127S_ADDRESS, "BL127S");
         runner = new EdgeRunner([
-            address(new LadderFP127()),
-            address(new LadderFP127Lib()),
+            address(new LadderBL127()),
+            address(new LadderBL127Lib()),
             address(new LadderABDK()),
             address(new LadderSolady()),
             address(new LadderPRB()),
@@ -67,7 +67,7 @@ contract Edges is Test {
             address(new LadderAave()),
             address(new LadderMorpho()),
             address(new LadderMaker()),
-            address(new LadderFP19()),
+            address(new LadderBL19()),
             address(new LadderSolmate()),
             address(new LadderOZ()),
             address(new LadderUniswap()),
@@ -98,10 +98,10 @@ contract Edges is Test {
                 }
                 (bool ok, int256 raw, bytes4 reason, uint256 gas) = runner.run(opIndex, f, _args(base, SCALE[f]));
                 console.log(string.concat("EDGE|", id, "|", FORMS[f], "|", ok ? "1" : "0", "|", vm.toString(raw), "|", vm.toString(reason), "|", vm.toString(gas)));
-                if (f == Form.FP127LIB) {
-                    (bool ok0, int256 raw0,,) = runner.run(opIndex, Form.FP127, _args(base, SCALE[0]));
-                    assertEq(ok0, ok, string.concat(id, ": fp127/fp127lib ok differ"));
-                    assertEq(raw0, raw, string.concat(id, ": fp127/fp127lib raw differ"));
+                if (f == Form.BL127LIB) {
+                    (bool ok0, int256 raw0,,) = runner.run(opIndex, Form.BL127, _args(base, SCALE[0]));
+                    assertEq(ok0, ok, string.concat(id, ": bl127/bl127lib ok differ"));
+                    assertEq(raw0, raw, string.concat(id, ": bl127/bl127lib raw differ"));
                 }
             }
         }

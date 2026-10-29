@@ -16,16 +16,16 @@ DIV is the floor quotient, MOD the remainder).
   L2  smul (Wide.sol): for words a, b read as two's complement A, B,
       ((h - [A < 0] b - [B < 0] a) mod 2^256, l), the first word read as
       two's complement, is the exact A B.
-  L3  for x, y < 2^19 (FP19's exponent fields), MUL(x, y) = 0 iff x = 0 or
+  L3  for x, y < 2^19 (BL19's exponent fields), MUL(x, y) = 0 iff x = 0 or
       y = 0. Handed to the solver as an assumption (Harness.assumeL3).
-  L4  for 2 <= u < 2^256, DIV(2^256 - u, u) + 1 = floor(2^256 / u) (FP127's inv).
+  L4  for 2 <= u < 2^256, DIV(2^256 - u, u) + 1 = floor(2^256 / u) (BL127's inv).
   L5  Wide.uabs(x) = (x XOR m) - m, m = SAR(255, x), is |x| for every
       two's complement x (bit-vectors).
   L6  two significands ma, mb in [2^236, 2^237): the high word of ma mb is
       in [2^216, 2^218) (the product in [2^472, 2^474)).
-  L7  the quotients FP19 rounds are at least 2^254: floor(ma 2^255 / mb),
+  L7  the quotients BL19 rounds are at least 2^254: floor(ma 2^255 / mb),
       floor(2^491 / m) and floor(m 2^60 / 5^18) for significands ma, mb, m.
-      L6 and L7 are handed to the solver as assumptions (ProofsFP19).
+      L6 and L7 are handed to the solver as assumptions (ProofsBL19).
   K18 Kernels.q18: for m < 2^237, the two word divisions by 5^18 give
       floor(m 2^60 / 5^18), and no intermediate leaves a word.
 """

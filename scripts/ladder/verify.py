@@ -17,7 +17,7 @@ from pathlib import Path
 from Crypto.Hash import keccak
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "scripts" / "fp127"))
+sys.path.insert(0, str(ROOT / "scripts" / "bl127"))
 from verify import SOURCIFY, http  # noqa: E402
 
 RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"

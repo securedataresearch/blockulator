@@ -25,12 +25,12 @@ LADDER = ROOT / "docs" / "benchmarks" / "ladder.json"
 RECORD = ROOT / "contracts" / "deployments" / "Ladder.json"
 INPUTS = ROOT / "scripts" / "ladder" / "inputs.json"
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
-FORMS = ["fp127", "fp127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "fp19", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"]
+FORMS = ["bl127", "bl127lib", "abdk", "solady", "prb", "quad", "balancer", "aave", "morpho", "maker", "bl19", "solmate", "oz", "uniswap", "prbud", "snekmate", "fraxlend", "euler"]
 # the forms the on-chain runners hold an adapter for (scripts/ladder/deploy.py ONCHAIN): our deployed objects.
 # The other libraries' cells are reproduced with make ladder / make edges; on chain their slots are empty.
-ONCHAIN = {"fp127", "fp19"}
-SCALE_OF_FORM = {"fp127": "fp127", "fp127lib": "fp127", "abdk": "abdk", "solady": "wad", "prb": "wad",
-                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "fp19": "fp19",
+ONCHAIN = {"bl127", "bl19"}
+SCALE_OF_FORM = {"bl127": "bl127", "bl127lib": "bl127", "abdk": "abdk", "solady": "wad", "prb": "wad",
+                 "quad": "quad", "balancer": "wad", "aave": "ray", "morpho": "wad", "maker": "ray", "bl19": "bl19",
                  "solmate": "wad", "oz": "wad", "uniswap": "wad", "prbud": "wad", "snekmate": "wad",
                  "fraxlend": "wad", "euler": "wad"}
 SIG = "run(uint8,uint8,uint32,int256[])(bool,int256,bytes4,uint256,uint256)"

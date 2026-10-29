@@ -3,880 +3,880 @@ pragma solidity ^0.8.31;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
-import {FP127, fp127, fp127FromInt, ONE as ONE127} from "../../contracts/src/fp127/FP127Type.sol";
-import "../../contracts/src/fp19/FP19Type.sol";
+import {BL127Lib} from "../../contracts/src/bl127/BL127Lib.sol";
+import {BL19Lib} from "../../contracts/src/bl19/BL19Lib.sol";
+import {BL127, bl127, bl127FromInt, ONE as ONE127} from "../../contracts/src/bl127/BL127Type.sol";
+import "../../contracts/src/bl19/BL19Type.sol";
 
 // One contract per op and form, f(x, y, z) the op alone, as a caller's own
-// contract would hold it: R19_<op> calls FP19Lib, T19_<op> the typed API.
-// test_gas compares their call gas. Every op of contracts/src/fp19/ops.json
+// contract would hold it: R19_<op> calls BL19Lib, T19_<op> the typed API.
+// test_gas compares their call gas. Every op of contracts/src/bl19/ops.json
 // has a pair, a row in _ops() and a line in raw() and typed()
 // (test_coversEveryOp checks the table).
 
 contract R19_sqrt {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.sqrt(x);
+        r = BL19Lib.sqrt(x);
     }
 }
 
 contract T19_sqrt {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.sqrt());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.sqrt());
     }
 }
 
 contract R19_exp {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.exp(x);
+        r = BL19Lib.exp(x);
     }
 }
 
 contract T19_exp {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.exp());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.exp());
     }
 }
 
 contract R19_ln {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.ln(x);
+        r = BL19Lib.ln(x);
     }
 }
 
 contract T19_ln {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.ln());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.ln());
     }
 }
 
 contract R19_log1p {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.log1p(x);
+        r = BL19Lib.log1p(x);
     }
 }
 
 contract T19_log1p {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.log1p());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.log1p());
     }
 }
 
 contract R19_expm1 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.expm1(x);
+        r = BL19Lib.expm1(x);
     }
 }
 
 contract T19_expm1 {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.expm1());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.expm1());
     }
 }
 
 contract R19_erf {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.erf(x);
+        r = BL19Lib.erf(x);
     }
 }
 
 contract T19_erf {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.erf());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.erf());
     }
 }
 
 contract R19_erfc {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.erfc(x);
+        r = BL19Lib.erfc(x);
     }
 }
 
 contract T19_erfc {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.erfc());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.erfc());
     }
 }
 
 contract R19_normCdf {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.normCdf(x);
+        r = BL19Lib.normCdf(x);
     }
 }
 
 contract T19_normCdf {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.normCdf());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.normCdf());
     }
 }
 
 contract R19_lambertW0 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.lambertW0(x);
+        r = BL19Lib.lambertW0(x);
     }
 }
 
 contract T19_lambertW0 {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.lambertW0());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.lambertW0());
     }
 }
 
 contract R19_lambertWm1 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.lambertWm1(x);
+        r = BL19Lib.lambertWm1(x);
     }
 }
 
 contract T19_lambertWm1 {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.lambertWm1());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.lambertWm1());
     }
 }
 
 contract R19_abs {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.abs(x);
+        r = BL19Lib.abs(x);
     }
 }
 
 contract T19_abs {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.abs());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.abs());
     }
 }
 
 contract R19_sign {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.sign(x);
+        r = BL19Lib.sign(x);
     }
 }
 
 contract T19_sign {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.sign());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.sign());
     }
 }
 
 contract R19_floor {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.floor(x);
+        r = BL19Lib.floor(x);
     }
 }
 
 contract T19_floor {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.floor());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.floor());
     }
 }
 
 contract R19_ceil {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.ceil(x);
+        r = BL19Lib.ceil(x);
     }
 }
 
 contract T19_ceil {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.ceil());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.ceil());
     }
 }
 
 contract R19_inv {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.inv(x);
+        r = BL19Lib.inv(x);
     }
 }
 
 contract T19_inv {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.inv());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.inv());
     }
 }
 
 contract R19_frac {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.frac(x);
+        r = BL19Lib.frac(x);
     }
 }
 
 contract T19_frac {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.frac());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.frac());
     }
 }
 
 contract R19_round {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.round(x);
+        r = BL19Lib.round(x);
     }
 }
 
 contract T19_round {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.round());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.round());
     }
 }
 
 contract R19_log2Up {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.log2Up(x);
+        r = BL19Lib.log2Up(x);
     }
 }
 
 contract T19_log2Up {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.log2Up());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.log2Up());
     }
 }
 
 contract R19_factorial {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.factorial(x);
+        r = BL19Lib.factorial(x);
     }
 }
 
 contract T19_factorial {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.factorial());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.factorial());
     }
 }
 
 contract R19_cbrt {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.cbrt(x);
+        r = BL19Lib.cbrt(x);
     }
 }
 
 contract T19_cbrt {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.cbrt());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.cbrt());
     }
 }
 
 contract R19_exp2 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.exp2(x);
+        r = BL19Lib.exp2(x);
     }
 }
 
 contract T19_exp2 {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.exp2());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.exp2());
     }
 }
 
 contract R19_exp10 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.exp10(x);
+        r = BL19Lib.exp10(x);
     }
 }
 
 contract T19_exp10 {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.exp10());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.exp10());
     }
 }
 
 contract R19_log2 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.log2(x);
+        r = BL19Lib.log2(x);
     }
 }
 
 contract T19_log2 {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.log2());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.log2());
     }
 }
 
 contract R19_log10 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.log10(x);
+        r = BL19Lib.log10(x);
     }
 }
 
 contract T19_log10 {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.log10());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.log10());
     }
 }
 
 contract R19_sinh {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.sinh(x);
+        r = BL19Lib.sinh(x);
     }
 }
 
 contract T19_sinh {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.sinh());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.sinh());
     }
 }
 
 contract R19_cosh {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.cosh(x);
+        r = BL19Lib.cosh(x);
     }
 }
 
 contract T19_cosh {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.cosh());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.cosh());
     }
 }
 
 contract R19_tanh {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.tanh(x);
+        r = BL19Lib.tanh(x);
     }
 }
 
 contract T19_tanh {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.tanh());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.tanh());
     }
 }
 
 contract R19_atanh {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.atanh(x);
+        r = BL19Lib.atanh(x);
     }
 }
 
 contract T19_atanh {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.atanh());
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.atanh());
     }
 }
 
 contract R19_neg {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.neg(x);
+        r = BL19Lib.neg(x);
     }
 }
 
 contract T19_neg {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(-a);
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(-a);
     }
 }
 
 contract R19_add {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.add(x, y);
+        r = BL19Lib.add(x, y);
     }
 }
 
 contract T19_add {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a + b);
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a + b);
     }
 }
 
 contract R19_sub {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.sub(x, y);
+        r = BL19Lib.sub(x, y);
     }
 }
 
 contract T19_sub {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a - b);
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a - b);
     }
 }
 
 contract R19_mul {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.mul(x, y);
+        r = BL19Lib.mul(x, y);
     }
 }
 
 contract T19_mul {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a * b);
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a * b);
     }
 }
 
 contract R19_div {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.div(x, y);
+        r = BL19Lib.div(x, y);
     }
 }
 
 contract T19_div {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a / b);
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a / b);
     }
 }
 
 contract R19_pow {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.pow(x, y);
+        r = BL19Lib.pow(x, y);
     }
 }
 
 contract T19_pow {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.pow(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.pow(b));
     }
 }
 
 contract R19_mulDown {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.mulDown(x, y);
+        r = BL19Lib.mulDown(x, y);
     }
 }
 
 contract T19_mulDown {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.mulDown(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.mulDown(b));
     }
 }
 
 contract R19_mulUp {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.mulUp(x, y);
+        r = BL19Lib.mulUp(x, y);
     }
 }
 
 contract T19_mulUp {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.mulUp(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.mulUp(b));
     }
 }
 
 contract R19_divDown {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.divDown(x, y);
+        r = BL19Lib.divDown(x, y);
     }
 }
 
 contract T19_divDown {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.divDown(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.divDown(b));
     }
 }
 
 contract R19_divUp {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.divUp(x, y);
+        r = BL19Lib.divUp(x, y);
     }
 }
 
 contract T19_divUp {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.divUp(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.divUp(b));
     }
 }
 
 contract R19_min {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.min(x, y);
+        r = BL19Lib.min(x, y);
     }
 }
 
 contract T19_min {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.min(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.min(b));
     }
 }
 
 contract R19_max {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.max(x, y);
+        r = BL19Lib.max(x, y);
     }
 }
 
 contract T19_max {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.max(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.max(b));
     }
 }
 
 contract R19_avg {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.avg(x, y);
+        r = BL19Lib.avg(x, y);
     }
 }
 
 contract T19_avg {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.avg(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.avg(b));
     }
 }
 
 contract R19_dist {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.dist(x, y);
+        r = BL19Lib.dist(x, y);
     }
 }
 
 contract T19_dist {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.dist(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.dist(b));
     }
 }
 
 contract R19_zeroFloorSub {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.zeroFloorSub(x, y);
+        r = BL19Lib.zeroFloorSub(x, y);
     }
 }
 
 contract T19_zeroFloorSub {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.zeroFloorSub(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.zeroFloorSub(b));
     }
 }
 
 contract R19_gavg {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.gavg(x, y);
+        r = BL19Lib.gavg(x, y);
     }
 }
 
 contract T19_gavg {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.gavg(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.gavg(b));
     }
 }
 
 contract R19_hypot {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.hypot(x, y);
+        r = BL19Lib.hypot(x, y);
     }
 }
 
 contract T19_hypot {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.hypot(b));
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.hypot(b));
     }
 }
 
 contract R19_powu {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.powu(x, y);
+        r = BL19Lib.powu(x, y);
     }
 }
 
 contract T19_powu {
-    function f(FP19 a, int256 y, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.powu(y));
+    function f(BL19 a, int256 y, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.powu(y));
     }
 }
 
 contract R19_compound {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.compound(x, y);
+        r = BL19Lib.compound(x, y);
     }
 }
 
 contract T19_compound {
-    function f(FP19 a, int256 y, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(a.compound(y));
+    function f(BL19 a, int256 y, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(a.compound(y));
     }
 }
 
 contract R19_clamp {
     function f(int256 x, int256 y, int256 z) external pure returns (int256 r) {
-        r = FP19Lib.clamp(x, y, z);
+        r = BL19Lib.clamp(x, y, z);
     }
 }
 
 contract T19_clamp {
-    function f(FP19 a, FP19 b, FP19 c) external pure returns (int256 r) {
-        r = FP19.unwrap(a.clamp(b, c));
+    function f(BL19 a, BL19 b, BL19 c) external pure returns (int256 r) {
+        r = BL19.unwrap(a.clamp(b, c));
     }
 }
 
 contract R19_lerp {
     function f(int256 x, int256 y, int256 z) external pure returns (int256 r) {
-        r = FP19Lib.lerp(x, y, z);
+        r = BL19Lib.lerp(x, y, z);
     }
 }
 
 contract T19_lerp {
-    function f(FP19 a, FP19 b, FP19 c) external pure returns (int256 r) {
-        r = FP19.unwrap(a.lerp(b, c));
+    function f(BL19 a, BL19 b, BL19 c) external pure returns (int256 r) {
+        r = BL19.unwrap(a.lerp(b, c));
     }
 }
 
 contract R19_cmp {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.cmp(x, y);
+        r = BL19Lib.cmp(x, y);
     }
 }
 
 contract T19_cmp {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
         r = a.cmp(b);
     }
 }
 
 contract R19_lt {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.lt(x, y) != 0 ? int256(1) : int256(0);
+        r = BL19Lib.lt(x, y) != 0 ? int256(1) : int256(0);
     }
 }
 
 contract T19_lt {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
         r = a < b ? int256(1) : int256(0);
     }
 }
 
 contract R19_gt {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.lt(y, x) != 0 ? int256(1) : int256(0);
+        r = BL19Lib.lt(y, x) != 0 ? int256(1) : int256(0);
     }
 }
 
 contract T19_gt {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
         r = a > b ? int256(1) : int256(0);
     }
 }
 
 contract R19_le {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.lt(y, x) == 0 ? int256(1) : int256(0);
+        r = BL19Lib.lt(y, x) == 0 ? int256(1) : int256(0);
     }
 }
 
 contract T19_le {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
         r = a <= b ? int256(1) : int256(0);
     }
 }
 
 contract R19_ge {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.lt(x, y) == 0 ? int256(1) : int256(0);
+        r = BL19Lib.lt(x, y) == 0 ? int256(1) : int256(0);
     }
 }
 
 contract T19_ge {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
         r = a >= b ? int256(1) : int256(0);
     }
 }
 
 contract R19_eq {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.eq(x, y) != 0 ? int256(1) : int256(0);
+        r = BL19Lib.eq(x, y) != 0 ? int256(1) : int256(0);
     }
 }
 
 contract T19_eq {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
         r = a == b ? int256(1) : int256(0);
     }
 }
 
 contract R19_ne {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP19Lib.eq(x, y) == 0 ? int256(1) : int256(0);
+        r = BL19Lib.eq(x, y) == 0 ? int256(1) : int256(0);
     }
 }
 
 contract T19_ne {
-    function f(FP19 a, FP19 b, int256) external pure returns (int256 r) {
+    function f(BL19 a, BL19 b, int256) external pure returns (int256 r) {
         r = a != b ? int256(1) : int256(0);
     }
 }
 
 contract R19_fromUint {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.fromUint(uint256(x));
+        r = BL19Lib.fromUint(uint256(x));
     }
 }
 
 contract T19_fromUint {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(fp19FromUint(uint256(x)));
+        r = BL19.unwrap(bl19FromUint(uint256(x)));
     }
 }
 
 contract R19_fromUintDown {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.fromUintDown(uint256(x));
+        r = BL19Lib.fromUintDown(uint256(x));
     }
 }
 
 contract T19_fromUintDown {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(fp19FromUintDown(uint256(x)));
+        r = BL19.unwrap(bl19FromUintDown(uint256(x)));
     }
 }
 
 contract R19_fromUintUp {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.fromUintUp(uint256(x));
+        r = BL19Lib.fromUintUp(uint256(x));
     }
 }
 
 contract T19_fromUintUp {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(fp19FromUintUp(uint256(x)));
+        r = BL19.unwrap(bl19FromUintUp(uint256(x)));
     }
 }
 
 contract R19_fromFixed18 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.fromFixed18(x);
+        r = BL19Lib.fromFixed18(x);
     }
 }
 
 contract T19_fromFixed18 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(fp19FromFixed18(x));
+        r = BL19.unwrap(bl19FromFixed18(x));
     }
 }
 
-contract R19_fromFP127 {
+contract R19_fromBL127 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.fromFP127(x);
+        r = BL19Lib.fromBL127(x);
     }
 }
 
-contract T19_fromFP127 {
-    function f(FP127 x, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(toFP19(x));
+contract T19_fromBL127 {
+    function f(BL127 x, int256, int256) external pure returns (int256 r) {
+        r = BL19.unwrap(toBL19(x));
     }
 }
 
-contract R19_toFP127 {
+contract R19_toBL127 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.toFP127(x);
+        r = BL19Lib.toBL127(x);
     }
 }
 
-contract T19_toFP127 {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.toFP127());
+contract T19_toBL127 {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.toBL127());
     }
 }
 
 contract R19_toFixed18 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.toFixed18(x);
+        r = BL19Lib.toFixed18(x);
     }
 }
 
 contract T19_toFixed18 {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = a.toFixed18();
     }
 }
 
 contract R19_toFixed18Down {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.toFixed18Down(x);
+        r = BL19Lib.toFixed18Down(x);
     }
 }
 
 contract T19_toFixed18Down {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = a.toFixed18Down();
     }
 }
 
 contract R19_toFixed18Up {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.toFixed18Up(x);
+        r = BL19Lib.toFixed18Up(x);
     }
 }
 
 contract T19_toFixed18Up {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = a.toFixed18Up();
     }
 }
 
 contract R19_toIntDown {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.toIntDown(x);
+        r = BL19Lib.toIntDown(x);
     }
 }
 
 contract T19_toIntDown {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = a.toIntDown();
     }
 }
 
 contract R19_toIntUp {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.toIntUp(x);
+        r = BL19Lib.toIntUp(x);
     }
 }
 
 contract T19_toIntUp {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = a.toIntUp();
     }
 }
 
 contract R19_toUintDown {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = int256(FP19Lib.toUintDown(x));
+        r = int256(BL19Lib.toUintDown(x));
     }
 }
 
 contract T19_toUintDown {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = int256(a.toUintDown());
     }
 }
 
 contract R19_toUintUp {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = int256(FP19Lib.toUintUp(x));
+        r = int256(BL19Lib.toUintUp(x));
     }
 }
 
 contract T19_toUintUp {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = int256(a.toUintUp());
     }
 }
 
 contract R19_fromWad {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        if (uint256(x) > uint256(type(int256).max)) revert FP19Lib.Overflow();
-        r = FP19Lib.fromFixed18(x);
+        if (uint256(x) > uint256(type(int256).max)) revert BL19Lib.Overflow();
+        r = BL19Lib.fromFixed18(x);
     }
 }
 
 contract T19_fromWad {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(fp19FromWad(uint256(x)));
+        r = BL19.unwrap(bl19FromWad(uint256(x)));
     }
 }
 
 contract R19_toWadDown {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.toFixed18Down(x);
-        if (r < 0) revert FP19Lib.OutOfRange();
+        r = BL19Lib.toFixed18Down(x);
+        if (r < 0) revert BL19Lib.OutOfRange();
     }
 }
 
 contract T19_toWadDown {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = int256(a.toWadDown());
     }
 }
 
 contract R19_toWadUp {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19Lib.toFixed18Up(x);
-        if (r < 0) revert FP19Lib.OutOfRange();
+        r = BL19Lib.toFixed18Up(x);
+        if (r < 0) revert BL19Lib.OutOfRange();
     }
 }
 
 contract T19_toWadUp {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = int256(a.toWadUp());
     }
 }
@@ -884,14 +884,14 @@ contract T19_toWadUp {
 contract R19_fromInt {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
         r = x >= 0
-            ? FP19Lib.fromUint(uint256(x))
-            : FP19Lib.sub(0, FP19Lib.fromUint(x == type(int256).min ? uint256(1) << 255 : uint256(-x)));
+            ? BL19Lib.fromUint(uint256(x))
+            : BL19Lib.sub(0, BL19Lib.fromUint(x == type(int256).min ? uint256(1) << 255 : uint256(-x)));
     }
 }
 
 contract T19_fromInt {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP19.unwrap(fp19FromInt(x));
+        r = BL19.unwrap(bl19FromInt(x));
     }
 }
 
@@ -902,32 +902,32 @@ contract R19_unwrap {
 }
 
 contract T19_unwrap {
-    function f(FP19 a, int256, int256) external pure returns (int256 r) {
+    function f(BL19 a, int256, int256) external pure returns (int256 r) {
         r = a.unwrap();
     }
 }
 
 /// @title Typed19
-/// @notice contracts/src/fp19/FP19Type.sol adds nothing to FP19Lib: the
+/// @notice contracts/src/bl19/BL19Type.sol adds nothing to BL19Lib: the
 ///         same three checks as test/typed/Typed127.t.sol (testFuzz_same,
-///         test_gas with TYPED|fp19|op|raw|typed lines, test_coversEveryOp),
+///         test_gas with TYPED|bl19|op|raw|typed lines, test_coversEveryOp),
 ///         plus testFuzz_order: the six comparison operators agree with
-///         FP19Lib.cmp. The comparisons' raw form is FP19Lib.lt / eq read
-///         as a bool, as a raw caller writes it. fp19FromInt is checked
+///         BL19Lib.cmp. The comparisons' raw form is BL19Lib.lt / eq read
+///         as a bool, as a raw caller writes it. bl19FromInt is checked
 ///         against an independent formula (0 - |n|), so its gas is printed but
-///         not compared. The file also imports FP127Type into the same scope,
+///         not compared. The file also imports BL127Type into the same scope,
 ///         ONE aliased, as a caller holding both types does.
 contract Typed19 is Test {
     struct Op {
         bytes32 name;
-        bytes kinds; // v FP19, f FP127 word, i int256, u uint256 (one char per argument)
+        bytes kinds; // v BL19, f BL127 word, i int256, u uint256 (one char per argument)
         int256[3] typ; // a typical input, in domain
         bool same; // raw is the same call, so the gas must match
         string rawC; // the two contracts
         string typedC;
     }
 
-    int256 constant O = FP19Lib.ONE;
+    int256 constant O = BL19Lib.ONE;
     bytes32 constant NA = keccak256(abi.encodeWithSignature("Error(string)", "na"));
 
     // ---- the two forms of every op ---------------------------------------
@@ -935,156 +935,156 @@ contract Typed19 is Test {
     function raw(bytes32 op, int256 x, int256 y, int256 z) external pure returns (int256 r) {
         (z);
         if (op == "sqrt") {
-            r = FP19Lib.sqrt(x);
+            r = BL19Lib.sqrt(x);
         } else if (op == "exp") {
-            r = FP19Lib.exp(x);
+            r = BL19Lib.exp(x);
         } else if (op == "ln") {
-            r = FP19Lib.ln(x);
+            r = BL19Lib.ln(x);
         } else if (op == "log1p") {
-            r = FP19Lib.log1p(x);
+            r = BL19Lib.log1p(x);
         } else if (op == "expm1") {
-            r = FP19Lib.expm1(x);
+            r = BL19Lib.expm1(x);
         } else if (op == "erf") {
-            r = FP19Lib.erf(x);
+            r = BL19Lib.erf(x);
         } else if (op == "erfc") {
-            r = FP19Lib.erfc(x);
+            r = BL19Lib.erfc(x);
         } else if (op == "normCdf") {
-            r = FP19Lib.normCdf(x);
+            r = BL19Lib.normCdf(x);
         } else if (op == "lambertW0") {
-            r = FP19Lib.lambertW0(x);
+            r = BL19Lib.lambertW0(x);
         } else if (op == "lambertWm1") {
-            r = FP19Lib.lambertWm1(x);
+            r = BL19Lib.lambertWm1(x);
         } else if (op == "abs") {
-            r = FP19Lib.abs(x);
+            r = BL19Lib.abs(x);
         } else if (op == "sign") {
-            r = FP19Lib.sign(x);
+            r = BL19Lib.sign(x);
         } else if (op == "floor") {
-            r = FP19Lib.floor(x);
+            r = BL19Lib.floor(x);
         } else if (op == "ceil") {
-            r = FP19Lib.ceil(x);
+            r = BL19Lib.ceil(x);
         } else if (op == "inv") {
-            r = FP19Lib.inv(x);
+            r = BL19Lib.inv(x);
         } else if (op == "frac") {
-            r = FP19Lib.frac(x);
+            r = BL19Lib.frac(x);
         } else if (op == "round") {
-            r = FP19Lib.round(x);
+            r = BL19Lib.round(x);
         } else if (op == "log2Up") {
-            r = FP19Lib.log2Up(x);
+            r = BL19Lib.log2Up(x);
         } else if (op == "factorial") {
-            r = FP19Lib.factorial(x);
+            r = BL19Lib.factorial(x);
         } else if (op == "cbrt") {
-            r = FP19Lib.cbrt(x);
+            r = BL19Lib.cbrt(x);
         } else if (op == "exp2") {
-            r = FP19Lib.exp2(x);
+            r = BL19Lib.exp2(x);
         } else if (op == "exp10") {
-            r = FP19Lib.exp10(x);
+            r = BL19Lib.exp10(x);
         } else if (op == "log2") {
-            r = FP19Lib.log2(x);
+            r = BL19Lib.log2(x);
         } else if (op == "log10") {
-            r = FP19Lib.log10(x);
+            r = BL19Lib.log10(x);
         } else if (op == "sinh") {
-            r = FP19Lib.sinh(x);
+            r = BL19Lib.sinh(x);
         } else if (op == "cosh") {
-            r = FP19Lib.cosh(x);
+            r = BL19Lib.cosh(x);
         } else if (op == "tanh") {
-            r = FP19Lib.tanh(x);
+            r = BL19Lib.tanh(x);
         } else if (op == "atanh") {
-            r = FP19Lib.atanh(x);
+            r = BL19Lib.atanh(x);
         } else if (op == "neg") {
-            r = FP19Lib.neg(x);
+            r = BL19Lib.neg(x);
         } else if (op == "add") {
-            r = FP19Lib.add(x, y);
+            r = BL19Lib.add(x, y);
         } else if (op == "sub") {
-            r = FP19Lib.sub(x, y);
+            r = BL19Lib.sub(x, y);
         } else if (op == "mul") {
-            r = FP19Lib.mul(x, y);
+            r = BL19Lib.mul(x, y);
         } else if (op == "div") {
-            r = FP19Lib.div(x, y);
+            r = BL19Lib.div(x, y);
         } else if (op == "pow") {
-            r = FP19Lib.pow(x, y);
+            r = BL19Lib.pow(x, y);
         } else if (op == "mulDown") {
-            r = FP19Lib.mulDown(x, y);
+            r = BL19Lib.mulDown(x, y);
         } else if (op == "mulUp") {
-            r = FP19Lib.mulUp(x, y);
+            r = BL19Lib.mulUp(x, y);
         } else if (op == "divDown") {
-            r = FP19Lib.divDown(x, y);
+            r = BL19Lib.divDown(x, y);
         } else if (op == "divUp") {
-            r = FP19Lib.divUp(x, y);
+            r = BL19Lib.divUp(x, y);
         } else if (op == "min") {
-            r = FP19Lib.min(x, y);
+            r = BL19Lib.min(x, y);
         } else if (op == "max") {
-            r = FP19Lib.max(x, y);
+            r = BL19Lib.max(x, y);
         } else if (op == "avg") {
-            r = FP19Lib.avg(x, y);
+            r = BL19Lib.avg(x, y);
         } else if (op == "dist") {
-            r = FP19Lib.dist(x, y);
+            r = BL19Lib.dist(x, y);
         } else if (op == "zeroFloorSub") {
-            r = FP19Lib.zeroFloorSub(x, y);
+            r = BL19Lib.zeroFloorSub(x, y);
         } else if (op == "gavg") {
-            r = FP19Lib.gavg(x, y);
+            r = BL19Lib.gavg(x, y);
         } else if (op == "hypot") {
-            r = FP19Lib.hypot(x, y);
+            r = BL19Lib.hypot(x, y);
         } else if (op == "powu") {
-            r = FP19Lib.powu(x, y);
+            r = BL19Lib.powu(x, y);
         } else if (op == "compound") {
-            r = FP19Lib.compound(x, y);
+            r = BL19Lib.compound(x, y);
         } else if (op == "clamp") {
-            r = FP19Lib.clamp(x, y, z);
+            r = BL19Lib.clamp(x, y, z);
         } else if (op == "lerp") {
-            r = FP19Lib.lerp(x, y, z);
+            r = BL19Lib.lerp(x, y, z);
         } else if (op == "cmp") {
-            r = FP19Lib.cmp(x, y);
+            r = BL19Lib.cmp(x, y);
         } else if (op == "lt") {
-            r = FP19Lib.lt(x, y) != 0 ? int256(1) : int256(0);
+            r = BL19Lib.lt(x, y) != 0 ? int256(1) : int256(0);
         } else if (op == "gt") {
-            r = FP19Lib.lt(y, x) != 0 ? int256(1) : int256(0);
+            r = BL19Lib.lt(y, x) != 0 ? int256(1) : int256(0);
         } else if (op == "le") {
-            r = FP19Lib.lt(y, x) == 0 ? int256(1) : int256(0);
+            r = BL19Lib.lt(y, x) == 0 ? int256(1) : int256(0);
         } else if (op == "ge") {
-            r = FP19Lib.lt(x, y) == 0 ? int256(1) : int256(0);
+            r = BL19Lib.lt(x, y) == 0 ? int256(1) : int256(0);
         } else if (op == "eq") {
-            r = FP19Lib.eq(x, y) != 0 ? int256(1) : int256(0);
+            r = BL19Lib.eq(x, y) != 0 ? int256(1) : int256(0);
         } else if (op == "ne") {
-            r = FP19Lib.eq(x, y) == 0 ? int256(1) : int256(0);
+            r = BL19Lib.eq(x, y) == 0 ? int256(1) : int256(0);
         } else if (op == "fromUint") {
-            r = FP19Lib.fromUint(uint256(x));
+            r = BL19Lib.fromUint(uint256(x));
         } else if (op == "fromUintDown") {
-            r = FP19Lib.fromUintDown(uint256(x));
+            r = BL19Lib.fromUintDown(uint256(x));
         } else if (op == "fromUintUp") {
-            r = FP19Lib.fromUintUp(uint256(x));
+            r = BL19Lib.fromUintUp(uint256(x));
         } else if (op == "fromFixed18") {
-            r = FP19Lib.fromFixed18(x);
-        } else if (op == "fromFP127") {
-            r = FP19Lib.fromFP127(x);
-        } else if (op == "toFP127") {
-            r = FP19Lib.toFP127(x);
+            r = BL19Lib.fromFixed18(x);
+        } else if (op == "fromBL127") {
+            r = BL19Lib.fromBL127(x);
+        } else if (op == "toBL127") {
+            r = BL19Lib.toBL127(x);
         } else if (op == "toFixed18") {
-            r = FP19Lib.toFixed18(x);
+            r = BL19Lib.toFixed18(x);
         } else if (op == "toFixed18Down") {
-            r = FP19Lib.toFixed18Down(x);
+            r = BL19Lib.toFixed18Down(x);
         } else if (op == "toFixed18Up") {
-            r = FP19Lib.toFixed18Up(x);
+            r = BL19Lib.toFixed18Up(x);
         } else if (op == "toIntDown") {
-            r = FP19Lib.toIntDown(x);
+            r = BL19Lib.toIntDown(x);
         } else if (op == "toIntUp") {
-            r = FP19Lib.toIntUp(x);
+            r = BL19Lib.toIntUp(x);
         } else if (op == "toUintDown") {
-            r = int256(FP19Lib.toUintDown(x));
+            r = int256(BL19Lib.toUintDown(x));
         } else if (op == "toUintUp") {
-            r = int256(FP19Lib.toUintUp(x));
+            r = int256(BL19Lib.toUintUp(x));
         } else if (op == "fromWad") {
-            if (uint256(x) > uint256(type(int256).max)) revert FP19Lib.Overflow();
-            r = FP19Lib.fromFixed18(x);
+            if (uint256(x) > uint256(type(int256).max)) revert BL19Lib.Overflow();
+            r = BL19Lib.fromFixed18(x);
         } else if (op == "toWadDown") {
-            r = FP19Lib.toFixed18Down(x);
-            if (r < 0) revert FP19Lib.OutOfRange();
+            r = BL19Lib.toFixed18Down(x);
+            if (r < 0) revert BL19Lib.OutOfRange();
         } else if (op == "toWadUp") {
-            r = FP19Lib.toFixed18Up(x);
-            if (r < 0) revert FP19Lib.OutOfRange();
+            r = BL19Lib.toFixed18Up(x);
+            if (r < 0) revert BL19Lib.OutOfRange();
         } else if (op == "fromInt") {
             r = x >= 0
-                ? FP19Lib.fromUint(uint256(x))
-                : FP19Lib.sub(0, FP19Lib.fromUint(x == type(int256).min ? uint256(1) << 255 : uint256(-x)));
+                ? BL19Lib.fromUint(uint256(x))
+                : BL19Lib.sub(0, BL19Lib.fromUint(x == type(int256).min ? uint256(1) << 255 : uint256(-x)));
         } else if (op == "unwrap") {
             r = x;
         } else {
@@ -1093,57 +1093,57 @@ contract Typed19 is Test {
     }
 
     function typed(bytes32 op, int256 x, int256 y, int256 z) external pure returns (int256 r) {
-        (FP19 a, FP19 b, FP19 c) = (FP19.wrap(x), FP19.wrap(y), FP19.wrap(z));
+        (BL19 a, BL19 b, BL19 c) = (BL19.wrap(x), BL19.wrap(y), BL19.wrap(z));
         (a, b, c);
-        if (op == "sqrt") r = FP19.unwrap(a.sqrt());
-        else if (op == "exp") r = FP19.unwrap(a.exp());
-        else if (op == "ln") r = FP19.unwrap(a.ln());
-        else if (op == "log1p") r = FP19.unwrap(a.log1p());
-        else if (op == "expm1") r = FP19.unwrap(a.expm1());
-        else if (op == "erf") r = FP19.unwrap(a.erf());
-        else if (op == "erfc") r = FP19.unwrap(a.erfc());
-        else if (op == "normCdf") r = FP19.unwrap(a.normCdf());
-        else if (op == "lambertW0") r = FP19.unwrap(a.lambertW0());
-        else if (op == "lambertWm1") r = FP19.unwrap(a.lambertWm1());
-        else if (op == "abs") r = FP19.unwrap(a.abs());
-        else if (op == "sign") r = FP19.unwrap(a.sign());
-        else if (op == "floor") r = FP19.unwrap(a.floor());
-        else if (op == "ceil") r = FP19.unwrap(a.ceil());
-        else if (op == "inv") r = FP19.unwrap(a.inv());
-        else if (op == "frac") r = FP19.unwrap(a.frac());
-        else if (op == "round") r = FP19.unwrap(a.round());
-        else if (op == "log2Up") r = FP19.unwrap(a.log2Up());
-        else if (op == "factorial") r = FP19.unwrap(a.factorial());
-        else if (op == "cbrt") r = FP19.unwrap(a.cbrt());
-        else if (op == "exp2") r = FP19.unwrap(a.exp2());
-        else if (op == "exp10") r = FP19.unwrap(a.exp10());
-        else if (op == "log2") r = FP19.unwrap(a.log2());
-        else if (op == "log10") r = FP19.unwrap(a.log10());
-        else if (op == "sinh") r = FP19.unwrap(a.sinh());
-        else if (op == "cosh") r = FP19.unwrap(a.cosh());
-        else if (op == "tanh") r = FP19.unwrap(a.tanh());
-        else if (op == "atanh") r = FP19.unwrap(a.atanh());
-        else if (op == "neg") r = FP19.unwrap(-a);
-        else if (op == "add") r = FP19.unwrap(a + b);
-        else if (op == "sub") r = FP19.unwrap(a - b);
-        else if (op == "mul") r = FP19.unwrap(a * b);
-        else if (op == "div") r = FP19.unwrap(a / b);
-        else if (op == "pow") r = FP19.unwrap(a.pow(b));
-        else if (op == "mulDown") r = FP19.unwrap(a.mulDown(b));
-        else if (op == "mulUp") r = FP19.unwrap(a.mulUp(b));
-        else if (op == "divDown") r = FP19.unwrap(a.divDown(b));
-        else if (op == "divUp") r = FP19.unwrap(a.divUp(b));
-        else if (op == "min") r = FP19.unwrap(a.min(b));
-        else if (op == "max") r = FP19.unwrap(a.max(b));
-        else if (op == "avg") r = FP19.unwrap(a.avg(b));
-        else if (op == "dist") r = FP19.unwrap(a.dist(b));
-        else if (op == "zeroFloorSub") r = FP19.unwrap(a.zeroFloorSub(b));
-        else if (op == "gavg") r = FP19.unwrap(a.gavg(b));
-        else if (op == "hypot") r = FP19.unwrap(a.hypot(b));
-        else if (op == "powu") r = FP19.unwrap(a.powu(y));
-        else if (op == "compound") r = FP19.unwrap(a.compound(y));
-        else if (op == "clamp") r = FP19.unwrap(a.clamp(b, c));
-        else if (op == "lerp") r = FP19.unwrap(a.lerp(b, c));
+        if (op == "sqrt") r = BL19.unwrap(a.sqrt());
+        else if (op == "exp") r = BL19.unwrap(a.exp());
+        else if (op == "ln") r = BL19.unwrap(a.ln());
+        else if (op == "log1p") r = BL19.unwrap(a.log1p());
+        else if (op == "expm1") r = BL19.unwrap(a.expm1());
+        else if (op == "erf") r = BL19.unwrap(a.erf());
+        else if (op == "erfc") r = BL19.unwrap(a.erfc());
+        else if (op == "normCdf") r = BL19.unwrap(a.normCdf());
+        else if (op == "lambertW0") r = BL19.unwrap(a.lambertW0());
+        else if (op == "lambertWm1") r = BL19.unwrap(a.lambertWm1());
+        else if (op == "abs") r = BL19.unwrap(a.abs());
+        else if (op == "sign") r = BL19.unwrap(a.sign());
+        else if (op == "floor") r = BL19.unwrap(a.floor());
+        else if (op == "ceil") r = BL19.unwrap(a.ceil());
+        else if (op == "inv") r = BL19.unwrap(a.inv());
+        else if (op == "frac") r = BL19.unwrap(a.frac());
+        else if (op == "round") r = BL19.unwrap(a.round());
+        else if (op == "log2Up") r = BL19.unwrap(a.log2Up());
+        else if (op == "factorial") r = BL19.unwrap(a.factorial());
+        else if (op == "cbrt") r = BL19.unwrap(a.cbrt());
+        else if (op == "exp2") r = BL19.unwrap(a.exp2());
+        else if (op == "exp10") r = BL19.unwrap(a.exp10());
+        else if (op == "log2") r = BL19.unwrap(a.log2());
+        else if (op == "log10") r = BL19.unwrap(a.log10());
+        else if (op == "sinh") r = BL19.unwrap(a.sinh());
+        else if (op == "cosh") r = BL19.unwrap(a.cosh());
+        else if (op == "tanh") r = BL19.unwrap(a.tanh());
+        else if (op == "atanh") r = BL19.unwrap(a.atanh());
+        else if (op == "neg") r = BL19.unwrap(-a);
+        else if (op == "add") r = BL19.unwrap(a + b);
+        else if (op == "sub") r = BL19.unwrap(a - b);
+        else if (op == "mul") r = BL19.unwrap(a * b);
+        else if (op == "div") r = BL19.unwrap(a / b);
+        else if (op == "pow") r = BL19.unwrap(a.pow(b));
+        else if (op == "mulDown") r = BL19.unwrap(a.mulDown(b));
+        else if (op == "mulUp") r = BL19.unwrap(a.mulUp(b));
+        else if (op == "divDown") r = BL19.unwrap(a.divDown(b));
+        else if (op == "divUp") r = BL19.unwrap(a.divUp(b));
+        else if (op == "min") r = BL19.unwrap(a.min(b));
+        else if (op == "max") r = BL19.unwrap(a.max(b));
+        else if (op == "avg") r = BL19.unwrap(a.avg(b));
+        else if (op == "dist") r = BL19.unwrap(a.dist(b));
+        else if (op == "zeroFloorSub") r = BL19.unwrap(a.zeroFloorSub(b));
+        else if (op == "gavg") r = BL19.unwrap(a.gavg(b));
+        else if (op == "hypot") r = BL19.unwrap(a.hypot(b));
+        else if (op == "powu") r = BL19.unwrap(a.powu(y));
+        else if (op == "compound") r = BL19.unwrap(a.compound(y));
+        else if (op == "clamp") r = BL19.unwrap(a.clamp(b, c));
+        else if (op == "lerp") r = BL19.unwrap(a.lerp(b, c));
         else if (op == "cmp") r = a.cmp(b);
         else if (op == "lt") r = a < b ? int256(1) : int256(0);
         else if (op == "gt") r = a > b ? int256(1) : int256(0);
@@ -1151,12 +1151,12 @@ contract Typed19 is Test {
         else if (op == "ge") r = a >= b ? int256(1) : int256(0);
         else if (op == "eq") r = a == b ? int256(1) : int256(0);
         else if (op == "ne") r = a != b ? int256(1) : int256(0);
-        else if (op == "fromUint") r = FP19.unwrap(fp19FromUint(uint256(x)));
-        else if (op == "fromUintDown") r = FP19.unwrap(fp19FromUintDown(uint256(x)));
-        else if (op == "fromUintUp") r = FP19.unwrap(fp19FromUintUp(uint256(x)));
-        else if (op == "fromFixed18") r = FP19.unwrap(fp19FromFixed18(x));
-        else if (op == "fromFP127") r = FP19.unwrap(toFP19(FP127.wrap(x)));
-        else if (op == "toFP127") r = FP127.unwrap(a.toFP127());
+        else if (op == "fromUint") r = BL19.unwrap(bl19FromUint(uint256(x)));
+        else if (op == "fromUintDown") r = BL19.unwrap(bl19FromUintDown(uint256(x)));
+        else if (op == "fromUintUp") r = BL19.unwrap(bl19FromUintUp(uint256(x)));
+        else if (op == "fromFixed18") r = BL19.unwrap(bl19FromFixed18(x));
+        else if (op == "fromBL127") r = BL19.unwrap(toBL19(BL127.wrap(x)));
+        else if (op == "toBL127") r = BL127.unwrap(a.toBL127());
         else if (op == "toFixed18") r = a.toFixed18();
         else if (op == "toFixed18Down") r = a.toFixed18Down();
         else if (op == "toFixed18Up") r = a.toFixed18Up();
@@ -1164,10 +1164,10 @@ contract Typed19 is Test {
         else if (op == "toIntUp") r = a.toIntUp();
         else if (op == "toUintDown") r = int256(a.toUintDown());
         else if (op == "toUintUp") r = int256(a.toUintUp());
-        else if (op == "fromWad") r = FP19.unwrap(fp19FromWad(uint256(x)));
+        else if (op == "fromWad") r = BL19.unwrap(bl19FromWad(uint256(x)));
         else if (op == "toWadDown") r = int256(a.toWadDown());
         else if (op == "toWadUp") r = int256(a.toWadUp());
-        else if (op == "fromInt") r = FP19.unwrap(fp19FromInt(x));
+        else if (op == "fromInt") r = BL19.unwrap(bl19FromInt(x));
         else if (op == "unwrap") r = a.unwrap();
         else revert("na");
     }
@@ -1175,15 +1175,15 @@ contract Typed19 is Test {
     // ---- the table ---------------------------------------------------------
 
     function _i(int256 n) internal pure returns (int256) {
-        return n >= 0 ? FP19Lib.fromUint(uint256(n)) : FP19Lib.neg(FP19Lib.fromUint(uint256(-n)));
+        return n >= 0 ? BL19Lib.fromUint(uint256(n)) : BL19Lib.neg(BL19Lib.fromUint(uint256(-n)));
     }
 
     function _q(int256 num, int256 den) internal pure returns (int256) {
-        return FP19Lib.div(_i(num), _i(den));
+        return BL19Lib.div(_i(num), _i(den));
     }
 
     function _q127(int256 num, int256 den) internal pure returns (int256) {
-        return num * FP127Lib.ONE / den;
+        return num * BL127Lib.ONE / den;
     }
 
     function _ops() internal pure returns (Op[] memory t) {
@@ -1252,8 +1252,8 @@ contract Typed19 is Test {
         t[59] = Op(
             "fromFixed18", "i", [int256(1.5e18), int256(0), int256(0)], true, "R19_fromFixed18", "T19_fromFixed18"
         );
-        t[60] = Op("fromFP127", "f", [_q127(3, 4), int256(0), int256(0)], true, "R19_fromFP127", "T19_fromFP127");
-        t[61] = Op("toFP127", "v", [_q(3, 4), int256(0), int256(0)], true, "R19_toFP127", "T19_toFP127");
+        t[60] = Op("fromBL127", "f", [_q127(3, 4), int256(0), int256(0)], true, "R19_fromBL127", "T19_fromBL127");
+        t[61] = Op("toBL127", "v", [_q(3, 4), int256(0), int256(0)], true, "R19_toBL127", "T19_toBL127");
         t[62] = Op("toFixed18", "v", [_q(3, 4), int256(0), int256(0)], true, "R19_toFixed18", "T19_toFixed18");
         t[63] = Op(
             "toFixed18Down", "v", [_q(3, 4), int256(0), int256(0)], true, "R19_toFixed18Down", "T19_toFixed18Down"
@@ -1277,9 +1277,9 @@ contract Typed19 is Test {
         if (s >= 8) return x >> (s - 8);
         int256[8] memory sp = [
             int256(0),
-            FP127Lib.ONE,
-            -FP127Lib.ONE,
-            FP127Lib.PI,
+            BL127Lib.ONE,
+            -BL127Lib.ONE,
+            BL127Lib.PI,
             type(int256).max,
             type(int256).min,
             int256(1),
@@ -1288,9 +1288,9 @@ contract Typed19 is Test {
         return sp[s];
     }
 
-    /// An FP19 word. s < 16: a special (zero, one, pi, the extremes of the
+    /// An BL19 word. s < 16: a special (zero, one, pi, the extremes of the
     /// format, a word that is not a number, the raw fuzzed word, ...);
-    /// s < 136: an FP127 value, every magnitude from 2^127 down to 2^-128;
+    /// s < 136: an BL127 value, every magnitude from 2^127 down to 2^-128;
     /// else the fuzzed word with its exponent moved to within 2^±512 of one.
     function _v(int256 x, uint8 s) internal pure returns (int256) {
         if (s >= 136) {
@@ -1298,24 +1298,24 @@ contract Typed19 is Test {
             uint256 e = 0x3ffff + ((w >> 236) & 0x3ff) - 512;
             return int256((w & ~(uint256(0x7ffff) << 236)) | (e << 236));
         }
-        if (s >= 16) return FP19Lib.fromFP127(x >> ((s - 16) * 2));
+        if (s >= 16) return BL19Lib.fromBL127(x >> ((s - 16) * 2));
         int256[16] memory sp = [
             int256(0),
             O,
-            FP19Lib.neg(O),
-            FP19Lib.PI,
-            FP19Lib.neg(FP19Lib.PI),
+            BL19Lib.neg(O),
+            BL19Lib.PI,
+            BL19Lib.neg(BL19Lib.PI),
             int256(1) << 236,
             type(int256).max,
             type(int256).min | type(int256).max,
             int256(1),
             x,
-            FP19Lib.div(O, _i(2)),
+            BL19Lib.div(O, _i(2)),
             _i(20367),
             _q(-367879441171442321, 1e18),
             _i(2),
             _i(34),
-            FP19Lib.fromFP127(1)
+            BL19Lib.fromBL127(1)
         ];
         return sp[s];
     }
@@ -1359,11 +1359,11 @@ contract Typed19 is Test {
         }
     }
 
-    /// The six operators and FP19Lib.cmp on the same pair (reverts if
+    /// The six operators and BL19Lib.cmp on the same pair (reverts if
     /// either word is not a number).
     function order(int256 x, int256 y) external pure returns (int256 c, bool[6] memory r) {
-        (FP19 a, FP19 b) = (FP19.wrap(x), FP19.wrap(y));
-        c = FP19Lib.cmp(x, y);
+        (BL19 a, BL19 b) = (BL19.wrap(x), BL19.wrap(y));
+        c = BL19Lib.cmp(x, y);
         r = [a < b, a > b, a <= b, a >= b, a == b, a != b];
     }
 
@@ -1378,7 +1378,7 @@ contract Typed19 is Test {
             assertEq(r[4], c == 0);
             assertEq(r[5], c != 0);
         } catch (bytes memory err) {
-            assertEq(err, abi.encodeWithSelector(FP19Lib.OutOfRange.selector));
+            assertEq(err, abi.encodeWithSelector(BL19Lib.OutOfRange.selector));
         }
     }
 
@@ -1404,18 +1404,18 @@ contract Typed19 is Test {
         for (uint256 i; i < t.length; i++) {
             uint256 gR = _gas(t[i].rawC, t[i].typ);
             uint256 gT = _gas(t[i].typedC, t[i].typ);
-            console.log(string.concat("TYPED|fp19|", _name(t[i].name), "|", vm.toString(gR), "|", vm.toString(gT)));
+            console.log(string.concat("TYPED|bl19|", _name(t[i].name), "|", vm.toString(gR), "|", vm.toString(gT)));
             if (!t[i].same) continue;
             uint256 d = gT > gR ? gT - gR : gR - gT;
             if (d > worst) worst = d;
             assertApproxEqAbs(gT, gR, tol, _name(t[i].name));
         }
-        console.log(string.concat("TYPED|fp19|worst|", vm.toString(worst)));
+        console.log(string.concat("TYPED|bl19|worst|", vm.toString(worst)));
     }
 
     function test_coversEveryOp() public view {
         string[] memory names =
-            abi.decode(vm.parseJson(vm.readFile("contracts/src/fp19/ops.json"), ".ops[*].name"), (string[]));
+            abi.decode(vm.parseJson(vm.readFile("contracts/src/bl19/ops.json"), ".ops[*].name"), (string[]));
         Op[] memory t = _ops();
         for (uint256 j; j < names.length; j++) {
             bool found;
@@ -1429,25 +1429,25 @@ contract Typed19 is Test {
     // ---- the API as a caller writes it -------------------------------------
 
     function test_constants() public pure {
-        assertEq(FP19.unwrap(ONE), FP19Lib.ONE);
-        assertEq(FP19.unwrap(PI), FP19Lib.PI);
-        assertEq(FP19.unwrap(fp19(42)), 42);
-        assertEq(fp19(42).unwrap(), 42);
-        assertEq(FP19.unwrap(toFP19(ONE127)), FP19Lib.ONE);
-        assertEq(FP127.unwrap(ONE.toFP127()), FP127Lib.ONE);
+        assertEq(BL19.unwrap(ONE), BL19Lib.ONE);
+        assertEq(BL19.unwrap(PI), BL19Lib.PI);
+        assertEq(BL19.unwrap(bl19(42)), 42);
+        assertEq(bl19(42).unwrap(), 42);
+        assertEq(BL19.unwrap(toBL19(ONE127)), BL19Lib.ONE);
+        assertEq(BL127.unwrap(ONE.toBL127()), BL127Lib.ONE);
     }
 
     function test_example() public pure {
-        FP19 b = fp19FromWad(1.5e18) * ONE.exp(); // 1.5 e
-        assertEq(FP19.unwrap(b), FP19Lib.mul(FP19Lib.fromFixed18(1.5e18), FP19Lib.exp(FP19Lib.ONE)));
-        assertTrue(b > fp19FromInt(4) && b < fp19FromInt(5));
+        BL19 b = bl19FromWad(1.5e18) * ONE.exp(); // 1.5 e
+        assertEq(BL19.unwrap(b), BL19Lib.mul(BL19Lib.fromFixed18(1.5e18), BL19Lib.exp(BL19Lib.ONE)));
+        assertTrue(b > bl19FromInt(4) && b < bl19FromInt(5));
         assertEq(b.toIntDown(), 4);
         assertEq(b.toUintUp(), 5);
-        FP127 n = b.toFP127();
-        assertTrue(FP127.unwrap(n) > FP127.unwrap(fp127FromInt(4)));
-        assertTrue(toFP19(n) <= b + fp19FromFixed18(1) && -toFP19(n) < ONE);
-        assertEq(fp19FromInt(-7).toIntDown(), -7);
-        assertEq(fp19FromInt(type(int256).min).toIntDown(), type(int256).min);
-        assertEq(FP127.unwrap(fp127(5)), 5);
+        BL127 n = b.toBL127();
+        assertTrue(BL127.unwrap(n) > BL127.unwrap(bl127FromInt(4)));
+        assertTrue(toBL19(n) <= b + bl19FromFixed18(1) && -toBL19(n) < ONE);
+        assertEq(bl19FromInt(-7).toIntDown(), -7);
+        assertEq(bl19FromInt(type(int256).min).toIntDown(), type(int256).min);
+        assertEq(BL127.unwrap(bl127(5)), 5);
     }
 }

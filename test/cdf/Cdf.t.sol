@@ -3,8 +3,8 @@
 pragma solidity ^0.8.24;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
+import {BL127Lib} from "../../contracts/src/bl127/BL127Lib.sol";
+import {BL19Lib} from "../../contracts/src/bl19/BL19Lib.sol";
 import {Gaussian} from "../../lib/solstat/src/Gaussian.sol";
 import {BlackScholes} from "../../contracts/src/ladder/vendor/lyra/libraries/BlackScholes.sol";
 import {RmmCDF} from "./CdfRmm.sol";
@@ -15,21 +15,21 @@ import {RmmCDF} from "./CdfRmm.sol";
 /// docs/benchmarks/cdf.{json,md}. Each wrapper is an external call so a revert is a result, not a failed test.
 ///
 ///   CDF|<impl>|<op>|<k>|<raw or REVERT>|<gas>
-contract CdfFP127 {
+contract CdfBL127 {
     function normCdf(int256 x) external view returns (int256 r, uint256 g) {
-        g = gasleft(); r = FP127Lib.normCdf(x); g -= gasleft();
+        g = gasleft(); r = BL127Lib.normCdf(x); g -= gasleft();
     }
     function erfc(int256 x) external view returns (int256 r, uint256 g) {
-        g = gasleft(); r = FP127Lib.erfc(x); g -= gasleft();
+        g = gasleft(); r = BL127Lib.erfc(x); g -= gasleft();
     }
 }
 
-contract CdfFP19 {
+contract CdfBL19 {
     function normCdf(int256 x) external view returns (int256 r, uint256 g) {
-        g = gasleft(); r = FP19Lib.normCdf(x); g -= gasleft();
+        g = gasleft(); r = BL19Lib.normCdf(x); g -= gasleft();
     }
     function erfc(int256 x) external view returns (int256 r, uint256 g) {
-        g = gasleft(); r = FP19Lib.erfc(x); g -= gasleft();
+        g = gasleft(); r = BL19Lib.erfc(x); g -= gasleft();
     }
 }
 
@@ -87,15 +87,15 @@ contract Cdf is Test {
         }
     }
 
-    function fp127(int256 k) internal pure returns (int256) { return (k << 128) / 32; } // exact: 32 divides 2^128
+    function bl127(int256 k) internal pure returns (int256) { return (k << 128) / 32; } // exact: 32 divides 2^128
     function wad(int256 k) internal pure returns (int256) { return k * 1e18 / 32; } // exact: 1e18 / 32 = 31.25e15, k * 1e18 divisible by 32
-    function fp19(int256 k) internal pure returns (int256) { return FP19Lib.fromFixed18(wad(k)); } // exact: k/32 is dyadic
+    function bl19(int256 k) internal pure returns (int256) { return BL19Lib.fromFixed18(wad(k)); } // exact: k/32 is dyadic
     function ray(int256 k) internal pure returns (int256) { return k * 1e27 / 32; } // exact: 1e27 / 32 = 3.125e25
     function abdk(int256 k) internal pure returns (int256) { return (k << 64) / 32; } // exact
 
     function test_cdf() public {
-        sweep("fp127", ICdf(address(new CdfFP127())), fp127);
-        sweep("fp19", ICdf(address(new CdfFP19())), fp19);
+        sweep("bl127", ICdf(address(new CdfBL127())), bl127);
+        sweep("bl19", ICdf(address(new CdfBL19())), bl19);
         sweep("solstat", ICdf(address(new CdfSolstat())), wad);
         sweep("lyra", ICdf(address(new CdfLyra())), ray, false);
         sweep("rmm", ICdf(address(new CdfRmm())), abdk, false);

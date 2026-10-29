@@ -2,7 +2,7 @@
 
     python test/proofs/kernel.py      # one line per step, exits 1 on any failure
 
-Kernels.divq (FP127's div) and Kernels.divh (FP19's) are Remco Bloemen's
+Kernels.divq (BL127's div) and Kernels.divh (BL19's) are Remco Bloemen's
 mulDiv specialised to the multiplier 2^s, s = 128 and 255:
 
     K127  divq(a, b) = floor(a 2^128 / b)   for 0 < a >> 128 < b

@@ -3,600 +3,600 @@ pragma solidity ^0.8.31;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import "../../contracts/src/fp127/FP127Type.sol";
+import {BL127Lib} from "../../contracts/src/bl127/BL127Lib.sol";
+import "../../contracts/src/bl127/BL127Type.sol";
 
 // One contract per op and form, f(x, y, z) the op alone, as a caller's own
-// contract would hold it: R127_<op> calls FP127Lib, T127_<op> the typed API.
-// test_gas compares their call gas. Every op of contracts/src/fp127/ops.json
+// contract would hold it: R127_<op> calls BL127Lib, T127_<op> the typed API.
+// test_gas compares their call gas. Every op of contracts/src/bl127/ops.json
 // has a pair, a row in _ops() and a line in raw() and typed()
 // (test_coversEveryOp checks the table).
 
 contract R127_exp2 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.exp2(x);
+        r = BL127Lib.exp2(x);
     }
 }
 
 contract T127_exp2 {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.exp2());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.exp2());
     }
 }
 
 contract R127_exp {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.exp(x);
+        r = BL127Lib.exp(x);
     }
 }
 
 contract T127_exp {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.exp());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.exp());
     }
 }
 
 contract R127_exp10 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.exp10(x);
+        r = BL127Lib.exp10(x);
     }
 }
 
 contract T127_exp10 {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.exp10());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.exp10());
     }
 }
 
 contract R127_log2 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.log2(x);
+        r = BL127Lib.log2(x);
     }
 }
 
 contract T127_log2 {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.log2());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.log2());
     }
 }
 
 contract R127_ln {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.ln(x);
+        r = BL127Lib.ln(x);
     }
 }
 
 contract T127_ln {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.ln());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.ln());
     }
 }
 
 contract R127_log10 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.log10(x);
+        r = BL127Lib.log10(x);
     }
 }
 
 contract T127_log10 {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.log10());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.log10());
     }
 }
 
 contract R127_log2Up {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.log2Up(x);
+        r = BL127Lib.log2Up(x);
     }
 }
 
 contract T127_log2Up {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.log2Up());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.log2Up());
     }
 }
 
 contract R127_sqrt {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.sqrt(x);
+        r = BL127Lib.sqrt(x);
     }
 }
 
 contract T127_sqrt {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.sqrt());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.sqrt());
     }
 }
 
 contract R127_cbrt {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.cbrt(x);
+        r = BL127Lib.cbrt(x);
     }
 }
 
 contract T127_cbrt {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.cbrt());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.cbrt());
     }
 }
 
 contract R127_inv {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.inv(x);
+        r = BL127Lib.inv(x);
     }
 }
 
 contract T127_inv {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.inv());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.inv());
     }
 }
 
 contract R127_abs {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.abs(x);
+        r = BL127Lib.abs(x);
     }
 }
 
 contract T127_abs {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.abs());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.abs());
     }
 }
 
 contract R127_sign {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.sign(x);
+        r = BL127Lib.sign(x);
     }
 }
 
 contract T127_sign {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.sign());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.sign());
     }
 }
 
 contract R127_floor {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.floor(x);
+        r = BL127Lib.floor(x);
     }
 }
 
 contract T127_floor {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.floor());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.floor());
     }
 }
 
 contract R127_ceil {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.ceil(x);
+        r = BL127Lib.ceil(x);
     }
 }
 
 contract T127_ceil {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.ceil());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.ceil());
     }
 }
 
 contract R127_frac {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.frac(x);
+        r = BL127Lib.frac(x);
     }
 }
 
 contract T127_frac {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.frac());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.frac());
     }
 }
 
 contract R127_round {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.round(x);
+        r = BL127Lib.round(x);
     }
 }
 
 contract T127_round {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.round());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.round());
     }
 }
 
 contract R127_factorial {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.factorial(x);
+        r = BL127Lib.factorial(x);
     }
 }
 
 contract T127_factorial {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.factorial());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.factorial());
     }
 }
 
 contract R127_lambertW0 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.lambertW0(x);
+        r = BL127Lib.lambertW0(x);
     }
 }
 
 contract T127_lambertW0 {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.lambertW0());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.lambertW0());
     }
 }
 
 contract R127_lambertWm1 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.lambertWm1(x);
+        r = BL127Lib.lambertWm1(x);
     }
 }
 
 contract T127_lambertWm1 {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.lambertWm1());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.lambertWm1());
     }
 }
 
 contract R127_log1p {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.log1p(x);
+        r = BL127Lib.log1p(x);
     }
 }
 
 contract T127_log1p {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.log1p());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.log1p());
     }
 }
 
 contract R127_expm1 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.expm1(x);
+        r = BL127Lib.expm1(x);
     }
 }
 
 contract T127_expm1 {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.expm1());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.expm1());
     }
 }
 
 contract R127_sinh {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.sinh(x);
+        r = BL127Lib.sinh(x);
     }
 }
 
 contract T127_sinh {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.sinh());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.sinh());
     }
 }
 
 contract R127_cosh {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.cosh(x);
+        r = BL127Lib.cosh(x);
     }
 }
 
 contract T127_cosh {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.cosh());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.cosh());
     }
 }
 
 contract R127_tanh {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.tanh(x);
+        r = BL127Lib.tanh(x);
     }
 }
 
 contract T127_tanh {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.tanh());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.tanh());
     }
 }
 
 contract R127_atanh {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.atanh(x);
+        r = BL127Lib.atanh(x);
     }
 }
 
 contract T127_atanh {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.atanh());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.atanh());
     }
 }
 
 contract R127_erf {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.erf(x);
+        r = BL127Lib.erf(x);
     }
 }
 
 contract T127_erf {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.erf());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.erf());
     }
 }
 
 contract R127_erfc {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.erfc(x);
+        r = BL127Lib.erfc(x);
     }
 }
 
 contract T127_erfc {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.erfc());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.erfc());
     }
 }
 
 contract R127_normCdf {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.normCdf(x);
+        r = BL127Lib.normCdf(x);
     }
 }
 
 contract T127_normCdf {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.normCdf());
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.normCdf());
     }
 }
 
 contract R127_neg {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.neg(x);
+        r = BL127Lib.neg(x);
     }
 }
 
 contract T127_neg {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(-a);
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(-a);
     }
 }
 
 contract R127_add {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.add(x, y);
+        r = BL127Lib.add(x, y);
     }
 }
 
 contract T127_add {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a + b);
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a + b);
     }
 }
 
 contract R127_sub {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.sub(x, y);
+        r = BL127Lib.sub(x, y);
     }
 }
 
 contract T127_sub {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a - b);
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a - b);
     }
 }
 
 contract R127_mul {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.mul(x, y);
+        r = BL127Lib.mul(x, y);
     }
 }
 
 contract T127_mul {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a * b);
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a * b);
     }
 }
 
 contract R127_div {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.div(x, y);
+        r = BL127Lib.div(x, y);
     }
 }
 
 contract T127_div {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a / b);
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a / b);
     }
 }
 
 contract R127_mulDown {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.mulDown(x, y);
+        r = BL127Lib.mulDown(x, y);
     }
 }
 
 contract T127_mulDown {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.mulDown(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.mulDown(b));
     }
 }
 
 contract R127_mulUp {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.mulUp(x, y);
+        r = BL127Lib.mulUp(x, y);
     }
 }
 
 contract T127_mulUp {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.mulUp(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.mulUp(b));
     }
 }
 
 contract R127_divDown {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.divDown(x, y);
+        r = BL127Lib.divDown(x, y);
     }
 }
 
 contract T127_divDown {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.divDown(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.divDown(b));
     }
 }
 
 contract R127_divUp {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.divUp(x, y);
+        r = BL127Lib.divUp(x, y);
     }
 }
 
 contract T127_divUp {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.divUp(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.divUp(b));
     }
 }
 
 contract R127_pow {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.pow(x, y);
+        r = BL127Lib.pow(x, y);
     }
 }
 
 contract T127_pow {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.pow(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.pow(b));
     }
 }
 
 contract R127_powu {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.powu(x, y);
+        r = BL127Lib.powu(x, y);
     }
 }
 
 contract T127_powu {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.powu(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.powu(b));
     }
 }
 
 contract R127_compound {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.compound(x, y);
+        r = BL127Lib.compound(x, y);
     }
 }
 
 contract T127_compound {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.compound(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.compound(b));
     }
 }
 
 contract R127_gavg {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.gavg(x, y);
+        r = BL127Lib.gavg(x, y);
     }
 }
 
 contract T127_gavg {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.gavg(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.gavg(b));
     }
 }
 
 contract R127_hypot {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.hypot(x, y);
+        r = BL127Lib.hypot(x, y);
     }
 }
 
 contract T127_hypot {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.hypot(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.hypot(b));
     }
 }
 
 contract R127_min {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.min(x, y);
+        r = BL127Lib.min(x, y);
     }
 }
 
 contract T127_min {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.min(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.min(b));
     }
 }
 
 contract R127_max {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.max(x, y);
+        r = BL127Lib.max(x, y);
     }
 }
 
 contract T127_max {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.max(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.max(b));
     }
 }
 
 contract R127_avg {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.avg(x, y);
+        r = BL127Lib.avg(x, y);
     }
 }
 
 contract T127_avg {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.avg(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.avg(b));
     }
 }
 
 contract R127_zeroFloorSub {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.zeroFloorSub(x, y);
+        r = BL127Lib.zeroFloorSub(x, y);
     }
 }
 
 contract T127_zeroFloorSub {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.zeroFloorSub(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.zeroFloorSub(b));
     }
 }
 
 contract R127_dist {
     function f(int256 x, int256 y, int256) external pure returns (int256 r) {
-        r = FP127Lib.dist(x, y);
+        r = BL127Lib.dist(x, y);
     }
 }
 
 contract T127_dist {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(a.dist(b));
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
+        r = BL127.unwrap(a.dist(b));
     }
 }
 
 contract R127_clamp {
     function f(int256 x, int256 y, int256 z) external pure returns (int256 r) {
-        r = FP127Lib.clamp(x, y, z);
+        r = BL127Lib.clamp(x, y, z);
     }
 }
 
 contract T127_clamp {
-    function f(FP127 a, FP127 b, FP127 c) external pure returns (int256 r) {
-        r = FP127.unwrap(a.clamp(b, c));
+    function f(BL127 a, BL127 b, BL127 c) external pure returns (int256 r) {
+        r = BL127.unwrap(a.clamp(b, c));
     }
 }
 
 contract R127_lerp {
     function f(int256 x, int256 y, int256 z) external pure returns (int256 r) {
-        r = FP127Lib.lerp(x, y, z);
+        r = BL127Lib.lerp(x, y, z);
     }
 }
 
 contract T127_lerp {
-    function f(FP127 a, FP127 b, FP127 c) external pure returns (int256 r) {
-        r = FP127.unwrap(a.lerp(b, c));
+    function f(BL127 a, BL127 b, BL127 c) external pure returns (int256 r) {
+        r = BL127.unwrap(a.lerp(b, c));
     }
 }
 
@@ -607,7 +607,7 @@ contract R127_lt {
 }
 
 contract T127_lt {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
         r = a < b ? int256(1) : int256(0);
     }
 }
@@ -619,7 +619,7 @@ contract R127_gt {
 }
 
 contract T127_gt {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
         r = a > b ? int256(1) : int256(0);
     }
 }
@@ -631,7 +631,7 @@ contract R127_le {
 }
 
 contract T127_le {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
         r = a <= b ? int256(1) : int256(0);
     }
 }
@@ -643,7 +643,7 @@ contract R127_ge {
 }
 
 contract T127_ge {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
         r = a >= b ? int256(1) : int256(0);
     }
 }
@@ -655,7 +655,7 @@ contract R127_eq {
 }
 
 contract T127_eq {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
         r = a == b ? int256(1) : int256(0);
     }
 }
@@ -667,132 +667,132 @@ contract R127_ne {
 }
 
 contract T127_ne {
-    function f(FP127 a, FP127 b, int256) external pure returns (int256 r) {
+    function f(BL127 a, BL127 b, int256) external pure returns (int256 r) {
         r = a != b ? int256(1) : int256(0);
     }
 }
 
 contract R127_fromFixed18 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.fromFixed18(x);
+        r = BL127Lib.fromFixed18(x);
     }
 }
 
 contract T127_fromFixed18 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(fp127FromFixed18(x));
+        r = BL127.unwrap(bl127FromFixed18(x));
     }
 }
 
 contract R127_toFixed18 {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.toFixed18(x);
+        r = BL127Lib.toFixed18(x);
     }
 }
 
 contract T127_toFixed18 {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
         r = a.toFixed18();
     }
 }
 
 contract R127_toFixed18Down {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.toFixed18Down(x);
+        r = BL127Lib.toFixed18Down(x);
     }
 }
 
 contract T127_toFixed18Down {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
         r = a.toFixed18Down();
     }
 }
 
 contract R127_toFixed18Up {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.toFixed18Up(x);
+        r = BL127Lib.toFixed18Up(x);
     }
 }
 
 contract T127_toFixed18Up {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
         r = a.toFixed18Up();
     }
 }
 
 contract R127_fromWad {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        if (uint256(x) > uint256(type(int256).max)) revert FP127Lib.Overflow();
-        r = FP127Lib.fromFixed18(x);
+        if (uint256(x) > uint256(type(int256).max)) revert BL127Lib.Overflow();
+        r = BL127Lib.fromFixed18(x);
     }
 }
 
 contract T127_fromWad {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(fp127FromWad(uint256(x)));
+        r = BL127.unwrap(bl127FromWad(uint256(x)));
     }
 }
 
 contract R127_toWadDown {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.toFixed18Down(x);
-        if (r < 0) revert FP127Lib.OutOfRange();
+        r = BL127Lib.toFixed18Down(x);
+        if (r < 0) revert BL127Lib.OutOfRange();
     }
 }
 
 contract T127_toWadDown {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
         r = int256(a.toWadDown());
     }
 }
 
 contract R127_toWadUp {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.toFixed18Up(x);
-        if (r < 0) revert FP127Lib.OutOfRange();
+        r = BL127Lib.toFixed18Up(x);
+        if (r < 0) revert BL127Lib.OutOfRange();
     }
 }
 
 contract T127_toWadUp {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
         r = int256(a.toWadUp());
     }
 }
 
 contract R127_fromInt {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        if (x > type(int128).max || x < type(int128).min) revert FP127Lib.Overflow();
-        r = x * FP127Lib.ONE;
+        if (x > type(int128).max || x < type(int128).min) revert BL127Lib.Overflow();
+        r = x * BL127Lib.ONE;
     }
 }
 
 contract T127_fromInt {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127.unwrap(fp127FromInt(x));
+        r = BL127.unwrap(bl127FromInt(x));
     }
 }
 
 contract R127_toIntDown {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = FP127Lib.floor(x) / FP127Lib.ONE;
+        r = BL127Lib.floor(x) / BL127Lib.ONE;
     }
 }
 
 contract T127_toIntDown {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
         r = a.toIntDown();
     }
 }
 
 contract R127_toIntUp {
     function f(int256 x, int256, int256) external pure returns (int256 r) {
-        r = x / FP127Lib.ONE;
-        if (x > 0 && x % FP127Lib.ONE != 0) r += 1;
+        r = x / BL127Lib.ONE;
+        if (x > 0 && x % BL127Lib.ONE != 0) r += 1;
     }
 }
 
 contract T127_toIntUp {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
         r = a.toIntUp();
     }
 }
@@ -804,15 +804,15 @@ contract R127_unwrap {
 }
 
 contract T127_unwrap {
-    function f(FP127 a, int256, int256) external pure returns (int256 r) {
+    function f(BL127 a, int256, int256) external pure returns (int256 r) {
         r = a.unwrap();
     }
 }
 
 /// @title Typed127
-/// @notice contracts/src/fp127/FP127Type.sol adds nothing to FP127Lib:
+/// @notice contracts/src/bl127/BL127Type.sol adds nothing to BL127Lib:
 ///         - testFuzz_same: raw() and typed() run every op by name, raw() on
-///           FP127Lib and typed() through the type (the operator where one is
+///           BL127Lib and typed() through the type (the operator where one is
 ///           bound, the attached function otherwise), on the same fuzzed
 ///           inputs: the same word or the same revert data, byte for byte;
 ///         - test_gas: on a typical input, the typed contract's call costs the
@@ -822,23 +822,23 @@ contract T127_unwrap {
 ///           36 to 56 gas, and up to 114 on floor, frac and sign, which the
 ///           legacy optimizer inlines whole into a raw caller but not through
 ///           the wrapper), and through the IR with 0, where every op costs
-///           the same. Prints TYPED|fp127|op|raw|typed;
+///           the same. Prints TYPED|bl127|op|raw|typed;
 ///         - test_coversEveryOp: every op in ops.json is in the table.
-///         The typed-only helpers (fp127FromWad, toWadDown, toWadUp,
-///         fp127FromInt, toIntDown, toIntUp) are checked against the raw call
+///         The typed-only helpers (bl127FromWad, toWadDown, toWadUp,
+///         bl127FromInt, toIntDown, toIntUp) are checked against the raw call
 ///         with the guard they document, or an independent formula (the last
 ///         three, whose gas is printed but not compared).
 contract Typed127 is Test {
     struct Op {
         bytes32 name;
-        bytes kinds; // v FP127, i int256, u uint256 (one char per argument)
+        bytes kinds; // v BL127, i int256, u uint256 (one char per argument)
         int256[3] typ; // a typical input, in domain
         bool same; // raw is the same call, so the gas must match
         string rawC; // the two contracts
         string typedC;
     }
 
-    int256 constant O = FP127Lib.ONE;
+    int256 constant O = BL127Lib.ONE;
     bytes32 constant NA = keccak256(abi.encodeWithSignature("Error(string)", "na"));
 
     // ---- the two forms of every op ---------------------------------------
@@ -846,103 +846,103 @@ contract Typed127 is Test {
     function raw(bytes32 op, int256 x, int256 y, int256 z) external pure returns (int256 r) {
         (z);
         if (op == "exp2") {
-            r = FP127Lib.exp2(x);
+            r = BL127Lib.exp2(x);
         } else if (op == "exp") {
-            r = FP127Lib.exp(x);
+            r = BL127Lib.exp(x);
         } else if (op == "exp10") {
-            r = FP127Lib.exp10(x);
+            r = BL127Lib.exp10(x);
         } else if (op == "log2") {
-            r = FP127Lib.log2(x);
+            r = BL127Lib.log2(x);
         } else if (op == "ln") {
-            r = FP127Lib.ln(x);
+            r = BL127Lib.ln(x);
         } else if (op == "log10") {
-            r = FP127Lib.log10(x);
+            r = BL127Lib.log10(x);
         } else if (op == "log2Up") {
-            r = FP127Lib.log2Up(x);
+            r = BL127Lib.log2Up(x);
         } else if (op == "sqrt") {
-            r = FP127Lib.sqrt(x);
+            r = BL127Lib.sqrt(x);
         } else if (op == "cbrt") {
-            r = FP127Lib.cbrt(x);
+            r = BL127Lib.cbrt(x);
         } else if (op == "inv") {
-            r = FP127Lib.inv(x);
+            r = BL127Lib.inv(x);
         } else if (op == "abs") {
-            r = FP127Lib.abs(x);
+            r = BL127Lib.abs(x);
         } else if (op == "sign") {
-            r = FP127Lib.sign(x);
+            r = BL127Lib.sign(x);
         } else if (op == "floor") {
-            r = FP127Lib.floor(x);
+            r = BL127Lib.floor(x);
         } else if (op == "ceil") {
-            r = FP127Lib.ceil(x);
+            r = BL127Lib.ceil(x);
         } else if (op == "frac") {
-            r = FP127Lib.frac(x);
+            r = BL127Lib.frac(x);
         } else if (op == "round") {
-            r = FP127Lib.round(x);
+            r = BL127Lib.round(x);
         } else if (op == "factorial") {
-            r = FP127Lib.factorial(x);
+            r = BL127Lib.factorial(x);
         } else if (op == "lambertW0") {
-            r = FP127Lib.lambertW0(x);
+            r = BL127Lib.lambertW0(x);
         } else if (op == "lambertWm1") {
-            r = FP127Lib.lambertWm1(x);
+            r = BL127Lib.lambertWm1(x);
         } else if (op == "log1p") {
-            r = FP127Lib.log1p(x);
+            r = BL127Lib.log1p(x);
         } else if (op == "expm1") {
-            r = FP127Lib.expm1(x);
+            r = BL127Lib.expm1(x);
         } else if (op == "sinh") {
-            r = FP127Lib.sinh(x);
+            r = BL127Lib.sinh(x);
         } else if (op == "cosh") {
-            r = FP127Lib.cosh(x);
+            r = BL127Lib.cosh(x);
         } else if (op == "tanh") {
-            r = FP127Lib.tanh(x);
+            r = BL127Lib.tanh(x);
         } else if (op == "atanh") {
-            r = FP127Lib.atanh(x);
+            r = BL127Lib.atanh(x);
         } else if (op == "erf") {
-            r = FP127Lib.erf(x);
+            r = BL127Lib.erf(x);
         } else if (op == "erfc") {
-            r = FP127Lib.erfc(x);
+            r = BL127Lib.erfc(x);
         } else if (op == "normCdf") {
-            r = FP127Lib.normCdf(x);
+            r = BL127Lib.normCdf(x);
         } else if (op == "neg") {
-            r = FP127Lib.neg(x);
+            r = BL127Lib.neg(x);
         } else if (op == "add") {
-            r = FP127Lib.add(x, y);
+            r = BL127Lib.add(x, y);
         } else if (op == "sub") {
-            r = FP127Lib.sub(x, y);
+            r = BL127Lib.sub(x, y);
         } else if (op == "mul") {
-            r = FP127Lib.mul(x, y);
+            r = BL127Lib.mul(x, y);
         } else if (op == "div") {
-            r = FP127Lib.div(x, y);
+            r = BL127Lib.div(x, y);
         } else if (op == "mulDown") {
-            r = FP127Lib.mulDown(x, y);
+            r = BL127Lib.mulDown(x, y);
         } else if (op == "mulUp") {
-            r = FP127Lib.mulUp(x, y);
+            r = BL127Lib.mulUp(x, y);
         } else if (op == "divDown") {
-            r = FP127Lib.divDown(x, y);
+            r = BL127Lib.divDown(x, y);
         } else if (op == "divUp") {
-            r = FP127Lib.divUp(x, y);
+            r = BL127Lib.divUp(x, y);
         } else if (op == "pow") {
-            r = FP127Lib.pow(x, y);
+            r = BL127Lib.pow(x, y);
         } else if (op == "powu") {
-            r = FP127Lib.powu(x, y);
+            r = BL127Lib.powu(x, y);
         } else if (op == "compound") {
-            r = FP127Lib.compound(x, y);
+            r = BL127Lib.compound(x, y);
         } else if (op == "gavg") {
-            r = FP127Lib.gavg(x, y);
+            r = BL127Lib.gavg(x, y);
         } else if (op == "hypot") {
-            r = FP127Lib.hypot(x, y);
+            r = BL127Lib.hypot(x, y);
         } else if (op == "min") {
-            r = FP127Lib.min(x, y);
+            r = BL127Lib.min(x, y);
         } else if (op == "max") {
-            r = FP127Lib.max(x, y);
+            r = BL127Lib.max(x, y);
         } else if (op == "avg") {
-            r = FP127Lib.avg(x, y);
+            r = BL127Lib.avg(x, y);
         } else if (op == "zeroFloorSub") {
-            r = FP127Lib.zeroFloorSub(x, y);
+            r = BL127Lib.zeroFloorSub(x, y);
         } else if (op == "dist") {
-            r = FP127Lib.dist(x, y);
+            r = BL127Lib.dist(x, y);
         } else if (op == "clamp") {
-            r = FP127Lib.clamp(x, y, z);
+            r = BL127Lib.clamp(x, y, z);
         } else if (op == "lerp") {
-            r = FP127Lib.lerp(x, y, z);
+            r = BL127Lib.lerp(x, y, z);
         } else if (op == "lt") {
             r = x < y ? int256(1) : int256(0);
         } else if (op == "gt") {
@@ -956,30 +956,30 @@ contract Typed127 is Test {
         } else if (op == "ne") {
             r = x != y ? int256(1) : int256(0);
         } else if (op == "fromFixed18") {
-            r = FP127Lib.fromFixed18(x);
+            r = BL127Lib.fromFixed18(x);
         } else if (op == "toFixed18") {
-            r = FP127Lib.toFixed18(x);
+            r = BL127Lib.toFixed18(x);
         } else if (op == "toFixed18Down") {
-            r = FP127Lib.toFixed18Down(x);
+            r = BL127Lib.toFixed18Down(x);
         } else if (op == "toFixed18Up") {
-            r = FP127Lib.toFixed18Up(x);
+            r = BL127Lib.toFixed18Up(x);
         } else if (op == "fromWad") {
-            if (uint256(x) > uint256(type(int256).max)) revert FP127Lib.Overflow();
-            r = FP127Lib.fromFixed18(x);
+            if (uint256(x) > uint256(type(int256).max)) revert BL127Lib.Overflow();
+            r = BL127Lib.fromFixed18(x);
         } else if (op == "toWadDown") {
-            r = FP127Lib.toFixed18Down(x);
-            if (r < 0) revert FP127Lib.OutOfRange();
+            r = BL127Lib.toFixed18Down(x);
+            if (r < 0) revert BL127Lib.OutOfRange();
         } else if (op == "toWadUp") {
-            r = FP127Lib.toFixed18Up(x);
-            if (r < 0) revert FP127Lib.OutOfRange();
+            r = BL127Lib.toFixed18Up(x);
+            if (r < 0) revert BL127Lib.OutOfRange();
         } else if (op == "fromInt") {
-            if (x > type(int128).max || x < type(int128).min) revert FP127Lib.Overflow();
-            r = x * FP127Lib.ONE;
+            if (x > type(int128).max || x < type(int128).min) revert BL127Lib.Overflow();
+            r = x * BL127Lib.ONE;
         } else if (op == "toIntDown") {
-            r = FP127Lib.floor(x) / FP127Lib.ONE;
+            r = BL127Lib.floor(x) / BL127Lib.ONE;
         } else if (op == "toIntUp") {
-            r = x / FP127Lib.ONE;
-            if (x > 0 && x % FP127Lib.ONE != 0) r += 1;
+            r = x / BL127Lib.ONE;
+            if (x > 0 && x % BL127Lib.ONE != 0) r += 1;
         } else if (op == "unwrap") {
             r = x;
         } else {
@@ -988,71 +988,71 @@ contract Typed127 is Test {
     }
 
     function typed(bytes32 op, int256 x, int256 y, int256 z) external pure returns (int256 r) {
-        (FP127 a, FP127 b, FP127 c) = (FP127.wrap(x), FP127.wrap(y), FP127.wrap(z));
+        (BL127 a, BL127 b, BL127 c) = (BL127.wrap(x), BL127.wrap(y), BL127.wrap(z));
         (a, b, c);
-        if (op == "exp2") r = FP127.unwrap(a.exp2());
-        else if (op == "exp") r = FP127.unwrap(a.exp());
-        else if (op == "exp10") r = FP127.unwrap(a.exp10());
-        else if (op == "log2") r = FP127.unwrap(a.log2());
-        else if (op == "ln") r = FP127.unwrap(a.ln());
-        else if (op == "log10") r = FP127.unwrap(a.log10());
-        else if (op == "log2Up") r = FP127.unwrap(a.log2Up());
-        else if (op == "sqrt") r = FP127.unwrap(a.sqrt());
-        else if (op == "cbrt") r = FP127.unwrap(a.cbrt());
-        else if (op == "inv") r = FP127.unwrap(a.inv());
-        else if (op == "abs") r = FP127.unwrap(a.abs());
-        else if (op == "sign") r = FP127.unwrap(a.sign());
-        else if (op == "floor") r = FP127.unwrap(a.floor());
-        else if (op == "ceil") r = FP127.unwrap(a.ceil());
-        else if (op == "frac") r = FP127.unwrap(a.frac());
-        else if (op == "round") r = FP127.unwrap(a.round());
-        else if (op == "factorial") r = FP127.unwrap(a.factorial());
-        else if (op == "lambertW0") r = FP127.unwrap(a.lambertW0());
-        else if (op == "lambertWm1") r = FP127.unwrap(a.lambertWm1());
-        else if (op == "log1p") r = FP127.unwrap(a.log1p());
-        else if (op == "expm1") r = FP127.unwrap(a.expm1());
-        else if (op == "sinh") r = FP127.unwrap(a.sinh());
-        else if (op == "cosh") r = FP127.unwrap(a.cosh());
-        else if (op == "tanh") r = FP127.unwrap(a.tanh());
-        else if (op == "atanh") r = FP127.unwrap(a.atanh());
-        else if (op == "erf") r = FP127.unwrap(a.erf());
-        else if (op == "erfc") r = FP127.unwrap(a.erfc());
-        else if (op == "normCdf") r = FP127.unwrap(a.normCdf());
-        else if (op == "neg") r = FP127.unwrap(-a);
-        else if (op == "add") r = FP127.unwrap(a + b);
-        else if (op == "sub") r = FP127.unwrap(a - b);
-        else if (op == "mul") r = FP127.unwrap(a * b);
-        else if (op == "div") r = FP127.unwrap(a / b);
-        else if (op == "mulDown") r = FP127.unwrap(a.mulDown(b));
-        else if (op == "mulUp") r = FP127.unwrap(a.mulUp(b));
-        else if (op == "divDown") r = FP127.unwrap(a.divDown(b));
-        else if (op == "divUp") r = FP127.unwrap(a.divUp(b));
-        else if (op == "pow") r = FP127.unwrap(a.pow(b));
-        else if (op == "powu") r = FP127.unwrap(a.powu(b));
-        else if (op == "compound") r = FP127.unwrap(a.compound(b));
-        else if (op == "gavg") r = FP127.unwrap(a.gavg(b));
-        else if (op == "hypot") r = FP127.unwrap(a.hypot(b));
-        else if (op == "min") r = FP127.unwrap(a.min(b));
-        else if (op == "max") r = FP127.unwrap(a.max(b));
-        else if (op == "avg") r = FP127.unwrap(a.avg(b));
-        else if (op == "zeroFloorSub") r = FP127.unwrap(a.zeroFloorSub(b));
-        else if (op == "dist") r = FP127.unwrap(a.dist(b));
-        else if (op == "clamp") r = FP127.unwrap(a.clamp(b, c));
-        else if (op == "lerp") r = FP127.unwrap(a.lerp(b, c));
+        if (op == "exp2") r = BL127.unwrap(a.exp2());
+        else if (op == "exp") r = BL127.unwrap(a.exp());
+        else if (op == "exp10") r = BL127.unwrap(a.exp10());
+        else if (op == "log2") r = BL127.unwrap(a.log2());
+        else if (op == "ln") r = BL127.unwrap(a.ln());
+        else if (op == "log10") r = BL127.unwrap(a.log10());
+        else if (op == "log2Up") r = BL127.unwrap(a.log2Up());
+        else if (op == "sqrt") r = BL127.unwrap(a.sqrt());
+        else if (op == "cbrt") r = BL127.unwrap(a.cbrt());
+        else if (op == "inv") r = BL127.unwrap(a.inv());
+        else if (op == "abs") r = BL127.unwrap(a.abs());
+        else if (op == "sign") r = BL127.unwrap(a.sign());
+        else if (op == "floor") r = BL127.unwrap(a.floor());
+        else if (op == "ceil") r = BL127.unwrap(a.ceil());
+        else if (op == "frac") r = BL127.unwrap(a.frac());
+        else if (op == "round") r = BL127.unwrap(a.round());
+        else if (op == "factorial") r = BL127.unwrap(a.factorial());
+        else if (op == "lambertW0") r = BL127.unwrap(a.lambertW0());
+        else if (op == "lambertWm1") r = BL127.unwrap(a.lambertWm1());
+        else if (op == "log1p") r = BL127.unwrap(a.log1p());
+        else if (op == "expm1") r = BL127.unwrap(a.expm1());
+        else if (op == "sinh") r = BL127.unwrap(a.sinh());
+        else if (op == "cosh") r = BL127.unwrap(a.cosh());
+        else if (op == "tanh") r = BL127.unwrap(a.tanh());
+        else if (op == "atanh") r = BL127.unwrap(a.atanh());
+        else if (op == "erf") r = BL127.unwrap(a.erf());
+        else if (op == "erfc") r = BL127.unwrap(a.erfc());
+        else if (op == "normCdf") r = BL127.unwrap(a.normCdf());
+        else if (op == "neg") r = BL127.unwrap(-a);
+        else if (op == "add") r = BL127.unwrap(a + b);
+        else if (op == "sub") r = BL127.unwrap(a - b);
+        else if (op == "mul") r = BL127.unwrap(a * b);
+        else if (op == "div") r = BL127.unwrap(a / b);
+        else if (op == "mulDown") r = BL127.unwrap(a.mulDown(b));
+        else if (op == "mulUp") r = BL127.unwrap(a.mulUp(b));
+        else if (op == "divDown") r = BL127.unwrap(a.divDown(b));
+        else if (op == "divUp") r = BL127.unwrap(a.divUp(b));
+        else if (op == "pow") r = BL127.unwrap(a.pow(b));
+        else if (op == "powu") r = BL127.unwrap(a.powu(b));
+        else if (op == "compound") r = BL127.unwrap(a.compound(b));
+        else if (op == "gavg") r = BL127.unwrap(a.gavg(b));
+        else if (op == "hypot") r = BL127.unwrap(a.hypot(b));
+        else if (op == "min") r = BL127.unwrap(a.min(b));
+        else if (op == "max") r = BL127.unwrap(a.max(b));
+        else if (op == "avg") r = BL127.unwrap(a.avg(b));
+        else if (op == "zeroFloorSub") r = BL127.unwrap(a.zeroFloorSub(b));
+        else if (op == "dist") r = BL127.unwrap(a.dist(b));
+        else if (op == "clamp") r = BL127.unwrap(a.clamp(b, c));
+        else if (op == "lerp") r = BL127.unwrap(a.lerp(b, c));
         else if (op == "lt") r = a < b ? int256(1) : int256(0);
         else if (op == "gt") r = a > b ? int256(1) : int256(0);
         else if (op == "le") r = a <= b ? int256(1) : int256(0);
         else if (op == "ge") r = a >= b ? int256(1) : int256(0);
         else if (op == "eq") r = a == b ? int256(1) : int256(0);
         else if (op == "ne") r = a != b ? int256(1) : int256(0);
-        else if (op == "fromFixed18") r = FP127.unwrap(fp127FromFixed18(x));
+        else if (op == "fromFixed18") r = BL127.unwrap(bl127FromFixed18(x));
         else if (op == "toFixed18") r = a.toFixed18();
         else if (op == "toFixed18Down") r = a.toFixed18Down();
         else if (op == "toFixed18Up") r = a.toFixed18Up();
-        else if (op == "fromWad") r = FP127.unwrap(fp127FromWad(uint256(x)));
+        else if (op == "fromWad") r = BL127.unwrap(bl127FromWad(uint256(x)));
         else if (op == "toWadDown") r = int256(a.toWadDown());
         else if (op == "toWadUp") r = int256(a.toWadUp());
-        else if (op == "fromInt") r = FP127.unwrap(fp127FromInt(x));
+        else if (op == "fromInt") r = BL127.unwrap(bl127FromInt(x));
         else if (op == "toIntDown") r = a.toIntDown();
         else if (op == "toIntUp") r = a.toIntUp();
         else if (op == "unwrap") r = a.unwrap();
@@ -1150,8 +1150,8 @@ contract Typed127 is Test {
             int256(0),
             O,
             -O,
-            FP127Lib.PI,
-            -FP127Lib.PI,
+            BL127Lib.PI,
+            -BL127Lib.PI,
             type(int256).max,
             type(int256).min,
             type(int256).min + 1,
@@ -1227,18 +1227,18 @@ contract Typed127 is Test {
         for (uint256 i; i < t.length; i++) {
             uint256 gR = _gas(t[i].rawC, t[i].typ);
             uint256 gT = _gas(t[i].typedC, t[i].typ);
-            console.log(string.concat("TYPED|fp127|", _name(t[i].name), "|", vm.toString(gR), "|", vm.toString(gT)));
+            console.log(string.concat("TYPED|bl127|", _name(t[i].name), "|", vm.toString(gR), "|", vm.toString(gT)));
             if (!t[i].same) continue;
             uint256 d = gT > gR ? gT - gR : gR - gT;
             if (d > worst) worst = d;
             assertApproxEqAbs(gT, gR, tol, _name(t[i].name));
         }
-        console.log(string.concat("TYPED|fp127|worst|", vm.toString(worst)));
+        console.log(string.concat("TYPED|bl127|worst|", vm.toString(worst)));
     }
 
     function test_coversEveryOp() public view {
         string[] memory names =
-            abi.decode(vm.parseJson(vm.readFile("contracts/src/fp127/ops.json"), ".ops[*].name"), (string[]));
+            abi.decode(vm.parseJson(vm.readFile("contracts/src/bl127/ops.json"), ".ops[*].name"), (string[]));
         Op[] memory t = _ops();
         for (uint256 j; j < names.length; j++) {
             bool found;
@@ -1252,26 +1252,26 @@ contract Typed127 is Test {
     // ---- the API as a caller writes it -------------------------------------
 
     function test_constants() public pure {
-        assertEq(FP127.unwrap(ONE), FP127Lib.ONE);
-        assertEq(FP127.unwrap(PI), FP127Lib.PI);
-        assertEq(FP127.unwrap(fp127(42)), 42);
-        assertEq(fp127(42).unwrap(), 42);
+        assertEq(BL127.unwrap(ONE), BL127Lib.ONE);
+        assertEq(BL127.unwrap(PI), BL127Lib.PI);
+        assertEq(BL127.unwrap(bl127(42)), 42);
+        assertEq(bl127(42).unwrap(), 42);
     }
 
     function test_example() public pure {
-        FP127 b = fp127FromWad(1.5e18) * ONE.exp(); // 1.5 e
-        assertEq(FP127.unwrap(b), FP127Lib.mul(FP127Lib.fromFixed18(1.5e18), FP127Lib.exp(FP127Lib.ONE)));
-        assertTrue(b > fp127FromInt(4) && b < fp127FromInt(5));
+        BL127 b = bl127FromWad(1.5e18) * ONE.exp(); // 1.5 e
+        assertEq(BL127.unwrap(b), BL127Lib.mul(BL127Lib.fromFixed18(1.5e18), BL127Lib.exp(BL127Lib.ONE)));
+        assertTrue(b > bl127FromInt(4) && b < bl127FromInt(5));
         assertEq(b.toWadDown(), 4077422742688567853);
         assertEq(b.toWadUp(), 4077422742688567854);
         assertEq(b.toIntDown(), 4);
         assertEq(b.toIntUp(), 5);
-        FP127 r = (b - ONE).ln() / PI + -ONE;
+        BL127 r = (b - ONE).ln() / PI + -ONE;
         assertEq(
-            FP127.unwrap(r),
-            FP127Lib.add(
-                FP127Lib.div(FP127Lib.ln(FP127Lib.sub(FP127.unwrap(b), FP127Lib.ONE)), FP127Lib.PI),
-                FP127Lib.neg(FP127Lib.ONE)
+            BL127.unwrap(r),
+            BL127Lib.add(
+                BL127Lib.div(BL127Lib.ln(BL127Lib.sub(BL127.unwrap(b), BL127Lib.ONE)), BL127Lib.PI),
+                BL127Lib.neg(BL127Lib.ONE)
             )
         );
         assertTrue(r != ONE && r <= ONE && r >= -ONE && !(r == ONE));

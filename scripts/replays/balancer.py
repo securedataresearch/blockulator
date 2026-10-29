@@ -21,9 +21,9 @@ BPT) is replayed through:
   deployed  StableMath as verified on Etherscan, _upscale = mulDown (bit-exact
             against every on-chain return; Python here and the Foundry test)
   mulUp     the same, with the given-out amount upscaled by mulUp (V3's fix)
-  fp127     FP127 (127.128 fixed point) for the upscaled amounts and the pool
-            maths, Newton run to FP127's own grid, ceil to token wei at the end
-  fp19     FP19 (256-bit float), the same algorithm on FP19's grid
+  bl127     BL127 (127.128 fixed point) for the upscaled amounts and the pool
+            maths, Newton run to BL127's own grid, ceil to token wei at the end
+  bl19     BL19 (256-bit float), the same algorithm on BL19's grid
   exact     exact rationals for the upscaling, the invariant and balance roots
             at 200 digits (mpmath), ceil to token wei at the end
   nearest   exact, rounded to nearest at the wei boundary (sensitivity only)
@@ -34,7 +34,7 @@ the rate token to `leave` wei, take `leave - 1` out, swap the recorded WETH
 amount back) is also replayed on each model's own balances, which reproduces
 the on-chain sequence under deployed pricing and records where it breaks under
 the others. The forge harness (test/replays/Balancer.t.sol) runs deployed,
-mulUp, fp127 and fp19 and asserts them; this script scores its log.
+mulUp, bl127 and bl19 and asserts them; this script scores its log.
 """
 from __future__ import annotations
 
@@ -457,11 +457,11 @@ def parse_log():
     return rows
 
 
-def fp127_val(s):
+def bl127_val(s):
     return Fraction(int(s), 2 ** 128)
 
 
-def fp19_val(s):
+def bl19_val(s):
     w = int(s) % 2 ** 256
     if w == 0:
         return Fraction(0)
@@ -472,7 +472,7 @@ def fp19_val(s):
 
 # ---------------------------------------------------------------- score
 
-MODELS = ("deployed", "mulUp", "fp127", "fp19", "exact", "nearest")
+MODELS = ("deployed", "mulUp", "bl127", "bl19", "exact", "nearest")
 
 
 def score(run_harness: bool):
@@ -528,7 +528,7 @@ def summarise(name, p, P, log):
     q = {k: Fraction(pool["sf"][k], ONE) for k in range(3)}
     tvl = sum(Fraction(int(p["balancesBlockMinus1"][k]), ONE) * q[k] for k in (wk, rk))
     amounts = {m: [a for a, _ in P["ev"][m]] for m in P["ev"]}
-    for m in ("fp127", "fp19"):
+    for m in ("bl127", "bl19"):
         amounts[m] = [int(log[m][s["k"]]["in"]) for s in steps]
     # sensitivity, not a proposal: the exact charge rounded to nearest instead of up at the wei boundary
     amounts["nearest"] = [int(mp.floor(x["need"] + mpf(1) / 2)) for _, x in P["ev"]["exact"]]
@@ -647,7 +647,7 @@ def convergence(pool, steps, ev, log):
         st["absY"].append(x["y"] - ystar); st["relY"].append((x["y"] - ystar) / ystar)
         st["absYstop"].append(x["y"] - yq); st["relYstop"].append((x["y"] - yq) / yq)
     conv["deployed"] = agg_conv(st)
-    for m, val in (("fp127", fp127_val), ("fp19", fp19_val)):
+    for m, val in (("bl127", bl127_val), ("bl19", bl19_val)):
         st = {"itD": [], "itY": [], "relD": [], "absD": [], "relY": [], "absY": []}
         for s in steps:
             d = log[m][s["k"]]
@@ -694,7 +694,7 @@ def write_md(data):
 
 
 LABEL = {"deployed": "deployed (V2, `_upscale` = mulDown)", "mulUp": "mulUp on the given-out amount (V3's direction)",
-         "fp127": "FP127 inside, ceil to wei once", "fp19": "FP19 inside, ceil to wei once",
+         "bl127": "BL127 inside, ceil to wei once", "bl19": "BL19 inside, ceil to wei once",
          "exact": "exact rationals, ceil to wei once", "nearest": "exact, but round-to-nearest at the wei boundary (sensitivity)"}
 
 
@@ -816,7 +816,7 @@ def render(data):
     w("### Which alternative alone suffices")
     w("")
     om, wm = os_["models"], ws["models"]
-    w(f"- **FP127 and FP19** charge exactly the exact-rational amount on all {os_['swaps']} + {ws['swaps']} calls. That is asserted "
+    w(f"- **BL127 and BL19** charge exactly the exact-rational amount on all {os_['swaps']} + {ws['swaps']} calls. That is asserted "
       f"call by call in the test, and no call lowers D*. Inside the format the upscaled 17 osETH-wei stays 17.988250947729518883 "
       f"to within 2^-128. The only rounding to the wei grid is the final ceil, which favours the pool.")
     w(f"- **mulUp alone** defeats the attack as executed: every micro call now over-charges, and the per-call ratio is "
@@ -829,7 +829,7 @@ def render(data):
       f"mulUp also over-charges a trader heavily at these balances: {ci(s23['models']['mulUp']['in'])} against the exact {ci(s23['models']['exact']['in'])} on swap 23.")
     w(f"- **Round-to-nearest at the boundary** instead of ceil, with exact maths inside: {om['nearest']['stepsInvariantFalls']} + "
       f"{wm['nearest']['stepsInvariantFalls']} calls lower D* by under half a wei of the token in each. The 0.01% fee keeps the phase net "
-      f"positive, with ratios {fnum(om['nearest']['invariantRatio'], 6)} and {fnum(wm['nearest']['invariantRatio'], 6)}. FP127's claim therefore "
+      f"positive, with ratios {fnum(om['nearest']['invariantRatio'], 6)} and {fnum(wm['nearest']['invariantRatio'], 6)}. BL127's claim therefore "
       f"depends on keeping the boundary's direction.")
     pr = os_["planReplay"]
     w(f"- The attacker's plan itself cannot be executed under the alternatives. Replayed adaptively (drain to {os_['leave']}, take "
@@ -859,9 +859,9 @@ def render(data):
     w("## Newton convergence: where each ruler stops")
     w("")
     w("StableMath's `_calculateInvariant` and `_getTokenBalanceGivenInvariantAndAllOtherBalances` are Newton iterations that "
-      "stop when two iterates differ by ≤ 1 on the wei grid. The same two maps run in FP127 and in FP19 with the same algebra, "
-      "reordered only so that FP127 does not overflow. Their stop is ≤ 1 unit of the format's own grid, or a stall: the step has "
-      "stopped shrinking and is already below 2^-64 (FP127) or 2^-128 (FP19) of the iterate. Residuals are measured against the "
+      "stop when two iterates differ by ≤ 1 on the wei grid. The same two maps run in BL127 and in BL19 with the same algebra, "
+      "reordered only so that BL127 does not overflow. Their stop is ≤ 1 unit of the format's own grid, or a stall: the step has "
+      "stopped shrinking and is already below 2^-64 (BL127) or 2^-128 (BL19) of the iterate. Residuals are measured against the "
       "exact root (200 digits) of the same inputs each solver received.")
     w("")
     w("| pool | ruler | invariant: iterations (median / max) | invariant: worst residual | balance: iterations (median / max) | balance: worst residual |")
@@ -872,7 +872,7 @@ def render(data):
         w(f"| {n} | wei grid (deployed) | {d['itD']['median']} / {d['itD']['max']} | {fnum(d['absD']['maxAbs'], 4)} wei "
           f"(rel {fnum(d['relD']['maxAbs'], 3)}, {d['relD']['minDigits']} digits) | {d['itY']['median']} / {d['itY']['max']} | "
           f"rel {fnum(d['relY']['maxAbs'], 3)} ({d['relY']['minDigits']} digits), always above the root; the stop alone leaves ≤ {fnum(d['absYstop']['maxAbs'], 4)} wei |")
-        for mm in ("fp127", "fp19"):
+        for mm in ("bl127", "bl19"):
             f = c[mm]
             w(f"| {n} | {mm.upper()} | {f['itD']['median']} / {f['itD']['max']} | rel {fnum(f['relD']['maxAbs'], 3)} ({f['relD']['minDigits']} digits) | "
               f"{f['itY']['median']} / {f['itY']['max']} | rel {fnum(f['relY']['maxAbs'], 3)} ({f['relY']['minDigits']} digits) |")
@@ -881,15 +881,15 @@ def render(data):
     w(f"- The same iteration reaches whatever ruler it runs on. On the wei grid the invariant stops within "
       f"{fnum(c1['deployed']['absD']['maxAbs'], 3)} wei of its own root (worst relative {fnum(c1['deployed']['relD']['maxAbs'], 2)}, "
       f"{c1['deployed']['relD']['minDigits']} digits, osETH; {c2['deployed']['relD']['minDigits']} in the larger wstETH pool). "
-      f"On FP127 it reaches {min(c1['fp127']['relD']['minDigits'], c2['fp127']['relD']['minDigits'])}–"
-      f"{max(c1['fp127']['relD']['minDigits'], c2['fp127']['relD']['minDigits'])} digits, and on FP19 "
-      f"{min(c1['fp19']['relD']['minDigits'], c2['fp19']['relD']['minDigits'])}–{max(c1['fp19']['relD']['minDigits'], c2['fp19']['relD']['minDigits'])}. "
-      f"It costs a few more iterations: median {c1['deployed']['itD']['median']} → {c1['fp127']['itD']['median']} → {c1['fp19']['itD']['median']} (osETH) and "
-      f"{c2['deployed']['itD']['median']} → {c2['fp127']['itD']['median']} → {c2['fp19']['itD']['median']} (wstETH, where one balance is 1 wei against 10^14).")
-    w(f"- The literal \"≤ 1 unit\" stop does not carry over to a fine grid. The map evaluated in FP127 is noisier than one unit "
+      f"On BL127 it reaches {min(c1['bl127']['relD']['minDigits'], c2['bl127']['relD']['minDigits'])}–"
+      f"{max(c1['bl127']['relD']['minDigits'], c2['bl127']['relD']['minDigits'])} digits, and on BL19 "
+      f"{min(c1['bl19']['relD']['minDigits'], c2['bl19']['relD']['minDigits'])}–{max(c1['bl19']['relD']['minDigits'], c2['bl19']['relD']['minDigits'])}. "
+      f"It costs a few more iterations: median {c1['deployed']['itD']['median']} → {c1['bl127']['itD']['median']} → {c1['bl19']['itD']['median']} (osETH) and "
+      f"{c2['deployed']['itD']['median']} → {c2['bl127']['itD']['median']} → {c2['bl19']['itD']['median']} (wstETH, where one balance is 1 wei against 10^14).")
+    w(f"- The literal \"≤ 1 unit\" stop does not carry over to a fine grid. The map evaluated in BL127 is noisier than one unit "
       f"near the root (D times a ratio carries D·2^-128), so the literal rule never stopped within 255 iterations on "
-      f"{c1['fp127']['literalRuleNeverStopped']['D']} of {c1['calls']} (osETH) and {c2['fp127']['literalRuleNeverStopped']['D']} of {c2['calls']} "
-      f"(wstETH) invariant solves. In FP19 the counts are {c1['fp19']['literalRuleNeverStopped']['D']} and {c2['fp19']['literalRuleNeverStopped']['D']}. "
+      f"{c1['bl127']['literalRuleNeverStopped']['D']} of {c1['calls']} (osETH) and {c2['bl127']['literalRuleNeverStopped']['D']} of {c2['calls']} "
+      f"(wstETH) invariant solves. In BL19 the counts are {c1['bl19']['literalRuleNeverStopped']['D']} and {c2['bl19']['literalRuleNeverStopped']['D']}. "
       f"StableMath's cap would revert there (`STABLE_INVARIANT_DIDNT_CONVERGE`). The stall test ends them, and their residuals are in the "
       f"table. The balance solver's literal rule always stopped.")
     w(f"- The deployed solvers are not what the attacker exploited. Their result is the root of their own rounded quadratic to within "
@@ -955,7 +955,7 @@ def render(data):
     w("- `test_deployed_*`: every call's return, bit for bit.")
     w("- `test_deployed_plan_*`: the plan replayed from the first balances reproduces every amount and every Vault balance.")
     w("- `test_mulUp_*`: the mulUp variant equals this script's port.")
-    w("- `test_fp127_*` and `test_fp19_*`: the formats equal the exact-rational charge on every call.")
+    w("- `test_bl127_*` and `test_bl19_*`: the formats equal the exact-rational charge on every call.")
     w("- `test_upscale_headline`: the products by hand.")
     w("")
     w("`balancer.py` also asserts three things: that its Python port equals the Solidity transcription in amount, D, y and "
@@ -965,7 +965,7 @@ def render(data):
     w("## Caveat")
     w("")
     w("The alternatives are priced call by call on the balances that actually occurred, not along a path an attacker would "
-      "re-optimise for each ruler. They show that these calls stop paying under FP127, FP19 or exact pricing; they do not show that no "
+      "re-optimise for each ruler. They show that these calls stop paying under BL127, BL19 or exact pricing; they do not show that no "
       "other sequence could find what remains, such as the token-in balance truncation that mulUp leaves.")
     w("")
     return "\n".join(o) + "\n"

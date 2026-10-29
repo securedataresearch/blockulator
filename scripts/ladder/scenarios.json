@@ -13,13 +13,13 @@
  ],
  "forms": [
   {
-   "id": "fp127",
-   "label": "FP127 (deployed, staticcall)",
+   "id": "bl127",
+   "label": "BL127 (deployed, staticcall)",
    "scale": "2**128"
   },
   {
-   "id": "fp127lib",
-   "label": "FP127Lib (inline)",
+   "id": "bl127lib",
+   "label": "BL127Lib (inline)",
    "scale": "2**128"
   },
   {
@@ -63,9 +63,9 @@
    "scale": "10**27"
   },
   {
-   "id": "fp19",
-   "label": "FP19 (float, inline)",
-   "scale": "fp19"
+   "id": "bl19",
+   "label": "BL19 (float, inline)",
+   "scale": "bl19"
   },
   {
    "id": "solmate",
@@ -200,10 +200,10 @@
     }
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul"
     ],
     "abdk": [
@@ -231,7 +231,7 @@
      "rpow",
      "rmul"
     ],
-    "fp19": [
+    "bl19": [
      "mul"
     ],
     "solmate": [
@@ -353,11 +353,11 @@
     }
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "pow",
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "pow",
      "mul"
     ],
@@ -391,7 +391,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "pow",
      "mul"
     ],
@@ -493,11 +493,11 @@
     }
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "sqrt",
      "add"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "sqrt",
      "add"
     ],
@@ -530,7 +530,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "sqrt",
      "add"
     ],
@@ -646,11 +646,11 @@
     }
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "ln",
      "exp"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "ln",
      "exp"
     ],
@@ -683,7 +683,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "ln",
      "exp"
     ],
@@ -805,11 +805,11 @@
     "payment": "principal * rate / (1 - (1 + rate)^(-term))"
    },
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul",
      "sub"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul",
      "sub"
     ],
@@ -842,7 +842,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul",
      "sub"
     ],
@@ -892,13 +892,13 @@
     }
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "div",
      "ln",
      "add",
      "exp"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "div",
      "ln",
      "add",
@@ -943,7 +943,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "div",
      "ln",
      "add",
@@ -1097,14 +1097,14 @@
     }
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "div",
      "ln",
      "add",
      "sqrt",
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "div",
      "ln",
      "add",
@@ -1155,7 +1155,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "div",
      "ln",
      "add",
@@ -1247,10 +1247,10 @@
     }
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul"
     ],
     "abdk": [
@@ -1277,7 +1277,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul"
     ],
     "solmate": [
@@ -1310,7 +1310,7 @@
    "title": "Annual compounding at 10% for 10,000 years",
    "step": "b = b * 1.1",
    "result": "balance after N years",
-   "why": "Ten thousand years of annual compounding grows $10,000 to about 10^418, past every fixed-point word: at 10% 64.64 overflows by N = 365, Solady, Balancer, Maker and FP127 by N = 1,000 and PRBMath by N = 10,000 (at 50%, 64.64 by N = 100 and the rest by N = 365); only binary128 and FP19 reach N = 10,000. Until about N = 20 the balances are short decimals that WAD and RAY hold exactly. The row began as a check of an old README claim ($25,937.42 true against $25,932.38 for Solady at N = 10); Solady returns $25,937.424601 exactly.",
+   "why": "Ten thousand years of annual compounding grows $10,000 to about 10^418, past every fixed-point word: at 10% 64.64 overflows by N = 365, Solady, Balancer, Maker and BL127 by N = 1,000 and PRBMath by N = 10,000 (at 50%, 64.64 by N = 100 and the rest by N = 365); only binary128 and BL19 reach N = 10,000. Until about N = 20 the balances are short decimals that WAD and RAY hold exactly. The row began as a check of an old README claim ($25,937.42 true against $25,932.38 for Solady at N = 10); Solady returns $25,937.424601 exactly.",
    "order": [
     "principal",
     "rate"
@@ -1355,14 +1355,14 @@
       "principal": "10000",
       "rate": "0.5"
      },
-     "why": "50% a year: 64.64 overflows by N = 100; the WAD libraries, Maker and FP127 by N = 365; binary128 and FP19 reach 10,000"
+     "why": "50% a year: 64.64 overflows by N = 100; the WAD libraries, Maker and BL127 by N = 365; binary128 and BL19 reach 10,000"
     }
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul"
     ],
     "abdk": [
@@ -1390,7 +1390,7 @@
      "rpow",
      "rmul"
     ],
-    "fp19": [
+    "bl19": [
      "mul"
     ],
     "solmate": [
@@ -1423,17 +1423,17 @@
    "title": "Per-second accrual",
    "step": "b = b0 * (1 + r/31536000)^(N * 86400)",
    "result": "balance after N days of per-second compounding",
-   "why": "How Maker's jug and pot accrue: the rate per second, compounded every second, N days at a time. The rate is 1.6e-9 at 5% APR, which an 18-decimal grid holds to ten digits before any arithmetic; FP127 and FP19 compute the power with compound, which never forms a rounded 1 + r; the WAD and 64.64 libraries as exp(n ln(1 + r)), Maker as rpow.",
+   "why": "How Maker's jug and pot accrue: the rate per second, compounded every second, N days at a time. The rate is 1.6e-9 at 5% APR, which an 18-decimal grid holds to ten digits before any arithmetic; BL127 and BL19 compute the power with compound, which never forms a rounded 1 + r; the WAD and 64.64 libraries as exp(n ln(1 + r)), Maker as rpow.",
    "order": [
     "principal",
     "rateSec"
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "compound",
      "mul"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "compound",
      "mul"
     ],
@@ -1469,7 +1469,7 @@
      "rpow",
      "rmul"
     ],
-    "fp19": [
+    "bl19": [
      "compound",
      "mul"
     ],
@@ -1567,12 +1567,12 @@
     "rateSec": "rateAnnual / 31536000"
    },
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul",
      "div",
      "exp"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul",
      "div",
      "exp"
@@ -1613,7 +1613,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul",
      "div",
      "exp"
@@ -1705,7 +1705,7 @@
    "title": "An option walking out of the money",
    "step": "S = S (1 - tick); then C = S N(d1) - K e^(-rT) N(d2)",
    "result": "the Black-Scholes call price after N down-ticks of the spot",
-   "why": "Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. FP127 and FP19 have normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives. Relative digits there say little about money: at N = 10,000 the true price of five of the six inputs is below 10^-15 wei of a $100 strike at 18 decimals, so every library is off by less than a wei; the slow walk's is 3.2 million wei ($3 × 10^-12), where the WAD libraries are off by about 94 wei. Up to N = 1,000 they are off by tens to ten thousand wei, FP127 by under 10^-16 (absErrWei in the data).",
+   "why": "Options protocols price with N(d), the normal distribution function, and the spot walks. Near the money every library agrees; past d = -8 an 18-decimal N(d) is zero and the price with it, and before that e^(-d^2/2) has lost most of its digits. BL127 and BL19 have normCdf as an op; the other libraries run the same series and continued fraction through their own exp, sqrt, mul and div, with pi by Ramanujan through the same ops, so each is judged on its primitives. Relative digits there say little about money: at N = 10,000 the true price of five of the six inputs is below 10^-15 wei of a $100 strike at 18 decimals, so every library is off by less than a wei; the slow walk's is 3.2 million wei ($3 × 10^-12), where the WAD libraries are off by about 94 wei. Up to N = 1,000 they are off by tens to ten thousand wei, BL127 by under 10^-16 (absErrWei in the data).",
    "order": [
     "spot",
     "strike",
@@ -1715,7 +1715,7 @@
     "tick"
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul",
      "sqrt",
      "ln",
@@ -1725,7 +1725,7 @@
      "sub",
      "normCdf"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul",
      "sqrt",
      "ln",
@@ -1788,7 +1788,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul",
      "sqrt",
      "ln",
@@ -1923,12 +1923,12 @@
     "eps"
    ],
    "ops": {
-    "fp127": [
+    "bl127": [
      "exp",
      "mul",
      "sub"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "exp",
      "mul",
      "sub"
@@ -1964,7 +1964,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "exp",
      "mul",
      "sub"
@@ -2056,12 +2056,12 @@
     "x": "speed * err * step, err the documented deviation at util (1 at 100%, -1 at 0%, 0.25 at 92.5%)"
    },
    "ops": {
-    "fp127": [
+    "bl127": [
      "mul",
      "div",
      "exp"
     ],
-    "fp127lib": [
+    "bl127lib": [
      "mul",
      "div",
      "exp"
@@ -2100,7 +2100,7 @@
     "maker": [
      "unsupported"
     ],
-    "fp19": [
+    "bl19": [
      "mul",
      "div",
      "exp"

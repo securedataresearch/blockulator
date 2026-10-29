@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Where the gas goes: a profile of FP19Lib and FP127Lib on the sweep's seeded
+"""Where the gas goes: a profile of BL19Lib and BL127Lib on the sweep's seeded
 random inputs.
 
     uv run scripts/sweep/gasprofile.py          # inputs, the passes, the via_ir bench -> docs/benchmarks/profile.{md,json}
@@ -11,7 +11,7 @@ read inside the call's own window (test/sweep/Sweep.t.sol):
 
   plain  the committed libraries: each op's total gas (median, p99, max);
   count  test-only copies whose rounding-test fallbacks count themselves
-         (scripts/fp127/gen.py --count-lib): the share of inputs that left the
+         (scripts/bl127/gen.py --count-lib): the share of inputs that left the
          fast path. Results must equal the plain pass's word for word;
   probe  test-only copies with a gas probe around each named helper
          (gen.py --probe-lib, PROBES): per helper, calls per input and its gas
@@ -19,7 +19,7 @@ read inside the call's own window (test/sweep/Sweep.t.sol):
          calls) and exclusive (without them). The probes' own cost is taken
          out (PROBE_OVH, PROBE_RESIDUAL); the residual per probe call left
          after that is reported as the calibration error;
-  forced the probe pass again on FP19's first 4,000 inputs per op with a
+  forced the probe pass again on BL19's first 4,000 inputs per op with a
          second stage, the rounding test forced to fail (gen.py --forced),
          against make sweep's second-stage pass (run_wide): what a fallback
          costs and where, wexpm1's share first.
@@ -27,7 +27,7 @@ read inside the call's own window (test/sweep/Sweep.t.sol):
 Then the build-setting bench (test/profile/ViaIr.t.sol) twice, under the
 default profile (via_ir = false) and [profile.viair], beside the Yul objects.
 The object's own call and dispatch cost (a flat selector switch is a linear
-chain, FP127's a binary search: it grows with the comparisons
+chain, BL127's a binary search: it grows with the comparisons
 before the selector's case, gen.py dispatch_steps) is fitted on the trivial
 ops, where the inline call is the same code, and taken out of the heavy ops'
 object column.
@@ -45,11 +45,11 @@ import sweep as S  # noqa: E402
 G = S.G
 D = S.D
 OUT = ROOT / "docs" / "benchmarks"
-OPS = [("fp19", op) for op in S.OPS19] + [("fp127", op) for op in S.OPS127 + ["lambertW0", "lambertWm1"]]
-TRIVIAL = {"fp127": ["abs", "neg", "sign", "floor", "ceil", "frac", "add", "sub", "min", "max"],
-           "fp19": ["abs", "neg", "sign", "cmp", "lt", "eq", "min", "max"]}
-HEAVY = {"fp127": ["mul", "div", "sqrt", "exp", "ln", "pow", "cbrt", "sinh", "cosh", "erf", "normCdf", "lambertW0", "lambertWm1"],
-         "fp19": ["add", "mul", "div", "sqrt", "exp", "ln", "pow", "erf", "normCdf", "lambertW0", "lambertWm1",
+OPS = [("bl19", op) for op in S.OPS19] + [("bl127", op) for op in S.OPS127 + ["lambertW0", "lambertWm1"]]
+TRIVIAL = {"bl127": ["abs", "neg", "sign", "floor", "ceil", "frac", "add", "sub", "min", "max"],
+           "bl19": ["abs", "neg", "sign", "cmp", "lt", "eq", "min", "max"]}
+HEAVY = {"bl127": ["mul", "div", "sqrt", "exp", "ln", "pow", "cbrt", "sinh", "cosh", "erf", "normCdf", "lambertW0", "lambertWm1"],
+         "bl19": ["add", "mul", "div", "sqrt", "exp", "ln", "pow", "erf", "normCdf", "lambertW0", "lambertWm1",
                    "exp2", "log2", "cbrt", "cosh", "tanh", "hypot"]}
 
 
@@ -141,7 +141,7 @@ def fit(xs, ys):
 def viair_rows():
     leg, ir = parse_via("default"), parse_via("viair")
     rows, fits = [], {}
-    for lib in ("fp127", "fp19"):
+    for lib in ("bl127", "bl19"):
         rk = ranks(lib)
         pts = [(rk[op], leg[(lib, op, "object")] - leg[(lib, op, "inline")]) for op in TRIVIAL[lib]
                if (lib, op, "object") in leg and (lib, op, "inline") in leg]
@@ -174,8 +174,8 @@ def report():
         if not (D / f"wide_{op}.out").exists():
             continue
         data = S.load(f"wide_{op}")
-        row = {"lib": "fp19", "op": op, "stage": "forced", "n": len(data), **stats([g for *_, g in data if g])}
-        pr = probe_rows("fp19", op, data, "probewide")
+        row = {"lib": "bl19", "op": op, "stage": "forced", "n": len(data), **stats([g for *_, g in data if g])}
+        pr = probe_rows("bl19", op, data, "probewide")
         if pr:
             row.update(pr)
         forced.append(row)
@@ -200,20 +200,20 @@ def report():
           "script's docstring; in short:",
           "",
           "- **gas**: the committed library, median / 99th percentile / largest over the op's inputs;",
-          "- **fallback**: the share of inputs whose rounding test fired (FP19 `rbad`; FP127 `rbad127` and `rbadw` on "
+          "- **fallback**: the share of inputs whose rounding test fired (BL19 `rbad`; BL127 `rbad127` and `rbadw` on "
           "every transcendental's fast value, and the double-word `l2p` and pow's `powmid` where the one-word log "
           "or `pow2t` could not decide; after an arrow, the share whose middle stage's test, `rbadm` or `rbadm127`, "
           "fired too), counted by a test-only copy of the library whose results "
-          "match the committed one's word for word; a dash: the op has no such test (Lambert W in FP19 "
+          "match the committed one's word for word; a dash: the op has no such test (Lambert W in BL19 "
           "tests its one-word step and runs the wide step, `lwfix`, only on a miss);",
           "- **helpers**: test-only gas probes around the named helpers. *exclusive* is a helper's gas without "
           "the probed helpers it calls, as a share of the op's total; *inclusive* counts them; the probes' own "
           "cost is taken out. Shares are over all inputs, so a fallback that runs rarely shows small.",
           "",
-          "Probed: FP19 " + ", ".join(f"`{h}`" for h in G.PROBES["fp19"]) + "; FP127 "
-          + ", ".join(f"`{h}`" for h in G.PROBES["fp127"]) + ".",
+          "Probed: BL19 " + ", ".join(f"`{h}`" for h in G.PROBES["bl19"]) + "; BL127 "
+          + ", ".join(f"`{h}`" for h in G.PROBES["bl127"]) + ".",
           ""]
-    for lib, title in (("fp19", "FP19"), ("fp127", "FP127")):
+    for lib, title in (("bl19", "BL19"), ("bl127", "BL127")):
         md += [f"## {title}", "",
                "| op | inputs | gas median / p99 / max | fallback | largest helpers (exclusive share) |",
                "|---|---:|---:|---:|---|"]
@@ -234,12 +234,12 @@ def report():
                     md.append(f"| {r['op']} | `{h}` | {v['callsPerInput']:g} | {v['gasPerCall']:,} | "
                               f"{v['exclusivePct']:.1f}% | {v['inclusivePct']:.1f}% |")
         md.append("")
-    md += ["## FP19, the second stage forced",
+    md += ["## BL19, the second stage forced",
            "",
            f"The first {S.WIDE_N:,} inputs of each op with a second stage (and of its wider rows), through the probed "
            "library with the rounding test forced to fail (`gen.py --probe-lib --forced`), as `make sweep`'s "
            "second-stage pass: what every fallback costs, and where. Gas is the plain forced pass's "
-           "(`FP19LibWide`); shares are of it.",
+           "(`BL19LibWide`); shares are of it.",
            "",
            "| op | inputs | forced gas median / p99 / max | `wexpm1` exclusive (calls / input) | largest helpers (exclusive share) |",
            "|---|---:|---:|---:|---|"]

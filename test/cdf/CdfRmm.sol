@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Transcribed from primitivefinance/rmm-core @ 8d3ef9b, contracts/libraries/CumulativeNormalDistribution.sol
 // (GPL-3.0-only), getCDF and getErrorFunction line for line, on ABDKMath64x64 (lib/abdk-libraries-solidity).
-// Benchmark only: nothing in FP127, FP19 or BlockulatorWad imports it.
+// Benchmark only: nothing in BL127, BL19 or BlockulatorWad imports it.
 pragma solidity ^0.8.4;
 
 import {ABDKMath64x64} from "../../lib/abdk-libraries-solidity/ABDKMath64x64.sol";

@@ -5,8 +5,8 @@ import {Wide} from "./Wide.sol";
 import {Kernels} from "./Kernels.sol";
 
 /// @title Ref127
-/// @notice Reference specifications of FP127's core ops, written from the
-///         documented semantics (contracts/src/fp127/README.md and each op's
+/// @notice Reference specifications of BL127's core ops, written from the
+///         documented semantics (contracts/src/bl127/README.md and each op's
 ///         notice), not from the library's code. A value is raw / 2^128.
 ///
 ///         Each spec returns (err, r): err is 0 and r the result, or err is the

@@ -3,8 +3,8 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
+import {BL127Lib} from "../../contracts/src/bl127/BL127Lib.sol";
+import {BL19Lib} from "../../contracts/src/bl19/BL19Lib.sol";
 
 /// @notice Balancer V2 ComposableStablePool v5 swap arithmetic, transcribed from the source verified on
 ///         Etherscan for both attacked pools (0xDACf5Fa19b1f720111609043ac67A9818262850c osETH/WETH and
@@ -119,7 +119,7 @@ library BalancerV2 {
 ///           the attacker's plan replayed from the first balances reproduces the whole on-chain sequence;
 ///         - mulUp: the same calls (each on its own on-chain balances) with the given-out amount upscaled by
 ///           mulUp (Balancer V3's direction); asserted equal to scripts/replays/balancer.py's port;
-///         - fp127 / fp19: the same calls with the upscaled amounts and the pool maths in FP127 / FP19, the
+///         - bl127 / bl19: the same calls with the upscaled amounts and the pool maths in BL127 / BL19, the
 ///           same Newton maps stopped on the format's own grid, and one ceil to token wei at the end (the pool's
 ///           favour); asserted equal to the exact-rational charge scripts/replays/balancer.py commits.
 ///         Every call prints  BAL|<pool>|<model>|<swap>|k=v;...  for balancer.py to score.
@@ -233,18 +233,18 @@ contract Balancer is Test {
         s.y = int256(y);
     }
 
-    // ------------------------------------------------------------------ FP127: the same Newton maps, FP127's grid
+    // ------------------------------------------------------------------ BL127: the same Newton maps, BL127's grid
 
     function _abs(int256 x) internal pure returns (int256) {
         return x < 0 ? -x : x;
     }
 
     // The stopping rule. StableMath stops when two iterates differ by <= 1 on its grid (1 wei of the 18-decimal
-    // upscaled amount). Here the grid is the format's: <= 1 unit (2^-128 wei in FP127, one ulp in FP19). That
+    // upscaled amount). Here the grid is the format's: <= 1 unit (2^-128 wei in BL127, one ulp in BL19). That
     // literal rule assumes the Newton map, evaluated in the format, is quiet to within one unit near the root;
     // in a format with 2^-128 resolution it is not (D times a ratio carries D * 2^-128 of noise), so the
     // iteration also stops when it has stalled: the step no longer shrinks, and is already below 2^-64 of the
-    // iterate in FP127 (2^-128 in FP19). `how` records which rule fired (0 grid, 1 stall); `literal` runs the
+    // iterate in BL127 (2^-128 in BL19). `how` records which rule fired (0 grid, 1 stall); `literal` runs the
     // literal rule alone and returns 0 iterations if it has not stopped after 255 (StableMath's cap).
 
     struct Solve {
@@ -264,37 +264,37 @@ contract Balancer is Test {
         return (false, 0, d);
     }
 
-    /// StableMath._calculateInvariant's Newton map in FP127, values in 18-decimal wei. The algebra is the
+    /// StableMath._calculateInvariant's Newton map in BL127, values in 18-decimal wei. The algebra is the
     /// original's, D' = D (A S + n D_P) / ((A - 1) D + (n + 1) D_P), with D_P = D (D / n b0) (D / n b1); the
-    /// products are reordered only so that no intermediate exceeds FP127's 2^127.
+    /// products are reordered only so that no intermediate exceeds BL127's 2^127.
     function _inv127(int256 annP, int256 b0, int256 b1, bool literal) internal pure returns (Solve memory r) {
         int256 N = int256(2) << 128;
-        int256 S = FP127Lib.add(b0, b1);
-        int256 aS = FP127Lib.mul(annP, S);
-        int256 aD = FP127Lib.sub(annP, ONE127);
+        int256 S = BL127Lib.add(b0, b1);
+        int256 aS = BL127Lib.mul(annP, S);
+        int256 aD = BL127Lib.sub(annP, ONE127);
         r.x = S;
         int256 dPrev = type(int256).max;
         for (r.it = 1; r.it <= 255; r.it++) {
-            int256 DP = FP127Lib.mul(
-                FP127Lib.mul(r.x, FP127Lib.div(r.x, FP127Lib.mul(b0, N))), FP127Lib.div(r.x, FP127Lib.mul(b1, N))
+            int256 DP = BL127Lib.mul(
+                BL127Lib.mul(r.x, BL127Lib.div(r.x, BL127Lib.mul(b0, N))), BL127Lib.div(r.x, BL127Lib.mul(b1, N))
             );
             int256 prev = r.x;
-            r.x = FP127Lib.mul(
+            r.x = BL127Lib.mul(
                 r.x,
-                FP127Lib.div(
-                    FP127Lib.add(aS, FP127Lib.mul(DP, N)),
-                    FP127Lib.add(FP127Lib.mul(aD, r.x), FP127Lib.mul(int256(3) << 128, DP))
+                BL127Lib.div(
+                    BL127Lib.add(aS, BL127Lib.mul(DP, N)),
+                    BL127Lib.add(BL127Lib.mul(aD, r.x), BL127Lib.mul(int256(3) << 128, DP))
                 )
             );
             bool stop;
             (stop, r.how, dPrev) = _stop127(r.x, prev, dPrev, r.it, literal);
             if (stop) return r;
         }
-        if (!literal) revert("FP127 invariant did not converge");
+        if (!literal) revert("BL127 invariant did not converge");
         r.it = 0;
     }
 
-    /// StableMath._getTokenBalanceGivenInvariantAndAllOtherBalances's map in FP127 (n = 2): y' = (y^2 + c) /
+    /// StableMath._getTokenBalanceGivenInvariantAndAllOtherBalances's map in BL127 (n = 2): y' = (y^2 + c) /
     /// (2y + b - D), c = D^2 bk / (A P_D) = D^3 / (4 A other), b = other + D / A, the first iterate (D^2 + c) / (D + b).
     function _bal127(int256 annP, int256 bk, int256 other, int256 D, bool literal)
         internal
@@ -302,20 +302,20 @@ contract Balancer is Test {
         returns (Solve memory r)
     {
         int256 N = int256(2) << 128;
-        int256 PD = FP127Lib.div(FP127Lib.mul(FP127Lib.mul(FP127Lib.mul(bk, N), other), N), D);
-        int256 inv2 = FP127Lib.mul(D, D);
-        int256 c = FP127Lib.mul(FP127Lib.div(inv2, FP127Lib.mul(annP, PD)), bk);
-        int256 b = FP127Lib.sub(FP127Lib.add(other, FP127Lib.div(D, annP)), D);
-        r.x = FP127Lib.div(FP127Lib.add(inv2, c), FP127Lib.add(FP127Lib.add(b, D), D));
+        int256 PD = BL127Lib.div(BL127Lib.mul(BL127Lib.mul(BL127Lib.mul(bk, N), other), N), D);
+        int256 inv2 = BL127Lib.mul(D, D);
+        int256 c = BL127Lib.mul(BL127Lib.div(inv2, BL127Lib.mul(annP, PD)), bk);
+        int256 b = BL127Lib.sub(BL127Lib.add(other, BL127Lib.div(D, annP)), D);
+        r.x = BL127Lib.div(BL127Lib.add(inv2, c), BL127Lib.add(BL127Lib.add(b, D), D));
         int256 dPrev = type(int256).max;
         for (r.it = 1; r.it <= 255; r.it++) {
             int256 prev = r.x;
-            r.x = FP127Lib.div(FP127Lib.add(FP127Lib.mul(r.x, r.x), c), FP127Lib.add(FP127Lib.mul(r.x, N), b));
+            r.x = BL127Lib.div(BL127Lib.add(BL127Lib.mul(r.x, r.x), c), BL127Lib.add(BL127Lib.mul(r.x, N), b));
             bool stop;
             (stop, r.how, dPrev) = _stop127(r.x, prev, dPrev, r.it, literal);
             if (stop) return r;
         }
-        if (!literal) revert("FP127 balance did not converge");
+        if (!literal) revert("BL127 balance did not converge");
         r.it = 0;
     }
 
@@ -329,40 +329,40 @@ contract Balancer is Test {
         int256[2] memory b;
         uint256 n = 0;
         for (uint256 k = 0; k < 3; k++) {
-            q[k] = FP127Lib.fromFixed18(int256(p.sf[k]));
+            q[k] = BL127Lib.fromFixed18(int256(p.sf[k]));
             if (k == p.bpt) continue;
-            b[n++] = FP127Lib.mul(int256(raw[k]) << 128, q[k]);
+            b[n++] = BL127Lib.mul(int256(raw[k]) << 128, q[k]);
         }
         s.b0 = b[0];
         s.b1 = b[1];
         s.out = amount;
-        int256 annP = FP127Lib.div(int256(p.amp * 2) << 128, int256(BalancerV2.AMP_PRECISION) << 128);
+        int256 annP = BL127Lib.div(int256(p.amp * 2) << 128, int256(BalancerV2.AMP_PRECISION) << 128);
         Solve memory r = _inv127(annP, b[0], b[1], false);
         (s.D, s.itD, s.howD) = (r.x, r.it, r.how);
         s.litD = _inv127(annP, b[0], b[1], true).it;
-        s.other = FP127Lib.sub(b[j > p.bpt ? j - 1 : j], FP127Lib.mul(int256(amount) << 128, q[j]));
+        s.other = BL127Lib.sub(b[j > p.bpt ? j - 1 : j], BL127Lib.mul(int256(amount) << 128, q[j]));
         int256 bIn = b[i > p.bpt ? i - 1 : i];
         r = _bal127(annP, bIn, s.other, s.D, false);
         (s.y, s.itY, s.howY) = (r.x, r.it, r.how);
         s.litY = _bal127(annP, bIn, s.other, s.D, true).it;
-        s.amountIn = _charge127(FP127Lib.div(FP127Lib.sub(s.y, bIn), q[i]), p.fee);
+        s.amountIn = _charge127(BL127Lib.div(BL127Lib.sub(s.y, bIn), q[i]), p.fee);
     }
 
     /// amount / (1 - fee), then one ceil to token wei: the only rounding to the wei grid, in the pool's favour.
     function _charge127(int256 tokens, uint256 fee) internal pure returns (uint256) {
-        int256 gross = FP127Lib.div(tokens, FP127Lib.sub(ONE127, FP127Lib.fromFixed18(int256(fee))));
-        return uint256(FP127Lib.ceil(gross) >> 128);
+        int256 gross = BL127Lib.div(tokens, BL127Lib.sub(ONE127, BL127Lib.fromFixed18(int256(fee))));
+        return uint256(BL127Lib.ceil(gross) >> 128);
     }
 
-    // ------------------------------------------------------------------ FP19: the same, FP19's grid
+    // ------------------------------------------------------------------ BL19: the same, BL19's grid
 
-    /// One unit in the last place of a positive FP19 word.
+    /// One unit in the last place of a positive BL19 word.
     function _ulp19(int256 x) internal pure returns (int256) {
         uint256 e = (uint256(x) >> 236) & 0x7ffff;
         return int256((e - 236) << 236);
     }
 
-    /// x * 2^-k for a positive FP19 word (exact: the exponent field only).
+    /// x * 2^-k for a positive BL19 word (exact: the exponent field only).
     function _shr19(int256 x, uint256 k) internal pure returns (int256) {
         return int256(uint256(x) - (k << 236));
     }
@@ -372,15 +372,15 @@ contract Balancer is Test {
         pure
         returns (bool, uint256, int256)
     {
-        int256 d = FP19Lib.abs(FP19Lib.sub(x, prev));
-        if (FP19Lib.cmp(d, _ulp19(x)) <= 0) return (true, 0, d);
-        if (!literal && it >= 3 && FP19Lib.cmp(d, dPrev) >= 0 && FP19Lib.cmp(d, _shr19(x, 128)) <= 0) {
+        int256 d = BL19Lib.abs(BL19Lib.sub(x, prev));
+        if (BL19Lib.cmp(d, _ulp19(x)) <= 0) return (true, 0, d);
+        if (!literal && it >= 3 && BL19Lib.cmp(d, dPrev) >= 0 && BL19Lib.cmp(d, _shr19(x, 128)) <= 0) {
             return (true, 1, d);
         }
         return (false, 0, d);
     }
 
-    /// Smallest integer >= x for a positive FP19 word.
+    /// Smallest integer >= x for a positive BL19 word.
     function _ceil19(int256 x) internal pure returns (uint256) {
         uint256 w = uint256(x);
         uint256 e = (w >> 236) & 0x7ffff;
@@ -392,31 +392,31 @@ contract Balancer is Test {
         return (m & ((uint256(1) << r) - 1)) == 0 ? q : q + 1;
     }
 
-    /// The FP127 maps above, op for op, on FP19.
+    /// The BL127 maps above, op for op, on BL19.
     function _inv19(int256 annP, int256 b0, int256 b1, bool literal) internal pure returns (Solve memory r) {
-        int256 N = FP19Lib.fromUint(2);
-        int256 S = FP19Lib.add(b0, b1);
-        int256 aS = FP19Lib.mul(annP, S);
-        int256 aD = FP19Lib.sub(annP, FP19Lib.ONE);
+        int256 N = BL19Lib.fromUint(2);
+        int256 S = BL19Lib.add(b0, b1);
+        int256 aS = BL19Lib.mul(annP, S);
+        int256 aD = BL19Lib.sub(annP, BL19Lib.ONE);
         r.x = S;
         int256 dPrev = type(int256).max;
         for (r.it = 1; r.it <= 255; r.it++) {
-            int256 DP = FP19Lib.mul(
-                FP19Lib.mul(r.x, FP19Lib.div(r.x, FP19Lib.mul(b0, N))), FP19Lib.div(r.x, FP19Lib.mul(b1, N))
+            int256 DP = BL19Lib.mul(
+                BL19Lib.mul(r.x, BL19Lib.div(r.x, BL19Lib.mul(b0, N))), BL19Lib.div(r.x, BL19Lib.mul(b1, N))
             );
             int256 prev = r.x;
-            r.x = FP19Lib.mul(
+            r.x = BL19Lib.mul(
                 r.x,
-                FP19Lib.div(
-                    FP19Lib.add(aS, FP19Lib.mul(DP, N)),
-                    FP19Lib.add(FP19Lib.mul(aD, r.x), FP19Lib.mul(FP19Lib.fromUint(3), DP))
+                BL19Lib.div(
+                    BL19Lib.add(aS, BL19Lib.mul(DP, N)),
+                    BL19Lib.add(BL19Lib.mul(aD, r.x), BL19Lib.mul(BL19Lib.fromUint(3), DP))
                 )
             );
             bool stop;
             (stop, r.how, dPrev) = _stop19(r.x, prev, dPrev, r.it, literal);
             if (stop) return r;
         }
-        if (!literal) revert("FP19 invariant did not converge");
+        if (!literal) revert("BL19 invariant did not converge");
         r.it = 0;
     }
 
@@ -425,21 +425,21 @@ contract Balancer is Test {
         pure
         returns (Solve memory r)
     {
-        int256 N = FP19Lib.fromUint(2);
-        int256 PD = FP19Lib.div(FP19Lib.mul(FP19Lib.mul(FP19Lib.mul(bk, N), other), N), D);
-        int256 inv2 = FP19Lib.mul(D, D);
-        int256 c = FP19Lib.mul(FP19Lib.div(inv2, FP19Lib.mul(annP, PD)), bk);
-        int256 b = FP19Lib.sub(FP19Lib.add(other, FP19Lib.div(D, annP)), D);
-        r.x = FP19Lib.div(FP19Lib.add(inv2, c), FP19Lib.add(FP19Lib.add(b, D), D));
+        int256 N = BL19Lib.fromUint(2);
+        int256 PD = BL19Lib.div(BL19Lib.mul(BL19Lib.mul(BL19Lib.mul(bk, N), other), N), D);
+        int256 inv2 = BL19Lib.mul(D, D);
+        int256 c = BL19Lib.mul(BL19Lib.div(inv2, BL19Lib.mul(annP, PD)), bk);
+        int256 b = BL19Lib.sub(BL19Lib.add(other, BL19Lib.div(D, annP)), D);
+        r.x = BL19Lib.div(BL19Lib.add(inv2, c), BL19Lib.add(BL19Lib.add(b, D), D));
         int256 dPrev = type(int256).max;
         for (r.it = 1; r.it <= 255; r.it++) {
             int256 prev = r.x;
-            r.x = FP19Lib.div(FP19Lib.add(FP19Lib.mul(r.x, r.x), c), FP19Lib.add(FP19Lib.mul(r.x, N), b));
+            r.x = BL19Lib.div(BL19Lib.add(BL19Lib.mul(r.x, r.x), c), BL19Lib.add(BL19Lib.mul(r.x, N), b));
             bool stop;
             (stop, r.how, dPrev) = _stop19(r.x, prev, dPrev, r.it, literal);
             if (stop) return r;
         }
-        if (!literal) revert("FP19 balance did not converge");
+        if (!literal) revert("BL19 balance did not converge");
         r.it = 0;
     }
 
@@ -452,27 +452,27 @@ contract Balancer is Test {
         int256[2] memory b;
         uint256 n = 0;
         for (uint256 k = 0; k < 3; k++) {
-            q[k] = FP19Lib.fromFixed18(int256(p.sf[k]));
+            q[k] = BL19Lib.fromFixed18(int256(p.sf[k]));
             if (k == p.bpt) continue;
-            b[n++] = FP19Lib.mul(FP19Lib.fromUint(raw[k]), q[k]);
+            b[n++] = BL19Lib.mul(BL19Lib.fromUint(raw[k]), q[k]);
         }
         s.b0 = b[0];
         s.b1 = b[1];
         s.out = amount;
-        int256 annP = FP19Lib.div(FP19Lib.fromUint(p.amp * 2), FP19Lib.fromUint(BalancerV2.AMP_PRECISION));
+        int256 annP = BL19Lib.div(BL19Lib.fromUint(p.amp * 2), BL19Lib.fromUint(BalancerV2.AMP_PRECISION));
         Solve memory r = _inv19(annP, b[0], b[1], false);
         (s.D, s.itD, s.howD) = (r.x, r.it, r.how);
         s.litD = _inv19(annP, b[0], b[1], true).it;
-        s.other = FP19Lib.sub(b[j > p.bpt ? j - 1 : j], FP19Lib.mul(FP19Lib.fromUint(amount), q[j]));
+        s.other = BL19Lib.sub(b[j > p.bpt ? j - 1 : j], BL19Lib.mul(BL19Lib.fromUint(amount), q[j]));
         int256 bIn = b[i > p.bpt ? i - 1 : i];
         r = _bal19(annP, bIn, s.other, s.D, false);
         (s.y, s.itY, s.howY) = (r.x, r.it, r.how);
         s.litY = _bal19(annP, bIn, s.other, s.D, true).it;
-        s.amountIn = _charge19(FP19Lib.div(FP19Lib.sub(s.y, bIn), q[i]), p.fee);
+        s.amountIn = _charge19(BL19Lib.div(BL19Lib.sub(s.y, bIn), q[i]), p.fee);
     }
 
     function _charge19(int256 tokens, uint256 fee) internal pure returns (uint256) {
-        return _ceil19(FP19Lib.div(tokens, FP19Lib.sub(FP19Lib.ONE, FP19Lib.fromFixed18(int256(fee)))));
+        return _ceil19(BL19Lib.div(tokens, BL19Lib.sub(BL19Lib.ONE, BL19Lib.fromFixed18(int256(fee)))));
     }
 
     // ------------------------------------------------------------------ one call, under a model
@@ -480,8 +480,8 @@ contract Balancer is Test {
     enum Model {
         Deployed,
         MulUp,
-        FP127,
-        FP19
+        BL127,
+        BL19
     }
 
     function _swap(Pool memory p, Model m, uint256[3] memory raw, uint256 i, uint256 j, uint256 amount)
@@ -491,7 +491,7 @@ contract Balancer is Test {
     {
         if (m == Model.Deployed) return _swapDeployed(p, raw, i, j, amount, false);
         if (m == Model.MulUp) return _swapDeployed(p, raw, i, j, amount, true);
-        if (m == Model.FP127) return _swap127(p, raw, i, j, amount);
+        if (m == Model.BL127) return _swap127(p, raw, i, j, amount);
         return _swap19(p, raw, i, j, amount);
     }
 
@@ -549,7 +549,7 @@ contract Balancer is Test {
         for (uint256 t = 0; t < p.i.length; t++) {
             uint256[3] memory raw = [p.bal[0][t], p.bal[1][t], p.bal[2][t]];
             Step memory s = _swap(p, m, raw, p.i[t], p.j[t], p.amount[t]);
-            _log(p, model, t, s, m == Model.FP127 || m == Model.FP19);
+            _log(p, model, t, s, m == Model.BL127 || m == Model.BL19);
             assertEq(s.amountIn, expected[t], string.concat(name, " ", model, " swap ", vm.toString(p.first + t)));
         }
     }
@@ -603,21 +603,21 @@ contract Balancer is Test {
         _calls("wstETH", Model.MulUp, "mulUp", _expect("wstETH", "expectMulUp"));
     }
 
-    /// The same calls in FP127 / FP19, ceil to wei once: equal to the exact-rational charge on every call.
-    function test_fp127_osETH() public view {
-        _calls("osETH", Model.FP127, "fp127", _expect("osETH", "expectExact"));
+    /// The same calls in BL127 / BL19, ceil to wei once: equal to the exact-rational charge on every call.
+    function test_bl127_osETH() public view {
+        _calls("osETH", Model.BL127, "bl127", _expect("osETH", "expectExact"));
     }
 
-    function test_fp127_wstETH() public view {
-        _calls("wstETH", Model.FP127, "fp127", _expect("wstETH", "expectExact"));
+    function test_bl127_wstETH() public view {
+        _calls("wstETH", Model.BL127, "bl127", _expect("wstETH", "expectExact"));
     }
 
-    function test_fp19_osETH() public view {
-        _calls("osETH", Model.FP19, "fp19", _expect("osETH", "expectExact"));
+    function test_bl19_osETH() public view {
+        _calls("osETH", Model.BL19, "bl19", _expect("osETH", "expectExact"));
     }
 
-    function test_fp19_wstETH() public view {
-        _calls("wstETH", Model.FP19, "fp19", _expect("wstETH", "expectExact"));
+    function test_bl19_wstETH() public view {
+        _calls("wstETH", Model.BL19, "bl19", _expect("wstETH", "expectExact"));
     }
 
     /// The headline step, by hand: 17 wei of osETH at the in-transaction rate upscales to 17.988... and

@@ -2,7 +2,7 @@
 
     python test/proofs/run.py            # the fast subset (CI): lemmas, CLZ self-test, fast Halmos checks, fuzz
     python test/proofs/run.py --full     # everything; rewrites docs/benchmarks/proofs.json and docs/proofs.md's table
-    python test/proofs/run.py --only fp19_add   # the checks whose name matches
+    python test/proofs/run.py --only bl19_add   # the checks whose name matches
 
 PROOFS_FULL=1 in the environment is --full. Each Halmos check runs in its own
 process (test/proofs/halmos_clz.py, Halmos with CLZ and commuted products),
@@ -37,57 +37,57 @@ SOLVER_VERSION = "0.8.1"
 #         "fuzzed"           no symbolic proof; FuzzProofs against the exact spec
 #         "counterexample"   fuzzed, and a pinned input where the op leaves its spec
 OPS = [
-    # FP127
-    ("FP127", "add", "proven", "a + b exact; Overflow outside int256", ["check_fp127_add"], [], ""),
-    ("FP127", "sub", "proven", "a - b exact; Overflow outside int256", ["check_fp127_sub"], [], ""),
-    ("FP127", "mul", "proven", "floor(a b / 2^128); Overflow when it leaves int256", ["check_fp127_mul"], ["L1", "L2"], ""),
-    ("FP127", "mulDown", "proven", "floor(a b / 2^128)", ["check_fp127_mulDown"], ["L1", "L2"], ""),
-    ("FP127", "mulUp", "proven", "ceil(a b / 2^128); Overflow when it leaves int256",
-     ["check_fp127_mulUp_outside", "check_fp127_mulUp_window"], ["L1", "L2"],
+    # BL127
+    ("BL127", "add", "proven", "a + b exact; Overflow outside int256", ["check_bl127_add"], [], ""),
+    ("BL127", "sub", "proven", "a - b exact; Overflow outside int256", ["check_bl127_sub"], [], ""),
+    ("BL127", "mul", "proven", "floor(a b / 2^128); Overflow when it leaves int256", ["check_bl127_mul"], ["L1", "L2"], ""),
+    ("BL127", "mulDown", "proven", "floor(a b / 2^128)", ["check_bl127_mulDown"], ["L1", "L2"], ""),
+    ("BL127", "mulUp", "proven", "ceil(a b / 2^128); Overflow when it leaves int256",
+     ["check_bl127_mulUp_outside", "check_bl127_mulUp_window"], ["L1", "L2"],
      "two checks: every input outside the window where floor(a b / 2^128) = -2^255 - 1, and the window itself (fixed in #159)"),
-    ("FP127", "div", "proven", "trunc(a 2^128 / b); DivisionByZero; Overflow", ["check_fp127_div"], ["K127", "L5"], ""),
-    ("FP127", "divDown", "proven", "floor(a 2^128 / b)", ["check_fp127_divDown"], ["K127", "L5"], ""),
-    ("FP127", "divUp", "proven", "ceil(a 2^128 / b)", ["check_fp127_divUp"], ["K127", "L5"], ""),
-    ("FP127", "inv", "proven", "trunc(2^256 / x); DivisionByZero; Overflow", ["check_fp127_inv"], ["L4", "L5"], ""),
-    ("FP127", "sqrt", "proven", "floor(sqrt(x 2^128)); OutOfRange below zero", [], ["R1", "R2", "L1"],
+    ("BL127", "div", "proven", "trunc(a 2^128 / b); DivisionByZero; Overflow", ["check_bl127_div"], ["K127", "L5"], ""),
+    ("BL127", "divDown", "proven", "floor(a 2^128 / b)", ["check_bl127_divDown"], ["K127", "L5"], ""),
+    ("BL127", "divUp", "proven", "ceil(a 2^128 / b)", ["check_bl127_divUp"], ["K127", "L5"], ""),
+    ("BL127", "inv", "proven", "trunc(2^256 / x); DivisionByZero; Overflow", ["check_bl127_inv"], ["L4", "L5"], ""),
+    ("BL127", "sqrt", "proven", "floor(sqrt(x 2^128)); OutOfRange below zero", [], ["R1", "R2", "L1"],
      "a proof by exhaustion and error bounds (test/proofs/isqrt.py): the seed within 2^-4 for each of its 196,608 leading values, five Newton steps to below 2^-128, and the corrections exact; fixed in #159 where it once returned floor + 1"),
-    ("FP127", "gavg", "fuzzed", "sqrt(a b) to nearest from the exact product (never a tie); OutOfRange for opposite signs; Overflow only at a = b = -2^255",
-     [], [], "FuzzProofs against a bit-by-bit integer root of the exact product: testFuzz_fp127_gavg, testFuzz_fp127_roots_near_mid (next to the midpoints), test_fp127_roots_edges"),
-    ("FP127", "hypot", "fuzzed", "sqrt(a^2 + b^2) to nearest from the exact sum of squares (never a tie); Overflow past 2^255 - 1",
-     [], [], "FuzzProofs against a bit-by-bit integer root of the exact sum: testFuzz_fp127_hypot, testFuzz_fp127_roots_near_mid, test_fp127_roots_edges"),
-    ("FP127", "floor", "proven", "2^128 floor(x / 2^128)", ["check_fp127_floor"], [], ""),
-    ("FP127", "ceil", "proven", "2^128 ceil(x / 2^128); Overflow at 2^255", ["check_fp127_ceil"], [], ""),
-    ("FP127", "round", "proven", "2^128 floor(x / 2^128 + 1/2); Overflow at 2^255", ["check_fp127_round"], [], ""),
-    ("FP127", "toFixed18", "proven", "floor(x 10^18 / 2^128)", ["check_fp127_toFixed18"], [], ""),
-    ("FP127", "toFixed18Down", "proven", "floor(x 10^18 / 2^128)", ["check_fp127_toFixed18Down"], [], ""),
-    ("FP127", "toFixed18Up", "proven", "ceil(x 10^18 / 2^128)", ["check_fp127_toFixed18Up"], [], ""),
-    ("FP127", "fromFixed18", "proven", "trunc(x 2^128 / 10^18); OutOfRange outside [-2^127, 2^127)", ["check_fp127_fromFixed18"], [], ""),
-    # FP19
-    ("FP19", "add", "proven", "a + b rounded to nearest (237 bits, ties away)", ["check_fp19_add"], [], ""),
-    ("FP19", "sub", "proven", "a - b rounded to nearest", ["check_fp19_sub"], [], ""),
-    ("FP19", "mul", "proven", "a b rounded to nearest", ["check_fp19_mul"], ["L1", "L3"], ""),
-    ("FP19", "mulDown", "proven", "a b rounded toward -inf", ["check_fp19_mulDown"], ["L1", "L3"], ""),
-    ("FP19", "mulUp", "proven", "a b rounded toward +inf", ["check_fp19_mulUp"], ["L1", "L3"], ""),
-    ("FP19", "div", "proven", "a / b rounded to nearest", ["check_fp19_div"], ["K19", "L3"], ""),
-    ("FP19", "divDown", "proven", "a / b rounded toward -inf", ["check_fp19_divDown"], ["K19", "L3"], ""),
-    ("FP19", "divUp", "proven", "a / b rounded toward +inf", ["check_fp19_divUp"], ["K19", "L3"], ""),
-    ("FP19", "inv", "proven", "1 / x rounded to nearest", ["check_fp19_inv"], ["K19"], ""),
-    ("FP19", "sqrt", "fuzzed", "sqrt(x) rounded to nearest", [], [], "FuzzProofs against the exact integer root"),
-    ("FP19", "floor", "proven", "the integral number at or below x", ["check_fp19_floor"], [], ""),
-    ("FP19", "ceil", "proven", "the integral number at or above x", ["check_fp19_ceil"], [], ""),
-    ("FP19", "round", "proven", "the nearest integral number, halves away from zero", ["check_fp19_round"], [], ""),
-    ("FP19", "toUintDown", "proven", "floor(x) as uint256", ["check_fp19_toUintDown"], [], ""),
-    ("FP19", "toUintUp", "proven", "ceil(x) as uint256", ["check_fp19_toUintUp"], [], ""),
-    ("FP19", "toIntDown", "proven", "floor(x) as int256", ["check_fp19_toIntDown"], [], ""),
-    ("FP19", "toIntUp", "proven", "ceil(x) as int256", ["check_fp19_toIntUp"], [], ""),
-    ("FP19", "toFixed18", "proven", "x 10^18 to the nearest integer, halves away", ["check_fp19_toFixed18"], ["L1"], ""),
-    ("FP19", "toFixed18Down", "proven", "floor(x 10^18)", ["check_fp19_toFixed18Down"], ["L1"], ""),
-    ("FP19", "toFixed18Up", "proven", "ceil(x 10^18)", ["check_fp19_toFixed18Up"], ["L1"], ""),
-    ("FP19", "fromUint", "proven", "x rounded to nearest", ["check_fp19_fromUint"], [], ""),
-    ("FP19", "fromUintDown", "proven", "x truncated to 237 bits", ["check_fp19_fromUintDown"], [], ""),
-    ("FP19", "fromUintUp", "proven", "x rounded up to 237 bits", ["check_fp19_fromUintUp"], [], ""),
-    ("FP19", "fromFixed18", "proven", "round(round(x) / 10^18), each to nearest (one rounding below 2^237)",
-     ["check_fp19_fromFixed18"], ["K18", "L5"], ""),
+    ("BL127", "gavg", "fuzzed", "sqrt(a b) to nearest from the exact product (never a tie); OutOfRange for opposite signs; Overflow only at a = b = -2^255",
+     [], [], "FuzzProofs against a bit-by-bit integer root of the exact product: testFuzz_bl127_gavg, testFuzz_bl127_roots_near_mid (next to the midpoints), test_bl127_roots_edges"),
+    ("BL127", "hypot", "fuzzed", "sqrt(a^2 + b^2) to nearest from the exact sum of squares (never a tie); Overflow past 2^255 - 1",
+     [], [], "FuzzProofs against a bit-by-bit integer root of the exact sum: testFuzz_bl127_hypot, testFuzz_bl127_roots_near_mid, test_bl127_roots_edges"),
+    ("BL127", "floor", "proven", "2^128 floor(x / 2^128)", ["check_bl127_floor"], [], ""),
+    ("BL127", "ceil", "proven", "2^128 ceil(x / 2^128); Overflow at 2^255", ["check_bl127_ceil"], [], ""),
+    ("BL127", "round", "proven", "2^128 floor(x / 2^128 + 1/2); Overflow at 2^255", ["check_bl127_round"], [], ""),
+    ("BL127", "toFixed18", "proven", "floor(x 10^18 / 2^128)", ["check_bl127_toFixed18"], [], ""),
+    ("BL127", "toFixed18Down", "proven", "floor(x 10^18 / 2^128)", ["check_bl127_toFixed18Down"], [], ""),
+    ("BL127", "toFixed18Up", "proven", "ceil(x 10^18 / 2^128)", ["check_bl127_toFixed18Up"], [], ""),
+    ("BL127", "fromFixed18", "proven", "trunc(x 2^128 / 10^18); OutOfRange outside [-2^127, 2^127)", ["check_bl127_fromFixed18"], [], ""),
+    # BL19
+    ("BL19", "add", "proven", "a + b rounded to nearest (237 bits, ties away)", ["check_bl19_add"], [], ""),
+    ("BL19", "sub", "proven", "a - b rounded to nearest", ["check_bl19_sub"], [], ""),
+    ("BL19", "mul", "proven", "a b rounded to nearest", ["check_bl19_mul"], ["L1", "L3"], ""),
+    ("BL19", "mulDown", "proven", "a b rounded toward -inf", ["check_bl19_mulDown"], ["L1", "L3"], ""),
+    ("BL19", "mulUp", "proven", "a b rounded toward +inf", ["check_bl19_mulUp"], ["L1", "L3"], ""),
+    ("BL19", "div", "proven", "a / b rounded to nearest", ["check_bl19_div"], ["K19", "L3"], ""),
+    ("BL19", "divDown", "proven", "a / b rounded toward -inf", ["check_bl19_divDown"], ["K19", "L3"], ""),
+    ("BL19", "divUp", "proven", "a / b rounded toward +inf", ["check_bl19_divUp"], ["K19", "L3"], ""),
+    ("BL19", "inv", "proven", "1 / x rounded to nearest", ["check_bl19_inv"], ["K19"], ""),
+    ("BL19", "sqrt", "fuzzed", "sqrt(x) rounded to nearest", [], [], "FuzzProofs against the exact integer root"),
+    ("BL19", "floor", "proven", "the integral number at or below x", ["check_bl19_floor"], [], ""),
+    ("BL19", "ceil", "proven", "the integral number at or above x", ["check_bl19_ceil"], [], ""),
+    ("BL19", "round", "proven", "the nearest integral number, halves away from zero", ["check_bl19_round"], [], ""),
+    ("BL19", "toUintDown", "proven", "floor(x) as uint256", ["check_bl19_toUintDown"], [], ""),
+    ("BL19", "toUintUp", "proven", "ceil(x) as uint256", ["check_bl19_toUintUp"], [], ""),
+    ("BL19", "toIntDown", "proven", "floor(x) as int256", ["check_bl19_toIntDown"], [], ""),
+    ("BL19", "toIntUp", "proven", "ceil(x) as int256", ["check_bl19_toIntUp"], [], ""),
+    ("BL19", "toFixed18", "proven", "x 10^18 to the nearest integer, halves away", ["check_bl19_toFixed18"], ["L1"], ""),
+    ("BL19", "toFixed18Down", "proven", "floor(x 10^18)", ["check_bl19_toFixed18Down"], ["L1"], ""),
+    ("BL19", "toFixed18Up", "proven", "ceil(x 10^18)", ["check_bl19_toFixed18Up"], ["L1"], ""),
+    ("BL19", "fromUint", "proven", "x rounded to nearest", ["check_bl19_fromUint"], [], ""),
+    ("BL19", "fromUintDown", "proven", "x truncated to 237 bits", ["check_bl19_fromUintDown"], [], ""),
+    ("BL19", "fromUintUp", "proven", "x rounded up to 237 bits", ["check_bl19_fromUintUp"], [], ""),
+    ("BL19", "fromFixed18", "proven", "round(round(x) / 10^18), each to nearest (one rounding below 2^237)",
+     ["check_bl19_fromFixed18"], ["K18", "L5"], ""),
 ]
 
 # The fuzz tests (forge, FuzzProofs) and what they cover.
@@ -95,7 +95,7 @@ FUZZ = "FuzzProofs"
 
 
 def contract_of(check):
-    return "ProofsFP127" if check.startswith("check_fp127") else "ProofsFP19"
+    return "ProofsBL127" if check.startswith("check_bl127") else "ProofsBL19"
 
 
 def install_solver(py):
@@ -316,7 +316,7 @@ def main():
                 ),
             })
         record = {
-            "about": "Formal proofs of FP127's and FP19's core arithmetic and directed rounding: docs/proofs.md",
+            "about": "Formal proofs of BL127's and BL19's core arithmetic and directed rounding: docs/proofs.md",
             "tools": record_tools,
             "summary": {
                 "ops": len(ops),

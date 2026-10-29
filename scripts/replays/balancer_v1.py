@@ -5,7 +5,7 @@
                                                         #   recompile + bytecode compare -> scripts/replays/balancer_v1.json
     uv run scripts/replays/balancer_v1.py score         # (offline) Python model of the deployed BNum/BMath replays every
                                                         #   logged pool call bit-exactly, mpmath at 200 digits, forge test
-                                                        #   (FP127, FP19) -> docs/benchmarks/replay-balancer-v1.md
+                                                        #   (BL127, BL19) -> docs/benchmarks/replay-balancer-v1.md
     uv run scripts/replays/balancer_v1.py score --no-forge   # reuse out/replays/balancer_v1.log
 
 The five attack transactions are the ones SlowMist listed
@@ -19,7 +19,7 @@ earlier in the attack block). Nothing here signs or sends a transaction.
 `score` re-runs every call through a transcription of the verified
 BNum/BMath/BPool arithmetic and asserts each logged amount; the same is done
 in Solidity by test/replays/BalancerV1.t.sol, which also computes
-calcSingleInGivenPoolOut / calcSingleOutGivenPoolIn with FP127 and FP19.
+calcSingleInGivenPoolOut / calcSingleOutGivenPoolIn with BL127 and BL19.
 """
 from __future__ import annotations
 
@@ -575,7 +575,7 @@ def _mp():
     return mp
 
 
-def fp19_value(word: int):
+def bl19_value(word: int):
     from mpmath import mpf
     w = word % (1 << 256)
     s, e, f = w >> 255, (w >> 236) & ((1 << 19) - 1), w & ((1 << 236) - 1)
@@ -744,16 +744,16 @@ def score(run_forge_test: bool = True) -> None:
                 assert f[a] == r[b], (pi, r["op"], a)
             assert f["ratio"] == r["steps"]["tokenInRatio" if r["kind"] == JOIN_POOL_OUT else "tokenOutRatio"]
             ex = exact_amount(r)
-            v127 = mpf(f["fp127"]) / mpf(2) ** 128
-            v19 = fp19_value(f["fp19"])
+            v127 = mpf(f["bl127"]) / mpf(2) ** 128
+            v19 = bl19_value(f["bl19"])
             toward = int(ceil(ex)) if r["kind"] == JOIN_POOL_OUT else int(floor(ex))
-            assert f["fp127u"] == toward and f["fp19u"] == toward, (pi, r["op"], "token units")
+            assert f["bl127u"] == toward and f["bl19u"] == toward, (pi, r["op"], "token units")
             d = decompose(r)
             out_rows.append({"op": r["op"], "log": pool["ops"][r["op"]]["log"], "kind": r["kind"],
                              "token": sym(toks[r["token"]]), "balance": r["balance"], "limit": r["limit"],
                              "poolAmount": r["poolAmount"], "supply": r["supply"], "share": mpf(r["poolAmount"]) / r["supply"],
                              "deployed": r["deployed"], "exact": ex, "toward": toward, "bnum1": f["bnum1"],
-                             "fp127u": f["fp127u"], "fp19u": f["fp19u"], "nearest": int(floor(ex + mpf(1) / 2)),
+                             "bl127u": f["bl127u"], "bl19u": f["bl19u"], "nearest": int(floor(ex + mpf(1) / 2)),
                              "d127": digits(v127, ex), "d19": digits(v19, ex), "decomp": d, "steps": r["steps"]})
         fin = pool["_final"]
         joins = [o for o in out_rows if o["kind"] == JOIN_POOL_OUT]
@@ -823,7 +823,7 @@ def write_md(data: dict, P: list[dict], series: list[dict]) -> None:
       f"{len(series)} swap calculations), it stopped at a term below 1e-10, and its residual against the exact "
       f"power was at most {fmt(max(_series_rel(c) for c in series), 2)} relative.")
     c0 = P[0]["cycle"]
-    a("- **Direction closes the loop; precision does not.** FP127, FP19 and 200-digit mpmath, each rounded toward "
+    a("- **Direction closes the loop; precision does not.** BL127, BL19 and 200-digit mpmath, each rounded toward "
       "the pool (ceil in, floor out), give 2 for every join and 0 for every dust exit, so every one of them reverts "
       "on the attacker's own limits. BNum's own 18-decimal ratio, kept on a 10^-18 grid and rounded up once at the "
       "end, gives the same answers. But the same exact formula rounded once *to nearest* only blocks these calls "
@@ -921,13 +921,13 @@ def write_md(data: dict, P: list[dict], series: list[dict]) -> None:
     a("Each column computes the same `calcSingleInGivenPoolOut` / `calcSingleOutGivenPoolIn` from the same on-chain "
       "state (the replay's state at that call). Every column except *deployed* converts to token units once, toward "
       "the pool: ceil for an amount in, floor for an amount out. *BNum, one rounding* keeps BNum's own 18-decimal "
-      "`tokenInRatio`, holds the amount on a 10^-18 grid, and rounds once at the end. FP127 and FP19 evaluate "
+      "`tokenInRatio`, holds the amount on a 10^-18 grid, and rounds once at the end. BL127 and BL19 evaluate "
       "`b·expm1((tW/w)·log1p(±pA/pS))` with the fee factor. *Digits* is −log10 of the relative error against "
       "200-digit mpmath before rounding. *Pays?* asks whether the attacker's own limit (maxAmountIn = 1, "
       "minAmountOut = 1) would still be met. The last column rounds the exact value to the nearest unit once, "
       "for the section after this one.")
     a("")
-    a("| # | call | n | balance (units) | deployed | exact (range) | BNum, one rounding | FP127 | FP19 | exact, rounded | FP127 digits (min) | FP19 digits (min) | pays? | exact, nearest once |")
+    a("| # | call | n | balance (units) | deployed | exact (range) | BNum, one rounding | BL127 | BL19 | exact, rounded | BL127 digits (min) | BL19 digits (min) | pays? | exact, nearest once |")
     a("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for p in P:
         for label, grp in (("join, max in 1", p["joins"]), ("exit, min out 1", p["dust"])):
@@ -938,7 +938,7 @@ def write_md(data: dict, P: list[dict], series: list[dict]) -> None:
             pays = sum(1 for o in grp if (o["toward"] <= o["limit"] if o["kind"] == JOIN_POOL_OUT else o["toward"] >= o["limit"]))
             a(f"| {p['i'] + 1} | {label} | {len(grp)} | {', '.join(map(str, bals))} | {one('deployed')} | "
               f"{fmt(min(o['exact'] for o in grp), 8)} – {fmt(max(o['exact'] for o in grp), 8)} | {one('bnum1')} | "
-              f"{one('fp127u')} | {one('fp19u')} | {one('toward')} | {min(o['d127'] for o in grp):.2f} | "
+              f"{one('bl127u')} | {one('bl19u')} | {one('toward')} | {min(o['d127'] for o in grp):.2f} | "
               f"{min(o['d19'] for o in grp):.2f} | {'no' if pays == 0 else f'{pays} of {len(grp)}'} | {one('nearest')} |")
     big = [o for p in P for o in p["exits"] if o["limit"] == 0]
     if big:
@@ -962,7 +962,7 @@ def write_md(data: dict, P: list[dict], series: list[dict]) -> None:
     a("")
     a("| # | rule | BPT for 1 unit in (% of supply) | BPT for 1 unit out (% of supply) | net per cycle (% of supply) |")
     a("|---|---|---|---|---|")
-    names = {"deployed": "deployed (the attacker's own amounts)", "nearest": "exact formula, nearest once (FP127 / FP19 / mpmath)",
+    names = {"deployed": "deployed (the attacker's own amounts)", "nearest": "exact formula, nearest once (BL127 / BL19 / mpmath)",
              "toward": "exact formula, toward the pool (ceil in, floor out)"}
     for p in P:
         for k in ("deployed", "nearest", "toward"):
@@ -974,7 +974,7 @@ def write_md(data: dict, P: list[dict], series: list[dict]) -> None:
       "38 or 71 digits do not help when the last step can round half a unit in the caller's favour. Rounded toward "
       "the pool, the loop runs backwards: each cycle leaves the swap fee in the pool. "
       "`test_precision_without_direction_still_pays` and `test_direction_closes_the_loop` assert pool 1's row in "
-      "FP127 and FP19 (`score` checks the test's literals against these solutions).")
+      "BL127 and BL19 (`score` checks the test's literals against these solutions).")
     a("")
 
     # ---- decomposition
@@ -1032,7 +1032,7 @@ def write_md(data: dict, P: list[dict], series: list[dict]) -> None:
       "the stopping rule does show in swap amounts. It is not what moved this attack.")
     a(f"- **The same series, run in exact arithmetic to each ruler's tolerance**, needs {min(t1e10)} – {max(t1e10)} terms "
       f"to reach 10^-10 (BNum's own rule without BNum's rounding), {min(t127)} – {max(t127)} terms to reach 2^-128 "
-      f"(FP127's ulp at 1), and {min(t19)} – {max(t19)} to reach 2^-237 (FP19's relative ulp). The series does "
+      f"(BL127's ulp at 1), and {min(t19)} – {max(t19)} to reach 2^-237 (BL19's relative ulp). The series does "
       "converge, and a finer ruler only means more terms. Had the series run at the decisive join, the largest "
       f"residual measured here ({fmt(max(res), 2)}) times a 3-unit balance would be "
       f"{fmt(max(res) * 3, 2)} units, about nine orders of magnitude below the half-unit grid step that decided "

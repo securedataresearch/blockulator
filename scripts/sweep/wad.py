@@ -663,7 +663,7 @@ def run_wide(want=None):
     if not names:
         return
     wd = ROOT / "test" / "sweep" / "wadwide"
-    subprocess.run(["uv", "run", "scripts/fp127/gen.py", "--lib", "wad", "--wide-lib",
+    subprocess.run(["uv", "run", "scripts/bl127/gen.py", "--lib", "wad", "--wide-lib",
                     str(wd / "BlockulatorWadWide.sol")], cwd=ROOT, check=True)
     disp = "\n".join(f'        if (op == "{f}") {{ g0 = gasleft(); r = B.{f}(a{", b" if FUNCS[f][1] == 2 else ""}); g = gasleft(); }}'
                      for f in names)

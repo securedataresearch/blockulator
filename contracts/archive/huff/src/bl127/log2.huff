@@ -1,0 +1,195 @@
+/// @title BL127 Binary Logarithm (base 2)
+/// @notice log2(x) for 127.128 fixed-point arithmetic
+/// @dev Requires: primitives.huff and arithmetic.huff must be included before this file
+///
+/// Algorithm:
+///   1. Find MSB, extract integer part: floor(log2(x)) = msb - 128
+///   2. Normalize x into [1, 2) by shifting
+///   3. Range-reduce m through 7 stages using precomputed 2^(1/2^k) thresholds:
+///      For each k=1..7: if m >= 2^(1/2^k), multiply m by 2^(-1/2^k) and add 2^(-k) to result
+///      After 7 stages, m is in [1, 2^(1/128)) so f = m-1 is in [0, ~0.0054)
+///   4. Evaluate h(f) = ln(1+f)/f via degree-17 Horner polynomial
+///   5. Compute log2(m_reduced) = f * (1/ln2) * h(f)
+///   6. Result = integer_part + range_reduction_bits + polynomial_part
+///
+/// Gas: ~3,500
+/// Precision: ~126 fractional bits
+
+// ============================================================================
+// Sub-macros for BL127_LOG2
+// ============================================================================
+
+/// @notice Normalize x into [1, 2) given msb
+/// @dev takes(2) returns(1)
+/// Stack input:  [msb, x]
+/// Stack output: [m] where m is in [ONE_BL127, TWO_BL127)
+#define macro BL127_LOG2_NORMALIZE() = takes(2) returns(1) {
+    // Stack: [msb, x]
+    [BL127_SHIFT] swap1 sub    // [msb - 128, x]
+    
+    dup1 IS_NEGATIVE() normalize_shift_left jumpi
+    
+    // msb >= 128: shift right
+    shr                        // [m = x >> shift]
+    normalize_done jump
+    
+    normalize_shift_left:
+    // msb < 128: shift left
+    NEGATE()                   // [128 - msb, x]
+    shl                        // [m = x << shift]
+    
+    normalize_done:
+}
+
+/// @notice Range-reduce m from [1,2) to [1, 2^(1/128)) via 7 squaring stages
+/// @dev takes(1) returns(2)
+/// Stack input:  [m] where m is in [ONE_BL127, TWO_BL127)
+/// Stack output: [m_reduced, frac_accum] where m_reduced is in [ONE_BL127, ~1.0054) and frac_accum accumulates the 7 fractional bits
+#define macro BL127_LOG2_RANGE_REDUCE() = takes(1) returns(2) {
+    // Stack: [m], need [m, frac_accum]
+    0x00                       // [frac_accum=0, m]
+    swap1                      // [m, frac_accum]
+
+    // Stage 1: threshold = sqrt(2), frac = 1/2
+    dup1 [SQRT2_BL127] gt log2_rs1_skip jumpi
+    [LOG2_INV_RT1] BL127_MUL()
+    swap1 0x80000000000000000000000000000000 add swap1
+    log2_rs1_skip:
+
+    // Stage 2: threshold = 2^(1/4), frac = 1/4
+    dup1 [LOG2_RT2] gt log2_rs2_skip jumpi
+    [LOG2_INV_RT2] BL127_MUL()
+    swap1 0x40000000000000000000000000000000 add swap1
+    log2_rs2_skip:
+
+    // Stage 3: threshold = 2^(1/8), frac = 1/8
+    dup1 [LOG2_RT3] gt log2_rs3_skip jumpi
+    [LOG2_INV_RT3] BL127_MUL()
+    swap1 0x20000000000000000000000000000000 add swap1
+    log2_rs3_skip:
+
+    // Stage 4: threshold = 2^(1/16), frac = 1/16
+    dup1 [LOG2_RT4] gt log2_rs4_skip jumpi
+    [LOG2_INV_RT4] BL127_MUL()
+    swap1 0x10000000000000000000000000000000 add swap1
+    log2_rs4_skip:
+
+    // Stage 5: threshold = 2^(1/32), frac = 1/32
+    dup1 [LOG2_RT5] gt log2_rs5_skip jumpi
+    [LOG2_INV_RT5] BL127_MUL()
+    swap1 0x08000000000000000000000000000000 add swap1
+    log2_rs5_skip:
+
+    // Stage 6: threshold = 2^(1/64), frac = 1/64
+    dup1 [LOG2_RT6] gt log2_rs6_skip jumpi
+    [LOG2_INV_RT6] BL127_MUL()
+    swap1 0x04000000000000000000000000000000 add swap1
+    log2_rs6_skip:
+
+    // Stage 7: threshold = 2^(1/128), frac = 1/128
+    dup1 [LOG2_RT7] gt log2_rs7_skip jumpi
+    [LOG2_INV_RT7] BL127_MUL()
+    swap1 0x02000000000000000000000000000000 add swap1
+    log2_rs7_skip:
+
+    // Stack: [m_reduced, frac_accum]
+}
+
+/// @notice Evaluate minimax polynomial for log2(1+f) directly
+/// @dev takes(1) returns(1)
+/// Stack input:  [f] where f is in [0, ~0.0054)
+/// Stack output: [log2(1+f)] computed via degree-13 minimax polynomial
+/// @dev Converted to function to save ~194 bytes (2 call sites would be 1 internal)
+#define fn BL127_LOG2_POLY() = takes(1) returns(1) {
+    // Stack: [f]
+    // Evaluate P(f) = log2(1+f) directly via Horner
+    // P(f) = P13*f^13 + ... + P1*f + P0
+    // Horner: (((...((P13*f + P12)*f + P11)*f + ...)*f + P1)*f + P0
+    
+    [LOG2_P13]                 // [P13, f]
+    
+    // 12 Horner steps: result = result * f + P_n
+    dup2 BL127_MUL() [LOG2_P12] add
+    dup2 BL127_MUL() [LOG2_P11] add
+    dup2 BL127_MUL() [LOG2_P10] add
+    dup2 BL127_MUL() [LOG2_P9] add
+    dup2 BL127_MUL() [LOG2_P8] add
+    dup2 BL127_MUL() [LOG2_P7] add
+    dup2 BL127_MUL() [LOG2_P6] add
+    dup2 BL127_MUL() [LOG2_P5] add
+    dup2 BL127_MUL() [LOG2_P4] add
+    dup2 BL127_MUL() [LOG2_P3] add
+    dup2 BL127_MUL() [LOG2_P2] add
+    dup2 BL127_MUL() [LOG2_P1] add
+    
+    // Final step: result = result * f + P0 (consumes f via swap1)
+    swap1 BL127_MUL() [LOG2_P0] add
+    // Stack: [log2(1+f)]
+}
+
+// ============================================================================
+// Full BL127_LOG2
+// ============================================================================
+
+/// @notice Compute log2(x) using CLZ + range reduction + polynomial
+/// @dev takes(1) returns(1)
+/// Stack input:  [x] (127.128 format, must be > 0)
+/// Stack output: [log2(x)] (127.128 format, signed)
+#define fn BL127_LOG2() = takes(1) returns(1) {
+    dup1 iszero log2_zero jumpi
+    dup1 IS_NEGATIVE() log2_zero jumpi
+    dup1 [ONE_BL127] eq log2_one jumpi
+    
+    // Fast path: check if x is a power of 2 (x & (x-1) == 0)
+    // For powers of 2, log2 is exact: just (msb - 128) << 128
+    dup1 dup1 0x01 swap1 sub   // [x-1, x, x]
+    and                        // [x & (x-1), x]
+    iszero log2_pow2 jumpi     // Jump if power of 2
+    
+    // Find MSB
+    dup1                       // [x, x]
+    MSB()                      // [msb, x]
+    
+    // Compute integer part: (msb - 128) << 128, store to memory
+    dup1                       // [msb, msb, x]
+    [BL127_SHIFT] swap1 sub    // [msb - 128, msb, x]
+    [BL127_SHIFT] shl          // [int_part, msb, x]
+    0x00 mstore                // [msb, x]
+    
+    // Normalize x into [1,2)
+    BL127_LOG2_NORMALIZE()     // [m]
+    
+    // Range-reduce m to [1, 2^(1/128))
+    BL127_LOG2_RANGE_REDUCE()  // [m_reduced, frac_accum]
+    
+    // Compute f = m_reduced - 1
+    [ONE_BL127] swap1 sub      // [f, frac_accum]
+    
+    // Evaluate polynomial
+    BL127_LOG2_POLY()          // [poly_result, frac_accum]
+    
+    // Total fractional part = frac_accum + poly_result
+    add                        // [total_frac]
+    
+    // Add integer part from memory
+    0x00 mload                 // [int_part, total_frac]
+    add                        // [result]
+    
+    log2_end jump
+    
+    log2_one:
+    pop 0x00
+    log2_end jump
+    
+    log2_zero:
+    pop 0x00
+    log2_end jump
+    
+    log2_pow2:
+    // x is a power of 2: log2(x) = msb - 128 (exact)
+    MSB()                      // [msb]
+    [BL127_SHIFT] swap1 sub    // [msb - 128]
+    [BL127_SHIFT] shl          // [(msb - 128) << 128] = result in BL127
+    
+    log2_end:
+}

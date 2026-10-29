@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import {FP127Lib} from "../../contracts/src/fp127/FP127Lib.sol";
-import {FP19Lib} from "../../contracts/src/fp19/FP19Lib.sol";
+import {BL127Lib} from "../../contracts/src/bl127/BL127Lib.sol";
+import {BL19Lib} from "../../contracts/src/bl19/BL19Lib.sol";
 
 /// @notice The deployed arithmetic of the Thetanuts Index Vault V1 USDC PUT
 ///         (0xC2C3AE0a7b405058558C9b4a63b373486CB86Ac7). Its source is not
@@ -25,7 +25,7 @@ library ThetanutsDeployed {
 ///         block 25323329, index 0. Replays the claim and the 37 mints from the
 ///         integers pinned in scripts/replays/thetanuts.json (no network), asserts
 ///         each equals the chain, then reruns the mints with the charge rounded
-///         up, in FP127 and FP19, against exact rationals and under round-to-
+///         up, in BL127 and BL19, against exact rationals and under round-to-
 ///         nearest re-tuned. Prints
 ///             TNT|<form>|k=v;k=v;...
 ///         for scripts/replays/thetanuts.py, which scores them against exact rationals.
@@ -176,27 +176,27 @@ contract ThetanutsReplay is Test {
         paid = stored - 1;
     }
 
-    /// The same path with the charge computed in FP127, then ceiled to a raw unit.
-    function _fp127CeilPath() internal pure returns (uint256 paid) {
+    /// The same path with the charge computed in BL127, then ceiled to a raw unit.
+    function _bl127CeilPath() internal pure returns (uint256 paid) {
         uint256 stored = 1;
         uint256 supply = SUPPLY_BEFORE - CLAIM;
         for (uint256 k; k < MINTS; k++) {
             uint256 a = _mintAmount(k);
-            int256 c = FP127Lib.div(FP127Lib.mul(_q(stored), _q(a)), _q(supply));
-            stored += uint256(FP127Lib.ceil(c) >> 128);
+            int256 c = BL127Lib.div(BL127Lib.mul(_q(stored), _q(a)), _q(supply));
+            stored += uint256(BL127Lib.ceil(c) >> 128);
             supply += a;
         }
         paid = stored - 1;
     }
 
-    /// The same path with the charge computed in FP19, then ceiled to a raw unit.
-    function _fp19CeilPath() internal pure returns (uint256 paid) {
+    /// The same path with the charge computed in BL19, then ceiled to a raw unit.
+    function _bl19CeilPath() internal pure returns (uint256 paid) {
         uint256 stored = 1;
         uint256 supply = SUPPLY_BEFORE - CLAIM;
         for (uint256 k; k < MINTS; k++) {
             uint256 a = _mintAmount(k);
-            int256 c = FP19Lib.div(FP19Lib.mul(FP19Lib.fromUint(stored), FP19Lib.fromUint(a)), FP19Lib.fromUint(supply));
-            stored += uint256(FP127Lib.ceil(FP19Lib.toFP127(c)) >> 128);
+            int256 c = BL19Lib.div(BL19Lib.mul(BL19Lib.fromUint(stored), BL19Lib.fromUint(a)), BL19Lib.fromUint(supply));
+            stored += uint256(BL127Lib.ceil(BL19Lib.toBL127(c)) >> 128);
             supply += a;
         }
         paid = stored - 1;
@@ -237,8 +237,8 @@ contract ThetanutsReplay is Test {
 
     function test_fp_ceil_paths_match_integer_round_up() public pure {
         (uint256 paid,) = _ceilPath(false);
-        assertEq(_fp127CeilPath(), paid);
-        assertEq(_fp19CeilPath(), paid);
+        assertEq(_bl127CeilPath(), paid);
+        assertEq(_bl19CeilPath(), paid);
     }
 
     function test_report() public pure {
@@ -252,37 +252,37 @@ contract ThetanutsReplay is Test {
             // as deployed (stored is 1 for every component on the chain path)
             _line("deployed", string.concat("k=", vm.toString(k), ";amount=", vm.toString(a), ";supply=", vm.toString(supply),
                 ";charge=", vm.toString(ThetanutsDeployed.share(1, a, supply))));
-            // FP127: the charge to 2^-128, then the three ways to make it a raw unit
-            int256 c = FP127Lib.div(FP127Lib.mul(_q(1), _q(a)), _q(supply));
-            int256 fl = FP127Lib.floor(c) >> 128;
-            int256 ce = FP127Lib.ceil(c) >> 128;
+            // BL127: the charge to 2^-128, then the three ways to make it a raw unit
+            int256 c = BL127Lib.div(BL127Lib.mul(_q(1), _q(a)), _q(supply));
+            int256 fl = BL127Lib.floor(c) >> 128;
+            int256 ce = BL127Lib.ceil(c) >> 128;
             assertEq(fl, 0);
             assertEq(ce, 1);
-            _line("fp127", string.concat("k=", vm.toString(k), ";raw=", vm.toString(c), ";floor=", vm.toString(fl), ";ceil=",
-                vm.toString(ce), ";round=", vm.toString(FP127Lib.round(c) >> 128)));
-            // FP19: same
-            int256 d = FP19Lib.div(FP19Lib.mul(FP19Lib.fromUint(1), FP19Lib.fromUint(a)), FP19Lib.fromUint(supply));
-            int256 dfl = FP127Lib.floor(FP19Lib.toFP127(d)) >> 128;
-            int256 dce = FP127Lib.ceil(FP19Lib.toFP127(d)) >> 128;
+            _line("bl127", string.concat("k=", vm.toString(k), ";raw=", vm.toString(c), ";floor=", vm.toString(fl), ";ceil=",
+                vm.toString(ce), ";round=", vm.toString(BL127Lib.round(c) >> 128)));
+            // BL19: same
+            int256 d = BL19Lib.div(BL19Lib.mul(BL19Lib.fromUint(1), BL19Lib.fromUint(a)), BL19Lib.fromUint(supply));
+            int256 dfl = BL127Lib.floor(BL19Lib.toBL127(d)) >> 128;
+            int256 dce = BL127Lib.ceil(BL19Lib.toBL127(d)) >> 128;
             assertEq(dfl, 0);
             assertEq(dce, 1);
-            _line("fp19", string.concat("k=", vm.toString(k), ";raw=", vm.toString(d), ";floor=", vm.toString(dfl), ";ceil=", vm.toString(dce)));
+            _line("bl19", string.concat("k=", vm.toString(k), ";raw=", vm.toString(d), ";floor=", vm.toString(dfl), ";ceil=", vm.toString(dce)));
             supply += a;
         }
         (uint256 paid, uint256 minted) = _ceilPath(true);
         _line("ceilSummary", string.concat("paidPerComponent=", vm.toString(paid), ";minPerComponent=", vm.toString((minted + 2) / 3),
             ";minted=", vm.toString(minted)));
-        _line("fp127ceil", string.concat("paidPerComponent=", vm.toString(_fp127CeilPath())));
-        _line("fp19ceil", string.concat("paidPerComponent=", vm.toString(_fp19CeilPath())));
+        _line("bl127ceil", string.concat("paidPerComponent=", vm.toString(_bl127CeilPath())));
+        _line("bl19ceil", string.concat("paidPerComponent=", vm.toString(_bl19CeilPath())));
         _line("nearestPath", string.concat("paidPerComponent=", vm.toString(_nearestPath())));
         (uint256 count, uint256 npaid) = _nearestRetuned();
         _line("nearestRetuned", string.concat("mints=", vm.toString(count), ";paidPerComponent=", vm.toString(npaid), ";minted=",
             vm.toString(FLASH + PREMIUM)));
     }
 
-    /// FP127 holds integers below 2^127 exactly; everything here is below 2^72.
+    /// BL127 holds integers below 2^127 exactly; everything here is below 2^72.
     function _q(uint256 x) internal pure returns (int256) {
-        require(x < 1 << 127, "FP127 range");
+        require(x < 1 << 127, "BL127 range");
         return int256(x) << 128;
     }
 

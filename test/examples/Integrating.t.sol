@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import {FP127Lib} from "fp127/FP127Lib.sol";
-import {FP19Lib} from "fp19/FP19Lib.sol";
+import {BL127Lib} from "bl127/BL127Lib.sol";
+import {BL19Lib} from "bl19/BL19Lib.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {IdleBalance127, IdleBalance19, Solvency127, Solvency19, JoinExit19, SwapCharge19, DivideLast, Index127, LogIndex127} from "./Integrating.sol";
 
@@ -11,7 +11,7 @@ import {IdleBalance127, IdleBalance19, Solvency127, Solvency19, JoinExit19, Swap
 ///         value here is a number in docs/benchmarks/replay-*.md, from the data in
 ///         scripts/replays/*.json; the replay tests in test/replays/ assert them first.
 ///         The mulDiv127 and logIndex tests have no replay. mulDiv127 uses exact powers of
-///         two; the logIndex tests measure both forms of an index against e^L in FP19, and
+///         two; the logIndex tests measure both forms of an index against e^L in BL19, and
 ///         the pages quote what they log (`forge test --match-test logIndex -vv`).
 contract IntegratingTest is Test {
     // ---- Rule 1: Bunni (docs/benchmarks/replay-bunni.md, scripts/replays/bunni.json) -------------
@@ -33,7 +33,7 @@ contract IntegratingTest is Test {
         IdleBalance19 b = new IdleBalance19(idle0);
         uint256 deployed = idle0; // BunniHubLogic.sol:478, whole wei
         uint256 fix = idle0; // the fix: mulDivUp on the subtrahend
-        uint256 storedUp = idle0; // the FP127 update, rounded up to wei before each store
+        uint256 storedUp = idle0; // the BL127 update, rounded up to wei before each store
         uint256 storedDown = idle0; // the same, rounded down
         for (uint256 k; k < 44; k++) {
             uint256 s = shares[k];
@@ -42,10 +42,10 @@ contract IntegratingTest is Test {
             b.withdraw(s, t);
             deployed -= deployed * s / t;
             fix -= (fix * s + t - 1) / t;
-            int256 u = FP127Lib.sub(int256(storedUp) << 128, FP127Lib.div(FP127Lib.mul(int256(storedUp) << 128, int256(s) << 128), int256(t) << 128));
-            storedUp = uint256(FP127Lib.ceil(u) >> 128);
-            int256 d = FP127Lib.sub(int256(storedDown) << 128, FP127Lib.div(FP127Lib.mul(int256(storedDown) << 128, int256(s) << 128), int256(t) << 128));
-            storedDown = uint256(FP127Lib.floor(d) >> 128);
+            int256 u = BL127Lib.sub(int256(storedUp) << 128, BL127Lib.div(BL127Lib.mul(int256(storedUp) << 128, int256(s) << 128), int256(t) << 128));
+            storedUp = uint256(BL127Lib.ceil(u) >> 128);
+            int256 d = BL127Lib.sub(int256(storedDown) << 128, BL127Lib.div(BL127Lib.mul(int256(storedDown) << 128, int256(s) << 128), int256(t) << 128));
+            storedDown = uint256(BL127Lib.floor(d) >> 128);
         }
         // the deployed code ends with 4 wei active (replay-bunni.md), which fixes the final balance
         uint256 balance = deployed + 4;
@@ -120,21 +120,21 @@ contract IntegratingTest is Test {
     function test_balancerV2_upscaleKeptInTheFormat() public pure {
         // 17 osETH-wei x 1.058132408689971699: _upscale (mulDown) reads 17; the true 17.988...
         int256 up = SwapCharge19.upscale(17, 1058132408689971699);
-        assertEq(FP19Lib.toUintDown(up), 17);
-        assertEq(FP19Lib.toUintUp(up), 18);
-        assertEq(FP19Lib.toFixed18(up), 17988250947729518883);
+        assertEq(BL19Lib.toUintDown(up), 17);
+        assertEq(BL19Lib.toUintUp(up), 18);
+        assertEq(BL19Lib.toFixed18(up), 17988250947729518883);
         // 4 wstETH-wei x 1.218116415279760760 = 4.87: read as 4
-        assertEq(FP19Lib.toUintDown(SwapCharge19.upscale(4, 1218116415279760760)), 4);
+        assertEq(BL19Lib.toUintDown(SwapCharge19.upscale(4, 1218116415279760760)), 4);
     }
 
     function test_balancerV2_chargeRoundsUp() public pure {
         // 0.01% fee: an amount in of exactly 999,900 wei grosses up to exactly 1,000,000
-        assertEq(SwapCharge19.chargeIn(FP19Lib.fromUint(999_900), 1e14), 1_000_000);
+        assertEq(SwapCharge19.chargeIn(BL19Lib.fromUint(999_900), 1e14), 1_000_000);
         // one part in 2^200 above it is charged one more wei
-        int256 above = FP19Lib.mulUp(FP19Lib.fromUint(999_900), FP19Lib.add(FP19Lib.ONE, FP19Lib.div(FP19Lib.ONE, FP19Lib.fromUint(1 << 200))));
+        int256 above = BL19Lib.mulUp(BL19Lib.fromUint(999_900), BL19Lib.add(BL19Lib.ONE, BL19Lib.div(BL19Lib.ONE, BL19Lib.fromUint(1 << 200))));
         assertEq(SwapCharge19.chargeIn(above, 1e14), 1_000_001);
         // dust is charged one wei, never zero
-        assertEq(SwapCharge19.chargeIn(FP19Lib.div(FP19Lib.ONE, FP19Lib.fromUint(1e30)), 1e14), 1);
+        assertEq(SwapCharge19.chargeIn(BL19Lib.div(BL19Lib.ONE, BL19Lib.fromUint(1e30)), 1e14), 1);
     }
 
     // ---- Divide last: Resupply (docs/benchmarks/replay-resupply.md, "divide by the price at the end") --
@@ -161,8 +161,8 @@ contract IntegratingTest is Test {
         int256 b = 1 << 88;
         int256 c = 1 << 68;
         // the product 2^-140 is below 2^-128, so mul floors it to 0 before the division
-        assertEq(FP127Lib.mul(a, b), 0);
-        assertEq(FP127Lib.div(FP127Lib.mul(a, b), c), 0);
+        assertEq(BL127Lib.mul(a, b), 0);
+        assertEq(BL127Lib.div(BL127Lib.mul(a, b), c), 0);
         // one 512-bit product, one division: exact here
         assertEq(DivideLast.mulDiv127(a, b, c), 1 << 48);
     }
@@ -170,7 +170,7 @@ contract IntegratingTest is Test {
     // ---- Accrue in the log: N accruals of a continuous rate, both ways --------------------------
     //
     // Rates are uniform below 2^-28 per second (up to about 12% a year), dt uniform in 1..86,400 s.
-    // The reference is e^L in FP19: L is exact, fromFP127 is exact, exp is correctly rounded to 237
+    // The reference is e^L in BL19: L is exact, fromBL127 is exact, exp is correctly rounded to 237
     // bits, so its own error is about 2^-109 units of 2^-128. Errors are in millionths of 2^-128.
 
     function _rate(uint256 seed, uint256 k) internal pure returns (int256) {
@@ -183,7 +183,7 @@ contract IntegratingTest is Test {
 
     /// (w - ref) in millionths of 2^-128
     function _err(int256 w, int256 ref) internal pure returns (int256) {
-        return FP19Lib.toFixed18(FP19Lib.mul(FP19Lib.sub(FP19Lib.fromFP127(w), ref), FP19Lib.fromUint(1 << 128))) / 1e12;
+        return BL19Lib.toFixed18(BL19Lib.mul(BL19Lib.sub(BL19Lib.fromBL127(w), ref), BL19Lib.fromUint(1 << 128))) / 1e12;
     }
 
     function _abs(int256 x) internal pure returns (int256) {
@@ -197,11 +197,11 @@ contract IntegratingTest is Test {
             m.accrue(_rate(seed, k), _dt(seed, k));
             l.accrue(_rate(seed, k), _dt(seed, k));
         }
-        int256 ref = FP19Lib.exp(FP19Lib.fromFP127(l.logIndex()));
+        int256 ref = BL19Lib.exp(BL19Lib.fromBL127(l.logIndex()));
         logErr = _err(l.index(), ref);
         mulErr = _err(m.index(), ref);
-        // the FP19 read, rounded to FP127, is the same word
-        assertEq(FP19Lib.toFP127(l.index19()), l.index());
+        // the BL19 read, rounded to BL127, is the same word
+        assertEq(BL19Lib.toBL127(l.index19()), l.index());
         console.log(string.concat("accrual N=", vm.toString(n), " seed=", vm.toString(seed),
             " log read err=", vm.toString(logErr), " multiplied err=", vm.toString(mulErr), " (1e-6 x 2^-128)"));
     }
@@ -228,15 +228,15 @@ contract IntegratingTest is Test {
         for (uint256 seed; seed < 2; seed++) {
             int256 L;
             int256 idx = 1 << 128;
-            int256 ref = FP19Lib.ONE;
+            int256 ref = BL19Lib.ONE;
             for (uint256 k; k < 100; k++) {
                 int256 r = _rate(seed, k);
                 uint256 n = _dt(seed, k);
-                L = FP127Lib.add(L, FP127Lib.log1p(r) * int256(n));
-                idx = FP127Lib.mul(idx, FP127Lib.compound(r, int256(n) << 128));
-                ref = FP19Lib.mul(ref, FP19Lib.compound(FP19Lib.fromFP127(r), int256(n)));
+                L = BL127Lib.add(L, BL127Lib.log1p(r) * int256(n));
+                idx = BL127Lib.mul(idx, BL127Lib.compound(r, int256(n) << 128));
+                ref = BL19Lib.mul(ref, BL19Lib.compound(BL19Lib.fromBL127(r), int256(n)));
             }
-            int256 logErr = _err(FP127Lib.exp(L), ref);
+            int256 logErr = _err(BL127Lib.exp(L), ref);
             int256 mulErr = _err(idx, ref);
             console.log(string.concat("per-period N=100 seed=", vm.toString(seed), " log1p x n err=", vm.toString(logErr),
                 " compound err=", vm.toString(mulErr), " (1e-6 x 2^-128)"));
@@ -245,20 +245,20 @@ contract IntegratingTest is Test {
         }
     }
 
-    /// In FP19 the product drifts too, at FP19's scale: each exp and mul rounds to nearest,
+    /// In BL19 the product drifts too, at BL19's scale: each exp and mul rounds to nearest,
     /// so the drift is a random walk of 2^-237-sized steps. Measured in parts of 2^236.
-    function test_logIndex_fp19Drift() public {
+    function test_logIndex_bl19Drift() public {
         for (uint256 seed; seed < 3; seed++) {
             LogIndex127 l = new LogIndex127();
-            int256 idx = FP19Lib.ONE;
+            int256 idx = BL19Lib.ONE;
             for (uint256 k; k < 1000; k++) {
                 l.accrue(_rate(seed, k), _dt(seed, k));
-                idx = FP19Lib.mul(idx, FP19Lib.exp(FP19Lib.fromFP127(_rate(seed, k) * int256(_dt(seed, k)))));
+                idx = BL19Lib.mul(idx, BL19Lib.exp(BL19Lib.fromBL127(_rate(seed, k) * int256(_dt(seed, k)))));
             }
             int256 rd = l.index19();
-            int256 rel = FP19Lib.div(FP19Lib.sub(idx, rd), rd);
-            int256 parts = FP19Lib.toFixed18(FP19Lib.mul(rel, FP19Lib.pow(FP19Lib.fromUint(2), FP19Lib.fromUint(236)))) / 1e12;
-            console.log(string.concat("fp19 N=1000 seed=", vm.toString(seed), " multiplied vs log read=", vm.toString(parts), " (1e-6 x 2^-236)"));
+            int256 rel = BL19Lib.div(BL19Lib.sub(idx, rd), rd);
+            int256 parts = BL19Lib.toFixed18(BL19Lib.mul(rel, BL19Lib.pow(BL19Lib.fromUint(2), BL19Lib.fromUint(236)))) / 1e12;
+            console.log(string.concat("bl19 N=1000 seed=", vm.toString(seed), " multiplied vs log read=", vm.toString(parts), " (1e-6 x 2^-236)"));
             assertGt(_abs(parts), 0);
             assertLt(_abs(parts), 100_000_000); // under 100 parts in 2^236
         }
@@ -268,8 +268,8 @@ contract IntegratingTest is Test {
         LogIndex127 l = new LogIndex127();
         l.accrue(int256(1) << 128, 100); // L = 100
         vm.expectRevert();
-        l.index(); // FP127's exp stops at 88
-        // FP19 reads e^100, about 2.7e43, past FP127's 2^127
-        assertGt(FP19Lib.cmp(l.index19(), FP19Lib.fromUint(1 << 127)), 0);
+        l.index(); // BL127's exp stops at 88
+        // BL19 reads e^100, about 2.7e43, past BL127's 2^127
+        assertGt(BL19Lib.cmp(l.index19(), BL19Lib.fromUint(1 << 127)), 0);
     }
 }

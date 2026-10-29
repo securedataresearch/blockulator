@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {ILadderAdapter, Form, FP127_ADDRESS} from "./ILadder.sol";
+import {ILadderAdapter, Form, BL127_ADDRESS} from "./ILadder.sol";
 
 /// @title LadderRunner
 /// @notice One eth_call re-verifies any cell of the terminal-precision ladder
@@ -15,8 +15,8 @@ import {ILadderAdapter, Form, FP127_ADDRESS} from "./ILadder.sol";
 contract LadderRunner {
     error UnknownForm(uint8 form);
 
-    address public immutable fp127;
-    address public immutable fp127lib;
+    address public immutable bl127;
+    address public immutable bl127lib;
     address public immutable abdk;
     address public immutable solady;
     address public immutable prb;
@@ -25,7 +25,7 @@ contract LadderRunner {
     address public immutable aave;
     address public immutable morpho;
     address public immutable maker;
-    address public immutable fp19;
+    address public immutable bl19;
     address public immutable solmate;
     address public immutable oz;
     address public immutable uniswap;
@@ -36,8 +36,8 @@ contract LadderRunner {
 
     /// The adapters in form-id order (ILadder.sol `Form`).
     constructor(address[18] memory adapters) {
-        fp127 = adapters[0];
-        fp127lib = adapters[1];
+        bl127 = adapters[0];
+        bl127lib = adapters[1];
         abdk = adapters[2];
         solady = adapters[3];
         prb = adapters[4];
@@ -46,7 +46,7 @@ contract LadderRunner {
         aave = adapters[7];
         morpho = adapters[8];
         maker = adapters[9];
-        fp19 = adapters[10];
+        bl19 = adapters[10];
         solmate = adapters[11];
         oz = adapters[12];
         uniswap = adapters[13];
@@ -57,8 +57,8 @@ contract LadderRunner {
     }
 
     function adapter(uint8 form) public view returns (address) {
-        if (form == Form.FP127) return fp127;
-        if (form == Form.FP127LIB) return fp127lib;
+        if (form == Form.BL127) return bl127;
+        if (form == Form.BL127LIB) return bl127lib;
         if (form == Form.ABDK) return abdk;
         if (form == Form.SOLADY) return solady;
         if (form == Form.PRB) return prb;
@@ -67,7 +67,7 @@ contract LadderRunner {
         if (form == Form.AAVE) return aave;
         if (form == Form.MORPHO) return morpho;
         if (form == Form.MAKER) return maker;
-        if (form == Form.FP19) return fp19;
+        if (form == Form.BL19) return bl19;
         if (form == Form.SOLMATE) return solmate;
         if (form == Form.OZ) return oz;
         if (form == Form.UNISWAP) return uniswap;
@@ -84,8 +84,8 @@ contract LadderRunner {
     /// @return gasPerStep  gasTotal / n (0 when !ok)
     /// @return gasTotal    gas the scenario function consumed inside the adapter:
     ///                     the parameter reads and the loop, not the call into the
-    ///                     adapter. The adapter and the FP127 object are warmed
-    ///                     first, so the FP127 form's staticcalls are steady-state
+    ///                     adapter. The adapter and the BL127 object are warmed
+    ///                     first, so the BL127 form's staticcalls are steady-state
     ///                     and the figure does not depend on what the caller
     ///                     touched earlier in the transaction. 0 when !ok.
     function run(uint8 scenario, uint8 form, uint32 n, int256[] calldata p)
@@ -94,7 +94,7 @@ contract LadderRunner {
         returns (bool ok, int256 raw, bytes4 reason, uint256 gasPerStep, uint256 gasTotal)
     {
         ILadderAdapter a = ILadderAdapter(adapter(form));
-        uint256 warm = address(a).code.length + FP127_ADDRESS.code.length;
+        uint256 warm = address(a).code.length + BL127_ADDRESS.code.length;
         try a.run(scenario, n, p) returns (int256 r, uint256 g) {
             ok = true;
             raw = r;

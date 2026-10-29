@@ -1,6 +1,6 @@
 cff-version: 1.2.0
-message: "If you use FP127, FP19 or BlockulatorWad, please cite it as below."
-title: "Blockulator: FP127 and FP19, high-precision math for the EVM"
+message: "If you use BL127, BL19 or BlockulatorWad, please cite it as below."
+title: "Blockulator: BL127 and BL19, high-precision math for the EVM"
 type: software
 authors:
   - name: "Secure Data Research, LLC"
@@ -10,12 +10,12 @@ repository-code: "https://github.com/securedataresearch/blockulator"
 url: "https://blockulator.com"
 abstract: >-
   Three math libraries for the EVM in which every op is exact or rounds once.
-  FP127 is signed 127.128 fixed point: 38 digits at 1 and a range of
-  ±1.7 × 10^38, in 53 ops. FP19 is a 256-bit binary float: about 71 digits at
+  BL127 is signed 127.128 fixed point: 38 digits at 1 and a range of
+  ±1.7 × 10^38, in 53 ops. BL19 is a 256-bit binary float: about 71 digits at
   any magnitude from 10^-78,913 to 10^78,913, in 65 ops, the special
   functions among them. BlockulatorWad keeps Solady's WAD function names and
   signatures and returns the exact value rounded once in the stated direction.
-  FP127 and FP19 ship as deployed contracts with no owner and as inline
+  BL127 and BL19 ship as deployed contracts with no owner and as inline
   libraries; BlockulatorWad is inline only.
 version: "3.0"
 date-released: "2026-10-28"

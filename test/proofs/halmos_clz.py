@@ -1,6 +1,6 @@
 """Halmos 0.3.3 with the CLZ opcode and commuted products.
 
-    python test/proofs/halmos_clz.py --contract ProofsFP127 ...   # Halmos's own arguments
+    python test/proofs/halmos_clz.py --contract ProofsBL127 ...   # Halmos's own arguments
     python test/proofs/halmos_clz.py --selftest
 
 Two changes, made at run time to the pinned Halmos (it refuses any other

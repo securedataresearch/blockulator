@@ -45,7 +45,7 @@ def num(x):
 
 
 def gas_section(reg: dict) -> dict:
-    g127, g19 = load("gas.json"), load("fp19/gas.json")
+    g127, g19 = load("gas.json"), load("bl19/gas.json")
 
     def median(g, op, form):
         o = g["ops"].get(op)
@@ -55,7 +55,7 @@ def gas_section(reg: dict) -> dict:
         return s["median"] if s else None
 
     def value(lib, op):
-        return median(g19, op, "lib") if lib == "fp19" else median(g127, op, "lib" if lib == "fp127" else lib)
+        return median(g19, op, "lib") if lib == "bl19" else median(g127, op, "lib" if lib == "bl127" else lib)
 
     offered = {op: [lib for lib in reg if value(lib, op) is not None] for op in g127["ops"]}
     ops = CORE_OPS + sorted((op for op, libs in offered.items() if sum(not reg[l].get("ours") for l in libs) >= 3 and op not in CORE_OPS), key=lambda o: (-len(offered[o]), o))
@@ -253,7 +253,7 @@ def pages(libs: list[dict]) -> dict:
                 rows.append({"lib": lib, "probe": i, "label": f"{op['id']}({', '.join(map(str, p['args']))})", "digits": min(int(c["digits"]), 72) if st == "ok" else 0, "status": st})
         edges.append({"id": op["id"], "label": op["label"], "rows": rows})
 
-    g127, g19 = load("gas.json"), load("fp19/gas.json")
+    g127, g19 = load("gas.json"), load("bl19/gas.json")
 
     def med(g, op, form):
         o = g["ops"].get(op)
@@ -261,18 +261,18 @@ def pages(libs: list[dict]) -> dict:
             return None
         sm = (o.get("typical") or o)["summary"].get(form)
         return sm["median"] if sm else None
-    # FP19 and binary128 are measured in fp19/gas.json, every other library in gas.json
-    src = {"fp19": (g19, "lib"), "quad": (g19, "quad"), "fp127": (g127, "lib")}
+    # BL19 and binary128 are measured in bl19/gas.json, every other library in gas.json
+    src = {"bl19": (g19, "lib"), "quad": (g19, "quad"), "bl127": (g127, "lib")}
     gas = [{"lib": lib, "op": op, "gas": v} for op in sorted(set(g127["ops"]) | set(g19["ops"])) for lib in ids
            if (g := src.get(lib, (g127, lib))) and (v := med(g[0], op, g[1])) is not None]
 
     # each library's ops: median gas inline and through the deployed object, and whether the result is exact
     libops = {}
-    for lib, prec, g in (("fp127", load("precision.json"), g127), ("fp19", load("fp19/precision.json"), g19)):
+    for lib, prec, g in (("bl127", load("precision.json"), g127), ("bl19", load("bl19/precision.json"), g19)):
         libops[lib] = [{"op": op, "inline": med(g, op, "lib"), "object": med(g, op, "yul"), "exact": v["minBits"] >= 256}
                        for op, v in prec.items() if med(g, op, "lib") is not None]
     # /results/cdf/: every on-chain normal CDF and erfc, digits at each x = k/32 (docs/benchmarks/cdf.json)
-    fam = {"fp19": "fp19", "fp127": "fp127", "solstat": "wad", "lyra": "protocol", "rmm": "6464"}
+    fam = {"bl19": "bl19", "bl127": "bl127", "solstat": "wad", "lyra": "protocol", "rmm": "6464"}
     c = load("cdf.json")
     # an exact result (100 digits, e.g. at x = 0) is drawn at its neighbours' digits, the line's level, not as a spike
     def capped(series):
@@ -295,8 +295,8 @@ TRUTHS = [("digits", "exact inputs"), ("digitsFormat", "inputs as each format ro
 
 def inner_tables(libs: list[dict]) -> dict:
     """Every ladder and edges table, in libtable's shape (libcols), so the templates only lay them out.
-    FP127Lib equals FP127 and is left out; the columns are every library the dataset measures, the same on every tab."""
-    shown = [l for l in libs if l["id"] != "fp127lib"]
+    BL127Lib equals BL127 and is left out; the columns are every library the dataset measures, the same on every tab."""
+    shown = [l for l in libs if l["id"] != "bl127lib"]
     d = load("ladder.json")
     have = {lib for sc in d["scenarios"] for lib in sc["summary"]}
     ladder = {}
@@ -332,12 +332,12 @@ def inner_tables(libs: list[dict]) -> dict:
                 + (f" · {x['interestCapped']} of interest" if "interestCapped" in x else "") + (f" · {x['absErrWei']} wei off" if "absErrWei" in x else "") \
                 + (f" · {x['ulps']} ULP" if "ulps" in x else "") + f" · {x['gasPerStep']:,} gas/step"
             return {"v": "exact" if x["exact"] else x["digitsCapped"], "h": round(float(x["digitsCapped"]) / 72, 3), "why": why}
-        ladder[sc["id"]] = {"summary": {k: summary(k) for k, _ in TRUTHS if k != "interest" or "interest" in sc["summary"]["fp127"]["1"]},
+        ladder[sc["id"]] = {"summary": {k: summary(k) for k, _ in TRUTHS if k != "interest" or "interest" in sc["summary"]["bl127"]["1"]},
                             "step": libcols(shown, have, [r | {"why": f"truth {ref['truth'][str(r['key'])]}"} for r in rows], step)}
 
     e = load("edges.json")
-    have = {lib for op in e["ops"] for p in op["probes"] for lib in p["cells"]} - {"fp127lib"}
-    caps = {"fp19": 71}  # FP19 to its 71 digits: a 72 or 73 is where the truth sits near the grid
+    have = {lib for op in e["ops"] for p in op["probes"] for lib in p["cells"]} - {"bl127lib"}
+    caps = {"bl19": 71}  # BL19 to its 71 digits: a 72 or 73 is where the truth sits near the grid
 
     def ecell(c):
         if c is None or (c.get("reverted") and c.get("unsupported")):
@@ -416,7 +416,7 @@ def deployed_data() -> tuple[dict, dict]:
     cases, live = [], []
     for c in d["cases"]:
         tr = c["truth"][c["primaryTruth"]]
-        row = {"protocol": c["protocol"], "deployed": tr["deployed"]["digitsInterest"], "fp127": tr["fp127"]["digitsInterest"], "fp19": tr["fp19"]["digitsInterest"]}
+        row = {"protocol": c["protocol"], "deployed": tr["deployed"]["digitsInterest"], "bl127": tr["bl127"]["digitsInterest"], "bl19": tr["bl19"]["digitsInterest"]}
         if c["group"] == "stylised":
             # the case's own terms, from its id: morpho-u100-10pct-1d -> "100% used, 10%"; aave-link-u100-borrow-7d -> "LINK borrow, 100% used"
             parts = c["id"].split("-")[1:-1]
@@ -427,9 +427,9 @@ def deployed_data() -> tuple[dict, dict]:
                                 "err": tr["deployed"]["errTokens"], "interest": tr["truthInterestTokens"], "symbol": c["symbol"]})
         else:
             live.append(row | {"label": f"{c['symbol']} {c['kind']}", "grid": tr["gridDigitsInterest"]})
-    cols = ["true interest", "deployed off by", "deployed digits", "token grid allows", "FP127 digits", "FP19 digits"]
+    cols = ["true interest", "deployed off by", "deployed digits", "token grid allows", "BL127 digits", "BL19 digits"]
     groups = [{"name": name[p], "rows": [{"label": r["label"], "long": r["why"], "family": "protocol", "ours": False,
-                                          "cells": [f"{float(r['interest']):,.6g} {r['symbol']}", f"{float(r['err']):+.3g} {r['symbol']}", f"{r['deployed']:.2f}", f"{r['grid']:.2f}" if r["grid"] else None, f"{r['fp127']:.2f}", f"{r['fp19']:.2f}"]}
+                                          "cells": [f"{float(r['interest']):,.6g} {r['symbol']}", f"{float(r['err']):+.3g} {r['symbol']}", f"{r['deployed']:.2f}", f"{r['grid']:.2f}" if r["grid"] else None, f"{r['bl127']:.2f}", f"{r['bl19']:.2f}"]}
                                          for r in cases if r["protocol"] == p]} for p in ("aave", "morpho")]
     return {"cases": cases, "live": live}, {"cols": cols, "groups": groups}
 
@@ -465,12 +465,12 @@ def incidents() -> list[dict]:
 # ---- /migrate/: each library's calls beside Blockulator's, from the same measurements ----
 def migrate(libs: list[dict]) -> dict:
     """Per guide, tables in grouptable's shape. Solady and PRBMath: their WAD functions beside BlockulatorWad's
-    (wad.json: share off by a wei, worst error, gas). ABDK: 64.64 beside FP127 and Quad beside FP19, the same kind of
+    (wad.json: share off by a wei, worst error, gas). ABDK: 64.64 beside BL127 and Quad beside BL19, the same kind of
     format, op by op (gas.json: gas, the call measured)."""
     reg = {l["id"]: l for l in libs}
     w = load("wad.json")
     wad = {(r["lib"], r["function"]): r for r in w["rows"]}
-    g127, g19 = load("gas.json"), load("fp19/gas.json")
+    g127, g19 = load("gas.json"), load("bl19/gas.json")
 
     def med(g, op, form):
         o = g["ops"].get(op)
@@ -505,16 +505,16 @@ def migrate(libs: list[dict]) -> dict:
     return {
         "solady": {"wad": wad_table("solady")},
         "prbmath": {"wad": wad_table("prb"), "wadud": wad_table("prbud")},
-        "abdk": {"ops": op_table("abdk", g127, "abdk", "lib", "FP127Lib"), "quad": op_table("quad", g19, "quad", "lib", "FP19Lib")},
+        "abdk": {"ops": op_table("abdk", g127, "abdk", "lib", "BL127Lib"), "quad": op_table("quad", g19, "quad", "lib", "BL19Lib")},
     }
 
 
 # ---- /vs/: each established library against its Blockulator counterpart, every number from the datasets ----
 VS = [  # (section id, theirs, ours): ours are compared column by column
-    ("solady", "solady", ["blockulator", "fp127"]),
-    ("prbmath", "prb", ["blockulator", "fp127"]),
-    ("abdk", "abdk", ["fp127"]),
-    ("quad", "quad", ["fp19"]),
+    ("solady", "solady", ["blockulator", "bl127"]),
+    ("prbmath", "prb", ["blockulator", "bl127"]),
+    ("abdk", "abdk", ["bl127"]),
+    ("quad", "quad", ["bl19"]),
 ]
 
 
@@ -540,7 +540,7 @@ def vs(home: dict, libs: list[dict]) -> dict:
         return None if not x else "0" if not x["wrong"] else f"{x['wrongPct']:.2g}%" if x["wrongPct"] < 1 else f"{round(x['wrongPct'])}%"
 
     def proven(lib):
-        name = {"fp127": "FP127", "fp19": "FP19"}.get(lib)
+        name = {"bl127": "BL127", "bl19": "BL19"}.get(lib)
         if not name:
             return None
         ps = [o for o in proofs if o["lib"] == name]

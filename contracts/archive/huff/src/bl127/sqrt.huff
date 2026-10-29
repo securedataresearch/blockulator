@@ -1,0 +1,57 @@
+/// @title BL127 Square Root
+/// @notice Carmack CLZ initial guess + Newton-Raphson refinement
+/// @dev 127.128 fixed-point format
+/// @dev Requires: arithmetic.huff (BL127_DIV_UNSIGNED) must be included before this file
+
+/// @notice Compute sqrt(x) using Carmack initial guess + Newton-Raphson
+/// @dev takes(1) returns(1)
+/// Stack input:  [x] (127.128 format, must be >= 0)
+/// Stack output: [sqrt(x)] (127.128 format)
+///
+/// Algorithm:
+///   1. Binary search to find MSB
+///   2. Carmack guess: y_0 = 2^((128 + msb) / 2)
+///   3. 7 Newton iterations: y = (y + x/y) / 2
+///
+/// Gas: ~1600
+/// Precision: ~38 decimal digits (128 fractional bits)
+#define fn BL127_SQRT() = takes(1) returns(1) {
+    // Input: [x]
+    dup1 iszero sqrt_is_zero jumpi
+    
+    // Find MSB using primitives.huff macro
+    dup1                                // [x, x]
+    MSB()                               // [msb, x]
+    
+    // Improved Carmack initial guess:
+    // y_0 = 2^(floor((128 + msb) / 2))
+    // If (128 + msb) is odd, multiply by sqrt(2) to halve initial error
+    [BL127_SHIFT] add                   // [128 + msb, x]
+    dup1 0x01 and                       // [parity, 128+msb, x]
+    swap1 0x01 shr                      // [half_exp, parity, x]
+    0x01 swap1 shl                      // [y_0 = 2^half_exp, parity, x]
+    
+    // If parity is 1, multiply by SQRT2_BL127
+    swap1 iszero sqrt_no_sqrt2 jumpi
+    [SQRT2_BL127]                       // [SQRT2, y_0, x]
+    BL127_MUL()                         // [y_0 * sqrt2, x]
+    sqrt_no_sqrt2:
+    // Stack: [y_0, x]
+    
+    // 7 Newton iterations: y = (y + x/y) / 2
+    NEWTON_SQRT_STEP()                  // [y_1, x]
+    NEWTON_SQRT_STEP()                  // [y_2, x]
+    NEWTON_SQRT_STEP()                  // [y_3, x]
+    NEWTON_SQRT_STEP()                  // [y_4, x]
+    NEWTON_SQRT_STEP()                  // [y_5, x]
+    NEWTON_SQRT_STEP()                  // [y_6, x]
+    NEWTON_SQRT_STEP()                  // [y_7, x]
+    
+    // Return result
+    swap1 pop                           // [y_7]
+    sqrt_done jump
+    
+    sqrt_is_zero:
+    // x is 0, already on stack
+    sqrt_done:
+}
