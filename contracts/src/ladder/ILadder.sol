@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 // @notice FP127's Yul objects (3.0, salts "FP127 v9", "FP127E v9", "FP127H v9", "FP127N v9", "FP127S v9"): the
-//         number, the elementary, hyperbolic, normal and special functions, at their predicted CREATE2 addresses
-//         (contracts/deployments/FP127.md has v8, the one object they replace). Tests etch the artifacts' runtimes
+//         number, the elementary, hyperbolic, normal and special functions, at their CREATE2 addresses, live on
+//         Sepolia since 2026-10-29 (contracts/deployments/FP127.md). Tests etch the artifacts' runtimes
 //         here, so the same adapter code runs in the harness and on chain; the adapters that call them are deployed
 //         after them.
 address constant FP127_ADDRESS = 0x0DF738d125677550a80A46BaF254386C66f96E0d;

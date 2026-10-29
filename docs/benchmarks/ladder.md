@@ -4,8 +4,6 @@ Generated 2026-10-28 by `make ladder`. Versions: fp127 6c2eeaf, huff sepolia:0xf
 
 Each scenario is run for several inputs; the first table is the reference input in full (`digits / digitsFormat / gas per step`, where digits is against the exact truth and digitsFormat against the truth from the parameters as the library received them, both to one decimal and capped at what the format holds at that magnitude), the next two summarise all inputs (`median (min–max)` of the capped digits over the inputs every library completed at that N; `k/n` where a library completed k of n inputs). Full values, both truths, signed errors and raw words are in ladder.json; the method is in the Methodology section at the end.
 
-**This dataset is ahead of the deployed runners.** LadderFP127, LadderFP19Deployed changed after "FP127 ladder v13" was deployed, so the live LadderRunner does not yet return these cells; it will after the "FP127 ladder v14" redeploy.
-
 ## compound: Daily compound interest
 
 Step: `b = b * (1 + r)`. Result: balance after N days.
