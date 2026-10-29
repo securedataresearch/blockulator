@@ -142,3 +142,40 @@ The hero of every comparison is Blockulator's own answer: `halo()` behind
 a hero dot, `glow_line()` under a hero line, `glow_bar()` behind a hero
 row of text; `Chart` (two GridLines at right angles, `grid()` for the
 faint rules behind the data) is the deck's plot.
+
+## The deck
+
+`talk/deck/slides.yaml` is the deck's one source: for each of the 19
+slides its title, its scene (`module.Class`), its sections in order with
+the sentence of research_notes/talk/script-v2.md spoken over each one
+(verbatim; `""` when the section just plays), and the script's `[you]`
+notes. `make deck` runs `talk/deck/build.py`, which checks, scene by
+scene, that three lists agree: the section names in manim's index (from
+`make anim`), the class's `SECTIONS`, and slides.yaml; every disagreement
+is printed (`MISMATCH  slide N  module.Class: index [...] != slides.yaml
+[...]`) and the build fails at the end, while a scene with no render yet
+is printed as `placeholder … not rendered` and gets a placeholder slide
+(title and cues), so the deck builds at every stage. It writes:
+
+- `talk/deck/index.html`: a reveal.js deck (5.1.0 vendored under
+  `talk/deck/vendor/`, the site's palette in `deck.css`; nothing is
+  fetched at runtime, so it opens from `file://` offline). One
+  `<section>` per slide, one `<video>` per scene section referenced by
+  relative path under `talk/build/` (nothing is copied): the first clip
+  plays when the slide arrives, every later one is a reveal fragment that
+  plays when shown and then holds its last frame (no `loop`; the title
+  alone loops). Stepping back hides the fragment and rewinds it; leaving
+  a slide pauses everything on it; the next slide's first clip is
+  preloaded.
+- `talk/deck/script.md`: the spoken script in order, one heading per
+  slide, a ▶ before each section's cue with its seconds and the slide's
+  cumulative start time. Print it: the speaker view over `file://` is not
+  to be trusted.
+- `talk/deck/talk.pdf` (`make deck-pdf`): one page per slide, the last
+  section's last frame; a titled dark page for an unrendered scene.
+
+`make talk` is `anim`, `contact`, `deck`, `deck-pdf` in that order. To
+present: open `talk/deck/index.html` in Chromium or Firefox, press F for
+full screen, and give one click (space, right arrow, or the clicker's
+PageDown) per section; a click past the last section moves to the next
+slide. Left arrow or PageUp steps back one section.
