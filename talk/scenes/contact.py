@@ -39,7 +39,7 @@ def sections_of(scene: str) -> list[str]:
     import vocab
 
     mod = importlib.import_module(scene)
-    classes = [c for c in vars(mod).values() if isinstance(c, type) and issubclass(c, vocab.DeckScene) and c is not vocab.DeckScene]
+    classes = [c for c in vars(mod).values() if isinstance(c, type) and issubclass(c, vocab.DeckScene) and c is not vocab.DeckScene and c.__module__ == mod.__name__]
     assert len(classes) == 1, (scene, classes)
     return list(classes[0].SECTIONS)
 
