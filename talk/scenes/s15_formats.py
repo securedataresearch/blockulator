@@ -90,7 +90,6 @@ LITERALS = {
 
 # layout (scene units; the frame is 14.22 × 8, the safe area ±6.4 × ±3.6)
 BAR_WIDTH = 12.6  # ≈ 1,700 px: 256 cells at 6.6 px with 0.5 px gaps
-Y_TITLE = 3.3
 Y_OVER = 2.65
 Y_BAR = 2.2
 Y_ROWS = (0.95, 0.45, -0.05)
@@ -227,7 +226,7 @@ class Formats(DeckScene):
         s = n["strings"]
         self.section(0)
         self.wait(0.3)
-        title = words(TITLE, SIZE_BODY, Palette.TEXT).move_to([0, Y_TITLE, 0]).align_to([-X_SAFE, 0, 0], LEFT)
+        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5), self.caption(CAPTION))
 
         # the word: 256 cells draw across the slide, then are counted

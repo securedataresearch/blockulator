@@ -115,8 +115,7 @@ X_NUM = -1.0  # the exact value starts here, after the widest protocol · date
 X_MECH = -3.2  # the mechanism starts here, after the grid and its tick names
 GRID_LEN = 1.55
 NAME_GAP = 0.22  # a tick name to the line's end
-Y_TITLE = 3.37
-Y_BAND_1 = 2.91
+Y_BAND_1 = 2.86  # under the left mark
 Y_A = (2.45, 1.49, 0.53, -1.43, -2.39)  # line (a) of each row
 A_B = 0.5  # line (b) is this far under line (a)
 Y_ONCE = -0.43
@@ -392,7 +391,7 @@ class Two(DeckScene):
         cap = self.caption(CAPTION)
         self._caption.to_corner(DOWN + RIGHT, buff=0.45)  # the left corner is row 5's half-unit bracket
         self.play(cap)
-        title = self.left(words(TITLE, SIZE_BODY, Palette.TEXT), X_LEFT, Y_TITLE)
+        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         band1 = self.left(words(BAND_1_TITLE, SIZE_BODY, Palette.MUTED), X_LEFT, Y_BAND_1)
         band2 = self.left(words(BAND_2_TITLE, SIZE_BODY, Palette.MUTED), X_LEFT, Y_BAND_2)
         rule = Line([X_LEFT, Y_RULE, 0], [-X_LEFT, Y_RULE, 0], color=Palette.RULE, stroke_width=1, stroke_opacity=0.6)

@@ -90,9 +90,9 @@ OURS = ("fp127", "fp19")  # Blockulator's, from the same probe, in the order the
 WORD_DECIMALS = 18
 RULER_EVERY = 10  # the ruler marks every tenth decimal; a block of ten is typed as one beat
 
-X_LEFT = -6.15  # digit strings and row labels start here
-X_RIGHT = 6.15  # the right-hand labels end here
-Y_TOP = 3.45
+X_LEFT = -5.79  # digit strings and row labels start here: right of the left mark (vocab's TITLE_GAP)
+X_RIGHT = 5.9  # the right-hand labels end here, clear of the right mark
+Y_TOP = 3.325  # the exact row's name line: the marks' centre line (the row is the slide's title)
 PITCH = 1.04  # row to row (the exact row and the three library rows)
 LABEL_DROP = 0.38  # label line to digit line
 MONO = SIZE_BODY
@@ -267,13 +267,17 @@ class Exp40(DeckScene):
     def row_y(self, i: int) -> float:
         return Y_TOP - i * PITCH
 
-    def place_row(self, i: int, label: str, label_colour: str, value: str, digit_colour: str = Palette.TEXT, mono: float = MONO, sans: float = SANS, label_markup: bool = False):
+    def place_row(self, i: int, label: str, label_colour: str, value: str, digit_colour: str = Palette.TEXT, mono: float = MONO, sans: float = SANS, label_markup: bool = False, as_title: bool = False):
         """A row: its name above, its digits below. label_markup sets the
-        name in Pango markup (a superscript)."""
+        name in Pango markup (a superscript); as_title puts the name beside
+        the left mark through self.title() (the exact row: the slide's
+        title line) instead of over the digits."""
         y = self.row_y(i)
-        lbl = (markup if label_markup else words)(label, sans, label_colour)
         txt = digits(value, mono, digit_colour)
         txt.move_to([X_LEFT + txt.width / 2, y - LABEL_DROP, 0])
+        if as_title:
+            return self.title(label, sans, label_colour, use_markup=label_markup), txt
+        lbl = (markup if label_markup else words)(label, sans, label_colour)
         lbl.move_to([txt.get_left()[0] + lbl.width / 2, y, 0])
         return lbl, txt
 
@@ -354,8 +358,8 @@ class Exp40(DeckScene):
         self.wait(0.3)
         self.play(self.caption(CAPTION))
 
-        # the closest 18-decimal value: e^40 rounded at the 18th decimal, complete
-        e_lbl, e_txt = self.place_row(0, EXACT_LABEL, Palette.EXACT, n["exact_row"], label_markup=True)
+        # the closest 18-decimal value: e^40 rounded at the 18th decimal, complete; its name is the slide's title
+        e_lbl, e_txt = self.place_row(0, EXACT_LABEL, Palette.EXACT, n["exact_row"], label_markup=True, as_title=True)
         self.type_row(e_lbl, e_txt, per_char=0.06)
         e_right = self.right_label(self.row_y(0), EXACT_RIGHT, Palette.FAINT)
         self.play(FadeIn(e_right, run_time=0.5))

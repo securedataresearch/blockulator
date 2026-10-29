@@ -59,7 +59,7 @@ Y_STEP = 20
 REVERT_BAND = -6.0  # digits axis position of the "revert" band, under 0
 SPREAD = 0.1  # scene units between libraries within a column
 LEGEND_X, LEGEND_TOP = 4.75, 2.55
-CLOSE_Y = 3.5
+CLOSE_Y = 3.3  # the closing line, on two lines between the two marks (one line is 13.9 units wide)
 
 LITERALS: dict[str, str] = {}  # every digit on the slide is a value of numbers()
 
@@ -261,9 +261,13 @@ class Cliff(DeckScene):
         # ---- the closing line (V28)
         self.section(4, hold=1.5)
         close = words(
-            f"the {n['wad_decimals']}-decimal grid is zero from exp({minus(n['wad_first_zero'])}) · FP127 has digits to exp({minus(last['arg'])}) · FP19: {fmt(n['fp19_min'])} digits on every probe",
+            f"the {n['wad_decimals']}-decimal grid is zero from exp({minus(n['wad_first_zero'])}) · FP127 has digits to exp({minus(last['arg'])})\nFP19: {fmt(n['fp19_min'])} digits on every probe",
             22,
             Palette.TEXT,
+            line_spacing=0.9,
         ).move_to([0, CLOSE_Y, 0])
+        # Text sets its lines flush left; centre the second (spaces are not glyphs, so count the rest)
+        k = len(close.original_text.split("\n")[0].replace(" ", ""))
+        close[k:].shift(RIGHT * (close.get_center()[0] - close[k:].get_center()[0]))
         self.play(FadeIn(close, shift=UP * 0.08, run_time=0.8))
         self.close()

@@ -69,7 +69,7 @@ TICK_HALF = 0.3  # the median tick: 1.5x the band height
 LABEL_LIFT = 0.36  # the median label's bottom above the row centre
 BRACKET_LIFT = 1.0  # the margin bracket above the lower row's centre, in the gap
 SEED = 40
-Y_TITLE, Y_FACET, Y_AXIS_TITLE, Y_CLOSE = 3.4, 2.94, -2.55, -2.97
+Y_FACET, Y_AXIS_TITLE, Y_CLOSE = 2.78, -2.55, -2.97  # the facet titles under the right mark (was 2.94)
 SIZE_TICK = SIZE_CAPTION + 4  # the axis labels, per the brief
 SIZE_CLOSE = 28  # the closing line does not fit the safe width at BODY (reported)
 
@@ -118,7 +118,7 @@ class Live(DeckScene):
         self.section(0)
         self.wait(0.3)
         self.play(self.caption(f"docs/benchmarks/accrual-deployed.json · live · block {n['block']} · {n['date']}"))
-        title = words(TITLE, SIZE_BODY, Palette.TEXT).move_to([0, Y_TITLE, 0]).align_to([X_LEFT, 0, 0], LEFT)
+        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.6))
 
         # ---- the facets: one panel per protocol on the same scale, a gridline at every tick

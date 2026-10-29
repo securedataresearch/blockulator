@@ -85,7 +85,6 @@ ROWS = (
 
 X_LEFT = -6.3  # the labels start here (5% safe area: ±6.4)
 X_FORMULA = -2.1  # the formulas start here
-Y_TITLE = 3.35
 Y_ROWS = (1.75, 0.55, -0.65, -1.85)
 X_HERO, Y_HERO = 4.75, -0.05  # between the second and third rows
 Y_CLOSE = -2.9
@@ -151,7 +150,7 @@ class Under(DeckScene):
     def construct(self):
         self.section(0)
         self.wait(0.3)
-        title = words(TITLE, SIZE_BODY, Palette.TEXT).move_to([0, Y_TITLE, 0]).align_to([-6.4, 0, 0], LEFT)
+        title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         self.play(FadeIn(title, shift=RIGHT * 0.1, run_time=0.5))
 
         # the four rows draw in, staggered

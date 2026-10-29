@@ -28,6 +28,25 @@ needs cairo, pango and ffmpeg from the system. `talk/build/` and manim's
 default `media/` are git-ignored; rendered mp4s are build outputs, like
 the tables.
 
+## Chrome: the logos and the title helper
+
+Every frame carries the two marks of `talk/logos/` at its top corners:
+`blockulator.png` top-left, `sdr.png` top-right, each `LOGO_HEIGHT`
+(0.55) tall at opacity 0.92, their outer corners at `LOGO_CORNER`
+(±6.75, 3.6). `DeckScene.setup()` adds them before anything else, as
+`self.chrome`, a `Group` of two `ImageMobject`s: chrome, not data. A
+scene never animates, dims or moves them; a "dim everything" step that
+collects `VMobject`s leaves them alone (they are not `VMobject`s), and
+one that names its mobjects must not name `self.chrome`.
+
+A slide's title goes beside the left mark: `self.title(text, size,
+colour, use_markup=False)` returns the `words()` (or `markup()`) placed
+`TITLE_GAP` (0.3) to the right of it, centred on its height, so a title
+never collides with the mark; the caller plays it in. It registers in
+`DRAWN` as any `words()` does, so a title in `LITERALS` keeps its string.
+Content at the top-right stays under the right mark (its bottom is at
+y = 3.05) or left of it (x < 6.2); nothing shrinks for it.
+
 ## Sections: one click, one beat
 
 A scene declares `SECTIONS = ("price", "division", …)` and calls
@@ -79,6 +98,15 @@ Pango per process; every text helper calls it.
   `talk/build/`; `self.caption(text)` returns the animation that puts the
   source of the numbers in the bottom-left corner; `SECTIONS`,
   `section(i, hold)`, `close()` as above.
+- `qr(url, size)`: a QR code drawn, not an image: a white rounded panel
+  (`Palette.TEXT`, the quiet zone of 4 modules inside it) with the dark
+  modules (`Palette.BG`) as one `VGroup` of squares, `size` units a side,
+  the URL under it in mono at `SIZE_CAPTION` (through `digits()` with the
+  font's ligatures left on, for the `//`), so `check.py` sees it; a URL
+  with a digit needs a `LITERALS` entry. Error correction M, the smallest
+  version that fits (`qrcode`, a dev dependency). `.panel`, `.modules`,
+  `.label`, `.matrix` name the parts; `qr_matrix(url)` is the matrix
+  alone, for `check.py` to regenerate and compare.
 - Loaders, all by path from the repo root: `libs()` (static/data/libraries.json
   → `{id: record}`) and `talk_libs()` (the same less BlockulatorWad: the 17
   every comparison accounts for), `edges(op)` and `probe(op, *args)`
