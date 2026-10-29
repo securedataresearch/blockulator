@@ -22,7 +22,7 @@
       "op": "sign",
       "bytes": 8
      },
-     "median": 457,
+     "median": 480,
      "max": {
       "op": "atanh",
       "bytes": 11158
@@ -41,8 +41,8 @@
     }
    },
    "sum": {
-    "legacy": 140095,
-    "viaIr": 131506
+    "legacy": 140245,
+    "viaIr": 131725
    },
    "ops": {
     "fromFixed18": {
@@ -142,12 +142,12 @@
      "viaIr": 472
     },
     "gavg": {
-     "legacy": 457,
-     "viaIr": 343
+     "legacy": 566,
+     "viaIr": 483
     },
     "hypot": {
-     "legacy": 508,
-     "viaIr": 378
+     "legacy": 549,
+     "viaIr": 457
     },
     "inv": {
      "legacy": 135,
