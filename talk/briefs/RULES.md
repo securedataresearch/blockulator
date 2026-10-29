@@ -19,6 +19,10 @@ These are the user's rules. They are not negotiable and they are not summarised;
 - "half a unit", never "½" (the font has no glyph). Avoid "√"; write the chain in words or tokens.
 - Always more impressive: staggered reveals, halos, ticking counters, depth; never static text where a drawn thing can carry it.
 
+## Chrome and colour (user, 2026-10-29)
+- **Titles, axes and keys are always visible, like the logos.** They are on the first frame of section 0 (drawn with `add`, not animated) and never revealed, faded, moved or dimmed; only the data and the story elements animate. A chart's axes, gridlines, axis titles and its legend (every series that will appear, in its colour) are complete before the first dot lands.
+- **Use the complete spectrum.** Distinct things get distinct hues from the whole palette (EMERALD, GOLD, SAPPHIRE, VIOLET, SLATE, RED, TEXT, plus MUTED/FAINT for de-emphasis), so a slide reads at a glance. The fixed meanings keep theirs: RED = wrong, EMERALD = FP127/correct, TEXT = FP19/exact; everything else in a scene (incidents, protocols, formulas, rows, steps) takes the remaining hues consistently within the scene and across the deck (one protocol = one hue everywhere; one library family = its family colour). Never two categories in one hue on the same slide; never a hue with no meaning.
+
 ## Legibility (1920×1080, a dark room, the back row)
 - `SIZE_CAPTION = 20` (the source caption only), `SIZE_BODY = 32` (everything else), `SIZE_HERO = 48` (the one hero number or line). These are manim font sizes in scene units, not pixels: the frame is 14.2 units wide, a mono character at size 32 is about 0.26 units, so a mono line holds about 46 characters at BODY and a 42-character address does not fit at HERO (draw it at the largest size that fits, and say so in the report). Nothing below CAPTION, ever; below BODY only when a string cannot fit, reported.
 - 5% safe area on every edge. One idea per section. Nothing smaller than `SIZE_CAPTION`, ever.
