@@ -595,8 +595,35 @@ def expect_s16_ziv(mod) -> dict:
     }
 
 
+def expect_s03_under(mod) -> dict:
+    """No JSON: every string is a LITERAL. The second route is the brief's
+    table (talk/briefs/s03_under.md §3): the labels, the formulas with
+    their markup stripped, the hero, the closing line (one line in the
+    script, two on the slide), and its flags: "every" in the title only."""
+    labels = [label for label, _ in mod.ROWS]
+    assert labels == ["compounding rate", "discount factor", "option price", "growth curve"], labels
+    formulas = [[TAG.sub("", stage) for stage in stages] for _, stages in mod.ROWS]
+    assert formulas == [["(1 + r/n)nt", "ent · ln(1 + r/n)"], ["e−rt"], ["N(d)", "erfc", "e−x2"], ["ekt"]], formulas
+    assert TAG.sub("", mod.HERO) == "ex" and mod.TITLE == "exp is under everything"
+    assert mod.CLOSE.replace("\n", " ") == "if exp has no canonical value on chain, nothing built on it has one"
+    lits = mod.LITERALS
+    assert set(lits) == {mod.TITLE, *labels, *(stage for _, stages in mod.ROWS for stage in stages), mod.HERO, mod.CLOSE}, sorted(lits)
+    assert all(v in ("V11", "V10, V11") for v in lits.values()) and lits[mod.CLOSE] == "V10, V11", lits
+    assert [k for k in lits if "every" in k.lower()] == [mod.TITLE]  # the rows are examples, not a claim of completeness
+    # Instrument Sans has no ² or →: the square is a <sup>, the arrows are drawn; nothing the font lacks is set
+    assert not any(ch in k for k in lits for ch in "²→½√…"), sorted(lits)
+    # the only digits drawn: the 1 of (1 + r/n) and the 2 of x²
+    toks = set()
+    for k in lits:
+        toks |= number_tokens(k)
+    assert toks == {"1", "2"}, toks
+    assert all(stage.startswith("e<sup>") for _, stages in mod.ROWS for stage in stages[-1:]), "every row ends in a power of e"
+    return {}
+
+
 EXPECT = {
     "s02_exp40": expect_s02_exp40,
+    "s03_under": expect_s03_under,
     "s04_grid": expect_s04_grid,
     "s05_cost": expect_s05_cost,
     "s06_resupply": expect_s06_resupply,

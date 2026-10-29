@@ -121,6 +121,7 @@ chart's own units.
 | file | slide | numbers from |
 |---|---|---|
 | `s02_exp40.py` | What is e^40? | edges.json op `exp`, probe `["40"]`: `.truth` (extended to 80 decimals by `truth80()`), `.cells[solady|balancer|prb].value` (counted in decimals of 18), `.cells[fp19|fp127].raw` decoded and written to 80 decimals, their matching digits against the truth counted by eye; labels from libraries.json |
+| `s03_under.py` | exp is under everything | no JSON: `numbers()` is empty and every string is a `LITERALS` entry (the title, four row labels, their formulas with the exp term last, the hero `e^x`: V11; the closing line: V10, V11); the `→` between a formula's stages is a drawn arrow and the `²` a `<sup>2</sup>`, since Instrument Sans has neither glyph; `check.py` compares the strings, markup stripped, with the brief's table |
 | `s04_grid.py` | Computers round | edges.json op `exp`, probe `["40"]`: `.truth` to 80 decimals (`truth80()`), `.cells.fp127.value`; the neighbours at every decimal and binary level, the 2^-128 words' readings to 80 decimals (they part at the 39th), computed from the truth with Fraction |
 | `s05_cost.py` | $130 million | `talk/scenes/data/incidents.json` (`.incidents[]`, `.total`, `.since`; the rounding lines are essay-v6 §2's, listed, not summed) |
 | `s06_resupply.py` | Resupply, 26 June 2025 | scripts/replays/resupply.json `.pins` (price, borrowAmount, collateral, maxLTV, ltvPrecision, exchangePrecision, block) and `.citations` (the two Solidity lines); every value computed from the pins |
