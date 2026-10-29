@@ -92,8 +92,9 @@ two objects share is copied into each: bytes, not gas) and has its own
 interface and ABI; `FP127Lib.sol` holds every export. Runtime sizes at the
 split: 3,367, 12,716, 7,560, 5,005 and 7,994 bytes, where v8's one object
 had 779 bytes free, so each now has room for the second stage behind its
-rounding tests. The words are v8's, op for op (`test/objects/ObjectsEqLib.t.sol`
-with `FP_REF_DIR` set to v8's artifact under every name). Salts `"FP127 v9"`,
+rounding tests. The split kept v8's words, op for op (`test/objects/ObjectsEqLib.t.sol`
+with `FP_REF_DIR` set to v8's artifact under every name); since then `gavg`
+and `hypot` round once (see Rounding), and `FP127` is 3,728 bytes. Salts `"FP127 v9"`,
 `"FP127E v9"`, `"FP127H v9"`, `"FP127N v9"`, `"FP127S v9"`; not deployed yet.
 
 Each object wraps its bodies in a dispatcher that finds the 4-byte selector
@@ -233,10 +234,12 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `abs`, `neg` | | `Overflow` at −2^255 |
 | `sign`, `min`, `max`, `clamp`, `avg`, `floor`, `frac` | exact, never revert | |
 | `ceil`, `round` | exact | `Overflow` at the top of the range |
-| `zeroFloorSub`, `dist`, `lerp`, `hypot`, `gavg` | checked compositions | `Overflow`, `OutOfRange` |
+| `zeroFloorSub`, `dist`, `lerp` | checked compositions | `Overflow` |
+| `gavg(a, b)` | √(a·b) to nearest, rounded once from the exact 512-bit product (never a tie); two negatives give the positive root | `OutOfRange` for opposite signs, `Overflow` only at a = b = −2^255 |
+| `hypot(a, b)` | √(a² + b²) to nearest, rounded once from the exact sum of squares (never a tie); no intermediate overflow | `Overflow` where the root passes the largest word |
 | `factorial(n)` | floor(n)! for 0 ≤ n < 34 | `OutOfRange` |
-| `lambertW0(x)` | W(x) for x ≥ −1/e | `OutOfRange` |
-| `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0 | `OutOfRange` |
+| `lambertW0(x)` | W(x) for x ≥ −1/e, correctly rounded: the double-word Newton step's value tested by `rbad127`, a log-form step at 2^-510 on a miss; W(0) = 0 the one exact point | `OutOfRange` |
+| `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0, correctly rounded as `lambertW0` | `OutOfRange` |
 | `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
 | `expm1(x)` | e^x − 1: on the grid the one is exact, so `exp(x)` − 1 word for word (a series below 1/16); −1 below −90 | `Overflow` above 88 |
 | `sinh`, `cosh` | \|x\| ≤ 88, correctly rounded; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192 (within 3 units plus 2^-299 relative, `rbad127` err 2^20), e^\|x\| and e^−\|x\| in two words past it; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
@@ -277,16 +280,22 @@ stated bound against 120-digit truth (CI runs it).
 `exp`, `exp2`, `exp10`, `expm1`, `sinh`, `cosh`, `tanh`, `atanh`, `pow`,
 `cbrt`, `ln`, `log2`, `log10`, `log1p`, `powu`, `compound`, `lambertW0`,
 `lambertWm1`, and, through the one-word kernel, `erf`, `erfc` and
-`normCdf` (no misrounding at any vector or random input). `add`, `sub`,
+`normCdf` (no misrounding at any vector or random input). `gavg` and `hypot`
+return the nearest word too, decided exactly (3.0): for raw words A and B the
+raw result is the root of the integer A·B or A² + B², taken in two words and
+rounded once, and an integer's root is never a tie. `add`, `sub`,
 `log2Up` and the integer ops are exact. `mul`, `mulDown`, `divDown`,
 `sqrt`, `toFixed18`, `toFixed18Down` floor; `mulUp`, `divUp`, `toFixed18Up`
 ceil; `div`, `inv`, `fromFixed18` truncate. Up to v8 `pow` was the
 exception: with log2 x absolute to 2^-299 a base within 2^-88 of one raised
 past 2^90 (results near 2^120) missed by up to 1e11 ULPs, and it rounded
-exact ties down; 3.0 repairs both (below). `gavg` and `hypot` are the
-v4 compositions (floored root of a floored product or sum), kept
-bit-identical to the Huff: within one ULP when the product is 1 or more,
-but a small product's 2^-128 is amplified by the root.
+exact ties down; 3.0 repairs both (below). Up to v8, `gavg` and
+`hypot` were the Huff's compositions, kept bit-identical to it: the floored
+root of a floored product or sum of squares. A product under one ULP floored
+to zero, so they were low by up to 2^64 ULPs (gavg(2^-78, 2^-60) returned 0
+for 2^-69), and they reverted with `Overflow` wherever a·b or a² + b² passed
+2^127 though the root fits. 3.0 drops that definition for FP19's: one
+rounding of the exact value.
 
 **At the token edge.** The replays
 ([`docs/benchmarks/replay-*.md`](../../../docs/benchmarks/)) put every loss
@@ -309,13 +318,22 @@ word steps, one residual step, exact cubes) and an exact midpoint test.
 bound cannot change the answer and fall back to `l2p` within 2^-145 of a
 midpoint (about one input in 2^17). Lambert W near −1/e (1 + e·x < 1/8)
 seeds q = 1 + W by a degree-16 fit in √(2(1 + e·x)) and takes one
-sixth-order step on the double-word exp kernel (q within 5 units of 2^-192
-whatever q, so the word is nearest unless within 5·2^-64 ULP of a
-midpoint); elsewhere it seeds from a crude logarithm, runs one-word
+sixth-order step on the double-word exp kernel (W within 6 units of 2^-192
+whatever q); elsewhere it seeds from a crude logarithm, runs one-word
 fourth-order log-form steps at 2^-126 on a table-driven logarithm until one
 starts within 2^-22, and ends with one Newton step whose residual comes
-from the double-word exponential (`precise_model.py lambertw` measures
-both). `scripts/fp127/generators/precise_model.py` models the
+from the double-word exponential, its value V at 2^-300 within
+err = 2^(2·msb|y| + msb|w| − 421) + |y|·2^-124 + 16 units (y the step's
+residual: Newton's own y²|w|/(2|1 + w|³) twice over, B's top word, the
+floors). From 3.0 `rbad127` tests either value and, when its bound may
+cross a midpoint, `lwwide` decides: FP19's `lwfix` in 127.128, one
+log-form Newton step at 2^-510 (`w19_wrecip`, `w19_wmul`, `w19_wlnw`,
+`w19_kln2`) from that value, within 2^-290 absolute, rounded once. W(x) is
+transcendental for every word x but 0 (Lindemann–Weierstrass), so it is
+never a midpoint and the tie rule never applies; W(0) = 0, and |x| < 2^-65
+returns x (W(x) − x is under 2^-130). `bounds127.py` checks both bounds
+(largest ratio 0.20 and 0.58 of the stated one) and
+`precise_model.py lambertw` the stages before them. `scripts/fp127/generators/precise_model.py` models the
 kernels in integers and measures them.
 
 Rounding directions of the arithmetic are inherited from the Huff and

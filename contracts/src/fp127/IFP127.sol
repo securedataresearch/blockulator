@@ -105,9 +105,20 @@ interface IFP127 {
     ///      v4 was pow(|x|, 1/3) with the exponent 1/3 floored to 128 bits,
     ///      which put large results 1.6e14 ULPs off.
     function cbrt(int256 x) external pure returns (int256 r);
-    /// @notice Geometric mean sqrt(a * b). Reverts with OutOfRange if a * b < 0.
+    /// @notice The geometric mean sqrt(a b), rounded once to nearest from the
+    ///         exact 512-bit product; two negatives give the positive root.
+    /// @dev rootw(|A| |B|) for the raw words. Up to v8 this was sqrt(mul(a,
+    ///      b)), the floored root of the floored product: low by up to 2^64 ULPs
+    ///      where a b is under one ULP (a = 2^-78, b = 2^-60: the product floors
+    ///      to zero, the root is 2^-69, 2^59 ULPs), and Overflow wherever a b
+    ///      passed 2^127 though its root fits.
     function gavg(int256 a, int256 b) external pure returns (int256 r);
-    /// @notice sqrt(a^2 + b^2), checked.
+    /// @notice sqrt(a^2 + b^2), rounded once to nearest from the exact sum of
+    ///         squares (two words); no intermediate overflows.
+    /// @dev rootw(A^2 + B^2) for the raw words. Up to v8 this was the floored
+    ///      root of the sum of floored squares: low by up to 2^64 ULPs where
+    ///      both squares are under one ULP, and Overflow wherever a^2 + b^2
+    ///      passed 2^127 though its root fits.
     function hypot(int256 a, int256 b) external pure returns (int256 r);
     /// @notice 1 / x. Reverts with DivisionByZero for x == 0.
     /// @dev div(2^128, x) in one word: floor(2^256 / |x|) is

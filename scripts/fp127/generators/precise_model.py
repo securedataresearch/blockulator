@@ -822,6 +822,34 @@ def lw_wm1(x):
     return lw_fast(x, lx - ll + sdiv(ll << 100, lx >> 28))
 
 
+def div127(a, b):
+    """The Yul's fp127_div: a 2^128 / b truncated toward zero."""
+    return sdiv(a << 128, b)
+
+
+def lw_fin(x, w):
+    """The Yul's lwfin, 3.0: the double-word Newton step from w, its rounding
+    test's operands and its word. Returns (r, v, err): the step's value is
+    w 2^172 + v at 2^-300 (v = -d, the correction), err its bound in units of
+    2^-300 (2^(2 msb|y| + msb|w| - 421) + |y| 2^-124 + 16), r the word nearest."""
+    n, s = exp_parts(w)
+    sh, sl = s >> 256, s & M256
+    aw = abs(w)
+    A = aw * sh + ((aw * sl) >> 256) + (aw << 256)
+    ax = abs(x)
+    B = ax << (256 - n)
+    p = (A - B) >> 84
+    assert abs(p) < H255, "lwfin's residual leaves its word"
+    y = div127(p, B >> 256)
+    ay = abs(y)
+    f = y - (((ay * ay) >> 256) >> 45)
+    d = div127((f * w) >> 128, w + ONE)
+    v = -d
+    t1 = 2 * msb(ay) + msb(aw) - 421 if ay else -1
+    err = (1 << t1 if t1 >= 0 else 0) + (ay >> 124) + 16
+    return w + ((v + (1 << 171)) >> 172), v, err
+
+
 def lw_measure(d=8):
     """Away from -1/e: the correct bits lwfin starts from, -log2(|w - W| /
     max(1, |W|)), and where its Newton step lands, -log2(err^2 / |1 + W|),

@@ -44,6 +44,8 @@ library LongDiv {
 
 contract Lib127 {
     function sqrt(int256 x) external pure returns (int256) { return FP127Lib.sqrt(x); }
+    function gavg(int256 a, int256 b) external pure returns (int256) { return FP127Lib.gavg(a, b); }
+    function hypot(int256 a, int256 b) external pure returns (int256) { return FP127Lib.hypot(a, b); }
 }
 
 contract Lib19 {
@@ -60,7 +62,8 @@ contract Lib19 {
 /// @title FuzzProofs
 /// @notice The fuzzed half of docs/proofs.md: the division kernels the proofs
 ///         take as lemmas (K127, K19) against a long division, and both
-///         square roots against exact integer roots. Inputs are spread over
+///         square roots, and FP127's gavg and hypot, against exact integer
+///         roots. Inputs are spread over
 ///         bit lengths, so short and long operands are as likely as random words.
 contract FuzzProofs is Test {
     Lib127 internal l127;
@@ -146,6 +149,99 @@ contract FuzzProofs is Test {
         vm.assume(x < 0);
         vm.expectRevert(FP127Lib.OutOfRange.selector);
         l127.sqrt(x);
+    }
+
+    /// The nearest integer to sqrt(nh 2^256 + nl), from the bit-by-bit root
+    /// y: one up iff N - y^2 > y (no ties: N = y^2 + y + 1/4 is no integer);
+    /// Overflow past 2^255 - 1. gavg's and hypot's spec on the raw words.
+    function refRoot(uint256 nh, uint256 nl) internal pure returns (bytes4, int256) {
+        uint256 y = LongDiv.isqrt(nh, nl);
+        (uint256 ph, uint256 pl) = Wide.umul(y, y + 1);
+        if (Wide.ult(ph, pl, nh, nl)) y += 1;
+        if (y >= uint256(1) << 255) return (Ref127.OVERFLOW, 0);
+        return (0, int256(y));
+    }
+
+    function abs127(int256 x) internal pure returns (uint256) {
+        unchecked { return x < 0 ? uint256(-x) : uint256(x); }
+    }
+
+    function check127(bool returned, int256 r, bytes memory err, bytes4 se, int256 sr, string memory op) internal pure {
+        if (returned) {
+            assertEq(se, bytes4(0), string.concat(op, " returned where the spec reverts"));
+            assertEq(r, sr, string.concat(op, " is not the nearest root"));
+        } else {
+            assertEq(bytes4(err), se, string.concat(op, " reverted differently"));
+        }
+    }
+
+    /// FP127 gavg (3.0): the nearest root of the exact product |a| |b| of the
+    /// raw words; 0 when either is zero; OutOfRange for opposite signs.
+    function checkGavg127(int256 a, int256 b) internal view {
+        bytes4 se;
+        int256 sr;
+        if (a != 0 && b != 0) {
+            if ((a < 0) != (b < 0)) se = Ref127.OUTOFRANGE;
+            else {
+                (uint256 nh, uint256 nl) = Wide.umul(abs127(a), abs127(b));
+                (se, sr) = refRoot(nh, nl);
+            }
+        }
+        try l127.gavg(a, b) returns (int256 r) { check127(true, r, "", se, sr, "gavg"); }
+        catch (bytes memory err) { check127(false, 0, err, se, sr, "gavg"); }
+    }
+
+    /// FP127 hypot (3.0): the nearest root of the exact A^2 + B^2.
+    function checkHypot127(int256 a, int256 b) internal view {
+        (uint256 ah, uint256 al) = Wide.umul(abs127(a), abs127(a));
+        (uint256 bh, uint256 bl) = Wide.umul(abs127(b), abs127(b));
+        unchecked {
+            al += bl;
+            ah += bh + (al < bl ? 1 : 0);
+        }
+        (bytes4 se, int256 sr) = refRoot(ah, al);
+        try l127.hypot(a, b) returns (int256 r) { check127(true, r, "", se, sr, "hypot"); }
+        catch (bytes memory err) { check127(false, 0, err, se, sr, "hypot"); }
+    }
+
+    /// A word with a random bit length and sign.
+    function spreadSigned(uint256 x, uint256 seed) internal pure returns (int256 v) {
+        v = int256(spread(x, seed) >> 1);
+        if ((seed >> 9) & 1 == 1) v = -v;
+        if ((seed >> 10) & 63 == 0) v = type(int256).min;
+    }
+
+    function testFuzz_fp127_gavg(uint256 a, uint256 b, uint256 sa, uint256 sb) public view {
+        checkGavg127(spreadSigned(a, sa), spreadSigned(b, sb));
+    }
+
+    function testFuzz_fp127_hypot(uint256 a, uint256 b, uint256 sa, uint256 sb) public view {
+        checkHypot127(spreadSigned(a, sa), spreadSigned(b, sb));
+    }
+
+    /// Next to the midpoints: gavg(x, x + d) has N = x^2 + d x, whose root
+    /// is just under x + 1/2 for d = 1 (N = x (x + 1), rounds down) and just
+    /// over it for d = 2; hypot(x, small) sits just above x.
+    function testFuzz_fp127_roots_near_mid(uint256 x, uint256 sx, uint8 d) public view {
+        int256 v = int256(spread(x, sx) >> 2);
+        int256 dd = int256(uint256(d % 5)) - 2;
+        checkGavg127(v, v + dd);
+        checkGavg127(-v, -v - dd);
+        checkHypot127(v, dd);
+        checkHypot127(v, int256(spread(x >> 7, sx >> 3) >> 130));
+    }
+
+    /// The edges: zero, one ULP, the extreme words, and the old floors' worst case.
+    function test_fp127_roots_edges() public view {
+        int256[8] memory w = [int256(0), 1, -1, type(int256).max, type(int256).min, type(int256).min + 1,
+            int256(1) << 50, int256(1) << 68];
+        for (uint256 i; i < w.length; i++) {
+            for (uint256 j; j < w.length; j++) {
+                checkGavg127(w[i], w[j]);
+                checkHypot127(w[i], w[j]);
+            }
+        }
+        assertEq(l127.gavg(int256(1) << 50, int256(1) << 68), int256(1) << 59);
     }
 
     /// The reference square root of an FP19 word: the exact integer root of

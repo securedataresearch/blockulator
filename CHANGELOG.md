@@ -26,6 +26,25 @@ gate on this tree: FP19 76 sweep rows misrounded 0, FP127 27 rows nearest
 everywhere, BlockulatorWad 160,000 results wrong 0; 292 tests; every object
 under 24,576 bytes (FP127 tightest, 779 free).
 
+FP127S: lambertW0 and lambertWm1 correctly rounded (v8 rounded their last
+value with no test):
+
+- lwfin's double-word Newton value V (2^-300) carries a derived bound,
+  err = 2^(2·msb|y| + msb|w| − 421) + |y|·2^-124 + 16 units (Newton's own
+  error twice over, B's top word, the floors), tested by `rbad127` at 172
+  guard bits; near −1/e lwbr's W at 2^-192 is within 6 units, tested at 64. `bounds127.py` checks both
+  (largest ratios 0.20 and 0.58); `precise_model.py`'s `lw_fin` models lwfin.
+- On a miss `lwwide`, FP19's `lwfix` in 127.128: one log-form Newton step at
+  2^-510 from that value on FP19's wide kernels (`w19_wrecip`, `w19_wmul`,
+  `w19_wlnw`, `w19_kln2`), within 2^-290, rounded once. W is transcendental
+  for every word but 0, so no ties; W(0) = 0.
+- Sweep (now 2,500 and 2,000 inputs, with 1,000 within 2^-20 of −1/e down
+  to the smallest input and 500 small negative x): 0 misrounded plain and
+  with the tests forced; fallback 0 of 4,500. Typical gas on v8's 1,500
+  inputs: lambertW0 8,152 → 8,347, lambertWm1 7,968 → 8,163 (+2.4%);
+  through the second stage about 36,000. FP127S 7,994 → 11,817 bytes;
+  inline `FP127Lib.lambertW0` 8,427 → 12,374.
+
 FP127's exp kernel and division, same words (FP127 takes a new salt at the
 next deploy):
 
@@ -137,6 +156,41 @@ kernels (`/// @import fp19 as w19`):
   Plain, second-stage and middle-stage sweeps: 0 misrounded. FP127H 7,560 →
   13,234 bytes; inline (legacy) sinh 4,898 → 6,392, tanh 5,183 → 6,715,
   atanh 2,967 → 11,158 (its three stages).
+
+FP127 `gavg` and `hypot` round once, as FP19's do; the Huff's definition
+goes, and results change:
+
+- For raw words A and B the raw result is the root of the integer A·B or
+  A² + B². `rootw` takes it in two words (sqrt's `isqrtw`, unchanged, one
+  Newton step, and an exact 512-bit test that steps the candidate up) and
+  rounds it to nearest once; an integer's root is never a tie, so the tie
+  rule does not enter. Up to v8 both were the Huff's composition, the
+  floored root of the floored product or sum of squares.
+- Every changed word goes up: v8's was never above the nearest. Where the
+  result is 1 or more, by one ULP (gavg) or up to two (hypot); below, by
+  up to about 2^127/r ULPs (hypot 2^128/r) for a raw result r, as the
+  floors' lost 2^-128 is divided by the root: up to 2^64 ULPs (hypot
+  2^64.5) where the product, or each square, is under one ULP
+  (gavg(2^-78, 2^-60) was 0, now 2^-69, 2^59 ULPs). On Phase 1's 4,000
+  sweep inputs each, 3,549 gavg and 3,234 hypot words change (451 and 766
+  were already nearest); of the vectors, 59 gavg and 53 hypot words.
+- Reverts: gavg no longer overflows except at a = b = −2^255 (the root
+  2^255 does not fit), and hypot only where its root passes the largest
+  word; v8 reverted with `Overflow` wherever a·b or a² + b² passed 2^127 (42
+  of gavg's vectors now return). gavg's `OutOfRange` for opposite signs is
+  kept, and now also where v8 said `Overflow` first (a huge product of
+  opposite signs).
+- Gas, the gas ladder's rows: inline `FP127Lib.gavg` 1,079 → 1,003 (733 →
+  706 for a product under one), `hypot` 1,366 → 1,164 (1,020 → 867);
+  through the object gavg 1,567 → 1,615, hypot 1,832 → 1,686. The FP127
+  object is 3,728 bytes (3,367 at the split).
+- `make sweep`: 0 misrounded of 4,000 each against the once-rounded word
+  (`scripts/fp127/oracle.py` now computes it; it encoded v4's composition,
+  so the sweep had scored v8 as correctly rounded); half of each op's
+  inputs now span the whole word. FuzzProofs checks both against a
+  bit-by-bit root at 50,000 runs, next to the midpoints and at the extreme
+  words (`docs/proofs.md`: fuzzed). The Huff equivalence tests assert the
+  divergence: the nearest root of the exact value, at or above the Huff's.
 
 FP127's elementary functions (`FP127E`) correctly rounded: every value is
 rounded only when its stated bound cannot change the word, with a last stage

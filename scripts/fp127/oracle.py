@@ -19,6 +19,8 @@ Rounding, matching contracts/src/fp127/README.md:
     mulUp, divUp, toFixed18Up                  ceil toward +inf
     div, inv, fromFixed18                      truncate toward 0
     divDown                                    floor toward -inf
+    gavg, hypot                                nearest, once, from the exact product or
+                                               sum of squares (never a tie)
     transcendentals                            nearest, ties up (powu, cbrt and the odd
                                                functions round the magnitude)
 mpmath at 200 digits. Each vector file holds in0.. (inputs), out (the
@@ -351,14 +353,26 @@ def _pow_tie(x, y, v):
     return T((w + 1) // 2, mpf(w) / 2)
 
 
+def _root_near(n: int):
+    """The nearest integer to sqrt(n) for an integer n >= 0, with its truth:
+    the raw result of gavg and hypot is the root of the exact product or sum
+    of squares of the raw words. Never a tie (y + 1/2 squared is not an
+    integer), so the tie rule does not enter."""
+    import math
+    y = math.isqrt(n)
+    return T(fit(y + (n - y * y > y)), mp.sqrt(mpf(n)))
+
+
 def op_gavg(a, b):
-    p = op_mul(a, b)[0]
-    return T(op_sqrt(p)[0], mp.sqrt(mpf(a) * b))
+    if a == 0 or b == 0:
+        return 0
+    if (a < 0) != (b < 0):
+        raise Revert("OutOfRange")
+    return _root_near(a * b)
 
 
 def op_hypot(a, b):
-    s = op_add(op_mul(a, a)[0], op_mul(b, b)[0])
-    return T(op_sqrt(s)[0], mp.sqrt(mpf(a) * a + mpf(b) * b))
+    return _root_near(a * a + b * b)
 
 
 def op_lambertW0(x):

@@ -36,6 +36,8 @@
 //   fromFixed18  truncate toward 0
 //   toFixed18, toFixed18Down floor toward -inf; toFixed18Up ceil toward +inf
 //   sqrt         floor
+//   gavg, hypot  nearest, once, from the exact two-word product or sum of
+//                squares (3.0; up to v8 the floored root of a floored value)
 //   transcendentals  round to nearest, ties up, once at the end. v5: exp,
 //                exp2, exp10, expm1, sinh, cosh and tanh go through a
 //                double-word kernel good to about 2^-300 relative (expk,
@@ -100,8 +102,9 @@ function absw(x) -> r {
 
 /// Index of the most significant set bit of x > 0, 0..255; msb(0) = 0. On
 /// the CLZ opcode (EIP-7939, Osaka): 255 - clz(x), guarded because
-/// 255 - clz(0) wraps. Every leading-bit count in this file goes through it;
-/// none of its 20 call sites passes zero. v1 to v5 ran the Huff's binary
+/// 255 - clz(0) wraps. Every leading-bit count in this file goes through it
+/// but lwfin's rounding bound, which takes clz itself (about 110 gas less there);
+/// none of its call sites passes zero. v1 to v5 ran the Huff's binary
 /// search here, 250 to 300 gas more.
 function msb(x) -> r {
     if x { r := sub(255, clz(x)) }
@@ -2341,20 +2344,95 @@ function fp127_cbrt(x) -> r {
     if slt(x, 0) { r := sub(0, r) }
 }
 
+/// 1 when N = h 2^256 + l > r (r + 1): sqrt(N) is past r + 1/2 (it is
+/// never exactly r + 1/2, which would need N = r^2 + r + 1/4). r < 2^255.
+function pastmid(r, h, l) -> t {
+    let p1, p0 := mul512(r, add(r, 1))
+    t := or(gt(h, p1), and(eq(h, p1), gt(l, p0)))
+}
+
+/// The nearest integer to sqrt(N), N = h 2^256 + l: gavg's and hypot's raw
+/// result, for raw words A, B, is sqrt(A B) or sqrt(A^2 + B^2) exactly, so
+/// N is their exact product or sum of squares and one rounding remains. The
+/// nearest is r with r (r - 1) < N <= r (r + 1); there are no ties.
+/// Overflow when it passes 2^255 - 1, that is N > 2^510 - 2^255. isqrtw is
+/// sqrt's kernel, unchanged (proven, test/proofs/isqrt.py).
+/// Below 2^256: floor(sqrt(N)) = isqrtw(N), or isqrtw(N 2^128) / 2^64 below
+/// 2^128 (isqrtw takes 2^16 and up), then one up iff N > r (r + 1), in a
+/// word (r < 2^128).
+/// Above: z, the top word of N 4^k with its msb at 254 or 255, has k >= 1
+/// (N < 2^510) and a root Y = isqrtw(z) in [2^127, 2^128). One Newton step
+/// from Y 2^128 for the root R of N 4^k, y = Y 2^128 + q, q = floor((z -
+/// Y^2) 2^127 / Y) (z - Y^2 <= 2Y, so the shifted numerator fits), is in
+/// (R - 2, R + 1): the exact step is in [R, R + 1), as R - Y 2^128 < 2^128
+/// and 2 Y 2^128 >= 2^256, and the floor and the dropped low word take
+/// under one each. So (y - 1) / 2^k rounded to nearest, formed as
+/// Y 2^(128 - k) + (q + 2^(k-1) - 1) >> k (y itself can reach 2^256), is
+/// at most the nearest root of N = R^2 / 4^k and at most one below it (two
+/// for k = 1): the exact product test steps it up. Fuzzed against a
+/// bit-by-bit root (test/proofs/Fuzz.t.sol).
+function rootw(h, l) -> r {
+    if iszero(h) {
+        if l {
+            let c := iszero(shr(128, l))
+            r := shr(shl(6, c), isqrtw(shl(shl(7, c), l)))
+            r := add(r, gt(l, mul(r, add(r, 1))))
+        }
+        leave
+    }
+    if or(shr(254, h), and(eq(h, 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff), gt(l, shl(255, 1)))) { rev(0x35278d12) }
+    let s := and(sub(255, msb(h)), not(1))
+    let k := shr(1, s)
+    let z := or(shl(s, h), shr(sub(256, s), l))
+    let Y := isqrtw(z)
+    r := add(shl(sub(128, k), Y), shr(k, add(div(shl(127, sub(z, mul(Y, Y))), Y), sub(shl(sub(k, 1), 1), 1))))
+    let p0 := mul(r, add(r, 1))
+    let p1 := mulmod(r, add(r, 1), not(0))
+    p1 := sub(sub(p1, p0), lt(p1, p0))
+    if or(gt(h, p1), and(eq(h, p1), gt(l, p0))) {
+        r := add(r, 1)
+        if pastmid(r, h, l) { r := add(r, 1) }
+    }
+}
+
 /// @export gavg(int256 a, int256 b) returns (int256 r)
 /// @domain a·b >= 0
-/// @reverts OutOfRange() if a·b < 0; Overflow() if a·b does not fit
-/// @notice Geometric mean sqrt(a * b). Reverts with OutOfRange if a * b < 0.
+/// @reverts OutOfRange() if a and b have opposite signs (both nonzero); Overflow() only for a = b = -2^255
+/// @notice The geometric mean sqrt(a b), rounded once to nearest from the
+///         exact 512-bit product; two negatives give the positive root.
+/// @dev rootw(|A| |B|) for the raw words. Up to v8 this was sqrt(mul(a,
+///      b)), the floored root of the floored product: low by up to 2^64 ULPs
+///      where a b is under one ULP (a = 2^-78, b = 2^-60: the product floors
+///      to zero, the root is 2^-69, 2^59 ULPs), and Overflow wherever a b
+///      passed 2^127 though its root fits.
 function fp127_gavg(a, b) -> r {
-    r := fp127_sqrt(fp127_mul(a, b))
+    if slt(xor(a, b), 0) {
+        if and(iszero(iszero(a)), iszero(iszero(b))) { rev(0x7db3aba7) }
+        leave
+    }
+    a := absw(a)
+    b := absw(b)
+    let l := mul(a, b)
+    let h := mulmod(a, b, not(0))
+    r := rootw(sub(sub(h, l), lt(h, l)), l)
 }
 
 /// @export hypot(int256 a, int256 b) returns (int256 r)
-/// @domain any a, b
-/// @reverts Overflow() if a^2 + b^2 does not fit
-/// @notice sqrt(a^2 + b^2), checked.
+/// @domain any a, b; the result must fit
+/// @reverts Overflow() when sqrt(a^2 + b^2) rounds past the largest word
+/// @notice sqrt(a^2 + b^2), rounded once to nearest from the exact sum of
+///         squares (two words); no intermediate overflows.
+/// @dev rootw(A^2 + B^2) for the raw words. Up to v8 this was the floored
+///      root of the sum of floored squares: low by up to 2^64 ULPs where
+///      both squares are under one ULP, and Overflow wherever a^2 + b^2
+///      passed 2^127 though its root fits.
 function fp127_hypot(a, b) -> r {
-    r := fp127_sqrt(fp127_add(fp127_mul(a, a), fp127_mul(b, b)))
+    let u := absw(a)
+    let h, l := mul512(u, u)
+    u := absw(b)
+    let h2, l2 := mul512(u, u)
+    l := add(l, l2)
+    r := rootw(add(add(h, h2), lt(l, l2)), l)
 }
 
 /// @export inv(int256 x) returns (int256 r)
@@ -2836,13 +2914,16 @@ function lwqs(q192, sg, q256) -> qn, at {
     at := absw(tau)
 }
 
-/// W near -1/e, both branches (sg = 1 for W-1), from q256 = 1 + e x at
-/// 2^-256 (0 < q256 < 2^253, y < 1/8; y = Y 2^ey, Y in [2^254, 2^255)): the
-/// seed p S(+-p), p = sqrt(2y) by isqrt, S the fit lwsp (within 2^-44.8);
-/// one lwqs step (a second only if the first started outside 2^-44); then
-/// w = -1 +- q, q rounded to 2^-128 from 2^-192: nearest unless q is within
-/// 5 2^-64 ULP of a midpoint.
-function lwbr(q256, sg) -> w {
+/// W near -1/e, both branches (sg = 1 for W-1), for -1/e <= x with 1 + e x
+/// = q256 at 2^-256 (lwq; 0 < q256 < 2^253, y < 1/8; y = Y 2^ey, Y in
+/// [2^254, 2^255)): the seed p S(+-p), p = sqrt(2y) by isqrt, S the fit
+/// lwsp (within 2^-44.8); one lwqs step (a second only if the first started
+/// outside 2^-44); then W = -1 +- q at 2^-192, within 6 units (lwqs's 5,
+/// bounds127.py measures it), rounded to the nearest word when rbad127 says
+/// 6 units cannot cross a midpoint, else from lwwide's Newton step at
+/// 2^-510 (3.0; v8 rounded blind).
+function lwbr(x, sg) -> w {
+    let q256 := lwq(x)
     let nb := msb(q256)
     let Y := shl(sub(254, nb), q256)
     let ey := sub(nb, 510)
@@ -2858,10 +2939,11 @@ function lwbr(q256, sg) -> w {
         q, at := lwqs(q, sg, q256)
         if lt(at, 0x10000000000000000000000000000000000000) { break }
     }
-    q := sar(64, add(q, 0x8000000000000000))
-    switch sg
-    case 0 { w := sub(q, 0x100000000000000000000000000000000) }
-    default { w := sub(sub(0, 0x100000000000000000000000000000000), q) }
+    // W at 2^-192: q - 1 on W0, -1 - q on W-1
+    q := sub(q, 0x1000000000000000000000000000000000000000000000000)
+    if sg { q := sub(sub(0, q), 0x2000000000000000000000000000000000000000000000000) }
+    w := sar(64, add(q, 0x8000000000000000))
+    if rbad127(q, 64, 6) { w := lwwide(x, w, shl(108, sub(q, shl(64, w)))) }
 }
 
 /// The final step of both branches, in the double word: Newton on
@@ -2869,11 +2951,23 @@ function lwbr(q256, sg) -> w {
 ///   w' = w - F w / (w + 1),
 /// with e^w = 2^n (1 + s) from the double-word kernel: A = |w| (1 + s) and
 /// B = |x| 2^-n at 2^-384, y = (A - B) / B and F = y - y^2/2 to about
-/// 2^-300, and the correction rounded once. The one-word stages leave w
-/// within about 2^-124 of W (relative, or times |1 + W| near -1/e); this
-/// step takes that to the nearest word, where v4 was 1,153 ULPs off near
-/// -1/e (the residual is now exact enough that the amplification 1 / (1 + w)
-/// no longer reaches the grid) and 2 ULPs off elsewhere.
+/// 2^-300, and the correction d at 2^-300, so the step's value is
+/// V = w + v 2^-300, v = -d. The one-word stages leave w within about 2^-88
+/// of W (relative, precise_model.py's lambertw; within 2^-120 or so typically),
+/// so V is within (3.0, bounds127.py checks it)
+///   err = 2^(2 msb|y| + msb|w| - 421) + |y| 2^-124 + 16
+/// units of 2^-300: Newton's own error, y^2 |w| / (2 |1 + w|^3) to first
+/// order, under 6.5 y^2 |w| (|1 + w| >= 0.43 away from -1/e, so |w| /
+/// |1 + w|^3 <= 13 |w|), the first term with room for twice that; B's top
+/// word, which y divides by, within 2^-128 of B, |y| 2^-128 / |1 + w| in
+/// d, the second; and the floors (the residual's, y's, F's, F w's, d's, each
+/// times at most |w| / |1 + w| <= 2.64 or 1 / |1 + w| <= 2.32) and the
+/// kernel's 2^-311 relative, under 14 units, the 16 (the exponent from clz:
+/// 2 msb|y| + msb|w| - 421 = 344 - 2 clz|y| - clz|w|, and 0 when negative,
+/// as shl gives). When rbad127 (172 guard bits) says err cannot cross a
+/// midpoint, V rounds to the nearest word,
+/// ties up; else lwwide's Newton step at 2^-510 decides (3.0; v8 rounded V
+/// blind). v4 was 1,153 ULPs off near -1/e and 2 ULPs elsewhere.
 function lwfin(x, w) -> r {
     let n, sh, sl := expx(w)
     let aw := absw(w)
@@ -2899,8 +2993,83 @@ function lwfin(x, w) -> r {
     let y := fp127_div(p, bh)
     let ay := absw(y)
     let f := sub(y, shr(45, hmul(ay, ay)))
-    let d := fp127_div(mulraw(f, w), add(w, 0x100000000000000000000000000000000))
-    r := add(w, sar(172, add(sub(0, d), 0x8000000000000000000000000000000000000000000)))
+    let v := sub(0, fp127_div(mulraw(f, w), add(w, 0x100000000000000000000000000000000)))
+    r := add(w, sar(172, add(v, 0x8000000000000000000000000000000000000000000)))
+    if rbad127(v, 172, add(add(shl(sub(344, add(shl(1, clz(ay)), clz(aw))), 1), shr(124, ay)), 16)) {
+        r := lwwide(x, r, sub(v, shl(172, sub(r, w))))
+    }
+}
+
+// Lambert W's second stage takes FP19's ln 2 in three words as well
+/// @import fp19 as w19: kln2
+
+/// Lambert W's second stage (3.0), FP19's lwfix in 127.128: one log-form
+/// Newton step at 2^-510 from W0 = r + e 2^-300 (r a word, |e| <= 2^171),
+///   W1 = W0 - (W0 + ln(|W0| / |x|)) W0 / (1 + W0),
+/// rounded once to the nearest word, ties up. The ratio of the two
+/// significands in two words (w19_wrecip, w19_wmul: within 2^-503), its log
+/// by w19_wlnw (within 2^-497) plus its exponent times ln 2 (w19_kln2), and
+/// W0 at 2^-510, all modulo 2^512, which holds the residual R (under
+/// 2^-105: W0 is within 2^-120 of W relative) whole; R at 2^-360 times
+/// W0 / (1 + W0) (at 2^-128 from W0 at 2^-192) is the correction. W1's
+/// error: Newton's (W0 - W)^2 / (2 |W| |1 + W|), with W0 within lwfin's err
+/// (or lwbr's 6 units of 2^-192: 2^-315 near -1/e, where |1 + W| >=
+/// 2^-64), R's floor times |W0 / (1 + W0)| <= 2^64 (2^-296), the log's
+/// 2^-497 likewise, and the floors at 2^-330: within 2^-290 (2^-162 ULP)
+/// whatever x. W is transcendental for every word x but 0, so it is never a
+/// midpoint; the sweep's forced pass runs every input through here (make
+/// sweep, gen.py's forced rbad127).
+function lwwide(x, r, e) -> rr {
+    // |W0| 2^300 = |r| 2^172 +- e in two words (W0 has r's sign: |r| >= 2^63)
+    let ar := absw(r)
+    let es := e
+    if slt(r, 0) { es := sub(0, e) }
+    let lo := shl(172, ar)
+    let hi := add(shr(84, ar), sar(255, es))
+    let l2 := add(lo, es)
+    hi := add(hi, lt(l2, lo))
+    // as a wide significand in [1, 2) (top bit 510): |W0| = m 2^(210 - t)
+    let nb := 0
+    switch hi
+    case 0 { nb := msb(l2) }
+    default { nb := add(msb(hi), 256) }
+    let t := sub(510, nb)
+    let mh := shl(sub(t, 256), l2)
+    let ml := 0
+    if lt(t, 256) {
+        mh := or(shl(t, hi), shr(sub(256, t), l2))
+        ml := shl(t, l2)
+    }
+    // |x| = mx 2^(nx - 128 - 254), Q = |W0| / |x| = (m / mx) 2^kq
+    let ax := absw(x)
+    let nx := msb(ax)
+    let qh, ql := w19_wrecip(shl(sub(254, nx), ax), 0)
+    qh, ql := w19_wmul(mh, ml, qh, ql)
+    let kq := sub(sub(338, t), nx)
+    if lt(qh, 0x4000000000000000000000000000000000000000000000000000000000000000) {
+        qh := or(shl(1, qh), shr(255, ql))
+        ql := shl(1, ql)
+        kq := sub(kq, 1)
+    }
+    let lh, ll := w19_wlnw(qh, ql, 0)
+    // R = W0 + ln Q + kq ln 2 at 2^-510, modulo 2^512
+    let ph, pl := w19_kln2(absw(kq))
+    switch slt(kq, 0)
+    case 0 {
+        ll := add(ll, pl)
+        lh := add(add(lh, ph), lt(ll, pl))
+    }
+    default {
+        lh := sub(sub(lh, ph), lt(ll, pl))
+        ll := sub(ll, pl)
+    }
+    let zl := shl(210, e)
+    ll := add(ll, zl)
+    lh := add(add(add(lh, shl(126, r)), sar(46, e)), lt(ll, zl))
+    // the correction R W0 / (1 + W0) at 2^-360, applied at 2^-330
+    let w192 := add(shl(64, r), sar(108, e))
+    let c := mulraw(or(shl(106, lh), shr(150, ll)), fp127_div(w192, add(w192, 0x1000000000000000000000000000000000000000000000000)))
+    rr := add(r, sar(202, add(sub(shl(30, e), sar(30, c)), 0x200000000000000000000000000000000000000000000000000)))
 }
 
 /// q = 1 + e x at 2^-256 for -1/e <= x < 0, with e to 2^-254: the distance to
@@ -2949,7 +3118,7 @@ function fp127_lambertW0(x) -> r {
         if slt(x, sub(0, 0x5267adbd9d4543376382ee923e4a59ec)) {
             // sg as a value of x (0 here, x < 0), not the literal 0, so the
             // optimizer keeps one copy of lwbr, lwqs and the exp kernel
-            r := lwbr(lwq(x), sgt(x, 0))
+            r := lwbr(x, sgt(x, 0))
             leave
         }
         // the origin cubic, |x| < 0.184; its error is about 8/3 x^3 relative
@@ -2988,7 +3157,7 @@ function fp127_lambertWm1(x) -> r {
     if iszero(slt(x, 0)) { rev(0x7db3aba7) }
     if slt(x, sub(0, 0x5267adbd9d4543376382ee923e4a59ec)) {
         // sg = 1 as a value of x (x < 0): see lambertW0
-        r := lwbr(lwq(x), slt(x, 0))
+        r := lwbr(x, slt(x, 0))
         leave
     }
     let rr, kk := lnm(sub(0, x))

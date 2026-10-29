@@ -8,8 +8,8 @@ The runtime bytecode one op adds to a contract that calls it through `FP127Lib` 
 
 | library | ops | smallest | median | largest | all ops, sum of singles |
 |---|---:|---|---:|---|---:|
-| FP127 legacy | 53 | `sign` 8 | 457 | `compound` 16,930 | 176,326 |
-| FP127 via_ir | 53 | `sign` 10 | 321 | `compound` 16,473 | 167,581 |
+| FP127 legacy | 53 | `sign` 8 | 480 | `compound` 16,930 | 184,361 |
+| FP127 via_ir | 53 | `sign` 10 | 321 | `compound` 16,473 | 175,563 |
 | FP19 legacy | 65 | `abs` 108 | 544 | `normCdf` 17,159 | 225,807 |
 | FP19 via_ir | 65 | `abs` 55 | 443 | `normCdf` 17,344 | 209,090 |
 
@@ -64,8 +64,8 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `powu` | 16,406 | 15,992 |
 | `compound` | 16,930 | 16,473 |
 | `cbrt` | 600 | 472 |
-| `gavg` | 457 | 343 |
-| `hypot` | 508 | 378 |
+| `gavg` | 566 | 483 |
+| `hypot` | 549 | 457 |
 | `inv` | 135 | 84 |
 | `abs` | 74 | 34 |
 | `neg` | 70 | 28 |
@@ -82,8 +82,8 @@ Inlining saves the external call: about 579 gas per call to the deployed FP127 a
 | `frac` | 16 | 18 |
 | `round` | 103 | 48 |
 | `factorial` | 864 | 690 |
-| `lambertW0` | 8,427 | 7,807 |
-| `lambertWm1` | 8,112 | 7,527 |
+| `lambertW0` | 12,374 | 11,698 |
+| `lambertWm1` | 12,050 | 11,399 |
 | `log1p` | 8,692 | 8,065 |
 | `expm1` | 6,207 | 6,143 |
 | `sinh` | 6,392 | 5,709 |

@@ -125,7 +125,7 @@ OPS127 = ["mul", "div", "sqrt", "exp", "ln", "log2", "pow", "cbrt", "expm1", "er
 # FP127LibMid (the fast path's test forced). The phases that give the other
 # ops a test and a second stage add them here.
 WIDE127 = ["ln", "log2", "log10", "log1p", "pow", "compound", "sinh", "cosh", "tanh", "atanh",
-           "exp", "exp2", "exp10", "expm1", "powu"]
+           "lambertW0", "lambertWm1", "exp", "exp2", "exp10", "expm1", "powu"]
 MID127 = ["pow", "compound", "atanh", "ln", "log2", "log10", "log1p"]
 WIDE = {"fp19": WIDE19, "fp127": WIDE127}
 MID = {"fp19": MID19, "fp127": MID127}
@@ -225,6 +225,15 @@ def gen():
         db = rl.randint(1, 126)
         d = rl.getrandbits(db) | (1 << db)
         wm1.append(-d if -d >= nie else nie + (1 << 108) + rl.getrandbits(100))
+    # 3.0: both branches within 2^-20 of -1/e down to the smallest input
+    # (lwbr's q at 2^-64), and W0 on small negative x (lwfin from the cubic)
+    for _ in range(500):
+        db = rl.randint(0, 107)
+        w0.append(nie + (rl.getrandbits(db) | (1 << db)))
+        db = rl.randint(0, 107)
+        wm1.append(nie + (rl.getrandbits(db) | (1 << db)))
+        db = rl.randint(63, 120)
+        w0.append(-(rl.getrandbits(db) | (1 << db)))
     write("fp127_lambertW0", w0)
     write("fp127_lambertWm1", [x for x in wm1 if x < 0])
     gen127()
@@ -238,9 +247,18 @@ def gen127():
     S = 4000
     # log1p: |x| < 1 at every scale down to 2^-127, both signs, then x from 1 to 2^126
     write("fp127_log1p", [f127(rng, 1, 127) for _ in range(S // 2)] + [f127(rng, 128, 254, 0) for _ in range(S // 2)])
-    # gavg: a b fits the word; hypot: both squares fit
-    write("fp127_gavg", [f127(rng, 1, 190, 0) for _ in range(S)], [f127(rng, 1, 190, 0) for _ in range(S)])
-    write("fp127_hypot", [f127(rng, 1, 190) for _ in range(S)], [f127(rng, 1, 190) for _ in range(S)])
+    # gavg: a b fits the word; hypot: both squares fit (where v4's composition did not overflow)
+    ga, gb = [f127(rng, 1, 190, 0) for _ in range(S)], [f127(rng, 1, 190, 0) for _ in range(S)]
+    ha, hb = [f127(rng, 1, 190) for _ in range(S)], [f127(rng, 1, 190) for _ in range(S)]
+    # 3.0 rounds both once from the exact value, whose product cannot overflow: the second half of
+    # each over the whole range, from its own seed (gavg's pairs share a sign)
+    wr = random.Random(SEED + 1276)
+    for i in range(S // 2, S):
+        a, b = f127(wr, 1, 254), f127(wr, 1, 254, 0)
+        ga[i], gb[i] = a, ((-b) % T256 if a >> 255 else b)
+        ha[i], hb[i] = f127(wr, 1, 254), f127(wr, 1, 254)
+    write("fp127_gavg", ga, gb)
+    write("fp127_hypot", ha, hb)
     write("fp127_inv", [f127(rng, 1, 254) for _ in range(S)])
     write("fp127_mulDown", [f127(rng, 100, 200) for _ in range(S)], [f127(rng, 60, 160) for _ in range(S)])
     # pow and powu's last quarter (3.0): bases within 2^-8 of one at every
@@ -689,7 +707,7 @@ def score():
            "",
            "*correctly rounded*: the word scripts/fp127/oracle.py gives, the rounding the op promises: to nearest "
            "with FP127's tie rule (ties up; powu, compound, cbrt, sinh, tanh and erf round the magnitude, so their "
-           "ties go away from zero), the directed ops in their direction, gavg and hypot their v4 composition; a "
+           "ties go away from zero), the directed ops in their direction; a "
            "revert where the oracle reverts counts as correct, so *inputs* includes the reverts; the ULP columns "
            "are over the results that returned. "
            "*nearest*: within half a ULP; *faithful*: within one; *min bits*: fewest correct bits relative to the "
