@@ -68,13 +68,31 @@ Sepolia, as does FP127 v7 (0xb97E0b824d86470BfAA52fe44f09363755d52591,
   Decode by dividing by 2**128. Range about +/- 1.7e38.
 - Checked arithmetic: out-of-domain inputs revert with Overflow(),
   DivisionByZero() or OutOfRange(). Nothing wraps.
-- Validated against mpmath at 200 decimal places: add, sub, the
-  comparisons and floor, ceil, round, factorial exact; mul and sqrt round down and div toward zero, within
-  one ULP; every transcendental (exp, ln, pow, cbrt, Lambert W, erf, ...)
-  the nearest word, within half an ULP at every committed vector and on
-  1,500 to 4,000 random inputs per op, pow at extreme exponents excepted.
-  exp(ln(x)) returns the same word for 10,000 steps.
-  /data/precision.json
+- Rounding: add, sub, the comparisons and floor, ceil, round, factorial
+  exact; mul and sqrt round down, div and inv toward zero, mulUp, divUp
+  and toFixed18Up up, mulDown, divDown and toFixed18Down down; every
+  transcendental (exp, ln, pow, cbrt, Lambert W, erf, ...) to nearest. In
+  the deployed v8 the transcendentals are the nearest word at every
+  committed vector and on 1,500 to 4,000 random inputs per op (mpmath at
+  200 decimal places), pow at extreme exponents excepted. From v9 (the
+  current source, not yet deployed) every op is correctly rounded on every
+  input: each fast value carries a derived error bound and a rounding
+  test, a wider stage decides what the test cannot, and the sweep is 0
+  misrounded plain and with every test forced. exp(ln(x)) returns the same
+  word for 10,000 steps. /data/precision.json
+- FP127 v9 (not deployed; predicted CREATE2 addresses through the same
+  proxy, the same on every chain): five objects by idea, as FP19's. FP127
+  the number (arithmetic, directed forms, conversions, sqrt, cbrt, gavg,
+  hypot, inv, factorial and the small ops) at
+  0x0DF738d125677550a80A46BaF254386C66f96E0d (salt "FP127 v9"), FP127E
+  (exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu,
+  compound) at 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808 (salt "FP127E
+  v9"), FP127H (sinh, cosh, tanh, atanh) at
+  0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B (salt "FP127H v9"), FP127N
+  (erf, erfc, normCdf) at 0xAA7Cd9635aE8630379636F533f23DBf2C193d296 (salt
+  "FP127N v9") and FP127S (lambertW0, lambertWm1) at
+  0xB9C2583a7Ad2251444DC7752658B6C1107C25036 (salt "FP127S v9"). Until a
+  deployment record exists at /contracts/deployments/, call v8 above.
 - Machine-readable op table (signature, selector, domain, reverts):
   /data/ops.json
 

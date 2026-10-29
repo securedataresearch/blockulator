@@ -3,7 +3,10 @@
 The public name for this release (2026-10-28, Sepolia, chainId 11155111,
 blocks 12,015,304 to 12,015,322). Each contract keeps its own version in its
 CREATE2 salt, since the salt names the address. Machine-readable copy:
-`RELEASE.json`; notes: `CHANGELOG.md`. It is not on Ethereum mainnet yet.
+`RELEASE.json`; notes: `CHANGELOG.md`. It is not on Ethereum mainnet yet,
+and the source is ahead of it: FP127 is now v9, five objects by idea with
+every op correctly rounded (`FP127.md`, `CHANGELOG.md` Unreleased), not
+deployed; the ladder's next runners take `"FP127 ladder v14"`.
 
 | component | version | runtime | address | record |
 |---|---|---:|---|---|

@@ -200,8 +200,10 @@ def report():
           "script's docstring; in short:",
           "",
           "- **gas**: the committed library, median / 99th percentile / largest over the op's inputs;",
-          "- **fallback**: the share of inputs whose rounding test fired (FP19 `rbad`; FP127 the double-word `l2p` "
-          "behind ln, log2, log10 and pow, and powu / compound's 512-bit `powus`), counted by a test-only copy of the library whose results "
+          "- **fallback**: the share of inputs whose rounding test fired (FP19 `rbad`; FP127 `rbad127` and `rbadw` on "
+          "every transcendental's fast value, and the double-word `l2p` and pow's `powmid` where the one-word log "
+          "or `pow2t` could not decide; after an arrow, the share whose middle stage's test, `rbadm` or `rbadm127`, "
+          "fired too), counted by a test-only copy of the library whose results "
           "match the committed one's word for word; a dash: the op has no such test (Lambert W in FP19 "
           "tests its one-word step and runs the wide step, `lwfix`, only on a miss);",
           "- **helpers**: test-only gas probes around the named helpers. *exclusive* is a helper's gas without "

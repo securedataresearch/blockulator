@@ -777,7 +777,10 @@ PROBES = {
               "em1k", "hserw", "hypw", "tanhw1", "tanhw2", "wln", "cbrtseed", "cbrtw", "cubegt",
               "isqrtw", "lerp3"],
     "fp127": ["expk", "log2m", "erfs", "erfct", "lwf127", "lnc", "lwqs", "lwsp", "lwfin",
-              "l2p", "powus", "einvhalf", "cbrtw", "cube"],
+              "l2p", "powus", "einvhalf", "cbrtw", "cube",
+              # 3.0's middle and last stages: pow's, the exponentials', the logs',
+              # Lambert W's, the error function's, and gavg / hypot's root
+              "powmid", "powslow", "expw", "l2w", "logw", "lwwide", "erfw127", "rootw"],
 }
 
 
