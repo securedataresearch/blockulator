@@ -242,9 +242,9 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `lambertWm1(x)` | W₋₁(x) for −1/e ≤ x < 0 | `OutOfRange` |
 | `log1p(x)` | ln(1 + x), the sum exact in the format | `OutOfRange` at or below −1, `Overflow` |
 | `expm1(x)` | e^x − 1, the one subtracted before rounding; −1 below −90 | `Overflow` above 88 |
-| `sinh`, `cosh` | \|x\| ≤ 88; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192, within 3 units of 2^-192; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
-| `tanh(x)` | all x; ±1 exactly from \|x\| = 46 | never |
-| `atanh(x)` | \|x\| < 1; log1p(2\|x\|/(1 − \|x\|))/2, one division and one unrounded log at 2^-192 | `OutOfRange` |
+| `sinh`, `cosh` | \|x\| ≤ 88, correctly rounded; (u ± u/(1+u))/2-shaped from one double-word exp and one division at 2^-192 (within 3 units plus 2^-299 relative, `rbad127` err 2^20), e^\|x\| and e^−\|x\| in two words past it; sinh is x below 2^-65, cosh is 1 below 2^-64 | `Overflow` |
+| `tanh(x)` | all x, correctly rounded; u/(u + 2) or (1 − w)/(1 + w) at 2^-192 (err 2 or 3 units), (1 − w)/(1 + w) in two words past it; ±1 exactly from \|x\| = 46 | never |
+| `atanh(x)` | \|x\| < 1, correctly rounded; log1p(2\|x\|/(1 − \|x\|))/2, one division and one unrounded log at 2^-192 (err 2^47 units), then `l2p` of 1 ± \|x\| (2^-248), then ln(1 ± \|x\|) in two words | `OutOfRange` |
 | `erf(x)`, `erfc(x)` | all x; series to 4, e^(x²) erfc(x) by a minimax polynomial beyond, at 2^-192; erfc(9.3) is one ULP, zero beyond | never |
 | `normCdf(x)` | Φ(x) = erfc(−x/√2)/2, the N(d) of Black-Scholes; Φ(−13) is two ULPs, Φ(−14) is zero, Φ(14) is one | never |
 
@@ -258,7 +258,7 @@ and `ln(10 ONE)` return the same nearest words, and `exp2`, `log2` and
 
 **The tie rule.** To nearest is floor(v + 1/2) on the 2^-128 grid: ties
 toward +∞ (`round64`, `rnd192`, `pow2r` and the logs' `x384mul` all add half
-and floor). `powu` and `compound`, `cbrt`, and the odd `sinh`, `tanh` and
+and floor). `powu` and `compound`, `cbrt`, and the odd `sinh`, `tanh`, `atanh` and
 `erf` round the magnitude and apply the sign, so their ties go away from
 zero; `scripts/fp127/oracle.py` rounds each op the same way, and make sweep's
 *correctly rounded* column compares with its word. `rbad127(v, g, err)` is
@@ -268,13 +268,15 @@ below the grid (`v`'s low `g` bits; `g = 256` for a two-word value's low
 word), may round to another word than `v` does: when the low bits are within
 `err` below half a step, at most `err` above it, or `err` reaches half a
 step. A `v` exactly on the midpoint with `err = 0` is the tie itself and
-rounds up. `scripts/fp127/generators/bounds127.py` measures each fast value's
+rounds up. Its body is one interval test, the low bits within [half − err,
+half + err), with no branch, so solc inlines a call with constant `g` and
+`err` (about 40 gas; the branching form cost 190). `scripts/fp127/generators/bounds127.py` measures each fast value's
 stated bound against 120-digit truth (CI runs it).
 
 **Rounding (v5).** Every transcendental returns the nearest word, ties up:
-`exp`, `exp2`, `exp10`, `expm1`, `sinh`, `cosh`, `tanh`, `pow`, `cbrt`,
-`ln`, `log2`, `log10`, `log1p`, `powu`, `compound`, `lambertW0`,
-`lambertWm1`, and, through the one-word kernel, `atanh`, `erf`, `erfc` and
+`exp`, `exp2`, `exp10`, `expm1`, `sinh`, `cosh`, `tanh`, `atanh`, `pow`,
+`cbrt`, `ln`, `log2`, `log10`, `log1p`, `powu`, `compound`, `lambertW0`,
+`lambertWm1`, and, through the one-word kernel, `erf`, `erfc` and
 `normCdf` (no misrounding at any vector or random input). `gavg` and `hypot`
 return the nearest word too, decided exactly (3.0): for raw words A and B the
 raw result is the root of the integer A·B or A² + B², taken in two words and
@@ -442,6 +444,30 @@ the tolerance 2^-175 e^(x²) on g, which is 2^-149 relative at x = 4 and
 erfc 2^18.25 units of 2^-192, the fraction's 2^18.17, both e^(−x²)'s);
 `--check` holds the source to its Yul (CI). 7,650 gas at every x of the
 tail; the products are written in line (calls to `mulg` cost 10,770).
+
+**The hyperbolics, correctly rounded (3.0).** `sinh`, `cosh`, `tanh` and
+`atanh` (`FP127H`) round their fast value only when its stated bound cannot
+change the word (`rbad127`); otherwise a second stage decides on FP19's wide
+kernels, imported as `w19_*`, whose absolute error (2^-497 to 2^-505) is far
+below anything the 2^-128 grid can see. `sinh` and `cosh`: V within 3 units
+of 2^-192 plus 2^-299 of e^|x|/2, under 2^19 units at |x| = 88, so err is
+2^20 (a constant: solc inlines the test); past it e^|x| = 2^k (1 + E) by
+`w19_wexpr`, e^−|x| by `w19_wrecip`, subtracted or added at 2^-510 (FP19's
+`hypw`). `tanh`: u/(u + 2) below 1/4 (u within 1.1 units below, slope at
+most 1/2, plus the quotient's floor: err 2), (1 − w)/(1 + w) from 1/4
+(slope at most 2: err 3); past it (1 − w)/(1 + w) with w = e^−2|x| in two
+words (FP19's `tanhw2`). `atanh`: the one-word log (2^-145) with err 2^47
+units; past it `l2p` of the exact words 1 + |x| and 1 − |x|, times ln 2/2
+at 2^-256 (err 2^-248, the constant's floor under a log of at most 129,
+`rbadm127`); past that ln(1 + |x|) and ln(1 − |x|) by `w19_wlnw`, the
+difference at 2^-384 plus j ln 2. `bounds127.py` measures every err
+(largest ratio 0.75, tanh below 2^-5). Sweep medians, inline: `sinh` 3,868
+→ 3,924, `cosh` 3,824 → 3,877, `tanh` 3,821 → 3,873, `atanh` 2,750 →
+2,814; the second stages cost about 27,700 (`sinh`, `cosh`), 28,200
+(`tanh`), 12,400 (`atanh`'s `l2p`) and 60,900 (its wide logs), and no
+sweep input reached one. `FP127H` is 13,234 bytes (7,560 before); inline, `sinh` and `cosh`
+take about 6.4 KB, `tanh` 6.7 KB and `atanh`, with three stages, 11.2 KB
+([`size.md`](../../../docs/benchmarks/size.md)).
 
 ## Precision
 

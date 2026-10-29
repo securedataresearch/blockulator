@@ -447,7 +447,7 @@ def op_tanh(x):
 def op_atanh(x):
     if abs(x) >= ONE:
         raise Revert("OutOfRange")
-    return nearv(mp.atanh(to_mpf(x)))
+    return nearv(mp.atanh(to_mpf(x)), True)
 
 
 def op_erf(x):

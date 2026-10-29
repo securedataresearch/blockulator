@@ -115,6 +115,29 @@ and vector):
 - The FP127 object is 23,797 bytes; inline `FP127Lib.compound` 11.0 KB
   (was 1.3 KB).
 
+FP127's hyperbolics (`FP127H`) correctly rounded: each fast value now has a
+stated bound and a rounding test, with a second stage behind it on FP19's wide
+kernels (`/// @import fp19 as w19`):
+
+- `sinh`, `cosh`: the one-exp value at 2^-192 is within 3 units plus 2^-299
+  relative, err 2^20 units; past it e^|x| and e^−|x| in two words
+  (`w19_wexpr`, `w19_wrecip`), summed or subtracted, rounded once.
+- `tanh`: u/(u + 2) below 1/4 (err 2 units), (1 − w)/(1 + w) beyond (err 3);
+  past it (1 − w)/(1 + w) in two words.
+- `atanh`: the one-word log (err 2^47 units), then a new middle stage, `l2p`
+  of the exact words 1 ± |x| (err 2^-248, `rbadm127`), then ln(1 ± |x|) by
+  `w19_wlnw` in two words. It now rounds the magnitude (ties away from
+  zero), as the Yul always did; the oracle agrees.
+- `rbad127` and `rbadm127` test the interval [half − err, half + err)
+  without a branch, so solc inlines a call with constant arguments: the same
+  predicate at about 40 gas, where the branching form cost about 190.
+- `bounds127.py` measures each err (largest ratio 0.75); `precise_model.py`
+  models the fast values, with `op_tanh`. Sweep medians, inline: sinh 3,868 → 3,924, cosh 3,824 → 3,877, tanh
+  3,821 → 3,873, atanh 2,750 → 2,814; no sweep input reached a second stage.
+  Plain, second-stage and middle-stage sweeps: 0 misrounded. FP127H 7,560 →
+  13,234 bytes; inline (legacy) sinh 4,898 → 6,392, tanh 5,183 → 6,715,
+  atanh 2,967 → 11,158 (its three stages).
+
 FP127 `gavg` and `hypot` round once, as FP19's do; the Huff's definition
 goes, and results change:
 
@@ -129,9 +152,9 @@ goes, and results change:
   up to about 2^127/r ULPs (hypot 2^128/r) for a raw result r, as the
   floors' lost 2^-128 is divided by the root: up to 2^64 ULPs (hypot
   2^64.5) where the product, or each square, is under one ULP
-  (gavg(2^-78, 2^-60) was 0, now 2^-69, 2^59 ULPs). On Phase 1's 4,000 sweep inputs each, 3,549 gavg and 3,234 hypot
-  words change (451 and 766 were already nearest); of the vectors, 59 gavg
-  and 53 hypot words.
+  (gavg(2^-78, 2^-60) was 0, now 2^-69, 2^59 ULPs). On Phase 1's 4,000
+  sweep inputs each, 3,549 gavg and 3,234 hypot words change (451 and 766
+  were already nearest); of the vectors, 59 gavg and 53 hypot words.
 - Reverts: gavg no longer overflows except at a = b = −2^255 (the root
   2^255 does not fit), and hypot only where its root passes the largest
   word; v8 reverted with `Overflow` wherever a·b or a² + b² passed 2^127 (42
