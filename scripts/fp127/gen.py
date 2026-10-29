@@ -756,8 +756,9 @@ COUNTS = {
     # BlockulatorWad: wadbad fires when FP19's bound reaches a wei boundary
     "wad": {"wadbad": "ret"},
     # FP127: the double-word log l2p runs exactly when the one-word log or pow
-    # could not decide (nearmid, or pow2t not ok)
-    "fp127": {"l2p": "call", "powus": "call"},
+    # could not decide (nearmid, or pow2t not ok); from 3.0 rbad127 fires when
+    # a fast value cannot round, rbadm127 when a middle stage cannot either
+    "fp127": {"l2p": "call", "powus": "call", "rbad127": "ret", "rbadm127": "ret2"},
 }
 
 # The helpers make profile measures, in slot order.
