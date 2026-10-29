@@ -13,6 +13,10 @@ concurrency:
 jobs:
   bl127:
     runs-on: ubuntu-latest
+    env:
+      # the one explicit `uv sync --no-group talk` below is the environment; `uv run`
+      # must not re-sync it (the talk group's manimpango needs pango, absent here)
+      UV_NO_SYNC: "1"
     steps:
       - uses: actions/checkout@v5
         with:
