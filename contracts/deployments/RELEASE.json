@@ -3,91 +3,91 @@
  "date": "2026-10-29",
  "chainId": 11155111,
  "network": "sepolia",
- "note": "The public name for this release. Component versions (salts) name addresses and stay in each record. FP19 v6 was deployed on 2026-10-28 (blocks 12,015,306 to 12,015,314), FP127 v9 and ladder v14 on 2026-10-29 UTC (12,017,693 to 12,017,707).",
+ "note": "The public name for this release. Component versions label the records; each record's saltAscii holds the CREATE2 salt, the deployed bytes (taken under the on-chain names FP127 and FP19 before the 2026-10-29 rename to BL127 and BL19). BL19 v6 was deployed on 2026-10-28 (blocks 12,015,306 to 12,015,314), BL127 v9 and ladder v14 on 2026-10-29 UTC (12,017,693 to 12,017,707).",
  "requires": "CLZ (EIP-7939, Osaka/Fusaka): every object is an evmVersion osaka build; see contracts/deployments/README.md for the supported and unsupported chains",
  "blocks": [
   12015306,
   12017707
  ],
  "components": {
-  "FP127": {
-   "version": "FP127 v9",
+  "BL127": {
+   "version": "BL127 v9",
    "address": "0x0DF738d125677550a80A46BaF254386C66f96E0d",
    "block": 12017693,
    "runtimeBytes": 3728,
-   "record": "contracts/deployments/FP127.md"
+   "record": "contracts/deployments/BL127.md"
   },
-  "FP127E": {
-   "version": "FP127E v9",
+  "BL127E": {
+   "version": "BL127E v9",
    "address": "0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808",
    "block": 12017695,
    "runtimeBytes": 18808,
-   "record": "contracts/deployments/FP127.md"
+   "record": "contracts/deployments/BL127.md"
   },
-  "FP127H": {
-   "version": "FP127H v9",
+  "BL127H": {
+   "version": "BL127H v9",
    "address": "0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B",
    "block": 12017697,
    "runtimeBytes": 13093,
-   "record": "contracts/deployments/FP127.md"
+   "record": "contracts/deployments/BL127.md"
   },
-  "FP127N": {
-   "version": "FP127N v9",
+  "BL127N": {
+   "version": "BL127N v9",
    "address": "0xAA7Cd9635aE8630379636F533f23DBf2C193d296",
    "block": 12017699,
    "runtimeBytes": 9088,
-   "record": "contracts/deployments/FP127.md"
+   "record": "contracts/deployments/BL127.md"
   },
-  "FP127S": {
-   "version": "FP127S v9",
+  "BL127S": {
+   "version": "BL127S v9",
    "address": "0xB9C2583a7Ad2251444DC7752658B6C1107C25036",
    "block": 12017701,
    "runtimeBytes": 11817,
-   "record": "contracts/deployments/FP127.md"
+   "record": "contracts/deployments/BL127.md"
   },
-  "FP19": {
-   "version": "FP19 v6",
+  "BL19": {
+   "version": "BL19 v6",
    "address": "0x94d9d43D6202827429a8058959eeCf6d232b8729",
    "block": 12015306,
    "runtimeBytes": 17221,
-   "record": "contracts/deployments/FP19.md"
+   "record": "contracts/deployments/BL19.md"
   },
-  "FP19E": {
-   "version": "FP19E v6",
+  "BL19E": {
+   "version": "BL19E v6",
    "address": "0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092",
    "block": 12015308,
    "runtimeBytes": 23621,
-   "record": "contracts/deployments/FP19.md"
+   "record": "contracts/deployments/BL19.md"
   },
-  "FP19H": {
-   "version": "FP19H v6",
+  "BL19H": {
+   "version": "BL19H v6",
    "address": "0xF059611C1c42543DE6EE82353Eb082Fd8999081f",
    "block": 12015310,
    "runtimeBytes": 13020,
-   "record": "contracts/deployments/FP19.md"
+   "record": "contracts/deployments/BL19.md"
   },
-  "FP19N": {
-   "version": "FP19N v6",
+  "BL19N": {
+   "version": "BL19N v6",
    "address": "0xCe9F09D646B37a9100F05ED1FFD14E9f43180214",
    "block": 12015312,
    "runtimeBytes": 17962,
-   "record": "contracts/deployments/FP19.md"
+   "record": "contracts/deployments/BL19.md"
   },
-  "FP19S": {
-   "version": "FP19S v6",
+  "BL19S": {
+   "version": "BL19S v6",
    "address": "0xf74ba90535224870830e6e89D2b328d4cc09DE48",
    "block": 12015314,
    "runtimeBytes": 11338,
-   "record": "contracts/deployments/FP19.md"
+   "record": "contracts/deployments/BL19.md"
   },
   "LadderRunner": {
-   "version": "FP127 ladder v14",
+   "version": "BL127 ladder v14",
    "address": "0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589",
    "block": 12017706,
    "record": "contracts/deployments/Ladder.md"
   },
   "EdgeRunner": {
-   "version": "FP127 ladder v14",
+   "version": "BL127 ladder v14",
    "address": "0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A",
    "block": 12017707,
    "record": "contracts/deployments/Ladder.md"
@@ -111,31 +111,31 @@
  },
  "superseded": [
   {
-   "version": "FP127 v8",
+   "version": "BL127 v8",
    "address": "0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B",
    "block": 12015304,
    "date": "2026-10-28",
-   "status": "still live and verified; sent as Blockulator 3.0's FP127 (one object) and superseded by FP127 v9 (five objects, every op correctly rounded) before mainnet",
-   "record": "contracts/deployments/FP127.md"
+   "status": "still live and verified; sent as Blockulator 3.0's BL127 (one object) and superseded by BL127 v9 (five objects, every op correctly rounded) before mainnet",
+   "record": "contracts/deployments/BL127.md"
   },
   {
-   "version": "FP127 ladder v13",
+   "version": "BL127 ladder v13",
    "date": "2026-10-28",
-   "status": "still live; its LadderFP127 calls FP127 v8; superseded by ladder v14",
+   "status": "still live; its LadderBL127 calls BL127 v8; superseded by ladder v14",
    "record": "contracts/deployments/Ladder.md"
   },
   {
-   "version": "FP127 v7",
+   "version": "BL127 v7",
    "address": "0xb97E0b824d86470BfAA52fe44f09363755d52591",
    "block": 12008542,
    "date": "2026-10-27",
-   "status": "still live and verified; sent as Blockulator 3.0's FP127 and superseded by FP127 v8 before mainnet",
-   "record": "contracts/deployments/FP127.md"
+   "status": "still live and verified; sent as Blockulator 3.0's BL127 and superseded by BL127 v8 before mainnet",
+   "record": "contracts/deployments/BL127.md"
   },
   {
-   "version": "FP127 ladder v12",
+   "version": "BL127 ladder v12",
    "date": "2026-10-27",
-   "status": "still live; its LadderFP127 calls FP127 v7; superseded by ladder v13",
+   "status": "still live; its LadderBL127 calls BL127 v7; superseded by ladder v13",
    "record": "contracts/deployments/Ladder.md"
   }
  ],
@@ -149,49 +149,49 @@
     11974985
    ],
    "components": {
-    "FP127": {
-     "version": "FP127 v6",
+    "BL127": {
+     "version": "BL127 v6",
      "address": "0xb349DB36D51b0BC10Dd43aF70009b7B6E7c1CBe4",
      "block": 11974968,
      "runtimeBytes": 21858,
-     "record": "contracts/deployments/FP127.md"
+     "record": "contracts/deployments/BL127.md"
     },
-    "FP19": {
-     "version": "FP19 v5",
+    "BL19": {
+     "version": "BL19 v5",
      "address": "0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52",
      "block": 11974969,
      "runtimeBytes": 10333,
-     "record": "contracts/deployments/FP19.md"
+     "record": "contracts/deployments/BL19.md"
     },
-    "FP19E": {
-     "version": "FP19E v5",
+    "BL19E": {
+     "version": "BL19E v5",
      "address": "0x017F68A57dD53a6dF2043c24B712b287F9549AE2",
      "block": 11974970,
      "runtimeBytes": 21598,
-     "record": "contracts/deployments/FP19.md"
+     "record": "contracts/deployments/BL19.md"
     },
-    "FP19H": {
-     "version": "FP19H v5",
+    "BL19H": {
+     "version": "BL19H v5",
      "address": "0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5",
      "block": 11974971,
      "runtimeBytes": 13021,
-     "record": "contracts/deployments/FP19.md"
+     "record": "contracts/deployments/BL19.md"
     },
-    "FP19S": {
-     "version": "FP19S v5",
+    "BL19S": {
+     "version": "BL19S v5",
      "address": "0x73E8809F163d4358773cc5F25c134997B4b842F4",
      "block": 11974972,
      "runtimeBytes": 24263,
-     "record": "contracts/deployments/FP19.md"
+     "record": "contracts/deployments/BL19.md"
     },
     "LadderRunner": {
-     "version": "FP127 ladder v11",
+     "version": "BL127 ladder v11",
      "address": "0x08b06D93620e7B33cD2d600118a75B45EF779Cec",
      "block": 11974984,
      "record": "contracts/deployments/Ladder.md"
     },
     "EdgeRunner": {
-     "version": "FP127 ladder v11",
+     "version": "BL127 ladder v11",
      "address": "0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83",
      "block": 11974985,
      "record": "contracts/deployments/Ladder.md"
@@ -223,44 +223,44 @@
     11966639
    ],
    "components": {
-    "FP127": {
-     "version": "FP127 v5",
+    "BL127": {
+     "version": "BL127 v5",
      "address": "0x619176d72D7a12390F8970802943D344c0fd3fE2",
      "block": 11966457,
-     "record": "contracts/deployments/FP127.md"
+     "record": "contracts/deployments/BL127.md"
     },
-    "FP19": {
-     "version": "FP19 v4",
+    "BL19": {
+     "version": "BL19 v4",
      "address": "0xA3C8C8700465F9e20Ff9dfA64066c2EF693Aa6c9",
      "block": 11966126,
-     "record": "contracts/deployments/FP19.md"
+     "record": "contracts/deployments/BL19.md"
     },
-    "FP19X": {
-     "version": "FP19X v4",
+    "BL19X": {
+     "version": "BL19X v4",
      "address": "0x175246B258Cc0dC3efEFe74b5fac8cC52C0c40d0",
      "block": 11966129,
-     "record": "contracts/deployments/FP19.md"
+     "record": "contracts/deployments/BL19.md"
     },
-    "FP19X2": {
-     "version": "FP19X2 v4",
+    "BL19X2": {
+     "version": "BL19X2 v4",
      "address": "0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697",
      "block": 11966115,
-     "record": "contracts/deployments/FP19.md"
+     "record": "contracts/deployments/BL19.md"
     },
-    "FP19X3": {
-     "version": "FP19X3 v4",
+    "BL19X3": {
+     "version": "BL19X3 v4",
      "address": "0x59D51481cb2EA924EC17FE263cd05b90CEF22383",
      "block": 11966114,
-     "record": "contracts/deployments/FP19.md"
+     "record": "contracts/deployments/BL19.md"
     },
     "LadderRunner": {
-     "version": "FP127 ladder v9",
+     "version": "BL127 ladder v9",
      "address": "0xCd4581E0a9Cf014d1aF660F62a7D96039efE7DC5",
      "block": 11966638,
      "record": "contracts/deployments/Ladder.md"
     },
     "EdgeRunner": {
-     "version": "FP127 ladder v9",
+     "version": "BL127 ladder v9",
      "address": "0xcA89eeA1831c38B62d2d3332ECbb8A57BaF246fF",
      "block": 11966639,
      "record": "contracts/deployments/Ladder.md"
@@ -288,23 +288,23 @@
    "date": "2026-10-16",
    "status": "still live and verified",
    "components": {
-    "FP127": {
-     "version": "FP127 v4",
+    "BL127": {
+     "version": "BL127 v4",
      "address": "0x6cFbCB928Ac068E84Ef793Dd1DFce4f8e9Cac1d1",
-     "record": "contracts/deployments/FP127.md"
+     "record": "contracts/deployments/BL127.md"
     },
-    "FP19": {
-     "version": "FP19 v3",
+    "BL19": {
+     "version": "BL19 v3",
      "address": "0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be",
-     "record": "contracts/deployments/FP19.md"
+     "record": "contracts/deployments/BL19.md"
     },
     "LadderRunner": {
-     "version": "FP127 ladder v8",
+     "version": "BL127 ladder v8",
      "address": "0xEf689d3782490066fE911a6dD33357f59caE40fE",
      "record": "contracts/deployments/Ladder.md"
     },
     "EdgeRunner": {
-     "version": "FP127 ladder v8",
+     "version": "BL127 ladder v8",
      "address": "0x09b8fC41E872279A749a0221AE23D124079AcB44",
      "record": "contracts/deployments/Ladder.md"
     }

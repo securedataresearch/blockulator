@@ -1,5 +1,6 @@
 {
- "contract": "FP127",
+ "contract": "BL127",
+ "onChainName": "FP127",
  "chainId": 11155111,
  "network": "sepolia",
  "address": "0x0DF738d125677550a80A46BaF254386C66f96E0d",
@@ -9,7 +10,7 @@
  "initCodeHash": "0x3c663aca27b46991b0b81c2e1056ec9b270da4b37b5ae1944b5f40a79dbb5316",
  "runtimeKeccak": "0x2841130456eac80bb73cf869aded1898e3acaaaa2c36d385f076145a7695f6ee",
  "runtimeBytes": 3728,
- "source": "contracts/src/fp127/FP127.yul",
+ "source": "contracts/src/bl127/BL127.yul",
  "sourceCommit": "80d0656",
  "compiler": {
   "language": "Yul",
@@ -17,7 +18,7 @@
   "optimizer": true,
   "runs": 200,
   "evmVersion": "osaka",
-  "optimizerSequence": "0.8.24 default (pinned in scripts/fp127/stdjson.py)"
+  "optimizerSequence": "0.8.24 default (pinned in scripts/bl127/stdjson.py)"
  },
  "txHash": "0x0685478dc4f61f667e78f99704b86f9546b80f7eb53830f6ea8aa840b68edb7c",
  "block": 12017693,
@@ -27,7 +28,7 @@
   "blockscout": "https://eth-sepolia.blockscout.com/address/0x0DF738d125677550a80A46BaF254386C66f96E0d?tab=contract",
   "etherscan": "unverified: the Etherscan API has no Yul path"
  },
- "abi": "contracts/src/fp127/abi.json",
+ "abi": "contracts/src/bl127/abi.json",
  "deployedBy": "0xe6306669b2f188d616bfb518e7b9255d001d731d",
  "gasUsed": 5974719,
  "explorerTx": "https://sepolia.etherscan.io/tx/0x0685478dc4f61f667e78f99704b86f9546b80f7eb53830f6ea8aa840b68edb7c",
