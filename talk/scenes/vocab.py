@@ -969,6 +969,48 @@ def balancer_v1_replay() -> list[list[dict]]:
     return [mod.replay(p) for p in _load("scripts/replays/balancer_v1.json")["pools"]]
 
 
+def balancer_v1_balances(i: int) -> dict:
+    """Pool i of balancer_v1.json (tx order) walked op by op on the logged
+    results alone (no arithmetic: a swap moves .result's [amountIn,
+    amountOut], a join or single-token exit its one amount, exitPool its
+    per-token amounts; the BPT supply moves by the op's .arg): "balances"[k]
+    is the pool's token balances after k ops (k = 0 the pinned state), "supply"
+    the same for the BPT supply, "ops" the kinds in order (the module's
+    SWAP_IN … EXIT_POOL), "joins" the op indices of the joins. The end state is
+    asserted against the module's own replay (its _final), so the two routes
+    agree."""
+    mod = _import_script("scripts/replays/balancer_v1.py")
+    pool = _load("scripts/replays/balancer_v1.json")["pools"][i]
+    bal = [int(t["balance"]) for t in pool["state"]["tokens"]]
+    S = int(pool["state"]["totalSupply"])
+    balances, supply, kinds, joins = [list(bal)], [S], [], []
+    for k, op in enumerate(pool["ops"]):
+        res = [int(x) for x in op["result"]]
+        kind = op["kind"]
+        if kind in (mod.SWAP_IN, mod.SWAP_OUT):
+            bal[op["tokenIn"]] += res[0]
+            bal[op["tokenOut"]] -= res[1]
+        elif kind == mod.JOIN_POOL_OUT:
+            bal[op["token"]] += res[0]
+            S += int(op["arg"])
+            joins.append(k)
+        elif kind == mod.EXIT_POOL_IN:
+            bal[op["token"]] -= res[0]
+            S -= int(op["arg"]) - mod.bmul(int(op["arg"]), mod.EXIT_FEE)
+        elif kind == mod.EXIT_POOL:
+            for j, out in enumerate(res):
+                bal[j] -= out
+            S -= int(op["arg"])
+        else:
+            raise KeyError((i, k, kind))
+        balances.append(list(bal))
+        supply.append(S)
+        kinds.append(kind)
+    mod.replay(pool)
+    assert pool["_final"] == {"balances": bal, "supply": S}, (i, pool["_final"], bal, S)
+    return {"balances": balances, "supply": supply, "ops": kinds, "joins": joins}
+
+
 TRUTH_DECIMALS = 80
 
 
