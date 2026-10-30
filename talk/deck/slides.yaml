@@ -217,9 +217,11 @@
       cue: ""
     - name: adaptive
       cue: ""
-    - name: closing
-      cue: ""
-
+  notes:
+    - "Source: docs/benchmarks/ladder.json · scenarios[compound] / [accrual-continuous] / [adaptive-rate]."
+    - "Compound: 18-decimal — Solady · Solmate · PRBMath SD · PRBMath UD · snekmate · Balancer · OpenZeppelin · Uniswap: 14.8; not offered: Aave · Morpho · FraxLend · Euler v2. Accrual (the accrual Aave and Morpho run): not offered OpenZeppelin · Uniswap · Maker · FraxLend · Euler v2. Adaptive (the rate FraxLend and Euler run): not offered OpenZeppelin · Uniswap · Maker · Aave · Morpho."
+    - "Blockulator's lines start higher and keep the gap: at N = 10,000, BL19 +52 to +62 digits, BL127 +19 to +20, over the best 18-decimal line (V14)."
+    - "CHECK THE CUE: \"nineteen and fifty-two digits higher\" — on the compound chart shown under it the margins are +20 and +52; +19 is the accrual scenario's."
 
 - slide: 13
   title: The cliff
@@ -231,11 +233,9 @@
       cue: "exp of minus forty-two is zero on an 18-decimal grid. Every probability below ten to the minus eighteen is gone."
     - name: bl19
       cue: "BL19 never falls off."
-    - name: legend
-      cue: ""
-    - name: closing
-      cue: ""
-
+  notes:
+    - "Source: docs/benchmarks/edges.json · exp."
+    - "The 18-decimal grid is zero from exp(−42) · BL127 has digits to exp(−88) · BL19: 71 digits on every probe (V28). No dot: PRBMath UD rejects negative inputs; no exp: OpenZeppelin · Uniswap · Maker · Aave · Morpho · FraxLend · Euler v2."
 
 - slide: 14
   title: Real markets, today
