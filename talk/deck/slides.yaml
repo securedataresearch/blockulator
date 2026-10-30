@@ -54,12 +54,14 @@
       cue: "A 256-bit word holds finitely many numbers."
     - name: decimal
       cue: "e to the forty is not one of them."
-    - name: binary
-      cue: ""
     - name: half
       cue: "Half a unit is the gap that stays."
     - name: snaps
       cue: "The wrong tick, or the wrong direction, is the error we can end."
+  notes:
+    - "Source: docs/benchmarks/edges.json · exp(40); the 80-decimal truth by mpmath (its first 24 decimals match edges.json)."
+    - "e^40 = 235385266837019985.40789991074903480450887161725455546723665125118928916352581695433673399870476756 (to 80 decimals). The 18-decimal libraries' grid: one tick = 10^-18, a whole wei; the correctly rounded WAD answer is 235385266837019985.407899910749034805. BL127's grid: one tick = 2^-128 ≈ 2.9 × 10^-39."
+    - "The lower word reads, to 80 decimals, 235385266837019985.40789991074903480450887161725455546723650207538258024203263970057194910881476857; the upper, 235385266837019985.40789991074903480450887161725455546723944081125963596080256154191500472300931524. They part at the 39th decimal. BL127's word is the lower, 0x686c20e8b55b3b8b620a9f8b68ca318e."
 
 
 - slide: 5
