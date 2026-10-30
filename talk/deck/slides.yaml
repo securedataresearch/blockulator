@@ -68,19 +68,13 @@
   title: $130 million
   scene: s05_cost.Cost
   sections:
-    - name: resupply
-      cue: "Since June 2025: more than a hundred and thirty million dollars, before recoveries."
-    - name: bunni
-      cue: ""
-    - name: balancer-v2
-      cue: ""
-    - name: thetanuts
-      cue: ""
-    - name: balancer-v1
-      cue: "Five incidents."
+    - name: incidents
+      cue: "Since June 2025: more than a hundred and thirty million dollars, before recoveries. Five incidents."
     - name: closing
       cue: "One rounding step each."
-
+  notes:
+    - "Source: talk/scenes/data/incidents.json (each loss's .source there), since June 2025. Each incident's .rounding line is in incidents.json."
+    - "The first sentence names the total before it appears; it lands on the second click with \"One rounding step each.\""
 
 - slide: 6
   title: Resupply
@@ -199,25 +193,17 @@
   sections:
     - name: bands
       cue: ""
-    - name: resupply
-      cue: "Resupply rounded too early."
-    - name: bunni
-      cue: "Bunni"
-    - name: balancer-v2
-      cue: "and Balancer V2 rounded too often:"
-    - name: round-once
-      cue: "carry the exact value and round once, and the attack stops."
-    - name: thetanuts
-      cue: "Thetanuts"
-    - name: balancer-v1
-      cue: "and Balancer V1 rounded at a unit, where no precision helps"
-    - name: direction
-      cue: "and only the direction decides who pays."
+    - name: inside
+      cue: "Resupply rounded too early. Bunni and Balancer V2 rounded too often: carry the exact value and round once, and the attack stops."
+    - name: unit
+      cue: "Thetanuts and Balancer V1 rounded at a unit, where no precision helps and only the direction decides who pays."
     - name: box
       cue: "Inside a calculation, precision shrinks error. At a unit, direction decides who pays."
   notes:
     - "[you: Bunni's \"safe in isolation\", if you want it]"
-
+    - "Source: scripts/replays/*.json · incidents.json."
+    - "Resupply 0.4999999999999999999995 (to 22 decimals), floored once. Bunni 23.659 (to 3 decimals), floored 44 times: active balance 28 → 4 wei. Balancer V2 17.988250947729518883 (to 18 decimals), mulDown, ×30 cycles."
+    - "Thetanuts: two thirds of a unit; ceil → 1 unit would have cost more than it took. Balancer V1 4.499999999999999991 (to 18 decimals), nearest: 1 unit charged for 1.5 units' worth; toward the pool → 5. Who pays? Half a unit."
 
 - slide: 12
   title: Measure it
@@ -261,9 +247,9 @@
       cue: "thirty in BL127,"
     - name: bl19
       cue: "sixty-seven in BL19."
-    - name: closing
-      cue: ""
-
+  notes:
+    - "Source: docs/benchmarks/accrual-deployed.json · live · block 26,206,698 · 2026-10-16 17:49 UTC."
+    - "The same 326 markets: 7 digits as deployed, 30 in BL127, 67 in BL19. Gains: Aave +21.9 digits (BL127) and +32.9 more (BL19); Morpho +23.0 and +36.8."
 
 - slide: 15
   title: Precision is a budget

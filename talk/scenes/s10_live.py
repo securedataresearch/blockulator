@@ -10,22 +10,23 @@ correct digits of the pending interest is x. Each market is one small
 dot, jittered within its row band on a fixed seed so the density shows;
 colour is the method (SLATE, EMERALD, TEXT: white is BL19's family
 colour on this slide, EXACT is not used). The summary layer is one
-median tick per row per panel with its value labelled beside it; the
-margin between consecutive medians is a bracket in the gap between the
-rows. Faint gridlines at the axis ticks, nothing else: no trails, no
+median tick per row per panel with its value labelled beside it (the
+medians say the margin: no bracket restates it). Faint gridlines at the axis ticks, nothing else: no trails, no
 bands, no halos on dots. The hero mark is the glow under the BL19
 row's median tick.
 
 The dots move as themselves: every dot drops to the next row and slides
 to its new x in one Transform, so a viewer who watches one market sees
-it travel; the strip it left stays, so the held frame shows every row. Four sections, one per click: the deployed row; the move to
-BL127; the move to BL19; the closing line.
+it travel; the strip it left stays, so the held frame shows every row.
+Three sections, one per click: the deployed row; the move to BL127; the
+move to BL19 (the poster). The chart's chrome, the three row keys and the
+axis tick labels, is self.key (not counted by vocab.text_census).
 
 Numbers from docs/benchmarks/accrual-deployed.json: .cases[] with .group
 == "live" (.protocol, .primaryTruth, .truth[primaryTruth].deployed
 .digitsInterest, .bl127.digitsInterest and .bl19.digitsInterest); the
 medians (overall and per protocol) and the margins between them are
-computed here; .survey.block and .date for the caption.
+computed here. Provenance (.survey.block and .date) is in the slide's notes.
 """
 
 from __future__ import annotations
@@ -48,7 +49,7 @@ from manim import (
 )
 from manim.utils.rate_functions import ease_in_out_cubic
 
-from vocab import ROW_COLOUR, SIZE_BODY, SIZE_CAPTION, Chart, DeckScene, Palette, _load, glow_bar, glow_line, live, thousands, words
+from vocab import ROW_COLOUR, SIZE_BODY, SIZE_CAPTION, Chart, DeckScene, Palette, glow_line, live, words
 
 TITLE = "Real markets, today"
 ROWS = tuple((key, name, ROW_COLOUR["s10"][key]) for key, name in (("deployed", "as deployed"), ("bl127", "in BL127"), ("bl19", "in BL19")))
@@ -60,18 +61,16 @@ AXIS_TITLE = "correct digits of the pending interest"
 # the frame: a 5% safe area is x in ±6.4, y in ±3.6
 X_LEFT = -6.3  # the title and the row labels start here
 LABEL_RIGHT = -3.92  # the row labels end here
-PANEL_X0, PANEL_W, PANEL_GAP = -3.6, 4.8, 0.4  # two equal panels fill the safe width
-AXIS_Y, PANEL_TOP = -1.9, 2.05  # the shared x scale sits here; the gridlines rise to the top
-ROW_Y = {"deployed": 1.8, "bl127": 0.2, "bl19": -1.4}  # the row centres, equal pitch
+PANEL_X0, PANEL_W, PANEL_GAP = -3.6, 4.7, 0.6  # two equal panels fill the safe width; the gap keeps "80" and "0" apart
+AXIS_Y, PANEL_TOP = -2.45, 2.2  # the shared x scale sits here; the gridlines rise to the top
+ROW_Y = {"deployed": 1.5, "bl127": -0.1, "bl19": -1.7}  # the row centres, equal pitch
 BAND = 0.2  # a row band's half-height; the jitter stays inside it
 DOT = 0.045  # the brief's radius
 TICK_HALF = 0.3  # the median tick: 1.5x the band height
 LABEL_LIFT = 0.36  # the median label's bottom above the row centre
-BRACKET_LIFT = 1.0  # the margin bracket above the lower row's centre, in the gap
 SEED = 40
-Y_FACET, Y_AXIS_TITLE, Y_CLOSE = 2.78, -2.55, -2.97  # the facet titles under the right mark (was 2.94)
+Y_FACET, Y_AXIS_TITLE = 2.62, -3.3  # the facet titles' baseline, under the right mark
 SIZE_TICK = SIZE_CAPTION + 4  # the axis labels, per the brief
-SIZE_CLOSE = 28  # the closing line does not fit the safe width at BODY (reported)
 
 LITERALS: dict[str, str] = {}  # every digit on the slide is a value of numbers()
 
@@ -82,7 +81,6 @@ def numbers() -> dict:
     for c in cases:
         t = c["truth"][c["primaryTruth"]]
         pts.append({"id": c["id"], "protocol": c["protocol"], "deployed": float(t["deployed"]["digitsInterest"]), "bl127": float(t["bl127"]["digitsInterest"]), "bl19": float(t["bl19"]["digitsInterest"])})
-    survey = _load("docs/benchmarks/accrual-deployed.json")["survey"]
     counts = {p: sum(1 for x in pts if x["protocol"] == p) for p in PROTOCOLS}
     assert sum(counts.values()) == len(pts)
     assert all(AXIS[0] <= x[k] <= AXIS[1] for x in pts for k, _, _ in ROWS)
@@ -90,36 +88,26 @@ def numbers() -> dict:
     def summary(sub: list[dict]) -> dict:
         med = {k: round(statistics.median(x[k] for x in sub), 1) for k, _, _ in ROWS}
         assert med["deployed"] < med["bl127"] < med["bl19"]
-        return {"medians": med, "margins": {"bl127": round(med["bl127"] - med["deployed"], 1), "bl19": round(med["bl19"] - med["bl127"], 1)}}
+        return {"medians": med}
 
-    whole = summary(pts)
     per = {p: {"count": counts[p], **summary([x for x in pts if x["protocol"] == p])} for p in PROTOCOLS}
     return {
         "points": pts,
-        "count": len(pts),
         "counts": counts,
-        "block": thousands(survey["block"]),
-        "date": survey["date"],
         "axis_ticks": list(range(AXIS[0], AXIS[1] + 1, AXIS[2])),
-        "above": sum(1 for x in pts if x["bl127"] > x["deployed"]),
-        "above_bl19": sum(1 for x in pts if x["bl19"] > x["deployed"]),
-        "medians": whole["medians"],
-        "medians_rounded": {k: round(v) for k, v in whole["medians"].items()},
-        "margins": whole["margins"],
         "by_protocol": per,
     }
 
 
 class Live(DeckScene):
-    SECTIONS = ("deployed", "bl127", "bl19", "closing")
+    SECTIONS = ("deployed", "bl127", "bl19")
 
     def construct(self):
         n = numbers()
         self.section(0)
-        # the chrome, on the first frame: the caption, the title, the two facets (their
-        # titles, axes, gridlines, tick labels, the axis title) and the three row keys in
-        # the rows' colours (ROW_COLOUR["s10"]); only the dots and their medians arrive
-        self.caption_now(f"docs/benchmarks/accrual-deployed.json · live · block {n['block']} · {n['date']}")
+        # the chrome, on the first frame: the title, the two facets (their titles, axes,
+        # gridlines, tick labels, the axis title) and the three row keys in the rows'
+        # colours (ROW_COLOUR["s10"]); only the dots and their medians arrive
         title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         row_labels = {key: words(name, SIZE_BODY, colour).move_to([0, ROW_Y[key], 0]).align_to([LABEL_RIGHT, 0, 0], RIGHT) for key, name, colour in ROWS}
 
@@ -134,8 +122,11 @@ class Live(DeckScene):
                 chart.x_label(v, str(v), size=SIZE_TICK, mono=True)
             grids.add(chart.grid())
             panels[p] = chart
-            facet_titles.add(words(f"{PROTOCOL_LABEL[p]} · {n['by_protocol'][p]['count']} markets", SIZE_BODY, Palette.MUTED).move_to([x0 + PANEL_W / 2, Y_FACET, 0]))
+            ft = words(f"{PROTOCOL_LABEL[p]} · {n['by_protocol'][p]['count']} markets", SIZE_BODY, Palette.MUTED).move_to([x0 + PANEL_W / 2, Y_FACET, 0])
+            facet_titles.add(ft.shift(UP * (Y_FACET - ft[0].get_bottom()[1])))  # on one baseline: the capital's foot at Y_FACET
         axis_title = words(AXIS_TITLE, 22, Palette.MUTED).move_to([PANEL_X0 + PANEL_W + PANEL_GAP / 2, Y_AXIS_TITLE, 0])
+        # the chart's key and axes (the row keys, the tick labels): chrome, not counted by the census
+        self.key = VGroup(*row_labels.values(), *[c.labels for c in panels.values()])
         self.fix(title, *panels.values(), axis_title, facet_titles, *row_labels.values())
         self.wait(0.6)
 
@@ -174,27 +165,8 @@ class Live(DeckScene):
                 lbl.align_to([x - 0.1, 0, 0], RIGHT)
             return tick, lbl
 
-        def bracket(p: str, prev: str, key: str, colour: str) -> VGroup:
-            """The margin between two rows' medians: a bracket |——| in the gap
-            under the upper row, from the upper median's x to the lower's,
-            labelled in digits beside its end (the right end where that fits
-            in the panel, else the left end)."""
-            y = ROW_Y[key] + BRACKET_LIFT
-            a, b = px(p, n["by_protocol"][p]["medians"][prev]), px(p, n["by_protocol"][p]["medians"][key])
-            cap = UP * 0.07
-            pa, pb = [a, y, 0], [b, y, 0]
-            bar = Line(pa, pb, color=colour, stroke_width=1.5)
-            caps = VGroup(Line(pa - cap, pa + cap, color=colour, stroke_width=1.5), Line(pb - cap, pb + cap, color=colour, stroke_width=1.5))
-            lbl = words(f"+{n['by_protocol'][p]['margins'][key]} digits", SIZE_BODY, colour).move_to([0, y, 0])
-            if inside(p, max(a, b) + 0.12, lbl.width):
-                lbl.align_to([max(a, b) + 0.12, 0, 0], LEFT)
-            else:
-                lbl.align_to([min(a, b) - 0.12, 0, 0], RIGHT)
-            return VGroup(bar, caps, lbl)
-
         # ---- the rows: the deployed strip fills; then the same dots move down, as themselves
         dots = None
-        prev = None
         for k, (key, name, colour) in enumerate(ROWS):
             if k:
                 self.section(k, hold=1.2)
@@ -218,16 +190,4 @@ class Live(DeckScene):
                 self.play(Create(glows, run_time=0.5), *[Create(t, run_time=0.5) for t, _ in marks], *[FadeIn(lbl, shift=UP * 0.06, run_time=0.5) for _, lbl in marks])
             else:
                 self.play(*[Create(t, run_time=0.5) for t, _ in marks], *[FadeIn(lbl, shift=UP * 0.06, run_time=0.5) for _, lbl in marks])
-            if prev is not None:
-                brs = [bracket(p, prev, key, colour) for p in PROTOCOLS]
-                self.play(*[Create(b[0], run_time=0.5) for b in brs], *[FadeIn(b[1], run_time=0.5) for b in brs])
-                self.play(*[FadeIn(b[2], shift=UP * 0.06, run_time=0.4) for b in brs])
-            prev = key
-
-        # ---- the closing line, in the rounded medians of all 326
-        self.section(len(ROWS), hold=1.5)
-        mr = n["medians_rounded"]
-        close = words(f"the same {n['count']} markets: {mr['deployed']} digits as deployed, {mr['bl127']} in BL127, {mr['bl19']} in BL19", SIZE_CLOSE, Palette.TEXT).move_to([0, Y_CLOSE, 0])
-        bar = glow_bar(close, pad=0.12)
-        self.play(FadeIn(bar, run_time=0.8), FadeIn(close, shift=UP * 0.08, run_time=0.8))
         self.close()
