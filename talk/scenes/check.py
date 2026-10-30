@@ -970,8 +970,8 @@ def expect_s07_two(mod) -> dict:
     assert names == ["Resupply", "Bunni v2", "Balancer V2", "Thetanuts", "Balancer V1"], names
     bands = [1, 1, 1, 2, 2]
     assert [i["date"][-4:] for i in inc] == sorted(i["date"][-4:] for i in inc), "oldest first"
-    assert mod.Two.SECTIONS == ("step", "bands", "inside", "unit", "box"), mod.Two.SECTIONS
-    assert mod.LITERALS == {mod.STEP: "user 2026-10-30 outline"} and mod.STEP.startswith("Step 6. ")  # the manual's step line, the first beat
+    assert mod.Two.SECTIONS == ("bands", "inside", "unit", "box"), mod.Two.SECTIONS
+    assert mod.LITERALS == {} and not hasattr(mod, "STEP")  # the user cut its step beat ("Step 6. File the report.")
     assert (mod.BOX_1, mod.BOX_2) == ("Inside a calculation, precision shrinks error.", "At a unit, direction decides who pays.")
     assert not any(ch.isdigit() for ch in "".join([mod.TITLE, *mod.BAND_TITLE.values(), *mod.RESOLVE.values(), mod.BOX_1, mod.BOX_2]))
     ids = ["resupply", "bunni", "balancer-v2", "thetanuts", "balancer-v1"]
@@ -1313,7 +1313,7 @@ def expect_s18_habits(mod) -> dict:
     assert mod.EXAMPLE == "example" and mod.REFERENCE == "reference:"
     assert not any("today" in k or "protocol" in k for k in mod.LITERALS)  # nothing says a protocol does this today
     assert mod.Habits.SECTIONS == ("step", "title", "decide", "measure", "declare")  # the block lands in declare; the sub-lines are the notes
-    assert mod.LITERALS[mod.STEP] == "user 2026-10-30 outline" and mod.STEP.startswith("Step 7. ")
+    assert mod.LITERALS[mod.STEP] == "user 2026-10-30 outline" and mod.STEP.startswith("Step 6. ")
     hues = vocab.ROW_COLOUR["s18"]
     assert len({hues[h] for h in habits}) == 3 and hues["tick"] == vocab.Palette.EMERALD
     assert not any(ch in k for k in mod.LITERALS for ch in "²→½√…")

@@ -309,8 +309,6 @@
   title: "Two failures, one decision"
   scene: s07_two.Two
   sections:
-    - name: step
-      cue: "Step 6. File the report."
     - name: bands
       cue: ""
     - name: inside
@@ -358,7 +356,7 @@
   scene: s18_habits.Habits
   sections:
     - name: step
-      cue: "Step 7. Assign homework."
+      cue: "Step 6. Assign homework."
     - name: title
       cue: "Rounding is a design decision, like access control."
     - name: decide

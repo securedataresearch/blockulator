@@ -45,7 +45,7 @@ INDENT = " " * len("rounding: ")
 ROUNDING_LINES = "\n".join([f"rounding: {OPS[0][0]} {OPS[0][1]}", *[f"{INDENT}{op} {way}" for op, way in OPS[1:]]])  # one op a line in the block
 REFERENCE = "reference:"
 
-STEP = "Step 7. Assign homework."  # the manual's step line, the slide's first beat
+STEP = "Step 6. Assign homework."  # the manual's step line, the slide's first beat
 LITERALS = {
     STEP: "user 2026-10-30 outline",
     TITLE: "essay §10",

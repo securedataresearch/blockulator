@@ -51,8 +51,7 @@ RESOLVE = {1: "carry the exact value, round once", 2: "only the direction decide
 BOX_1 = "Inside a calculation, precision shrinks error."
 BOX_2 = "At a unit, direction decides who pays."
 
-STEP = "Step 6. File the report."  # the manual's step line, the slide's first beat
-LITERALS: dict[str, str] = {STEP: "user 2026-10-30 outline"}  # the digits on the slide are the protocols' names, values of numbers()
+LITERALS: dict[str, str] = {}  # the digits on the slide are the protocols' names, values of numbers() (no step beat: the user cut "Step 6. File the report.", 2026-10-30)
 
 # geometry (scene units: the 5% safe area is ±6.4 by ±3.6)
 X_EDGE = 6.4
@@ -77,7 +76,7 @@ def numbers() -> dict:
 
 
 class Two(DeckScene):
-    SECTIONS = ("step", "bands", "inside", "unit", "box")
+    SECTIONS = ("bands", "inside", "unit", "box")
 
     def panel(self, band: int):
         top = PANEL_TOP[band]
@@ -110,8 +109,6 @@ class Two(DeckScene):
         n = numbers()
         rows = n["rows"]
         self.section(0)
-        self.step(STEP)  # the step line alone, then its kicker above the title
-        self.section(1)
         title = self.title(TITLE, SIZE_BODY, Palette.TEXT)
         self.fix(title)
         panels = {b: self.panel(b) for b in (1, 2)}
@@ -122,7 +119,7 @@ class Two(DeckScene):
 
         # band 1: too early, too often; then carry the exact value and round once
         story = VGroup(*[m for b in (1, 2) for m in panels[b]])
-        for b, sec in ((1, 2), (2, 3)):
+        for b, sec in ((1, 1), (2, 2)):
             self.section(sec, hold=1.5)
             names = self.names(b, rows)
             for name in names:
@@ -130,7 +127,7 @@ class Two(DeckScene):
             story.add(names, self.resolve(b, panels[b][0]))
 
         # the box: everything but the title leaves; the thesis holds on its panel
-        self.section(4, hold=2.0)
+        self.section(3, hold=2.0)
         # each sentence on two lines, broken at its comma: one line each does not fit the safe area at HERO
         box = VGroup(*[VGroup(*[words(part, BOX_SIZE, Palette.TEXT) for part in s.replace(", ", ",|").split("|")]).arrange(DOWN, buff=0.22) for s in (BOX_1, BOX_2)]).arrange(DOWN, buff=0.5)
         box.move_to([0, -0.35, 0])
