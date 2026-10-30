@@ -41,10 +41,9 @@
     - name: four
       cue: "Every rate, every discount, every option price runs through exp."
     - name: resolve
-      cue: ""
-    - name: alone
       cue: "If exp has no canonical value on chain, nothing built on it has one. That is an attack vector."
-
+  notes:
+    - "The four formulas (V11): compounding rate (1 + r/n)^nt → e^(nt · ln(1 + r/n)); discount factor e^(−rt); option price N(d) → erfc → e^(−x²); growth curve e^(kt)."
 
 - slide: 4
   title: Computers round
@@ -278,12 +277,12 @@
     - name: chains
       cue: "one right word for every input, the same address on every chain,"
     - name: call
-      cue: ""
-    - name: properties
       cue: "no owner, no upgrade path,"
     - name: closing
       cue: "one call to check."
-
+  notes:
+    - "Chains probed 2026-10-29 (chains.json; verify-K.md, 2026-10-29 chain probe); the CLZ-since dates per chain are in chains.json."
+    - "No storage · no owner · no upgrade path · source verified (V4). A correct implementation returns the same word (V2, K14)."
 
 - slide: 17
   title: Not switch. Measure.
@@ -300,18 +299,15 @@
   scene: s14_institutions.Institutions
   sections:
     - name: scales
-      cue: "Fees scale with the computation; errors scale with the amount."
-    - name: not-cents
-      cue: "What an institution buys is not fewer cents."
+      cue: "Fees scale with the computation; errors scale with the amount. What an institution buys is not fewer cents."
     - name: reproducible
       cue: "It is a result that can be reproduced,"
     - name: declared
       cue: "declared"
     - name: checked
       cue: "and checked."
-    - name: precedent
-      cue: ""
-
+  notes:
+    - "Precedent: ERC-4626 fixes the rounding direction of each vault conversion (V1)."
 
 - slide: 19
   title: Two formats
@@ -325,9 +321,9 @@
       cue: "Floating point, binary256: seventy-one digits at any magnitude."
     - name: revert
       cue: "Overflow reverts, because a revert can't be ignored."
-    - name: rule
-      cue: ""
-
+  notes:
+    - "Sources: contracts/src/bl127/README.md · contracts/src/bl19/README.md. BL19 is laid out as IEEE 754 binary256 (E9): sign · exponent · fraction (236 stored), significand 237 bits with the hidden bit. No NaN, no infinity (K4)."
+    - "BL127: sign · integer · fraction, 1 · 127 · 128; about 38 digits of fraction; about ±1.7 × 10^38; the grid ends at 2^−128 (K1, K2). Known range: fixed point · many orders of magnitude: floating point."
 
 - slide: 20
   title: What correct costs

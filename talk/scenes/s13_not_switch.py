@@ -4,8 +4,8 @@ the second the hero.
 "Not "switch libraries"." types in at HERO in TEXT and a RED strike
 draws through the two words "switch libraries" (wrong = red and a
 stroke). Then "Measure yourself against the reference." types in at HERO
-inside an EMERALD glow_bar() while the first line and its strike dim to
-FAINT. Straight quotes, as the script writes them. Nothing else is on
+inside an EMERALD glow_bar(), centred, once the first line and its
+strike have faded out (no ghost: the beat that is over leaves). Straight quotes, as the script writes them. Nothing else is on
 the slide: no title (slides.yaml names it), no numbers.
 
 Two sections: not, measure.
@@ -13,7 +13,7 @@ Two sections: not, measure.
 
 from __future__ import annotations
 
-from manim import Create, VGroup
+from manim import UP, Create, FadeOut, VGroup
 
 from vocab import (
     SIZE_HERO,
@@ -30,9 +30,8 @@ MEASURE = "Measure yourself against the reference."
 
 LITERALS = {NOT: "script §13", MEASURE: "script §13"}
 
-Y_NOT = 1.0
-Y_MEASURE = -0.7
-DIM = 0.45  # the first line's opacity once the second is the hero
+Y_NOT = 0.0  # each line alone, centred, in its turn
+Y_MEASURE = 0.0  # alone on the slide once the first line has gone
 
 
 def numbers() -> dict:
@@ -52,9 +51,9 @@ class NotSwitch(TextScene):
         strike = self.strike(struck, Palette.WRONG, stroke_width=5.0)
         self.play(Create(strike, run_time=0.6))
 
-        # 1 · the second line, the hero, on its panel; the first recedes
+        # 1 · the first line leaves; the second, the hero, types on its panel
         self.section(1, hold=1.2)
-        self.play(VGroup(line1, strike).animate.set_opacity(DIM), run_time=0.6)
+        self.play(FadeOut(VGroup(line1, strike), shift=UP * 0.2), run_time=0.6)
         # the panel is sized on the line before it is typed (the same string, measured)
         panel = glow_bar(words(MEASURE, SIZE_HERO, Palette.TEXT).move_to([0, Y_MEASURE, 0]), Palette.EMERALD, pad=0.3, opacity=0.1)
         panel.set_fill(opacity=0)
