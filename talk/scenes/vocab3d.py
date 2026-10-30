@@ -653,7 +653,8 @@ class Gauge(VGroup):
     animation that swings the needle; set_input(name, fraction) the
     animation that fills or collapses an input's bar; glow() the green
     arc's flash; bracket(text) a bracket along the red arc with a HERO
-    label (the multiplier)."""
+    label (the multiplier). With no `inputs` the dial is bare: a wire()
+    to the hub says what drives the needle."""
 
     def __init__(self, limit_label: str, inputs: list[tuple[str, str | None, float]], at=ORIGIN, facing: float = 0.0, radius: float = 1.0, pivot: float = 2.35, bar_width: float = 2.2, size: float = SIZE_BODY, hues: tuple[str, ...] = (Palette.SAPPHIRE, Palette.GOLD, Palette.VIOLET)):
         super().__init__()
@@ -756,10 +757,12 @@ class Gauge(VGroup):
         return self._point((GAUGE_LIMIT + GAUGE_END) / 2, 1.45)
 
 
-def wire(ball: Ball, gauge: Gauge, name: str = "rate", colour: str | None = None) -> Line:
-    """A thin line from the ball to an input's port on the gauge: the ball's
-    position drives that input. Draw it with Create."""
-    return Line(ball.get_center(), gauge.port(name), color=colour or ball.colour, stroke_width=2.5)
+def wire(ball: Ball, gauge: Gauge, name: str | None = None, colour: str | None = None) -> Line:
+    """A thin line from the ball to the gauge: to an input's port when
+    `name` is given, else straight to the hub (the ball's position drives
+    the needle). Draw it with Create."""
+    end = gauge.port(name) if name is not None else gauge.hub.get_center()
+    return Line(ball.get_center(), end, color=colour or ball.colour, stroke_width=2.5)
 
 
 def ground_line(a, b, colour: str = Palette.RULE, stroke_width: float = 2.0) -> Line:

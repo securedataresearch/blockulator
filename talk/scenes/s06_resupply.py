@@ -8,24 +8,27 @@ the exchange rate 10^36 ÷ price, hovers at 0.4999999999999999999995 (to
 22 decimals: the fewest at which it still reads below one half); the
 camera dollies in on the half. The floor: the ball drops and rolls to 0
 in RED, the direction arrow on the ground, tick 0 lit. The check, cause
-then effect, one beat at a time: a Gauge rises beside the lattice with
-the Gate behind it, its three input bars borrow 10,000,000, rate,
-collateral 1; a wire draws from the ball at 0 to the rate input and the
-bar collapses to 0; the needle swings to 0, the readout reads 10,000,000
-× 0 / 1 = 0, the green arc glows, the limit mark reads ≤ 95,000; a held
+then effect, one beat at a time, staged left to right: the lattice with
+the ball (left third), a Gauge with the Gate standing square behind it
+(centre third), the pool and the attacker's tank (right third). A wire
+draws from the ball at 0 straight to the dial's hub, RED; the needle
+swings to 0 in RED, the readout over the gate reads 10,000,000 × 0 / 1
+= 0 (HERO: the borrow, the rate and the collateral, read once, in one
+place), the green arc glows, the limit mark reads ≤ 95,000; a held
 second; the gate lifts EMERALD under a check (ResupplyPairCore.sol:282,
 the caption); the pool (10,000,000 reUSD) drains to empty into the
-attacker's pocket, which grows to the pool's size as it fills, while the
-1 share block sits beside the collateral input as collateral: 1
-share-wei; the camera orbits during the pour. The half restored, the
-counterfactual on the same gauge: the pool refills and the pocket
-shrinks back (the rewind), the ball lifts to 0.4999… in white with its
-value, the wire re-draws, the rate bar rises, the needle swings past the
-limit and pins at the end of the red arc, the readout becomes
-499,999,999,999.9999999995004995 and the limit mark > 95,000, a bracket
-along the red arc reads 5,263,158× the limit (HERO, claim V12), the gate
-shuts RED under a cross: insolvent. The multiplier: all but the gauge,
-its bracket and the shut gate dims (the poster).
+attacker's tank, which grows to the pool's size as it fills, while the
+1 share block sits at the dial's foot as collateral: 1 share-wei; the
+camera orbits during the pour. The half restored, the counterfactual on
+the same dial: the pool refills and the attacker's tank shrinks back
+(the rewind), the ball lifts to 0.4999… in white with its value, the
+wire re-draws white, the needle swings past the limit and pins at the
+end of the red arc, the readout becomes 499,999,999,999.9999999995004995
+and the limit mark > 95,000, a bracket along the red arc reads
+5,263,158× the limit (HERO, claim V12), the gate shuts RED under a
+cross: insolvent. The multiplier: all but the dial, its bracket and the
+shut gate dims (the poster). One label per object; nothing over the
+lattice's ticks.
 
 Six sections, one per click: price, division, floor, check, half,
 multiplier. No number on screen carries an ellipsis: each is complete in
@@ -48,7 +51,9 @@ from fractions import Fraction
 import re
 from math import log10
 
+import numpy as np
 from manim import DEGREES, DOWN, LEFT, OUT, RIGHT, UP, Create, FadeIn, FadeOut, VGroup
+from manim.utils.space_ops import rotate_vector
 
 from vocab import SIZE_BODY, SIZE_HERO, Palette, digits, incidents, markup, resupply, thousands, words
 from vocab3d import Ball, DeckScene3D, Gate, Gauge, Lattice, Stack, Tank, dim, dolly, drop_snap, lift, orbit, pour, shut, slide, transfer, wire
@@ -59,6 +64,27 @@ LTV_DECIMALS = 16  # decimals of the exact LTV, complete and labelled
 RATE_SHORT = 22  # decimals of the rate where it is named: the fewest that still read below one half
 GRID = (0, 2, 1)  # the integer grid the stored rate lives on
 PRICE_SPLIT = 26  # the price per share is 49 characters: at HERO it is two lines, broken after this many (a thousands group ends there)
+# the check's stage, left to right: the lattice (left third, where the floor left it), the dial with the gate square behind
+# it (centre third), the pool and the attacker's tank (right third); the share block at the dial's foot
+CHECK_ZOOM = 0.72
+DIAL_AT = np.array([0.6, 0.0, 0.0])
+DIAL_RADIUS = 0.95
+DIAL_PIVOT = 1.15  # the hub's height: low, so the gate behind shows whole above the arc
+GATE_BEHIND = 3.8  # the gate stands this far behind the dial, along the dial's normal (far enough to show whole above the arc)
+GATE_HEIGHT = 1.5
+GATE_WIDTH = 1.7  # a little wider than the dial
+GATE_ASIDE = 0.4  # along the dial's own horizontal: the gate sits centred behind the dial on screen (perspective pulls it left)
+READOUT_LIFT = 0.7  # the readout over the gate's top (over the check or cross mark)
+RATIO_OFFSET = RIGHT * 0.6 + DOWN * 1.6  # the multiplier under the red arc's end, where the needle pins
+LIMIT_OFFSET = RIGHT * 1.5 + UP * 0.3  # the limit mark's label, up-right of its tick, beside the gate's right post
+RATE_OFFSET = UP * 0.8 + LEFT * 0.5  # the ball's value, over the ball, its right end short of the gate
+VERDICT_OFFSET = LEFT * 1.9 + UP * 0.3  # "insolvent" beside the cross
+POOL_AT = [6.6, -1.8, 0]  # front of the right third: its labels sit mid-height
+POCKET_AT = [6.2, 4.4, 0]  # back of the right third: its labels sit high, clear of the pool's; the grown tank stays inside the frame
+POCKET_LABEL_SHIFT = LEFT * 0.3
+POOL_LABEL_SHIFT = RIGHT * 0.5
+HALF_LOOK = (58 * DEGREES, -62 * DEGREES)  # the half holds the dial square-on (the pour's orbit ends 4° off it)
+SHARE_AT = [-4.4, -3.4, 0]  # front-left, in front of the lattice (its label under the tick numbers): the one share against the whole pool
 
 
 def _rounded(q: Fraction, places: int) -> str:
@@ -89,9 +115,9 @@ def _numerator_exp(rate_line: str) -> int:
     return int(m.group(1))
 
 
-# every digit on the slide is a value of numbers() (the formula's 36 is read from the cited line); the gauge's
-# input names, the pool's name and the collateral label are claim C1's words (research_notes/talk/claims.md)
-LITERALS: dict[str, str] = {"borrow": "C1", "rate": "C1", "collateral": "C1", "the pool": "C1", "collateral: 1 share-wei": "C1"}
+# every digit on the slide is a value of numbers() (the formula's 36 is read from the cited line); the pool's
+# name and the collateral label are claim C1's words (research_notes/talk/claims.md)
+LITERALS: dict[str, str] = {"the pool": "C1", "collateral: 1 share-wei": "C1"}
 
 
 def numbers() -> dict:
@@ -188,8 +214,8 @@ class Resupply(DeckScene3D):
             *[m.animate.set_opacity(aside) for m in (vault.name, attacker.name, attacker.quantity, share.label)],
             run_time=1.2,
         )
-        self.remove(vault, vault.name)  # parked and invisible: a later dim must not bring it back
-        lattice = Lattice(GRID, length=6.5, at=[-1.6, -0.6, 0], minor=0.5)
+        self.remove(vault, vault.name, attacker, attacker.name, attacker.quantity)  # parked and invisible: a later dim must not bring them back
+        lattice = Lattice(GRID, length=6.5, at=[-2.1, -0.6, 0], minor=0.5)
         self.show(lattice)
         for num in lattice.numbers.values():
             num.set_opacity(0)
@@ -222,67 +248,53 @@ class Resupply(DeckScene3D):
             run_time=0.5,
         )
 
-        # ---- check: the ball's 0 drives the gauge; the needle at 0 lifts the gate; the pool pours against one share
+        # ---- check: the ball's 0 drives the dial; the needle at 0 lifts the gate behind it; the pool pours against one share
         self.section(3, hold=2.0)
         facing = -62 * DEGREES + 90 * DEGREES  # the dial faces the camera midway through the pour's orbit (−66° to −58°)
-        gate = Gate(None, at=[-2.4, 1.5, 0], width=2.2, height=1.4, mark_lift=0.3).face(facing)
-        gauge = Gauge(
-            n["max_ltv"],
-            [("borrow", n["borrow_tokens"], 0.78), ("rate", None, x_exact), ("collateral", n["collateral"], 0.08)],
-            at=[1.05, -0.4, 0],
-            facing=facing,
-            radius=1.0,
-            pivot=2.2,
-            bar_width=1.8,
-        )
+        gauge = Gauge(n["max_ltv"], [], at=DIAL_AT, facing=facing, radius=DIAL_RADIUS, pivot=DIAL_PIVOT)
+        behind = rotate_vector(UP, facing, OUT)  # away from the camera, square to the dial's face
+        gate = Gate(None, at=DIAL_AT + behind * GATE_BEHIND + gauge.u * GATE_ASIDE, width=GATE_WIDTH, height=GATE_HEIGHT, mark_lift=0.3).face(facing)
         self.show(gate, gauge)
-        gauge_labels = VGroup(*[m for m, _, _ in gauge.labels])
         gate.shift(OUT * -1.2)
         gauge.shift(OUT * -1.2)
-        gauge_labels.set_opacity(0)
+        gauge.limit_label.set_opacity(0)
         dolly(
             self,
-            0.78,
+            CHECK_ZOOM,
             at=None,  # the zoom only: a re-centred frame drags the fixed-in-frame chrome with it
             run_time=1.0,
             added_anims=[
                 self.caption(f"{n['ltv_cite']} · scripts/replays/resupply.json · block {n['block']}"),
-                lattice.stretch(0.4, about=float(n["floor"]), run_time=1.0),  # the lattice makes room about the ball's 0 (the floor has had its frame)
+                lattice.stretch(0.5, about=float(n["floor"]), run_time=1.0),  # the lattice makes room about the ball's 0 (the floor has had its frame)
                 FadeOut(arrow, floor_lbl, run_time=0.4),
                 gate.animate.shift(OUT * 1.2),
                 gauge.animate.shift(OUT * 1.2),
-                gauge_labels.animate.set_opacity(1),
+                gauge.limit_label.animate.set_opacity(1),
             ],
         )
-        floor_lbl = words("floor", SIZE_BODY, Palette.WRONG)
-        self.billboard(floor_lbl, ball, UP * 0.62)
-        # 1. the wire from the ball at 0: the rate input collapses
-        line = wire(ball, gauge, "rate", Palette.WRONG)
-        self.play(Create(line, run_time=0.5))
-        rate_zero = digits(n["floor"], SIZE_BODY, Palette.WRONG)
-        self.billboard(rate_zero, lambda: gauge.inputs["rate"][0].get_right(), RIGHT * 0.44)
-        rate_zero.set_opacity(0)
-        self.play(gauge.set_input("rate", 0.0, run_time=0.6, colour=Palette.WRONG), rate_zero.animate.set_opacity(1))
-        # 2. the needle swings to 0; the readout; the green arc glows; the limit mark reads "≤ 95,000"; hold
-        readout = digits(f"{n['borrow_tokens']} × {n['floor']} / {n['collateral']} = {n['ltv_floor']}", SIZE_BODY, Palette.CORRECT)
-        self.billboard(readout, gauge.top, UP * 1.15 + LEFT * 0.2)
+        # 1. the wire from the ball at 0 to the dial's hub, RED: the floored rate is what the needle reads
+        line = wire(ball, gauge, colour=Palette.WRONG)
+        self.play(Create(line, run_time=0.6))
+        # 2. the needle swings to 0 in RED; the readout (HERO) over the gate; the green arc glows; the limit mark reads "≤ 95,000"; hold
+        readout = digits(f"{n['borrow_tokens']} × {n['floor']} / {n['collateral']} = {n['ltv_floor']}", SIZE_HERO, Palette.CORRECT)
+        self.billboard(readout, gate.top, UP * READOUT_LIFT)
         readout.set_opacity(0)
         under = digits(f"≤ {n['max_ltv']}", SIZE_BODY, Palette.CORRECT)
-        self.play(gauge.aim(Gauge.angle_of(0.0, 1.0), Palette.CORRECT, run_time=0.8), readout.animate.set_opacity(1))
-        self.play(gauge.glow(0.8), self.relabel(gauge.limit_label, under, run_time=0.4))
+        self.play(gauge.aim(Gauge.angle_of(0.0, 1.0), Palette.WRONG, run_time=0.8), readout.animate.set_opacity(1))
+        self.play(gauge.glow(0.8), self.relabel(gauge.limit_label, under, run_time=0.4, offset=LIMIT_OFFSET))
         gauge.limit_label = under
         self.wait(1.0)
         # 3. the gate lifts
         self.play(open_gate(gate, self))
-        # 4. the pool pours out, all of it, against the one share
-        two_lines = {"line_spacing": 0.8}  # "10,000,000 reUSD" on one line is 4.2 units: too wide beside the dial
-        pool = Tank("the pool", level=0.85, colour=Palette.SAPPHIRE, quantity=f"{n['borrow_tokens']}\nreUSD", at=[5.7, 3.9, 0], radius=0.7, height=1.3, stacked=True, label_shift=RIGHT * 0.45)
-        pocket = Tank("attacker", level=0.0, colour=Palette.GOLD, quantity=f"{n['floor']} crvUSD", at=[7.1, -1.6, 0], radius=0.4, height=0.9, stacked=True, label_shift=RIGHT * 0.25)
+        # 4. the pool pours out, all of it, against the one share at the dial's foot
+        two_lines = {"line_spacing": 0.8}  # "10,000,000 reUSD" on one line is 4.2 units: too wide for a tank's own third
+        pool = Tank("the pool", level=0.85, colour=Palette.SAPPHIRE, quantity=f"{n['borrow_tokens']}\nreUSD", at=POOL_AT, radius=0.7, height=1.3, stacked=True, label_shift=POOL_LABEL_SHIFT)
+        pocket = Tank("attacker", level=0.0, colour=Palette.GOLD, quantity=f"{n['floor']} crvUSD", at=POCKET_AT, radius=0.4, height=0.9, stacked=True, label_shift=POCKET_LABEL_SHIFT)
         self.show(pool, pocket)
         collateral = words("collateral: 1 share-wei", SIZE_BODY, Palette.VIOLET)
         self.play(
             FadeIn(pool, pool.name, pool.quantity, pocket, pocket.name, pocket.quantity, run_time=0.6),
-            transfer(share, [1.05, -2.7, 0], opacity=1.0),
+            transfer(share, SHARE_AT, opacity=1.0),
             self.relabel(share.label, collateral, run_time=0.6, offset=DOWN * 0.7),
             run_time=0.8,
         )
@@ -291,50 +303,50 @@ class Resupply(DeckScene3D):
         orbit(self, 56 * DEGREES, -58 * DEGREES, run_time=3.0, added_anims=[pour(pool, pocket, 0.85, run_time=3.0, drops=14, grow=(0.7, 1.3))])
         taken = digits(f"{n['borrow_tokens']}\nreUSD", SIZE_BODY, Palette.SAPPHIRE, **two_lines)
         emptied_pool = digits(f"{n['floor']} reUSD", SIZE_BODY, Palette.SAPPHIRE)
-        self.play(self.relabel(pocket.quantity, taken, run_time=0.5, offset=UP * (0.72 + taken.height / 2)), self.relabel(pool.quantity, emptied_pool, run_time=0.5, offset=UP * (0.72 + emptied_pool.height / 2)))
+        self.play(self.relabel(pocket.quantity, taken, run_time=0.5, offset=UP * (0.72 + taken.height / 2) + POCKET_LABEL_SHIFT), self.relabel(pool.quantity, emptied_pool, run_time=0.5, offset=UP * (0.72 + emptied_pool.height / 2) + POOL_LABEL_SHIFT))
         pocket.quantity, pool.quantity = taken, emptied_pool
 
-        # ---- half: the exact rate on the same gauge; the needle pins in the red; the gate shuts; the pool stays
+        # ---- half: the exact rate on the same dial; the needle pins in the red; the gate shuts; the pool stays
         self.section(4, hold=2.5)
-        self.play(FadeOut(line, floor_lbl, rate_zero, run_time=0.4), lattice.post(float(n["floor"])).animate.set_fill(Palette.FAINT).set_stroke(Palette.FAINT), lattice.numbers[float(n["floor"])].animate.set_color(Palette.FAINT))
+        self.play(FadeOut(line, run_time=0.4), lattice.post(float(n["floor"])).animate.set_fill(Palette.FAINT).set_stroke(Palette.FAINT), lattice.numbers[float(n["floor"])].animate.set_color(Palette.FAINT))
         refilled = digits(f"{n['borrow_tokens']}\nreUSD", SIZE_BODY, Palette.SAPPHIRE, **two_lines)
         emptied = digits(f"{n['floor']} crvUSD", SIZE_BODY, Palette.GOLD)
         orbit(
             self,
-            62 * DEGREES,
-            -66 * DEGREES,
+            *HALF_LOOK,
             run_time=1.8,
             added_anims=[
                 lift(ball, lattice, x_exact, Palette.EXACT),
-                pour(pocket, pool, 0.85, run_time=1.8, drops=6, grow=(0.4, 0.9)),  # the rewind: the pocket empties and shrinks back
-                self.relabel(pool.quantity, refilled, run_time=0.6, offset=UP * (0.72 + refilled.height / 2)),
-                self.relabel(pocket.quantity, emptied, run_time=0.6, offset=UP * (0.72 + emptied.height / 2)),
+                pocket.grow_to(0.4, 0.9, run_time=1.8),  # the rewind: the attacker's tank shrinks back as it empties
+                pour(pocket, pool, 0.85, run_time=1.8, drops=6),
+                self.relabel(pool.quantity, refilled, run_time=0.6, offset=UP * (0.72 + refilled.height / 2) + POOL_LABEL_SHIFT),
+                self.relabel(pocket.quantity, emptied, run_time=0.6, offset=UP * (0.72 + emptied.height / 2) + POCKET_LABEL_SHIFT),
             ],
         )
         pool.quantity, pocket.quantity = refilled, emptied
-        rate_lbl = VGroup(digits(n["rate_short"], SIZE_BODY, Palette.EXACT), words(n["rate_label"], SIZE_BODY, Palette.FAINT)).arrange(DOWN, buff=0.1)
-        self.billboard(rate_lbl, ball, UP * 0.9 + RIGHT * 2.4)
+        # the ball's one label: its value and the format, one string on two lines (the format line FAINT)
+        rate_lbl = digits(f"{n['rate_short']}\n{n['rate_label']}", SIZE_BODY, Palette.EXACT, line_spacing=0.8, t2c={n["rate_label"]: Palette.FAINT})
+        self.billboard(rate_lbl, ball, RATE_OFFSET)
         rate_lbl.set_opacity(0)
-        line = wire(ball, gauge, "rate", Palette.EXACT)
+        line = wire(ball, gauge, colour=Palette.EXACT)
         self.play(Create(line, run_time=0.5), rate_lbl.animate.set_opacity(1))
-        self.play(gauge.set_input("rate", x_exact, run_time=0.6, colour=Palette.EXACT))
         exact = digits(n["ltv_exact"], SIZE_BODY, Palette.WRONG)
         over = digits(f"> {n['max_ltv']}", SIZE_BODY, Palette.WRONG)
-        self.play(gauge.aim(Gauge.angle_of(2.0, 1.0), Palette.WRONG, run_time=1.0), self.relabel(readout, exact, run_time=0.6), self.relabel(gauge.limit_label, over, run_time=0.6))
+        self.play(gauge.aim(Gauge.angle_of(2.0, 1.0), Palette.EXACT, run_time=1.0), self.relabel(readout, exact, run_time=0.6, offset=UP * READOUT_LIFT), self.relabel(gauge.limit_label, over, run_time=0.6, offset=LIMIT_OFFSET))
         readout, gauge.limit_label = exact, over
         brace = gauge.bracket()
         ratio = markup(f"<span foreground='{Palette.WRONG}'>{n['ratio']}×</span>\nthe limit", SIZE_HERO, Palette.TEXT, line_spacing=0.6)
-        self.billboard(ratio, gauge.bracket_anchor, RIGHT * 1.3 + DOWN * 0.7)
+        self.billboard(ratio, gauge.bracket_anchor, RATIO_OFFSET)
         gauge.extras += [brace, ratio, readout]
         ratio.set_opacity(0)
         self.play(Create(brace, run_time=0.5), ratio.animate.set_opacity(1))
         verdict = words("insolvent", SIZE_BODY, Palette.WRONG)
-        self.billboard(verdict, gate.top, LEFT * 1.7 + UP * 0.5)
+        self.billboard(verdict, gate.top, VERDICT_OFFSET)
         gate.extras.append(verdict)
         verdict.set_opacity(0)
         self.play(shut(gate, self), verdict.animate.set_opacity(1))
 
-        # ---- multiplier: all but the gauge, its bracket and the shut gate dims
+        # ---- multiplier: all but the dial, its bracket and the shut gate dims
         self.section(5, hold=2.0)
         self.play(dim(self.dimmable(gauge, gate), 0.12))
         self.close()
