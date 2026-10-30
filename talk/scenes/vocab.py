@@ -226,9 +226,13 @@ def text_census(scene) -> tuple[int, int, int]:
     on the scene with any ink, split into lit strings (fill opacity at or
     above GHOST_OPACITY) and ghosts (dimmed leftovers), and the glyphs in
     the lit ones (markup tags and spaces not counted). The logos and the
-    caption are text too and are counted: the audience sees them."""
+    caption are text too and are counted: the audience sees them. A
+    chart's key, collected in scene.key, is not counted (the user keeps all
+    17 libraries on every chart)."""
     lit = ghost = glyphs = 0
-    seen = set()
+    # a chart's key (self.key, a VGroup the scene fills) is chrome the user keeps on purpose: not counted
+    key = getattr(scene, "key", None)
+    seen = {id(m) for m in key.get_family()} if isinstance(key, VMobject) else set()
     for m in scene.mobjects:
         for sm in m.get_family():
             if not isinstance(sm, (Text, MarkupText)) or id(sm) in seen:

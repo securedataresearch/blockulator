@@ -96,6 +96,10 @@
       cue: "The exact rate fails that check five million times over."
     - name: multiplier
       cue: ""
+  notes:
+    - "Source: scripts/replays/resupply.json · block 22,785,461; ResupplyPairCore.sol:573 `_exchangeRate = 1e36 / IOracle(_exchangeRateInfo.oracle).getPrices(address(collateral));` and :282 `uint256 _ltv = ((_borrowerAmount * _exchangeRate * LTV_PRECISION) / EXCHANGE_PRECISION) / _collateralAmount;`."
+    - "The stored rate is an integer. 10^36 ÷ price = 0.499999999999999999999500499500 (to 30 decimals). The limit is 95,000 (95%)."
+    - "BL127 / BL19 keep the rate and the LTV exact: insolvent, the borrow reverts. Replayed, not observed."
 
 
 - slide: 7
@@ -116,6 +120,10 @@
       cue: ""
   notes:
     - "[you: Bunni's \"safe in isolation\", if you want it]"
+    - "Source: scripts/replays/bunni.json · tx 0x1c27c4d6 · block 23,273,098; BunniHubLogic.sol:478 `uint256 newBalance = balance - balance.mulDiv(shares, currentTotalSupply);` (idle after = idle − floor(idle × shares / totalSupply): the floor is on the subtrahend)."
+    - "Balances: raw USDC 63,338,394,819; vault shares redeem to 253,353,581,163; idle 316,691,975,954; active USDC 28 wei = raw + redeem − idle. Operands 316,691,975,954 × 119,254,548,996 / 1,596,285,787,955,479,539,002; stored idle after 316,691,975,931 (on chain); active USDC reads 0.659 wei low."
+    - "Total liquidity 58,303,185,165,681,209 → 9,114,083,388,149,667 (−84.37%); then a swap pair against the now mispriced pool. mulDivUp: 48 wei after the same 44."
+    - "BL127 / BL19 (35.6278053051404733807526976078415462767862 / …768833, to 40 decimals) ceil the idle balance once instead of 44 times: total liquidity −0.0000009%, as in the exact form. Replayed, not observed."
 
 - slide: 8
   title: Balancer V2, 3 Nov 2025
@@ -155,6 +163,11 @@
       cue: "About $105,000 in USDC, plus the rest of the vault."
     - name: exact
       cue: ""
+  notes:
+    - "Source: scripts/replays/thetanuts.json · tx 0xbba9f138 · block 25,323,329 · Thetanuts Index Vault V1 USDC PUT, Ethereum. The vault source was never published: the replay is pinned to bytecode (MUL at pc 12186, DIV at pc 12220; EVM DIV floors, whole units only)."
+    - "Before: index supply 153,054,600,572; flash-borrowed 153,054,600,569 (fee 137,749,140); one claim leaves supply 3 and 1 raw unit of each of 5 components (stored 49,716,431,048 · 23,955,277,334 · 6,378,688,542 · 17,186,382,410 · 10,028,704,388, each drained to 1)."
+    - "The 37 mints double: 2, 4, 8 … 2^36, then 15,753,396,239; supply 3 to 153,192,349,712; minted 153,192,349,709 repays the loan and its fee. Realised 105,471.499078 USDC, and the rest of the vault: 6,378.688541 AVAXUSD · 17,186.382409 BNBUSD · 10,028.704387 MATICUSD."
+    - "BL127 / BL19 keep 0.666667; direction decides: floor 0, ceil 1. Ceil to a raw unit charges 1 on the chain's path and 76,596.174855 tokens per component over the 37 mints, more than the claim took of any one (at most 49,716.431047). Computed off-chain, not observed."
 
 - slide: 10
   title: Balancer V1, 31 Aug 2026
@@ -172,6 +185,11 @@
       cue: "120 pools, $1.39M."
     - name: exact
       cue: ""
+  notes:
+    - "Source: scripts/replays/balancer_v1.json · tx 0x72510b25 · block 25,872,274 · pool 1 of 5; BMath.sol:156-182 (calcSingleInGivenPoolOut) · BNum.sol:63-73 (bmul, half up): newBalance = bmul(tokenInRatio, balance). 120 pools and $1,393,694.67 from BIP-930."
+    - "Pool 1 before: DPI 546.83609422, WBTC 35,748,405 satoshi; pushed down by swaps to 3 satoshi, 96 of 100 joins run at 3. 4.499999999999999991 is 9 × 10^−18 satoshi below the half; maxAmountIn = 1, the attacker's own limit, met."
+    - "Over the loop: DPI to 0.57099095 (−99.90%); 400 of the 438 joins at a balance of 3. Replayed: 5 pools in 5 transactions."
+    - "BL127 / BL19 round toward the pool: 5, costing 2 against maxAmountIn = 1, so every join reverts on the attacker's own limit; exact cost per join 1.50079 to 1.52749 units. Replayed, not observed."
 
 - slide: 11
   title: Two failures, one decision
