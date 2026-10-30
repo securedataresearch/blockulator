@@ -97,7 +97,9 @@ EXACT_LABEL = f"e<sup>40</sup> to {WORD_DECIMALS} decimals"  # the title row's n
 EXACT_RIGHT = f"the closest {WORD_DECIMALS}-decimal value"
 
 # the digit-bearing fixed strings on the slide, each with its claim id (research_notes/talk/claims.md)
+STEP = "Step 4. Ask it a simple question."  # the manual's step line, the slide's first beat
 LITERALS = {
+    STEP: "user 2026-10-30 outline",
     EXACT_LABEL: "V9",  # e^40 and its correctly rounded 18-decimal word
     EXACT_RIGHT: "V9",
 }
@@ -219,7 +221,7 @@ def numbers() -> dict:
 
 
 class Exp40(DeckScene):
-    SECTIONS = ("exact", "libraries", "blockulator")
+    SECTIONS = ("step", "exact", "libraries", "blockulator")
 
     def row_y(self, i: int) -> float:
         """Library row i's name line (i = 1, 2, 3)."""
@@ -298,6 +300,8 @@ class Exp40(DeckScene):
         point = len(n["truth"].partition(".")[0])  # index of the point in every row
         lib = libs()
         self.section(0)
+        self.step(STEP)  # the step line alone, then its kicker above the title
+        self.section(1)
         # the chrome: the title (the exact row's name) and the three library rows'
         # names (the keys, in their family colour) are on the first frame
         title = self.title(EXACT_LABEL, TITLE_SIZE, Palette.EXACT, use_markup=True)
@@ -313,7 +317,7 @@ class Exp40(DeckScene):
         self.play(FadeIn(e_right, run_time=0.5))
 
         # three answers, counted in decimals: the word promises 18
-        self.section(1)
+        self.section(2)
         story = VGroup(e_right, *names)
         for i, r in enumerate(rows, start=1):
             txt = self.at_left(digits(r["value"], MONO, Palette.TEXT), self.row_y(i) - NAME_DROP)
@@ -327,7 +331,7 @@ class Exp40(DeckScene):
             self.wait(1.5)
 
         # the reveal: the three rows leave; Blockulator's two words take their place, last, lit where they match
-        self.section(2)
+        self.section(3)
         self.play(FadeOut(story, shift=UP * 0.3, run_time=0.7))
         by_id = {r["id"]: r for r in n["ours"]}
         # BL127: EMERALD; BL19: its family colour, white, under a glow (EXACT's white is the title row)

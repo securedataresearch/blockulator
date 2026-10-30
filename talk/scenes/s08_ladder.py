@@ -86,7 +86,8 @@ KEY_RIGHT, KEY_TOP = 6.75, 2.75  # the key's column: right edge on the safe area
 KEY_PITCH = 0.27
 GUIDE_DROP = 5.0  # digits below the 18-decimal line the slope guide is drawn
 
-LITERALS: dict[str, str] = {}  # every digit on the slide is a value of numbers()
+STEP = "Step 5. Ask everybody else."  # the manual's step line, the slide's first beat
+LITERALS: dict[str, str] = {STEP: "user 2026-10-30 outline"}  # every digit on the slide is a value of numbers()
 
 
 def scenario_numbers(sid: str, lib: dict[str, dict], N: list[int]) -> dict:
@@ -180,7 +181,7 @@ def solve(items: list[tuple[float, object]], gap: float) -> None:
 
 
 class Ladder(DeckScene):
-    SECTIONS = ("compound", "blockulator", "accrual", "adaptive")
+    SECTIONS = ("step", "compound", "blockulator", "accrual", "adaptive")
 
     def build(self, chart: Chart, xs: list[float], lib: dict, s: dict) -> dict:
         """Every mobject one scenario puts on the chart, keyed by library so
@@ -273,6 +274,8 @@ class Ladder(DeckScene):
         y_max = int(n["axisMax"])
         scenarios = n["scenarios"]
         self.section(0)
+        self.step(STEP)  # the step line alone, then its kicker above the title
+        self.section(1)
         # the chrome, on the first frame: the chart (axes, gridlines, the end ticks'
         # labels, the axis titles) and the key; the title names the current scenario
         chart = Chart(X_RANGE, (0, y_max, Y_STEP), WIDTH, HEIGHT, origin=(*ORIGIN_XY, 0))
@@ -318,7 +321,7 @@ class Ladder(DeckScene):
         self.play(FadeIn(guide_lbl, run_time=0.5))
 
         # ---- Blockulator's lines, last and on top, under a glow; then the margins
-        self.section(1, hold=1.5)
+        self.section(2, hold=1.5)
         self.play(*[FadeOut(m) for m in (guide, guide_lbl, visiting) if m is not None], run_time=0.6)
         for it in order:
             if not it["ours"]:
@@ -334,7 +337,7 @@ class Ladder(DeckScene):
         self.heroes_on_top(cur)
 
         # ---- the morphs: every line slides to its next value; leavers fade, arrivals draw
-        for k, s in enumerate(scenarios[1:], start=2):
+        for k, s in enumerate(scenarios[1:], start=3):
             self.section(k, hold=2.0)
             nxt = self.build(chart, xs, lib, s)
             slide, leave, arrive = [], [], []

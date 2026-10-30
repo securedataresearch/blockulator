@@ -102,7 +102,8 @@ WORD_PITCH = 0.8
 X_WORD = -5.55
 
 # the digit-bearing fixed strings, each with its claim id (research_notes/talk/claims.md)
-LITERALS: dict[str, str] = {}  # every digit on the slide is a value of numbers(): the address, the version, the word, the argument
+STEP = "Step 3. Deploy it where nobody can change it. Including you."  # the manual's step line, the slide's first beat
+LITERALS: dict[str, str] = {STEP: "user 2026-10-30 outline"}  # every digit on the slide is a value of numbers(): the address, the version, the word, the argument
 
 
 def call_label() -> str:
@@ -174,7 +175,7 @@ def numbers() -> dict:
 
 
 class Reference(DeckScene):
-    SECTIONS = ("address", "chains", "call", "closing")
+    SECTIONS = ("step", "address", "chains", "call", "closing")
 
     def ref_box(self, n: dict, size: float, y: float) -> VGroup:
         """The reference's box: its label and the version on the first line,
@@ -250,6 +251,8 @@ class Reference(DeckScene):
 
         # 0 · the reference's box, the address the hero: typed in on a glowing panel
         self.section(0)
+        self.step(STEP)  # the step line alone, then its kicker above the title
+        self.section(1)
         self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
         self.wait(0.3)
         hero = self.ref_box(n, SIZE_ADDRESS, Y_HERO)
@@ -261,7 +264,7 @@ class Reference(DeckScene):
         self.play(Indicate(hero.address, color=Palette.CORRECT, scale_factor=1.02, run_time=0.6))
 
         # 1 · the chains: the box goes under the title; the groups land one by one, Sepolia last
-        self.section(1)
+        self.section(2)
         top = self.ref_box(n, SIZE_BODY, Y_BOX)
         self.play(Transform(hero, top, run_time=0.9, rate_func=ease_out_cubic), FadeOut(panel, run_time=0.5))
         table = self.group_rows(n["groups"])
@@ -281,7 +284,7 @@ class Reference(DeckScene):
         self.play(Indicate(sepolia.status, color=Palette.CORRECT, scale_factor=1.08, run_time=0.6))
 
         # 2 · the table leaves (Sepolia's row becomes the box's pin); your contract calls the reference
-        self.section(2)
+        self.section(3)
         pin = words(n["pin"], SIZE_BODY, Palette.MUTED)
         pin.move_to([hero.rect.get_right()[0] - BOX_PAD - pin.width / 2, hero.label.get_y(), 0])
         assert pin.get_left()[0] > hero.version.get_right()[0] + 0.3, (pin.get_left()[0], hero.version.get_right()[0])
@@ -306,7 +309,7 @@ class Reference(DeckScene):
         self.play(AddTextLetterByLetter(word_ref, time_per_char=0.045))
 
         # 3 · your contract's word, the same string from the same loader, judged equal
-        self.section(3, hold=1.2)
+        self.section(4, hold=1.2)
         word_yours = digits(n["word"], SIZE_BODY, Palette.EXACT)
         word_yours.move_to([word_ref.get_x(), Y_WORD - WORD_PITCH, 0])
         self.play(AddTextLetterByLetter(word_yours, time_per_char=0.045))

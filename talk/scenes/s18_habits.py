@@ -45,7 +45,9 @@ INDENT = " " * len("rounding: ")
 ROUNDING_LINES = "\n".join([f"rounding: {OPS[0][0]} {OPS[0][1]}", *[f"{INDENT}{op} {way}" for op, way in OPS[1:]]])  # one op a line in the block
 REFERENCE = "reference:"
 
+STEP = "Step 7. Assign homework."  # the manual's step line, the slide's first beat
 LITERALS = {
+    STEP: "user 2026-10-30 outline",
     TITLE: "essay §10",
     **{h: "essay §10" for h in HABITS},
     DECLARES: "essay §10",
@@ -68,11 +70,13 @@ def numbers() -> dict:
 
 
 class Habits(TextScene):
-    SECTIONS = ("title", "decide", "measure", "declare")
+    SECTIONS = ("step", "title", "decide", "measure", "declare")
 
     def construct(self):
         n = numbers()
         self.section(0)
+        self.step(STEP)  # the step line alone, then its kicker above the title
+        self.section(1)
         self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
         boxes = []
         for label, x in zip(HABITS, COL_X):
@@ -85,7 +89,7 @@ class Habits(TextScene):
 
         # 1–3 · each habit: its box ticks
         for i in range(len(HABITS)):
-            self.section(1 + i, hold=1.0)
+            self.section(2 + i, hold=1.0)
             self.play(boxes[i].tick(run_time=0.5))
 
         # the last click goes on: the contract outline, and the declaration slides in and attaches to it

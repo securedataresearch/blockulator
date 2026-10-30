@@ -922,7 +922,8 @@ def expect_s12_reference(mod) -> dict:
     groups = [{"status": st, "chains": [r["chain"] for r in rows if r["status_text"] == st]} for st in order]
     groups = [g for g in groups if g["chains"]]
     assert [len(g["chains"]) for g in groups] == [1, 11, 3], [len(g["chains"]) for g in groups]
-    assert mod.Reference.SECTIONS == ("address", "chains", "call", "closing")
+    assert mod.Reference.SECTIONS == ("step", "address", "chains", "call", "closing")
+    assert mod.LITERALS == {mod.STEP: "user 2026-10-30 outline"} and mod.STEP.startswith("Step 3. ")  # the manual's step line, the first beat
     return {
         "address": address,
         "version": version,
@@ -969,7 +970,8 @@ def expect_s07_two(mod) -> dict:
     assert names == ["Resupply", "Bunni v2", "Balancer V2", "Thetanuts", "Balancer V1"], names
     bands = [1, 1, 1, 2, 2]
     assert [i["date"][-4:] for i in inc] == sorted(i["date"][-4:] for i in inc), "oldest first"
-    assert mod.Two.SECTIONS == ("bands", "inside", "unit", "box"), mod.Two.SECTIONS
+    assert mod.Two.SECTIONS == ("step", "bands", "inside", "unit", "box"), mod.Two.SECTIONS
+    assert mod.LITERALS == {mod.STEP: "user 2026-10-30 outline"} and mod.STEP.startswith("Step 6. ")  # the manual's step line, the first beat
     assert (mod.BOX_1, mod.BOX_2) == ("Inside a calculation, precision shrinks error.", "At a unit, direction decides who pays.")
     assert not any(ch.isdigit() for ch in "".join([mod.TITLE, *mod.BAND_TITLE.values(), *mod.RESOLVE.values(), mod.BOX_1, mod.BOX_2]))
     ids = ["resupply", "bunni", "balancer-v2", "thetanuts", "balancer-v1"]
@@ -1023,9 +1025,10 @@ def expect_s15_formats(mod) -> dict:
     assert "-" not in strings["bl19_min"] and "−" in strings["bl19_min"]
     # the edit pass moved "laid out as IEEE 754 binary256" (E9), the field names, the significand line,
     # the closing rule and the README caption to the notes: no digit-bearing literal is left on the slide
-    assert mod.LITERALS == {} and not hasattr(mod, "IEEE") and not hasattr(mod, "CLOSE") and not hasattr(mod, "CAPTION")
+    assert mod.LITERALS == {mod.STEP: "user 2026-10-30 outline"} and mod.STEP.startswith("Step 1. ")  # the step line is the one literal (no digit-bearing fact)
+    assert not hasattr(mod, "IEEE") and not hasattr(mod, "CLOSE") and not hasattr(mod, "CAPTION")
     assert mod.REVERT == "overflow reverts"  # K4
-    assert mod.Formats.SECTIONS == ("bar", "fixed", "floating", "revert")
+    assert mod.Formats.SECTIONS == ("step", "bar", "fixed", "floating", "revert")
     return {
         "word_bits": 256,
         "radix": 2,
@@ -1106,7 +1109,8 @@ def expect_s17_proofs(mod) -> dict:
     assert mod.KEYS == ("proven", "fuzzed", "swept")
     assert mod.LIMIT == "limit: a midpoint within the last stage's error · none known" and len(mod.LIMIT) <= 60
     assert "bug" not in mod.LIMIT.lower() and not any(ch in mod.LIMIT for ch in "²→½√…")
-    assert mod.LITERALS == {} and mod.Proofs.SECTIONS == ("proven", "fuzzed", "tested", "limits")
+    assert mod.LITERALS == {mod.STEP: "user 2026-10-30 outline"} and mod.STEP.startswith("Step 2. ")  # the step line is the one literal
+    assert mod.Proofs.SECTIONS == ("step", "proven", "fuzzed", "tested", "limits")
     assert trans_mis == {"bl19": 0, "bl127": 0} and sum(trans.values()) == 495608  # the notes' figures (V34)
     return {
         "labels": {"bl19": lib["bl19"]["label"], "bl127": lib["bl127"]["label"]},
@@ -1308,7 +1312,8 @@ def expect_s18_habits(mod) -> dict:
     assert mod.TITLE == "Rounding is a design decision, like access control."
     assert mod.EXAMPLE == "example" and mod.REFERENCE == "reference:"
     assert not any("today" in k or "protocol" in k for k in mod.LITERALS)  # nothing says a protocol does this today
-    assert mod.Habits.SECTIONS == ("title", "decide", "measure", "declare")  # the block lands in declare; the sub-lines are the notes
+    assert mod.Habits.SECTIONS == ("step", "title", "decide", "measure", "declare")  # the block lands in declare; the sub-lines are the notes
+    assert mod.LITERALS[mod.STEP] == "user 2026-10-30 outline" and mod.STEP.startswith("Step 7. ")
     hues = vocab.ROW_COLOUR["s18"]
     assert len({hues[h] for h in habits}) == 3 and hues["tick"] == vocab.Palette.EMERALD
     assert not any(ch in k for k in mod.LITERALS for ch in "²→½√…")
@@ -1399,6 +1404,129 @@ def expect_s20_thanks(mod) -> dict:
     return out
 
 
+def expect_s21_tiers_libs(mod) -> dict:
+    """The grades by the other route: the JSON files read as JSON (not
+    through vocab's loaders), Decimal for the digits, the rule applied as a
+    table of predicates in the opposite order (C's conditions first, then
+    the grade is the first of S/A/B whose test holds), and the labels
+    rebuilt from the same values."""
+    import json
+    import statistics
+
+    root = vocab.ROOT
+    lib = {r["id"]: r for r in json.loads((root / "static/data/libraries.json").read_text())["libraries"] if r["id"] != "blockulator"}
+    assert len(lib) == 17, len(lib)
+    lad = json.loads((root / "docs/benchmarks/ladder.json").read_text())
+    scen = {s["id"]: s for s in lad["scenarios"]}
+    sids = ("compound", "accrual-continuous", "adaptive-rate")
+    assert tuple(mod.LADDER_SCENARIOS) == sids and mod.COMPOUND == "compound"
+    n_last = max(lad["ladder"])
+    assert n_last == 10000
+
+    def med(sid, lid):
+        cell = scen[sid]["summary"].get(lid, {}).get(str(n_last))
+        if not cell or not cell.get("count"):
+            return None
+        return Decimal(str(cell["digits"]["median"] if isinstance(cell["digits"], dict) else cell["digits"]))
+
+    sw = json.loads((root / "docs/benchmarks/sweep.json").read_text())["rows"]
+    ed = next(o for o in json.loads((root / "docs/benchmarks/edges.json").read_text())["ops"] if o["id"] == "exp")
+    assert mod.CLIFF_OP == "exp" and (mod.ARG_LO, mod.ARG_HI) == (-100, -40) and mod.RANGE_REASON == "ParamOutOfRange"
+    probes = sorted((p for p in ed["probes"] if len(p["args"]) == 1 and -100 <= Decimal(p["args"][0]) <= -40), key=lambda p: -Decimal(p["args"][0]))
+    acc = json.loads((root / "docs/benchmarks/accrual-deployed.json").read_text())["cases"]
+
+    def live_median(pid):
+        v = [Decimal(str(c["truth"][c["primaryTruth"]]["deployed"]["digitsInterest"])) for c in acc if c["group"] == "live" and c["protocol"] == pid]
+        return round(float(statistics.median(v)), 1)
+
+    def fmt(d):
+        return str(int(d)) if d == d.to_integral_value() else str(d)
+
+    rows, misrounded, revert_from, live_med = [], {}, {}, {}
+    for lid, rec in lib.items():
+        meds = [med(sid, lid) for sid in sids]
+        present = [m for m in meds if m is not None]
+        lo = min(present) if present else None
+        comp = meds[0]
+        if rec.get("ours"):
+            misrounded[lid] = sum(r["misrounded"] for r in sw if r["lib"] == lid)
+        if rec["family"] == "wad":
+            for p in probes:
+                cell = p["cells"][lid]
+                if cell.get("unsupported"):
+                    continue
+                if cell.get("reverted") and not str(cell.get("reasonName", "")).startswith("ParamOutOfRange"):
+                    revert_from[lid] = p["args"][0]
+                    break
+        if lid in ("aave", "morpho"):
+            live_med[lid] = live_median(lid)
+        # the predicates, C first
+        c_revert = lid in revert_from
+        c_live = lid in live_med
+        is_s = bool(rec.get("ours")) and misrounded.get(lid) == 0
+        is_a = lo is not None and lo >= 25
+        is_b = rec["family"] == "wad" and comp is not None and comp >= 14 and not c_revert
+        if is_s:
+            tier, label = "S", f"{misrounded[lid]} misrounded"
+        elif is_a:
+            tier, label = "A", f"{fmt(lo)} digits"
+        elif is_b:
+            tier, label = "B", None
+        elif c_revert:
+            tier, label = "C", "reverts from exp(" + revert_from[lid].replace("-", "\u2212") + ")"
+        elif c_live:
+            tier, label = "C", f"{live_med[lid]} digits live"
+        else:
+            tier, label = "C", f"{fmt(lo)} digits"
+        rows.append({"id": lid, "label": rec["label"], "family": rec["family"], "tier": tier, "chip": label, "ladder_min": None if lo is None else float(lo), "compound": None if comp is None else float(comp)})
+    by_tier = {t: [r["id"] for r in rows if r["tier"] == t] for t in vocab.TIERS}
+    # the report card the plan expects (talk/briefs: "The tier list"); a difference here is a REPORT item, not a fix
+    assert by_tier["S"] == ["bl19", "bl127"] and by_tier["A"] == ["quad"], by_tier
+    assert by_tier["B"] == ["solady", "solmate", "prb", "prbud", "snekmate", "oz", "uniswap"], by_tier["B"]
+    assert by_tier["C"] == ["abdk", "balancer", "maker", "aave", "morpho", "fraxlend", "euler"] and by_tier["F"] == [], by_tier
+    assert revert_from == {"balancer": "-42"}, revert_from
+    assert mod.TiersLibs.SECTIONS == ("rule", "grades", "blockulator")
+    assert mod.LITERALS == {vocab.TIER_RULE["A"]: vocab.TIER_RULE_CLAIM, vocab.TIER_RULE["B"]: vocab.TIER_RULE_CLAIM}
+    assert not any(ch.isdigit() for ch in mod.TITLE + vocab.TIER_RULE["S"] + vocab.TIER_RULE["C"] + vocab.TIER_RULE["F"])
+    return {"N": n_last, "rows": rows, "by_tier": by_tier, "misrounded": misrounded, "revert_from": revert_from, "live_median": live_med}
+
+
+def expect_s22_tiers_exchanges(mod) -> dict:
+    """tiers.json read as JSON: every row's tier one of S..F, every kind one
+    of the three, the five incidents F and named as incidents.json names
+    them; then a dry run of the scene, and every label drawn after a
+    chip's name ("· fact") is some row's fact, verbatim."""
+    import json
+    import os
+
+    path = os.environ.get("TALK_TIERS_JSON", str(vocab.ROOT / vocab.TIERS_JSON))
+    d = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert set(d["rule"]) == {"S", "A", "B", "C", "F"}, sorted(d["rule"])
+    rows = []
+    for r in d["rows"]:
+        assert r["tier"] in ("S", "A", "B", "C", "F"), (r["id"], r["tier"])
+        assert r["kind"] in ("exchange", "protocol", "incident"), (r["id"], r["kind"])
+        assert isinstance(r["fact"], str) and r["fact"] and r["source"]["ref"] and r["claim"], r["id"]
+        rows.append({"id": r["id"], "name": r["name"], "kind": r["kind"], "tier": r["tier"], "fact": r["fact"]})
+    inc = {i["protocol"] for i in json.loads((vocab.ROOT / "talk/scenes/data/incidents.json").read_text())["incidents"]}
+    incidents = [r for r in rows if r["kind"] == "incident"]
+    assert {r["name"] for r in incidents} == inc and all(r["tier"] == "F" for r in incidents), incidents
+    assert all(r["kind"] == "incident" for r in rows if r["tier"] == "F"), "F is for the incidents alone"
+    assert mod.TiersExchanges.SECTIONS == ("rule", "exchanges", "lenders", "incidents") and mod.LITERALS == {}
+    # the drawn facts: a dry run, then every "· …" string is a row's fact
+    scene = dry_run(mod)
+    facts = {r["fact"] for r in rows}
+    labels = [s for s in vocab.DRAWN if s.startswith(vocab.CHIP_LABEL_SEP)]
+    assert all(s[len(vocab.CHIP_LABEL_SEP) :] in facts for s in labels), [s for s in labels if s[len(vocab.CHIP_LABEL_SEP) :] not in facts]
+    assert scene.label_policy in mod.LABELLED
+    return {
+        "rule": dict(d["rule"]),
+        "rows": rows,
+        "by_tier": {t: [r["id"] for r in rows if r["tier"] == t] for t in ("S", "A", "B", "C", "F")},
+        "counts": {k: sum(1 for r in rows if r["kind"] == k) for k in ("exchange", "protocol", "incident")},
+    }
+
+
 EXPECT = {
     "s02_exp40": expect_s02_exp40,
     "s03_under": expect_s03_under,
@@ -1424,6 +1552,8 @@ EXPECT = {
     "s18_habits": expect_s18_habits,
     "s19_address": expect_s19_address,
     "s20_thanks": expect_s20_thanks,
+    "s21_tiers_libs": expect_s21_tiers_libs,
+    "s22_tiers_exchanges": expect_s22_tiers_exchanges,
 }
 
 

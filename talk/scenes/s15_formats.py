@@ -77,7 +77,8 @@ TITLE = f"Two ways to spend {WORD_BITS} bits"
 REVERT = "overflow reverts"
 
 # the digit-bearing fixed strings on the slide: none (every digit is a value of numbers())
-LITERALS: dict[str, str] = {}
+STEP = "Step 1. Write a superior math library. Then write another."  # the manual's step line, the slide's first beat
+LITERALS: dict[str, str] = {STEP: "user 2026-10-30 outline"}
 
 # layout (scene units; the frame is 14.22 × 8, the safe area ±6.4 × ±3.6)
 BAR_WIDTH = 12.6  # ≈ 1,700 px: 256 cells at 6.6 px with 0.5 px gaps
@@ -174,7 +175,7 @@ def clamp_x(mobj, lo: float = -X_SAFE, hi: float = X_SAFE):
 
 
 class Formats(DeckScene):
-    SECTIONS = ("bar", "fixed", "floating", "revert")
+    SECTIONS = ("step", "bar", "fixed", "floating", "revert")
 
     def sweep(self, cells: VGroup, colour: str, run_time: float):
         """A field's colour sweeping along its cells, left to right."""
@@ -203,6 +204,8 @@ class Formats(DeckScene):
         self.n = n = numbers()
         s = n["strings"]
         self.section(0)
+        self.step(STEP)  # the step line alone, then its kicker above the title
+        self.section(1)
         # the chrome, on the first frame: the title (it counts the bits)
         self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
         self.wait(0.3)
@@ -212,7 +215,7 @@ class Formats(DeckScene):
         self.play(LaggedStart(*[FadeIn(c, shift=DOWN * 0.08) for c in bar.cells], lag_ratio=0.004, run_time=1.6))
 
         # fixed point: sign, integer, fraction, bracketed and counted; the one label
-        self.section(1, hold=1.0)
+        self.section(2, hold=1.0)
         f = n["bl127"]
         edges127 = (0, f["sign"], f["sign"] + f["integer"], WORD_BITS)
         colours127 = (HUES["sign"], HUES["bl127_integer"], HUES["bl127_fraction"])
@@ -232,7 +235,7 @@ class Formats(DeckScene):
         self.play(Create(grid, run_time=1.0), FadeIn(grid_glow, run_time=1.0))
 
         # floating point: the same bits as sign, exponent, fraction; the magnitude axis and the window
-        self.section(2, hold=1.0)
+        self.section(3, hold=1.0)
         g = n["bl19"]
         label19 = words(s["bl19_label"], LABEL_SIZE, Palette.TEXT).move_to([0, Y_LABEL, 0])
         self.play(FadeOut(label127, shift=UP * 0.1, run_time=0.4))
@@ -269,7 +272,7 @@ class Formats(DeckScene):
             self.wait(0.8)
 
         # overflow: a value slides past the last tick and reverts
-        self.section(3, hold=0.4)
+        self.section(4, hold=0.4)
         mid = (AXIS_TICKS[0] + AXIS_TICKS[1]) / 2
         dot = axis.dot_at(mid, Palette.TEXT)
         self.play(FadeIn(dot, scale=0.3, run_time=0.4))

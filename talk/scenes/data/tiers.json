@@ -1,0 +1,368 @@
+{
+  "_doc": "Slide 20, the report card: exchanges and lending protocols graded by the rule below, one row per component, plus the five incidents of incidents.json graded F. Every row's 'fact' is a measurement or a documented choice, stated as measured and never as a defect; a library's or protocol's documented precision is not a defect; no loss is claimed at any exchange. 'fact' is what the slide may print beside the name (<= 48 chars); 'measured' says how the number was obtained; 'source.ref' is the repo JSON that holds the number or the protocol's source file at a pinned commit; 'claim' is the T-id in talk/briefs/tiers-provenance.md, which quotes the line or shows the computation. Incident rows copy name, date, loss, lossUsd, rounding (as 'measured') and source (as 'note') verbatim from incidents.json. Generated 2026-10-30; rows the draft listed but that could not be pinned are listed in the provenance note under 'not pinned'.",
+  "rule": {
+    "S": "S · correctly rounded or integer-exact: every answer the closest the format holds (for an exchange: the swap maths is exact integer arithmetic, nothing to round)",
+    "A": "A · about 30 correct digits on the talk's data",
+    "B": "B · the format's 18 decimals, as documented; zero below 10^-18 is the floor; a small documented precision choice",
+    "C": "C · fewer digits than the format holds, or a cliff or revert inside the domain; a rate model measurably off its documented value",
+    "F": "F · a rounding step that lost money"
+  },
+  "rows": [
+    {
+      "id": "uniswap-v2-swap",
+      "name": "Uniswap v2 swap",
+      "kind": "exchange",
+      "tier": "S",
+      "fact": "x·y = k checked in whole units · fee 3 of 1000",
+      "measured": "UniswapV2Pair.swap requires balance0Adjusted·balance1Adjusted >= reserve0·reserve1·1000² with balanceAdjusted = balance·1000 − amountIn·3, all in uint256; the only rounding is the integer output the caller asks for.",
+      "source": {
+        "ref": "https://github.com/Uniswap/v2-core/blob/6a9e7c97860676e0992f22a49665760444c1cdf5/contracts/UniswapV2Pair.sol#L180-L182",
+        "licence": "GPL-3.0 (repo)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T1"
+    },
+    {
+      "id": "uniswap-v3-swap",
+      "name": "Uniswap v3/v4 swap step",
+      "kind": "exchange",
+      "tier": "S",
+      "fact": "512-bit mulDiv · every step rounds to the pool",
+      "measured": "SqrtPriceMath and SwapMath compute the next sqrt price and the amounts with FullMath.mulDiv (exact 512-bit intermediate) and a stated rounding direction per quantity ('Always rounds up, because in the exact output case ... we need to move the price at least far enough'); nothing is approximated. v4-core carries the same libraries.",
+      "source": {
+        "ref": "https://github.com/Uniswap/v3-core/blob/5ea68a77cb541c6b3812df783be71ba8c081e25f/contracts/libraries/SqrtPriceMath.sol#L18-L54 · https://github.com/Uniswap/v4-core/blob/bea7f6d1c11cd5dc4f0d5151ffa37a1c239feee6/src/libraries/SwapMath.sol",
+        "licence": "v3-core: BUSL-1.1 header, Change Date 2023-04-01 passed, Change License GPL-2.0-or-later; v4-core: MIT",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T2"
+    },
+    {
+      "id": "curve-stableswap",
+      "name": "Curve StableSwap (3pool, ng)",
+      "kind": "exchange",
+      "tier": "S",
+      "fact": "D and y by integer Newton, stopped within 1 unit",
+      "measured": "get_D and get_y iterate in uint256 and stop when |D − Dprev| <= 1 and |y − y_prev| <= 1 ('Equality with the precision of 1'): the invariant and the swap output are integers to the last unit, in both the 2020 3pool and stableswap-ng.",
+      "source": {
+        "ref": "https://github.com/curvefi/curve-contract/blob/574f44027d089de0eac765f5a74ea5ae96aba968/contracts/pools/3pool/StableSwap3Pool.vy#L205-L217 · https://github.com/curvefi/stableswap-ng/blob/3332cd44656ec64b3c048885e1dd71955254b262/contracts/main/CurveStableSwapNG.vy#L1098-L1121",
+        "licence": "Curve.Fi, all rights reserved (ng header: 'Copyright (c) Curve.Fi, 2020-2023 - all rights reserved'); read only, no transcription",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T3"
+    },
+    {
+      "id": "aerodrome-stable",
+      "name": "Aerodrome stable pool",
+      "kind": "exchange",
+      "tier": "S",
+      "fact": "x³y + y³x solved in whole units · nearest y",
+      "measured": "Pool._get_y iterates in integer 1e18-normalised units and returns y or y + 1 ('There's no closer answer than y + 1'); the swap check _k(balance) < _k(reserve) is integer.",
+      "source": {
+        "ref": "https://github.com/aerodrome-finance/contracts/blob/1ba30815bba620f7e9faa34769ffd00c214c9b82/contracts/Pool.sol#L381-L440",
+        "licence": "Pool.sol header: GPL-3.0-or-later (repo licence field unset; the draft said BUSL)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T4"
+    },
+    {
+      "id": "trader-joe-lb-swap",
+      "name": "Trader Joe LB swap in a bin",
+      "kind": "exchange",
+      "tier": "S",
+      "fact": "128.128 multiply-shift · rounded toward the pool",
+      "measured": "BinHelper.getAmounts: the bin's max amount in is reserve·2^128/price rounded up (shiftDivRoundUp / mulShiftRoundUp) and the amount out is amountIn·price >> 128 rounded down; integer arithmetic on a 128.128 price, no approximation.",
+      "source": {
+        "ref": "https://github.com/lfj-gg/joe-v2/blob/067c6ccf5b8ff1526d03fa3e4c65ec45d01c1f73/src/libraries/BinHelper.sol#L236-L262",
+        "licence": "MIT",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T5"
+    },
+    {
+      "id": "uniswap-v3-tickmath",
+      "name": "Uniswap v3/v4 TickMath",
+      "kind": "exchange",
+      "tier": "A",
+      "fact": "sqrt price · 29 digits at tick ±1 · 9 at the end",
+      "measured": "getSqrtRatioAtTick transcribed (constants parsed from the file; each within 0.49 units of 2^128·1.0001^(−2^(i−1))) and compared with mpmath sqrt(1.0001^tick)·2^96 at 120 digits: 28–29 correct digits for |tick| <= 23027, 31–33 at 100000–200000, 18–27 at ±500000, 19 at +887272 and 9 at −887272, where the Q64.96 fixed point holds about 32 significant bits. The result is rounded up, not to nearest.",
+      "source": {
+        "ref": "https://github.com/Uniswap/v3-core/blob/5ea68a77cb541c6b3812df783be71ba8c081e25f/contracts/libraries/TickMath.sol#L23-L53 · https://github.com/Uniswap/v4-core/blob/bea7f6d1c11cd5dc4f0d5151ffa37a1c239feee6/src/libraries/TickMath.sol",
+        "licence": "v3-core TickMath.sol: GPL-2.0-or-later; v4-core: MIT",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T6"
+    },
+    {
+      "id": "trader-joe-lb-price",
+      "name": "Trader Joe LB bin price",
+      "kind": "exchange",
+      "tier": "A",
+      "fact": "price from bin id · 26 to 39 correct digits",
+      "measured": "PriceHelper.getPriceFromId = getBase(binStep).pow(id − 2^23) in 128.128, transcribed: the base (1 + binStep/10000)·2^128 is floored (relative −4e-40); against exact (1 + s/10000)^e·2^128 at 120 digits the price has 39 digits at e = ±1, 33–36 at the mid range, 34 at binStep 1 or 10 with e = ±10000 and 26 at binStep 100 with e = ±3000, where the truncation of each squaring accumulates.",
+      "source": {
+        "ref": "https://github.com/lfj-gg/joe-v2/blob/067c6ccf5b8ff1526d03fa3e4c65ec45d01c1f73/src/libraries/PriceHelper.sol#L28-L58 · https://github.com/lfj-gg/joe-v2/blob/067c6ccf5b8ff1526d03fa3e4c65ec45d01c1f73/src/libraries/math/Uint128x128Math.sol#L95-L175",
+        "licence": "MIT",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T7"
+    },
+    {
+      "id": "uniswap-v3-twap",
+      "name": "Uniswap v3 TWAP (OracleLibrary)",
+      "kind": "exchange",
+      "tier": "B",
+      "fact": "mean tick floored before pricing · under 1 bp",
+      "measured": "OracleLibrary.consult sets arithmeticMeanTick = int24(tickCumulativesDelta / secondsAgo) and 'Always round[s] to negative infinity'; one tick is a factor 1.0001, so the floor moves the price it reports by less than 1 bp. The live +0.787 bp figure of the draft (USDC/WETH, block 26258017) was not re-run and is not claimed.",
+      "source": {
+        "ref": "https://github.com/Uniswap/v3-periphery/blob/24ccf014fe7f81d74a14c1689d6fdf123f280e45/contracts/libraries/OracleLibrary.sol#L34-L36",
+        "licence": "GPL-2.0-or-later",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T8"
+    },
+    {
+      "id": "pendle-market",
+      "name": "Pendle market exchange rate",
+      "kind": "exchange",
+      "tier": "B",
+      "fact": "E = e^rt in 18-decimal LogExpMath, as documented",
+      "measured": "MarketMathCore._getExchangeRateFromImpliedRate: 'The formula is E = e^rt'; exchangeRate = LogExpMath.exp(rt) and the implied rate is exchangeRate.ln(), both Balancer's 18-decimal LogExpMath. Not integer-exact, so B rather than the draft's S.",
+      "source": {
+        "ref": "https://github.com/pendle-finance/pendle-core-v2-public/blob/87685c89d05087535e9b9647eeda0e3d297d1f06/contracts/core/Market/MarketMathCore.sol#L305-L324",
+        "licence": "GPL-3.0-or-later (file header)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T9"
+    },
+    {
+      "id": "gmx-v2-price-impact",
+      "name": "GMX v2 price impact",
+      "kind": "exchange",
+      "tier": "B",
+      "fact": "impact exponent by 18-decimal pow, as documented",
+      "measured": "Precision.applyExponentFactor converts the 30-decimal float to 18 decimals, calls PRBMathUD60x18.pow and converts back ('we need to convert float (30 decimals) to 60x18 (18 decimals) and then back to 30 decimals'); below 1.0 it returns 0 ('pow doesn't work for x less than one'). Not integer-exact, so B rather than the draft's S.",
+      "source": {
+        "ref": "https://github.com/gmx-io/gmx-synthetics/blob/a85ea3491c19c93bb4b5a002d9b358fb769b7849/contracts/utils/Precision.sol#L88-L109 · https://github.com/gmx-io/gmx-synthetics/blob/a85ea3491c19c93bb4b5a002d9b358fb769b7849/contracts/pricing/PricingUtils.sol#L104-L110",
+        "licence": "BUSL-1.1, Change Date 31 August 2026, Change License GPL-2.0-or-later (LICENSE at the pinned commit)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T10"
+    },
+    {
+      "id": "curve-twocrypto-get-y",
+      "name": "Curve twocrypto-ng get_y",
+      "kind": "exchange",
+      "tier": "B",
+      "fact": "Newton on y stops at 1e-14 of y, its own limit",
+      "measured": "TwocryptoMath.get_y sets convergence_limit = max(x_j // 10**14, D // 10**14, 100) and returns when the step is below max(convergence_limit, y // 10**14): a stated stopping precision of 1e-14 relative in 18-decimal arithmetic. The draft's 7.4e-16 measurement was not re-run and is not claimed.",
+      "source": {
+        "ref": "https://github.com/curvefi/twocrypto-ng/blob/5cbe558902402e8fcb331463089db65fc56c11f9/contracts/main/TwocryptoMath.vy#L150-L197",
+        "licence": "Curve.Fi, all rights reserved (header: 'Copyright (c) Curve.Fi, 2025 - all rights reserved'); read only, no transcription",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T11"
+    },
+    {
+      "id": "algebra-v1-fee",
+      "name": "Algebra V1 dynamic fee",
+      "kind": "exchange",
+      "tier": "B",
+      "fact": "sigmoid fee by an 8-term e^x series · cut at 6γ",
+      "measured": "AdaptiveFee.exp sums e^(x/g)·g^8 through the x^8 term ('e^(x/g) = 1 + x/g + x^2/(2*g^2) + ...') and sigmoid returns alpha or 0 once x >= 6·g; the fee itself is a uint16. A fee policy, graded as documented.",
+      "source": {
+        "ref": "https://github.com/cryptoalgebra/Algebra/blob/60d71de06b75518b6bc9e1d6909fcb7c0c9e5cd7/src/core/contracts/libraries/AdaptiveFee.sol#L41-L100",
+        "licence": "BUSL-1.1 (file header at tag v1.0.0; no LICENSE file at the tag; the draft said GPL)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T12"
+    },
+    {
+      "id": "compound-v3",
+      "name": "Compound v3 (Comet)",
+      "kind": "protocol",
+      "tier": "B",
+      "fact": "15-decimal index · simple interest between calls",
+      "measured": "BASE_INDEX_SCALE = 1e15 and accruedInterestIndices adds mulFactor(index, rate·timeElapsed) to the stored uint64 index: linear between accruals, floored to the 1e15 grid. A documented precision choice, so B rather than the draft's C.",
+      "source": {
+        "ref": "https://github.com/compound-finance/comet/blob/f766f51583c23acc33b2a7824654ef2029a96804/contracts/CometCore.sol#L51 · https://github.com/compound-finance/comet/blob/f766f51583c23acc33b2a7824654ef2029a96804/contracts/CometWithExtendedAssetList.sol#L254-L265",
+        "licence": "BUSL-1.1, Change Date 2025-12-31 passed, Change License GPL-2.0-or-later",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T13"
+    },
+    {
+      "id": "maverick-v2-tickmath",
+      "name": "Maverick v2 TickMath",
+      "kind": "exchange",
+      "tier": "C",
+      "fact": "sqrt price · 17 digits at tick ±1 · 11 at MAX",
+      "measured": "tickSqrtPrice transcribed with the 19 constants parsed from the file: the constants' relative error doubles from 5.5e-18 (i = 0) to 1.4e-12 (i = 18), so each holds 17.3 down to 11.8 digits; the D18 result against exact sqrt(1.0001^tick)·1e18 has 17 correct digits at tick ±1, 14 at ±1000, 13 at ±10000, 12 at ±100000 and 11 at ±322378 (MAX_TICK), in a format that holds 18. Every user of a pool sees the same grid; no loss is claimed. The draft's 'constants as float64 1.0001' does not hold: float64 1/sqrt(1.0001) in Q128 is 0xfffcb933bd6fb8000..., not the file's 0xfffcb933bd6fad9d....",
+      "source": {
+        "ref": "https://github.com/maverickprotocol/v2-common/blob/d91e8714a20b65913166d6b6608590ff822c3f06/contracts/libraries/TickMath.sol#L54-L80 · https://github.com/maverickprotocol/v2-common/blob/d91e8714a20b65913166d6b6608590ff822c3f06/contracts/libraries/Constants.sol#L17",
+        "licence": "GPL-2.0-or-later",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T14"
+    },
+    {
+      "id": "aave-v3",
+      "name": "Aave v3 (Ethereum)",
+      "kind": "protocol",
+      "tier": "C",
+      "fact": "74 live positions · median 8.6 interest digits",
+      "measured": "docs/benchmarks/accrual-deployed.json: 74 live Aave v3 positions at block 26206698 (39 borrow, 35 supply) against a 200-digit truth of the formula Aave states (e^(rt) for debt; per-second compounding of the liquidity rate, the APY Aave displays, for supply): correct digits of interest min 0.0, median 8.6, of balance median 13.5. Deployed code pinned to aave-v3-origin v3.7.0 and verified against the mainnet bytecode in the same file.",
+      "source": {
+        "ref": "docs/benchmarks/accrual-deployed.json (cases, group 'live', protocol 'aave'; pins.aave cff15de6d1271b0c800fc001f4aea4c263e8a597) · https://github.com/aave-dao/aave-v3-origin/blob/cff15de6d1271b0c800fc001f4aea4c263e8a597/src/contracts/protocol/libraries/math/MathUtils.sol#L38-L83",
+        "licence": "BUSL-1.1 (MathUtils.sol header)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T15"
+    },
+    {
+      "id": "morpho-blue",
+      "name": "Morpho Blue",
+      "kind": "protocol",
+      "tier": "C",
+      "fact": "252 live markets · median 7.1 digits of interest",
+      "measured": "docs/benchmarks/accrual-deployed.json: 252 live Morpho Blue markets at block 26206698 against e^(integral of the rate) on the IRM's stated path: correct digits of interest median 7.1 over all 252 (7.41 over the 210 idle under 7 days; 1.7 over the 42 idle 7 days or more, most at 100% utilisation). wTaylorCompounded: 'the sum of the first three non-zero terms of a Taylor expansion of e^(nx) - 1'.",
+      "source": {
+        "ref": "docs/benchmarks/accrual-deployed.json (cases, group 'live', protocol 'morpho'; pins.morpho 55d2d99304fb3fb930c688462ae2ccabb1d533ad) · https://github.com/morpho-org/morpho-blue/blob/55d2d99304fb3fb930c688462ae2ccabb1d533ad/src/libraries/MathLib.sol#L36-L38",
+        "licence": "GPL-2.0-or-later (MathLib.sol header)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T16"
+    },
+    {
+      "id": "sparklend",
+      "name": "SparkLend",
+      "kind": "protocol",
+      "tier": "C",
+      "fact": "binomial's cubic term is 0 below 3.1536% APR",
+      "measured": "sparklend-v1-core MathUtils (the Aave v3.0.2 form): basePowerThree = (rate.rayMul(rate) / SECONDS_PER_YEAR²).rayMul(rate) / SECONDS_PER_YEAR floors to 0 for every rate up to 31535999842319999605799990 RAY = 3.1536% APR (binary search over the integer formula; 1 at the next RAY unit). At 3% APR the dropped term is 1.1e-9 of one idle day's interest, 1.0e-6 of 30 days', 1.5e-4 of a year's. Repo code; the deployed pool was not re-verified against bytecode.",
+      "source": {
+        "ref": "https://github.com/sparkdotfi/sparklend-v1-core/blob/8120e495061dc3315f0a86f682f4ca645a418bf7/contracts/protocol/libraries/math/MathUtils.sol#L64-L80",
+        "licence": "BUSL-1.1 (file header)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T17"
+    },
+    {
+      "id": "fraxlend",
+      "name": "FraxLend VariableInterestRate V2",
+      "kind": "protocol",
+      "tier": "C",
+      "fact": "5 idle days at 100% · ×3.5, half-life says ×5.66",
+      "measured": "docs/benchmarks/ladder.json, scenario adaptive-rate, input 'reference' (4% APR, 100% utilisation, a day per step, FraxLend's deployed half-life of two days), N = 5: FraxLend 4.439370876e-9 per second from rate0 1.26839167935e-9 (×3.5000), where 2^(5/2) gives the truth 7.17510686e-9 (×5.6569); 1.2 correct digits (over the scenario: min 0.2, median 1.4, max 4.7 at N = 1). The code multiplies by (1 + δ²Δt/H), which equals the documented 2^(Δt/H) only at Δt = H.",
+      "source": {
+        "ref": "docs/benchmarks/ladder.json (scenarios[adaptive-rate].inputs[reference].cells.fraxlend) · https://github.com/FraxFinance/fraxlend/blob/2bed49d4dcc6702d92dede825c3424893517d841/src/contracts/VariableInterestRate.sol#L120-L134",
+        "licence": "ISC (file header)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T18"
+    },
+    {
+      "id": "euler-adaptive-curve",
+      "name": "Euler v2 IRMAdaptiveCurve",
+      "kind": "protocol",
+      "tier": "C",
+      "fact": "rate at target, one idle day · −0.28% / +0.42%",
+      "measured": "docs/benchmarks/ladder.json, scenario adaptive-rate, at Euler's deployed ADJUSTMENT_SPEED (100 per year), one idle day then one update: input 'euler-speed' (100% utilisation) relative error −0.00279481; input 'euler-halving' (0% utilisation) +0.00421513, against r0·e^(speed·err·t), the formula the contract's comment states. ExpLib.wExp reduces x by ln 2 and computes 'e^r with a 2nd-order Taylor polynomial'.",
+      "source": {
+        "ref": "docs/benchmarks/ladder.json (scenarios[adaptive-rate].inputs[euler-speed, euler-halving].cells.euler) · https://github.com/euler-xyz/evk-periphery/blob/dd93a5f518ec0775f1cb87d358fe24b9fb5fbb66/src/IRM/IRMAdaptiveCurve.sol#L196-L201 · https://github.com/euler-xyz/evk-periphery/blob/dd93a5f518ec0775f1cb87d358fe24b9fb5fbb66/src/IRM/lib/ExpLib.sol#L23-L43",
+        "licence": "MIT (file headers)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T19"
+    },
+    {
+      "id": "resupply",
+      "name": "Resupply",
+      "kind": "incident",
+      "tier": "F",
+      "fact": "26 Jun 2025 · $9.5M–$10M",
+      "measured": "The exchange rate, 1e36 divided by that price, came out just under one half. Integer division floored it to zero.",
+      "source": {
+        "ref": "talk/scenes/data/incidents.json#incidents[0]",
+        "licence": "n/a (incident record)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T20",
+      "date": "26 Jun 2025",
+      "loss": "$9.5M–$10M",
+      "lossUsd": 9500000,
+      "note": "about $9.5M–$10M, reported"
+    },
+    {
+      "id": "bunni-v2",
+      "name": "Bunni v2",
+      "kind": "incident",
+      "tier": "F",
+      "fact": "2 Sep 2025 · $8.4M",
+      "measured": "Forty-four withdrawals, each rounding the idle balance the way the team believed safe. Active USDC 28 base units to 4; liquidity down 84%.",
+      "source": {
+        "ref": "talk/scenes/data/incidents.json#incidents[1]",
+        "licence": "n/a (incident record)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T21",
+      "date": "2 Sep 2025",
+      "loss": "$8.4M",
+      "lossUsd": 8400000,
+      "note": "$8.4M, Bunni's post-mortem"
+    },
+    {
+      "id": "balancer-v2",
+      "name": "Balancer V2",
+      "kind": "incident",
+      "tier": "F",
+      "fact": "3 Nov 2025 · $121.1M",
+      "measured": "17 x 1.0581 = 17.988, rounded down to 17. A swap undercharged by 34.7%, repeated 55 times in one transaction.",
+      "source": {
+        "ref": "talk/scenes/data/incidents.json#incidents[2]",
+        "licence": "n/a (incident record)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T22",
+      "date": "3 Nov 2025",
+      "loss": "$121.1M",
+      "lossUsd": 121100000,
+      "note": "$121.1M total losses, Balancer's post-mortem"
+    },
+    {
+      "id": "thetanuts",
+      "name": "Thetanuts",
+      "kind": "incident",
+      "tier": "F",
+      "fact": "15 Jun 2026 · $105,000",
+      "measured": "Supply redeemed down to 3 raw units, then 37 mints, each charged less than one raw unit, floored to 0.",
+      "source": {
+        "ref": "talk/scenes/data/incidents.json#incidents[3]",
+        "licence": "n/a (incident record)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T23",
+      "date": "15 Jun 2026",
+      "loss": "$105,000",
+      "lossUsd": 105000,
+      "note": "about $105,000 USDC realised; PeckShield estimate $2.1M"
+    },
+    {
+      "id": "balancer-v1",
+      "name": "Balancer V1",
+      "kind": "incident",
+      "tier": "F",
+      "fact": "31 Aug 2026 · $1.39M",
+      "measured": "3 x a rate just under 1.5 = just under 4.5, rounded to 4. One token unit paid for one and a half, 438 times.",
+      "source": {
+        "ref": "talk/scenes/data/incidents.json#incidents[4]",
+        "licence": "n/a (incident record)",
+        "accessed": "2026-10-30"
+      },
+      "claim": "T24",
+      "date": "31 Aug 2026",
+      "loss": "$1.39M",
+      "lossUsd": 1390000,
+      "note": "$1.39M, BIP-930"
+    }
+  ]
+}

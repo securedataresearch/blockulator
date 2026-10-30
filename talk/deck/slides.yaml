@@ -17,66 +17,20 @@
   notes:
     - "[you: who you are, one line]"
 
-
 - slide: 2
-  title: What is e⁴⁰?
-  scene: s02_exp40.Exp40
-  sections:
-    - name: exact
-      cue: "Ask a mathematician what e to the forty is and you get one answer."
-    - name: libraries
-      cue: "Ask Ethereum and you get three. All three are good."
-    - name: blockulator
-      cue: "None is the closest value an 18-decimal word can hold. Blockulator's is."
-  notes:
-    - "Source: docs/benchmarks/edges.json · exp(40)."
-    - "Solady · Balancer · PRBMath SD: 2 · 3 · 0 decimals right. Three good answers, none the closest; Blockulator: all 18."
-    - "BL127: 39 decimals · BL19: 55 decimals, every one of them right. The full words run to 127 (BL127) and 179 (BL19) decimals; their precision ends at 39 and 55."
-
-
-- slide: 3
-  title: exp is under everything
-  scene: s03_under.Under
-  sections:
-    - name: four
-      cue: "Every rate, every discount, every option price runs through exp."
-    - name: resolve
-      cue: "If exp has no canonical value on chain, nothing built on it has one. That is an attack vector."
-  notes:
-    - "The four formulas (V11): compounding rate (1 + r/n)^nt → e^(nt · ln(1 + r/n)); discount factor e^(−rt); option price N(d) → erfc → e^(−x²); growth curve e^(kt)."
-
-- slide: 4
-  title: Computers round
-  scene: s04_grid.Grid
-  sections:
-    - name: human
-      cue: "A 256-bit word holds finitely many numbers."
-    - name: decimal
-      cue: "e to the forty is not one of them."
-    - name: half
-      cue: "Half a unit is the gap that stays."
-    - name: snaps
-      cue: "The wrong tick, or the wrong direction, is the error we can end."
-  notes:
-    - "Source: docs/benchmarks/edges.json · exp(40); the 80-decimal truth by mpmath (its first 24 decimals match edges.json)."
-    - "e^40 = 235385266837019985.40789991074903480450887161725455546723665125118928916352581695433673399870476756 (to 80 decimals). The 18-decimal libraries' grid: one tick = 10^-18, a whole wei; the correctly rounded WAD answer is 235385266837019985.407899910749034805. BL127's grid: one tick = 2^-128 ≈ 2.9 × 10^-39."
-    - "The lower word reads, to 80 decimals, 235385266837019985.40789991074903480450887161725455546723650207538258024203263970057194910881476857; the upper, 235385266837019985.40789991074903480450887161725455546723944081125963596080256154191500472300931524. They part at the 39th decimal. BL127's word is the lower, 0x686c20e8b55b3b8b620a9f8b68ca318e."
-
-
-- slide: 5
-  title: $130 million
+  title: "$130 million"
   scene: s05_cost.Cost
   sections:
     - name: incidents
-      cue: "Since June 2025: more than a hundred and thirty million dollars, before recoveries. Five incidents."
+      cue: "Since June 2025. Five incidents."
     - name: closing
-      cue: "One rounding step each."
+      cue: "More than a hundred and thirty million dollars, before recoveries. One rounding step each."
   notes:
     - "Source: talk/scenes/data/incidents.json (each loss's .source there), since June 2025. Each incident's .rounding line is in incidents.json."
     - "The first sentence names the total before it appears; it lands on the second click with \"One rounding step each.\""
 
-- slide: 6
-  title: Resupply
+- slide: 3
+  title: "Resupply"
   scene: s06_resupply.Resupply
   sections:
     - name: price
@@ -96,9 +50,8 @@
     - "The stored rate is an integer. 10^36 ÷ price = 0.499999999999999999999500499500 (to 30 decimals). The limit is 95,000 (95%)."
     - "BL127 / BL19 keep the rate and the LTV exact: insolvent, the borrow reverts. Replayed, not observed."
 
-
-- slide: 7
-  title: Bunni v2, 2 Sep 2025
+- slide: 4
+  title: "Bunni v2, 2 Sep 2025"
   scene: s06b_bunni.Bunni
   sections:
     - name: before
@@ -120,8 +73,8 @@
     - "Total liquidity 58,303,185,165,681,209 → 9,114,083,388,149,667 (−84.37%); then a swap pair against the now mispriced pool. mulDivUp: 48 wei after the same 44."
     - "BL127 / BL19 (35.6278053051404733807526976078415462767862 / …768833, to 40 decimals) ceil the idle balance once instead of 44 times: total liquidity −0.0000009%, as in the exact form. Replayed, not observed."
 
-- slide: 8
-  title: Balancer V2, 3 Nov 2025
+- slide: 5
+  title: "Balancer V2, 3 Nov 2025"
   scene: s06c_balancer_v2.BalancerV2
   sections:
     - name: before
@@ -142,8 +95,8 @@
     - "30 of 30 cycles osETH/WETH, 25 of 25 wstETH/WETH; D*, the pool's invariant, from 0 to 137,894.598 wei-eq. Net to the attacker: 11,873.89 ETH."
     - "BL127 / BL19 keep 17.988… exact and ceil the final charge to wei once: 0 calls below exact, the attacker would lose 127.677 ETH. Replayed, not observed."
 
-- slide: 9
-  title: Thetanuts, 15 Jun 2026
+- slide: 6
+  title: "Thetanuts, 15 Jun 2026"
   scene: s06d_thetanuts.Thetanuts
   sections:
     - name: before
@@ -164,8 +117,8 @@
     - "The 37 mints double: 2, 4, 8 … 2^36, then 15,753,396,239; supply 3 to 153,192,349,712; minted 153,192,349,709 repays the loan and its fee. Realised 105,471.499078 USDC, and the rest of the vault: 6,378.688541 AVAXUSD · 17,186.382409 BNBUSD · 10,028.704387 MATICUSD."
     - "BL127 / BL19 keep 0.666667; direction decides: floor 0, ceil 1. Ceil to a raw unit charges 1 on the chain's path and 76,596.174855 tokens per component over the 37 mints, more than the claim took of any one (at most 49,716.431047). Computed off-chain, not observed."
 
-- slide: 10
-  title: Balancer V1, 31 Aug 2026
+- slide: 7
+  title: "Balancer V1, 31 Aug 2026"
   scene: s06e_balancer_v1.BalancerV1
   sections:
     - name: before
@@ -179,140 +132,19 @@
     - name: take
       cue: "120 pools, $1.39M."
     - name: exact
-      cue: ""
+      cue: "So we checked everybody's math."
   notes:
     - "Source: scripts/replays/balancer_v1.json · tx 0x72510b25 · block 25,872,274 · pool 1 of 5; BMath.sol:156-182 (calcSingleInGivenPoolOut) · BNum.sol:63-73 (bmul, half up): newBalance = bmul(tokenInRatio, balance). 120 pools and $1,393,694.67 from BIP-930."
     - "Pool 1 before: DPI 546.83609422, WBTC 35,748,405 satoshi; pushed down by swaps to 3 satoshi, 96 of 100 joins run at 3. 4.499999999999999991 is 9 × 10^−18 satoshi below the half; maxAmountIn = 1, the attacker's own limit, met."
     - "Over the loop: DPI to 0.57099095 (−99.90%); 400 of the 438 joins at a balance of 3. Replayed: 5 pools in 5 transactions."
     - "BL127 / BL19 round toward the pool: 5, costing 2 against maxAmountIn = 1, so every join reverts on the attacker's own limit; exact cost per join 1.50079 to 1.52749 units. Replayed, not observed."
 
-- slide: 11
-  title: Two failures, one decision
-  scene: s07_two.Two
-  sections:
-    - name: bands
-      cue: ""
-    - name: inside
-      cue: "Resupply rounded too early. Bunni and Balancer V2 rounded too often: carry the exact value and round once, and the attack stops."
-    - name: unit
-      cue: "Thetanuts and Balancer V1 rounded at a unit, where no precision helps and only the direction decides who pays."
-    - name: box
-      cue: "Inside a calculation, precision shrinks error. At a unit, direction decides who pays."
-  notes:
-    - "[you: Bunni's \"safe in isolation\", if you want it]"
-    - "Source: scripts/replays/*.json · incidents.json."
-    - "Resupply 0.4999999999999999999995 (to 22 decimals), floored once. Bunni 23.659 (to 3 decimals), floored 44 times: active balance 28 → 4 wei. Balancer V2 17.988250947729518883 (to 18 decimals), mulDown, ×30 cycles."
-    - "Thetanuts: two thirds of a unit; ceil → 1 unit would have cost more than it took. Balancer V1 4.499999999999999991 (to 18 decimals), nearest: 1 unit charged for 1.5 units' worth; toward the pool → 5. Who pays? Half a unit."
-
-- slide: 12
-  title: Measure it
-  scene: s08_ladder.Ladder
-  sections:
-    - name: compound
-      cue: "We measure gas on every change. Almost nobody measures digits. Ten thousand dollars at ten percent, compounded daily: every library loses a digit each time the steps grow tenfold."
-    - name: blockulator
-      cue: "BL127 and BL19 start nineteen and fifty-two digits higher and keep the gap."
-    - name: accrual
-      cue: ""
-    - name: adaptive
-      cue: ""
-  notes:
-    - "Source: docs/benchmarks/ladder.json · scenarios[compound] / [accrual-continuous] / [adaptive-rate]."
-    - "Compound: 18-decimal — Solady · Solmate · PRBMath SD · PRBMath UD · snekmate · Balancer · OpenZeppelin · Uniswap: 14.8; not offered: Aave · Morpho · FraxLend · Euler v2. Accrual (the accrual Aave and Morpho run): not offered OpenZeppelin · Uniswap · Maker · FraxLend · Euler v2. Adaptive (the rate FraxLend and Euler run): not offered OpenZeppelin · Uniswap · Maker · Aave · Morpho."
-    - "Blockulator's lines start higher and keep the gap: at N = 10,000, BL19 +52 to +62 digits, BL127 +19 to +20, over the best 18-decimal line (V14)."
-    - "CHECK THE CUE: \"nineteen and fifty-two digits higher\" — on the compound chart shown under it the margins are +20 and +52; +19 is the accrual scenario's."
-
-- slide: 13
-  title: The cliff
-  scene: s09_cliff.Cliff
-  sections:
-    - name: columns
-      cue: "Then the cliffs."
-    - name: zeros
-      cue: "exp of minus forty-two is zero on an 18-decimal grid. Every probability below ten to the minus eighteen is gone."
-    - name: bl19
-      cue: "BL19 never falls off."
-  notes:
-    - "Source: docs/benchmarks/edges.json · exp."
-    - "The 18-decimal grid is zero from exp(−42) · BL127 has digits to exp(−88) · BL19: 71 digits on every probe (V28). No dot: PRBMath UD rejects negative inputs; no exp: OpenZeppelin · Uniswap · Maker · Aave · Morpho · FraxLend · Euler v2."
-
-- slide: 14
-  title: Real markets, today
-  scene: s10_live.Live
-  sections:
-    - name: deployed
-      cue: "Three hundred and twenty-six live Aave and Morpho markets. The same interest, measured three times: seven correct digits as deployed,"
-    - name: bl127
-      cue: "thirty in BL127,"
-    - name: bl19
-      cue: "sixty-seven in BL19."
-  notes:
-    - "Source: docs/benchmarks/accrual-deployed.json · live · block 26,206,698 · 2026-10-16 17:49 UTC."
-    - "The same 326 markets: 7 digits as deployed, 30 in BL127, 67 in BL19. Gains: Aave +21.9 digits (BL127) and +32.9 more (BL19); Morpho +23.0 and +36.8."
-
-- slide: 15
-  title: Precision is a budget
-  scene: s11_budget.Budget
-  sections:
-    - name: title
-      cue: "Not every protocol should change libraries. Spend precision where it pays:"
-    - name: horizons
-      cue: "long horizons,"
-    - name: cancellation
-      cue: "cancellation,"
-    - name: tails
-      cue: "tails,"
-    - name: iteration
-      cue: "iteration."
-    - name: direction
-      cue: "And decide the direction of every rounding at a unit."
-
-
-- slide: 16
-  title: There is no reference
-  scene: s12_reference.Reference
-  sections:
-    - name: address
-      cue: "No standard says what exp should return on chain. A correctly rounded library can be that reference:"
-    - name: chains
-      cue: "one right word for every input, the same address on every chain,"
-    - name: call
-      cue: "no owner, no upgrade path,"
-    - name: closing
-      cue: "one call to check."
-  notes:
-    - "Chains probed 2026-10-29 (chains.json; verify-K.md, 2026-10-29 chain probe); the CLZ-since dates per chain are in chains.json."
-    - "No storage · no owner · no upgrade path · source verified (V4). A correct implementation returns the same word (V2, K14)."
-
-- slide: 17
-  title: Not switch. Measure.
-  scene: s13_not_switch.NotSwitch
-  sections:
-    - name: not
-      cue: "Not \"switch libraries\"."
-    - name: measure
-      cue: "\"Measure yourself against the reference.\""
-
-
-- slide: 18
-  title: What institutions buy
-  scene: s14_institutions.Institutions
-  sections:
-    - name: scales
-      cue: "Fees scale with the computation; errors scale with the amount. What an institution buys is not fewer cents."
-    - name: reproducible
-      cue: "It is a result that can be reproduced,"
-    - name: declared
-      cue: "declared"
-    - name: checked
-      cue: "and checked."
-  notes:
-    - "Precedent: ERC-4626 fixes the rounding direction of each vault conversion (V1)."
-
-- slide: 19
-  title: Two formats
+- slide: 8
+  title: "Two formats"
   scene: s15_formats.Formats
   sections:
+    - name: step
+      cue: "Step 1. Write a superior math library. Then write another."
     - name: bar
       cue: "Two ways to spend 256 bits."
     - name: fixed
@@ -325,8 +157,8 @@
     - "Sources: contracts/src/bl127/README.md · contracts/src/bl19/README.md. BL19 is laid out as IEEE 754 binary256 (E9): sign · exponent · fraction (236 stored), significand 237 bits with the hidden bit. No NaN, no infinity (K4)."
     - "BL127: sign · integer · fraction, 1 · 127 · 128; about 38 digits of fraction; about ±1.7 × 10^38; the grid ends at 2^−128 (K1, K2). Known range: fixed point · many orders of magnitude: floating point."
 
-- slide: 20
-  title: What correct costs
+- slide: 9
+  title: "What correct costs"
   scene: s16_ziv.Ziv
   sections:
     - name: prices
@@ -341,18 +173,20 @@
     - "Sources: MUL 5 gas (the EVM fee schedule); 512-by-256-bit division 393 gas (divh, contracts/src/bl19/README.md:181, V32); docs/benchmarks/sweep.json · gas.json · exp."
     - "A fast value, with a bound derived in the source. BL127 exp: 2,716 → 2,835 gas with the test (+4.4%); 2,716 from contracts/deployments/BL127.md (typical inline gas exp 5,360 → 2,716, V19), 2,835 the median of gas.json .ops.exp.typical.gas.lib. The last stage: 0 of 3,963 inputs."
 
-- slide: 21
-  title: Knowing it's right
+- slide: 10
+  title: "Knowing it's right"
   scene: s17_proofs.Proofs
   sections:
+    - name: step
+      cue: "Step 2. Prove it. Nobody is going to audit the auditor."
     - name: proven
       cue: "A test checks the inputs it was given. A proof covers every input. The core arithmetic of both libraries is proven."
     - name: fuzzed
       cue: ""
     - name: tested
-      cue: "Every transcendental is swept against a 300-digit reference with every fallback forced: zero misrounded."
+      cue: "Every transcendental is swept against a reference of up to 300 digits with every fallback forced: zero misrounded."
     - name: limits
-      cue: "Two things no check covers, and they are on the slide. State your own guarantees this specifically."
+      cue: "One limit no check covers, and it is on the slide. The proofs found two bugs. Both were ours. State your own guarantees this specifically."
   notes:
     - "Sources: docs/benchmarks/proofs.json · sweep.json; the transcendental list from contracts/src/bl127/README.md (V34)."
     - "Proven: BL127 17 core operations of 19 (16 by Halmos, sqrt in exact integers); BL19 18 of 24. Fuzzed against the spec: BL127 gavg, hypot · BL19 six · 50,000 runs a test. Swept: BL19 327,488 transcendental results at 300 digits · BL127 168,120 at 200 (455,082 and 212,119 over every operation), 0 misrounded."
@@ -360,23 +194,184 @@
     - "The proofs found two bugs on the way: fixed, now proven (V52: issue #159, fix PR #163 2026-10-23, proofs PR #187 2026-10-27, docs/proofs.md:84–87)."
     - "CHECK THE CUES: the limits cue says two things are on the slide, the slide now shows one (the other is in these notes); the tested cue says a 300-digit reference, BL127's oracle is 200 digits."
 
-- slide: 22
-  title: Decide. Measure. Declare.
+- slide: 11
+  title: "There is no reference"
+  scene: s12_reference.Reference
+  sections:
+    - name: step
+      cue: "Step 3. Deploy it where nobody can change it. Including you."
+    - name: address
+      cue: "No standard says what exp should return on chain. A correctly rounded library can be that reference:"
+    - name: chains
+      cue: "one right word for every input, the same address on every chain,"
+    - name: call
+      cue: "no owner, no upgrade path,"
+    - name: closing
+      cue: "one call to check."
+  notes:
+    - "Chains probed 2026-10-29 (chains.json; verify-K.md, 2026-10-29 chain probe); the CLZ-since dates per chain are in chains.json."
+    - "No storage · no owner · no upgrade path · source verified (V4). A correct implementation returns the same word (V2, K14)."
+
+- slide: 12
+  title: "What is e⁴⁰?"
+  scene: s02_exp40.Exp40
+  sections:
+    - name: step
+      cue: "Step 4. Ask it a simple question."
+    - name: exact
+      cue: "Ask a mathematician what e to the forty is and you get one answer."
+    - name: libraries
+      cue: "Ask Ethereum and you get three. All three are good."
+    - name: blockulator
+      cue: "None is the closest value an 18-decimal word can hold. Blockulator's is."
+  notes:
+    - "Source: docs/benchmarks/edges.json · exp(40)."
+    - "Solady · Balancer · PRBMath SD: 2 · 3 · 0 decimals right. Three good answers, none the closest; Blockulator: all 18."
+    - "BL127: 39 decimals · BL19: 55 decimals, every one of them right. The full words run to 127 (BL127) and 179 (BL19) decimals; their precision ends at 39 and 55."
+
+- slide: 13
+  title: "exp is under everything"
+  scene: s03_under.Under
+  sections:
+    - name: four
+      cue: "Every rate, every discount, every option price runs through exp."
+    - name: resolve
+      cue: "If exp has no canonical value on chain, nothing built on it has one. That is an attack vector."
+  notes:
+    - "The four formulas (V11): compounding rate (1 + r/n)^nt → e^(nt · ln(1 + r/n)); discount factor e^(−rt); option price N(d) → erfc → e^(−x²); growth curve e^(kt)."
+
+- slide: 14
+  title: "Computers round"
+  scene: s04_grid.Grid
+  sections:
+    - name: human
+      cue: "A 256-bit word holds finitely many numbers."
+    - name: decimal
+      cue: "e to the forty is not one of them."
+    - name: half
+      cue: "Half a unit is the gap that stays."
+    - name: snaps
+      cue: "The wrong tick, or the wrong direction, is the error we can end."
+  notes:
+    - "Source: docs/benchmarks/edges.json · exp(40); the 80-decimal truth by mpmath (its first 24 decimals match edges.json)."
+    - "e^40 = 235385266837019985.40789991074903480450887161725455546723665125118928916352581695433673399870476756 (to 80 decimals). The 18-decimal libraries' grid: one tick = 10^-18, a whole wei; the correctly rounded WAD answer is 235385266837019985.407899910749034805. BL127's grid: one tick = 2^-128 ≈ 2.9 × 10^-39."
+    - "The lower word reads, to 80 decimals, 235385266837019985.40789991074903480450887161725455546723650207538258024203263970057194910881476857; the upper, 235385266837019985.40789991074903480450887161725455546723944081125963596080256154191500472300931524. They part at the 39th decimal. BL127's word is the lower, 0x686c20e8b55b3b8b620a9f8b68ca318e."
+
+- slide: 15
+  title: "Measure it"
+  scene: s08_ladder.Ladder
+  sections:
+    - name: step
+      cue: "Step 5. Ask everybody else."
+    - name: compound
+      cue: "We measure gas on every change. Almost nobody measures digits. Ten thousand dollars at ten percent, compounded daily: every library loses a digit each time the steps grow tenfold."
+    - name: blockulator
+      cue: "BL127 and BL19 start twenty and fifty-two digits higher and keep the gap."
+    - name: accrual
+      cue: ""
+    - name: adaptive
+      cue: ""
+  notes:
+    - "Source: docs/benchmarks/ladder.json · scenarios[compound] / [accrual-continuous] / [adaptive-rate]."
+    - "Compound: 18-decimal — Solady · Solmate · PRBMath SD · PRBMath UD · snekmate · Balancer · OpenZeppelin · Uniswap: 14.8; not offered: Aave · Morpho · FraxLend · Euler v2. Accrual (the accrual Aave and Morpho run): not offered OpenZeppelin · Uniswap · Maker · FraxLend · Euler v2. Adaptive (the rate FraxLend and Euler run): not offered OpenZeppelin · Uniswap · Maker · Aave · Morpho."
+    - "Blockulator's lines start higher and keep the gap: at N = 10,000, BL19 +52 to +62 digits, BL127 +19 to +20, over the best 18-decimal line (V14)."
+    - "CHECK THE CUE: \"nineteen and fifty-two digits higher\" — on the compound chart shown under it the margins are +20 and +52; +19 is the accrual scenario's."
+
+- slide: 16
+  title: "The cliff"
+  scene: s09_cliff.Cliff
+  sections:
+    - name: columns
+      cue: "Then the cliffs."
+    - name: zeros
+      cue: "exp of minus forty-two is zero on an 18-decimal grid. Every probability below ten to the minus eighteen is gone."
+    - name: bl19
+      cue: "BL19 never falls off."
+  notes:
+    - "Source: docs/benchmarks/edges.json · exp."
+    - "The 18-decimal grid is zero from exp(−42) · BL127 has digits to exp(−88) · BL19: 71 digits on every probe (V28). No dot: PRBMath UD rejects negative inputs; no exp: OpenZeppelin · Uniswap · Maker · Aave · Morpho · FraxLend · Euler v2."
+
+- slide: 17
+  title: "Real markets, today"
+  scene: s10_live.Live
+  sections:
+    - name: deployed
+      cue: "Three hundred and twenty-six live Aave and Morpho markets. The same interest, measured three times: seven correct digits as deployed,"
+    - name: bl127
+      cue: "thirty in BL127,"
+    - name: bl19
+      cue: "sixty-seven in BL19. Nobody had complained."
+  notes:
+    - "Source: docs/benchmarks/accrual-deployed.json · live · block 26,206,698 · 2026-10-16 17:49 UTC."
+    - "The same 326 markets: 7 digits as deployed, 30 in BL127, 67 in BL19. Gains: Aave +21.9 digits (BL127) and +32.9 more (BL19); Morpho +23.0 and +36.8."
+
+- slide: 18
+  title: "Two failures, one decision"
+  scene: s07_two.Two
+  sections:
+    - name: step
+      cue: "Step 6. File the report."
+    - name: bands
+      cue: ""
+    - name: inside
+      cue: "Resupply rounded too early. Bunni and Balancer V2 rounded too often: carry the exact value and round once, and the attack stops."
+    - name: unit
+      cue: "Thetanuts and Balancer V1 rounded at a unit, where no precision helps and only the direction decides who pays."
+    - name: box
+      cue: "Inside a calculation, precision shrinks error. At a unit, direction decides who pays."
+  notes:
+    - "[you: Bunni's \"safe in isolation\", if you want it]"
+    - "Source: scripts/replays/*.json · incidents.json."
+    - "Resupply 0.4999999999999999999995 (to 22 decimals), floored once. Bunni 23.659 (to 3 decimals), floored 44 times: active balance 28 → 4 wei. Balancer V2 17.988250947729518883 (to 18 decimals), mulDown, ×30 cycles."
+    - "Thetanuts: two thirds of a unit; ceil → 1 unit would have cost more than it took. Balancer V1 4.499999999999999991 (to 18 decimals), nearest: 1 unit charged for 1.5 units' worth; toward the pool → 5. Who pays? Half a unit."
+
+- slide: 19
+  title: "The grades: libraries"
+  scene: s21_tiers_libs.TiersLibs
+  sections:
+    - name: rule
+      cue: ""
+    - name: grades
+      cue: "Two correctly rounded. One at thirty digits. Eight at eighteen decimals, as documented."
+    - name: blockulator
+      cue: ""
+  notes:
+    - "Grades computed at render time from ladder.json, edges.json and sweep.json by the rule on the slide. B is the format's documented precision, not a defect."
+
+- slide: 20
+  title: "The grades: exchanges and protocols"
+  scene: s22_tiers_exchanges.TiersExchanges
+  sections:
+    - name: rule
+      cue: ""
+    - name: exchanges
+      cue: "The exchanges did their arithmetic in integers. Nothing to round."
+    - name: lenders
+      cue: "The lenders borrowed a math library."
+    - name: incidents
+      cue: ""
+  notes:
+    - "Rows and sources: talk/scenes/data/tiers.json (one source per row, licences noted). No losses are claimed at exchanges; grades are as measured."
+
+- slide: 21
+  title: "Decide. Measure. Declare."
   scene: s18_habits.Habits
   sections:
+    - name: step
+      cue: "Step 7. Assign homework."
     - name: title
       cue: "Rounding is a design decision, like access control."
     - name: decide
-      cue: "Decide which way."
+      cue: "Decide which way. Not every protocol should change libraries. Spend precision where it pays: long horizons, cancellation, tails, iteration. And decide the direction of every rounding at a unit."
     - name: measure
-      cue: "Measure your digits like your gas."
+      cue: "Measure your digits like your gas. Not \"switch libraries\". \"Measure yourself against the reference.\""
     - name: declare
-      cue: "Declare what you guarantee, and check it."
+      cue: "Declare what you guarantee, and check it. Fees scale with the computation; errors scale with the amount. What an institution buys is not fewer cents. It is a result that can be reproduced, declared and checked."
   notes:
     - "Decide: for each rounding, which way, and why. Measure: know a calculation's digits the way you know its gas, and check it against a reference. Declare: write down what each operation guarantees, and test or prove it (essay §10)."
 
-- slide: 23
-  title: The reference
+- slide: 22
+  title: "The reference"
   scene: s19_address.Address
   sections:
     - name: addresses
@@ -389,8 +384,8 @@
     - "[you: thanks]"
     - "The eight objects (Sepolia, Blockulator 3.0): BL127E v9 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808 · BL127H v9 0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B · BL127N v9 0xAA7Cd9635aE8630379636F533f23DBf2C193d296 · BL127S v9 0xB9C2583a7Ad2251444DC7752658B6C1107C25036 · BL19E v6 0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092 · BL19H v6 0xF059611C1c42543DE6EE82353Eb082Fd8999081f · BL19N v6 0xCe9F09D646B37a9100F05ED1FFD14E9f43180214 · BL19S v6 0xf74ba90535224870830e6e89D2b328d4cc09DE48."
 
-- slide: 24
-  title: Thank you
+- slide: 23
+  title: "Thank you"
   scene: s20_thanks.Thanks
   sections:
     - name: thanks

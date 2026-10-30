@@ -68,7 +68,8 @@ Y_LIMIT = -2.45
 HUES = ROW_COLOUR["s17"]  # the rows: proven EMERALD, fuzzed GOLD, tested (swept) SAPPHIRE, the limit MUTED
 
 # the digit-bearing fixed strings: none (every number on the slide is from numbers())
-LITERALS: dict[str, str] = {}
+STEP = "Step 2. Prove it. Nobody is going to audit the auditor."  # the manual's step line, the slide's first beat
+LITERALS: dict[str, str] = {STEP: "user 2026-10-30 outline"}
 
 
 def numbers() -> dict:
@@ -101,7 +102,7 @@ def numbers() -> dict:
 
 
 class Proofs(DeckScene):
-    SECTIONS = ("proven", "fuzzed", "tested", "limits")
+    SECTIONS = ("step", "proven", "fuzzed", "tested", "limits")
 
     def row(self, i: int, key: str, value, mark, gap: float = GAP):
         """A row: the mark and the verb (in the row's hue) ending GAP before X_VALUE, the value from X_VALUE."""
@@ -124,8 +125,12 @@ class Proofs(DeckScene):
         n = numbers()
         bl19, bl127 = n["labels"]["bl19"], n["labels"]["bl127"]
 
-        # 0 · proven
+        # 0 · the step line alone, then its kicker above the title
         self.section(0)
+        self.step(STEP)
+
+        # 1 · proven
+        self.section(1)
         self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
         self.wait(1.5)
         proven = words(
@@ -136,12 +141,12 @@ class Proofs(DeckScene):
         self.land(*self.row(0, KEYS[0], proven, check_mark(HUES["proven"], size=0.4)))
 
         # 1 · fuzzed
-        self.section(1, hold=1.2)
+        self.section(2, hold=1.2)
         fuzzed = words(f"{thousands(n['runs'])} runs a test", SIZE_ROW, Palette.TEXT)
         self.land(*self.row(1, KEYS[1], fuzzed, check_mark(HUES["fuzzed"], size=0.4)))
 
         # 2 · swept: the hero, 0 misrounded, on a halo
-        self.section(2, hold=1.2)
+        self.section(3, hold=1.2)
         zero = words(f"{n['misrounded']} {MISROUNDED}", SIZE_ZERO, Palette.CORRECT)
         key, zero = self.row(2, KEYS[2], zero, check_mark(HUES["tested"], size=0.4), gap=0.75)
         glow = halo(zero[0].get_center(), Palette.EMERALD, radius=0.32, layers=5, spread=1.2, opacity=0.26)
@@ -151,7 +156,7 @@ class Proofs(DeckScene):
         self.play(FadeIn(glow, run_time=0.6), FadeIn(zero, shift=UP * 0.12, scale=0.9, run_time=0.6))
 
         # 3 · the one known limit: a hollow marker, one line, never red
-        self.section(3, hold=1.6)
+        self.section(4, hold=1.6)
         ring = Circle(radius=0.14, color=HUES["limits"], stroke_width=3, fill_opacity=0)
         limit = words(LIMIT, SIZE_BODY, HUES["limits"])
         line = VGroup(ring, limit).arrange(RIGHT, buff=0.25).move_to([0, Y_LIMIT, 0])
