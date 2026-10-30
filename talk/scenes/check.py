@@ -321,26 +321,17 @@ def expect_s04_grid(mod) -> dict:
     with localcontext() as ctx:
         ctx.prec = 200
         t = Decimal(truth)
-        q18 = Decimal(1).scaleb(-mod.WORD_DECIMALS)
-        lo18 = t.quantize(q18, rounding=ROUND_FLOOR)
-        hi18 = lo18 + q18
-        f18 = float((t - lo18) / q18)
         scale = Decimal(2) ** mod.FRACTION_BITS
         lob = int((t * scale).to_integral_value(rounding=ROUND_FLOOR))
         hib = lob + 1
         fb = float(t * scale - lob)
         ub = Decimal(1) / scale
-
-        def reading(w: int, places: int) -> str:  # the word's value to `places` decimals, nearest
-            return str((Decimal(w) * ub).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP))
-
         nearest = hib if fb >= 0.5 else lob
-        tick = f"{float(ub):.1e}"
-        neighbours_128 = [reading(lob, mod.EXPANSION_DECIMALS), reading(hib, mod.EXPANSION_DECIMALS)]
-        nearest_128 = reading(nearest, mod.EXPANSION_DECIMALS)
-        word18 = reading(nearest, mod.WORD_DECIMALS)
-        # the readings go exactly as far as the truth does, part from each other, and BL127's word to 18 decimals is the closest 18-decimal value
-        assert neighbours_128[0] != neighbours_128[1] and word18 == vocab.correctly_rounded_18(truth), (neighbours_128, word18)
+        # BL127's cell, printed to its decimals, is the nearer 2^-128 word; to 18 decimals it is the closest 18-decimal value
+        bl127 = p["cells"]["bl127"]["value"]
+        places = len(bl127.partition(".")[2])
+        assert str((Decimal(nearest) * ub).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)) == bl127, bl127
+        assert str((Decimal(nearest) * ub).quantize(Decimal(1).scaleb(-mod.WORD_DECIMALS), rounding=ROUND_HALF_UP)) == vocab.correctly_rounded_18(truth)
         # the two words differ by one in the last place of their 32-hex-digit fractions, shown complete
         hexes = [f"0x{w % (1 << mod.FRACTION_BITS):032x}" for w in (lob, hib)]
         assert all(len(h) == 2 + mod.HEX_DIGITS and "…" not in h for h in hexes) and int(hexes[1], 16) - int(hexes[0], 16) == 1, hexes
@@ -357,27 +348,17 @@ def expect_s04_grid(mod) -> dict:
             w = int((t * Decimal(2) ** b).to_integral_value(rounding=ROUND_FLOOR))
             neighbours_hex.append([f"0x{(w + m) % (1 << b):0{b // 4}x}" for m in (0, 1)])
     assert bits[-1] == mod.FRACTION_BITS and all(b % 4 == 0 for b in bits)  # every binary level's fraction is whole hex digits
+    assert neighbours_hex[-1] == hexes
     return {
         "truth": truth,
-        "truth_probe": p["truth"],
-        "expansion_decimals": mod.EXPANSION_DECIMALS,
-        "levels_decimal": mod.WORD_DECIMALS,
         "decimal_levels": levels,
         "bases": [10, 2],
         "neighbours_decimal": neighbours_decimal,
-        "neighbours_hex_levels": neighbours_hex,
-        "neighbours_18": [str(lo18), str(hi18)],
-        "fraction_18": f18,
-        "correctly_rounded": vocab.correctly_rounded_18(truth),
         "bits": bits,
-        "neighbours_hex": hexes,
-        "neighbours_128": neighbours_128,
+        "neighbours_hex_levels": neighbours_hex,
         "fraction_128": fb,
         "nearest_hex": hexes[1] if nearest == hib else hexes[0],
-        "nearest_128": nearest_128,
-        "word18": word18,
-        "tick_128": tick,
-        "bl127": p["cells"]["bl127"]["value"],
+        "bl127": bl127,
     }
 
 
@@ -390,8 +371,11 @@ def expect_s05_cost(mod) -> dict:
     assert "sum" not in mod.numbers() and not any("sum" in r for r in mod.numbers()["rows"])
     for r in rows:
         assert "wrong way" not in r["rounding"], r  # V27: one rounding step, never "rounded the wrong way"
-    assert len(rows) + 1 == len(mod.Cost.SECTIONS), (len(rows), mod.Cost.SECTIONS)
-    return {"rows": rows, "total": d["total"], "since": d["since"], "caption": f"talk/scenes/data/incidents.json · since {d['since']}"}
+    assert mod.Cost.SECTIONS == ("incidents", "closing"), mod.Cost.SECTIONS  # the rows on one click, the total on the next
+    total = d["total"]
+    k = total.index(",")  # the hero ends at the phrase's comma; the tail starts after its space
+    assert total[k + 1] == " " and total.count(",") == 1, total
+    return {"rows": [{key: r[key] for key in ("date", "protocol", "loss")} for r in rows], "total": total, "hero": total[:k], "tail": total[k + 2 :]}
 
 
 def expect_s06_resupply(mod) -> dict:
@@ -406,17 +390,18 @@ def expect_s06_resupply(mod) -> dict:
         def to_decimals(x: Decimal, places: int) -> str:  # rounded half-up at the stated decimal, by Decimal
             return f"{x.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP):,}"
 
-        quotient = to_decimals(rate, mod.QUOTIENT_DIGITS)
         rate_short = to_decimals(rate, mod.RATE_SHORT)
         ltv = Decimal(borrow) * rate * ltv_p / ex_p / coll
         ltv_str = to_decimals(ltv, mod.LTV_DECIMALS)
         ratio = f"{int((ltv / max_ltv).to_integral_value()):,}"
-        pct = f"{(Decimal(max_ltv) / ltv_p * 100).normalize()}%"
         # the story: the rate reads below one half at the count the scene names it to, and
         # that count is the fewest that does (one fewer rounds up to 0.5), so the floor to 0 is visible
-        assert Decimal(rate_short) < Decimal("0.5") and Decimal(quotient) < Decimal("0.5"), (rate_short, quotient)
+        assert Decimal(rate_short) < Decimal("0.5"), rate_short
         assert Decimal(to_decimals(rate, mod.RATE_SHORT - 1)) == Decimal("0.5"), mod.RATE_SHORT
-        assert len(quotient.partition(".")[2]) == mod.QUOTIENT_DIGITS and len(ltv_str.partition(".")[2]) == mod.LTV_DECIMALS
+        assert len(ltv_str.partition(".")[2]) == mod.LTV_DECIMALS
+        # BL127 / BL19's line: the replay table carries their rate and LTV to 28 and 16 decimals, equal to the exact ones, and the verdict
+        rows = [r for r in vocab.replay_table("resupply", mod.RULERS) if r["method"].split()[0].rstrip(",") in ("BL127", "BL19", "FP127", "FP19")]
+        assert len(rows) == 2 and all(r["rate"] == to_decimals(rate, 28) and r["LTV (1e-5)"] == to_decimals(ltv, 16).replace(",", "") and "insolvent: reverts" in r["verdict"] for r in rows), rows
     floor_rate = 10**36 // price
     assert floor_rate == int(p["exchangeRateOnChain"]), "the chain stored the floored rate"
     ltv_floor = ((borrow * floor_rate * ltv_p) // ex_p) // coll
@@ -426,14 +411,13 @@ def expect_s06_resupply(mod) -> dict:
         assert "…" not in str(v), (k, v)
     rate_exp = int(cite[573].split("1e")[1].split(" ")[0])
     assert rate_exp == 36
+    inc = next(i for i in vocab.incidents()["incidents"] if i["protocol"] == mod.PROTOCOL)
     return {
-        "block": f"{int(p['block']):,}",
+        "title": f"{mod.PROTOCOL}, {inc['date']}",
         "rate_exp": rate_exp,
         "base": 10,
         "grid_ticks": [0, 1, 2],
         "price": f"{price:,}",
-        "quotient": quotient,
-        "quotient_label": f"(to {mod.QUOTIENT_DIGITS} decimals)",
         "rate_short": rate_short,
         "rate_label": f"(to {mod.RATE_SHORT} decimals)",
         "floor": str(floor_rate),
@@ -442,21 +426,18 @@ def expect_s06_resupply(mod) -> dict:
         "ltv_exp": round(log10(ltv_p)),
         "ltv_floor": f"{ltv_floor:,}",
         "max_ltv": f"{max_ltv:,}",
-        "max_ltv_pct": pct,
         "ltv_exact": ltv_str,
         "ltv_label": f"(to {mod.LTV_DECIMALS} decimals)",
         "ratio": ratio,
         "solvent_floor": ltv_floor <= max_ltv,
         "solvent_exact": ltv <= max_ltv,
-        "rate_line": cite[573],
-        "ltv_line": cite[282],
     }
 
 
 def expect_s06b_bunni(mod) -> dict:
     """The decisive step by a second route (Decimal), the chain's own reads
     for the start and the end, the replay table cross-checked against the
-    JSON and the module where both have a figure."""
+    JSON for the poster's line."""
     d = vocab._load("scripts/replays/bunni.json")
     st, steps = d["start"], d["steps"]
     raw0, idle0, T0, s0 = int(st["raw0"]), int(st["idle"]), int(st["totalSupply"]), int(steps["shares"][0])
@@ -487,65 +468,31 @@ def expect_s06b_bunni(mod) -> dict:
     r = vocab.bunni_replay()
     active = [int(a) for a in r["seq"]["deployed"]]
     assert active[0] == active_start and active[-1] == active_end and len(active) == 45
-    L0, L1 = int(d["observed"]["swap3"]["totalLiquidity"]), int(d["observed"]["afterWithdrawals"]["totalLiquidity"])
-    with localcontext() as ctx:
-        ctx.prec = 60
-        pct = dec((Decimal(L1) / Decimal(L0) - 1) * 100, mod.PCT_DECIMALS).replace("-", "−") + "%"
-    assert pct == "−84.37%", pct
-    # the replay table against the JSON and the module where both have a figure
-    lq = vocab.bunni_liquidity()
+    # the poster's line from the replay table: deployed liquidity is the chain's; BL127 and BL19 end where the exact form does, −0.0000009%
+    L1 = int(d["observed"]["afterWithdrawals"]["totalLiquidity"])
     table = {row["idle balance"]: row for row in vocab.replay_table("bunni", mod.TABLE_HEADING)}
     dep = next(v for k, v in table.items() if k.startswith("deployed"))
-    assert int(dep["active USDC after 44 (wei)"]) == active_end and int(dep["total liquidity after"]) == L1 == lq["forms"]["deployed"]
-    fix = next(v for k, v in table.items() if "mulDivUp" in k)
-    assert int(fix["active USDC after 44 (wei)"]) == r["seq"]["mulDivUp"][-1] == 48 and int(fix["total liquidity after"]) == lq["forms"]["mulDivUp"]
-    bl127 = table["BL127 idle balance"]
-    assert bl127["active USDC after 44 (wei)"] == vocab.to_decimals(r["seq"]["bl127"][-1], mod.WORD_DECIMALS) and int(bl127["total liquidity after"]) == lq["forms"]["bl127"]
-    with localcontext() as ctx:
-        ctx.prec = 60
-        fix_pct = dec((Decimal(lq["forms"]["mulDivUp"]) / Decimal(lq["start"]) - 1) * 100, mod.PCT_FIX_DECIMALS).replace("-", "−") + "%"
-        assert fix_pct == fix["change"].replace("-", "−") == bl127["change"].replace("-", "−"), (fix_pct, fix["change"])
-        assert dec((Decimal(L1) / Decimal(lq["start"]) - 1) * 100, 7).replace("-", "−") + "%" == dep["change"].replace("-", "−")
-    bl19 = table["BL19 idle balance"]["active USDC after 44 (wei)"]  # the forge run's; the table alone carries it (REPORT)
-    cite = next(c for c in d["cites"] if c["id"] == "idle")
-    assert cite["file"] == "src/lib/BunniHubLogic.sol" and cite["line"] == 478
+    assert int(dep["active USDC after 44 (wei)"]) == active_end and int(dep["total liquidity after"]) == L1
+    exact_row = table["exact rational"]
+    for lib in ("BL127", "BL19"):
+        row = table[f"{lib} idle balance"]
+        assert row["total liquidity after"] == exact_row["total liquidity after"] and row["change"] == exact_row["change"] == "-0.0000009%", row
     for k, v in mod.numbers().items():
         assert "…" not in str(v), (k, v)
     return {
-        "protocol": inc["protocol"],
-        "date": inc["date"],
-        "chain": "Ethereum",
-        "block": f"{int(d['tx']['block']):,}",
-        "tx_short": d["tx"]["hash"][: 2 + mod.TX_SHORT],
-        "tx_short_len": mod.TX_SHORT,
-        "tx_len": 64,
-        "raw": f"{raw0:,}",
-        "redeem": f"{redeem0:,}",
+        "title": f"{inc['protocol']}, {inc['date']}",
         "idle": f"{idle0:,}",
-        "active_start": active_start,
-        "active_end": active_end,
-        "active": active,
-        "withdrawals": 44,
-        "shares": f"{s0:,}",
-        "supply": f"{T0:,}",
         "sub": sub_str,
         "sub_label": f"(to {mod.SUB_DECIMALS} decimals)",
         "floor": str(floor),
         "kept": kept,
         "grid_ticks": [floor, floor + 1],
-        "idle_after": f"{int(d['snapshots']['idle'][0]):,}",
-        "cite_file": "BunniHubLogic.sol",
-        "cite_line": 478,
-        "cite_text": cite["text"],
-        "liq_start": f"{L0:,}",
-        "liq_end": f"{L1:,}",
-        "liq_pct": pct,
+        "withdrawals": 44,
+        "counter_ticks": list(range(1, 45)),
+        "active": active,
+        "active_start": active_start,
+        "active_end": active_end,
         "loss": inc["loss"],
-        "up": "48",
-        "bl127": bl127["active USDC after 44 (wei)"],
-        "bl19": bl19,
-        "word_label": f"(to {mod.WORD_DECIMALS} decimals)",
-        "fix_pct": fix_pct,
     }
 
 
@@ -671,12 +618,12 @@ def expect_s06d_thetanuts(mod) -> dict:
     # the date: incidents.json's day is the block's (UTC)
     assert datetime.fromtimestamp(int(d["blockTimestamp"]), timezone.utc).strftime("%-d %b %Y") == inc["date"], inc["date"]
     (dec,) = {int(c["decimals"]) for c in comps}
-    assert dec == 6 == mod.USDC_DECIMALS
+    assert dec == 6  # the components' decimals, as USDC's (the notes' realised USDC)
 
     def tok(raw: int, places: int) -> str:
         return f"{Decimal(raw).scaleb(-places):,.{places}f}"
 
-    usdc = tok(int(d["realised"]["usdcTotal"]), mod.USDC_DECIMALS)
+    usdc = tok(int(d["realised"]["usdcTotal"]), 6)  # USDC has 6 decimals
     page = (vocab.ROOT / "docs" / "benchmarks" / "replay-thetanuts.md").read_text(encoding="utf-8")
     assert f"{usdc} USDC" in page, usdc  # the page writes the realised USDC with the same six decimals
     by_addr = {c["address"].lower(): c for c in comps}
@@ -685,24 +632,11 @@ def expect_s06d_thetanuts(mod) -> dict:
     for k, v in mod.numbers().items():
         assert "…" not in str(v), (k, v)
     return {
-        "protocol": inc["protocol"],
-        "date": inc["date"],
-        "vault_name": d["vault"]["name"],
-        "tx_short": d["tx"][:10],
-        "block": f"{int(d['block']):,}",
+        "title": f"{inc['protocol']}, {inc['date']}",
         "supply_before": f"{int(d['pre']['totalSupply']):,}",
-        "borrowed": f"{int(d['flashLoan']['amount']):,}",
-        "supply_after_claim": "3",
-        "stored_after": "1",
-        "n_components": 5,
-        "components": [
-            {"label": c["symbol"].split("-")[-1], "stored_before": f"{int(s):,}", "payout": f"{int(p):,}", "stored_after": "1"}
-            for c, s, p in zip(comps, claim["storedBefore"], claim["payout"])
-        ],
-        "pc_mul": 12186,
-        "pc_div": 12220,
+        "supply": "3",
+        "stored": "1",
         "amount0": "2",
-        "supply0": "3",
         "charge0": charge0_str,
         "charge0_label": f"(to {mod.CHARGE_DECIMALS} decimals)",
         "charge0_x": Fraction(2, 3),
@@ -710,21 +644,13 @@ def expect_s06d_thetanuts(mod) -> dict:
         "ceil0": "1",
         "grid_ticks": [0, 1, 2],
         "n_mints": 37,
-        "mint_index": list(range(1, 38)),
-        "amounts": [f"{int(m['amount']):,}" for m in mints],
-        "supplies": [f"{int(m['supplyBefore']):,}" for m in mints],
-        "supply_after": f"{int(d['post']['totalSupply']):,}",
-        "minted": f"{minted:,}",
-        "loan_fee": f"{int(d['flashLoan']['amount']) + int(d['flashLoan']['premium']):,}",
-        "zero_transfers": 185,
+        "counter_ticks": list(range(1, 38)),
+        "amount_bits": [len(bin(int(m["amount"]))) - 2 for m in mints],
         "loss": inc["loss"],
-        "usdc": usdc,
-        "leftovers": leftovers,
-        "ceil_total_raw": f"{ceil_total:,}",
-        "ceil_total": tok(ceil_total, dec),
-        "max_take": tok(max_take, dec),
         "repaid": True,
-        "ceil_wins": True,
+        "ceil_total": ceil_total,
+        "max_take": max_take,
+        "would_lose": True,
     }
 
 
@@ -773,6 +699,7 @@ def expect_s08_ladder(mod) -> dict:
                 "end": end,
                 "absent": absent,
                 "gold_end": gold_end,
+                "gold_low": min(end[lid] for lid in end if lib[lid]["family"] == "wad"),
                 "margins": margins,
                 "margin_digits": {lid: int(m // 1) for lid, m in margins.items()},
             }
@@ -781,8 +708,11 @@ def expect_s08_ladder(mod) -> dict:
     by_id = {s["id"]: s for s in scenarios}
     assert "maker" in by_id["compound"]["series"] and {"aave", "morpho"} <= set(by_id["accrual-continuous"]["series"]) and {"fraxlend", "euler"} <= set(by_id["adaptive-rate"]["series"])
     assert all(s["margins"]["bl19"] > s["margins"]["bl127"] > 0 for s in scenarios)
-    assert mod.CLOSE_FIRST == "Blockulator's lines start higher and keep the gap" and "flat" not in mod.CLOSE_FIRST  # V14
-    return {"N": N, "log10": [first["log10"][str(n)] for n in N], "axisMax": first["axisMax"], "y_ticks": list(range(0, int(first["axisMax"]) + 1, 20)), "wad_decimals": 18, "scenarios": scenarios}
+    # the guide: the 18-decimal line's loss per decade of N in the first scenario (decades from N itself)
+    wad0 = next(v for lid, v in scenarios[0]["series"].items() if lib[lid]["family"] == "wad")
+    slope = int((Decimal(str(wad0[0])) - Decimal(str(wad0[-1]))) / Decimal(round(log10(N[-1] / N[0]))) + Decimal("0.5"))
+    assert slope == 1, slope  # the cue: "every library loses a digit each time the steps grow tenfold"
+    return {"N": N, "log10": [first["log10"][str(n)] for n in N], "axisMax": first["axisMax"], "y_ends": [0, int(first["axisMax"])], "wad_decimals": 18, "slope": slope, "scenarios": scenarios}
 
 
 def expect_s09_cliff(mod) -> dict:
@@ -855,7 +785,6 @@ def expect_s09_cliff(mod) -> dict:
 
 def expect_s10_live(mod) -> dict:
     cases = vocab.live()
-    survey = vocab._load("docs/benchmarks/accrual-deployed.json")["survey"]
     pts = [
         {
             "id": c["id"],
@@ -892,19 +821,13 @@ def expect_s10_live(mod) -> dict:
     # every facet's rows climb like the whole: deployed < BL127 < BL19
     for p, s in by_protocol.items():
         assert s["medians"]["deployed"] < s["medians"]["bl127"] < s["medians"]["bl19"], (p, s)
+        del s["margins"]  # the slide draws the medians only; the margins are the speaker's (and asserted positive above)
     assert medians["deployed"] < medians["bl127"] < medians["bl19"], medians
+    assert mod.Live.SECTIONS == ("deployed", "bl127", "bl19"), mod.Live.SECTIONS
     return {
         "points": pts,
-        "count": len(pts),
         "counts": counts,
-        "block": f"{survey['block']:,}",
-        "date": survey["date"],
         "axis_ticks": [0, 20, 40, 60, 80],
-        "above": above,
-        "above_bl19": above_bl19,
-        "medians": medians,
-        "medians_rounded": {k: int(Decimal(str(v)).quantize(Decimal(1), rounding="ROUND_HALF_EVEN")) for k, v in medians.items()},
-        "margins": whole["margins"],
         "by_protocol": by_protocol,
     }
 
@@ -923,33 +846,16 @@ def expect_s16_ziv(mod) -> dict:
     assert bl19["fallback"] == 1 and bl19["fallbackRuns"] == 1 and bl127["fallback"] == 0, (bl19["fallback"], bl127["fallback"])
     assert bl127["n"] + bl127["status"]["gotrev"] == bl127["inputs"] and bl127["status"]["ok"] == bl127["n"], bl127["status"]
     assert bl19["status"]["ok"] == bl19["n"], bl19["status"]
-    # the gas median by hand: the middle of the sorted typical inline cells (V19: 2,835)
-    g = vocab._load("docs/benchmarks/gas.json")
-    cells = sorted(c for c in g["ops"][mod.OP]["typical"]["gas"][mod.GAS_FORM] if c is not None)
-    k = len(cells) // 2
-    median = (cells[k - 1] + cells[k]) / 2 if len(cells) % 2 == 0 else float(cells[k])
-    assert median == 2835, median
-    assert mod.GAS_BEFORE_TEST == 2716 and mod.MUL_GAS == 5 and mod.DIVH_GAS == 393  # V19, V32: the figures the ledger verified
-    with localcontext() as ctx:
-        ctx.prec = 30
-        pct = float(((Decimal(median) - mod.GAS_BEFORE_TEST) / mod.GAS_BEFORE_TEST * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
-    assert 0 < pct < 10, pct  # "a few percent"
+    assert mod.MUL_GAS == 5 and mod.DIVH_GAS == 393  # V32: the figures the ledger verified
+    assert mod.MUL_LABEL == "5 gas" and mod.DIVH_LABEL == "393 gas"
+    # every counter carries its library: the names over the counters are BL19's and BL127's (the edit pass's honesty pin)
+    assert mod.Ziv.SECTIONS == ("prices", "fast", "crosses", "counters")
     counters = {lid: f"{rows[lid]['fallback']} of {rows[lid]['n']:,}" for lid in ("bl19", "bl127")}
-    # every figure carries its library: the fallback counters BL19's and BL127's, the gas line BL127's
-    gas_line = f"{lib['bl127']['label']} {mod.OP}: {mod.GAS_BEFORE_TEST:,} → {int(median):,} gas with the test"
-    assert gas_line.startswith("BL127") and "BL19" not in gas_line
     return {
         "op": mod.OP,
         "bl19": {"label": lib["bl19"]["label"], "n": bl19["n"], "fallback": bl19["fallback"]},
         "bl127": {"label": lib["bl127"]["label"], "n": bl127["n"], "fallback": bl127["fallback"], "inputs": bl127["inputs"]},
-        "gas_before": mod.GAS_BEFORE_TEST,
-        "gas_with_test": median,
-        "gas_form": g["formLabels"][mod.GAS_FORM],
-        "pct": pct,
-        "gas_line": gas_line,
-        "pct_line": f"+{pct}%",
         "counters": counters,
-        "close_line": f"the last stage: {counters['bl127']} inputs",
     }
 
 
@@ -987,7 +893,6 @@ def expect_s12_reference(mod) -> dict:
             {
                 "chain": r["chain"],
                 "clz_since": r["clz_since"],
-                "clz_text": f"CLZ since {r['clz_since']}" if r["clz_since"] else None,
                 "status": r["status"],
                 "deployed": bool(r["deployed"]),
                 "proxy": r["proxy"],
@@ -1008,17 +913,25 @@ def expect_s12_reference(mod) -> dict:
     # the probe is the 2026-10-29 one and the proxy was found everywhere (verify-K.md "2026-10-29 chain probe")
     assert d["probed"] == "2026-10-29" and all(r["proxy"] is True for r in rows), d["probed"]
     assert any(r["status"] == "unsupported" for r in rows) and len(rows) == 15, len(rows)
-    for s in (mod.CLOSE, mod.STATUS_SUPPORTED, mod.STATUS_DEPLOYED, mod.STATUS_UNSUPPORTED):
+    pin = f"deployed today: {deployed[0]}"
+    for s in (pin, mod.STATUS_SUPPORTED, mod.STATUS_DEPLOYED, mod.STATUS_UNSUPPORTED):
         assert "ready" not in s.lower() and "live" not in s.lower(), s
-    assert mod.CLOSE == "one call to check · deployed today: Sepolia"  # script §12, verbatim
+    assert pin == "deployed today: Sepolia"  # the closing sentence's tail (script §12), the user's honesty pin
+    # the groups by the other route: one pass over the rows per status, in the slide's order
+    order = ("deployed", "has CLZ · proxy present · not yet deployed", "has CLZ · not yet deployed", "no CLZ")
+    groups = [{"status": st, "chains": [r["chain"] for r in rows if r["status_text"] == st]} for st in order]
+    groups = [g for g in groups if g["chains"]]
+    assert [len(g["chains"]) for g in groups] == [1, 11, 3], [len(g["chains"]) for g in groups]
+    assert mod.Reference.SECTIONS == ("address", "chains", "call", "closing")
     return {
         "address": address,
         "version": version,
         "release": rel["release"],
         "network": rel["network"],
         "rows": rows,
+        "groups": groups,
+        "pin": pin,
         "probed": d["probed"],
-        "probed_caption": f"probed {d['probed']}",
         "arg": mod.ARG,
         "call": f"eth_call {mod.OP}({mod.ARG})",
         "truth_probe": truth,
@@ -1027,158 +940,40 @@ def expect_s12_reference(mod) -> dict:
     }
 def expect_s03_under(mod) -> dict:
     """No JSON: every string is a LITERAL. The second route is the brief's
-    table (talk/briefs/s03_under.md §3): the labels, the formulas with
-    their markup stripped, the hero, the closing line (one line in the
-    script, two on the slide), and its flags: "every" in the title only."""
-    labels = [label for label, _ in mod.ROWS]
-    assert labels == ["compounding rate", "discount factor", "option price", "growth curve"], labels
-    formulas = [[TAG.sub("", stage) for stage in stages] for _, stages in mod.ROWS]
-    assert formulas == [["(1 + r/n)nt", "ent · ln(1 + r/n)"], ["e−rt"], ["N(d)", "erfc", "e−x2"], ["ekt"]], formulas
+    table (talk/briefs/s03_under.md §3, cut in the edit pass: the four
+    formulas and the closing sentence went to the notes): the four names,
+    the hero, the title; "every" in the title only."""
+    assert mod.NAMES == ("compounding rate", "discount factor", "option price", "growth curve"), mod.NAMES
     assert TAG.sub("", mod.HERO) == "ex" and mod.TITLE == "exp is under everything"
-    assert mod.CLOSE.replace("\n", " ") == "if exp has no canonical value on chain, nothing built on it has one"
     lits = mod.LITERALS
-    assert set(lits) == {mod.TITLE, *labels, *(stage for _, stages in mod.ROWS for stage in stages), mod.HERO, mod.CLOSE}, sorted(lits)
-    assert all(v in ("V11", "V10, V11") for v in lits.values()) and lits[mod.CLOSE] == "V10, V11", lits
-    assert [k for k in lits if "every" in k.lower()] == [mod.TITLE]  # the rows are examples, not a claim of completeness
-    # Instrument Sans has no ² or →: the square is a <sup>, the arrows are drawn; nothing the font lacks is set
+    assert set(lits) == {mod.TITLE, *mod.NAMES, mod.HERO}, sorted(lits)
+    assert all(v == "V11" for v in lits.values()), lits
+    assert [k for k in lits if "every" in k.lower()] == [mod.TITLE]  # the names are examples, not a claim of completeness
     assert not any(ch in k for k in lits for ch in "²→½√…"), sorted(lits)
-    # the only digits drawn: the 1 of (1 + r/n) and the 2 of x²
-    toks = set()
-    for k in lits:
-        toks |= number_tokens(k)
-    assert toks == {"1", "2"}, toks
-    assert all(stage.startswith("e<sup>") for _, stages in mod.ROWS for stage in stages[-1:]), "every row ends in a power of e"
+    assert not any(ch.isdigit() for k in lits for ch in TAG.sub("", k))  # no digit on the slide (markup sizes aside)
+    assert set(vocab.ROW_COLOUR["s03"]) == {*mod.NAMES, "hero"} and vocab.ROW_COLOUR["s03"]["hero"] == vocab.Palette.EMERALD
+    assert mod.Under.SECTIONS == ("four", "resolve")
     return {}
+
+
 def expect_s07_two(mod) -> dict:
-    inc = vocab.incidents()["incidents"]
+    """The five names, oldest first, by the other route (incidents.json read
+    as JSON, not through vocab), sorted into the bands the essay names
+    (research_notes/talk/essay-v6.txt §2, claims C1–C5, V27): Resupply rounded
+    too early, Bunni and Balancer V2 too often; Thetanuts and Balancer V1 at a
+    unit. The slide draws only the names: the replays carry the numbers."""
+    import json
+
+    inc = json.loads((vocab.ROOT / "talk" / "scenes" / "data" / "incidents.json").read_text())["incidents"]
     names = [i["protocol"] for i in inc]
-    with localcontext() as ctx:
-        ctx.prec = 120
-
-        def dec(x: Decimal, places: int) -> str:  # nearest, half-up, by Decimal (the scene used integer arithmetic on Fractions)
-            return str(x.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP))
-
-        # row 1: the rate by Decimal, as slide 6's check; the scene reuses slide 6's strings
-        s06 = mod.resupply_numbers()
-        price = int(vocab.resupply()["pins"]["price"])
-        rate = Decimal(10 ** s06["rate_exp"]) / Decimal(price)
-        rate22, floor1 = dec(rate, 22), str(int(rate.to_integral_value(rounding=ROUND_FLOOR)))
-        assert rate22 == s06["rate_short"] and floor1 == s06["floor"] == "0" and s06["rate_label"] == "(to 22 decimals)" and Decimal(rate22) < Decimal("0.5"), (rate22, floor1)  # C1, V12
-        # row 2: the first withdrawal's subtrahend from the raw operands; the chain's idle balance fell by its floor
-        bj = vocab._load("scripts/replays/bunni.json")
-        idle0, s0, t0 = int(bj["start"]["idle"]), int(bj["steps"]["shares"][0]), int(bj["start"]["totalSupply"])
-        sub = Decimal(idle0) * Decimal(s0) / Decimal(t0)
-        sub3, sub_floor = dec(sub, mod.SUB_DECIMALS), int(sub.to_integral_value(rounding=ROUND_FLOOR))
-        assert Fraction(idle0 * s0, t0) == Fraction(sub3) + (Fraction(idle0 * s0, t0) - Fraction(sub3)) and abs(Fraction(idle0 * s0, t0) - Fraction(sub3)) < Fraction(1, 2 * 10**mod.SUB_DECIMALS)
-        assert int(bj["snapshots"]["after"][0]) == 1 and idle0 - int(bj["snapshots"]["idle"][0]) == sub_floor == 23, sub_floor  # C2
-        active = [int(a) for a in vocab.bunni_replay()["seq"]["deployed"]]
-        withdrawals = len(active) - 1
-        assert withdrawals == len(bj["steps"]["shares"]) == 44 and active[0] == 28 and active[-1] == 4, (withdrawals, active[0], active[-1])  # C2: 44 withdrawals, 28 → 4
-        # row 3: the upscale from the rate in the tx; mulDown floors it, mulUp would not
-        bal = vocab.balancer()
-        pool, score = bal["pools"]["osETH"], bal["score"]["osETH"]
-        factor = int(pool["rateCacheUpdatedInTx"]["providerRate"])
-        micro = [s for s in score["steps"] if s["what"] == "micro"]
-        cycles = len(micro)
-        assert cycles == score["kinds"]["micro"] == 30 and {int(s["out"]) for s in micro} == {17}, cycles  # C3
-        out = int(micro[0]["out"])
-        up = Decimal(out) * Decimal(factor) / Decimal(10**18)
-        up18, mul_down = dec(up, 18), int(up.to_integral_value(rounding=ROUND_FLOOR))
-        assert up18 == "17.988250947729518883" and mul_down == 17 and all(int(s["upscaledOutDeployed"]) == 17 and int(s["upscaledOutMulUp"]) == 18 for s in micro), up18  # C3
-        assert Fraction(up18) == Fraction(out * factor, 10**18), "17 × the factor is exact at 18 decimals"
-        # row 4: the first mint's charge, exactly two thirds; every charge 0 across the 37 mints
-        tj = vocab.thetanuts()
-        mints = tj["mints"]
-        m0 = mints[0]
-        amount, held, supply = int(m0["amount"]), int(m0["storedBefore"][0]), int(m0["supplyBefore"])
-        charge = Fraction(amount * held, supply)
-        assert charge == Fraction(2, 3) and (amount, held, supply) == (2, 1, 3) and len(mints) == 37 and supply == int(tj["claim"]["supplyAfter"])  # C4, C8
-        assert all(int(c) == 0 for m in mints for c in m["charge"]) and all(int(h) == 1 for m in mints[:1] for h in m["storedBefore"])
-        # row 5: BNum's ratio at a balance of 3, pools 1–3 (pools 4–5 land lower: C5); × 3 by Decimal; half-up to 4
-        v1 = vocab.balancer_v1_replay()
-        at3 = [[r for r in p if r["kind"] == 2 and r["balance"] == 3] for p in v1]
-        ratios = [{int(r["steps"]["tokenInRatio"]) for r in rows} for rows in at3]
-        assert ratios[0] == ratios[1] == ratios[2] and len(ratios[0]) == 1 and ratios[3] == ratios[4] and ratios[3] != ratios[0], ratios
-        (ratio,) = ratios[0]
-        product = Decimal(3) * Decimal(ratio) / Decimal(10**18)
-        prod18, nearest = dec(product, 18), int(product.quantize(Decimal(1), rounding=ROUND_HALF_UP))
-        assert prod18 == "4.499999999999999991" and nearest == 4 and Decimal(prod18) < Decimal("4.5"), prod18  # C5, V27: nearest, and still 4
-        assert all(int(r["steps"]["newTokenBalanceIn"]) == 4 and int(r["deployed"]) == 1 for rows in at3[:3] for r in rows)
-        joins = sum(1 for p in v1 for r in p if r["kind"] == 2)
-        assert joins == 438 and sum(len(rows) for rows in at3) == 400, joins  # C5
-    # the strings: complete in a stated format, never cut short
-    for s, places in ((rate22, 22), (sub3, mod.SUB_DECIMALS), (up18, 18), (prod18, 18)):
-        assert "…" not in s and len(s.partition(".")[2]) == places, (s, places)
-    assert "floored" not in mod.MECH_V1 and mod.MECH_V1.startswith("nearest") and mod.MECH_RESUPPLY == "floored once" and "would have cost" in mod.CEIL_LABEL  # flags
-    rows = [
-        {"id": "resupply", "protocol": names[0], "date": inc[0]["date"], "ticks": [0, 1], "x": float(Fraction(10 ** s06["rate_exp"], price)), "exact": rate22, "exact_label": s06["rate_label"], "rounded": floor1, "to": 0, "mechanism": mod.MECH_RESUPPLY},
-        {
-            "id": "bunni",
-            "protocol": names[1],
-            "date": inc[1]["date"],
-            "ticks": [sub_floor, sub_floor + 1],
-            "x": float(Fraction(idle0 * s0, t0)),
-            "exact": sub3,
-            "exact_label": f"(to {mod.SUB_DECIMALS} decimals)",
-            "rounded": str(sub_floor),
-            "to": sub_floor,
-            "mechanism": mod.mech_bunni(withdrawals, active[0], active[-1]),
-            "counter": [mod.mech_bunni(k, active[0], active[k]) for k in range(1, withdrawals + 1)],
-            "withdrawals": withdrawals,
-            "active": active,
-        },
-        {
-            "id": "balancer-v2",
-            "protocol": names[2],
-            "date": inc[2]["date"],
-            "ticks": [mul_down, mul_down + 1],
-            "x": float(Fraction(out * factor, 10**18)),
-            "exact": up18,
-            "exact_label": "(to 18 decimals)",
-            "rounded": str(mul_down),
-            "to": mul_down,
-            "mechanism": mod.mech_v2(cycles),
-            "counter": [mod.mech_v2(k) for k in range(1, cycles + 1)],
-            "cycles": cycles,
-            "out": out,
-            "factor": str(factor),
-        },
-        {
-            "id": "thetanuts",
-            "protocol": names[3],
-            "date": inc[3]["date"],
-            "ticks": [0, 1],
-            "x": float(charge),
-            "exact": mod.TWO_THIRDS,
-            "exact_label": mod.TWO_THIRDS_FRACTION,
-            "rounded": "0",
-            "to": 0,
-            "mechanism": mod.MECH_THETANUTS.format(mints=len(mints), charge=0),
-            "mints": len(mints),
-            "operands": [amount, held, supply],
-            "other_way": 1,
-            "other_label": mod.CEIL_LABEL,
-        },
-        {
-            "id": "balancer-v1",
-            "protocol": names[4],
-            "date": inc[4]["date"],
-            "ticks": [nearest, nearest + 1],
-            "x": float(Fraction(3 * ratio, 10**18)),
-            "exact": prod18,
-            "exact_label": "(to 18 decimals)",
-            "rounded": str(nearest),
-            "to": nearest,
-            "mechanism": mod.MECH_V1,
-            "ratio": str(ratio),
-            "balance": 3,
-            "joins": joins,
-            "other_way": nearest + 1,
-            "other_label": mod.TOWARD_POOL,
-        },
-    ]
-    assert mod.Two.SECTIONS == ("bands", "resupply", "bunni", "balancer-v2", "round-once", "thetanuts", "balancer-v1", "direction", "box")
-    return {"rows": rows, "half": 0.5, "wad_decimals": 18}
+    assert names == ["Resupply", "Bunni v2", "Balancer V2", "Thetanuts", "Balancer V1"], names
+    bands = [1, 1, 1, 2, 2]
+    assert [i["date"][-4:] for i in inc] == sorted(i["date"][-4:] for i in inc), "oldest first"
+    assert mod.Two.SECTIONS == ("bands", "inside", "unit", "box"), mod.Two.SECTIONS
+    assert (mod.BOX_1, mod.BOX_2) == ("Inside a calculation, precision shrinks error.", "At a unit, direction decides who pays.")
+    assert not any(ch.isdigit() for ch in "".join([mod.TITLE, *mod.BAND_TITLE.values(), *mod.RESOLVE.values(), mod.BOX_1, mod.BOX_2]))
+    ids = ["resupply", "bunni", "balancer-v2", "thetanuts", "balancer-v1"]
+    return {"rows": [{"id": i, "protocol": p, "band": b} for i, p, b in zip(ids, names, bands)]}
 
 
 def expect_s15_formats(mod) -> dict:
@@ -1216,31 +1011,21 @@ def expect_s15_formats(mod) -> dict:
         return f"10<sup>{'−' if e < 0 else ''}{abs(e):,}</sup>"
 
     strings = {
-        "bits": "256 bits",
-        "bl127_fields": f"{sign} · {integer} · {fraction}",
-        "bl127_names": "sign · integer · fraction",
-        "bl127_digits": f"about {d127} digits of fraction",
-        "bl127_range": f"about ±{mantissa} × {power(range_exp)}",
-        "bl127_grid_end": f"the grid ends at 2<sup>−{fraction}</sup>",
         "bl127_label": f"{lib['bl127']['label']} · fixed point",
-        "bl19_fields": f"{sign} · {exponent} · {stored}",
-        "bl19_names": f"sign · exponent · fraction ({stored} stored)",
-        "bl19_significand": f"significand {significand} bits with the hidden bit",
+        "bl19_label": f"{lib['bl19']['label']} · floating point",
         "bl19_digits": f"about {d19} digits at every magnitude",
         "bl19_min": f"about {power(min_exp)}",
         "bl19_max": f"about {power(max_exp)}",
-        "bl19_label": f"{lib['bl19']['label']} · floating point",
     }
-    # the flags: "236 stored" and the 237-bit significand both on screen; never "237 stored" or "236-bit significand"
-    joined = " | ".join(strings.values())
-    assert "236 stored" in joined and "significand 237 bits" in joined and "237 stored" not in joined and "236-bit" not in joined, joined
-    # every digit count and range is prefixed "about"; the minus is U+2212; the slide says "laid out as", not "is"
-    for k in ("bl127_digits", "bl127_range", "bl19_digits", "bl19_min", "bl19_max"):
+    # every digit count and range is prefixed "about"; the minus is U+2212
+    for k in ("bl19_digits", "bl19_min", "bl19_max"):
         assert strings[k].startswith("about "), strings[k]
-    assert "-" not in strings["bl19_min"] and "−" in strings["bl19_min"] and "−" in strings["bl127_grid_end"]
-    assert mod.IEEE == "laid out as IEEE 754 binary256" and mod.LITERALS[mod.IEEE] == "E9" and " is " not in mod.IEEE
-    assert mod.CLOSE == "known range: fixed point · many orders of magnitude: floating point"  # essay §8, verbatim
-    assert mod.REVERT == "no NaN, no infinity: overflow reverts"  # K4
+    assert "-" not in strings["bl19_min"] and "−" in strings["bl19_min"]
+    # the edit pass moved "laid out as IEEE 754 binary256" (E9), the field names, the significand line,
+    # the closing rule and the README caption to the notes: no digit-bearing literal is left on the slide
+    assert mod.LITERALS == {} and not hasattr(mod, "IEEE") and not hasattr(mod, "CLOSE") and not hasattr(mod, "CAPTION")
+    assert mod.REVERT == "overflow reverts"  # K4
+    assert mod.Formats.SECTIONS == ("bar", "fixed", "floating", "revert")
     return {
         "word_bits": 256,
         "radix": 2,
@@ -1254,7 +1039,9 @@ def expect_s15_formats(mod) -> dict:
 def expect_s17_proofs(mod) -> dict:
     """The counts straight from proofs.json by op, the sums from sweep.json by
     a loop over every row with running totals, the transcendental list from
-    the BL127 README's own sentence (V34) and from the sweep's forced pass."""
+    the BL127 README's own sentence (V34) and from the sweep's forced pass.
+    The edit pass draws one number a row: the proven counts of the core
+    operations, the runs, the transcendental results with 0 misrounded."""
     pj = vocab._load("docs/benchmarks/proofs.json")
     lib = vocab.libs()
     counts = {}
@@ -1285,7 +1072,7 @@ def expect_s17_proofs(mod) -> dict:
     for t in ("testFuzz_bl19_add", "testFuzz_bl19_sub", "testFuzz_bl19_sqrt", "testFuzz_bl19_toFixed18"):
         assert fuzz[t]["runs"] == 50000 and fuzz[t]["result"] == "pass", t
     assert all(f["runs"] == 50000 for t, f in fuzz.items() if t.startswith("testFuzz_")) and all(f["result"] == "pass" for f in fuzz.values())
-    assert mod.NUMBER_WORDS[len(f19["fuzzed"])] == "six"
+    assert len(f19["fuzzed"]) == 6  # "six" (V23), in the notes now
     # the transcendentals by two routes: the README's sentence, and the sweep's forced pass plus cbrt (V34: 20 + cbrt)
     readme = (vocab.ROOT / "contracts/src/bl127/README.md").read_text(encoding="utf-8")
     sentence = readme.split("The transcendentals round to nearest under the tie rule above:", 1)[1].split(". ", 1)[0]
@@ -1295,7 +1082,7 @@ def expect_s17_proofs(mod) -> dict:
     forced = {lid: sorted({r["op"] for r in sw["rows"] if r["lib"] == lid and r.get("stage") == "second"}) for lid in mod.LIBS}
     assert forced["bl19"] == forced["bl127"] and len(forced["bl19"]) == 20 and sorted(set(mod.TRANSCENDENTAL) - set(forced["bl19"])) == ["cbrt"], forced
     # the sums by a running loop; every row of both libraries counted once, every bl19/bl127 row correctly rounded in full
-    total, mis, trans, nrows, seen = {}, {}, {}, {}, set()
+    total, mis, trans, trans_mis, nrows, seen = {}, {}, {}, {}, {}, set()
     for r in sw["rows"]:
         lid = r["lib"]
         if lid not in mod.LIBS:
@@ -1310,35 +1097,23 @@ def expect_s17_proofs(mod) -> dict:
         mis[lid] = mis.get(lid, 0) + r["misrounded"]
         if r["op"] in mod.TRANSCENDENTAL:
             trans[lid] = trans.get(lid, 0) + r["n"]
+            trans_mis[lid] = trans_mis.get(lid, 0) + r["misrounded"]
     assert mis == {"bl19": 0, "bl127": 0}, mis
     assert total == {"bl19": 455082, "bl127": 212119} and nrows == {"bl19": 76, "bl127": 59}, (total, nrows)  # V25
     assert trans == {"bl19": 327488, "bl127": 168120}, trans  # V34
     assert all(trans[lid] < total[lid] for lid in mod.LIBS)
-    # the oracles' digits by the other route: sweep.md's header (V17)
-    header = (vocab.ROOT / "docs/benchmarks/sweep.md").read_text(encoding="utf-8").split("\n## ", 1)[0]
-    ref = {"bl19": int(re.search(r"oracle\.py, (\d+) digits", header).group(1)), "bl127": int(re.search(r"real truth at (\d+) digits", header).group(1))}
-    assert ref == {"bl19": 300, "bl127": 200}, ref
-    # the flags: the oracle row says tested, row 4 is never a bug list, the footnote's bugs are history
-    assert mod.LABELS[2].startswith("tested") and "proven" not in mod.LABELS[2] and mod.LABELS[3] == "known limits"
-    assert "bug" not in " ".join(mod.LIMIT_BOUND + mod.LIMIT_STAGE).lower() and "fixed, now proven" in mod.FOOTNOTE
-    assert "0.79" in mod.LIMIT_BOUND[1] and "0.78" not in mod.LIMIT_BOUND[1] and "0.92" in mod.LIMIT_BOUND[1]  # V38: the ledger's figure
-    assert mod.CLOSING == "State your own guarantees this specifically."
-    assert not any(ch in s for s in (*mod.LIMIT_BOUND, *mod.LIMIT_STAGE, mod.FOOTNOTE, mod.CLOSING) for ch in "²→½√…")
+    # the flags: three verbs (none says the sweep proves), one limit and never a bug, nothing the edit pass cut is drawn
+    assert mod.KEYS == ("proven", "fuzzed", "swept")
+    assert mod.LIMIT == "limit: a midpoint within the last stage's error · none known" and len(mod.LIMIT) <= 60
+    assert "bug" not in mod.LIMIT.lower() and not any(ch in mod.LIMIT for ch in "²→½√…")
+    assert mod.LITERALS == {} and mod.Proofs.SECTIONS == ("proven", "fuzzed", "tested", "limits")
+    assert trans_mis == {"bl19": 0, "bl127": 0} and sum(trans.values()) == 495608  # the notes' figures (V34)
     return {
         "labels": {"bl19": lib["bl19"]["label"], "bl127": lib["bl127"]["label"]},
-        "proven": {"BL127": f127["proven"], "BL19": f19["proven"]},
-        "fuzzed": {"BL127": f127["fuzzed"], "BL19": f19["fuzzed"]},
-        "ops": {"BL127": f127["ops"], "BL19": f19["ops"]},
         "proven_count": {"BL127": len(f127["proven"]), "BL19": len(f19["proven"])},
-        "halmos_count": f127["halmos"],
-        "exact_integer": f127["exact"],
-        "bl19_fuzzed_word": "six",
+        "ops": {"BL127": f127["ops"], "BL19": f19["ops"]},
         "runs": 50000,
-        "rows": nrows,
-        "total": total,
-        "misrounded": mis,
-        "transcendental": trans,
-        "reference_digits": ref,
+        "misrounded": sum(mis.values()),
     }
 
 
@@ -1382,7 +1157,7 @@ def expect_s06e_balancer_v1(mod) -> dict:
 
         costs = [cost(r) for r in all_joins]
         cost_str = dec(cost(first), mod.COST_DECIMALS)
-        cost_min, cost_max = dec(min(costs), mod.RANGE_DECIMALS), dec(max(costs), mod.RANGE_DECIMALS)
+        cost_min, cost_max = dec(min(costs), 5), dec(max(costs), 5)
         # C5: 438 joins, 400 at balance 3, exact cost 1.50079 to 1.52749, every one rounds up to 2 toward the pool
         assert len(all_joins) == 438 and sum(1 for r in all_joins if r["balance"] == 3) == 400, len(all_joins)
         assert (cost_min, cost_max) == ("1.50079", "1.52749") and cost_str == "1.5056462", (cost_min, cost_max, cost_str)
@@ -1413,7 +1188,7 @@ def expect_s06e_balancer_v1(mod) -> dict:
             wbtc_path.append(bal[wi])
         assert len(join_ops) == len(joins) == 100 and sum(1 for r in joins if r["balance"] == 3) == 96
         dpi0, dpi1 = dpi_path[0], dpi_path[-1]
-        dpi_pct = dec((Decimal(dpi1) / Decimal(dpi0) - 1) * 100, mod.PCT_DECIMALS).replace("-", "−") + "%"
+        dpi_pct = dec((Decimal(dpi1) / Decimal(dpi0) - 1) * 100, 2).replace("-", "−") + "%"
         dpi_before, dpi_after = dec(Decimal(dpi0) / Decimal(10**18), 8), dec(Decimal(dpi1) / Decimal(10**18), 8)
         assert tokens[di]["decimals"] == 18 and tokens[wi]["decimals"] == 8
         assert (dpi_before, dpi_after, dpi_pct) == ("546.83609422", "0.57099095", "−99.90%"), (dpi_before, dpi_after, dpi_pct)
@@ -1430,49 +1205,25 @@ def expect_s06e_balancer_v1(mod) -> dict:
     assert lines["BMath.sol"]["calcSingleInGivenPoolOut"] == [156, 182] and lines["BNum.sol"]["bmul"] == [63, 73]
     for k, v in mod.numbers().items():
         assert "…" not in str(v), (k, v)
+    # the cost of the drawn join: the new balance less the old, the attacker's own limit
+    charged = nearest - b
+    assert charged == int(first["deployed"]) == int(first["limit"]) == 1
+    n_joins = sum(int(r["n"]) for r in table)
     return {
-        "protocol": inc["protocol"],
-        "date": inc["date"],
-        "chain": "Ethereum",
-        "block": f"{int(pool['block']):,}",
-        "tx_short": pool["tx"][: 2 + mod.TX_SHORT],
-        "tx_short_len": mod.TX_SHORT,
-        "tx_len": 64,
-        "pool_index": 1,
-        "pools": 5,
-        "dpi_before": dpi_before,
-        "wbtc_before": f"{wbtc_path[0]:,}",
-        "loop_balance": 3,
-        "joins_pool": 100,
-        "at3_pool": 96,
-        "cite_fn": "BMath.sol:156-182",
-        "cite_bmul": "BNum.sol:63-73",
+        "title": f"{mod.PROTOCOL}, {inc['date']}",
+        "balance": b,
         "ratio": "1.499999999999999997",
-        "balance": 3,
         "product": product_str,
         "product_label": f"(to {mod.WAD} decimals)",
         "grid_ticks": [3, 4, 5, 6],
-        "below_half_e18": 9,
-        "wad": 18,
         "nearest": nearest,
         "toward": toward,
-        "charged": 1,
-        "limit": 1,
+        "charged": charged,
         "cost": cost_str,
         "cost_label": f"(to {mod.COST_DECIMALS} decimals)",
-        "joins": 438,
-        "at3": 400,
-        "dpi_path": dpi_path,
-        "wbtc_path": wbtc_path,
-        "join_ops": join_ops,
-        "dpi_after": dpi_after,
-        "dpi_pct": dpi_pct,
+        "joins": n_joins,
+        "counter_ticks": [1] + [k for k in range(2, n_joins) if k % mod.COUNT_STEP == 0] + [n_joins],
         "loss": inc["loss"],
-        "source": inc["source"],
-        "cost_min": cost_min,
-        "cost_max": cost_max,
-        "cost_toward": cost_toward,
-        "fp_join": table[mod.POOL]["BL127"],  # forge's; the table alone carries it (REPORT)
     }
 
 
@@ -1524,17 +1275,15 @@ def expect_s13_not_switch(mod) -> dict:
 
 
 def expect_s14_institutions(mod) -> dict:
-    """No JSON: the essay's words (§7) and the ERC-4626 line (V1); the chart carries no number; the words in a row."""
+    """No JSON: the essay's words (§7); the two lines carry no axis and no number; the words in a row.
+    "not fewer cents" and the ERC-4626 line (V1) went to the notes in the edit pass."""
     words_ = ("reproducible", "declared", "checked")
     assert mod.WORDS == words_
-    _text_only(mod, {"What institutions buy", "amount", "fees · scale with the computation", "errors · scale with the amount", "not fewer cents", *words_, "ERC-4626 fixes the rounding direction of each vault conversion"})
-    assert mod.LITERALS["ERC-4626 fixes the rounding direction of each vault conversion"] == "V1"
-    toks = set()
-    for k in mod.LITERALS:
-        toks |= number_tokens(k)
-    assert toks == {"4626"}, toks  # the standard's number is the only digit on the slide
+    _text_only(mod, {"What institutions buy", "fees · scale with the computation", "errors · scale with the amount", *words_})
+    assert not any(ch.isdigit() for ch in "".join(mod.LITERALS))  # no digit on the slide
     assert all("$" not in k and "digit" not in k for k in mod.LITERALS)  # the "15 digits on $10 million" line stays in the essay
     assert vocab.ROW_COLOUR["s14"]["errors"] == vocab.Palette.RED and vocab.ROW_COLOUR["s14"]["words"] == vocab.Palette.EMERALD
+    assert mod.Institutions.SECTIONS == ("scales", "reproducible", "declared", "checked")
     return {}
 
 
@@ -1553,11 +1302,12 @@ def expect_s18_habits(mod) -> dict:
         assert re.search(rf"function {re.escape(op)}\(", src), f"{op} is not an BL127Lib function"
     assert [way for _, way in mod.OPS] == ["down", "up", "nearest"]
     assert mod.ROUNDING == "rounding: " + " · ".join(f"{op} {way}" for op, way in mod.OPS)
-    habits = [h for h, _ in mod.HABITS]
+    habits = list(mod.HABITS)
     assert habits == ["Decide", "Measure", "Declare"]
     assert mod.TITLE == "Rounding is a design decision, like access control."
     assert mod.EXAMPLE == "example" and mod.REFERENCE == "reference:"
-    assert not any("today" in line or "protocol" in line for _, line in mod.HABITS)  # nothing says a protocol does this today
+    assert not any("today" in k or "protocol" in k for k in mod.LITERALS)  # nothing says a protocol does this today
+    assert mod.Habits.SECTIONS == ("title", "decide", "measure", "declare")  # the block lands in declare; the sub-lines are the notes
     hues = vocab.ROW_COLOUR["s18"]
     assert len({hues[h] for h in habits}) == 3 and hues["tick"] == vocab.Palette.EMERALD
     assert not any(ch in k for k in mod.LITERALS for ch in "²→½√…")
@@ -1609,22 +1359,25 @@ def expect_s19_address(mod) -> dict:
     rel = vocab._load("contracts/deployments/RELEASE.json")
     comps = rel["components"]
     assert rel["network"] == "sepolia"
-    out = {"network": rel["network"], "release": rel["release"], "main": {}, "others": {}}
+    out = {"network": rel["network"], "release": rel["release"], "main": {}}
     names = ("BL19", "BL127", "BL127E", "BL127H", "BL127N", "BL127S", "BL19E", "BL19H", "BL19N", "BL19S")
     for name in names:
         c = comps[name]
         assert len(c["address"]) == 42 and c["address"][:2] == "0x" and int(c["address"][2:], 16) > 0, c
         assert c["version"].startswith(name + " v"), c["version"]
         assert c["address"] in (vocab.ROOT / c["record"]).read_text(encoding="utf-8"), (name, c["record"])
-        (out["main"] if name in ("BL19", "BL127") else out["others"])[name] = {"version": c["version"], "address": c["address"]}
+        if name in ("BL19", "BL127"):  # the two drawn; the eight sub-objects are in the notes (checked here all the same)
+            out["main"][name] = {"version": c["version"], "address": c["address"]}
     assert len({c["address"] for c in comps.values()}) == len(comps), "every object has its own address"
     assert not any(name.lower().startswith("ladder") for name in names)  # the ladder objects are not shown
     # the commands, verbatim from README.md's Install section (K12)
     readme = _readme_install()
-    for cmd in (mod.FORGE, mod.NPM, mod.LLMS, mod.ETH_CALL):
+    for cmd in (mod.FORGE, mod.NPM, mod.LLMS):
         assert cmd in readme, cmd
     assert mod.LLMS == "blockulator.com/llms.txt" and "https://" + mod.LLMS in readme
-    assert mod.TODAY == "today: Sepolia" and mod.CLOSE == "Measure yourself against it."
+    assert mod.TODAY == "today: Sepolia" and mod.CLOSE == "Measure yourself against it." and mod.CLOSE_LINES.replace("\n", " ") == mod.CLOSE
+    assert mod.TODAY in mod.TITLE_LINE and mod.TITLE_LINE.startswith(mod.TITLE)  # the network beside the title, from the first frame
+    assert mod.Address.SECTIONS == ("addresses", "use", "links")
     assert "mainnet" not in " ".join(mod.LITERALS).lower()
     out["repo_url"] = _repo_from_git()
     out["site_url"] = "https://blockulator.com"

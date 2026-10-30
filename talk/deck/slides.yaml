@@ -335,31 +335,30 @@
       cue: "Ziv's technique: a fast value with a derived bound; test whether the bound could change the rounding;"
     - name: crosses
       cue: "only then recompute."
-    - name: recompute
-      cue: ""
     - name: counters
       cue: "For exp, that happens once in twenty-two thousand calls."
-    - name: closing
-      cue: ""
-
+  notes:
+    - "Sources: MUL 5 gas (the EVM fee schedule); 512-by-256-bit division 393 gas (divh, contracts/src/bl19/README.md:181, V32); docs/benchmarks/sweep.json · gas.json · exp."
+    - "A fast value, with a bound derived in the source. BL127 exp: 2,716 → 2,835 gas with the test (+4.4%); 2,716 from contracts/deployments/BL127.md (typical inline gas exp 5,360 → 2,716, V19), 2,835 the median of gas.json .ops.exp.typical.gas.lib. The last stage: 0 of 3,963 inputs."
 
 - slide: 21
   title: Knowing it's right
   scene: s17_proofs.Proofs
   sections:
-    - name: test-proof
-      cue: "A test checks the inputs it was given. A proof covers every input."
     - name: proven
-      cue: "The core arithmetic of both libraries is proven."
+      cue: "A test checks the inputs it was given. A proof covers every input. The core arithmetic of both libraries is proven."
     - name: fuzzed
       cue: ""
     - name: tested
       cue: "Every transcendental is swept against a 300-digit reference with every fallback forced: zero misrounded."
     - name: limits
-      cue: "Two things no check covers, and they are on the slide."
-    - name: closing
-      cue: "State your own guarantees this specifically."
-
+      cue: "Two things no check covers, and they are on the slide. State your own guarantees this specifically."
+  notes:
+    - "Sources: docs/benchmarks/proofs.json · sweep.json; the transcendental list from contracts/src/bl127/README.md (V34)."
+    - "Proven: BL127 17 core operations of 19 (16 by Halmos, sqrt in exact integers); BL19 18 of 24. Fuzzed against the spec: BL127 gavg, hypot · BL19 six · 50,000 runs a test. Swept: BL19 327,488 transcendental results at 300 digits · BL127 168,120 at 200 (455,082 and 212,119 over every operation), 0 misrounded."
+    - "Limits: a derived bound could be wrong beyond its sampled margin: the measured error reaches 0.92 of BL127's bound and 0.79 of BL19's (V38). The last stage has no test of its own: a true value within its error of a midpoint would misround; none is known (V26)."
+    - "The proofs found two bugs on the way: fixed, now proven (V52: issue #159, fix PR #163 2026-10-23, proofs PR #187 2026-10-27, docs/proofs.md:84–87)."
+    - "CHECK THE CUES: the limits cue says two things are on the slide, the slide now shows one (the other is in these notes); the tested cue says a 300-digit reference, BL127's oracle is 200 digits."
 
 - slide: 22
   title: Decide. Measure. Declare.
@@ -373,9 +372,8 @@
       cue: "Measure your digits like your gas."
     - name: declare
       cue: "Declare what you guarantee, and check it."
-    - name: block
-      cue: ""
-
+  notes:
+    - "Decide: for each rounding, which way, and why. Measure: know a calculation's digits the way you know its gas, and check it against a reference. Declare: write down what each operation guarantees, and test or prove it (essay §10)."
 
 - slide: 23
   title: The reference
@@ -383,14 +381,14 @@
   sections:
     - name: addresses
       cue: "Open source. One address on every chain that has it."
-    - name: objects
-      cue: ""
     - name: use
       cue: ""
     - name: links
       cue: "Today, Sepolia. Measure yourself against it."
   notes:
     - "[you: thanks]"
+    - "Every op is a free eth_call (K12)."
+    - "The eight objects (Sepolia, Blockulator 3.0): BL127E v9 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808 · BL127H v9 0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B · BL127N v9 0xAA7Cd9635aE8630379636F533f23DBf2C193d296 · BL127S v9 0xB9C2583a7Ad2251444DC7752658B6C1107C25036 · BL19E v6 0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092 · BL19H v6 0xF059611C1c42543DE6EE82353Eb082Fd8999081f · BL19N v6 0xCe9F09D646B37a9100F05ED1FFD14E9f43180214 · BL19S v6 0xf74ba90535224870830e6e89D2b328d4cc09DE48."
 
 - slide: 24
   title: Thank you

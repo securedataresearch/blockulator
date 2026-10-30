@@ -14,8 +14,13 @@ line at HERO on two lines beside an EMERALD direction() arrow over a
 short grid, on a glow_bar(): the hero.
 
 Six sections: title, horizons, cancellation, tails, iteration,
-direction. No JSON: numbers() is empty; every string is a LITERAL
-(essay-v7 §5, script §11). "every" appears in the fifth line only.
+direction (kept at six in the edit pass: the script names the four
+places one word each, and a click per word lets each glyph land with its
+word; merged, the glyphs would race or trail the list). The glyphs are
+drawn heavy (strokes, ticks, dots and marks about twice the vocabulary's
+defaults) so they read from the back row. No JSON: numbers() is empty;
+every string is a LITERAL (essay-v7 §5, script §11). "every" appears in
+the fifth line only.
 """
 
 from __future__ import annotations
@@ -67,11 +72,15 @@ LITERALS = {
 }
 
 X_LEFT = -6.2
-Y_LEAD = 2.45
-Y_ROWS = (1.55, 0.55, -0.45, -1.45)
+Y_LEAD = 2.5
+Y_ROWS = (1.6, 0.65, -0.3, -1.25)
 X_GLYPH = -0.9  # the glyphs start here
 X_GLYPH_END = 6.2
-Y_DIRECTION = -2.95
+Y_DIRECTION = -2.8  # the panel's bottom stays inside the 5% safe area
+# the glyphs, heavy enough for the back row
+STROKE = 4.5
+TICK = 0.2
+DOT_R = 0.17
 X_DIRECTION_TEXT = -4.25
 
 
@@ -81,6 +90,11 @@ def numbers() -> dict:
 
 class Budget(TextScene):
     SECTIONS = ("title", "horizons", "cancellation", "tails", "iteration", "direction")
+
+    @staticmethod
+    def grid(x_range, length: float, hue: str) -> GridLine:
+        """A GridLine drawn heavy: thick stroke, tall ticks."""
+        return GridLine(x_range, length=length, colour=hue, tick_size=TICK, stroke_width=STROKE)
 
     def line(self, i: int):
         return self.typed(BULLETS[i], SIZE_BODY, HUES[BULLETS[i]], place=lambda t: t.move_to([X_LEFT + t.width / 2, Y_ROWS[i], 0]))
@@ -97,8 +111,8 @@ class Budget(TextScene):
         hue = HUES[BULLETS[0]]
         self.line(0)
         y = Y_ROWS[0]
-        short = GridLine((0, 3, 1), length=1.8, colour=hue).move_to([X_GLYPH + 0.9, y, 0])
-        long = GridLine((0, 24, 1), length=X_GLYPH_END - X_GLYPH, colour=hue).move_to([(X_GLYPH + X_GLYPH_END) / 2, y, 0])
+        short = self.grid((0, 3, 1), 1.8, hue).move_to([X_GLYPH + 0.9, y, 0])
+        long = self.grid((0, 24, 1), X_GLYPH_END - X_GLYPH, hue).move_to([(X_GLYPH + X_GLYPH_END) / 2, y, 0])
         self.play(Create(short, run_time=0.5))
         self.play(Transform(short, long, run_time=2.4, rate_func=ease_in_out_cubic))
 
@@ -107,21 +121,24 @@ class Budget(TextScene):
         hue = HUES[BULLETS[1]]
         self.line(1)
         y = Y_ROWS[1]
-        h, w = 0.84, 0.55
+        h, w = 0.9, 1.0
+        left = 0.78  # the second bar's height, as a share of the first's: what is left is a sliver
         base = y - h / 2  # the bars stand on one baseline
         a = Rectangle(width=w, height=h, color=hue, fill_color=hue, fill_opacity=0.85, stroke_width=0).move_to([X_GLYPH + 0.4 + w / 2, base + h / 2, 0])
-        b = Rectangle(width=w, height=h * 0.86, color=hue, fill_color=hue, fill_opacity=0.35, stroke_width=0).move_to([X_GLYPH + 0.4 + 1.5 * w + 0.3, base + h * 0.43, 0])
-        floor = Line([X_GLYPH, base, 0], [X_GLYPH + 2.6, base, 0], color=hue, stroke_width=1.5)
+        b = Rectangle(width=w, height=h * left, color=hue, fill_color=hue, fill_opacity=0.35, stroke_width=0).move_to([X_GLYPH + 0.4 + 1.5 * w + 0.4, base + h * left / 2, 0])
+        floor = Line([X_GLYPH, base, 0], [X_GLYPH + 3.4, base, 0], color=hue, stroke_width=STROKE * 0.7)
         self.play(Create(floor, run_time=0.3), FadeIn(a, shift=UP * 0.1, run_time=0.4), FadeIn(b, shift=UP * 0.1, run_time=0.4))
         self.wait(0.3)
         # the second bar slides onto the first and takes its height away; what is left is a sliver on the baseline
         self.play(b.animate.move_to([a.get_x(), b.get_y(), 0]), run_time=0.9, rate_func=ease_in_out_cubic)
-        sliver_h = h * 0.14
+        sliver_h = h * (1 - left)
         sliver = Rectangle(width=w, height=sliver_h, color=hue, fill_color=hue, fill_opacity=1.0, stroke_width=0).move_to([a.get_x(), base + sliver_h / 2, 0])
-        self.play(Transform(VGroup(a, b), sliver, run_time=0.7, rate_func=ease_out_cubic))
+        # the first bar's outline stays, so the sliver reads against the height that cancelled
+        outline = Rectangle(width=w, height=h, color=hue, stroke_width=STROKE * 0.6, fill_opacity=0).move_to(a.get_center())
+        self.play(Transform(VGroup(a, b), sliver, run_time=0.7, rate_func=ease_out_cubic), FadeIn(outline, run_time=0.7))
         # the bare bracket, stood on end beside the sliver: the gap, with no number
-        bracket = measure(GridLine((0, 1, 1), length=sliver_h, colour=hue), 0, 1, None, colour=hue, drop=0)
-        bracket.rotate(PI / 2).move_to([sliver.get_right()[0] + 0.3, sliver.get_y(), 0])
+        bracket = measure(GridLine((0, 1, 1), length=sliver_h, colour=hue), 0, 1, None, scale=2.4, colour=hue, drop=0).set_stroke(width=STROKE * 0.75)
+        bracket.rotate(PI / 2).move_to([sliver.get_right()[0] + 0.35, sliver.get_y(), 0])
         self.play(Create(bracket, run_time=0.5))
 
         # 3 · extreme ranges and tails: a dot slides left along a grid and drops off its last tick
@@ -129,14 +146,14 @@ class Budget(TextScene):
         hue = HUES[BULLETS[2]]
         self.line(2)
         y = Y_ROWS[2]
-        grid = GridLine((0, 8, 1), length=5.6, colour=hue).move_to([X_GLYPH + 1.0 + 2.8, y, 0])  # the fall lands right of the text
-        dot = grid.dot_at(7.5, hue)
+        grid = self.grid((0, 8, 1), 5.6, hue).move_to([X_GLYPH + 1.0 + 2.8, y, 0])  # the fall lands right of the text
+        dot = grid.dot_at(7.5, hue, radius=DOT_R)
         self.play(Create(grid, run_time=0.5), FadeIn(dot, run_time=0.3))
         self.play(dot.animate.move_to(grid.n2p(0.5)), run_time=1.6, rate_func=ease_in_out_cubic)
         # past the last tick there is nothing to hold it: it falls, red, and a cross marks the loss
         fall = dot.copy().move_to(grid.n2p(-0.7) + DOWN * 0.3).set_color(Palette.WRONG)
         self.play(Transform(dot, fall, run_time=0.7, rate_func=ease_in_out_cubic))
-        cross = cross_mark(size=0.26).next_to(dot, LEFT, buff=0.15)
+        cross = cross_mark(size=0.42, stroke_width=STROKE + 1).next_to(dot, LEFT, buff=0.15)
         self.play(Create(cross, run_time=0.3))
 
         # 4 · iteration: a dot snaps tick to tick under a loop arrow; the bracket from its start grows
@@ -144,17 +161,17 @@ class Budget(TextScene):
         hue = HUES[BULLETS[3]]
         self.line(3)
         y = Y_ROWS[3]
-        grid4 = GridLine((0, 6, 1), length=4.2, colour=hue).move_to([X_GLYPH + 2.1, y, 0])
-        d4 = grid4.dot_at(0, hue)
-        loop = Arc(radius=0.3, start_angle=-PI * 0.15, angle=PI * 1.6, color=hue, stroke_width=2.5).add_tip(tip_length=0.12)
-        loop.move_to([X_GLYPH + 4.95, y + 0.05, 0])
+        grid4 = self.grid((0, 6, 1), 4.8, hue).move_to([X_GLYPH + 2.4, y, 0])
+        d4 = grid4.dot_at(0, hue, radius=DOT_R)
+        loop = Arc(radius=0.4, start_angle=-PI * 0.15, angle=PI * 1.6, color=hue, stroke_width=STROKE).add_tip(tip_length=0.22, tip_width=0.22)
+        loop.move_to([X_GLYPH + 5.75, y + 0.05, 0])
         self.play(Create(grid4, run_time=0.5), FadeIn(d4, run_time=0.3), Create(loop, run_time=0.6))
         bracket4 = None
         for k in (1, 2, 3):
             # each pass lands a little further off: the drift, then the snap, and the gap from the start grows
             self.play(d4.animate.move_to(grid4.n2p(k + 0.42)), run_time=0.45, rate_func=ease_in_out_cubic)
             self.play(snap(d4, grid4, k + 1, hue, run_time=0.55))
-            new = measure(grid4, 0, k + 1, None, drop=0.32, colour=hue)
+            new = measure(grid4, 0, k + 1, None, scale=1.6, drop=0.24, colour=hue).set_stroke(width=STROKE * 0.75)
             if bracket4 is None:
                 bracket4 = new
                 self.play(Create(bracket4, run_time=0.3))

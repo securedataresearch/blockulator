@@ -1,85 +1,55 @@
-"""Slide 17, "Knowing it's right": the honest table.
+"""Slide 17, "Knowing it's right": three verbs, one number each, one limit.
 
-Two lines first: "A test checks the inputs it was given." beside a plane
-of inputs on which tests land as a scatter of dots; "A proof covers every
-input." and the plane fills. The four row labels are on the first frame (each with its mark, in its
-row's hue: proven EMERALD, fuzzed GOLD, tested SAPPHIRE, limits MUTED);
-their values land one by one, each row's string in white (EXACT, the
-table's text): what is proven (an EMERALD tick), what is fuzzed (a MUTED
-tick), what is tested against an oracle (the two counts ticking up from
-0, then the hero "0 misrounded" at HERO size under a halo, then the
-totals over every operation), and what no check covers (a hollow marker,
-never red: these are limits, not bugs; its two strings in two held
-sub-beats, "none is known" last). The footnote and the closing line close
-the slide.
+The title is chrome. One row per click, the previous rows staying (they
+are the answer): a tick and a verb in the row's hue, then its number in
+white at 40: "proven" (BL127's and BL19's proven counts of their core
+operations), "fuzzed" (the runs a test), "swept" with the hero "0
+misrounded" at 72 in EMERALD on a halo. Last the one limit no check
+covers, one MUTED line beside a hollow marker (never red: a limit is not
+a bug), "none known" closing it.
 
-Numbers from docs/benchmarks/proofs.json (.ops[] per lib with status and
-tool: the proven and fuzzed ops per library, the Halmos count, sqrt by
-exact integers; .fuzz[] runs) and docs/benchmarks/sweep.json (.rows[] for
-bl19 and bl127: n and misrounded summed per library, over every row and
-over the rows whose op is one of the 21 transcendentals; ._doc for the
-oracles' digit counts). The transcendental list is the BL127 README's
-"The transcendentals round to nearest" sentence (claim V34). Six sections.
+Four sections: proven (autoplays under the test-and-proof lines), fuzzed,
+tested (the swept row), limits (the poster). The plane of inputs, the
+parentheticals (the Halmos count, the fuzzed ops, the result counts, the
+oracles' digits), the second limit, the footnote and the closing line
+are in the slide's notes, not on it.
+
+Numbers from docs/benchmarks/proofs.json (.ops[] per lib with status:
+the proven count and the core operations per library; .fuzz[] runs) and
+docs/benchmarks/sweep.json (.rows[] for bl19 and bl127: misrounded summed
+over every row; the 21 transcendentals, the BL127 README's list, V34,
+are asserted among them).
 """
 
 from __future__ import annotations
 
-import random
-import re
-
 from manim import (
-    DOWN,
     LEFT,
     RIGHT,
     UP,
     Circle,
-    Create,
     FadeIn,
-    FadeOut,
-    GrowFromEdge,
-    LaggedStart,
-    Rectangle,
-    Text,
-    ValueTracker,
     VGroup,
-    always_redraw,
 )
-from manim.utils.rate_functions import ease_out_cubic, linear
 
 from vocab import (
     ROW_COLOUR,
-    MONO,
     SIZE_BODY,
-    SIZE_CAPTION,
-    SIZE_HERO,
-    Chart,
     DeckScene,
     Palette,
     _load,
     check_mark,
-    digits,
-    glow_bar,
     halo,
     libs,
     proofs,
-    setup_fonts,
     thousands,
     words,
 )
 
 TITLE = "Knowing it's right"
-TEST_LINE = "A test checks the inputs it was given."
-PROOF_LINE = "A proof covers every input."
-CLOSING = "State your own guarantees this specifically."
-FOOTNOTE = "the proofs found two bugs on the way: fixed, now proven"
-CAPTION = "docs/benchmarks/proofs.json · sweep.json"  # the transcendental list: contracts/src/bl127/README.md (V34)
-LABELS = ("proven for every input", "fuzzed against the spec", "tested against an oracle", "known limits")
-NONE_KNOWN = "none is known"
-# the two limits, wrapped by hand so each digit-bearing line is a LITERAL (V38); the first
-# line of each sits beside the row's label, the rest below it at the margin
-LIMIT_BOUND = ("a derived bound could be wrong beyond its", "sampled margin: the measured error reaches 0.92 of BL127's\nbound and 0.79 of BL19's")
-LIMIT_STAGE = ("the last stage has no test of its own: a true", "value within its error of a midpoint would misround")
-NUMBER_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine"}
+KEYS = ("proven", "fuzzed", "swept")  # three verbs, each in its row's hue
+MISROUNDED = "misrounded"
+LIMIT = "limit: a midpoint within the last stage's error · none known"  # the one limit (V26), one line
 # the 21 transcendentals, contracts/src/bl127/README.md "Rounding (3.0)": "The transcendentals
 # round to nearest under the tie rule above: …" (claim V34; the same list for BL19)
 TRANSCENDENTAL = (
@@ -88,36 +58,17 @@ TRANSCENDENTAL = (
 )
 LIBS = ("bl19", "bl127")
 
-X_LEFT = -6.4
-X_RIGHT = 6.4
-Y_ROWS = 2.78  # the first row's first line
-PITCH = 0.46  # line to line at BODY
-ROW_GAP = 0.1  # extra between rows
-HERO_PITCH = 0.6  # the hero line is taller
-MARK_BUFF = 0.22  # mark to label
-LABEL_BUFF = 0.38  # label to the first line's text
-PIECE_BUFF = 0.16  # between the pieces of a line (words · digits · words)
-PLANE_SEED = 17
-PLANE_DOTS = 48
-PLANE_SMALL = 0.25  # the plane's scale once the table begins
-PLANE_CORNER = (5.6, 2.45, 0)  # under the right mark (was 5.75, 3.12)
-PLANE_ORIGIN = (1.3, -0.9, 0)  # the plane in section 0, right of the row keys; the two lines sit under it
-Y_LINES = (-1.75, -2.35)  # the test line and the proof line, right-aligned under the plane
-HUES = ROW_COLOUR["s17"]  # the rows: proven EMERALD, fuzzed GOLD, tested SAPPHIRE, limits MUTED
-# the first line of each row: row 1 at Y_ROWS; each row's last line and the gap to the next
-# (two lines at PITCH per row; row 3 adds the hero line and the totals), as construct() walks them
-ROW_Y = (
-    Y_ROWS,
-    Y_ROWS - 2 * PITCH - ROW_GAP,
-    Y_ROWS - 4 * PITCH - 2 * ROW_GAP,
-    Y_ROWS - 6 * PITCH - 3 * ROW_GAP - HERO_PITCH - (HERO_PITCH - 0.06),
-)
+SIZE_ROW = 40  # the rows: a verb and its number, one line each
+SIZE_ZERO = 72  # the hero: 0 misrounded
+X_VALUE = -2.2  # the numbers' left edge; the verbs end GAP before it
+GAP = 0.45
+MARK_BUFF = 0.25  # mark to verb
+ROW_Y = (2.05, 0.85, -0.6)  # the three rows
+Y_LIMIT = -2.45
+HUES = ROW_COLOUR["s17"]  # the rows: proven EMERALD, fuzzed GOLD, tested (swept) SAPPHIRE, the limit MUTED
 
-# the digit-bearing fixed strings, each with its claim id (research_notes/talk/claims.md)
-LITERALS = {
-    LIMIT_BOUND[1]: "V38",
-    FOOTNOTE: "V52",
-}
+# the digit-bearing fixed strings: none (every number on the slide is from numbers())
+LITERALS: dict[str, str] = {}
 
 
 def numbers() -> dict:
@@ -129,223 +80,81 @@ def numbers() -> dict:
     fuzzed = {name: [o["op"] for o in ops if o["status"] == "fuzzed"] for name, ops in by.items()}
     for name, ops in by.items():
         assert len(proven[name]) + len(fuzzed[name]) == len(ops), (name, [o["status"] for o in ops])
-    halmos = [o["op"] for o in by["BL127"] if o["status"] == "proven" and o["tool"].startswith("Halmos")]
-    exact = [o["op"] for o in by["BL127"] if o["status"] == "proven" and not o["tool"].startswith("Halmos")]
-    assert exact == ["sqrt"] and "exact integer" in next(o["tool"] for o in by["BL127"] if o["op"] == "sqrt"), exact
     # every fuzz test's runs (the regression pins run once; they are not fuzz runs)
     runs = {f["runs"] for f in full["fuzz"] if f["test"].startswith("testFuzz_")}
     assert len(runs) == 1 and all(f["result"] == "pass" for f in full["fuzz"]), runs
     runs = runs.pop()
-    # the sweep: every bl19 and bl127 row, plain and forced passes alike
+    # the sweep: every bl19 and bl127 row, plain and forced passes alike; the transcendentals among them
     sw = _load("docs/benchmarks/sweep.json")
     rows = {lid: [r for r in sw["rows"] if r["lib"] == lid] for lid in LIBS}
-    total = {lid: sum(r["n"] for r in rows[lid]) for lid in LIBS}
-    misrounded = {lid: sum(r["misrounded"] for r in rows[lid]) for lid in LIBS}
-    transcendental = {lid: sum(r["n"] for r in rows[lid] if r["op"] in TRANSCENDENTAL) for lid in LIBS}
     assert all(set(TRANSCENDENTAL) <= {r["op"] for r in rows[lid]} for lid in LIBS)
-    doc = sw["_doc"]
-    ref = {"bl19": int(re.search(r"mpmath at (\d+) digits", doc).group(1)), "bl127": int(re.search(r"truth at (\d+) digits", doc).group(1))}
-    assert misrounded == {"bl19": 0, "bl127": 0}, misrounded
+    assert sum(r["misrounded"] for lid in LIBS for r in rows[lid] if r["op"] in TRANSCENDENTAL) == 0
+    misrounded = sum(r["misrounded"] for lid in LIBS for r in rows[lid])
+    assert misrounded == 0, misrounded
     return {
         "labels": {"bl19": lib["bl19"]["label"], "bl127": lib["bl127"]["label"]},
-        "proven": proven,
-        "fuzzed": fuzzed,
-        "ops": {name: len(ops) for name, ops in by.items()},
         "proven_count": {name: len(v) for name, v in proven.items()},
-        "halmos_count": len(halmos),
-        "exact_integer": exact,
-        "bl19_fuzzed_word": NUMBER_WORDS[len(fuzzed["BL19"])],
+        "ops": {name: len(ops) for name, ops in by.items()},
         "runs": runs,
-        "rows": {lid: len(rows[lid]) for lid in LIBS},
-        "total": total,
         "misrounded": misrounded,
-        "transcendental": transcendental,
-        "reference_digits": ref,
     }
 
 
 class Proofs(DeckScene):
-    SECTIONS = ("test-proof", "proven", "fuzzed", "tested", "limits", "closing")
+    SECTIONS = ("proven", "fuzzed", "tested", "limits")
 
-    # ---------------------------------------------------------------- rows --
-    def label(self, text: str, mark, y: float, colour: str = Palette.MUTED) -> VGroup:
-        """A row's left cell: its mark, then the label in the row's hue, at the margin."""
-        lbl = words(text, SIZE_BODY, colour)
-        mark.move_to([X_LEFT + mark.width / 2 + 0.02, y, 0])
-        lbl.next_to(mark, RIGHT, buff=MARK_BUFF).set_y(y)
-        return VGroup(mark, lbl)
+    def row(self, i: int, key: str, value, mark, gap: float = GAP):
+        """A row: the mark and the verb (in the row's hue) ending GAP before X_VALUE, the value from X_VALUE."""
+        hue = HUES[("proven", "fuzzed", "tested")[i]]
+        verb = words(key, SIZE_ROW, hue)
+        value.move_to([X_VALUE + value.width / 2, ROW_Y[i], 0])
+        verb.move_to([X_VALUE - gap - verb.width / 2, ROW_Y[i], 0])
+        # baselines level: the last glyphs (n, d, t; 4, t, d) have no descenders
+        verb.shift(UP * (value[-1].get_bottom()[1] - verb[-1].get_bottom()[1]))
+        mark.next_to(verb, LEFT, buff=MARK_BUFF)
+        mark.shift(UP * (verb[-1].get_bottom()[1] - mark.get_bottom()[1]))
+        assert value.get_right()[0] <= 6.4 and mark.get_left()[0] >= -6.4, (value.get_right()[0], mark.get_left()[0])
+        return VGroup(mark, verb), value
 
-    @staticmethod
-    def line(pieces, y: float, x: float = X_LEFT) -> VGroup:
-        """A line of the right cell: its pieces side by side from x, baselines level."""
-        g = VGroup(*pieces).arrange(RIGHT, buff=PIECE_BUFF, aligned_edge=DOWN)
-        for piece in pieces:
-            piece.set_y(y)
-        g.align_to([x, 0, 0], LEFT)
-        return g
+    def land(self, key, value, run_time: float = 0.5):
+        self.play(FadeIn(key, shift=RIGHT * 0.1, run_time=run_time))
+        self.play(FadeIn(value, shift=RIGHT * 0.1, run_time=run_time))
 
-    @staticmethod
-    def block(text: str, y_top: float) -> Text:
-        """The rest of a right cell, wrapped at the margin, its first line at y_top."""
-        t = words(text, SIZE_BODY, Palette.TEXT, line_spacing=0.6)
-        return t.move_to([X_LEFT + t.width / 2, y_top - (t.height - 0.42) / 2, 0])
-
-    def ticking(self, tracker: ValueTracker, size: float, colour: str):
-        """A thousands-separated count following the tracker; the frames on the
-        way are plain Text (not a claim), the final string is drawn by digits()."""
-        setup_fonts()
-        return always_redraw(lambda: Text(thousands(int(round(tracker.get_value()))), font=MONO, font_size=size, color=colour, disable_ligatures=True))
-
-    def land(self, *mobjs, run_time: float = 0.45):
-        self.play(*[FadeIn(m, shift=RIGHT * 0.1, run_time=run_time) for m in mobjs])
-
-    # ------------------------------------------------------------- the slide --
     def construct(self):
         n = numbers()
         bl19, bl127 = n["labels"]["bl19"], n["labels"]["bl127"]
 
-        # 0 · a test, a proof: the two lines and the plane of inputs
+        # 0 · proven
         self.section(0)
-        # the chrome, on the first frame: the title, the caption, the plane's axes and
-        # grid, and the four row keys (each mark and label in its row's hue); the rows'
-        # values arrive per click
         self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
-        self.caption_now(CAPTION)
-        plane = Chart((0, 8, 1), (0, 6, 1), width=4.6, height=3.5, origin=PLANE_ORIGIN)
-        grid = plane.grid()
-        labs = [
-            self.label(LABELS[0], check_mark(HUES["proven"]), ROW_Y[0], HUES["proven"]),
-            self.label(LABELS[1], check_mark(HUES["fuzzed"]), ROW_Y[1], HUES["fuzzed"]),
-            self.label(LABELS[2], check_mark(HUES["tested"]), ROW_Y[2], HUES["tested"]),
-            self.label(LABELS[3], Circle(radius=0.13, color=HUES["limits"], stroke_width=3, fill_opacity=0), ROW_Y[3], HUES["limits"]),
-        ]
-        self.fix(plane, *labs)
-        self.wait(0.3)
-        test_line = words(TEST_LINE, SIZE_BODY, Palette.TEXT).move_to([0, Y_LINES[0], 0]).align_to([X_RIGHT, 0, 0], RIGHT)
-        self.play(FadeIn(test_line, shift=RIGHT * 0.1, run_time=0.5))
-        rng = random.Random(PLANE_SEED)
-        dots = VGroup(*[plane.dot(rng.uniform(0.3, 7.7), rng.uniform(0.3, 5.7), Palette.BODY, radius=0.055) for _ in range(PLANE_DOTS)])
-        self.play(LaggedStart(*[FadeIn(d, scale=0.3) for d in dots], lag_ratio=0.04, run_time=1.6))
-        self.wait(0.6)
-        proof_line = words(PROOF_LINE, SIZE_BODY, Palette.TEXT).move_to([0, Y_LINES[1], 0]).align_to([X_RIGHT, 0, 0], RIGHT)
-        self.play(FadeIn(proof_line, shift=RIGHT * 0.1, run_time=0.5))
-        fill = Rectangle(width=plane.width, height=plane.height, color=Palette.EMERALD, fill_color=Palette.EMERALD, fill_opacity=0.22, stroke_width=0)
-        fill.move_to(plane.c2p(4, 3))
-        self.add(fill)
-        self.bring_to_back(fill)
-        self.play(GrowFromEdge(fill, DOWN, rate_func=ease_out_cubic, run_time=1.2), dots.animate.set_color(Palette.EMERALD), run_time=1.2)
-        proof_mark = check_mark(Palette.CORRECT, size=0.5, stroke_width=5).move_to(plane.c2p(4, 3))
-        self.play(Create(proof_mark, run_time=0.4))
-        whole_plane = VGroup(fill, grid, plane, dots, proof_mark)
-
-        # 1 · proven: the plane (filled, a story element now) to the corner, the first row's values land
-        self.section(1, hold=1.2)
-        self.play(
-            FadeOut(test_line, run_time=0.5),
-            FadeOut(proof_line, run_time=0.5),
-            whole_plane.animate.scale(PLANE_SMALL).move_to(PLANE_CORNER),
-            run_time=0.9,
+        self.wait(1.5)
+        proven = words(
+            f"{bl127} {n['proven_count']['BL127']} of {n['ops']['BL127']} · {bl19} {n['proven_count']['BL19']} of {n['ops']['BL19']}",
+            SIZE_ROW,
+            Palette.TEXT,
         )
-        y = Y_ROWS
-        lab1 = labs[0]
-        assert abs(y - ROW_Y[0]) < 1e-9
-        r1a = self.line([words(f"{bl127}: {n['proven_count']['BL127']} core operations", SIZE_BODY, Palette.TEXT)], y, x=lab1.get_right()[0] + LABEL_BUFF)
-        y -= PITCH
-        r1b = self.block(f"({n['halmos_count']} by Halmos, {n['exact_integer'][0]} in exact integers) · {bl19}: {n['proven_count']['BL19']} of {n['ops']['BL19']}", y)
-        self.land(r1a)
-        self.land(r1b)
-        self.wait(0.5)
+        self.land(*self.row(0, KEYS[0], proven, check_mark(HUES["proven"], size=0.4)))
 
-        # 2 · fuzzed
-        self.section(2, hold=2.0)
-        y -= PITCH + ROW_GAP
-        lab2 = labs[1]
-        assert abs(y - ROW_Y[1]) < 1e-9
-        r2a = self.line([words(f"{bl127}: {', '.join(n['fuzzed']['BL127'])} · {bl19}: {n['bl19_fuzzed_word']} ·", SIZE_BODY, Palette.TEXT)], y, x=lab2.get_right()[0] + LABEL_BUFF)
-        y -= PITCH
-        r2b = self.line([digits(thousands(n["runs"]), SIZE_BODY, Palette.TEXT), words("runs a test", SIZE_BODY, Palette.TEXT)], y)
-        self.land(r2a)
-        self.land(r2b)
-        self.wait(0.4)
+        # 1 · fuzzed
+        self.section(1, hold=1.2)
+        fuzzed = words(f"{thousands(n['runs'])} runs a test", SIZE_ROW, Palette.TEXT)
+        self.land(*self.row(1, KEYS[1], fuzzed, check_mark(HUES["fuzzed"], size=0.4)))
 
-        # 3 · tested: the counts tick up, the hero lands last
-        self.section(3, hold=1.8)
-        y -= PITCH + ROW_GAP
-        lab3 = labs[2]
-        assert abs(y - ROW_Y[2]) < 1e-9
-        trackers = {lid: ValueTracker(0) for lid in LIBS}
-        tick19 = self.ticking(trackers["bl19"], SIZE_BODY, Palette.TEXT)
-        r3a_words = [words(f"{bl19}:", SIZE_BODY, Palette.TEXT), words("transcendental", SIZE_BODY, Palette.TEXT)]
-        y3a = y
-        y -= PITCH
-        y3b = y
-        tick127 = self.ticking(trackers["bl127"], SIZE_BODY, Palette.TEXT)
-        r3b_words = [words(f"results at {n['reference_digits']['bl19']} digits · {bl127}:", SIZE_BODY, Palette.TEXT), words(f"at {n['reference_digits']['bl127']} ·", SIZE_BODY, Palette.TEXT)]
-        x3a = lab3.get_right()[0] + LABEL_BUFF
-
-        def place(y_line, x_line, count_text, pieces):
-            return self.line([pieces[0], count_text, pieces[1]], y_line, x=x_line)
-
-        final19 = digits(thousands(n["transcendental"]["bl19"]), SIZE_BODY, Palette.TEXT)
-        final127 = digits(thousands(n["transcendental"]["bl127"]), SIZE_BODY, Palette.TEXT)
-        # lay the lines out with the final digits (the widest), then let the tickers take their place
-        r3a = place(y3a, x3a, final19, r3a_words)
-        r3b = place(y3b, X_LEFT, final127, r3b_words)
-        tick19.add_updater(lambda m: m.move_to(final19, aligned_edge=LEFT))
-        tick127.add_updater(lambda m: m.move_to(final127, aligned_edge=LEFT))
-        self.land(r3a_words[0], r3a_words[1])
-        self.add(tick19)
-        self.play(trackers["bl19"].animate(rate_func=linear).set_value(n["transcendental"]["bl19"]), run_time=1.4)
-        self.remove(tick19)
-        self.add(final19)
-        self.land(r3b_words[0], r3b_words[1])
-        self.add(tick127)
-        self.play(trackers["bl127"].animate(rate_func=linear).set_value(n["transcendental"]["bl127"]), run_time=1.2)
-        self.remove(tick127)
-        self.add(final127)
-        self.wait(0.3)
-        y -= HERO_PITCH
-        hero = digits(f"{n['misrounded']['bl19']} misrounded", SIZE_HERO, Palette.CORRECT).move_to([0, y, 0]).align_to([X_LEFT + 0.1, 0, 0], LEFT)
-        glow = halo(hero.get_center(), Palette.EMERALD, radius=0.3, layers=5, spread=1.5, opacity=0.22)
-        glow.stretch_to_fit_width(hero.width + 1.4)
+        # 2 · swept: the hero, 0 misrounded, on a halo
+        self.section(2, hold=1.2)
+        zero = words(f"{n['misrounded']} {MISROUNDED}", SIZE_ZERO, Palette.CORRECT)
+        key, zero = self.row(2, KEYS[2], zero, check_mark(HUES["tested"], size=0.4), gap=0.75)
+        glow = halo(zero[0].get_center(), Palette.EMERALD, radius=0.32, layers=5, spread=1.2, opacity=0.26)
+        self.play(FadeIn(key, shift=RIGHT * 0.1, run_time=0.5))
         self.add(glow)
         self.bring_to_back(glow)
-        self.play(FadeIn(glow, run_time=0.6), FadeIn(hero, shift=UP * 0.12, scale=0.9, run_time=0.6))
-        self.wait(0.5)
-        y -= HERO_PITCH - 0.06
-        totals = words(f"({thousands(n['total']['bl19'])} and {thousands(n['total']['bl127'])} over every operation)", SIZE_BODY, Palette.MUTED).move_to([0, y, 0]).align_to([X_LEFT, 0, 0], LEFT)
-        self.land(totals)
+        self.play(FadeIn(glow, run_time=0.6), FadeIn(zero, shift=UP * 0.12, scale=0.9, run_time=0.6))
 
-        # 4 · known limits: a hollow marker, two sub-beats, "none is known" last
-        self.section(4, hold=1.6)
-        y -= PITCH + ROW_GAP
-        lab4 = labs[3]
-        assert abs(y - ROW_Y[3]) < 1e-9
-        x4 = lab4.get_right()[0] + LABEL_BUFF
-        y4a = y
-        bound_a = self.line([words(LIMIT_BOUND[0], SIZE_BODY, Palette.TEXT)], y4a, x=x4)
-        bound_b = self.block(LIMIT_BOUND[1], y4a - PITCH)
-        self.land(bound_a)
-        self.land(bound_b, run_time=0.6)
-        self.wait(1.8)
-        stage_a = self.line([words(LIMIT_STAGE[0], SIZE_BODY, Palette.TEXT)], y4a, x=x4)
-        stage_b = self.block(LIMIT_STAGE[1], y4a - PITCH)
-        self.play(FadeOut(bound_a, run_time=0.4), FadeOut(bound_b, run_time=0.4))
-        self.land(stage_a)
-        self.land(stage_b, run_time=0.6)
-        self.wait(0.8)
-        y = y4a - 2 * PITCH
-        none_known = words(NONE_KNOWN, SIZE_BODY, Palette.TEXT).move_to([0, y, 0]).align_to([X_LEFT, 0, 0], LEFT)
-        self.land(none_known)
-
-        # 5 · the footnote and the closing line
-        self.section(5, hold=1.0)
-        foot = words(FOOTNOTE, SIZE_CAPTION, Palette.FAINT).to_corner(DOWN + RIGHT, buff=0.45)
-        self.play(FadeIn(foot, run_time=0.5))
-        close = words(CLOSING, SIZE_BODY, Palette.TEXT).move_to([0, y, 0]).align_to([X_RIGHT, 0, 0], RIGHT)
-        bar = glow_bar(close, Palette.EMERALD, pad=0.2, opacity=0.14)
-        self.add(bar)
-        self.bring_to_back(bar)
-        self.play(FadeIn(bar, run_time=0.6), FadeIn(close, shift=UP * 0.08, run_time=0.6))
-        self.wait(0.6)
+        # 3 · the one known limit: a hollow marker, one line, never red
+        self.section(3, hold=1.6)
+        ring = Circle(radius=0.14, color=HUES["limits"], stroke_width=3, fill_opacity=0)
+        limit = words(LIMIT, SIZE_BODY, HUES["limits"])
+        line = VGroup(ring, limit).arrange(RIGHT, buff=0.25).move_to([0, Y_LIMIT, 0])
+        assert line.width <= 12.8, line.width
+        self.play(FadeIn(line, shift=RIGHT * 0.1, run_time=0.7))
         self.close()
