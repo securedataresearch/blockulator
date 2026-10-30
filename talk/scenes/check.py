@@ -197,14 +197,12 @@ def expect_s02_exp40(mod) -> dict:
         # or 0 (before the point) when the integer parts differ
         wd = rows[-1]["decimals"] + 1 if v.partition(".")[0] == truth.partition(".")[0] else 0
         rows[-1]["wrong_decimal"] = wd
-        rows[-1]["right_label"] = (
-            f"{rows[-1]['decimals']} right · wrong at the {mod.ordinal(wd)} decimal" if wd else f"{rows[-1]['decimals']} right · wrong before the point"
-        )
-    # the story the slide tells, checked against the cells: 3rd, 4th, and one wrong before the point (V29)
+        rows[-1]["right_label"] = f"{rows[-1]['decimals']} decimals right"
+    # the story the slide tells, checked against the cells: wrong at the 3rd, the 4th, and before the point (V29)
     by_id = {r["id"]: r for r in rows}
-    assert by_id["solady"]["wrong_decimal"] == 3 and by_id["solady"]["right_label"] == "2 right · wrong at the 3rd decimal", by_id["solady"]
-    assert by_id["balancer"]["wrong_decimal"] == 4 and by_id["balancer"]["right_label"] == "3 right · wrong at the 4th decimal", by_id["balancer"]
-    assert by_id["prb"]["wrong_decimal"] == 0 and by_id["prb"]["decimals"] == 0 and by_id["prb"]["right_label"] == "0 right · wrong before the point", by_id["prb"]
+    assert by_id["solady"]["wrong_decimal"] == 3 and by_id["solady"]["right_label"] == "2 decimals right", by_id["solady"]
+    assert by_id["balancer"]["wrong_decimal"] == 4 and by_id["balancer"]["right_label"] == "3 decimals right", by_id["balancer"]
+    assert by_id["prb"]["wrong_decimal"] == 0 and by_id["prb"]["decimals"] == 0 and by_id["prb"]["right_label"] == "0 decimals right", by_id["prb"]
     assert mod.ordinal(1) == "1st" and mod.ordinal(2) == "2nd" and mod.ordinal(11) == "11th" and mod.ordinal(13) == "13th" and mod.ordinal(21) == "21st" and mod.ordinal(22) == "22nd"
     # the words by the other route: each raw word's fields read with masks and shifts written here
     # (contracts/src/bl19/README.md lines 21-24: sign bit 255, E bits 254..236 bias 262143, F bits 235..0,
@@ -241,6 +239,9 @@ def expect_s02_exp40(mod) -> dict:
             # the words agree with vocab's Fraction decoders
             assert Fraction(num, 2**k) == vocab.word_value(lid, c["raw"]), lid
             v = str(d.quantize(Decimal(1).scaleb(-mod.TRUTH_DECIMALS), rounding=ROUND_HALF_UP))
+            assert v.startswith(c["value"][:-1]), (lid, v, c["value"])  # the cell prints the same word
+            shown_n = mod.SHOWN[lid]
+            shown = str(d.quantize(Decimal(1).scaleb(-shown_n), rounding=ROUND_HALF_UP))
             m = 0
             for a, b in zip(word.replace(".", ""), truth.replace(".", "")):
                 if a != b:
@@ -252,26 +253,30 @@ def expect_s02_exp40(mod) -> dict:
             word18 = str(d.quantize(Decimal(1).scaleb(-mod.WORD_DECIMALS), rounding=ROUND_HALF_UP))
             assert word18 == exact_row, (lid, word18, exact_row)
             dec = m - int_len
-            assert mod.WORD_DECIMALS <= dec < k, (lid, dec, k)
-            # the lines the slide draws hold every decimal once, in order, none longer than the first
-            lines = [word.partition(".")[0] + "." + word.partition(".")[2][: mod.LINE1]]
-            rest = word.partition(".")[2][mod.LINE1 :]
-            lines += [rest[i : i + mod.LINE] for i in range(0, len(rest), mod.LINE)]
-            assert "".join(lines) == word and len(lines[0]) == int_len + 1 + mod.LINE1 and all(len(ln) <= mod.LINE for ln in lines[1:]), (lid, lines)
+            # the bracket falls inside the drawn digits, and the drawn string matches as far as the whole word
+            assert mod.WORD_DECIMALS <= dec < shown_n < k, (lid, dec, shown_n, k)
+            assert shown[: m + 1] == word[: m + 1] and shown[m + 1] != truth[m + 1], (lid, shown, m)
+            # the lines the slide draws: the integer part, the point and 20 decimals, then 20 a line;
+            # every decimal once, in order
+            sw, _, sf = shown.partition(".")
+            assert len(sf) == shown_n and shown_n % mod.LINE == 0, (lid, shown)
+            lines = [sw + "." + sf[: mod.LINE]] + [sf[i : i + mod.LINE] for i in range(mod.LINE, shown_n, mod.LINE)]
+            assert "".join(lines) == shown and all(len(ln) == mod.LINE for ln in lines[1:]), (lid, lines)
             ours.append(
                 {
                     "id": lid,
                     "label": lib[lid]["label"],
-                    "value": v,
                     "word": word,
                     "word_decimals": k,
+                    "shown": shown,
+                    "shown_decimals": shown_n,
                     "lines": lines,
                     "word18": word18,
                     "matching": m,
                     "decimals_right": dec,
                     "digits": int(c["digits"]),
-                    "right_label": f"{m} digits right · {dec} decimals",
-                    "end_label": f"the word's precision ends here · {dec} decimals",
+                    "name_line": f"{lib[lid]['label']} to {shown_n} decimals",
+                    "right_label": f"{dec} decimals right",
                 }
             )
     by = {o["id"]: o for o in ours}
@@ -279,14 +284,18 @@ def expect_s02_exp40(mod) -> dict:
     assert (by["bl127"]["matching"], by["bl127"]["decimals_right"]) == (57, 39), by["bl127"]
     assert (by["bl19"]["matching"], by["bl19"]["decimals_right"]) == (73, 55), by["bl19"]
     assert by["bl127"]["word_decimals"] == 127 and by["bl19"]["word_decimals"] == 179, (by["bl127"]["word_decimals"], by["bl19"]["word_decimals"])
+    # the words are drawn to 40 and 60 decimals (the stated format on their name lines)
+    assert (by["bl127"]["shown_decimals"], by["bl19"]["shown_decimals"]) == (40, 60), (by["bl127"]["shown_decimals"], by["bl19"]["shown_decimals"])
     # the reveal rows carry the plain count like the others, and never what the format holds
     for o in ours:
-        assert "holds" not in o["right_label"] and "holds" not in o["end_label"], o
-    # no number on the slide is cut short: every 18-decimal row is exactly 18 decimals, no ellipsis anywhere
+        assert "holds" not in o["right_label"] and "holds" not in o["name_line"], o
+    # no number on the slide is cut short: every 18-decimal row is exactly 18 decimals, every word exactly
+    # its stated decimals, no ellipsis anywhere
     for s in [exact_row] + [r["value"] for r in rows] + [o["word18"] for o in ours]:
         assert "…" not in s and len(s.partition(".")[2]) == mod.WORD_DECIMALS, s
-    assert "…" not in mod.EXACT_LABEL and "…" not in mod.EXACT_RIGHT and "…" not in mod.CLOSE and "…" not in mod.END_TEXT
-    longest = max(o["word_decimals"] for o in ours)
+    for o in ours:
+        assert "…" not in o["shown"] and len(o["shown"].partition(".")[2]) == o["shown_decimals"], o["shown"]
+    assert "…" not in mod.EXACT_LABEL and "…" not in mod.EXACT_RIGHT
     return {
         "truth": truth,
         "truth_decimals": mod.TRUTH_DECIMALS,
@@ -302,9 +311,6 @@ def expect_s02_exp40(mod) -> dict:
         "bl19_match": by["bl19"]["matching"],
         "bl127_decimals": by["bl127"]["decimals_right"],
         "bl19_decimals": by["bl19"]["decimals_right"],
-        "ruler_marks": [t for t in range(10, longest + 1, 10)],
-        "context": " · ".join(r["label"] for r in rows) + ": " + " · ".join(str(r["decimals"]) for r in rows) + " decimals right",
-        "close2": " · ".join(f"{o['label']}: {o['decimals_right']} decimals" for o in ours) + " · every one of them right",
     }
 
 
@@ -546,22 +552,22 @@ def expect_s06b_bunni(mod) -> dict:
 def expect_s06c_balancer_v2(mod) -> dict:
     """The decisive step by the raw trace: the Vault's own onSwap call (not
     the scored step), the rate the attacker's updateTokenRateCache set, the
-    product and its mulDown by Fraction, the exact charge from the forge
-    harness's expectation, the cycles counted in the trace, the
-    counterfactual's figures from the generated table."""
+    product and its floor by Fraction, the undercharge by Decimal against the
+    forge harness's exact charge, the cycles counted in the trace of both
+    pools, the counterfactual's loss from the generated table."""
     d = vocab.balancer()
-    pool, test, score = d["pools"][mod.POOL], d["test"][mod.POOL], d["score"][mod.POOL]
+    pool, test = d["pools"][mod.POOL], d["test"][mod.POOL]
     sym = pool["symbols"]
     rk, wk = sym.index(mod.POOL), sym.index("WETH")
     rate = int(pool["rateCacheUpdatedInTx"]["providerRate"])
     first = int(test["first"])  # the replayed phase starts at this swap; the micro swap is the next call
     raw = pool["swaps"][first + mod.MICRO_INDEX]
     assert raw["kind"] == 1 and raw["i"] == wk and raw["j"] == rk, raw  # GIVEN_OUT, WETH in, osETH out
-    out, charged = int(raw["amount"]), int(raw["amountIn"])
-    assert charged == 625_492 and out == 17, (charged, out)  # C3
+    out, charged, held = int(raw["amount"]), int(raw["amountIn"]), int(raw["balances"][rk])
+    assert charged == 625_492 and out == 17 and held == 18, (charged, out, held)  # C3
     product = Fraction(out * rate, 10**mod.WAD)
-    mul_down, mul_up = product.numerator // product.denominator, -(-product.numerator // product.denominator)
-    assert mul_down == 17 and mul_up == 18 and product != mul_down, (mul_down, mul_up)  # C3: mulDown keeps 17, mulUp would give 18
+    floor = product.numerator // product.denominator
+    assert floor == 17 and product != floor, floor  # C3: mulDown keeps 17
     exact = int(test["expectExact"][mod.MICRO_INDEX])
     assert exact == 957_169, exact  # C3
     with localcontext() as ctx:
@@ -574,65 +580,35 @@ def expect_s06c_balancer_v2(mod) -> dict:
         assert under_pct == "34.65%", under_pct  # C3
         product_str = dec(Decimal(out * rate) / Decimal(10**mod.WAD), mod.WAD)
         rate_str = dec(Decimal(rate) / Decimal(10**mod.WAD), mod.WAD)
-        d_start, d_end = Decimal(score["trueInvariantStart"]), Decimal(score["trueInvariantEnd"])
-        ratio = Decimal(score["onchainInvariantRatio"])
-        assert (d_end / d_start).quantize(Decimal(1).scaleb(-mod.RATIO_DECIMALS)) == ratio.quantize(Decimal(1).scaleb(-mod.RATIO_DECIMALS))
-        levels = [float(Decimal(score["steps"][3 * c]["trueInvariantBefore"]) / d_start) for c in range(1, score["kinds"]["micro"])] + [float(d_end / d_start)]
-        d_start_s, d_end_s, ratio_s = dec(d_start, mod.INVARIANT_DECIMALS), dec(d_end, mod.INVARIANT_DECIMALS), "×" + dec(ratio, mod.RATIO_DECIMALS)
-        net = dec(score["batchSwapNetEth"], mod.NET_DECIMALS)
     # the cycles, counted in the trace: every GIVEN_OUT micro swap of `out` wei of the rate token
     cycles = sum(1 for s in pool["swaps"] if s["kind"] == 1 and s["j"] == rk and int(s["amount"]) == out)
     other = d["pools"][mod.OTHER]
     ork = other["symbols"].index(mod.OTHER)
     other_leave = int(d["test"][mod.OTHER]["leave"])
     other_cycles = sum(1 for s in other["swaps"] if s["kind"] == 1 and s["j"] == ork and int(s["amount"]) == other_leave - 1)
-    assert (cycles, other_cycles) == (30, 25), (cycles, other_cycles)  # C3
+    assert (cycles, other_cycles) == (30, 25), (cycles, other_cycles)  # C3: 55 in one transaction
     # the counterfactual from the generated table (the scene cross-checks it against the JSON)
     rulers = {r["model"]: r for r in vocab.replay_table("balancer", "The same calls on five rulers")}
-    dep = next(r for m, r in rulers.items() if m.startswith("deployed"))
-    fp = next(r for m, r in rulers.items() if m.startswith("BL127"))
+    fp = next(r for m, r in rulers.items() if m.startswith(("BL127", "FP127")))
     would_lose = str(-Decimal(fp["projected take (ETH)"]))
     inc = next(i for i in vocab.incidents()["incidents"] if i["protocol"] == mod.PROTOCOL)
-    cites = pool["source"]["cites"]
     for k, v in mod.numbers().items():
         assert "…" not in str(v), (k, v)
     return {
         "title": f"{mod.PROTOCOL}, {inc['date']}",
-        "tx_short": d["provenance"]["tx"][:10],
-        "block": f"{int(d['provenance']['block']):,}",
-        "chain": "Ethereum",
         "pool": f"{mod.POOL}/WETH",
-        "other_pool": f"{mod.OTHER}/WETH",
-        "weth_before": f"{int(raw['balances'][wk]):,}",
-        "rate_before": f"{int(raw['balances'][rk]):,}",
-        "out": str(out),
+        "held": held,
+        "out": out,
         "rate": rate_str,
         "product": product_str,
         "product_label": f"(to {mod.WAD} decimals)",
         "grid_ticks": list(range(mod.GRID[0], mod.GRID[1] + 1)),
-        "mul_down": str(mul_down),
-        "mul_up": str(mul_up),
-        "charged": f"{charged:,}",
-        "exact": f"{exact:,}",
+        "floor": floor,
         "under_pct": under_pct,
-        "cycles": cycles,
-        "other_cycles": other_cycles,
-        "other_out": str(other_leave - 1),
-        "other_leave": str(other_leave),
-        "counter_ticks": list(range(1, max(cycles, other_cycles) + 1)),
-        "d_start": d_start_s,
-        "d_end": d_end_s,
-        "d_ratio": ratio_s,
-        "d_levels": levels,
+        "repeats": cycles + other_cycles,
+        "counter_ticks": list(range(1, cycles + other_cycles + 1)),
         "loss": inc["loss"],
-        "net_eth": net,
-        "deployed_charged_total": dep["charged in (WETH-wei / rate-token-wei)"].split(" / ")[0],
-        "fp_charged_total": fp["charged in (WETH-wei / rate-token-wei)"].split(" / ")[0],
-        "deployed_below": int(dep["calls below exact"]),
-        "fp_below": int(fp["calls below exact"]),
         "would_lose": would_lose,
-        "upscale_cite": cites["BasePool.sol:_upscale"].split("/")[-1],
-        "muldown_cite": cites["FixedPoint.sol:mulDown"].split("/")[-1],
     }
 
 

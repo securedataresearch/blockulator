@@ -28,8 +28,10 @@
       cue: "Ask Ethereum and you get three. All three are good."
     - name: blockulator
       cue: "None is the closest value an 18-decimal word can hold. Blockulator's is."
-    - name: closing
-      cue: ""
+  notes:
+    - "Source: docs/benchmarks/edges.json · exp(40)."
+    - "Solady · Balancer · PRBMath SD: 2 · 3 · 0 decimals right. Three good answers, none the closest; Blockulator: all 18."
+    - "BL127: 39 decimals · BL19: 55 decimals, every one of them right. The full words run to 127 (BL127) and 179 (BL19) decimals; their precision ends at 39 and 55."
 
 
 - slide: 3
@@ -131,6 +133,11 @@
       cue: "$121.1M across five chains."
     - name: exact
       cue: ""
+  notes:
+    - "Source: scripts/replays/balancer.json · tx 0x6ed07db1 · block 23,717,397; BasePool.sol:680-686 · FixedPoint.sol:48-53 (_upscale = mulDown(amount × rate))."
+    - "After the drain (wei): WETH 374,353 · osETH 18 · out 17. Charged 625,492, exact 957,169; mulUp would give 18."
+    - "30 of 30 cycles osETH/WETH, 25 of 25 wstETH/WETH; D*, the pool's invariant, from 0 to 137,894.598 wei-eq. Net to the attacker: 11,873.89 ETH."
+    - "BL127 / BL19 keep 17.988… exact and ceil the final charge to wei once: 0 calls below exact, the attacker would lose 127.677 ETH. Replayed, not observed."
 
 - slide: 9
   title: Thetanuts, 15 Jun 2026

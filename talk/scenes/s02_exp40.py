@@ -1,46 +1,37 @@
 """Slide 2, "What is e^40?": one closest answer, three good ones, and ours.
 
-Rows of monospace digits aligned on the decimal point, each typed in left
-to right, every row complete in its stated format (no number on screen is
-cut short with an ellipsis). The first row, "e^40 to 18 decimals", is the
-correctly rounded value (docs/benchmarks/edges.json, op exp, probe args
-["40"], .truth rounded half-up at the 18th decimal): the closest
-18-decimal value there is. Then Solady, Balancer and PRBMath SD (the
-probe's .cells[lib].value, 18-decimal words already). The three are
-18-decimal fixed point, so they are counted in DECIMALS: as each row
-completes, its first digit that departs from the exact value turns WRONG
-(red), the digits after it dim, and the row is labelled with how many
-digits after the point match and where the first wrong one sits ("3 right
-· wrong at the 4th decimal"; "0 right · wrong before the point" when the
-integer part differs, since then no decimal is right). Both come from the
-data: the count from matching_decimals, the position from
-first_wrong_index, each against .truth and checked against the rounded
-row shown. numbers() also carries each row's correct significant digits,
-floor(−log10(|value − truth| / truth)), the measure edges.json reports as
-.digits, so the ledger keeps both counts.
+Rows of monospace digits on one column grid (every row starts at the same
+x at the same size, so decimal k sits in the same column in every row),
+each typed in left to right, every row complete in its stated format (no
+number on screen is cut short with an ellipsis). The title row, "e^40 to
+18 decimals", is the correctly rounded value (docs/benchmarks/edges.json,
+op exp, probe args ["40"], .truth rounded half-up at the 18th decimal):
+the closest 18-decimal value there is. Then Solady, Balancer and PRBMath
+SD (the probe's .cells[lib].value, 18-decimal words already), counted in
+DECIMALS: as each row completes, its first digit that departs from the
+exact value turns WRONG (red), the digits after it dim, and the row is
+labelled with how many decimals match ("2 decimals right"; matching_decimals
+against .truth, checked against the rounded row shown). numbers() also
+carries each row's correct significant digits and the position of its
+first wrong decimal, so the ledger keeps both counts.
 
-Then the reveal: Blockulator's two words in full. Each cell's .raw is
-decoded exactly (vocab.decode_bl127: raw / 2^128; vocab.decode_bl19: the
-binary256 fields, contracts/src/bl19/README.md lines 21–24) to a Fraction
-with a power-of-two denominator, whose decimal expansion therefore
-terminates: BL127's at the 127th decimal, BL19's at the 179th (the
-exponent is negative). Every one of those decimals is drawn, in blocks
-of ten with a ruler underneath marking each tenth decimal, so a reader
-can count. The digits that match e^40 to 80 decimals (vocab.truth80,
-mpmath; matching_digits counts the prefix) are lit, EMERALD for BL127,
-TEXT under a glow for BL19; from the first digit past the matching
-prefix the digits are MUTED, never red: they are the word's own exact
-expansion, the bits below its precision, not errors, and a bracket under
-that point says so ("the word's precision ends here · 39 decimals"). The
-label at the right of each word's name line is the matching-prefix count
-and the decimals it covers ("57 digits right · 39 decimals"). The three
-library rows become one faint line of context above the words. Labels
-come from static/data/libraries.json; no row says why a library's digits
-end where they do (a documented precision is not a defect). Nothing here
-says what the format holds (that is slide 15's fact).
+Then the reveal. The three rows leave; Blockulator's two words arrive in
+the space they held, last, each to a stated number of decimals: BL127's
+word to 40, BL19's to 60 (each cell's .raw decoded exactly by
+vocab.decode_bl127 / decode_bl19 to a Fraction, then rounded to N
+decimals, nearest). Each is drawn as one block: the integer part, the
+point and 20 decimals, then lines of 20 decimals under the first line's
+decimals, so the columns read in tens. The digits that match e^40
+(vocab.truth80, mpmath; matching_digits counts the prefix) are lit,
+EMERALD for BL127, TEXT under a glow for BL19; the few digits past the
+matching prefix are MUTED, never red (they are the word's own value, below
+its precision, not errors), and a bracket at that point carries the
+word's one label ("39 decimals right"). No row says why a library's
+digits end where they do (a documented precision is not a defect), and
+nothing says what the format holds (that is slide 15's fact).
 
-Four sections, one per click: the exact row; the three library rows;
-the two Blockulator words; the closing lines (claims V9, V29).
+Three sections, one per click: the exact row; the three library rows;
+Blockulator's two words (the poster). Claims V9, V29.
 """
 
 from __future__ import annotations
@@ -52,7 +43,7 @@ from manim import (
     AddTextLetterByLetter,
     FadeIn,
     FadeOut,
-    ReplacementTransform,
+    Line,
     Transform,
     VGroup,
 )
@@ -71,13 +62,10 @@ from vocab import (
     first_wrong_index,
     glow_line,
     libs,
-    markup,
     matching_decimals,
     matching_digits,
     precision_end,
     probe,
-    ruler,
-    ruler_depth,
     to_decimals,
     truth80,
     word_value,
@@ -87,44 +75,31 @@ from vocab import (
 OP, ARG = "exp", "40"
 LIBS = ("solady", "balancer", "prb")  # the three answers the talk names
 OURS = ("bl127", "bl19")  # Blockulator's, from the same probe, in the order they unfold
+SHOWN = {"bl127": 40, "bl19": 60}  # the decimals each word is drawn to (the stated format, "to N decimals")
 WORD_DECIMALS = 18
-RULER_EVERY = 10  # the ruler marks every tenth decimal; a block of ten is typed as one beat
+LINE = 20  # decimals per line of a word: the first line carries the integer part and the point too
 
-X_LEFT = -5.79  # digit strings and row labels start here: right of the left mark (vocab's TITLE_GAP)
+X_LEFT = -5.79  # every digit row and row name starts here: right of the left mark (vocab's TITLE_GAP)
 X_RIGHT = 5.9  # the right-hand labels end here, clear of the right mark
-Y_TOP = 3.325  # the exact row's name line: the marks' centre line (the row is the slide's title)
-PITCH = 1.04  # row to row (the exact row and the three library rows)
-LABEL_DROP = 0.38  # label line to digit line
-MONO = SIZE_BODY
-SANS = 23
-SANS_OURS = 25
+Y_TITLE = 3.325  # the title line: the marks' centre line
+MONO = 36  # every digit row (the 39-glyph first line of a word is 11.6 units at 36)
+SANS = SIZE_BODY  # row names and labels
+TITLE_SIZE = 36
+EXACT_Y = 2.74  # the exact row's digits, under the title
+ROW_TOP = 1.85  # the first library row's name line
+PITCH = 1.4  # library row to library row
+NAME_DROP = 0.48  # a name line to its digits' first line
+WORD_TOP = 1.85  # BL127's name line (where the library rows were)
+WORD_PITCH = 0.6  # a word's digit line to the next
+WORD_GAP = 0.75  # the bottom of BL127's bracket label to BL19's name line
 
-# the two words in full: a first line with the integer part, the point and
-# LINE1 decimals, then lines of LINE decimals, at MONO_WORD (the largest mono
-# size at which 50 digits sit inside the safe area: 50 × 0.232 = 11.6 units)
-MONO_WORD = 28
-LINE1 = 30
-LINE = 50
-WORD_PITCH = 0.63  # digit line to digit line, the ruler strip between
-NAME_DROP = 0.36  # a word's name line to its first digit line
-NAME_GAP = 0.27  # the last ruler's numbers to the next word's name line
-CTX_Y = 2.57  # the one line of context (then the first closing line)
-CLOSE2_Y = 2.245  # the second closing line
-WORD_TOP = 1.87  # the first word's name line
-SANS_CLOSE = 24  # the two closing lines, stacked where the context line was
-
-EXACT_LABEL = f"e<sup>40</sup> to {WORD_DECIMALS} decimals"  # the first row's name (markup)
+EXACT_LABEL = f"e<sup>40</sup> to {WORD_DECIMALS} decimals"  # the title row's name (markup)
 EXACT_RIGHT = f"the closest {WORD_DECIMALS}-decimal value"
-CAPTION = "docs/benchmarks/edges.json · exp(40)"
-CLOSE = "three good answers, none the closest · Blockulator: all 18"
-END_TEXT = "the word's precision ends here"
 
 # the digit-bearing fixed strings on the slide, each with its claim id (research_notes/talk/claims.md)
 LITERALS = {
     EXACT_LABEL: "V9",  # e^40 and its correctly rounded 18-decimal word
     EXACT_RIGHT: "V9",
-    CAPTION: "V9",  # the exp(40) probe
-    CLOSE: "V29",  # three distinct 18-decimal answers, none the closest; Blockulator's words round to it
 }
 
 
@@ -141,46 +116,32 @@ def wrong_decimal(first_wrong: int, truth: str) -> int:
     return first_wrong - point if first_wrong > point else 0
 
 
-def row_label_text(r: dict) -> str:
-    """An 18-decimal row's label: the count of correct decimals and where
-    the first wrong one sits, both from the data."""
-    where = f"at the {ordinal(r['wrong_decimal'])} decimal" if r["wrong_decimal"] else "before the point"
-    return f"{r['decimals']} right · wrong {where}"
+def right_text(decimals: int) -> str:
+    """Every row's one label: the decimals that match e^40, counted by eye."""
+    return f"{decimals} decimals right"
 
 
-def ours_label_text(r: dict) -> str:
-    """A word's label: how many leading digits of the whole word match
-    e^40 to 80 decimals, by eye, and how many decimals that covers."""
-    return f"{r['matching']} digits right · {r['decimals_right']} decimals"
+def name_text(label: str, shown: int) -> str:
+    """A word's name line: the library and the stated format."""
+    return f"{label} to {shown} decimals"
 
 
-def end_text(r: dict) -> str:
-    """The bracket under the first digit past the matching prefix."""
-    return f"{END_TEXT} · {r['decimals_right']} decimals"
-
-
-def context_text(rows: list[dict]) -> str:
-    """The three library rows as one faint line: their names and their
-    correct decimals, in the rows' order."""
-    return " · ".join(r["label"] for r in rows) + ": " + " · ".join(str(r["decimals"]) for r in rows) + " decimals right"
-
-
-def close2_text(ours: list[dict]) -> str:
-    """The second closing line: each word's decimals, every one of them
-    right (each word's matching prefix covers all of its stated decimals)."""
-    return " · ".join(f"{r['label']}: {r['decimals_right']} decimals" for r in ours) + " · every one of them right"
-
-
-def word_lines(word: str) -> list[str]:
-    """A word's expansion as the lines the slide draws: the integer part,
-    the point and the first LINE1 decimals, then LINE decimals per line;
+def word_lines(value: str) -> list[str]:
+    """A word to N decimals as the lines the slide draws: the integer part,
+    the point and the first LINE decimals, then LINE decimals per line;
     every decimal appears on exactly one line."""
-    whole, _, frac = word.partition(".")
-    lines = [whole + "." + frac[:LINE1]]
-    for k in range(LINE1, len(frac), LINE):
-        lines.append(frac[k : k + LINE])
-    assert "".join(lines).replace(".", "") == whole + frac, word
+    whole, _, frac = value.partition(".")
+    lines = [whole + "." + frac[:LINE]] + [frac[k : k + LINE] for k in range(LINE, len(frac), LINE)]
+    assert "".join(lines).replace(".", "") == whole + frac, value
     return lines
+
+
+def block_text(lines: list[str], point: int) -> str:
+    """The lines as one mono string: each later line indented under the
+    first line's decimals, so decimal k and k + LINE share a column. Text
+    keeps a (zero-width) submobject per space and line break, so glyph i
+    is character i."""
+    return "\n".join([lines[0]] + [" " * (point + 1) + ln for ln in lines[1:]])
 
 
 def numbers() -> dict:
@@ -207,39 +168,38 @@ def numbers() -> dict:
         # the red digit and the count hold against the rounded row on screen and against the probe's own truth
         assert first_wrong_index(value, exact_row) == fw and matching_decimals(value, exact_row) == r["decimals"], (lid, fw)
         assert first_wrong_index(value, p["truth"]) == fw and matching_decimals(value, p["truth"]) == r["decimals"], (lid, fw)
-        r["right_label"] = row_label_text(r)
+        r["right_label"] = right_text(r["decimals"])
         rows.append(r)
     ours = []
     for lid in OURS:
         cell = p["cells"][lid]
         q = word_value(lid, cell["raw"])  # the word, exactly (decode_bl127 / decode_bl19)
         word = exact_decimals(q)  # its complete decimal expansion: every digit the word holds
-        value = to_decimals(q, TRUTH_DECIMALS)  # the same word to 80 decimals, nearest
-        assert value.startswith(cell["value"][:-1]), (lid, value, cell["value"])  # the cell prints the same word
+        shown = to_decimals(q, SHOWN[lid])  # the word to N decimals, nearest: what the slide draws
+        assert to_decimals(q, TRUTH_DECIMALS).startswith(cell["value"][:-1]), (lid, cell["value"])  # the cell prints the same word
         m = matching_digits(word, truth)
-        assert m == matching_digits(value, truth), (lid, m)  # the count by eye is the same on either string
+        assert m == matching_digits(shown, truth), (lid, m)  # the count by eye is the same on the drawn string
         word18 = correctly_rounded_18(word)  # the word rendered to 18 decimals, nearest
         assert m >= word_digits and lib[lid].get("ours") and word18 == exact_row, (lid, m, word18)
         dec = m - len(integer_part)  # the decimals the matching prefix covers (the integer part is inside it)
-        word_decimals = len(word.partition(".")[2])
-        assert WORD_DECIMALS <= dec < word_decimals, (lid, dec, word_decimals)  # the tail past the prefix is on the slide too
+        assert WORD_DECIMALS <= dec < SHOWN[lid] < len(word.partition(".")[2]), (lid, dec)  # the bracket falls inside the drawn digits
         r = {
             "id": lid,
             "label": lib[lid]["label"],
-            "value": value,
             "word": word,
-            "word_decimals": word_decimals,
-            "lines": word_lines(word),
+            "word_decimals": len(word.partition(".")[2]),
+            "shown": shown,
+            "shown_decimals": SHOWN[lid],
+            "lines": word_lines(shown),
             "word18": word18,
             "matching": m,
             "decimals_right": dec,
             "digits": int(cell["digits"]),
         }
-        r["right_label"] = ours_label_text(r)
-        r["end_label"] = end_text(r)
+        r["name_line"] = name_text(r["label"], SHOWN[lid])
+        r["right_label"] = right_text(dec)
         ours.append(r)
     by_id = {r["id"]: r for r in ours}
-    longest = max(r["word_decimals"] for r in ours)
     return {
         "truth": truth,
         "truth_decimals": TRUTH_DECIMALS,
@@ -255,36 +215,22 @@ def numbers() -> dict:
         "bl19_match": by_id["bl19"]["matching"],
         "bl127_decimals": by_id["bl127"]["decimals_right"],
         "bl19_decimals": by_id["bl19"]["decimals_right"],
-        "ruler_marks": list(range(RULER_EVERY, longest + 1, RULER_EVERY)),
-        "context": context_text(rows),
-        "close2": close2_text(ours),
     }
 
 
 class Exp40(DeckScene):
-    SECTIONS = ("exact", "libraries", "blockulator", "closing")
+    SECTIONS = ("exact", "libraries", "blockulator")
 
     def row_y(self, i: int) -> float:
-        return Y_TOP - i * PITCH
+        """Library row i's name line (i = 1, 2, 3)."""
+        return ROW_TOP - (i - 1) * PITCH
 
-    def place_row(self, i: int, label: str, label_colour: str, value: str, digit_colour: str = Palette.TEXT, mono: float = MONO, sans: float = SANS, label_markup: bool = False, as_title: bool = False):
-        """A row: its name above, its digits below. label_markup sets the
-        name in Pango markup (a superscript); as_title puts the name beside
-        the left mark through self.title() (the exact row: the slide's
-        title line) instead of over the digits."""
-        y = self.row_y(i)
-        txt = digits(value, mono, digit_colour)
-        txt.move_to([X_LEFT + txt.width / 2, y - LABEL_DROP, 0])
-        if as_title:
-            return self.title(label, sans, label_colour, use_markup=label_markup), txt
-        lbl = (markup if label_markup else words)(label, sans, label_colour)
-        lbl.move_to([txt.get_left()[0] + lbl.width / 2, y, 0])
-        return lbl, txt
+    def at_left(self, mobj, y: float):
+        return mobj.move_to([X_LEFT + mobj.width / 2, y, 0])
 
     def right_label(self, y: float, text: str, colour: str, size: float = SANS):
         t = words(text, size, colour)
-        t.move_to([X_RIGHT - t.width / 2, y, 0])
-        return t
+        return t.move_to([X_RIGHT - t.width / 2, y, 0])
 
     def mark_wrong(self, txt, k: int, after=Palette.FAINT):
         """Light the first wrong digit and dim everything after it."""
@@ -296,106 +242,95 @@ class Exp40(DeckScene):
         )
         self.play(Transform(glyph, glyph.copy().scale(1 / 1.35), run_time=0.25))
 
-    def unfold_word(self, r: dict, name_y: float, colour: str, lit: str, glow: bool, point: int) -> float:
-        """A word in full: its name at the left of the name line, the
-        expansion typed line by line in blocks of ten, a ruler under each
-        line, the matched digits lit and the tail MUTED, the bracket where
-        the precision ends, then the count at the right of the name line.
-        Returns the y of the bottom of the last ruler strip."""
-        name = words(r["label"], SANS_OURS, colour)
-        name.move_to([X_LEFT + name.width / 2, name_y, 0])
+    def bracket(self, txt, k: int, text: str, colour: str):
+        """The word's one label at the point its precision ends: vocab's
+        precision_end() under the gap before glyph k, its label turned to
+        the left of the tick (the matching digits are the ones it counts,
+        and the drawn digits end a few glyphs to the right)."""
+        end = precision_end(txt, k, text, colour, size=SANS)
+        tick, foot, label = end
+        x = tick.get_x()
+        y = foot.get_y()
+        end.remove(foot)
+        foot = Line([x, y, 0], [x - 0.1, y, 0], color=colour, stroke_width=2.5)
+        label.move_to([x - 0.16 - label.width / 2, label.get_y(), 0])
+        return VGroup(tick, foot, label)
+
+    def unfold_word(self, r: dict, name_y: float, colour: str, glow: bool, point: int) -> float:
+        """A word to its stated decimals: its name line, then the block
+        typed in (integer part, point and 20 decimals; then 20 a line under
+        the decimals), the matching digits lit and the rest MUTED, then the
+        bracket with the count. Returns the y of the bracket label's bottom."""
+        name = self.at_left(words(r["name_line"], SANS, colour), name_y)
         self.play(FadeIn(name, shift=RIGHT * 0.1, run_time=0.4))
+        txt = digits(block_text(r["lines"], point), MONO, colour)
+        txt.shift([X_LEFT - txt[0].get_left()[0], name_y - NAME_DROP - txt[0].get_y(), 0])
+        # glyph index of decimal d (1-based): the first line holds point + 1 + LINE glyphs, a line break,
+        # then each later line is point + 1 spaces and LINE decimals
+        stride = point + 1 + LINE + 1
+        for j in range(1, len(r["lines"])):  # open the lines to WORD_PITCH (the font's own leading is tighter)
+            line = txt[j * stride : (j + 1) * stride]
+            line.shift(UP * (txt[0].get_y() - j * WORD_PITCH - txt[j * stride + point + 1].get_y()))
+
+        def glyph_of(d: int) -> int:
+            line, col = divmod(d - 1, LINE)
+            return line * stride + point + 1 + col
+
         dec_right = r["decimals_right"]
-        first = 0  # the 1-based decimal index of the line's first decimal, less one
-        y = name_y - NAME_DROP
-        for j, line in enumerate(r["lines"]):
-            txt = digits(line, MONO_WORD, lit)
-            txt.move_to([X_LEFT + txt.width / 2, y, 0])
-            offset = point + 1 if j == 0 else 0  # glyphs before the first decimal on this line
-            n_dec = len(line) - offset
-
-            def decimal_of(g: int) -> int:  # the 1-based decimal index under glyph g
-                return first + g - offset + 1
-
-            # the tail past the matching prefix is the word's own, MUTED (never red)
-            k_end = None
-            for g in range(offset, len(line)):
-                if decimal_of(g) > dec_right:
-                    k_end = g
-                    break
-            if k_end is not None:
-                txt[k_end:].set_color(Palette.MUTED)
-            lit_to = len(line) if k_end is None else k_end  # glyphs lit on this line
-            if glow and lit_to:
-                band = glow_line([txt[0].get_left() * [1, 0, 0] + [0, y, 0], txt[lit_to - 1].get_right() * [1, 0, 0] + [0, y, 0]], colour, width=34, opacity=0.10)
+        for d in range(dec_right + 1, r["shown_decimals"] + 1):
+            txt[glyph_of(d)].set_color(Palette.MUTED)  # the word's own digits past the match: never red
+        if glow:
+            # the glow under the lit digits, one band per line
+            for j in range((dec_right - 1) // LINE + 1):
+                first = 0 if j == 0 else glyph_of(j * LINE + 1)
+                last = glyph_of(min((j + 1) * LINE, dec_right))
+                y = txt[last].get_y()
+                band = glow_line([[txt[first].get_left()[0], y, 0], [txt[last].get_right()[0], y, 0]], colour, width=44, opacity=0.10)
                 self.add(band)
-            marks = [(g, decimal_of(g)) for g in range(offset, len(line)) if decimal_of(g) % RULER_EVERY == 0]
-            end = None
-            if k_end is not None and k_end >= offset and decimal_of(k_end) == dec_right + 1:
-                end = precision_end(txt, k_end, r["end_label"], colour)
-            strip = ruler(txt, marks, avoid=end.avoid if end else None)
-            self.play(AddTextLetterByLetter(txt, time_per_char=0.025))
-            self.play(FadeIn(strip, run_time=0.2))
-            if end is not None:
-                self.play(FadeIn(end, shift=UP * 0.05, run_time=0.4))
-            first += n_dec
-            last = txt
-            y -= WORD_PITCH
-        right = self.right_label(name_y, r["right_label"], colour, size=SANS_OURS)
-        self.play(FadeIn(right, shift=LEFT * 0.08, run_time=0.4))
-        return last.get_bottom()[1] - ruler_depth()
+        self.play(AddTextLetterByLetter(txt, time_per_char=0.03))
+        end = self.bracket(txt, glyph_of(dec_right + 1), r["right_label"], colour)
+        self.play(FadeIn(end, shift=UP * 0.05, run_time=0.5))
+        return end[2].get_bottom()[1]
 
     def construct(self):
         n = numbers()
         rows = n["rows"]
         point = len(n["truth"].partition(".")[0])  # index of the point in every row
-        self.section(0)
-        # the chrome: the caption, the title (the exact row's name) and the three
-        # library rows' names (the keys, in their family colour) are on the first frame
-        self.caption_now(CAPTION)
-        e_lbl, e_txt = self.place_row(0, EXACT_LABEL, Palette.EXACT, n["exact_row"], label_markup=True, as_title=True)
-        self.fix(e_lbl)
         lib = libs()
-        placed = [self.place_row(i, r["label"], colour_of(lib[r["id"]]), r["value"]) for i, r in enumerate(rows, start=1)]
-        self.fix(*[lbl for lbl, _ in placed])
+        self.section(0)
+        # the chrome: the title (the exact row's name) and the three library rows'
+        # names (the keys, in their family colour) are on the first frame
+        title = self.title(EXACT_LABEL, TITLE_SIZE, Palette.EXACT, use_markup=True)
+        names = [self.at_left(words(r["label"], SANS, colour_of(lib[r["id"]])), self.row_y(i)) for i, r in enumerate(rows, start=1)]
+        self.fix(title, *names)
+        e_txt = self.at_left(digits(n["exact_row"], MONO, Palette.EXACT), EXACT_Y)
         self.wait(0.3)
 
         # the closest 18-decimal value: e^40 rounded at the 18th decimal, complete; its name is the slide's title
         self.play(AddTextLetterByLetter(e_txt, time_per_char=0.06))
         self.wait(0.3)
-        e_right = self.right_label(self.row_y(0), EXACT_RIGHT, Palette.FAINT)
+        e_right = self.right_label(Y_TITLE, EXACT_RIGHT, Palette.MUTED)
         self.play(FadeIn(e_right, run_time=0.5))
 
         # three answers, counted in decimals: the word promises 18
         self.section(1)
-        row_mobjects = VGroup()
+        story = VGroup(e_right, *names)
         for i, r in enumerate(rows, start=1):
-            lbl, txt = placed[i - 1]
+            txt = self.at_left(digits(r["value"], MONO, Palette.TEXT), self.row_y(i) - NAME_DROP)
             self.play(AddTextLetterByLetter(txt, time_per_char=0.065))
             self.wait(0.3)
             self.mark_wrong(txt, r["first_wrong"])
+            self.add(txt)  # the Transform split the row into glyphs on the scene; put it back whole
             right = self.right_label(self.row_y(i), r["right_label"], Palette.MUTED)
             self.play(FadeIn(right, run_time=0.4))
-            row_mobjects.add(lbl, txt, right)
-            self.wait(2.0)
+            story.add(txt, right)
+            self.wait(1.5)
 
-        # the reveal: the two words in full, every decimal they hold, the matching prefix lit
+        # the reveal: the three rows leave; Blockulator's two words take their place, last, lit where they match
         self.section(2)
-        context = words(n["context"], SANS, Palette.FAINT)
-        context.move_to([0, CTX_Y, 0])
-        self.play(FadeOut(row_mobjects, shift=UP * 0.3, run_time=0.7), FadeIn(context, shift=UP * 0.3, run_time=0.7))
+        self.play(FadeOut(story, shift=UP * 0.3, run_time=0.7))
         by_id = {r["id"]: r for r in n["ours"]}
-        name_y = WORD_TOP
-        # BL127: EMERALD digits; BL19: its family colour, white, under a glow (EXACT's white is the row at the top)
-        bottom = self.unfold_word(by_id["bl127"], name_y, Palette.EMERALD, Palette.EMERALD, glow=False, point=point)
-        name_y = bottom - NAME_GAP
-        self.unfold_word(by_id["bl19"], name_y, Palette.TEXT, Palette.TEXT, glow=True, point=point)
-        self.wait(2.0)
-
-        # the closing lines take the context line's place: the verdict on the three, then on the two
-        self.section(3)
-        close = words(CLOSE, SANS_CLOSE, Palette.BODY).move_to([0, CTX_Y, 0])
-        close2 = words(n["close2"], SANS_CLOSE, Palette.BODY).move_to([0, CLOSE2_Y, 0])
-        self.play(ReplacementTransform(context, close, run_time=0.8))
-        self.play(FadeIn(close2, shift=UP * 0.08, run_time=0.8))
+        # BL127: EMERALD; BL19: its family colour, white, under a glow (EXACT's white is the title row)
+        bottom = self.unfold_word(by_id["bl127"], WORD_TOP, Palette.EMERALD, glow=False, point=point)
+        self.unfold_word(by_id["bl19"], bottom - WORD_GAP, Palette.TEXT, glow=True, point=point)
         self.close()
