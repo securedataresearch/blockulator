@@ -1,0 +1,19 @@
+{
+  "_doc": "Drafted fixes for the report card, one per row that is a few digits short or worse (the user, 2026-10-30: 'these people will be in the audience, this has to be HELPFUL'). Each names the step that loses the digits at the row's worst normal input, read from the pinned source (talk/briefs/tiers-provenance.md); none is a tested patch. Approved by the user 2026-10-30 ('report cards look great now').",
+  "status": "approved",
+  "fixes": {
+    "prb": "pow: log2 in more bits",
+    "prbud": "pow: log2 in more bits",
+    "gmx-v2-price-impact": "pow in 30 decimals",
+    "curve-twocrypto-get-y": "Newton to the last unit",
+    "algebra-v1-fee": "no sigmoid cutoff at 6γ",
+    "curve-stableswap": "dynamic fee in 18 decimals",
+    "maverick-v2-tickmath": "exact tick constants",
+    "euler-adaptive-curve": "a full exp step",
+    "uniswap-v3-twap": "quote the fractional mean tick",
+    "aave-v3": "exp, not three terms",
+    "sparklend": "exp, not three terms",
+    "morpho-blue": "exp, not three terms",
+    "fraxlend": "2^(t/H), as documented"
+  }
+}
