@@ -27,6 +27,14 @@ These are the user's rules. They are not negotiable and they are not summarised;
 - One idea per section; the section owns the frame (the previous beat leaves; only chrome stays). Text per frame: the title, at most one sentence, labels on objects. No tables or row lists; the one number that matters is HERO size on the thing it describes.
 - Things are things: tanks, blocks, balls on a lattice, gates; repetitions are objects multiplying; the camera orbits on reveals. Charts stay 2D. See talk/briefs/3d-direction.md for the vocabulary (`talk/scenes/vocab3d.py`).
 
+## The edit pass: one thing per frame (user, 2026-10-30; talk/briefs/edit-pass.md)
+- **The section owns the frame, and the poster holds only the conclusion.** When a beat ends its elements FadeOut or transform into the next beat's one object; nothing is dimmed to stay. The last section's held frame shows the slide's one conclusion and the object that proves it, not the whole story.
+- **The budget:** a held frame has at most 12 lit text strings and 260 glyphs and 0 ghosts (text below fill opacity 0.5); the title counts, a chart's key does not. `uv run talk/scenes/census.py sNN_name` prints every held frame's counts and the poster's verdict; a scene is not done until it is under budget.
+- **The slide shows; the speaker says.** No sentence of the script on a slide (s07's box, s13's line and s18's title are the three exceptions). Closing lines, "what you saw" summaries and explanatory sub-lines go to the slide's `notes` in slides.yaml.
+- **A number once.** One representation per quantity (a bracket or a median label; a counter or a box). "to N decimals" stays: it is part of the number.
+- **No source code and no source caption on a slide.** Provenance (file:line, block, tx) goes to the slide's notes; `caption_now`/`caption` are not called. The key on a chart stays (all 17 libraries) as one compact CAPTION-size column, the no-value reasons one line inside it.
+- **Fewer strings, bigger type.** A lone hero number goes to 64–72. Nothing is shrunk to fit; what does not fit is cut. At most four sections per slide (a replay five).
+
 ## Legibility (1920×1080, a dark room, the back row)
 - `SIZE_CAPTION = 20` (the source caption only), `SIZE_BODY = 32` (everything else), `SIZE_HERO = 48` (the one hero number or line). These are manim font sizes in scene units, not pixels: the frame is 14.2 units wide, a mono character at size 32 is about 0.26 units, so a mono line holds about 46 characters at BODY and a 42-character address does not fit at HERO (draw it at the largest size that fits, and say so in the report). Nothing below CAPTION, ever; below BODY only when a string cannot fit, reported.
 - 5% safe area on every edge. One idea per section. Nothing smaller than `SIZE_CAPTION`, ever.

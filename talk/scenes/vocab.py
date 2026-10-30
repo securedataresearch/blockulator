@@ -218,6 +218,37 @@ LOGO_CORNER = (6.75, 3.6)  # the marks' outer corners: 0.36 in from the frame's 
 TITLE_GAP = 0.3  # the left mark to the slide's title
 
 
+GHOST_OPACITY = 0.5  # a text drawn below this fill opacity is a ghost: dimmed, still on the frame
+
+
+def text_census(scene) -> tuple[int, int, int]:
+    """What a held frame asks the eye to read: the Text/MarkupText mobjects
+    on the scene with any ink, split into lit strings (fill opacity at or
+    above GHOST_OPACITY) and ghosts (dimmed leftovers), and the glyphs in
+    the lit ones (markup tags and spaces not counted). The logos and the
+    caption are text too and are counted: the audience sees them."""
+    lit = ghost = glyphs = 0
+    seen = set()
+    for m in scene.mobjects:
+        for sm in m.get_family():
+            if not isinstance(sm, (Text, MarkupText)) or id(sm) in seen:
+                continue
+            # a Text's family is its glyphs (VMobjects), not Texts: count the Text once
+            seen.add(id(sm))
+            parts = [g for g in sm.family_members_with_points() if g is not sm]
+            if not parts:
+                continue
+            op = max(g.get_fill_opacity() for g in parts)
+            if op <= 0.02:
+                continue
+            if op < GHOST_OPACITY:
+                ghost += 1
+            else:
+                lit += 1
+                glyphs += len(re.sub(r"<[^>]+>|\s", "", getattr(sm, "original_text", None) or sm.text))
+    return lit, ghost, glyphs
+
+
 class DeckScene(Scene):
     """Dark background, the fonts registered, the two marks at the top
     corners (self.chrome: never animated, never dimmed; scenes leave it
@@ -239,6 +270,8 @@ class DeckScene(Scene):
         self.camera.background_color = Palette.BG
         self._caption = None
         self.sections_called: list[str] = []
+        # the held frame of every section, as text_census() counts it: (name, lit strings, ghost strings, glyphs)
+        self.held: list[tuple[str, int, int, int]] = []
         # the chrome goes in first, so every frame carries it; it is a Group of
         # ImageMobjects, not a VMobject, so a scene's "dim everything" over
         # VMobjects leaves it alone
@@ -292,12 +325,15 @@ class DeckScene(Scene):
         if i:
             self.wait(hold)
         name = self.SECTIONS[i]
+        if i:
+            self.held.append((self.SECTIONS[i - 1], *text_census(self)))
         self.next_section(name)
         self.sections_called.append(name)
 
     def close(self, hold: float = END_HOLD) -> None:
         """The final hold: every section must have been called."""
         assert self.sections_called == list(self.SECTIONS), (self.sections_called, self.SECTIONS)
+        self.held.append((self.SECTIONS[-1], *text_census(self)))
         self.wait(hold)
 
     def caption(self, text: str, size: float = SIZE_CAPTION, run_time: float = 0.6):
