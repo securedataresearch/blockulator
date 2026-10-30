@@ -140,8 +140,8 @@ TIER_RULE = {
     "S": "correctly rounded: every answer the closest the format holds",
     "A": "about 30 correct digits on the talk's data",
     "B": "18 decimals, as documented; zero below 10<sup>-18</sup> is the floor",
-    "C": "fewer digits than the format holds, or a revert inside the domain",
-    "F": "a rounding step that lost money",
+    "C": "10 digits or more, but fewer than the format holds",
+    "F": "under 10 digits, a revert inside the domain, or a rounding step that lost money",
 }
 TIER_RULE_CLAIM = "user 2026-10-30 tier rule"  # the LITERALS claim id of the legend's lines
 

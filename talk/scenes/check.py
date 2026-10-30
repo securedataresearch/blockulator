@@ -1473,21 +1473,22 @@ def expect_s21_tiers_libs(mod) -> dict:
         elif is_b:
             tier, label = "B", None
         elif c_revert:
-            tier, label = "C", "reverts from exp(" + revert_from[lid].replace("-", "\u2212") + ")"
+            tier, label = "F", "reverts from exp(" + revert_from[lid].replace("-", "\u2212") + ")"
         elif c_live:
-            tier, label = "C", f"{live_med[lid]} digits live"
+            tier, label = ("F" if float(live_med[lid]) < 10 else "C"), f"{live_med[lid]} digits live"
         else:
-            tier, label = "C", f"{fmt(lo)} digits"
+            tier, label = ("F" if float(lo) < 10 else "C"), f"{fmt(lo)} digits"
         rows.append({"id": lid, "label": rec["label"], "family": rec["family"], "tier": tier, "chip": label, "ladder_min": None if lo is None else float(lo), "compound": None if comp is None else float(comp)})
     by_tier = {t: [r["id"] for r in rows if r["tier"] == t] for t in vocab.TIERS}
     # the report card the plan expects (talk/briefs: "The tier list"); a difference here is a REPORT item, not a fix
     assert by_tier["S"] == ["bl19", "bl127"] and by_tier["A"] == ["quad"], by_tier
     assert by_tier["B"] == ["solady", "solmate", "prb", "prbud", "snekmate", "oz", "uniswap"], by_tier["B"]
-    assert by_tier["C"] == ["abdk", "balancer", "maker", "aave", "morpho", "fraxlend", "euler"] and by_tier["F"] == [], by_tier
+    assert by_tier["C"] == ["abdk", "maker"] and by_tier["F"] == ["balancer", "aave", "morpho", "fraxlend", "euler"], by_tier
     assert revert_from == {"balancer": "-42"}, revert_from
     assert mod.TiersLibs.SECTIONS == ("rule", "grades", "blockulator")
-    assert mod.LITERALS == {vocab.TIER_RULE["A"]: vocab.TIER_RULE_CLAIM, vocab.TIER_RULE["B"]: vocab.TIER_RULE_CLAIM}
-    assert not any(ch.isdigit() for ch in mod.TITLE + vocab.TIER_RULE["S"] + vocab.TIER_RULE["C"] + vocab.TIER_RULE["F"])
+    assert mod.LITERALS == {vocab.TIER_RULE[t]: vocab.TIER_RULE_CLAIM for t in ("A", "B", "C", "F")}
+    assert mod.F_BELOW_DIGITS == 10
+    assert not any(ch.isdigit() for ch in mod.TITLE + vocab.TIER_RULE["S"])
     return {"N": n_last, "rows": rows, "by_tier": by_tier, "misrounded": misrounded, "revert_from": revert_from, "live_median": live_med}
 
 
@@ -1507,11 +1508,13 @@ def expect_s22_tiers_exchanges(mod) -> dict:
         assert r["tier"] in ("S", "A", "B", "C", "F"), (r["id"], r["tier"])
         assert r["kind"] in ("exchange", "protocol", "incident"), (r["id"], r["kind"])
         assert isinstance(r["fact"], str) and r["fact"] and r["source"]["ref"] and r["claim"], r["id"]
-        rows.append({"id": r["id"], "name": r["name"], "kind": r["kind"], "tier": r["tier"], "fact": r["fact"]})
+        rows.append({"id": r["id"], "name": r["name"], "short": r.get("short", r["name"]), "kind": r["kind"], "tier": r["tier"], "fact": r["fact"]})
     inc = {i["protocol"] for i in json.loads((vocab.ROOT / "talk/scenes/data/incidents.json").read_text())["incidents"]}
     incidents = [r for r in rows if r["kind"] == "incident"]
     assert {r["name"] for r in incidents} == inc and all(r["tier"] == "F" for r in incidents), incidents
-    assert all(r["kind"] == "incident" for r in rows if r["tier"] == "F"), "F is for the incidents alone"
+    # the user's rule (2026-10-30): F = under 10 digits, a revert in the domain, or a rounding step that lost money
+    assert all(r["tier"] == "F" for r in rows if r["kind"] == "incident"), "every incident is F"
+    assert sorted(r["name"] for r in rows if r["tier"] == "F" and r["kind"] != "incident") == sorted(["Aave v3 (Ethereum)", "Morpho Blue", "SparkLend", "FraxLend VariableInterestRate V2", "Euler v2 IRMAdaptiveCurve"]), "the under-10-digit rows"
     assert mod.TiersExchanges.SECTIONS == ("rule", "exchanges", "lenders", "incidents") and mod.LITERALS == {}
     # the drawn facts: a dry run, then every "· …" string is a row's fact
     scene = dry_run(mod)

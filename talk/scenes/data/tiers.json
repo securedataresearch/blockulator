@@ -1,11 +1,11 @@
 {
-  "_doc": "Slide 20, the report card: exchanges and lending protocols graded by the rule below, one row per component, plus the five incidents of incidents.json graded F. Every row's 'fact' is a measurement or a documented choice, stated as measured and never as a defect; a library's or protocol's documented precision is not a defect; no loss is claimed at any exchange. 'fact' is what the slide may print beside the name (<= 48 chars); 'measured' says how the number was obtained; 'source.ref' is the repo JSON that holds the number or the protocol's source file at a pinned commit; 'claim' is the T-id in talk/briefs/tiers-provenance.md, which quotes the line or shows the computation. Incident rows copy name, date, loss, lossUsd, rounding (as 'measured') and source (as 'note') verbatim from incidents.json. Generated 2026-10-30; rows the draft listed but that could not be pinned are listed in the provenance note under 'not pinned'.",
+  "_doc": "Slide 20, the report card: exchanges and lending protocols graded by the rule below, one row per component, plus the five incidents of incidents.json graded F. Every row's 'fact' is a measurement or a documented choice, stated as measured and never as a defect; a library's or protocol's documented precision is not a defect; no loss is claimed at any exchange. 'fact' is what the slide may print beside the name (<= 48 chars); 'measured' says how the number was obtained; 'source.ref' is the repo JSON that holds the number or the protocol's source file at a pinned commit; 'claim' is the T-id in talk/briefs/tiers-provenance.md, which quotes the line or shows the computation. Incident rows copy name, date, loss, lossUsd, rounding (as 'measured') and source (as 'note') verbatim from incidents.json. Generated 2026-10-30; rows the draft listed but that could not be pinned are listed in the provenance note under 'not pinned'. 2026-10-30: the user's rule moves under-10-digit rows and in-domain reverts to F (Aave v3, Morpho Blue, SparkLend, FraxLend, Euler v2). 'short' is the chip's name on the slide where 'name' is too long to fit; 'name' stays the row's full name for the notes.",
   "rule": {
     "S": "S · correctly rounded or integer-exact: every answer the closest the format holds (for an exchange: the swap maths is exact integer arithmetic, nothing to round)",
     "A": "A · about 30 correct digits on the talk's data",
     "B": "B · the format's 18 decimals, as documented; zero below 10^-18 is the floor; a small documented precision choice",
-    "C": "C · fewer digits than the format holds, or a cliff or revert inside the domain; a rate model measurably off its documented value",
-    "F": "F · a rounding step that lost money"
+    "C": "C · 10 correct digits or more, but fewer than the format holds; a model measurably off its documented value",
+    "F": "F · under 10 correct digits, a revert inside the domain, or a rounding step that lost money (the user's rule, 2026-10-30)"
   },
   "rows": [
     {
@@ -34,7 +34,8 @@
         "licence": "v3-core: BUSL-1.1 header, Change Date 2023-04-01 passed, Change License GPL-2.0-or-later; v4-core: MIT",
         "accessed": "2026-10-30"
       },
-      "claim": "T2"
+      "claim": "T2",
+      "short": "Uniswap v3/v4 swap"
     },
     {
       "id": "curve-stableswap",
@@ -48,7 +49,8 @@
         "licence": "Curve.Fi, all rights reserved (ng header: 'Copyright (c) Curve.Fi, 2020-2023 - all rights reserved'); read only, no transcription",
         "accessed": "2026-10-30"
       },
-      "claim": "T3"
+      "claim": "T3",
+      "short": "Curve StableSwap"
     },
     {
       "id": "aerodrome-stable",
@@ -62,7 +64,8 @@
         "licence": "Pool.sol header: GPL-3.0-or-later (repo licence field unset; the draft said BUSL)",
         "accessed": "2026-10-30"
       },
-      "claim": "T4"
+      "claim": "T4",
+      "short": "Aerodrome stable"
     },
     {
       "id": "trader-joe-lb-swap",
@@ -76,7 +79,8 @@
         "licence": "MIT",
         "accessed": "2026-10-30"
       },
-      "claim": "T5"
+      "claim": "T5",
+      "short": "Trader Joe LB swap"
     },
     {
       "id": "uniswap-v3-tickmath",
@@ -90,7 +94,8 @@
         "licence": "v3-core TickMath.sol: GPL-2.0-or-later; v4-core: MIT",
         "accessed": "2026-10-30"
       },
-      "claim": "T6"
+      "claim": "T6",
+      "short": "Uniswap TickMath"
     },
     {
       "id": "trader-joe-lb-price",
@@ -104,7 +109,8 @@
         "licence": "MIT",
         "accessed": "2026-10-30"
       },
-      "claim": "T7"
+      "claim": "T7",
+      "short": "Trader Joe LB price"
     },
     {
       "id": "uniswap-v3-twap",
@@ -118,7 +124,8 @@
         "licence": "GPL-2.0-or-later",
         "accessed": "2026-10-30"
       },
-      "claim": "T8"
+      "claim": "T8",
+      "short": "Uniswap v3 TWAP"
     },
     {
       "id": "pendle-market",
@@ -132,7 +139,8 @@
         "licence": "GPL-3.0-or-later (file header)",
         "accessed": "2026-10-30"
       },
-      "claim": "T9"
+      "claim": "T9",
+      "short": "Pendle"
     },
     {
       "id": "gmx-v2-price-impact",
@@ -146,7 +154,8 @@
         "licence": "BUSL-1.1, Change Date 31 August 2026, Change License GPL-2.0-or-later (LICENSE at the pinned commit)",
         "accessed": "2026-10-30"
       },
-      "claim": "T10"
+      "claim": "T10",
+      "short": "GMX v2"
     },
     {
       "id": "curve-twocrypto-get-y",
@@ -160,7 +169,8 @@
         "licence": "Curve.Fi, all rights reserved (header: 'Copyright (c) Curve.Fi, 2025 - all rights reserved'); read only, no transcription",
         "accessed": "2026-10-30"
       },
-      "claim": "T11"
+      "claim": "T11",
+      "short": "Curve twocrypto"
     },
     {
       "id": "algebra-v1-fee",
@@ -174,7 +184,8 @@
         "licence": "BUSL-1.1 (file header at tag v1.0.0; no LICENSE file at the tag; the draft said GPL)",
         "accessed": "2026-10-30"
       },
-      "claim": "T12"
+      "claim": "T12",
+      "short": "Algebra V1 fee"
     },
     {
       "id": "compound-v3",
@@ -188,7 +199,8 @@
         "licence": "BUSL-1.1, Change Date 2025-12-31 passed, Change License GPL-2.0-or-later",
         "accessed": "2026-10-30"
       },
-      "claim": "T13"
+      "claim": "T13",
+      "short": "Compound v3"
     },
     {
       "id": "maverick-v2-tickmath",
@@ -202,13 +214,14 @@
         "licence": "GPL-2.0-or-later",
         "accessed": "2026-10-30"
       },
-      "claim": "T14"
+      "claim": "T14",
+      "short": "Maverick v2"
     },
     {
       "id": "aave-v3",
       "name": "Aave v3 (Ethereum)",
       "kind": "protocol",
-      "tier": "C",
+      "tier": "F",
       "fact": "74 live positions · median 8.6 interest digits",
       "measured": "docs/benchmarks/accrual-deployed.json: 74 live Aave v3 positions at block 26206698 (39 borrow, 35 supply) against a 200-digit truth of the formula Aave states (e^(rt) for debt; per-second compounding of the liquidity rate, the APY Aave displays, for supply): correct digits of interest min 0.0, median 8.6, of balance median 13.5. Deployed code pinned to aave-v3-origin v3.7.0 and verified against the mainnet bytecode in the same file.",
       "source": {
@@ -216,13 +229,14 @@
         "licence": "BUSL-1.1 (MathUtils.sol header)",
         "accessed": "2026-10-30"
       },
-      "claim": "T15"
+      "claim": "T15",
+      "short": "Aave v3"
     },
     {
       "id": "morpho-blue",
       "name": "Morpho Blue",
       "kind": "protocol",
-      "tier": "C",
+      "tier": "F",
       "fact": "252 live markets · median 7.1 digits of interest",
       "measured": "docs/benchmarks/accrual-deployed.json: 252 live Morpho Blue markets at block 26206698 against e^(integral of the rate) on the IRM's stated path: correct digits of interest median 7.1 over all 252 (7.41 over the 210 idle under 7 days; 1.7 over the 42 idle 7 days or more, most at 100% utilisation). wTaylorCompounded: 'the sum of the first three non-zero terms of a Taylor expansion of e^(nx) - 1'.",
       "source": {
@@ -236,9 +250,9 @@
       "id": "sparklend",
       "name": "SparkLend",
       "kind": "protocol",
-      "tier": "C",
-      "fact": "binomial's cubic term is 0 below 3.1536% APR",
-      "measured": "sparklend-v1-core MathUtils (the Aave v3.0.2 form): basePowerThree = (rate.rayMul(rate) / SECONDS_PER_YEAR²).rayMul(rate) / SECONDS_PER_YEAR floors to 0 for every rate up to 31535999842319999605799990 RAY = 3.1536% APR (binary search over the integer formula; 1 at the next RAY unit). At 3% APR the dropped term is 1.1e-9 of one idle day's interest, 1.0e-6 of 30 days', 1.5e-4 of a year's. Repo code; the deployed pool was not re-verified against bytecode.",
+      "tier": "F",
+      "fact": "cubic term 0 below 3.1536% APR · 8.8 digits a day",
+      "measured": "sparklend-v1-core MathUtils (the Aave v3.0.2 form): basePowerThree = (rate.rayMul(rate) / SECONDS_PER_YEAR²).rayMul(rate) / SECONDS_PER_YEAR floors to 0 for every rate up to 31535999842319999605799990 RAY = 3.1536% APR (binary search over the integer formula; 1 at the next RAY unit). At 3% APR the dropped term is 1.1e-9 of one idle day's interest, 1.0e-6 of 30 days', 1.5e-4 of a year's. Repo code; the deployed pool was not re-verified against bytecode. Graded by the user's rule (under 10 digits is F): Aave v3.0.2's integer binomial in ray, one day at 3% APR, against continuous compounding e^(rt) - 1 (the model the binomial approximates), mpmath at 60 digits: 8.8 correct digits of the day's interest.",
       "source": {
         "ref": "https://github.com/sparkdotfi/sparklend-v1-core/blob/8120e495061dc3315f0a86f682f4ca645a418bf7/contracts/protocol/libraries/math/MathUtils.sol#L64-L80",
         "licence": "BUSL-1.1 (file header)",
@@ -250,7 +264,7 @@
       "id": "fraxlend",
       "name": "FraxLend VariableInterestRate V2",
       "kind": "protocol",
-      "tier": "C",
+      "tier": "F",
       "fact": "5 idle days at 100% · ×3.5, half-life says ×5.66",
       "measured": "docs/benchmarks/ladder.json, scenario adaptive-rate, input 'reference' (4% APR, 100% utilisation, a day per step, FraxLend's deployed half-life of two days), N = 5: FraxLend 4.439370876e-9 per second from rate0 1.26839167935e-9 (×3.5000), where 2^(5/2) gives the truth 7.17510686e-9 (×5.6569); 1.2 correct digits (over the scenario: min 0.2, median 1.4, max 4.7 at N = 1). The code multiplies by (1 + δ²Δt/H), which equals the documented 2^(Δt/H) only at Δt = H.",
       "source": {
@@ -258,13 +272,14 @@
         "licence": "ISC (file header)",
         "accessed": "2026-10-30"
       },
-      "claim": "T18"
+      "claim": "T18",
+      "short": "FraxLend"
     },
     {
       "id": "euler-adaptive-curve",
       "name": "Euler v2 IRMAdaptiveCurve",
       "kind": "protocol",
-      "tier": "C",
+      "tier": "F",
       "fact": "rate at target, one idle day · −0.28% / +0.42%",
       "measured": "docs/benchmarks/ladder.json, scenario adaptive-rate, at Euler's deployed ADJUSTMENT_SPEED (100 per year), one idle day then one update: input 'euler-speed' (100% utilisation) relative error −0.00279481; input 'euler-halving' (0% utilisation) +0.00421513, against r0·e^(speed·err·t), the formula the contract's comment states. ExpLib.wExp reduces x by ln 2 and computes 'e^r with a 2nd-order Taylor polynomial'.",
       "source": {
@@ -272,7 +287,8 @@
         "licence": "MIT (file headers)",
         "accessed": "2026-10-30"
       },
-      "claim": "T19"
+      "claim": "T19",
+      "short": "Euler v2"
     },
     {
       "id": "resupply",

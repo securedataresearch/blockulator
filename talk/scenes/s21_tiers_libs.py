@@ -18,12 +18,14 @@ typed (check.py recomputes them by a second route from the same JSON):
   domain; a ParamOutOfRange revert (the argument does not fit the type:
   PRBMath UD and a negative input) is outside the domain. Label: the
   registry's decimals.
-- C, everything else: a revert inside the domain (label "reverts from
-  exp(−42)", the first such probe), fewer digits (the ladder minimum), or a
-  protocol rate model (Aave and Morpho labelled by their live median from
-  docs/benchmarks/accrual-deployed.json, as s10 computes it; the others by
-  their ladder minimum).
-- F: none (a library is not an incident).
+- C, 10 digits or more but fewer than the format holds: the ladder minimum
+  (or, for Aave and Morpho, the live median from
+  docs/benchmarks/accrual-deployed.json, as s10 computes it) is at least
+  F_BELOW_DIGITS.
+- F (the user's rule, 2026-10-30: "<10 digits is F tier, and balancer
+  reverts? so i guess F tier"): a revert inside the domain (label "reverts
+  from exp(−42)", the first such probe), or fewer than F_BELOW_DIGITS
+  digits by the same measure as C.
 
 Three sections: rule (the empty board, chrome), grades (C, B and A chips
 fly in), blockulator (the two S chips, last, under halos). The chips are
@@ -64,12 +66,13 @@ from vocab import (
 TITLE = "The grades: libraries"
 A_MIN_DIGITS = 25  # the A rule: at least this many correct digits at N = 10,000 in every scenario the library runs
 B_MIN_DIGITS = 14  # the B rule: an 18-decimal library keeps at least this at N = 10,000 on the compound ladder
+F_BELOW_DIGITS = 10  # the user's rule: under 10 correct digits is F
 COMPOUND = LADDER_SCENARIOS[0]
 LIVE_LABELLED = ("aave", "morpho")  # the protocols measured live (s10): labelled by their live median
 NONE = "none"  # the F band's one chip: a library is not an incident
 MINUS = "−"
 
-LITERALS: dict[str, str] = {TIER_RULE["A"]: TIER_RULE_CLAIM, TIER_RULE["B"]: TIER_RULE_CLAIM}  # the legend's two lines with digits
+LITERALS: dict[str, str] = {TIER_RULE[t]: TIER_RULE_CLAIM for t in ("A", "B", "C", "F")}  # the legend's four lines with digits
 
 
 def fmt(d: float) -> str:
@@ -118,15 +121,15 @@ def numbers() -> dict:
         elif rec["family"] == "wad" and compound[lid] is not None and compound[lid] >= B_MIN_DIGITS and lid not in revert_from:
             tier, label = "B", None  # the legend carries the grade ("18 decimals, as documented"); seven labels would not fit
         elif lid in revert_from:
-            tier, label = "C", f"reverts from exp({revert_from[lid].replace('-', MINUS)})"
+            tier, label = "F", f"reverts from exp({revert_from[lid].replace('-', MINUS)})"
         elif lid in live_median:
-            tier, label = "C", f"{fmt(live_median[lid])} digits live"
+            digits = live_median[lid]
+            tier, label = ("F" if digits < F_BELOW_DIGITS else "C"), f"{fmt(digits)} digits live"
         else:
             assert ladder_min[lid] is not None, lid
-            tier, label = "C", f"{fmt(ladder_min[lid])} digits"
+            tier, label = ("F" if ladder_min[lid] < F_BELOW_DIGITS else "C"), f"{fmt(ladder_min[lid])} digits"
         rows.append({"id": lid, "label": rec["label"], "family": rec["family"], "tier": tier, "chip": label, "ladder_min": ladder_min[lid], "compound": compound[lid]})
     by_tier = {t: [r["id"] for r in rows if r["tier"] == t] for t in TIERS}
-    assert not by_tier["F"]
     return {
         "N": N,
         "rows": rows,
@@ -149,7 +152,8 @@ class TiersLibs(DeckScene):
         for lid in lib:
             r = rows[lid]
             chips[r["tier"]].append(chip(r["label"], colour_of(lib[lid]), r["chip"]))
-        chips["F"].append(chip(NONE, Palette.MUTED, None, glyph=None))
+        if not chips["F"]:
+            chips["F"].append(chip(NONE, Palette.MUTED, None, glyph=None))
 
         # 0 · the rule: title, the five bands, their letters and legends, all chrome on the first frame
         self.section(0)

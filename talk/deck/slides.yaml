@@ -332,7 +332,7 @@
     - name: rule
       cue: ""
     - name: grades
-      cue: "Two correctly rounded. One at thirty digits. Eight at eighteen decimals, as documented."
+      cue: "Two correctly rounded. One at thirty digits. Seven at eighteen decimals, as documented."
     - name: blockulator
       cue: ""
   notes:

@@ -53,7 +53,7 @@ LITERALS: dict[str, str] = {}  # every digit on the slide is a value of numbers(
 
 def numbers() -> dict:
     d = tiers()
-    rows = [{"id": r["id"], "name": r["name"], "kind": r["kind"], "tier": r["tier"], "fact": r["fact"]} for r in d["rows"]]
+    rows = [{"id": r["id"], "name": r["name"], "short": r.get("short", r["name"]), "kind": r["kind"], "tier": r["tier"], "fact": r["fact"]} for r in d["rows"]]
     assert all(r["tier"] in TIERS and r["kind"] in KINDS for r in rows)
     incidents = [r for r in rows if r["kind"] == "incident"]
     assert all(r["tier"] == "F" for r in incidents) and len(incidents) == 5, [(r["name"], r["tier"]) for r in incidents]
@@ -72,7 +72,7 @@ def make_chips(rows: list[dict], labelled: tuple[str, ...]) -> dict[str, list]:
             colour, glyph_colour = protocol_colour(r["name"]), Palette.WRONG
         else:
             colour = glyph_colour = HUE[r["kind"]]
-        c = chip(r["name"], colour, r["fact"] if r["tier"] in labelled else None, glyph=GLYPH[r["kind"]], glyph_colour=glyph_colour)
+        c = chip(r.get("short", r["name"]), colour, r["fact"] if r["tier"] in labelled else None, glyph=GLYPH[r["kind"]], glyph_colour=glyph_colour)
         c.kind = r["kind"]
         chips[r["tier"]].append(c)
     for t in TIERS:
