@@ -431,6 +431,8 @@ def expect_s06_resupply(mod) -> dict:
         donation = Decimal(p["donation"]).scaleb(-18)  # crvUSD, whole
         assert donation == donation.to_integral_value() and Decimal(p["donation"]) / Decimal(ex_p) == donation
     assert int(p["mintShares"]) == 1 == int(p["vaultTotalSupply"]) and int(p["mintAssets"]) > 0  # one share minted into a vault with none
+    # the gauge's input names, the pool's name and the collateral label are claim C1's words (v3b brief)
+    assert mod.LITERALS == {k: "C1" for k in ("borrow", "rate", "collateral", "the pool", "collateral: 1 share-wei")}, mod.LITERALS
     return {
         "title": f"Resupply, {inc['date']}",
         "block": f"{int(p['block']):,}",
