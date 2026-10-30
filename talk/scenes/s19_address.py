@@ -14,7 +14,7 @@ and the repository, from `git remote`, normalised) with their URLs under
 them, bottom right, and the closing line at HERO in EMERALD beside them.
 
 Three sections: addresses, use, links. The eight sub-objects' addresses
-(the QR tiles lead to them) and "every op is a free eth_call" are in the
+(the QR tiles lead to them) are in the
 notes. Every address and version is from release() (RELEASE.json, V15);
 check.py reads the file by a second path, asserts the commands appear in
 README.md verbatim and regenerates the QR matrices. The ladder objects
