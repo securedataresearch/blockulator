@@ -1,4 +1,4 @@
-"""Slide 1, "THE END OF ROUNDING ERRORS": the title, and one value that
+"""Slide 1, "How to Audit Everybody's Math": the title, and one value that
 rounds once while the room settles.
 
 The only looping scene (slides.yaml: loop: true), so its last frame is
@@ -34,19 +34,22 @@ from vocab import (
     words,
 )
 
-TITLE = "THE END OF ROUNDING ERRORS"
+TITLE = "How to Audit Everybody's Math"
 SITE = "blockulator.com"
-SPEAKER = "Sam Reeves · founder, Secure Data Research · developer of Blockulator"  # the user's line (2026-10-29): "The speaker is Sam Reeves founder of secure data research, dev of blockulator"
+SPEAKER_NAME = "Sam Reeves"  # the user's line (2026-10-29): "The speaker is Sam Reeves founder of secure data research, dev of blockulator"
+SPEAKER_ROLE = "founder, Secure Data Research · developer of Blockulator"
 
 LITERALS = {
     TITLE: "V-none",  # the user's own title
     SITE: "K12",
-    SPEAKER: "user 2026-10-29",  # the user: "The speaker is Sam Reeves founder of secure data research, dev of blockulator"
+    SPEAKER_NAME: "user 2026-10-29",
+    SPEAKER_ROLE: "user 2026-10-29",
 }
 
 Y_TITLE = 1.1
 Y_SITE = -0.1
-Y_SPEAKER = -0.75
+Y_NAME = -0.8  # the name, then the role on its own line (one line ran past the safe area); both centred
+Y_ROLE = -1.35
 Y_GRID = -2.4
 GRID_LENGTH = 12.0
 GRID_RANGE = (0, 12, 1)
@@ -69,8 +72,9 @@ class Title(TextScene):
         # everything on the first frame: the title, the two lines, the grid and the dot
         title = words(TITLE, SIZE_HERO, Palette.TEXT).move_to([0, Y_TITLE, 0])
         site = words(SITE, SIZE_BODY, Palette.MUTED).move_to([0, Y_SITE, 0])
-        speaker = words(SPEAKER, SIZE_BODY, Palette.MUTED).move_to([0, Y_SPEAKER, 0])
-        self.fix(title, site, speaker)
+        name = words(SPEAKER_NAME, SIZE_BODY, Palette.MUTED).move_to([0, Y_NAME, 0])
+        role = words(SPEAKER_ROLE, SIZE_BODY, Palette.MUTED).move_to([0, Y_ROLE, 0])
+        self.fix(title, site, name, role)
         grid = GridLine(GRID_RANGE, length=GRID_LENGTH, colour=Palette.RULE).move_to([0, Y_GRID, 0])
         grid.set_stroke(opacity=0.6)
         self.fix(grid)

@@ -1,4 +1,4 @@
-"""Build the deck of *The End of Rounding Errors* from talk/deck/slides.yaml.
+"""Build the deck of *How to Audit Everybody's Math* from talk/deck/slides.yaml.
 
     uv run talk/deck/build.py [--pdf] [--quality 1080p30]
 
@@ -268,7 +268,7 @@ def write_html(slides: list[Slide], out: Path) -> None:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The End of Rounding Errors</title>
+<title>How to Audit Everybody's Math</title>
 <link rel="stylesheet" href="{VENDOR}/reset.css">
 <link rel="stylesheet" href="{VENDOR}/reveal.css">
 <link rel="stylesheet" href="deck.css">
@@ -295,7 +295,7 @@ def mmss(seconds: float) -> str:
 
 def write_script(slides: list[Slide], out: Path) -> None:
     lines = [
-        "# The End of Rounding Errors: the spoken script, with the clicks",
+        "# How to Audit Everybody's Math: the spoken script, with the clicks",
         "",
         "One ▶ is one click: it starts the named section (its motion lasts the",
         "seconds shown) and the sentence after it is spoken over it. Section 0",

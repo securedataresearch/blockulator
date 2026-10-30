@@ -8,7 +8,7 @@
 # Text is never paraphrased here: change script-v2 first.
 
 - slide: 1
-  title: THE END OF ROUNDING ERRORS
+  title: "How to Audit Everybody's Math"
   scene: s01_title.Title
   loop: true
   sections:

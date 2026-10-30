@@ -28,6 +28,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from manim import (
+    ReplacementTransform,
     DOWN,
     PI,
     UP,
@@ -320,6 +321,22 @@ class DeckScene(Scene):
         t.next_to(self.logo_left, RIGHT, buff=TITLE_GAP)
         t.set_y(self.logo_left.get_y())
         return t
+
+    def step(self, text: str, hold: float = 1.2):
+        """The manual's step line (direction v5, "How to Audit Everybody's
+        Math"): drawn alone at HERO, centred, as the slide's first beat; held;
+        then shrunk to a kicker at CAPTION above the title slot (MUTED), where
+        it stays as chrome. Call it inside the scene's first section, before
+        the title is placed. Returns the kicker (already fixed)."""
+        line = words(text, SIZE_HERO, Palette.TEXT).move_to([0, 0.2, 0])
+        self.play(FadeIn(line, shift=UP * 0.15, run_time=0.6))
+        self.wait(hold)
+        kicker = words(text, SIZE_CAPTION, Palette.MUTED)
+        kicker.next_to(self.logo_left, RIGHT, buff=TITLE_GAP)
+        kicker.set_y(self.logo_left.get_top()[1] + 0.22)
+        self.play(ReplacementTransform(line, kicker, run_time=0.7))
+        self.fixed.add(kicker)
+        return kicker
 
     def section(self, i: int, hold: float = 1.0) -> None:
         """Start SECTIONS[i]; i must be the next index. The previous section
