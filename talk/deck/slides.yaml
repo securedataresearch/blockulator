@@ -330,28 +330,37 @@
     - name: rule
       cue: ""
     - name: grades
-      cue: "Two correctly rounded. One at thirty digits. Seven at eighteen decimals, as documented."
+      cue: "Four libraries are correctly rounded. Seven are within a digit of eighteen. Two are a few digits short, and the fix is one step."
     - name: blockulator
       cue: ""
   notes:
-    - "Grades computed at render time from ladder.json, edges.json and sweep.json by the rule on the slide. B is the format's documented precision, not a defect."
+    - "Grades from scripts/tiers/grade.py over docs/benchmarks/lost.json: 100,000 typical inputs per function; digits short = what the format holds there, capped at 18, minus digits held, worst case. The cap hides two losses, in the appendix: ABDKMathQuad's ln next to 1 loses 15 of its 34 digits (still 18.9 held); Maker's rpow holds 20.5 of 27."
 
 - slide: 20
-  title: "The grades: exchanges and protocols"
+  title: "The grades: exchanges"
   scene: s22_tiers_exchanges.TiersExchanges
   sections:
     - name: rule
       cue: ""
-    - name: exchanges
-      cue: "The exchanges did their arithmetic in integers. Nothing to round."
-    - name: lenders
-      cue: "The lenders borrowed a math library."
+    - name: grades
+      cue: "The swaps are within a digit. The price and oracle maths is where the digits go, and each has a one-step fix."
+  notes:
+    - "Grades from talk/scenes/data/tiers-worst-exchanges.json (scripts/tiers/measure_exchanges.py): whole-token amounts 1 to 1e9, prices 1e-6 to 1e6, errors in the more valuable token's smallest unit. The cap hides Trader Joe's price above 1 (12 of 45 digits lost, 32 held). Curve is graded on precision only."
+
+- slide: 21
+  title: "The grades: lenders and incidents"
+  scene: s23_tiers_lenders.TiersLenders
+  sections:
+    - name: rule
+      cue: ""
+    - name: grades
+      cue: "The lenders approximate exp with a few terms. The error grows with the rate and the wait."
     - name: incidents
       cue: ""
   notes:
-    - "Rows and sources: talk/scenes/data/tiers.json (one source per row, licences noted). No losses are claimed at exchanges; grades are as measured."
+    - "Grades from talk/scenes/data/tiers-worst-protocols.json (scripts/tiers/measure_protocols.py): rates up to what live markets charged (800% APR) or each protocol's own maximum, idle 24 s to 340 days. Compound v3 is within one index unit everywhere."
 
-- slide: 21
+- slide: 22
   title: "Decide. Measure. Declare."
   scene: s18_habits.Habits
   sections:
@@ -368,7 +377,7 @@
   notes:
     - "Decide: for each rounding, which way, and why. Measure: know a calculation's digits the way you know its gas, and check it against a reference. Declare: write down what each operation guarantees, and test or prove it (essay §10)."
 
-- slide: 22
+- slide: 23
   title: "The reference"
   scene: s19_address.Address
   sections:
@@ -382,7 +391,7 @@
     - "[you: thanks]"
     - "The eight objects (Sepolia, Blockulator 3.0): BL127E v9 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808 · BL127H v9 0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B · BL127N v9 0xAA7Cd9635aE8630379636F533f23DBf2C193d296 · BL127S v9 0xB9C2583a7Ad2251444DC7752658B6C1107C25036 · BL19E v6 0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092 · BL19H v6 0xF059611C1c42543DE6EE82353Eb082Fd8999081f · BL19N v6 0xCe9F09D646B37a9100F05ED1FFD14E9f43180214 · BL19S v6 0xf74ba90535224870830e6e89D2b328d4cc09DE48."
 
-- slide: 23
+- slide: 24
   title: "Thank you"
   scene: s20_thanks.Thanks
   sections:

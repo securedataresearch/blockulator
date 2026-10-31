@@ -1,143 +1,81 @@
-"""Slide 19, "The grades: libraries": the audit's report card for the 17
-libraries, graded at render time from the deck's own data.
+"""Slide 19, "The grades: libraries": the report card for the 13 libraries
+in talk/scenes/data/grades.json (group "library"), as graded there by
+scripts/tiers/grade.py (the rule is written once, in that script). The
+scene grades nothing: it reads each row's tier, chip and fix and draws
+them (check.py reads the JSON by a second route and compares the drawn
+board).
 
-Five bands S/A/B/C/F (vocab.TierBoard), the rule as each band's legend
-(vocab.TIER_RULE, the user's), the libraries as chips in their family
-colour with one measured label each. The grades are computed here, never
-typed (check.py recomputes them by a second route from the same JSON):
+Five bands, the digit tiers in grade.py's order (vocab.TierBoard): the
+band's plain-word name in its colour in the left column, its legend (one
+CAPTION line, the rule's ceiling in words: vocab.GRADE_LEGEND, LITERALS
+under the user's claim) along its top. The sixth tier, "lost money", holds
+the incidents and is on the next slide. One chip per library in the
+file's order: its family colour, the name, "· " and the chip ("exact",
+"0.6 short"), and where the row has a fix, the fix in EMERALD after an
+arrow (fixes.json is a draft: talk/scenes/data/fixes.json). A band with no
+library says "none". The chips are the data, like a chart's key: they live
+in self.key, which the census does not count; the glyph budget is waived
+for this slide (README). The chips' size is the largest of SIZE_CHIP down
+to CAPTION at which the board fits (.policy records it).
 
-- S, correctly rounded: a Blockulator library (ours) whose sweep rows
-  (docs/benchmarks/sweep.json) sum to 0 misrounded. Label: "0 misrounded".
-- A, about 30 digits: the least of the library's median correct digits at
-  N = 10,000 across the ladder slide's three scenarios (s08_ladder.SCENARIOS,
-  docs/benchmarks/ladder.json) is at least A_MIN_DIGITS. Label: that number.
-- B, 18 decimals as documented: an 18-decimal library (family "wad") whose
-  compound-ladder median at N = 10,000 is at least B_MIN_DIGITS and which
-  returns a value (a zero below 10^-18 is the documented floor) on every
-  exp probe of the cliff slide (s09_cliff's range of edges.json) inside its
-  domain; a ParamOutOfRange revert (the argument does not fit the type:
-  PRBMath UD and a negative input) is outside the domain. Label: the
-  registry's decimals.
-- C, 10 digits or more but fewer than the format holds: the ladder minimum
-  (or, for Aave and Morpho, the live median from
-  docs/benchmarks/accrual-deployed.json, as s10 computes it) is at least
-  F_BELOW_DIGITS.
-- F (the user's rule, 2026-10-30: "<10 digits is F tier, and balancer
-  reverts? so i guess F tier"): a revert inside the domain (label "reverts
-  from exp(−42)", the first such probe), or fewer than F_BELOW_DIGITS
-  digits by the same measure as C.
-
-Three sections: rule (the empty board, chrome), grades (C, B and A chips
-fly in), blockulator (the two S chips, last, under halos). The chips are
-the data, like a chart's key: they live in self.key, which the census
-does not count; the glyph budget is waived for this slide (README).
+Three sections: rule (the empty board, chrome), grades (every library but
+ours flies in, band by band, best first), blockulator (BL127 and BL19 last,
+under halos).
 """
 
 from __future__ import annotations
 
-import statistics
-
 from manim import DOWN, FadeIn, LaggedStart, VGroup
 from manim.utils.rate_functions import ease_out_cubic
 
-from s08_ladder import SCENARIOS as LADDER_SCENARIOS
-from s09_cliff import ARG_HI, ARG_LO, RANGE_REASON
-from s09_cliff import OP as CLIFF_OP
 from vocab import (
+    GRADE_CLAIM,
+    GRADE_LEGEND,
+    GRADE_TIERS,
     SIZE_BODY,
-    TIER_RULE,
-    TIER_RULE_CLAIM,
-    TIERS,
     DeckScene,
     Palette,
-    TierBoard,
     chip,
     colour_of,
-    edges,
+    fit_board,
+    grades,
     halo,
-    ladder,
-    ladder_median,
-    live,
-    _load,
     talk_libs,
-    words,
 )
 
 TITLE = "The grades: libraries"
-A_MIN_DIGITS = 25  # the A rule: at least this many correct digits at N = 10,000 in every scenario the library runs
-B_MIN_DIGITS = 14  # the B rule: an 18-decimal library keeps at least this at N = 10,000 on the compound ladder
-F_BELOW_DIGITS = 10  # the user's rule: under 10 correct digits is F
-COMPOUND = LADDER_SCENARIOS[0]
-LIVE_LABELLED = ("aave", "morpho")  # the protocols measured live (s10): labelled by their live median
-NONE = "none"  # the F band's one chip: a library is not an incident
-MINUS = "−"
-
-LITERALS: dict[str, str] = {TIER_RULE[t]: TIER_RULE_CLAIM for t in ("A", "B", "C", "F")}  # the legend's four lines with digits
-
-
-def fmt(d: float) -> str:
-    return str(int(d)) if float(d).is_integer() else str(d)
+GROUP = "library"
+BANDS = GRADE_TIERS[:5]  # the digit tiers; "lost money" holds the incidents (slide 20)
+NONE = "none"  # an empty band's one chip
+POLICIES = ({"size": 24}, {"size": 22}, {"size": 20})  # the chips' size, largest first; never below CAPTION
+LITERALS: dict[str, str] = {GRADE_LEGEND[t]: GRADE_CLAIM for t in BANDS}  # the legend's lines (the user's rule, in words)
 
 
 def numbers() -> dict:
-    lib = talk_libs()
-    N = ladder(COMPOUND)["N"][-1]
-    # the ladder: median digits at the last N per scenario, the minimum across the talk's three
-    scen = {sid: ladder(sid)["scenario"]["summary"] for sid in LADDER_SCENARIOS}
-    ladder_min: dict[str, float | None] = {}
-    compound: dict[str, float | None] = {}
-    for lid in lib:
-        vals = [ladder_median(scen[sid].get(lid, {}).get(str(N))) for sid in LADDER_SCENARIOS]
-        present = [v for v in vals if v is not None]
-        ladder_min[lid] = min(present) if present else None
-        compound[lid] = vals[0]
-    # the sweep: misrounded summed over every row of ours
-    sw = _load("docs/benchmarks/sweep.json")["rows"]
-    misrounded = {lid: sum(r["misrounded"] for r in sw if r["lib"] == lid) for lid in lib if lib[lid].get("ours")}
-    # the cliff: the first probe in the range where an 18-decimal library reverts inside its domain
-    probes = [p for p in edges(CLIFF_OP)["probes"] if len(p["args"]) == 1 and ARG_LO <= float(p["args"][0]) <= ARG_HI]
-    revert_from: dict[str, str] = {}
-    for lid in lib:
-        if lib[lid]["family"] != "wad":
-            continue
-        for p in probes:
-            c = p["cells"][lid]
-            if c.get("unsupported"):
-                continue  # no exp: the probe is outside what the library offers
-            if c.get("reverted") and not str(c.get("reasonName", "")).startswith(RANGE_REASON):
-                revert_from[lid] = p["args"][0]
-                break
-    # the live data: the deployed median per protocol
-    live_median = {}
-    for pid in LIVE_LABELLED:
-        pts = [float(c["truth"][c["primaryTruth"]]["deployed"]["digitsInterest"]) for c in live() if c["protocol"] == pid]
-        live_median[pid] = round(statistics.median(pts), 1)
-    rows = []
-    for lid, rec in lib.items():
-        if rec.get("ours") and misrounded[lid] == 0:
-            tier, label = "S", f"{misrounded[lid]} misrounded"
-        elif ladder_min[lid] is not None and ladder_min[lid] >= A_MIN_DIGITS:
-            tier, label = "A", f"{fmt(ladder_min[lid])} digits"
-        elif rec["family"] == "wad" and compound[lid] is not None and compound[lid] >= B_MIN_DIGITS and lid not in revert_from:
-            tier, label = "B", None  # the legend carries the grade ("18 decimals, as documented"); seven labels would not fit
-        elif lid in revert_from:
-            tier, label = "F", f"reverts from exp({revert_from[lid].replace('-', MINUS)})"
-        elif lid in live_median:
-            digits = live_median[lid]
-            tier, label = ("F" if digits < F_BELOW_DIGITS else "C"), f"{fmt(digits)} digits live"
-        else:
-            assert ladder_min[lid] is not None, lid
-            tier, label = ("F" if ladder_min[lid] < F_BELOW_DIGITS else "C"), f"{fmt(ladder_min[lid])} digits"
-        rows.append({"id": lid, "label": rec["label"], "family": rec["family"], "tier": tier, "chip": label, "ladder_min": ladder_min[lid], "compound": compound[lid]})
-    by_tier = {t: [r["id"] for r in rows if r["tier"] == t] for t in TIERS}
+    g = grades()
+    rows = [{"id": r["id"], "name": r["name"], "tier": r["tier"], "chip": r["chip"], "fix": r["fix"]} for r in g["rows"] if r["group"] == GROUP]
+    assert all(r["tier"] in BANDS and r["chip"] for r in rows), [(r["id"], r["tier"]) for r in rows if r["tier"] not in BANDS]
     return {
-        "N": N,
+        "cap": g["cap"],
+        "rule": {r["tier"]: r.get("digits_short_max") for r in g["rule"]},
         "rows": rows,
-        "by_tier": by_tier,
-        "misrounded": misrounded,
-        "revert_from": revert_from,
-        "live_median": live_median,
+        "by_tier": {t: [r["id"] for r in rows if r["tier"] == t] for t in BANDS},
     }
+
+
+def make_chips(rows: list[dict], policy: dict) -> dict[str, list]:
+    lib = talk_libs()
+    chips = {t: [] for t in BANDS}
+    for r in rows:
+        c = chip(r["name"], colour_of(lib[r["id"]]), r["chip"], size=policy["size"], fix=r["fix"])
+        c.row, c.ours = r["id"], bool(lib[r["id"]].get("ours"))
+        chips[r["tier"]].append(c)
+    for t in BANDS:
+        if not chips[t]:
+            c = chip(NONE, Palette.MUTED, None, glyph=None, size=policy["size"])
+            c.row, c.ours = None, False
+            chips[t].append(c)
+    return chips
 
 
 class TiersLibs(DeckScene):
@@ -145,37 +83,30 @@ class TiersLibs(DeckScene):
 
     def construct(self):
         n = numbers()
-        lib = talk_libs()
-        rows = {r["id"]: r for r in n["rows"]}
-        # the chips, in registry order within a band (ours first, as the registry lists them)
-        chips = {t: [] for t in TIERS}
-        for lid in lib:
-            r = rows[lid]
-            chips[r["tier"]].append(chip(r["label"], colour_of(lib[lid]), r["chip"]))
-        if not chips["F"]:
-            chips["F"].append(chip(NONE, Palette.MUTED, None, glyph=None))
+        board, self.policy = fit_board(lambda p: make_chips(n["rows"], p), GRADE_LEGEND, BANDS, POLICIES)
+        self.board = board
 
-        # 0 · the rule: title, the five bands, their letters and legends, all chrome on the first frame
+        # 0 · the rule: title, the five bands, their names and legends, chrome on the first frame
         self.section(0)
         self.fix(self.title(TITLE, SIZE_BODY, Palette.TEXT))
-        board = TierBoard(chips, TIER_RULE)
         self.fix(board.chrome)
         self.key = board.key
+        self.add(*[c for t in BANDS for c in board.chips[t] if c.row is None])  # an empty band says "none" from the first frame
         self.wait(1.0)
 
-        # 1 · the grades: C, B and A fly into their bands, the F band's "none" with C
+        # 1 · the grades: every library but ours, band by band, best first
         self.section(1, hold=0.6)
-        for t in ("C", "F", "B", "A"):
-            group = board.chips[t]
-            if not group:
-                continue
-            self.play(LaggedStart(*[FadeIn(c, shift=DOWN * 0.35, run_time=0.5, rate_func=ease_out_cubic) for c in group], lag_ratio=0.18))
-            self.wait(0.3)
+        for t in BANDS:
+            group = [c for c in board.chips[t] if c.row is not None and not c.ours]
+            if group:
+                self.play(LaggedStart(*[FadeIn(c, shift=DOWN * 0.35, run_time=0.5, rate_func=ease_out_cubic) for c in group], lag_ratio=0.18))
+                self.wait(0.2)
 
         # 2 · Blockulator last, under halos
         self.section(2, hold=1.0)
-        glows = VGroup(*[halo(c.glyph.get_center(), c.name.get_color(), radius=0.12, layers=4, spread=2.2, opacity=0.3) for c in board.chips["S"]])
+        ours = [c for t in BANDS for c in board.chips[t] if c.ours]
+        glows = VGroup(*[halo(c.glyph.get_center(), c.name.get_color(), radius=0.12, layers=4, spread=2.2, opacity=0.3) for c in ours])
         self.add(glows)
         self.bring_to_back(glows)
-        self.play(LaggedStart(*[FadeIn(VGroup(g, c), shift=DOWN * 0.35, scale=1.15, run_time=0.7, rate_func=ease_out_cubic) for g, c in zip(glows, board.chips["S"])], lag_ratio=0.3))
+        self.play(LaggedStart(*[FadeIn(VGroup(g, c), shift=DOWN * 0.35, scale=1.15, run_time=0.7, rate_func=ease_out_cubic) for g, c in zip(glows, ours)], lag_ratio=0.3))
         self.close()

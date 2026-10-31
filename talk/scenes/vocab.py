@@ -47,6 +47,7 @@ from manim import (
     Line,
     MarkupText,
     NumberLine,
+    Polygon,
     Rectangle,
     RoundedRectangle,
     Scene,
@@ -129,21 +130,31 @@ ROW_COLOUR = {
 }
 
 
-# The report card (talk/briefs: "The tier list"): five grades, a hue each. S
-# is EMERALD (correct), A TEXT (the exact white), B GOLD (the 18-decimal
-# family's), C SLATE (the protocols' family colour), F RED (wrong). The rule
-# is the user's (2026-10-30 plan, "The tier list"), printed as the legend on
-# both tier slides; tiers.json carries the same text for the exchanges slide.
-TIERS = ("S", "A", "B", "C", "F")
-TIER_COLOUR = {"S": Palette.EMERALD, "A": Palette.TEXT, "B": Palette.GOLD, "C": Palette.SLATE, "F": Palette.RED}
-TIER_RULE = {
-    "S": "correctly rounded: every answer the closest the format holds",
-    "A": "about 30 correct digits on the talk's data",
-    "B": "18 decimals, as documented; zero below 10<sup>-18</sup> is the floor",
-    "C": "10 digits or more, but fewer than the format holds",
-    "F": "under 10 digits, a revert inside the domain, or a rounding step that lost money",
+# The report card (talk/briefs: "The tier list"; the user's rule of
+# 2026-10-30, written once in scripts/tiers/grade.py): six bands in plain
+# words, graded by grade.py into talk/scenes/data/grades.json, never here.
+# A hue each, best to worst: EMERALD (correct), TEXT (the exact white), GOLD,
+# AMBER, RED (wrong); the incidents' band is RED too. Each band's legend is
+# one CAPTION line, the rule's ceiling in words (check.py rebuilds each line
+# from grades.json's .rule and .cap).
+GRADE_TIERS = ("correctly rounded", "within a digit", "a few digits", "many digits", "most digits lost", "lost money")
+GRADE_COLOUR = {
+    "correctly rounded": Palette.EMERALD,
+    "within a digit": Palette.TEXT,
+    "a few digits": Palette.GOLD,
+    "many digits": Palette.AMBER,
+    "most digits lost": Palette.RED,
+    "lost money": Palette.RED,
 }
-TIER_RULE_CLAIM = "user 2026-10-30 tier rule"  # the LITERALS claim id of the legend's lines
+GRADE_LEGEND = {
+    "correctly rounded": "within a unit of the exact value",
+    "within a digit": "at most 1 digit short of 18",
+    "a few digits": "at most 5 digits short of 18",
+    "many digits": "at most 12 digits short of 18",
+    "most digits lost": "more than 12 digits short of 18",
+    "lost money": "a rounding step that lost money",
+}
+GRADE_CLAIM = "user 2026-10-30 tier rule"  # the LITERALS claim id of the legend's lines
 
 
 def protocol_colour(name: str) -> str:
@@ -691,28 +702,41 @@ def glow_bar(mobj, colour: str = Palette.EMERALD, pad: float = 0.18, opacity: fl
 
 
 # ---------------------------------------------------------- the tier board --
-SIZE_CHIP = 24  # a chip's name and label: the smallest the user allows on the tier slides
-CHIP_PITCH = 0.44  # row to row inside a band
+SIZE_CHIP = 24  # a chip's name, number and fix at their largest; a board too full steps down to CAPTION, never below
+CHIP_PITCH = 0.44  # row to row inside a band, at SIZE_CHIP (scales with the chips' size)
 CHIP_GAP = 0.34  # chip to chip in a row
 CHIP_GLYPH = 0.065  # a chip's glyph: a dot's radius, half a square's side
 CHIP_GLYPH_GAP = 0.12  # glyph to name
 CHIP_BASELINE_DROP = 0.12  # a row's centre to its names' baseline
-CHIP_LABEL_SEP = "· "  # opens the label
-CHIP_LABEL_GAP = 0.12  # name to the label's middle dot
+CHIP_LABEL_SEP = "· "  # opens the number
+CHIP_LABEL_GAP = 0.12  # name to the number's middle dot
+CHIP_ARROW = 0.26  # the fix's arrow, drawn (neither deck font has U+2192), at SIZE_CHIP
+CHIP_ARROW_GAP = 0.12  # either side of the arrow
 BAND_PAD = 0.08  # a band's edge to its content
 BAND_GAP = 0.1  # band to band
-BAND_LETTER_W = 0.8  # the column the letter sits in
-LEGEND_LINE = 0.26  # a legend line's pitch (CAPTION)
+BAND_LABEL_SIZE = SIZE_CHIP  # the band's plain-word name, in its colour, in the left column
+BAND_LABEL_GAP = 0.45  # the left column's right edge to the chips
+LEGEND_LINE = 0.26  # the legend line's pitch (CAPTION)
 LEGEND_GAP = 0.02  # legend to the first chip row
 BOARD_TOP, BOARD_BOTTOM = 2.95, -3.62  # under the title, to the safe area's foot
 
 
-def chip(name: str, colour: str, label: str | None = None, glyph: str | None = "dot", glyph_colour: str | None = None, label_colour: str = Palette.MUTED, size: float = SIZE_CHIP) -> VGroup:
+def _fix_arrow(colour: str, length: float) -> VGroup:
+    """A small right arrow: a shaft and a filled head, on the x axis at 0..length."""
+    head = 0.38 * length
+    return VGroup(
+        Line([0, 0, 0], [length - head * 0.6, 0, 0], color=colour, stroke_width=2.2),
+        Polygon([length - head, head * 0.5, 0], [length, 0, 0], [length - head, -head * 0.5, 0], color=colour, stroke_width=0, fill_color=colour, fill_opacity=1.0),
+    )
+
+
+def chip(name: str, colour: str, label: str | None = None, glyph: str | None = "dot", glyph_colour: str | None = None, label_colour: str = Palette.MUTED, size: float = SIZE_CHIP, fix: str | None = None, fix_colour: str = Palette.EMERALD) -> VGroup:
     """One chip of a tier board: a small glyph ("dot", "square", "cross" or
     None) in glyph_colour (the name's colour by default), the name in its
-    colour, an optional measured label in MUTED after a middle dot. The
-    name and the label are separate Texts, so the label can be read as the
-    data it is; both register in DRAWN. .name, .label and .glyph name the
+    colour, an optional measured number in MUTED after a middle dot, and an
+    optional fix in EMERALD after a drawn arrow. The name, the number and
+    the fix are separate Texts, so each can be read as the data it is; all
+    register in DRAWN. .name, .label, .fix, .arrow and .glyph name the
     parts (None when absent)."""
     glyph_colour = glyph_colour or colour
     parts = []
@@ -729,25 +753,34 @@ def chip(name: str, colour: str, label: str | None = None, glyph: str | None = "
         parts.append(g)
     nm = words(name, size, colour)
     parts.append(nm)
-    lb = None
-    if label:
-        lb = words(CHIP_LABEL_SEP + label, size, label_colour)
+    lb = words(CHIP_LABEL_SEP + label, size, label_colour) if label else None
+    if lb is not None:
         parts.append(lb)
+    ar = fx = None
+    if fix:
+        ar = _fix_arrow(fix_colour, CHIP_ARROW * size / SIZE_CHIP)
+        fx = words(fix, size, fix_colour)
+        parts += [ar, fx]
     c = VGroup(*parts)
     # on one baseline: a glyph with no descender in each Text sets it
     base = _baseline(nm)
+    x_mid = base + 0.11 * size / SIZE_CHIP  # the glyphs' and the arrow's height: the lower-case middle
     x = 0.0
     for m in parts:
         if m is g:
-            m.move_to([x + m.width / 2, base + 0.11, 0])
+            m.move_to([x + m.width / 2, x_mid, 0])
             x += m.width + CHIP_GLYPH_GAP
+        elif m is ar:
+            x += CHIP_ARROW_GAP
+            m.move_to([x + m.width / 2, x_mid, 0])
+            x += m.width + CHIP_ARROW_GAP
         else:
             if m is lb:
                 x += CHIP_LABEL_GAP
             m.align_to([x, 0, 0], LEFT)
             m.shift(UP * (base - _baseline(m)))
             x += m.width
-    c.name, c.label, c.glyph = nm, lb, g
+    c.name, c.label, c.fix, c.arrow, c.glyph = nm, lb, fx, ar, g
     return c
 
 
@@ -764,58 +797,62 @@ def _baseline(txt: Text) -> float:
     return txt.get_bottom()[1]
 
 
-def _wrap_to_width(text: str, size: float, width: float) -> list[str]:
-    """A legend's markup text broken at spaces so no line is wider than
-    width (measured with the font; the trial Texts are not registered in
-    DRAWN: the one drawn string is the joined legend)."""
+def band_label_width(labels=GRADE_TIERS, size: float = BAND_LABEL_SIZE) -> float:
+    """The left column's width: the widest band name at size (measured with
+    the font; the trial Texts are not registered in DRAWN). One width for
+    every board, so the columns of the two tier slides line up."""
     setup_fonts()
-    lines, cur = [], ""
-    for w in text.split(" "):
-        trial = (cur + " " + w).strip()
-        if cur and MarkupText(trial, font=SANS, font_size=size).width > width:
-            lines.append(cur)
-            cur = w
-        else:
-            cur = trial
-    lines.append(cur)
-    return lines
+    return max(Text(t, font=SANS, font_size=size).width for t in labels)
 
 
 class TierBoard(VGroup):
-    """The report card: five horizontal bands S/A/B/C/F down the frame
-    between top and bottom, each a faint rounded panel in its TIER_COLOUR
-    with its letter at HERO in a column on the left, its legend (one
-    CAPTION line in MUTED, wrapped only if it does not fit) along the top
-    of the band, and its chips laid out in rows under the legend, wrapping,
-    sized by their content (a band with more rows is taller). The legend
-    and the letters are chrome (.chrome, for scene.fix); every chip is in
-    .key (for scene.key, which text_census does not count: the names are
-    the data, like a chart's key). .bands[tier] is the panel, .chips[tier]
-    the chips in order, each already in place (pack=True lays each band's
-    chips first-fit decreasing by width instead of in order: fewer rows). chips is {tier: [chips from
-    chip()]}; rule is {tier: legend text (Pango markup)}. Raises if the
-    board does not fit between top and bottom: nothing shrinks."""
+    """The report card: horizontal bands down the frame between top and
+    bottom, one per tier in `tiers` (in order), each a faint rounded panel
+    in its GRADE_COLOUR with its plain-word name in that colour in a fixed
+    left column (band_label_width(): "most digits lost" fits), its legend
+    (one CAPTION line in MUTED) along the top of the band, and its chips
+    in rows under the legend, wrapping, sized by their content (a band with
+    more rows is taller). The names and the legends are chrome (.chrome,
+    for scene.fix); every chip is in .key (for scene.key, which
+    text_census does not count: the chips are the data, like a chart's
+    key). .bands, .labels, .legends and .chips are keyed by tier, each
+    chip already in place (pack=True lays each band's chips first-fit
+    decreasing by width instead of in order: fewer rows). chips is {tier:
+    [chips from chip()]}; legend is {tier: one line}. Raises
+    AssertionError if the board does not fit between top and bottom or a
+    legend would need two lines: nothing shrinks here (the scene chooses
+    the chips' size)."""
 
-    def __init__(self, chips: dict[str, list[VGroup]], rule: dict[str, str], top: float = BOARD_TOP, bottom: float = BOARD_BOTTOM, left: float = -6.4, right: float = 6.4, legend_size: float = SIZE_CAPTION, letter_size: float = SIZE_HERO, pitch: float = CHIP_PITCH, pack: bool = False):
+    def __init__(self, chips: dict[str, list[VGroup]], legend: dict[str, str], tiers=GRADE_TIERS, top: float = BOARD_TOP, bottom: float = BOARD_BOTTOM, left: float = -6.4, right: float = 6.4, legend_size: float = SIZE_CAPTION, pitch: float = CHIP_PITCH, pack: bool = False):
         super().__init__()
+        tiers = tuple(tiers)
+        self.tiers = tiers
         self.bands: dict[str, RoundedRectangle] = {}
-        self.letters: dict[str, Text] = {}
-        self.legends: dict[str, MarkupText] = {}
-        self.chips: dict[str, list[VGroup]] = {t: list(chips.get(t, [])) for t in TIERS}
+        self.labels: dict[str, Text] = {}
+        self.legends: dict[str, Text] = {}
+        self.chips: dict[str, list[VGroup]] = {t: list(chips.get(t, [])) for t in tiers}
+        assert set(chips) <= set(tiers), sorted(set(chips) - set(tiers))
         self.chrome = VGroup()
         self.key = VGroup()
-        chip_left = left + BAND_PAD + BAND_LETTER_W
-        chip_right = right - BAND_PAD
+        label_left = left + BAND_PAD + 0.12
+        chip_left = label_left + band_label_width() + BAND_LABEL_GAP
+        chip_right = right - BAND_PAD - 0.06
         zone = chip_right - chip_left
+        setup_fonts()
+        for t in tiers:
+            w = Text(legend[t], font=SANS, font_size=legend_size).width
+            assert w <= zone, f"the legend of {t!r} is {w:.2f} wide; {zone:.2f} available"
         # rows per band, by measured widths: in the order given, or (pack) first-fit
         # decreasing by width, the fewest rows when the order within a band is free
         layout: dict[str, list[list[VGroup]]] = {}
-        for t in TIERS:
+        for t in tiers:
             rows: list[list[VGroup]] = []
+            for c in self.chips[t]:
+                assert c.width <= zone, f"a chip of {t!r} is {c.width:.2f} wide; {zone:.2f} available"
             if pack:
                 for c in sorted(self.chips[t], key=lambda c: -c.width):
                     for row in rows:
-                        if sum(m.width for m in row) + CHIP_GAP * len(row) + c.width <= chip_right - chip_left:
+                        if sum(m.width for m in row) + CHIP_GAP * len(row) + c.width <= zone:
                             row.append(c)
                             break
                     else:
@@ -832,37 +869,52 @@ class TierBoard(VGroup):
             if not rows:
                 rows.append([])  # a band with no chips still has one (empty) row
             layout[t] = rows
-        legend_lines = {t: _wrap_to_width(rule[t], legend_size, zone) for t in TIERS}
-        heights = {t: 2 * BAND_PAD + LEGEND_LINE * len(legend_lines[t]) + LEGEND_GAP + len(layout[t]) * pitch for t in TIERS}
-        total = sum(heights.values()) + BAND_GAP * (len(TIERS) - 1)
+        heights = {t: 2 * BAND_PAD + LEGEND_LINE + LEGEND_GAP + len(layout[t]) * pitch for t in tiers}
+        total = sum(heights.values()) + BAND_GAP * (len(tiers) - 1)
         assert total <= top - bottom + 1e-6, f"the board is {total:.2f} tall; {top - bottom:.2f} available"
         # place, top down; the spare height is split between the bands' gaps
-        gap = BAND_GAP + (top - bottom - total) / (len(TIERS) - 1)
+        gap = BAND_GAP + (top - bottom - total) / (len(tiers) - 1)
         y = top
-        for t in TIERS:
+        for t in tiers:
             h = heights[t]
-            colour = TIER_COLOUR[t]
+            colour = GRADE_COLOUR[t]
             rect = RoundedRectangle(width=right - left, height=h, corner_radius=0.14, stroke_color=colour, stroke_width=1.5, stroke_opacity=0.55, fill_color=colour, fill_opacity=0.045)
             rect.move_to([(left + right) / 2, y - h / 2, 0])
-            letter = words(t, letter_size, colour)
-            letter.move_to([left + BAND_PAD + BAND_LETTER_W / 2 - 0.08, y - h / 2, 0])
-            legend = markup("\n".join(legend_lines[t]), legend_size, Palette.MUTED, line_spacing=0.6)
-            legend_h = LEGEND_LINE * len(legend_lines[t])
-            legend.move_to([chip_left + legend.width / 2, y - BAND_PAD - legend_h / 2, 0])
-            self.bands[t], self.letters[t], self.legends[t] = rect, letter, legend
-            self.chrome.add(rect, letter, legend)
-            y_row = y - BAND_PAD - legend_h - LEGEND_GAP - pitch / 2
+            label = words(t, BAND_LABEL_SIZE, colour)
+            label.move_to([label_left + label.width / 2, y - h / 2, 0])
+            lg = words(legend[t], legend_size, Palette.MUTED)
+            lg.move_to([chip_left + lg.width / 2, y - BAND_PAD - LEGEND_LINE / 2, 0])
+            self.bands[t], self.labels[t], self.legends[t] = rect, label, lg
+            self.chrome.add(rect, label, lg)
+            y_row = y - BAND_PAD - LEGEND_LINE - LEGEND_GAP - pitch / 2
             for row in layout[t]:
                 x = chip_left
                 for c in row:
                     c.move_to([x + c.width / 2, y_row, 0])
-                    c.shift(UP * (y_row - CHIP_BASELINE_DROP - _baseline(c.name)))  # one baseline a row, whatever the names' descenders
+                    c.shift(UP * (y_row - CHIP_BASELINE_DROP * pitch / CHIP_PITCH - _baseline(c.name)))  # one baseline a row, whatever the names' descenders
                     x += c.width + CHIP_GAP
                     self.key.add(c)
                 y_row -= pitch
             y -= h + gap
         self.add(self.chrome, self.key)
         self.height_used = total
+
+
+def fit_board(make_chips, legend: dict[str, str], tiers, policies, pack: bool = False):
+    """The first policy whose board fits: make_chips(policy) -> {tier:
+    [chips]}, policy a dict with at least .size (the chips' font size, ≥
+    SIZE_CAPTION). Strings drawn by a policy that did not fit are taken
+    back out of DRAWN. Returns (board, policy); raises if none fits."""
+    for policy in policies:
+        assert policy["size"] >= SIZE_CAPTION, policy
+        mark = len(DRAWN)
+        try:
+            board = TierBoard(make_chips(policy), legend, tiers, pitch=CHIP_PITCH * policy["size"] / SIZE_CHIP, pack=pack)
+        except AssertionError:
+            del DRAWN[mark:]
+            continue
+        return board, policy
+    raise AssertionError("the board does not fit under any policy")
 
 
 DIGIT_HEIGHT_PER_SIZE = 0.0105  # a JetBrains Mono digit's height in scene units per font-size point (0.209 at 20, 0.334 at 32)
@@ -1253,19 +1305,20 @@ def chains() -> dict:
     return _load("talk/scenes/data/chains.json")
 
 
-TIERS_JSON = "talk/scenes/data/tiers.json"
+GRADES_JSON = "talk/scenes/data/grades.json"
 
 
-def tiers() -> dict:
-    """talk/scenes/data/tiers.json: the exchanges-and-protocols report card.
-    .rule {S..F: text} and .rows [{id, name, kind (exchange | protocol |
-    incident), tier, fact, measured, source {ref, licence, accessed}, claim}].
-    Every row's tier is asserted one of TIERS and every kind one of the three."""
-    d = _load(os.environ.get("TALK_TIERS_JSON", TIERS_JSON))  # the env override is for a builder's stub while the file is written
-    assert set(d["rule"]) == set(TIERS), sorted(d["rule"])
+def grades() -> dict:
+    """talk/scenes/data/grades.json, written by scripts/tiers/grade.py (the
+    rule is there, once): .cap (18), .rule [{tier, digits_short_max}] and
+    .rows [{id, name, group (library | exchange | protocol | incident),
+    tier, chip, short18, digits_lost, correctly_rounded, fix, where,
+    source}]. Read, never re-judged: every row's tier is asserted one of
+    GRADE_TIERS, and the rule's order is the deck's."""
+    d = _load(GRADES_JSON)
+    assert tuple(r["tier"] for r in d["rule"]) == GRADE_TIERS, d["rule"]
     for r in d["rows"]:
-        assert r["tier"] in TIERS, (r["id"], r["tier"])
-        assert r["kind"] in ("exchange", "protocol", "incident"), (r["id"], r["kind"])
+        assert r["tier"] in GRADE_TIERS and r["group"] in ("library", "exchange", "protocol", "incident"), (r["id"], r["tier"], r["group"])
     return d
 
 

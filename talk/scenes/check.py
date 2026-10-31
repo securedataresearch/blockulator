@@ -1404,130 +1404,140 @@ def expect_s20_thanks(mod) -> dict:
     return out
 
 
-def expect_s21_tiers_libs(mod) -> dict:
-    """The grades by the other route: the JSON files read as JSON (not
-    through vocab's loaders), Decimal for the digits, the rule applied as a
-    table of predicates in the opposite order (C's conditions first, then
-    the grade is the first of S/A/B whose test holds), and the labels
-    rebuilt from the same values."""
+def _grades_raw() -> dict:
+    """grades.json read as JSON (not through vocab.grades()): the file
+    scripts/tiers/grade.py writes, the rule's order checked here."""
     import json
-    import statistics
 
-    root = vocab.ROOT
-    lib = {r["id"]: r for r in json.loads((root / "static/data/libraries.json").read_text())["libraries"] if r["id"] != "blockulator"}
-    assert len(lib) == 17, len(lib)
-    lad = json.loads((root / "docs/benchmarks/ladder.json").read_text())
-    scen = {s["id"]: s for s in lad["scenarios"]}
-    sids = ("compound", "accrual-continuous", "adaptive-rate")
-    assert tuple(mod.LADDER_SCENARIOS) == sids and mod.COMPOUND == "compound"
-    n_last = max(lad["ladder"])
-    assert n_last == 10000
+    d = json.loads((vocab.ROOT / "talk/scenes/data/grades.json").read_text(encoding="utf-8"))
+    tiers = [r["tier"] for r in d["rule"]]
+    assert tiers == ["correctly rounded", "within a digit", "a few digits", "many digits", "most digits lost", "lost money"], tiers
+    assert d["cap"] == 18, d["cap"]
+    return d
 
-    def med(sid, lid):
-        cell = scen[sid]["summary"].get(lid, {}).get(str(n_last))
-        if not cell or not cell.get("count"):
-            return None
-        return Decimal(str(cell["digits"]["median"] if isinstance(cell["digits"], dict) else cell["digits"]))
 
-    sw = json.loads((root / "docs/benchmarks/sweep.json").read_text())["rows"]
-    ed = next(o for o in json.loads((root / "docs/benchmarks/edges.json").read_text())["ops"] if o["id"] == "exp")
-    assert mod.CLIFF_OP == "exp" and (mod.ARG_LO, mod.ARG_HI) == (-100, -40) and mod.RANGE_REASON == "ParamOutOfRange"
-    probes = sorted((p for p in ed["probes"] if len(p["args"]) == 1 and -100 <= Decimal(p["args"][0]) <= -40), key=lambda p: -Decimal(p["args"][0]))
-    acc = json.loads((root / "docs/benchmarks/accrual-deployed.json").read_text())["cases"]
+def _legend_from_rule(d: dict) -> dict[str, str]:
+    """Each band's legend line rebuilt from grades.json's .rule and .cap:
+    the first tier is the correctly rounded one, each middle tier "at most
+    N digits short of cap", the last digit tier "more than" the one before,
+    the incidents' band what an incident is."""
+    rule, cap = d["rule"], d["cap"]
 
-    def live_median(pid):
-        v = [Decimal(str(c["truth"][c["primaryTruth"]]["deployed"]["digitsInterest"])) for c in acc if c["group"] == "live" and c["protocol"] == pid]
-        return round(float(statistics.median(v)), 1)
+    def n(x):
+        return str(int(x)) if float(x).is_integer() else str(x)
 
-    def fmt(d):
-        return str(int(d)) if d == d.to_integral_value() else str(d)
-
-    rows, misrounded, revert_from, live_med = [], {}, {}, {}
-    for lid, rec in lib.items():
-        meds = [med(sid, lid) for sid in sids]
-        present = [m for m in meds if m is not None]
-        lo = min(present) if present else None
-        comp = meds[0]
-        if rec.get("ours"):
-            misrounded[lid] = sum(r["misrounded"] for r in sw if r["lib"] == lid)
-        if rec["family"] == "wad":
-            for p in probes:
-                cell = p["cells"][lid]
-                if cell.get("unsupported"):
-                    continue
-                if cell.get("reverted") and not str(cell.get("reasonName", "")).startswith("ParamOutOfRange"):
-                    revert_from[lid] = p["args"][0]
-                    break
-        if lid in ("aave", "morpho"):
-            live_med[lid] = live_median(lid)
-        # the predicates, C first
-        c_revert = lid in revert_from
-        c_live = lid in live_med
-        is_s = bool(rec.get("ours")) and misrounded.get(lid) == 0
-        is_a = lo is not None and lo >= 25
-        is_b = rec["family"] == "wad" and comp is not None and comp >= 14 and not c_revert
-        if is_s:
-            tier, label = "S", f"{misrounded[lid]} misrounded"
-        elif is_a:
-            tier, label = "A", f"{fmt(lo)} digits"
-        elif is_b:
-            tier, label = "B", None
-        elif c_revert:
-            tier, label = "F", "reverts from exp(" + revert_from[lid].replace("-", "\u2212") + ")"
-        elif c_live:
-            tier, label = ("F" if float(live_med[lid]) < 10 else "C"), f"{live_med[lid]} digits live"
+    out = {rule[0]["tier"]: "within a unit of the exact value"}
+    for prev, r in zip(rule, rule[1:-1]):
+        m = r["digits_short_max"]
+        if m is not None:
+            out[r["tier"]] = f"at most {n(m)} digit{'' if m == 1 else 's'} short of {cap}"
         else:
-            tier, label = ("F" if float(lo) < 10 else "C"), f"{fmt(lo)} digits"
-        rows.append({"id": lid, "label": rec["label"], "family": rec["family"], "tier": tier, "chip": label, "ladder_min": None if lo is None else float(lo), "compound": None if comp is None else float(comp)})
-    by_tier = {t: [r["id"] for r in rows if r["tier"] == t] for t in vocab.TIERS}
-    # the report card the plan expects (talk/briefs: "The tier list"); a difference here is a REPORT item, not a fix
-    assert by_tier["S"] == ["bl19", "bl127"] and by_tier["A"] == ["quad"], by_tier
-    assert by_tier["B"] == ["solady", "solmate", "prb", "prbud", "snekmate", "oz", "uniswap"], by_tier["B"]
-    assert by_tier["C"] == ["abdk", "maker"] and by_tier["F"] == ["balancer", "aave", "morpho", "fraxlend", "euler"], by_tier
-    assert revert_from == {"balancer": "-42"}, revert_from
+            out[r["tier"]] = f"more than {n(prev['digits_short_max'])} digits short of {cap}"
+    out[rule[-1]["tier"]] = "a rounding step that lost money"
+    return out
+
+
+def _board_drawn(scene, bands) -> dict[str, list[tuple]]:
+    """What the dry-run board draws in each band: (name, number, fix) per
+    chip, the strings the Texts were made from ("none" chips left out)."""
+    sep = vocab.CHIP_LABEL_SEP
+    out = {}
+    for t in bands:
+        assert scene.board.labels[t].original_text == t, (t, scene.board.labels[t].original_text)
+        rows = []
+        for c in scene.board.chips[t]:
+            if c.row is None:
+                assert c.name.original_text == "none" and c.label is None and c.fix is None and len(scene.board.chips[t]) == 1, t
+                continue
+            lb = c.label.original_text if c.label is not None else None
+            assert lb is None or lb.startswith(sep), lb
+            rows.append((c.name.original_text, None if lb is None else lb[len(sep) :], None if c.fix is None else c.fix.original_text))
+        out[t] = sorted(rows, key=str)
+    return out
+
+
+def expect_s21_tiers_libs(mod) -> dict:
+    """grades.json by the other route (raw JSON): the 13 library rows, their
+    tier, chip and fix as the file has them (the grades are grade.py's;
+    nothing here re-judges them); the legend rebuilt from .rule and .cap;
+    then a dry run, and the board must draw exactly each row's name, chip
+    and fix in its tier's band, and each band's name and legend."""
+    d = _grades_raw()
+    rows = [{"id": r["id"], "name": r["name"], "tier": r["tier"], "chip": r["chip"], "fix": r["fix"]} for r in d["rows"] if r["group"] == "library"]
+    assert len(rows) == 13, len(rows)
+    bands = [r["tier"] for r in d["rule"]][:5]
+    assert tuple(mod.BANDS) == tuple(bands) and all(r["tier"] in bands and r["chip"] for r in rows)
+    legend = _legend_from_rule(d)
+    assert mod.LITERALS == {legend[t]: "user 2026-10-30 tier rule" for t in bands}, mod.LITERALS
     assert mod.TiersLibs.SECTIONS == ("rule", "grades", "blockulator")
-    assert mod.LITERALS == {vocab.TIER_RULE[t]: vocab.TIER_RULE_CLAIM for t in ("A", "B", "C", "F")}
-    assert mod.F_BELOW_DIGITS == 10
-    assert not any(ch.isdigit() for ch in mod.TITLE + vocab.TIER_RULE["S"])
-    return {"N": n_last, "rows": rows, "by_tier": by_tier, "misrounded": misrounded, "revert_from": revert_from, "live_median": live_med}
+    assert not any(ch.isdigit() for ch in mod.TITLE)
+    scene = dry_run(mod)
+    assert all(p["size"] >= vocab.SIZE_CAPTION for p in mod.POLICIES) and scene.policy in mod.POLICIES
+    assert {t: scene.board.legends[t].original_text for t in bands} == {t: legend[t] for t in bands}
+    want = {t: sorted(((r["name"], r["chip"], r["fix"]) for r in rows if r["tier"] == t), key=str) for t in bands}
+    assert _board_drawn(scene, bands) == want, (_board_drawn(scene, bands), want)
+    return {
+        "cap": d["cap"],
+        "rule": {r["tier"]: r.get("digits_short_max") for r in d["rule"]},
+        "rows": rows,
+        "by_tier": {t: [r["id"] for r in rows if r["tier"] == t] for t in bands},
+    }
+
+
+def _expect_card(mod, scene_cls, kinds: tuple[str, ...], n_bands: int, sections: tuple[str, ...]) -> dict:
+    """A report card of grades.json's groups `kinds` by the other route (raw
+    JSON): the rows' tier, chip and fix as the file has them (grade.py's;
+    nothing here re-judges them), an incident always "lost money" with no
+    chip and named as incidents.json names it; the legend rebuilt from
+    .rule and .cap; then a dry run, and the board must draw exactly each
+    row's name, chip and fix in its tier's band, and each band's name and
+    legend."""
+    import json
+
+    d = _grades_raw()
+    rows = [{"id": r["id"], "name": r["name"], "kind": r["group"], "tier": r["tier"], "chip": r["chip"], "fix": r["fix"]} for r in d["rows"] if r["group"] in kinds]
+    counts = {k: sum(1 for r in rows if r["kind"] == k) for k in kinds}
+    bands = [r["tier"] for r in d["rule"]][:n_bands]
+    assert tuple(mod.BANDS) == tuple(bands) and tuple(mod.KINDS) == kinds
+    assert all(r["tier"] in bands for r in rows)
+    for r in rows:
+        if r["kind"] == "incident":
+            assert r["tier"] == "lost money" and r["chip"] is None, r
+        else:
+            assert r["tier"] != "lost money" and r["chip"], r
+    if "incident" in kinds:
+        inc = {i["protocol"] for i in json.loads((vocab.ROOT / "talk/scenes/data/incidents.json").read_text())["incidents"]}
+        assert {r["name"] for r in rows if r["kind"] == "incident"} == inc and counts["incident"] == 5, counts
+    legend = _legend_from_rule(d)
+    assert mod.LITERALS == {legend[t]: "user 2026-10-30 tier rule" for t in bands}, mod.LITERALS
+    assert scene_cls.SECTIONS == sections
+    scene = dry_run(mod)
+    assert all(p["size"] >= vocab.SIZE_CAPTION for p in mod.POLICIES) and scene.policy in mod.POLICIES
+    assert {t: scene.board.legends[t].original_text for t in bands} == {t: legend[t] for t in bands}
+    want = {t: sorted(((r["name"], r["chip"], r["fix"]) for r in rows if r["tier"] == t), key=str) for t in bands}
+    assert _board_drawn(scene, bands) == want, (_board_drawn(scene, bands), want)
+    return {
+        "cap": d["cap"],
+        "rule": {r["tier"]: r.get("digits_short_max") for r in d["rule"]},
+        "rows": rows,
+        "by_tier": {t: [r["id"] for r in rows if r["tier"] == t] for t in bands},
+        "counts": counts,
+    }
 
 
 def expect_s22_tiers_exchanges(mod) -> dict:
-    """tiers.json read as JSON: every row's tier one of S..F, every kind one
-    of the three, the five incidents F and named as incidents.json names
-    them; then a dry run of the scene, and every label drawn after a
-    chip's name ("· fact") is some row's fact, verbatim."""
-    import json
-    import os
+    """The exchanges' report card: the 13 rows of group exchange, five bands."""
+    out = _expect_card(mod, mod.TiersExchanges, ("exchange",), 5, ("rule", "grades"))
+    assert out["counts"] == {"exchange": 13}, out["counts"]
+    return out
 
-    path = os.environ.get("TALK_TIERS_JSON", str(vocab.ROOT / vocab.TIERS_JSON))
-    d = json.loads(Path(path).read_text(encoding="utf-8"))
-    assert set(d["rule"]) == {"S", "A", "B", "C", "F"}, sorted(d["rule"])
-    rows = []
-    for r in d["rows"]:
-        assert r["tier"] in ("S", "A", "B", "C", "F"), (r["id"], r["tier"])
-        assert r["kind"] in ("exchange", "protocol", "incident"), (r["id"], r["kind"])
-        assert isinstance(r["fact"], str) and r["fact"] and r["source"]["ref"] and r["claim"], r["id"]
-        rows.append({"id": r["id"], "name": r["name"], "short": r.get("short", r["name"]), "kind": r["kind"], "tier": r["tier"], "fact": r["fact"]})
-    inc = {i["protocol"] for i in json.loads((vocab.ROOT / "talk/scenes/data/incidents.json").read_text())["incidents"]}
-    incidents = [r for r in rows if r["kind"] == "incident"]
-    assert {r["name"] for r in incidents} == inc and all(r["tier"] == "F" for r in incidents), incidents
-    # the user's rule (2026-10-30): F = under 10 digits, a revert in the domain, or a rounding step that lost money
-    assert all(r["tier"] == "F" for r in rows if r["kind"] == "incident"), "every incident is F"
-    assert sorted(r["name"] for r in rows if r["tier"] == "F" and r["kind"] != "incident") == sorted(["Aave v3 (Ethereum)", "Morpho Blue", "SparkLend", "FraxLend VariableInterestRate V2", "Euler v2 IRMAdaptiveCurve"]), "the under-10-digit rows"
-    assert mod.TiersExchanges.SECTIONS == ("rule", "exchanges", "lenders", "incidents") and mod.LITERALS == {}
-    # the drawn facts: a dry run, then every "· …" string is a row's fact
-    scene = dry_run(mod)
-    facts = {r["fact"] for r in rows}
-    labels = [s for s in vocab.DRAWN if s.startswith(vocab.CHIP_LABEL_SEP)]
-    assert all(s[len(vocab.CHIP_LABEL_SEP) :] in facts for s in labels), [s for s in labels if s[len(vocab.CHIP_LABEL_SEP) :] not in facts]
-    assert scene.label_policy in mod.LABELLED
-    return {
-        "rule": dict(d["rule"]),
-        "rows": rows,
-        "by_tier": {t: [r["id"] for r in rows if r["tier"] == t] for t in ("S", "A", "B", "C", "F")},
-        "counts": {k: sum(1 for r in rows if r["kind"] == k) for k in ("exchange", "protocol", "incident")},
-    }
+
+def expect_s23_tiers_lenders(mod) -> dict:
+    """The lenders' report card: the 6 rows of group protocol in five bands
+    and the five incidents in the sixth, "lost money"."""
+    out = _expect_card(mod, mod.TiersLenders, ("protocol", "incident"), 6, ("rule", "grades", "incidents"))
+    assert out["counts"] == {"protocol": 6, "incident": 5}, out["counts"]
+    return out
 
 
 EXPECT = {
@@ -1557,6 +1567,7 @@ EXPECT = {
     "s20_thanks": expect_s20_thanks,
     "s21_tiers_libs": expect_s21_tiers_libs,
     "s22_tiers_exchanges": expect_s22_tiers_exchanges,
+    "s23_tiers_lenders": expect_s23_tiers_lenders,
 }
 
 
