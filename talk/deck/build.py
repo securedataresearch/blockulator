@@ -360,8 +360,39 @@ def write_pdf(slides: list[Slide], out: Path) -> None:
             last_frame(last, png)
         else:
             placeholder_frame(slide, slides, png)
+        if slide.number > 1:
+            number_page(png, slide.number, len(slides))
         pages.append(str(png))
     out.write_bytes(img2pdf.convert(pages))
+    set_pdf_metadata(out)
+
+
+PDF_TITLE = "How to Audit Everybody's Math"  # the talk's title (the user, 2026-10-30)
+PDF_AUTHOR = "Sam Reeves · Secure Data Research"
+
+
+def number_page(png: Path, number: int, total: int) -> None:
+    """The page number, small and faint at the bottom-right corner inside the
+    safe area, so a reader of the PDF can refer to a slide; the title slide
+    carries none. The slide's own pixels are otherwise untouched."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    im = Image.open(png).convert("RGB")
+    d = ImageDraw.Draw(im)
+    mono = ImageFont.truetype(str(FONTS / "JetBrainsMono.ttf"), 22)
+    d.text((im.width - 44, im.height - 30), f"{number} / {total}", font=mono, fill=FAINT, anchor="rd")
+    im.save(png)
+
+
+def set_pdf_metadata(out: Path) -> None:
+    """Title and author in the PDF's document information, so the file names
+    itself in a reader's title bar and in search."""
+    from pypdf import PdfReader, PdfWriter
+
+    w = PdfWriter(clone_from=PdfReader(str(out)))
+    w.add_metadata({"/Title": PDF_TITLE, "/Author": PDF_AUTHOR, "/Subject": "Slides, one page each"})
+    with out.open("wb") as f:
+        w.write(f)
 
 
 # ----------------------------------------------------------------- main --

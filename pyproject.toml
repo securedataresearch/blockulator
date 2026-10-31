@@ -16,7 +16,9 @@ package = false
 default-groups = ["dev", "talk"]
 
 [dependency-groups]
-dev = []
+dev = [
+    "pypdf>=6.21.4",
+]
 talk = [
     "img2pdf>=0.6.3",
     "manim==0.22.1",
