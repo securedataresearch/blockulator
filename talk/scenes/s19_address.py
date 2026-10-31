@@ -63,8 +63,8 @@ LLMS = "blockulator.com/llms.txt"
 TODAY = "today: Sepolia"
 SITE_URL = "https://blockulator.com"
 SITE = "blockulator.com"
-CLOSE = "Measure yourself against it."
-CLOSE_LINES = "Measure yourself\nagainst it."  # two lines at HERO, left of the tiles
+CLOSE = "Check your exp against it."  # the user, 2026-10-30: the line the audience leaves with
+CLOSE_LINES = "Check your exp\nagainst it."  # two lines at HERO, left of the tiles
 
 TITLE_LINE = f'{TITLE}   <span foreground="{Palette.MUTED}">{TODAY}</span>'  # one line: the title, and the network beside it
 

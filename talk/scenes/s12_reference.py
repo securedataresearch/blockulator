@@ -102,7 +102,7 @@ WORD_PITCH = 0.8
 X_WORD = -5.55
 
 # the digit-bearing fixed strings, each with its claim id (research_notes/talk/claims.md)
-STEP = "Step 3. Deploy it where nobody can change it. Including you."  # the manual's step line, the slide's first beat
+STEP = "Step 2. Deploy it where nobody can change it. Including you."  # the manual's step line, the slide's first beat
 LITERALS: dict[str, str] = {STEP: "user 2026-10-30 outline"}  # every digit on the slide is a value of numbers(): the address, the version, the word, the argument
 
 

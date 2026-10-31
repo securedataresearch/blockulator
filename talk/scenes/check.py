@@ -923,7 +923,7 @@ def expect_s12_reference(mod) -> dict:
     groups = [g for g in groups if g["chains"]]
     assert [len(g["chains"]) for g in groups] == [1, 11, 3], [len(g["chains"]) for g in groups]
     assert mod.Reference.SECTIONS == ("step", "address", "chains", "call", "closing")
-    assert mod.LITERALS == {mod.STEP: "user 2026-10-30 outline"} and mod.STEP.startswith("Step 3. ")  # the manual's step line, the first beat
+    assert mod.LITERALS == {mod.STEP: "user 2026-10-30 outline"} and mod.STEP.startswith("Step 2. ")  # the manual's step line, the first beat
     return {
         "address": address,
         "version": version,
@@ -1313,7 +1313,7 @@ def expect_s18_habits(mod) -> dict:
     assert mod.EXAMPLE == "example" and mod.REFERENCE == "reference:"
     assert not any("today" in k or "protocol" in k for k in mod.LITERALS)  # nothing says a protocol does this today
     assert mod.Habits.SECTIONS == ("step", "title", "decide", "measure", "declare")  # the block lands in declare; the sub-lines are the notes
-    assert mod.LITERALS[mod.STEP] == "user 2026-10-30 outline" and mod.STEP.startswith("Step 6. ")
+    assert mod.LITERALS[mod.STEP] == "user 2026-10-30 outline" and mod.STEP.startswith("Step 5. ")
     hues = vocab.ROW_COLOUR["s18"]
     assert len({hues[h] for h in habits}) == 3 and hues["tick"] == vocab.Palette.EMERALD
     assert not any(ch in k for k in mod.LITERALS for ch in "²→½√…")
@@ -1381,7 +1381,7 @@ def expect_s19_address(mod) -> dict:
     for cmd in (mod.FORGE, mod.NPM, mod.LLMS):
         assert cmd in readme, cmd
     assert mod.LLMS == "blockulator.com/llms.txt" and "https://" + mod.LLMS in readme
-    assert mod.TODAY == "today: Sepolia" and mod.CLOSE == "Measure yourself against it." and mod.CLOSE_LINES.replace("\n", " ") == mod.CLOSE
+    assert mod.TODAY == "today: Sepolia" and mod.CLOSE == "Check your exp against it." and mod.CLOSE_LINES.replace("\n", " ") == mod.CLOSE
     assert mod.TODAY in mod.TITLE_LINE and mod.TITLE_LINE.startswith(mod.TITLE)  # the network beside the title, from the first frame
     assert mod.Address.SECTIONS == ("addresses", "use", "links")
     assert "mainnet" not in " ".join(mod.LITERALS).lower()

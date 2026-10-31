@@ -97,7 +97,7 @@ EXACT_LABEL = f"e<sup>40</sup> to {WORD_DECIMALS} decimals"  # the title row's n
 EXACT_RIGHT = f"the closest {WORD_DECIMALS}-decimal value"
 
 # the digit-bearing fixed strings on the slide, each with its claim id (research_notes/talk/claims.md)
-STEP = "Step 4. Ask it a simple question."  # the manual's step line, the slide's first beat
+STEP = "Step 3. Ask it a simple question."  # the manual's step line, the slide's first beat
 LITERALS = {
     STEP: "user 2026-10-30 outline",
     EXACT_LABEL: "V9",  # e^40 and its correctly rounded 18-decimal word

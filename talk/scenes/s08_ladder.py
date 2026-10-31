@@ -86,7 +86,7 @@ KEY_RIGHT, KEY_TOP = 6.75, 2.75  # the key's column: right edge on the safe area
 KEY_PITCH = 0.27
 GUIDE_DROP = 5.0  # digits below the 18-decimal line the slope guide is drawn
 
-STEP = "Step 5. Ask everybody else."  # the manual's step line, the slide's first beat
+STEP = "Step 4. Ask everybody else."  # the manual's step line, the slide's first beat
 LITERALS: dict[str, str] = {STEP: "user 2026-10-30 outline"}  # every digit on the slide is a value of numbers()
 
 
