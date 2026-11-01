@@ -1,21 +1,18 @@
-{#- The page's banner: title, one line under it, then the sub-nav of the page's group, on the cloth
-    (hero.js), drifting slowly. The banner is first on every page and the same element, so nothing moves between pages;
-    each group has its own cloth (seeds). -#}
+{#- The page's banner (sdr-ui .ui-banner): title, one line under it, then the sub-nav of the page's group. The banner is
+    first on every page and the same element, with the same cloth, so nothing moves between pages. -#}
 {%- set groups = {
   "results": [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/ops/", "Per op"], ["/results/wad/", "WAD"], ["/results/deployed/", "Deployed"], ["/results/incidents/", "Incidents"], ["/results/cdf/", "Normal CDF"], ["/vs/", "Versus"], ["/proofs/", "Proofs"]],
   "library": [["/library/", "BL127"], ["/library/bl19/", "BL19"], ["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]],
   "writeup": [["/writeup/", "Write-up"], ["/why/", "Why WAD loses digits"]]
 } -%}
-{%- set seeds = {"results": "3.1", "library": "5.7"} -%}
 {%- set g = page.extra.group | default(value="") %}
-<header class="banner pagehead">
-  <canvas class="cloth" data-quiet data-seed="{% if seeds[g] is defined %}{{ seeds[g] }}{% else %}1.9{% endif %}" aria-hidden="true"></canvas>
-  <div class="banner-inner">
+<header class="ui-banner ui-banner--head">
+  <div class="ui-banner-inner">
   <h1>{{ page.title }}</h1>
-  {%- if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
+  {%- if page.description %}<p class="ui-lead">{{ page.description }}</p>{% endif %}
   {%- if g and groups[g] is defined %}
-  <nav class="tabs subnav" aria-label="{{ g }}">
-    {%- for item in groups[g] %}<a href="{{ item[0] }}"{% if current_path == item[0] %} class="on" aria-current="page"{% endif %}>{{ item[1] }}</a>{% endfor %}
+  <nav class="ui-tabs" aria-label="{{ g }}">
+    {%- for item in groups[g] %}<a href="{{ item[0] }}"{% if current_path == item[0] %} aria-current="page"{% endif %}>{{ item[1] }}</a>{% endfor %}
   </nav>
   {%- endif %}
   </div>

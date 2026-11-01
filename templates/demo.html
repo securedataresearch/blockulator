@@ -26,8 +26,8 @@
 </dl>
 </details>
 
-<nav class="tabs" id="scenario-tabs" aria-label="Scenario">
-{%- for sc in d.scenarios %}<a href="#{{ sc.id }}" data-tab="{{ sc.id }}"{% if loop.first %} class="on"{% endif %}>{{ sc.title }}</a>{% endfor %}
+<nav class="ui-tabs" id="scenario-tabs" aria-label="Scenario">
+{%- for sc in d.scenarios %}<a href="#{{ sc.id }}" data-tab="{{ sc.id }}"{% if loop.first %} aria-current="true"{% endif %}>{{ sc.title }}</a>{% endfor %}
 </nav>
 {%- for sc in d.scenarios %}{% set id = sc.id %}{% set si = sc.index %}{% set ref = sc.inputs[0] %}{% set hasint = sc.summary.bl127["1"].interest is defined %}
 <section class="scenario" id="{{ id }}" data-index="{{ si }}"{% if not loop.first %} hidden{% endif %}>

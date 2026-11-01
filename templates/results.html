@@ -12,12 +12,12 @@
 
 {% set_global probes = 0 %}{% for op in e.ops %}{% set_global probes = probes + op.probes | length %}{% endfor -%}
 <div class="stories next">
-  <a class="card story" href="/results/ladder/"><span class="label">ladder</span><h3>Step by step</h3><p>Each of the {{ d.scenarios | length }} scenarios from N = 1 to 10,000, input by input.</p></a>
-  <a class="card story" href="/results/edges/"><span class="label">edges</span><h3>Where formats break</h3><p>{{ probes }} single calls at the ends of each library's range: where results go to zero or revert.</p></a>
-  <a class="card story" href="/results/ops/"><span class="label">per op</span><h3>Gas and precision per op</h3><p>Every op against every library that offers it.</p></a>
-  <a class="card story" href="/results/wad/"><span class="label">wad</span><h3>To the last wei</h3><p>BlockulatorWad and every library's WAD functions on the same inputs: how often each is a wei off.</p></a>
-  <a class="card story" href="/results/deployed/"><span class="label">deployed</span><h3>Aave and Morpho live</h3><p>The deployed markets against the formula each says it computes.</p></a>
-  <a class="card story" href="/results/cdf/"><span class="label">normal cdf</span><h3>Every on-chain Φ(x)</h3><p>The normal CDF and erfc of each library that has one, at the same exact points, with the gas of a call.</p></a>
-  <a class="card story" href="/results/incidents/"><span class="label">incidents</span><h3>Five exploits, replayed</h3><p>Real attacks rerun from their own transactions, and what would have stopped each one.</p></a>
+  <a class="ui-card ui-card--lift story" href="/results/ladder/"><span class="ui-label">ladder</span><h3>Step by step</h3><p>Each of the {{ d.scenarios | length }} scenarios from N = 1 to 10,000, input by input.</p></a>
+  <a class="ui-card ui-card--lift story" href="/results/edges/"><span class="ui-label">edges</span><h3>Where formats break</h3><p>{{ probes }} single calls at the ends of each library's range: where results go to zero or revert.</p></a>
+  <a class="ui-card ui-card--lift story" href="/results/ops/"><span class="ui-label">per op</span><h3>Gas and precision per op</h3><p>Every op against every library that offers it.</p></a>
+  <a class="ui-card ui-card--lift story" href="/results/wad/"><span class="ui-label">wad</span><h3>To the last wei</h3><p>BlockulatorWad and every library's WAD functions on the same inputs: how often each is a wei off.</p></a>
+  <a class="ui-card ui-card--lift story" href="/results/deployed/"><span class="ui-label">deployed</span><h3>Aave and Morpho live</h3><p>The deployed markets against the formula each says it computes.</p></a>
+  <a class="ui-card ui-card--lift story" href="/results/cdf/"><span class="ui-label">normal cdf</span><h3>Every on-chain Φ(x)</h3><p>The normal CDF and erfc of each library that has one, at the same exact points, with the gas of a call.</p></a>
+  <a class="ui-card ui-card--lift story" href="/results/incidents/"><span class="ui-label">incidents</span><h3>Five exploits, replayed</h3><p>Real attacks rerun from their own transactions, and what would have stopped each one.</p></a>
 </div>
 {% endblock body %}

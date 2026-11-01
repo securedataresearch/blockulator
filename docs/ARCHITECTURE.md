@@ -35,19 +35,15 @@ commits and explains the licensing).
 ## The site
 
 A Zola site, started from securedataresearch.net's style and now its own.
-`static/css/site.css` holds the theme: every colour token, light and dark
-(the system's choice, no theme script), the mesh background and the one
-glass recipe for cards; `static/css/blockulator.css` styles the components
-with those tokens only. `templates/base.html` repeats the page colour in an
-inline critical block, and every page cross-fades through a view transition
-with the frosted top bar held still, so no navigation shows a blank or
-off-colour frame. The cloth shader (`static/js/hero.js`) runs on the home
-page only, drawn on the page's own colour and revealed after its first
-frame; inner pages are one frosted sheet with a static header
-(`templates/pagehead.html`) and a sub-nav for their group (Results,
-Library). The fonts are self-hosted in `static/fonts/` (OFL), preloaded,
-`font-display: optional`, with metric-matched fallbacks, so nothing swaps
-or shifts.
+The look is [sdr-ui](https://github.com/securedataresearch/sdr-ui), shared by every Secure Data Research site and
+loaded from `ui.securedataresearch.net` at the version pinned (with SRI hashes) in `config.toml` `[extra.ui]`: the
+tokens, light and dark, the faces, the page, the top bar, the banner (one vector cloth on every page, final on first
+paint), buttons, cards, tabs, notes, key/value lists, prose and the footer. `static/css/blockulator.css` holds only what
+this site has alone (charts, data tables, the word strip, the home units) on those tokens. `templates/base.html` writes
+the critical colours from the pin, so no frame shows a blank or off-colour page, and pages cross-fade through view
+transitions with the top bar held still. `build.sh` refuses to build when the pin does not match what the CDN serves.
+The fonts in `static/fonts/` remain for the talk (`make talk-fonts`); pages take theirs from sdr-ui,
+preloaded, `font-display: optional`, with metric-matched fallbacks, so nothing swaps or shifts.
 Pages are Markdown under `content/`; `path` and `aliases` in the front
 matter place them and keep the old URLs (`/demo/`, `/edges/`, `/compare/`,
 `/float/`). Tables and the ladder chart are Tera components in

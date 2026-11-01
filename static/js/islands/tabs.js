@@ -6,7 +6,7 @@ const sections = document.querySelectorAll('section.scenario');
 function show(id) {
     if (!document.getElementById(id)) return;
     sections.forEach((s) => { s.hidden = s.id !== id; });
-    tabs.forEach((t) => t.classList.toggle('on', t.dataset.tab === id));
+    tabs.forEach((t) => { if (t.dataset.tab === id) t.setAttribute('aria-current', 'true'); else t.removeAttribute('aria-current'); });
 }
 window.addEventListener('hashchange', () => show(location.hash.slice(1)));
 if (location.hash) show(location.hash.slice(1));
