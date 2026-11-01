@@ -16,3 +16,16 @@ repo = "https://github.com/securedataresearch/blockulator"
 [link_checker]
 # GitHub renders heading anchors with JavaScript, so a link checker never finds them.
 skip_anchor_prefixes = ["https://github.com/"]
+
+# The shared look (securedataresearch/sdr-ui), pinned. Change it with: deno run -A ../sdr-ui/tools/pin.ts X.Y.Z
+# build.sh checks these hashes against the hosted manifest before it builds.
+[extra.ui]
+version = "0.3.0"
+base = "https://ui.securedataresearch.net/v0.3.0/"
+css = "sha384-LpF+TfSDqWRzoZ0AmYVFPgdPxKa8GLRmiWs7WmqbbVeM5CqHK0qblB8VxEosec9S"
+boot = "sha384-sSml3AEAW5UfVzZO8zqniVlzbLbVOz7cqaJqAmDP6ckk/vw5r/Iv/wy4R+AVANJG"
+transitions = "sha384-AlxXXX3N143LTKw5IR3pPBMCNazXZBo5YHzjF8EDh0+wmOMeUhERWL9+C2IzqnTY"
+bg_light = "#f3f4f0"
+text_light = "#1b1c1c"
+bg_dark = "#0c0e10"
+text_dark = "#e2e3df"

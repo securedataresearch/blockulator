@@ -5,18 +5,17 @@
 <script>(function(){var h=location.hash,p=location.pathname;if(p!=='/'&&p!=='/index.html')return;if(h.slice(0,2)!=='#/')return;var s=h.slice(2).split('/'),m={games:'/archive/',vyper:'/archive/',futures:'/archive/',badges:'/badges/',bl127:'/library/',benchmarks:'/results/',about:'/why/'},t=m[s[0]];if(!t)return;if(s[0]==='games'||s[0]==='vyper'||s[0]==='futures')t+='#/'+s.slice(0,2).join('/');location.replace(t);})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f3f4f0" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0c0e10" media="(prefers-color-scheme: dark)">
-{#- Critical: the page colour and theme before any stylesheet, so no frame is ever the browser's white or a wrong theme. Mirrors site.css --bg. -#}
-<style id="critical">
-:root { color-scheme: light dark; }
-html { background: #f3f4f0; color: #1b1c1c; }
-@media (prefers-color-scheme: dark) { html { background: #0c0e10; color: #e2e3df; } }
-@view-transition { navigation: auto; }
-</style>
-{#- Browsers without cross-document view transitions (Firefox; Safari before 18.2) get the same ease out and in from
-    .page's animations (blockulator.css, html.nvt), started here before the first paint. -#}
-<script>if(!('onpagereveal' in window))document.documentElement.classList.add('nvt');</script>
+{%- set ui = config.extra.ui %}
+<meta name="theme-color" content="{{ ui.bg_light }}" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="{{ ui.bg_dark }}" media="(prefers-color-scheme: dark)">
+{#- The shared look: sdr-ui, pinned in config.toml [extra.ui]. Order per sdr-ui markup/head.html: the critical colours
+    (from the pin, so they cannot drift), boot.js before the first paint, the face preloaded, the bundle, this site's sheet. -#}
+<style id="ui-critical">html{background:{{ ui.bg_light }};color:{{ ui.text_light }}}@media (prefers-color-scheme:dark){html:not([data-theme=light]){background:{{ ui.bg_dark }};color:{{ ui.text_dark }}}}@view-transition{navigation:auto}</style>
+<script src="{{ ui.base }}boot.js" integrity="{{ ui.boot }}" crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://ui.securedataresearch.net" crossorigin>
+<link rel="preload" href="{{ ui.base }}fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{{ ui.base }}sdr-ui.css" integrity="{{ ui.css }}" crossorigin="anonymous">
+<link rel="stylesheet" href="/css/blockulator.css">
 <title>{% block title %}{{ config.title }}{% endblock title %}</title>
 <meta name="description" content="{% block description %}{{ config.description }}{% endblock description %}">
 <link rel="icon" type="image/png" href="/blockulator_favicon.png">
@@ -33,11 +32,6 @@ html { background: #f3f4f0; color: #1b1c1c; }
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preload" href="/fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/instrument-sans-italic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/css/site.css">
-<link rel="stylesheet" href="/css/blockulator.css">
 {% if page and page.extra.math %}<link rel="stylesheet" href="/vendor/katex@0.16.11/katex.min.css">
 <script defer src="/vendor/katex@0.16.11/katex.min.js"></script>
 <script defer src="/vendor/katex@0.16.11/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});"></script>
@@ -52,24 +46,24 @@ html { background: #f3f4f0; color: #1b1c1c; }
 {%- set here = current_path | default(value="/") %}
 {#- the top-level item a page belongs to: its group (pagehead.html), else its path -#}
 {%- if page %}{% set grp = page.extra.group | default(value="") %}{% elif section %}{% set grp = section.extra.group | default(value="") %}{% else %}{% set grp = "" %}{% endif %}
-<div class="topbar">
-<header class="top">
-  <a class="brand" href="/" aria-label="Blockulator home"><img src="/blockulator_favicon.png" alt="" width="36" height="36"><span>blockulator</span></a>
-  <nav class="links" aria-label="Main">
+<div class="ui-topbar">
+<header class="ui-top">
+  <a class="ui-brand" href="/" aria-label="Blockulator home"><img class="ui-mask" src="/blockulator_favicon.png" alt="" width="36" height="36"><span>blockulator</span></a>
+  <nav class="ui-links" aria-label="Main">
     <a href="/results/"{% if grp == "results" or "/results/" in here %} aria-current="page"{% endif %}>Results</a>
     <a href="/library/"{% if grp == "library" or "/library/" in here %} aria-current="page"{% endif %}>Library</a>
     <a href="/writeup/"{% if grp == "writeup" or "/writeup/" in here %} aria-current="page"{% endif %}>Write-up</a>
-    <a class="cta" href="{{ config.extra.repo }}">Source</a>
+    <a class="ui-cta" href="{{ config.extra.repo }}">Source</a>
   </nav>
 </header>
 </div>
-<div class="page">
+<div class="ui-page">
 {% block hero %}{% endblock hero %}
-<main class="wrap">
+<main class="ui-wrap">
 {% block content %}{% endblock content %}
 </main>
 {% block wide %}{% endblock wide %}
-<footer class="foot wrap">
+<footer class="ui-foot ui-wrap">
   <nav aria-label="More">
     <a href="/why/">Why WAD loses digits</a>
     <a href="/proofs/">Proofs</a>
@@ -83,14 +77,9 @@ html { background: #f3f4f0; color: #1b1c1c; }
   <p>Blockulator, BL127 and BL19 are made by Secure Data Research LLC and released under the <a href="{{ config.extra.repo }}/blob/master/LICENSE">MIT licence</a>.</p>
 </footer>
 </div>
-<script src="/js/hero.js" defer></script>
 <script type="module" src="/js/islands/notes.js"></script>
 {% block scripts %}{% endblock scripts %}
-<script>(function(){var h=document.documentElement;if(!h.classList.contains('nvt')||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-document.addEventListener('click',function(e){var a=e.target.closest('a[href]');if(!a||e.defaultPrevented||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||a.target||a.hasAttribute('download'))return;
-var u=new URL(a.href,location.href);if(u.origin!==location.origin||(u.pathname===location.pathname&&u.search===location.search)||/\.(?!html?$)[a-z0-9]+$/i.test(u.pathname))return;
-e.preventDefault();h.classList.add('leaving');setTimeout(function(){location.href=u.href;},parseFloat(getComputedStyle(h).getPropertyValue('--t-out'))||90);});
-addEventListener('pageshow',function(e){if(e.persisted)h.classList.remove('leaving');});})();</script>
+<script src="{{ ui.base }}transitions.js" integrity="{{ ui.transitions }}" crossorigin="anonymous" defer></script>
 <script>document.addEventListener('click',function(e){var b=e.target.closest('.copy');if(!b||!navigator.clipboard)return;navigator.clipboard.writeText(b.dataset.copy).then(function(){var t=b.textContent;b.textContent='copied';setTimeout(function(){b.textContent=t;},1200);});});</script>
 </body>
 </html>

@@ -1,12 +1,12 @@
 {% component deployment(lib: string = "bl127") -%}
 {%- set d = load_data(path="static/data/" ~ (lib == "bl19" and "bl19/bl19.json" or "bl127.json")) -%}
-<dl class="kv">
+<dl class="ui-kv">
   <dt>network</dt><dd>{{ d.network }} (chain id {{ d.chainId }})</dd>
   <dt>address</dt><dd>{{ d.address }} <button class="copy" data-copy="{{ d.address }}">copy</button></dd>
   <dt>verified</dt><dd><a href="{{ d.verification.sourcifyRepo }}">Sourcify</a>, <a href="{{ d.verification.blockscout }}">Blockscout</a>. Etherscan has no Yul path.</dd>
 </dl>
 <details class="record"><summary>Deployment record</summary>
-<dl class="kv">
+<dl class="ui-kv">
   <dt>deployer</dt><dd>{{ d.deployer }} (the CREATE2 proxy)</dd>
   <dt>salt</dt><dd>"{{ d.saltAscii }}" = {{ d.salt }}</dd>
   <dt>init code hash</dt><dd>{{ d.initCodeHash }}</dd>
@@ -232,11 +232,11 @@
     liveChecked, liveMismatches, liveBlock and liveDate into the dataset. A regenerated dataset drops them. -#}
 {% component stamp(d: map, script: string) -%}
 {%- if d.runnersAhead is defined %}
-<p class="stamp pending"><strong>Live check pending a redeploy.</strong> These numbers come from a newer build than the runner on Sepolia ("{{ d.runnersAhead.deployed }}"); <code>make ladder</code> reproduces them, and <code>uv run scripts/ladder/{{ script }}</code> checks them live once "{{ d.runnersAhead.next }}" is deployed.</p>
+<p class="ui-note ui-note--wait"><strong>Live check pending a redeploy.</strong> These numbers come from a newer build than the runner on Sepolia ("{{ d.runnersAhead.deployed }}"); <code>make ladder</code> reproduces them, and <code>uv run scripts/ladder/{{ script }}</code> checks them live once "{{ d.runnersAhead.next }}" is deployed.</p>
 {%- elif d.liveChecked is defined %}
-<p class="stamp{% if d.liveMismatches > 0 %} bad{% endif %}"><strong>BL127's and BL19's deployed contracts checked live on Sepolia: {{ d.liveChecked | num_format }} results at block {{ d.liveBlock | num_format }}, {{ d.liveMismatches }} mismatch{% if d.liveMismatches != 1 %}es{% endif %}.</strong> The other libraries' results reproduce locally with <code>make ladder</code>. {{ d.liveDate }}, runner <a href="https://repo.sourcify.dev/11155111/{{ d.liveRunner }}">{{ d.liveRunner | truncate(length=10, end="…") }}</a>. Re-run: <code>uv run scripts/ladder/{{ script }}</code></p>
+<p class="ui-note {% if d.liveMismatches > 0 %}ui-note--bad{% else %}ui-note--ok{% endif %}"><strong>BL127's and BL19's deployed contracts checked live on Sepolia: {{ d.liveChecked | num_format }} results at block {{ d.liveBlock | num_format }}, {{ d.liveMismatches }} mismatch{% if d.liveMismatches != 1 %}es{% endif %}.</strong> The other libraries' results reproduce locally with <code>make ladder</code>. {{ d.liveDate }}, runner <a href="https://repo.sourcify.dev/11155111/{{ d.liveRunner }}">{{ d.liveRunner | truncate(length=10, end="…") }}</a>. Re-run: <code>uv run scripts/ladder/{{ script }}</code></p>
 {%- else %}
-<p class="stamp pending"><strong>Not re-checked on Sepolia since this data was generated ({{ d.generated }}).</strong> Check every cell against the live runner with <code>uv run scripts/ladder/{{ script }}</code></p>
+<p class="ui-note ui-note--wait"><strong>Not re-checked on Sepolia since this data was generated ({{ d.generated }}).</strong> Check every cell against the live runner with <code>uv run scripts/ladder/{{ script }}</code></p>
 {%- endif %}
 {%- endcomponent %}
 

@@ -5,7 +5,7 @@
 {#- Every inner page: its head, then lead (before the Markdown), the Markdown, then body. A data page extends this
     and fills body (and lead, width) instead of repeating the page around them. -#}
 {% block content %}
-<article class="prose doc{% block width %}{% endblock width %}">
+<article class="ui-prose ui-prose--data{% block width %}{% endblock width %}">
 {% include "pagehead.html" %}
 {% block lead %}{% endblock lead %}
 {{ page.content | safe }}

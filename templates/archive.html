@@ -3,19 +3,19 @@
 {% block description %}{{ page.description }}{% endblock description %}
 {% block head %}<link rel="stylesheet" href="/css/legacy/main.css">{% endblock head %}
 {% block content %}
-<article class="prose doc wide">
+<article class="ui-prose ui-prose--data wide">
 {% include "pagehead.html" %}
 {{ page.content | safe }}
 </article>
-<section class="block archive">
+<section class="ui-section archive">
   <div class="stories">
     {% for a in page.extra.apps %}
-    <article class="card story" data-open="{{ a.open }}">
-      <p class="about">{{ a.kind }}</p>
+    <article class="ui-card story" data-open="{{ a.open }}">
+      <p class="ui-meta">{{ a.kind }}</p>
       <h3>{{ a.name }}</h3>
       <p>{{ a.text }}</p>
       {% if a.address %}<p class="addr"><a href="https://sepolia.etherscan.io/address/{{ a.address }}">{{ a.address }}</a></p>{% endif %}
-      <p class="links"><a class="more" href="#/{{ a.open }}">Open →</a> <a class="more" href="{{ config.extra.repo }}/tree/master/{{ a.source }}">Source</a></p>
+      <p class="links"><a class="ui-more" href="#/{{ a.open }}">Open →</a> <a class="ui-more" href="{{ config.extra.repo }}/tree/master/{{ a.source }}">Source</a></p>
     </article>
     {% endfor %}
   </div>

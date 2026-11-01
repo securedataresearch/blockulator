@@ -15,8 +15,8 @@
 </dl>
 </details>
 
-<nav class="tabs" id="scenario-tabs" aria-label="Op">
-{%- for op in d.ops %}<a href="#{{ op.id }}" data-tab="{{ op.id }}"{% if loop.first %} class="on"{% endif %}>{{ op.label }}</a>{% endfor %}
+<nav class="ui-tabs" id="scenario-tabs" aria-label="Op">
+{%- for op in d.ops %}<a href="#{{ op.id }}" data-tab="{{ op.id }}"{% if loop.first %} aria-current="true"{% endif %}>{{ op.label }}</a>{% endfor %}
 </nav>
 {%- for op in d.ops %}
 <section class="scenario" id="{{ op.id }}" data-index="{{ op.index }}"{% if not loop.first %} hidden{% endif %}>
