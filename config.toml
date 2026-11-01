@@ -20,11 +20,11 @@ skip_anchor_prefixes = ["https://github.com/"]
 # The shared look (securedataresearch/sdr-ui), pinned. Change it with: deno run -A ../sdr-ui/tools/pin.ts X.Y.Z
 # build.sh checks these hashes against the hosted manifest before it builds.
 [extra.ui]
-version = "0.8.0"
-base = "https://ui.securedataresearch.net/v0.8.0/"
-css = "sha384-2odJFJ+N7JD5zle7DcQ74oQJiD1hzfABxbl8AeMuzSRsP7nTg5heL7jEuQ7LViQr"
-boot = "sha384-sSml3AEAW5UfVzZO8zqniVlzbLbVOz7cqaJqAmDP6ckk/vw5r/Iv/wy4R+AVANJG"
-transitions = "sha384-AlxXXX3N143LTKw5IR3pPBMCNazXZBo5YHzjF8EDh0+wmOMeUhERWL9+C2IzqnTY"
+version = "0.9.0"
+base = "https://ui.securedataresearch.net/v0.9.0/"
+css = "sha384-MxgV9D7CbQ9P7hmOUBz2qrsCKKFeW+geQbgy18/ed1kQbPEUVIPtnZF6Z5OO0ZqT"
+boot = "sha384-DtK/h6DTZ6qK7ORBVT2ehLYnbmj0kRyng894/ISM6ICFmGSHKyMOkBaXXN/eH4g3"
+transitions = "sha384-jCJjdzpoq7ZJFM5B2ij/USrZWs+rmfEMAWlzH5TMRFNQK0Sp0I1yYalQD3qKnePJ"
 bg_light = "#f3f4f0"
 text_light = "#1b1c1c"
 bg_dark = "#0c0e10"
