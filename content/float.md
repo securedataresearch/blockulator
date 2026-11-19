@@ -11,7 +11,7 @@ moved = ["rule-1-bunni-v2", "rule-2-resupply", "rule-2-balancer-v2", "rule-2-bal
 moved_to = "/library/integrating/"
 +++
 
-BL19 is a float, so its digits move with the value: about 71 at any size, where BL127 keeps 38 at 1 and 8 at 10<sup>−30</sup>. Every op is correctly rounded: none of 360,590 random inputs was misrounded ([sweep]({{ config.extra.repo }}/blob/master/docs/benchmarks/sweep.md)).
+BL19 is a float, so its digits move with the value: about 71 at any size, where BL127 keeps 38 at 1 and 8 at 10<sup>−30</sup>. Every op is correctly rounded: none of 340,394 random inputs was misrounded ([sweep]({{ config.extra.repo }}/blob/master/docs/benchmarks/sweep.md)).
 
 ## The format
 

@@ -518,10 +518,7 @@ def vs(home: dict, libs: list[dict]) -> dict:
     sc = home["ladder"]["scenarios"][0]
 
     def g(lib, op):
-        # the WAD libraries' gas is their own WAD function's (wad.json); BL19's and BL127's is the op's (gas.json)
-        if lib in ("solady", "prb") and (lib, wadname.get(op, "")) in w:
-            x = w.get((lib, wadname.get(op, "")))
-            return x and x.get("gasTypical")
+        # one source for every library: the per-op benchmark (gas.json, gas19.json), as on /results/ops/
         return gas.get((lib, op))
 
     def wrong(lib, op):

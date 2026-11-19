@@ -15,7 +15,7 @@ A WAD value moves in with `fromFixed18` and out with `toFixed18Down` or `toFixed
 
 {{ <table name="migrate.solady.wad" first="Solady FixedPointMathLib" /> }}
 
-Move `expWad`, `lnWad`, `powWad` and `lambertW0Wad`: on everyday inputs Solady is off by a wei on 4% to 68% of their results, and BL19 and BL127 on none. Keep `mulWad`, `divWad`, `sqrtWad` and `cbrtWad` for a single product, quotient or root of token amounts: they are exact and cost a tenth of the gas. Both libraries need the CLZ opcode: compile with `evm_version = "osaka"` and solc 0.8.31 or later.
+Move `expWad`, `lnWad`, `powWad` and `lambertW0Wad`: on everyday inputs Solady is off by a wei on 4% to 68% of their results, and BL19 and BL127 on none. Keep `mulWad`, `divWad`, `sqrtWad` and `cbrtWad` for a single product, quotient or root of token amounts: they are exact and cost less: `mulWad` is 86 gas, against 827 through BL127 and 2,473 through BL19 with their conversions. Both libraries need the CLZ opcode: compile with `evm_version = "osaka"` and solc 0.8.31 or later.
 
 ## From PRBMath
 
@@ -25,7 +25,7 @@ PRBMath's values are user-defined types over the same 18-decimal integers, so a 
 
 {{ <table name="migrate.prbmath.wadud" first="PRBMath UD60x18" /> }}
 
-On everyday inputs PRBMath's `exp` is off by a wei on 54% of results and its `ln`, `log2`, `log10` and `pow` on every one; BL19 and BL127 on none. Its `mul`, `div` and `sqrt` are exact; keep them for a single product, quotient or root.
+On 200 everyday inputs each, PRBMath's `exp` is off by a wei on 107 results and its `ln`, `log2`, `log10` and `pow` on all 200; BL19 and BL127 on none. Its `mul`, `div` and `sqrt` are exact; keep them for a single product, quotient or root.
 
 ## From ABDK
 

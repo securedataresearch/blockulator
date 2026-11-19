@@ -9,7 +9,7 @@ moved = ["rule-1-bunni-v2", "rule-2-resupply", "rule-2-balancer-v2", "rule-2-bal
 moved_to = "/library/integrating/"
 +++
 
-BL127 is a number format and a math library for Solidity. A value is stored as `value × 2^128` in an `int256`, so it keeps 38 correct digits at 1 where WAD keeps 18, and the same Yul source ships two ways: a library you inline, and a deployed contract you call. The two are fuzzed equal on every `int256`, reverts included.
+BL127 is a number format and a math library for the EVM, written in Yul and called from Solidity. A value is stored as `value × 2^128` in an `int256`, so it keeps 38 correct digits at 1 where WAD keeps 18, and the same Yul source ships two ways: a library you inline, and a deployed contract you call. The two are fuzzed equal on every `int256`, reverts included.
 
 ## Install
 
