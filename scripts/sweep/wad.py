@@ -866,9 +866,8 @@ def render(doc) -> str:
           "4,000 inputs per function over everything a 256-bit word holds, weighted toward the hard cases: magnitudes "
           "from one wei to 10^59 tokens, and inputs built so the exact answer lands on or beside a whole wei (perfect "
           "squares and cubes, products that are a whole number of wei, x = ln(k)). BL19 holds 71 digits, so an answer "
-          "past 10^71 wei cannot carry its last wei. A decimal that is not a binary fraction is rounded as it converts "
-          "in, so an answer that should land exactly on a whole wei can land one below, and beside a large operand "
-          "that rounding can grow past a wei.",
+          "past 10^71 wei cannot carry its last wei. Why each of the other misses happens has not been analysed here; "
+          "the table gives the counts and the largest miss.",
           "",
           "*Wrong wei*: results off by at least one wei, of the inputs where the library and the exact "
           "value both give one; *max / median*: wei off over those inputs. *Reverts in range*: reverts where "
