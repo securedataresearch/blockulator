@@ -4,7 +4,7 @@ A release is the public name for a set of deployed contracts. Each contract
 keeps its own version in its CREATE2 salt, because the salt names the address;
 `contracts/deployments/RELEASE.json` maps the release to every address.
 
-## Unreleased
+## Blockulator 3.0 (2026-10-29)
 
 ### Renamed
 

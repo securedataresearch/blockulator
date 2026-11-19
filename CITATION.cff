@@ -16,7 +16,7 @@ abstract: >-
   functions among them. Both ship as deployed contracts with no owner and as
   inline libraries.
 version: "3.0"
-date-released: "2026-10-28"
+date-released: "2026-10-29"
 keywords:
   - ethereum
   - evm

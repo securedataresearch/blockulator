@@ -71,7 +71,7 @@ int256  ltv  = BL127Lib.divUp(debt, collateral);    // a limit check: never belo
 
 Or call the deployed contracts, where every op is a free `eth_call`: `IBL127E(0xc16F…0808).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
 
-**Requires the CLZ opcode** (EIP-7939, the Osaka EVM). Supported: Ethereum, Arbitrum, OP Mainnet, Base, Unichain, Polygon PoS, BNB Chain, Gnosis, Scroll, Linea. Not supported: zkSync Era, Avalanche C-Chain. Check any chain with `make probe-clz RPC=<url>`.
+**Requires the CLZ opcode** (EIP-7939, the Osaka EVM). Supported: Ethereum, Arbitrum One, OP Mainnet, Base, Unichain, Polygon PoS, BNB Chain and Gnosis; Scroll and Linea by a live probe of the opcode ([the list](contracts/deployments/README.md#chains-clz-osaka-required)). Not supported: zkSync Era, Avalanche C-Chain, Polygon zkEVM. Check any chain with `make probe-clz RPC=<url>`.
 
 ## Two rules that end dust
 
@@ -98,6 +98,13 @@ The [integration guide](https://blockulator.com/library/#integrating) has the wo
 | BL19S (Lambert W) | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` |
 
 Every contract is verified on Sourcify and Blockscout. Each library is one Yul source that generates both the deployed object and the inline library, fuzzed to agree bit for bit. More detail: [records](contracts/deployments/RELEASE.md), [BL127](contracts/src/bl127/README.md), [BL19](contracts/src/bl19/README.md), [precision](docs/bl19/precision.md), [the ladder](docs/benchmarks/ladder.md), [the edges](docs/benchmarks/edges.md), [proofs](docs/proofs.md), [changelog](CHANGELOG.md).
+
+## How we know
+
+- **Proved for every input.** 17 of BL127's 19 core ops and 18 of BL19's 24 return exactly the word an independent specification returns, on all 2<sup>256</sup> or 2<sup>512</sup> inputs at once (Halmos; `make proofs`, [`docs/proofs.md`](docs/proofs.md)). The other eight are fuzzed against their exact specifications.
+- **Swept.** Every op of both libraries against correctly rounded truth: BL127 on 212,119 inputs and BL19 on 455,082, none misrounded (`make sweep`, [`sweep.md`](docs/benchmarks/sweep.md)).
+- **Reproducible.** Every number here and on the site comes from a committed dataset that a `make` target regenerates; `make gates` reruns the checks a merge needs.
+- **Not done.** No third party has audited the libraries, and they are deployed on Sepolia only, not on Ethereum mainnet.
 
 ## Learn more
 
