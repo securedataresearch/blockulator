@@ -6,7 +6,100 @@ BL19 and BL127 are not WAD libraries: each is called as a WAD user calls it, `fr
 
 Versions: Blockulator at c1105e1, Solady v0.1.26, PRBMath v4.2.0, Solmate main@89365b8, OpenZeppelin v5.7.0 (vendored), Uniswap v4-core v4.0.0 (vendored), snekmate v0.1.2 (vyper 0.4.3).
 
-## Wei error
+## Everyday inputs
+
+200 inputs per function in its everyday range, none a round number: exp of -10..10, ln and the logs of 0.001..1,000, pow of 0.5..2 to -3..3, products, quotients and roots of amounts up to 10^9 tokens.
+
+| function | library | off by a wei | worst, wei |
+|---|---|---:|---:|
+| mulWad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 0 of 200 | 0 |
+|  | PRBMath (UD60x18 / SD59x18) | 0 of 200 | 0 |
+|  | Solmate | 0 of 200 | 0 |
+|  | OpenZeppelin Math | 0 of 200 | 0 |
+|  | Uniswap FullMath | 0 of 200 | 0 |
+|  | snekmate (Vyper) | 0 of 200 | 0 |
+| mulWadUp | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 0 of 200 | 0 |
+|  | Solmate | 0 of 200 | 0 |
+|  | OpenZeppelin Math | 0 of 200 | 0 |
+|  | Uniswap FullMath | 0 of 200 | 0 |
+|  | snekmate (Vyper) | 0 of 200 | 0 |
+| divWad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 0 of 200 | 0 |
+|  | PRBMath (UD60x18 / SD59x18) | 0 of 200 | 0 |
+|  | Solmate | 0 of 200 | 0 |
+|  | OpenZeppelin Math | 0 of 200 | 0 |
+|  | Uniswap FullMath | 0 of 200 | 0 |
+|  | snekmate (Vyper) | 0 of 200 | 0 |
+| divWadUp | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 0 of 200 | 0 |
+|  | Solmate | 0 of 200 | 0 |
+|  | OpenZeppelin Math | 0 of 200 | 0 |
+|  | Uniswap FullMath | 0 of 200 | 0 |
+|  | snekmate (Vyper) | 0 of 200 | 0 |
+| sMulWad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 0 of 200 | 0 |
+|  | PRBMath (UD60x18 / SD59x18) | 0 of 200 | 0 |
+|  | Solmate | 0 of 200 | 0 |
+| sDivWad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 0 of 200 | 0 |
+|  | PRBMath (UD60x18 / SD59x18) | 0 of 200 | 0 |
+|  | Solmate | 0 of 200 | 0 |
+| sqrtWad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 0 of 200 | 0 |
+|  | PRBMath (UD60x18 / SD59x18) | 0 of 200 | 0 |
+|  | Solmate | 0 of 200 | 0 |
+|  | OpenZeppelin Math | 0 of 200 | 0 |
+| sqrtWadUp | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | OpenZeppelin Math | 0 of 200 | 0 |
+| cbrtWad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 0 of 200 | 0 |
+|  | snekmate (Vyper) | 0 of 200 | 0 |
+| expWad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 55 of 200 | 223 |
+|  | PRBMath (UD60x18 / SD59x18) | 107 of 200 | 57,429 |
+|  | PRBMath UD60x18 (exp, logs, pow) | 101 of 103 | 57,429 |
+|  | Solmate | 55 of 200 | 223 |
+|  | snekmate (Vyper) | 55 of 200 | 223 |
+| lnWad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 8 of 200 | 1 |
+|  | PRBMath (UD60x18 / SD59x18) | 200 of 200 | 12 |
+|  | PRBMath UD60x18 (exp, logs, pow) | 200 of 200 | 12 |
+|  | Solmate | 8 of 200 | 1 |
+|  | snekmate (Vyper) | 8 of 200 | 1 |
+| log2Wad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | PRBMath (UD60x18 / SD59x18) | 200 of 200 | 20 |
+|  | PRBMath UD60x18 (exp, logs, pow) | 199 of 199 | 20 |
+| log10Wad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | PRBMath (UD60x18 / SD59x18) | 200 of 200 | 5 |
+|  | PRBMath UD60x18 (exp, logs, pow) | 200 of 200 | 5 |
+| powWad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 136 of 200 | 18 |
+|  | PRBMath (UD60x18 / SD59x18) | 200 of 200 | 188 |
+|  | PRBMath UD60x18 (exp, logs, pow) | 108 of 108 | 188 |
+|  | Solmate | 136 of 200 | 18 |
+| lambertW0Wad | **BL19** | 0 of 200 | 0 |
+|  | **BL127** | 0 of 200 | 0 |
+|  | Solady FixedPointMathLib | 48 of 200 | 1 |
+
+## The whole domain
+
+4,000 inputs per function over everything a 256-bit word holds, weighted toward the hard cases: magnitudes from one wei to 10^59 tokens, and inputs built so the exact answer lands on or beside a whole wei (perfect squares and cubes, products that are a whole number of wei, x = ln(k)). BL19 holds 71 digits, so an answer past 10^71 wei cannot carry its last wei. A decimal that is not a binary fraction is rounded as it converts in, so an answer that should land exactly on a whole wei can land one below, and beside a large operand that rounding can grow past a wei.
 
 *Wrong wei*: results off by at least one wei, of the inputs where the library and the exact value both give one; *max / median*: wei off over those inputs. *Reverts in range*: reverts where the exact result fits the word (a narrower domain, as Solady's mulWad reverting once x y passes 2^256, or BL127 past 1.7 × 10^38); *value out of range*: a value where there is none (snekmate's wad_ln(0) = 0). A function defined on part of the domain only is scored on that part (*outside domain*).
 

@@ -13,7 +13,7 @@ Each established library does something better. This page says what, then puts t
 
 **What it does better:** gas. Its `expWad`, `lnWad` and `powWad` are the cheapest WAD transcendentals there are, its code is small, and it runs on every EVM chain.
 
-**The answer:** they are cheap because they stop short of the last wei: `expWad` is off by a wei on 48% of results, `lnWad` on 24% and `powWad` on 66%. BL127 keeps 38 digits at 6.6 times the gas on `exp` and 3.5 times on `ln`. For a single product or quotient of token amounts Solady's `mulWad` and `divWad` are exact and cheaper; keep them.
+**The answer:** they are cheap because they stop short of the last wei: on everyday inputs `expWad` is off by a wei on 28% of results, `lnWad` on 4% and `powWad` on 68%, and BL19 and BL127 on none. BL127 keeps 38 digits at 6.6 times the gas on `exp` and 3.5 times on `ln`. For a single product or quotient of token amounts Solady's `mulWad` and `divWad` are exact and cheaper; keep them.
 
 {{ <table name="vs.solady" first="" /> }}
 
@@ -21,7 +21,7 @@ Each established library does something better. This page says what, then puts t
 
 **What it does better:** types. SD59x18 and UD60x18 are user-defined value types with operators, so a raw integer cannot be passed where a fixed-point value is meant.
 
-**The answer:** BL19 and BL127 are typed the same way. PRBMath is off by a wei more often than Solady, on 71% to 98% of its `exp`, `ln`, `log2`, `log10` and `pow` results, and costs 3.6 times BL127's gas on `ln` and 3.0 times on `pow`; `exp` is 2,743 gas against BL127's 2,835.
+**The answer:** BL19 and BL127 are typed the same way. PRBMath is off by a wei more often than Solady, on 54% of everyday `exp` results and on every `ln`, `log2`, `log10` and `pow` result, and costs 3.6 times BL127's gas on `ln` and 3.0 times on `pow`; `exp` is 2,743 gas against BL127's 2,835.
 
 {{ <table name="vs.prbmath" first="" /> }}
 

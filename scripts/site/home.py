@@ -124,11 +124,12 @@ def edges_section(reg: dict) -> dict:
 
 
 def wad_section(reg: dict) -> dict:
-    """Every library's WAD functions on the same inputs (wad.json): the share of results off by a wei, for the chart."""
+    """Every library's WAD functions on the same everyday inputs (wad.json, .typical): the share of results off by a
+    wei, for the chart."""
     d = load("wad.json")
     fns = list(dict.fromkeys(r["function"] for r in d["rows"]))
-    rows = [{"lib": r["lib"], "fn": r["function"], "pct": round(r["wrongWeiPct"], 2), "wrong": r["wrongWei"], "n": r["valued"], "maxWei": r.get("maxWei")}
-            for lib in reg for r in d["rows"] if r["lib"] == lib]
+    rows = [{"lib": r["lib"], "fn": r["function"], "pct": round(t["wrongWeiPct"], 2), "wrong": t["wrongWei"], "n": t["valued"], "maxWei": t["maxWei"]}
+            for lib in reg for r in d["rows"] if r["lib"] == lib for t in [r["typical"]]]
     return {"functions": fns, "rows": rows}
 
 
@@ -374,6 +375,12 @@ def wad_tables(libs: list[dict]) -> dict:
     def table(cell):
         return libcols(libs, have, rows, lambda c, r: (lambda x: cell(c, x) if x else {"v": None, "why": "not offered"})(by.get((c["id"], r["key"]))))
 
+    def everyday(c, x):
+        t = x["typical"]
+        v = "0" if not t["wrongWei"] else f"{t['wrongWeiPct']:.2g}%" if t["wrongWeiPct"] < 1 else f"{round(t['wrongWeiPct'])}%"
+        return {"v": v, "h": round(min(t["wrongWeiPct"], 100) / 100, 3),
+                "why": f"{c['long']} {x['function']}: {t['wrongWei']:,} of {t['valued']:,} everyday results off by a wei or more, {t['maxWei']:,} wei at worst"}
+
     def wei(c, x):
         v = "0" if not x["wrongWei"] else f"{x['wrongWeiPct']:.2g}%" if x["wrongWeiPct"] < 1 else f"{round(x['wrongWeiPct'])}%"
         return {"v": v, "h": round(min(x["wrongWeiPct"], 100) / 100, 3),
@@ -393,7 +400,7 @@ def wad_tables(libs: list[dict]) -> dict:
     def gas(c, x):
         return {"v": f"{x['gasTypical']:,}" if x.get("gasTypical") else None,
                 "why": f"{c['long']} {x['function']}: median {x['gasTypical']:,} gas on everyday inputs, p99 {x['gasP99']:,} over the sweep" if x.get("gasTypical") else None}
-    return {"wei": table(wei), "reverts": table(reverts), "worst": table(worst), "gas": table(gas)}
+    return {"everyday": table(everyday), "wei": table(wei), "reverts": table(reverts), "worst": table(worst), "gas": table(gas)}
 
 
 def deployed_data() -> tuple[dict, dict]:
@@ -467,8 +474,9 @@ def migrate(libs: list[dict]) -> dict:
         return sm["median"] if sm else None
 
     def wei(x):
-        """The share of the values a library returns that are off by a wei or more."""
-        return "0" if not x["wrongWei"] else f"{x['wrongWeiPct']:.2g}%" if x["wrongWeiPct"] < 1 else f"{round(x['wrongWeiPct'])}%"
+        """The share of a library's results on everyday inputs that are off by a wei or more."""
+        t = x["typical"]
+        return "0" if not t["wrongWei"] else f"{t['wrongWeiPct']:.2g}%" if t["wrongWeiPct"] < 1 else f"{round(t['wrongWeiPct'])}%"
 
     def wad_table(lib):
         rows = []
@@ -528,7 +536,8 @@ def vs(home: dict, libs: list[dict]) -> dict:
 
     def wrong(lib, op):
         x = w.get((lib, wadname.get(op, "")))
-        return None if not x else "0" if not x["wrongWei"] else f"{x['wrongWeiPct']:.2g}%" if x["wrongWeiPct"] < 1 else f"{round(x['wrongWeiPct'])}%"
+        t = x and x["typical"]
+        return None if not t else "0" if not t["wrongWei"] else f"{t['wrongWeiPct']:.2g}%" if t["wrongWeiPct"] < 1 else f"{round(t['wrongWeiPct'])}%"
 
     def proven(lib):
         name = {"bl127": "BL127", "bl19": "BL19"}.get(lib)
@@ -543,7 +552,7 @@ def vs(home: dict, libs: list[dict]) -> dict:
 
     metrics = [("digits of precision at 1", lambda l: str(reg[l]["digits"]))] \
         + [(f"gas, {op}", lambda l, op=op: (lambda v: f"{v:,}" if v else None)(g(l, op))) for op in ("mul", "exp", "ln", "pow", "sqrt")] \
-        + [(f"{wadname[op]} results off by a wei", lambda l, op=op: wrong(l, op)) for op in ("exp", "ln", "pow")] \
+        + [(f"{wadname[op]} results off by a wei, everyday inputs", lambda l, op=op: wrong(l, op)) for op in ("exp", "ln", "pow")] \
         + [(f"{sc['title'].lower()}: median digits after the last step", lambda l: (lambda x: f"{x['digits']:.1f}" if x and x["digits"] is not None else None)(lad.get((l, sc["id"]))))] \
         + [("edge probes: median digits", lambda l: edge(l, "median")), ("edge probes: reverted", lambda l: edge(l, "reverts")),
            ("edge probes: went to zero", lambda l: edge(l, "zero")), ("core ops formally proven", proven)]

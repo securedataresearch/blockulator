@@ -61,7 +61,16 @@
    "gasP99": 2473,
    "gasMax": 2473,
    "gasTypical": 2473,
-   "bytes": 998
+   "bytes": 998,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -92,7 +101,16 @@
    "gasP99": 827,
    "gasMax": 827,
    "gasTypical": 827,
-   "bytes": 361
+   "bytes": 361,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -122,7 +140,16 @@
    "gasP99": 86,
    "gasMax": 105,
    "gasTypical": 86,
-   "bytes": 61
+   "bytes": 61,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -151,7 +178,16 @@
    "gasP99": 304,
    "gasMax": 304,
    "gasTypical": 218,
-   "bytes": 226
+   "bytes": 226,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -181,7 +217,16 @@
    "gasP99": 146,
    "gasMax": 146,
    "gasTypical": 146,
-   "bytes": 56
+   "bytes": 56,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "oz",
@@ -210,7 +255,16 @@
    "gasP99": 533,
    "gasMax": 533,
    "gasTypical": 239,
-   "bytes": 276
+   "bytes": 276,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "uniswap",
@@ -239,7 +293,16 @@
    "gasP99": 478,
    "gasMax": 478,
    "gasTypical": 179,
-   "bytes": 191
+   "bytes": 191,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "snekmate",
@@ -268,7 +331,16 @@
    "gasP99": 886,
    "gasMax": 886,
    "gasTypical": 323,
-   "bytes": null
+   "bytes": null,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -309,7 +381,16 @@
    "gasP99": 2488,
    "gasMax": 2488,
    "gasTypical": 2488,
-   "bytes": 999
+   "bytes": 999,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -340,7 +421,16 @@
    "gasP99": 846,
    "gasMax": 846,
    "gasTypical": 846,
-   "bytes": 373
+   "bytes": 373,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -370,7 +460,16 @@
    "gasP99": 110,
    "gasMax": 129,
    "gasTypical": 110,
-   "bytes": 68
+   "bytes": 68,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -400,7 +499,16 @@
    "gasP99": 172,
    "gasMax": 172,
    "gasTypical": 172,
-   "bytes": 64
+   "bytes": 64,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "oz",
@@ -429,7 +537,16 @@
    "gasP99": 926,
    "gasMax": 926,
    "gasTypical": 632,
-   "bytes": 499
+   "bytes": 499,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "uniswap",
@@ -458,7 +575,16 @@
    "gasP99": 603,
    "gasMax": 603,
    "gasTypical": 304,
-   "bytes": 259
+   "bytes": 259,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "snekmate",
@@ -487,7 +613,16 @@
    "gasP99": 997,
    "gasMax": 997,
    "gasTypical": 391,
-   "bytes": null
+   "bytes": null,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -528,7 +663,16 @@
    "gasP99": 2755,
    "gasMax": 2755,
    "gasTypical": 2755,
-   "bytes": 1096
+   "bytes": 1096,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -569,7 +713,16 @@
    "gasP99": 1101,
    "gasMax": 1392,
    "gasTypical": 985,
-   "bytes": 706
+   "bytes": 706,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -599,7 +752,16 @@
    "gasP99": 87,
    "gasMax": 87,
    "gasTypical": 87,
-   "bytes": 81
+   "bytes": 81,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -628,7 +790,16 @@
    "gasP99": 534,
    "gasMax": 534,
    "gasTypical": 242,
-   "bytes": 282
+   "bytes": 282,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -658,7 +829,16 @@
    "gasP99": 146,
    "gasMax": 146,
    "gasTypical": 146,
-   "bytes": 78
+   "bytes": 78,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "oz",
@@ -687,7 +867,16 @@
    "gasP99": 533,
    "gasMax": 533,
    "gasTypical": 239,
-   "bytes": 276
+   "bytes": 276,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "uniswap",
@@ -716,7 +905,16 @@
    "gasP99": 478,
    "gasMax": 478,
    "gasTypical": 179,
-   "bytes": 191
+   "bytes": 191,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "snekmate",
@@ -745,7 +943,16 @@
    "gasP99": 886,
    "gasMax": 904,
    "gasTypical": 323,
-   "bytes": null
+   "bytes": null,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -786,7 +993,16 @@
    "gasP99": 2770,
    "gasMax": 2770,
    "gasTypical": 2770,
-   "bytes": 1097
+   "bytes": 1097,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -827,7 +1043,16 @@
    "gasP99": 1120,
    "gasMax": 1411,
    "gasTypical": 1004,
-   "bytes": 718
+   "bytes": 718,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -857,7 +1082,16 @@
    "gasP99": 113,
    "gasMax": 113,
    "gasTypical": 113,
-   "bytes": 89
+   "bytes": 89,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -887,7 +1121,16 @@
    "gasP99": 172,
    "gasMax": 172,
    "gasTypical": 172,
-   "bytes": 86
+   "bytes": 86,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "oz",
@@ -916,7 +1159,16 @@
    "gasP99": 926,
    "gasMax": 926,
    "gasTypical": 632,
-   "bytes": 499
+   "bytes": 499,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "uniswap",
@@ -945,7 +1197,16 @@
    "gasP99": 603,
    "gasMax": 603,
    "gasTypical": 304,
-   "bytes": 259
+   "bytes": 259,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "snekmate",
@@ -974,7 +1235,16 @@
    "gasP99": 997,
    "gasMax": 1015,
    "gasTypical": 391,
-   "bytes": null
+   "bytes": null,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -1014,7 +1284,16 @@
    "gasP99": 2450,
    "gasMax": 2450,
    "gasTypical": 2450,
-   "bytes": 983
+   "bytes": 983,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -1045,7 +1324,16 @@
    "gasP99": 809,
    "gasMax": 809,
    "gasTypical": 809,
-   "bytes": 378
+   "bytes": 378,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -1075,7 +1363,16 @@
    "gasP99": 126,
    "gasMax": 126,
    "gasTypical": 126,
-   "bytes": 71
+   "bytes": 71,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -1104,7 +1401,16 @@
    "gasP99": 567,
    "gasMax": 567,
    "gasTypical": 481,
-   "bytes": 404
+   "bytes": 404,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -1134,7 +1440,16 @@
    "gasP99": 131,
    "gasMax": 131,
    "gasTypical": 131,
-   "bytes": 64
+   "bytes": 64,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -1174,7 +1489,16 @@
    "gasP99": 2732,
    "gasMax": 2732,
    "gasTypical": 2707,
-   "bytes": 1081
+   "bytes": 1081,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -1215,7 +1539,16 @@
    "gasP99": 1053,
    "gasMax": 1344,
    "gasTypical": 937,
-   "bytes": 723
+   "bytes": 723,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -1245,7 +1578,16 @@
    "gasP99": 93,
    "gasMax": 93,
    "gasTypical": 93,
-   "bytes": 57
+   "bytes": 57,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -1274,7 +1616,16 @@
    "gasP99": 797,
    "gasMax": 797,
    "gasTypical": 494,
-   "bytes": 460
+   "bytes": 460,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -1304,7 +1655,16 @@
    "gasP99": 97,
    "gasMax": 97,
    "gasTypical": 97,
-   "bytes": 50
+   "bytes": 50,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -1334,7 +1694,16 @@
    "gasP99": 2551,
    "gasMax": 2551,
    "gasTypical": 2535,
-   "bytes": 1296
+   "bytes": 1296,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -1364,7 +1733,16 @@
    "gasP99": 1183,
    "gasMax": 1183,
    "gasTypical": 1183,
-   "bytes": 574
+   "bytes": 574,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -1392,7 +1770,16 @@
    "gasP99": 840,
    "gasMax": 840,
    "gasTypical": 393,
-   "bytes": 401
+   "bytes": 401,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -1421,7 +1808,16 @@
    "gasP99": 892,
    "gasMax": 893,
    "gasTypical": 803,
-   "bytes": 509
+   "bytes": 509,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -1450,7 +1846,16 @@
    "gasP99": 504,
    "gasMax": 504,
    "gasTypical": 432,
-   "bytes": 247
+   "bytes": 247,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "oz",
@@ -1479,7 +1884,16 @@
    "gasP99": 841,
    "gasMax": 841,
    "gasTypical": 763,
-   "bytes": 447
+   "bytes": 447,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -1509,7 +1923,16 @@
    "gasP99": 2566,
    "gasMax": 2566,
    "gasTypical": 2550,
-   "bytes": 1297
+   "bytes": 1297,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -1538,7 +1961,16 @@
    "gasP99": 1202,
    "gasMax": 1202,
    "gasTypical": 1202,
-   "bytes": 585
+   "bytes": 585,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "oz",
@@ -1567,7 +1999,16 @@
    "gasP99": 1126,
    "gasMax": 1126,
    "gasTypical": 1048,
-   "bytes": 605
+   "bytes": 605,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -1597,7 +2038,16 @@
    "gasP99": 4108,
    "gasMax": 4108,
    "gasTypical": 4069,
-   "bytes": 1699
+   "bytes": 1699,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -1627,7 +2077,16 @@
    "gasP99": 2312,
    "gasMax": 2312,
    "gasTypical": 2312,
-   "bytes": 820
+   "bytes": 820,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -1655,7 +2114,16 @@
    "gasP99": 1187,
    "gasMax": 1187,
    "gasTypical": 619,
-   "bytes": 546
+   "bytes": 546,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "snekmate",
@@ -1694,7 +2162,16 @@
    "gasP99": 1552,
    "gasMax": 1570,
    "gasTypical": 1407,
-   "bytes": null
+   "bytes": null,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -1734,7 +2211,16 @@
    "gasP99": 4644,
    "gasMax": 4646,
    "gasTypical": 4578,
-   "bytes": 6844
+   "bytes": 6844,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -1775,7 +2261,16 @@
    "gasP99": 3163,
    "gasMax": 3173,
    "gasTypical": 3123,
-   "bytes": 5929
+   "bytes": 5929,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -1816,7 +2311,16 @@
    "gasP99": 430,
    "gasMax": 430,
    "gasTypical": 430,
-   "bytes": 403
+   "bytes": 403,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 55,
+    "wrongWeiPct": 27.5,
+    "maxWei": 223,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -1857,7 +2361,16 @@
    "gasP99": 2953,
    "gasMax": 3051,
    "gasTypical": 2743,
-   "bytes": 2226
+   "bytes": 2226,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 107,
+    "wrongWeiPct": 53.5,
+    "maxWei": 57429,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prbud",
@@ -1898,7 +2411,16 @@
    "gasP99": 2787,
    "gasMax": 2843,
    "gasTypical": 2647,
-   "bytes": 2121
+   "bytes": 2121,
+   "typical": {
+    "n": 103,
+    "valued": 103,
+    "wrongWei": 101,
+    "wrongWeiPct": 98.058,
+    "maxWei": 57429,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -1939,7 +2461,16 @@
    "gasP99": 430,
    "gasMax": 430,
    "gasTypical": 430,
-   "bytes": 451
+   "bytes": 451,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 55,
+    "wrongWeiPct": 27.5,
+    "maxWei": 223,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "snekmate",
@@ -1980,7 +2511,16 @@
    "gasP99": 604,
    "gasMax": 604,
    "gasTypical": 604,
-   "bytes": null
+   "bytes": null,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 55,
+    "wrongWeiPct": 27.5,
+    "maxWei": 223,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -2010,7 +2550,16 @@
    "gasP99": 5497,
    "gasMax": 28836,
    "gasTypical": 4379,
-   "bytes": 7064
+   "bytes": 7064,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -2041,7 +2590,16 @@
    "gasP99": 2276,
    "gasMax": 2296,
    "gasTypical": 2236,
-   "bytes": 8732
+   "bytes": 8732,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -2071,7 +2629,16 @@
    "gasP99": 556,
    "gasMax": 556,
    "gasTypical": 556,
-   "bytes": 567
+   "bytes": 567,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 8,
+    "wrongWeiPct": 4.0,
+    "maxWei": 1,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -2111,7 +2678,16 @@
    "gasP99": 7225,
    "gasMax": 7405,
    "gasTypical": 6985,
-   "bytes": 601
+   "bytes": 601,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 200,
+    "wrongWeiPct": 100.0,
+    "maxWei": 12,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prbud",
@@ -2150,7 +2726,16 @@
    "gasP99": 6678,
    "gasMax": 6858,
    "gasTypical": 6438,
-   "bytes": 415
+   "bytes": 415,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 200,
+    "wrongWeiPct": 100.0,
+    "maxWei": 12,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -2180,7 +2765,16 @@
    "gasP99": 644,
    "gasMax": 644,
    "gasTypical": 644,
-   "bytes": 595
+   "bytes": 595,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 8,
+    "wrongWeiPct": 4.0,
+    "maxWei": 1,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "snekmate",
@@ -2211,7 +2805,16 @@
    "gasP99": 1370,
    "gasMax": 1388,
    "gasTypical": 1235,
-   "bytes": null
+   "bytes": null,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 8,
+    "wrongWeiPct": 4.0,
+    "maxWei": 1,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -2240,7 +2843,16 @@
    "gasP99": 5270,
    "gasMax": 5291,
    "gasTypical": 4153,
-   "bytes": 7279
+   "bytes": 7279,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -2270,7 +2882,16 @@
    "gasP99": 2060,
    "gasMax": 2070,
    "gasTypical": 2020,
-   "bytes": 8464
+   "bytes": 8464,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -2310,7 +2931,16 @@
    "gasP99": 6882,
    "gasMax": 7061,
    "gasTypical": 6641,
-   "bytes": 415
+   "bytes": 415,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 200,
+    "wrongWeiPct": 100.0,
+    "maxWei": 20,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prbud",
@@ -2349,7 +2979,16 @@
    "gasP99": 6546,
    "gasMax": 6726,
    "gasTypical": 6306,
-   "bytes": 334
+   "bytes": 334,
+   "typical": {
+    "n": 199,
+    "valued": 199,
+    "wrongWei": 199,
+    "wrongWeiPct": 100.0,
+    "maxWei": 20,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -2379,7 +3018,16 @@
    "gasP99": 5487,
    "gasMax": 29280,
    "gasTypical": 4379,
-   "bytes": 7274
+   "bytes": 7274,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -2410,7 +3058,16 @@
    "gasP99": 2276,
    "gasMax": 2296,
    "gasTypical": 2245,
-   "bytes": 8732
+   "bytes": 8732,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -2450,7 +3107,16 @@
    "gasP99": 8969,
    "gasMax": 9090,
    "gasTypical": 8729,
-   "bytes": 3612
+   "bytes": 3612,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 200,
+    "wrongWeiPct": 100.0,
+    "maxWei": 5,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prbud",
@@ -2489,7 +3155,16 @@
    "gasP99": 8636,
    "gasMax": 8726,
    "gasTypical": 8396,
-   "bytes": 3603
+   "bytes": 3603,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 200,
+    "wrongWeiPct": 100.0,
+    "maxWei": 5,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -2530,7 +3205,16 @@
    "gasP99": 8909,
    "gasMax": 16973,
    "gasTypical": 8713,
-   "bytes": 15272
+   "bytes": 15272,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -2572,7 +3256,16 @@
    "gasP99": 10967,
    "gasMax": 10992,
    "gasTypical": 3782,
-   "bytes": 15367
+   "bytes": 15367,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -2613,7 +3306,16 @@
    "gasP99": 1275,
    "gasMax": 1275,
    "gasTypical": 1275,
-   "bytes": 1123
+   "bytes": 1123,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 136,
+    "wrongWeiPct": 68.0,
+    "maxWei": 18,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prb",
@@ -2655,7 +3357,16 @@
    "gasP99": 10214,
    "gasMax": 10486,
    "gasTypical": 9906,
-   "bytes": 3016
+   "bytes": 3016,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 200,
+    "wrongWeiPct": 100.0,
+    "maxWei": 188,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "prbud",
@@ -2697,7 +3408,16 @@
    "gasP99": 9669,
    "gasMax": 9831,
    "gasTypical": 9339,
-   "bytes": 2812
+   "bytes": 2812,
+   "typical": {
+    "n": 108,
+    "valued": 108,
+    "wrongWei": 108,
+    "wrongWeiPct": 100.0,
+    "maxWei": 188,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solmate",
@@ -2738,7 +3458,16 @@
    "gasP99": 1363,
    "gasMax": 1363,
    "gasTypical": 1363,
-   "bytes": 1196
+   "bytes": 1196,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 136,
+    "wrongWeiPct": 68.0,
+    "maxWei": 18,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl19",
@@ -2767,7 +3496,16 @@
    "gasP99": 33651,
    "gasMax": 43114,
    "gasTypical": 12114,
-   "bytes": 11275
+   "bytes": 11275,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "bl127",
@@ -2797,7 +3535,16 @@
    "gasP99": 11624,
    "gasMax": 11717,
    "gasTypical": 8687,
-   "bytes": 12609
+   "bytes": 12609,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 0,
+    "wrongWeiPct": 0.0,
+    "maxWei": 0,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   },
   {
    "lib": "solady",
@@ -2837,7 +3584,16 @@
    "gasP99": 13254,
    "gasMax": 13877,
    "gasTypical": 2820,
-   "bytes": 1482
+   "bytes": 1482,
+   "typical": {
+    "n": 200,
+    "valued": 200,
+    "wrongWei": 48,
+    "wrongWeiPct": 24.0,
+    "maxWei": 1,
+    "revertInRange": 0,
+    "valueOutOfRange": 0
+   }
   }
  ]
 }

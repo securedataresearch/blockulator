@@ -815,11 +815,14 @@ def score(with_sizes=True):
         for k, lib, f, _, _ in bench_cells():
             direction = FUNCS[f][3] if lib in OURS else COMP[lib][f][1]
             res, gas = score_rows(pool, f"wadbench_{k}_wad_{f}", f, direction, inputs=f"wad_{f}")
-            _, tgas = score_rows(pool, f"wadbench_{k}_wadtyp_{f}", f, direction, inputs=f"wadtyp_{f}")
+            tres, tgas = score_rows(pool, f"wadbench_{k}_wadtyp_{f}", f, direction, inputs=f"wadtyp_{f}")
             tg = sorted(x for x in tgas if x)
+            ts = summary(tres, tgas)
             row = {"lib": lib, "function": f, "call": COMP[lib][f][0] if lib in COMP else ours_call(lib, f).replace("L19.", "BL19Lib.").replace("L127.", "BL127Lib."),
                    "direction": DIRNAME[direction], **summary(res, gas),
-                   "gasTypical": tg[len(tg) // 2] if tg else None, "bytes": sz.get(k)}
+                   "gasTypical": tg[len(tg) // 2] if tg else None, "bytes": sz.get(k),
+                   # the everyday inputs, scored the same way
+                   "typical": {k2: ts[k2] for k2 in ("n", "valued", "wrongWei", "wrongWeiPct", "maxWei", "revertInRange", "valueOutOfRange")}}
             rows.append(row)
             print(json.dumps(row), flush=True)
     doc = {"_doc": __doc__.strip(), "seed": SEED, "versions": versions(), "libraries": LABEL, "rows": rows}
@@ -847,7 +850,25 @@ def render(doc) -> str:
           f"Solmate {v.get('solmate', '?')}, OpenZeppelin {v.get('openzeppelin', '?')}, Uniswap {v.get('uniswap', '?')}, "
           f"snekmate {v.get('snekmate', '?')}.",
           "",
-          "## Wei error",
+          "## Everyday inputs",
+          "",
+          "200 inputs per function in its everyday range, none a round number: exp of -10..10, ln and the logs of "
+          "0.001..1,000, pow of 0.5..2 to -3..3, products, quotients and roots of amounts up to 10^9 tokens.",
+          "",
+          "| function | library | off by a wei | worst, wei |",
+          "|---|---|---:|---:|",
+          *[f"| {f if lib == LIBS[0] else ''} | {'**' + LABEL[lib] + '**' if lib in OURS else LABEL[lib]} | "
+            f"{by[(lib, f)]['typical']['wrongWei']:,} of {by[(lib, f)]['typical']['valued']:,} | {fmt(by[(lib, f)]['typical']['maxWei'])} |"
+            for f in FUNCS for lib in LIBS if (lib, f) in by],
+          "",
+          "## The whole domain",
+          "",
+          "4,000 inputs per function over everything a 256-bit word holds, weighted toward the hard cases: magnitudes "
+          "from one wei to 10^59 tokens, and inputs built so the exact answer lands on or beside a whole wei (perfect "
+          "squares and cubes, products that are a whole number of wei, x = ln(k)). BL19 holds 71 digits, so an answer "
+          "past 10^71 wei cannot carry its last wei. A decimal that is not a binary fraction is rounded as it converts "
+          "in, so an answer that should land exactly on a whole wei can land one below, and beside a large operand "
+          "that rounding can grow past a wei.",
           "",
           "*Wrong wei*: results off by at least one wei, of the inputs where the library and the exact "
           "value both give one; *max / median*: wei off over those inputs. *Reverts in range*: reverts where "

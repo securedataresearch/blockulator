@@ -7,15 +7,15 @@ path = "library/migrating"
 group = "library"
 +++
 
-Every number on this page is measured. The share of results off by a wei or more comes from the [WAD results](/results/wad/); the gas comes from the same run for Solady and PRBMath, and from the [per-op benchmarks](/results/ops/) for ABDK. Hover a row for the exact call.
+Every number on this page is measured. The share of results off by a wei or more is on everyday inputs, from the [WAD results](/results/wad/); the gas comes from the same run for Solady and PRBMath, and from the [per-op benchmarks](/results/ops/) for ABDK. Hover a row for the exact call.
 
-A WAD value moves in with `fromFixed18` and out with `toFixed18Down` or `toFixed18Up`. Do that around a whole calculation, not around each call: the tables below convert around every single call, which is the worst case for both the result and the gas. [Integrating](/library/integrating/) has the two rules.
+A WAD value moves in with `fromFixed18` and out with `toFixed18Down` or `toFixed18Up`. Do that around a whole calculation, not around each call: the tables below convert around every single call, which is the worst case for the gas. [Integrating](/library/integrating/) has the two rules.
 
 ## From Solady
 
 {{ <table name="migrate.solady.wad" first="Solady FixedPointMathLib" /> }}
 
-Move `expWad`, `lnWad`, `powWad` and `lambertW0Wad`: Solady is off by a wei on 24% to 66% of their results, and BL19 and BL127 on far fewer. Keep `mulWad`, `divWad`, `sqrtWad` and `cbrtWad` for a single product, quotient or root of token amounts: Solady's are exact and cost a tenth of the gas, and a value converted in and out of BL19 or BL127 for one call can land a wei off. Both libraries need the CLZ opcode: compile with `evm_version = "osaka"` and solc 0.8.31 or later.
+Move `expWad`, `lnWad`, `powWad` and `lambertW0Wad`: on everyday inputs Solady is off by a wei on 4% to 68% of their results, and BL19 and BL127 on none. Keep `mulWad`, `divWad`, `sqrtWad` and `cbrtWad` for a single product, quotient or root of token amounts: they are exact and cost a tenth of the gas. Both libraries need the CLZ opcode: compile with `evm_version = "osaka"` and solc 0.8.31 or later.
 
 ## From PRBMath
 
@@ -25,7 +25,7 @@ PRBMath's values are user-defined types over the same 18-decimal integers, so a 
 
 {{ <table name="migrate.prbmath.wadud" first="PRBMath UD60x18" /> }}
 
-PRBMath's `exp`, `ln`, `log2`, `log10` and `pow` are off by a wei on 71% to 98% of their results. Its `mul`, `div` and `sqrt` are exact; keep them for a single product, quotient or root.
+On everyday inputs PRBMath's `exp` is off by a wei on 54% of results and its `ln`, `log2`, `log10` and `pow` on every one; BL19 and BL127 on none. Its `mul`, `div` and `sqrt` are exact; keep them for a single product, quotient or root.
 
 ## From ABDK
 
