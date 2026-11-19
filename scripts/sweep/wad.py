@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""BlockulatorWad against the exact value, and every established library's
-WAD functions beside it (Solady, PRBMath SD59x18 and UD60x18, Solmate,
-OpenZeppelin Math, Uniswap FullMath, snekmate), on the same seeded inputs.
+"""Every established library's WAD functions (Solady, PRBMath SD59x18 and
+UD60x18, Solmate, OpenZeppelin Math, Uniswap FullMath, snekmate) against the
+exact value, with BL19 and BL127 beside them through their own WAD
+conversions, on the same seeded inputs.
 
-    uv run scripts/sweep/wad.py            # make wad: inputs -> forge (test/wad/WadBench.t.sol) -> wad.{json,md}
+    uv run scripts/sweep/wad.py            # make wad: inputs -> forge (test/sweep/WadBench.t.sol) -> wad.{json,md}
     uv run scripts/sweep/wad.py score      # re-score the last forge outputs only
 
 The inputs (seed 20261023) cover each function's domain: log-uniform
@@ -12,9 +13,7 @@ function takes them, the inputs whose exact value sits near a wei boundary
 (an output near an integer number of wei: x = ln(k) for exp, perfect squares
 and cubes for the roots, products one wei either side of a multiple of
 10^18), the exact cases (exp(0), ln(1), powers of two and ten for the logs,
-perfect powers for pow) and the ends of each domain. make sweep runs the same
-inputs through BlockulatorWad as its WAD rows (scripts/sweep/sweep.py), with
-a forced second-stage pass.
+perfect powers for pow) and the ends of each domain.
 
 Truth is the exact real value: integer arithmetic for mul, div, sqrt and
 cbrt; mpmath at 300 digits for the rest, rounded in the stated direction. A
@@ -23,8 +22,13 @@ where it is one (exp(0), ln(1), log2 at 10^18 2^k, log10 at 10^(18 + k), a
 pow whose rational power is exactly that integer, W(0)); any other would stop
 the run.
 
-Each library is scored in its own rounding direction (DIRS): BlockulatorWad
-in the direction each function states; Solady floor for the unsigned and
+BL19 and BL127 are called as a WAD user calls them: fromFixed18 on each
+argument, the op, then toFixed18Down or toFixed18Up in the direction the row
+states (toward zero: Down for a result at or above zero, Up below). A uint256
+argument past int256's top does not fit their word and counts as a revert.
+
+Each library is scored in its own rounding direction: BL19 and BL127 in the
+row's; Solady floor for the unsigned and
 exp/ln/pow results, toward zero for sMulWad, sDivWad and lambertW0Wad (its
 sdiv); PRBMath floor for UD60x18 and exp/pow, toward zero for SD59x18's mul,
 div and logs (log2 of x < 1 is minus log2(1/x) truncated). *Wrong* counts a
@@ -37,7 +41,8 @@ truncate toward zero), OpenZeppelin and Uniswap in the direction their
 rounding argument names, snekmate floor; the roots Solmate and OpenZeppelin
 have are integer roots, called on x 10^18 as a WAD user does.
 
-Gas is each library's internal call alone (WadBench.t.sol reads gasleft() on
+Gas is each library's internal call alone, the conversions included for BL19
+and BL127 (WadBench.t.sol reads gasleft() on
 either side of the call, net of the same window around an assignment; for
 snekmate, a Vyper library, its own contract reads msg.gas around the module
 call, net of its own window around an assignment), on
@@ -51,7 +56,6 @@ from __future__ import annotations
 import json
 import math
 import multiprocessing as mpc
-import os
 import random
 import re
 import statistics
@@ -77,22 +81,30 @@ NT = 200          # typical inputs per function
 FUNCS = {
     "mulWad": ("mul", 2, "u", 0), "mulWadUp": ("mul", 2, "u", 1),
     "divWad": ("div", 2, "u", 0), "divWadUp": ("div", 2, "u", 1),
-    "sMulWad": ("smul", 2, "s", 2), "sMulWadDown": ("smul", 2, "s", 0), "sMulWadUp": ("smul", 2, "s", 1),
-    "sDivWad": ("sdiv", 2, "s", 2), "sDivWadDown": ("sdiv", 2, "s", 0), "sDivWadUp": ("sdiv", 2, "s", 1),
+    "sMulWad": ("smul", 2, "s", 2), "sDivWad": ("sdiv", 2, "s", 2),
     "sqrtWad": ("sqrt", 1, "u", 0), "sqrtWadUp": ("sqrt", 1, "u", 1),
-    "cbrtWad": ("cbrt", 1, "u", 0), "cbrtWadUp": ("cbrt", 1, "u", 1),
-    "expWad": ("exp", 1, "s", 0), "expWadUp": ("exp", 1, "s", 1),
-    "lnWad": ("ln", 1, "s", 0), "lnWadUp": ("ln", 1, "s", 1),
-    "log2Wad": ("log2", 1, "s", 0), "log2WadUp": ("log2", 1, "s", 1),
-    "log10Wad": ("log10", 1, "s", 0), "log10WadUp": ("log10", 1, "s", 1),
-    "powWad": ("pow", 2, "s", 0), "powWadUp": ("pow", 2, "s", 1),
-    "lambertW0Wad": ("w0", 1, "s", 2), "lambertW0WadDown": ("w0", 1, "s", 0), "lambertW0WadUp": ("w0", 1, "s", 1),
+    "cbrtWad": ("cbrt", 1, "u", 0),
+    "expWad": ("exp", 1, "s", 0), "lnWad": ("ln", 1, "s", 0),
+    "log2Wad": ("log2", 1, "s", 0), "log10Wad": ("log10", 1, "s", 0),
+    "powWad": ("pow", 2, "s", 0), "lambertW0Wad": ("w0", 1, "s", 2),
 }
-# the functions with a second stage, swept again with the fast path's test forced to fail
-WIDE = [f for f, (m, *_) in FUNCS.items() if m in ("exp", "ln", "log2", "log10", "pow", "w0")]
-WIDE_N = 4000
+# BL19's and BL127's op for each maths
+OP = {"mul": "mul", "div": "div", "smul": "mul", "sdiv": "div", "sqrt": "sqrt", "cbrt": "cbrt", "exp": "exp", "ln": "ln",
+      "log2": "log2", "log10": "log10", "pow": "pow", "w0": "lambertW0"}
+OURS = {"bl19": "L19", "bl127": "L127"}   # library id -> its alias in WadBench.t.sol
 
-# The competitors: library -> our function -> (their call, their direction).
+
+def ours_call(lib: str, f: str) -> str:
+    """BL19 or BL127 as a WAD user calls it: fromFixed18 on each argument (a uint256 one must fit int256), the op,
+    then toFixed18Down or toFixed18Up in the row's direction (toward zero through tz19 / tz127)."""
+    maths, nargs, kind, d = FUNCS[f]
+    L = OURS[lib]
+    arg = lambda v: f"{L}.fromFixed18({'pos(' + v + ')' if kind == 'u' else v})"  # noqa: E731
+    r = f"{L}.{OP[maths]}({', '.join(arg(v) for v in ('a', 'b')[:nargs])})"
+    return f"tz{L[1:]}({r})" if d == 2 else f"{L}.toFixed18{'Up' if d == 1 else 'Down'}({r})"
+
+
+# The other libraries: library -> the function -> (their call, their direction).
 # The calls are Solidity expressions in WadBench.t.sol; a and b are the inputs.
 COMP = {
     "solady": {
@@ -157,8 +169,8 @@ COMP.update({
         "expWad": ("SNK.wad_exp(a)", 0), "lnWad": ("SNK.wad_ln(a)", 0),
     },
 })
-LIBS = ["blockulator", "solady", "prb", "prbud", "solmate", "oz", "uniswap", "snekmate"]
-LABEL = {"blockulator": "BlockulatorWad", "solady": "Solady FixedPointMathLib", "prb": "PRBMath (UD60x18 / SD59x18)",
+LIBS = ["bl19", "bl127", "solady", "prb", "prbud", "solmate", "oz", "uniswap", "snekmate"]
+LABEL = {"bl19": "BL19", "bl127": "BL127", "solady": "Solady FixedPointMathLib", "prb": "PRBMath (UD60x18 / SD59x18)",
          "prbud": "PRBMath UD60x18 (exp, logs, pow)", "solmate": "Solmate", "oz": "OpenZeppelin Math",
          "uniswap": "Uniswap FullMath", "snekmate": "snekmate (Vyper)"}
 # the revert a domain guard raises (Error("dom")): an input the function is not defined on
@@ -611,128 +623,6 @@ def summary(res, gas):
     return out
 
 
-# ---- make sweep's second-stage pass ----------------------------------------
-
-WIDE_TEST = """// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.31;
-// GENERATED by scripts/sweep/wad.py for make sweep's second-stage pass; removed after the run.
-
-import {Test} from "forge-std/Test.sol";
-import {BlockulatorWadWide as B} from "./BlockulatorWadWide.sol";
-
-contract SweepWadWide is Test {
-    string constant DIR = "cache/sweep/";
-
-    function f(bytes32 op, int256 a, int256 b) external view returns (int256 r, uint256 g) {
-        uint256 g0;
-        if (op == "noop") { g0 = gasleft(); r = a; g = gasleft(); }
-%(disp)s
-        require(g0 != 0, "op");
-        g = g0 - g;
-    }
-
-    function runOne(string memory op) external {
-        string memory j = vm.readFile(string.concat(DIR, "wad_", op, ".json"));
-        bytes32[] memory a = vm.parseJsonBytes32Array(j, ".a");
-        bytes32[] memory b = vm.keyExistsJson(j, ".b") ? vm.parseJsonBytes32Array(j, ".b") : new bytes32[](a.length);
-        string memory outp = string.concat(DIR, "wadwide_", op, ".out");
-        if (vm.exists(outp)) vm.removeFile(outp);
-        bytes32 k = bytes32(bytes(op));
-        (, uint256 base) = this.f("noop", 0, 0);
-        uint256 n = a.length < %(n)d ? a.length : %(n)d;
-        for (uint256 i; i < n; i++) {
-            try this.f(k, int256(uint256(a[i])), int256(uint256(b[i]))) returns (int256 r, uint256 g) {
-                vm.writeLine(outp, string.concat(vm.toString(bytes32(uint256(r))), " ", vm.toString(g > base ? g - base : 0)));
-            } catch (bytes memory e) {
-                vm.writeLine(outp, string.concat("R", vm.toString(e), " 0"));
-            }
-        }
-    }
-
-%(runs)s
-}
-"""
-
-
-def run_wide(want=None):
-    """The first WIDE_N inputs of each function with a second stage, through
-    a test-only BlockulatorWad whose fast-path test always fails (gen.py
-    --lib wad --wide-lib), so every result is the second stage's; written to
-    cache/sweep/wadwide_<function>.out. The generated files are removed."""
-    names = [f for f in WIDE if want is None or f in want]
-    if not names:
-        return
-    wd = ROOT / "test" / "sweep" / "wadwide"
-    subprocess.run(["uv", "run", "scripts/bl127/gen.py", "--lib", "wad", "--wide-lib",
-                    str(wd / "BlockulatorWadWide.sol")], cwd=ROOT, check=True)
-    disp = "\n".join(f'        if (op == "{f}") {{ g0 = gasleft(); r = B.{f}(a{", b" if FUNCS[f][1] == 2 else ""}); g = gasleft(); }}'
-                     for f in names)
-    runs = "\n".join(f'    function test_{f}() public {{ this.runOne("{f}"); }}' for f in names)
-    (wd / "SweepWadWide.t.sol").write_text(WIDE_TEST % {"disp": disp, "runs": runs, "n": WIDE_N})
-    keep = bool(os.environ.get("SWEEP_KEEP"))   # leave the generated files, show forge's output
-    try:
-        subprocess.run(["forge", "test", "--match-path", "test/sweep/wadwide/SweepWadWide.t.sol"] + ([] if keep else ["-q"]),
-                       cwd=ROOT, check=True)
-    finally:
-        if not keep:
-            for p in wd.glob("*"):
-                p.unlink()
-            wd.rmdir()
-
-
-def sweep_rows(pool, selected, fallback) -> list[dict]:
-    """make sweep's WAD rows: every function on its inputs (with the count
-    pass's fallback share), then the second-stage pass."""
-    rows = []
-    for f, (maths, nargs, kind, d) in FUNCS.items():
-        if not selected(f) or not (D / f"wad_{f}.out").exists():
-            continue
-        res, gas = score_rows(pool, f"wad_{f}", f)
-        rows.append({"lib": "wad", "op": f, "direction": DIRNAME[d], **summary(res, gas),
-                     **fallback("wad", f, load(f"wad_{f}"))})
-        print(json.dumps(rows[-1]), flush=True)
-    for f in WIDE:
-        if not selected(f) or not (D / f"wadwide_{f}.out").exists():
-            continue
-        res, gas = score_rows(pool, f"wadwide_{f}", f, inputs=f"wad_{f}")
-        rows.append({"lib": "wad", "op": f, "stage": "second", "direction": DIRNAME[FUNCS[f][3]], **summary(res, gas)})
-        print(json.dumps(rows[-1]), flush=True)
-    return rows
-
-
-def sweep_md(rows, pct) -> list[str]:
-    """make sweep's WAD section of sweep.md."""
-    md = ["",
-          "## BlockulatorWad",
-          "",
-          "Every function and direction on `scripts/sweep/wad.py`'s inputs, against the exact value "
-          "rounded in the stated direction (integers for mul, div, sqrt and cbrt; mpmath at 300 digits "
-          "for the rest). *Wrong* is any result off by a wei, a revert where the value fits or a value "
-          "where it does not. *Fallback* is the share of inputs whose fast path could not decide the "
-          "last wei and ran the second stage. Competitors on the same inputs: `wad.md`.",
-          "",
-          "| function | direction | inputs | wrong | reverts (both) | gas median / p99 / max | fallback |",
-          "|---|---|---:|---:|---:|---:|---:|"]
-    for r in rows:
-        if r["lib"] == "wad" and "stage" not in r:
-            md.append(f"| {r['op']} | {r['direction']} | {r['n']:,} | {r['wrong']:,} | {r['status'].get('bothrev', 0):,} | "
-                      f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} | {pct(r)} |")
-    md += ["",
-           "### The second stage alone",
-           "",
-           f"The first {WIDE_N:,} inputs of each function with a second stage again, through a test-only "
-           "copy of BlockulatorWad whose fast-path test always fails, so every result comes from the "
-           "second stage at 2^-510 on the exact input.",
-           "",
-           "| function | direction | inputs | wrong | gas median / p99 / max |",
-           "|---|---|---:|---:|---:|"]
-    for r in rows:
-        if r["lib"] == "wad" and r.get("stage"):
-            md.append(f"| {r['op']} | {r['direction']} | {r['n']:,} | {r['wrong']:,} | "
-                      f"{r.get('gasMedian', 0):,} / {r.get('gasP99', 0):,} / {r.get('gasMax', 0):,} |")
-    return md
-
-
 # ---- the bench -------------------------------------------------------------
 
 BENCH = """// SPDX-License-Identifier: AGPL-3.0-only
@@ -740,7 +630,8 @@ pragma solidity ^0.8.31;
 // GENERATED by scripts/sweep/wad.py (make wad); removed after the run.
 
 import {Test} from "forge-std/Test.sol";
-import {BlockulatorWad as B} from "../../contracts/src/wad/BlockulatorWad.sol";
+import {BL19Lib as L19} from "../../contracts/src/bl19/BL19Lib.sol";
+import {BL127Lib as L127} from "../../contracts/src/bl127/BL127Lib.sol";
 import {FixedPointMathLib as S} from "../../lib/solady/src/utils/FixedPointMathLib.sol";
 import {SD59x18} from "../../lib/prb-math/src/SD59x18.sol";
 import {UD60x18} from "../../lib/prb-math/src/UD60x18.sol";
@@ -751,8 +642,13 @@ import {FixedPointMathLib as SM} from "../../lib/solmate/src/utils/FixedPointMat
 import {Math as OZ} from "../../contracts/src/ladder/vendor/openzeppelin/utils/math/Math.sol";
 import {FullMath} from "../../contracts/src/ladder/vendor/uniswap/FullMath.sol";
 
-/// Every library's WAD function on the same inputs, one result and its gas
-/// per line, as Sweep.t.sol records BlockulatorWad.
+/// a uint256 argument, as the int256 BL19 and BL127 take: past int256's top it does not fit
+function pos(int256 a) pure returns (int256) { require(a >= 0, "fit"); return a; }
+/// toward zero: floor at or above zero, ceiling below (both words carry their sign in the top bit)
+function tz19(int256 r) pure returns (int256) { return r >= 0 ? L19.toFixed18Down(r) : L19.toFixed18Up(r); }
+function tz127(int256 r) pure returns (int256) { return r >= 0 ? L127.toFixed18Down(r) : L127.toFixed18Up(r); }
+
+/// Every library's WAD function on the same inputs, one result and its gas per line.
 interface ISnekmateMath {
     function wad_exp(int256 x) external view returns (int256, uint256);
     function wad_ln(int256 x) external view returns (int256, uint256);
@@ -805,17 +701,16 @@ contract WadBench is Test {
 """
 
 
-KEY = {"blockulator": "b", "solady": "s", "prb": "p", "prbud": "pu", "solmate": "sm", "oz": "oz", "uniswap": "uni", "snekmate": "sn"}
+KEY = {"bl19": "b19", "bl127": "b127", "solady": "s", "prb": "p", "prbud": "pu", "solmate": "sm", "oz": "oz", "uniswap": "uni", "snekmate": "sn"}
 
 
 def bench_cells():
     """(op key, library, our function, expression, domain) for every bench cell."""
     cells = []
     for f, (maths, nargs, kind, _) in FUNCS.items():
-        args = "uint256(a), uint256(b)" if kind == "u" and nargs == 2 else "a, b" if nargs == 2 else "uint256(a)" if kind == "u" else "a"
-        call = f"B.{f}({args})"
-        cells.append((f"b_{f}", "blockulator", f, f"int256({call})" if kind == "u" else call, None))
-        for lib in LIBS[1:]:
+        for lib in OURS:
+            cells.append((f"{KEY[lib]}_{f}", lib, f, ours_call(lib, f), None))
+        for lib in LIBS[len(OURS):]:
             calls = COMP[lib]
             if f in calls:
                 expr = calls[f][0]
@@ -843,10 +738,10 @@ def run_bench():
     for k, _, f, _, _ in cells:
         for inp in (f"wad_{f}", f"wadtyp_{f}"):
             runs.append(f'    function test_{k}_{"t" if inp.startswith("wadtyp") else "s"}() public {{ this.runOne("{inp}", "{k}"); }}')
-    path = ROOT / "test" / "wad" / "WadBench.t.sol"
+    path = ROOT / "test" / "sweep" / "WadBench.t.sol"
     path.write_text(BENCH % {"disp": disp, "runs": "\n".join(runs)})
     try:
-        subprocess.run(["forge", "test", "--match-path", "test/wad/WadBench.t.sol", "-q"], cwd=ROOT, check=True)
+        subprocess.run(["forge", "test", "--match-path", "test/sweep/WadBench.t.sol", "-q"], cwd=ROOT, check=True)
     finally:
         path.unlink()
 
@@ -868,7 +763,8 @@ SIZE_SRC = """// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.31;
 // GENERATED by scripts/sweep/wad.py (make wad) to measure inline sizes; removed after the build.
 
-import {BlockulatorWad as B} from "../../contracts/src/wad/BlockulatorWad.sol";
+import {BL19Lib as L19} from "../../contracts/src/bl19/BL19Lib.sol";
+import {BL127Lib as L127} from "../../contracts/src/bl127/BL127Lib.sol";
 import {FixedPointMathLib as S} from "../../lib/solady/src/utils/FixedPointMathLib.sol";
 import {SD59x18} from "../../lib/prb-math/src/SD59x18.sol";
 import {UD60x18} from "../../lib/prb-math/src/UD60x18.sol";
@@ -878,6 +774,12 @@ import {wadMul, wadDiv, wadExp, wadLn, wadPow} from "../../lib/solmate/src/utils
 import {FixedPointMathLib as SM} from "../../lib/solmate/src/utils/FixedPointMathLib.sol";
 import {Math as OZ} from "../../contracts/src/ladder/vendor/openzeppelin/utils/math/Math.sol";
 import {FullMath} from "../../contracts/src/ladder/vendor/uniswap/FullMath.sol";
+
+/// a uint256 argument, as the int256 BL19 and BL127 take: past int256's top it does not fit
+function pos(int256 a) pure returns (int256) { require(a >= 0, "fit"); return a; }
+/// toward zero: floor at or above zero, ceiling below (both words carry their sign in the top bit)
+function tz19(int256 r) pure returns (int256) { return r >= 0 ? L19.toFixed18Down(r) : L19.toFixed18Up(r); }
+function tz127(int256 r) pure returns (int256) { return r >= 0 ? L127.toFixed18Down(r) : L127.toFixed18Up(r); }
 
 contract WadSizeBase {
     function f(int256 a, int256 b) external pure returns (int256 r) { r = a ^ b; }
@@ -893,7 +795,7 @@ def sizes() -> dict[str, int]:
     cells = [c for c in bench_cells() if not c[3].startswith("SNK.")]
     body = "\n".join(f"contract WadSize_{k} {{\n    function f(int256 a, int256 b) external pure returns (int256 r) {{ r = {e}; }}\n}}"
                      for k, _, _, e, _ in cells)
-    path = ROOT / "test" / "wad" / "WadSize.sol"
+    path = ROOT / "test" / "sweep" / "WadSize.sol"
     path.write_text(SIZE_SRC % body)
     try:
         subprocess.run(["forge", "build", str(path.relative_to(ROOT))], cwd=ROOT, check=True, capture_output=True)
@@ -911,11 +813,11 @@ def score(with_sizes=True):
     sz = sizes() if with_sizes else {}
     with mpc.Pool() as pool:
         for k, lib, f, _, _ in bench_cells():
-            direction = FUNCS[f][3] if lib == "blockulator" else COMP[lib][f][1]
+            direction = FUNCS[f][3] if lib in OURS else COMP[lib][f][1]
             res, gas = score_rows(pool, f"wadbench_{k}_wad_{f}", f, direction, inputs=f"wad_{f}")
             _, tgas = score_rows(pool, f"wadbench_{k}_wadtyp_{f}", f, direction, inputs=f"wadtyp_{f}")
             tg = sorted(x for x in tgas if x)
-            row = {"lib": lib, "function": f, "call": COMP[lib][f][0] if lib in COMP else f"BlockulatorWad.{f}",
+            row = {"lib": lib, "function": f, "call": COMP[lib][f][0] if lib in COMP else ours_call(lib, f).replace("L19.", "BL19Lib.").replace("L127.", "BL127Lib."),
                    "direction": DIRNAME[direction], **summary(res, gas),
                    "gasTypical": tg[len(tg) // 2] if tg else None, "bytes": sz.get(k)}
             rows.append(row)
@@ -929,74 +831,73 @@ def score(with_sizes=True):
 def render(doc) -> str:
     rows = doc["rows"]
     by = {(r["lib"], r["function"]): r for r in rows}
-    ours = [r for r in rows if r["lib"] == "blockulator"]
-    n_ours = sum(r["n"] for r in ours)
-    w_ours = sum(r["wrong"] for r in ours)
     v = doc["versions"]
     md = ["# WAD maths to the last wei",
           "",
           "Generated by `make wad` (`scripts/sweep/wad.py`) from seeded inputs: each function's domain "
           "(log-uniform magnitudes from one wei up), the inputs whose exact value lies near a wei boundary, "
           "the exact cases and the ends. Truth is the exact real value (integers for mul, div, sqrt and "
-          "cbrt; mpmath at 300 digits for the rest), rounded in each library's own direction. Data: "
-          "`wad.json`; BlockulatorWad's own rows, with the forced second-stage pass, are in `sweep.md`.",
+          "cbrt; mpmath at 300 digits for the rest), rounded in each library's own direction. Data: `wad.json`.",
           "",
-          f"Versions: BlockulatorWad at {v['blockulator']}, Solady {v['solady']}, PRBMath {v['prb-math']}, "
+          "BL19 and BL127 are not WAD libraries: each is called as a WAD user calls it, `fromFixed18` on every "
+          "argument, the op, then `toFixed18Down` or `toFixed18Up` in the row's direction, and its gas includes "
+          "those conversions.",
+          "",
+          f"Versions: Blockulator at {v['blockulator']}, Solady {v['solady']}, PRBMath {v['prb-math']}, "
           f"Solmate {v.get('solmate', '?')}, OpenZeppelin {v.get('openzeppelin', '?')}, Uniswap {v.get('uniswap', '?')}, "
           f"snekmate {v.get('snekmate', '?')}.",
-          "",
-          f"BlockulatorWad: **{w_ours:,} wrong of {n_ours:,}** results across {len(ours)} functions and directions.",
           "",
           "## Wei error",
           "",
           "*Wrong wei*: results off by at least one wei, of the inputs where the library and the exact "
           "value both give one; *max / median*: wei off over those inputs. *Reverts in range*: reverts where "
           "the exact result fits the word (a narrower domain, as Solady's mulWad reverting once x y passes "
-          "2^256); *value out of range*: a value where there is none (snekmate's wad_ln(0) = 0). A function "
-          "defined on part of the domain only is scored on that part (*outside domain*).",
+          "2^256, or BL127 past 1.7 × 10^38); *value out of range*: a value where there is none (snekmate's "
+          "wad_ln(0) = 0). A function defined on part of the domain only is scored on that part (*outside domain*).",
           "",
           "| function | direction | library | wrong wei | max / median | reverts in range | value out of range | outside domain |",
           "|---|---|---|---:|---:|---:|---:|---:|"]
     for f in FUNCS:
-        b = by[("blockulator", f)]
-        md.append(f"| {f} | {b['direction']} | **BlockulatorWad** | **{b['wrong']:,} wrong of {b['n']:,}** | "
-                  f"{fmt(b['maxWei'])} / {fmt(b['medianWei'])} | {b['revertInRange']:,} | {b['valueOutOfRange']:,} | |")
-        for lib in LIBS[1:]:
+        first = True
+        for lib in LIBS:
             r = by.get((lib, f))
             if not r:
                 continue
-            md.append(f"| | {r['direction']} | {LABEL[lib]} | {r['wrongWei']:,} of {r['valued']:,} ({r['wrongWeiPct']:.1f}%) | "
+            name = f"**{LABEL[lib]}**" if lib in OURS else LABEL[lib]
+            md.append(f"| {f if first else ''} | {r['direction']} | {name} | {r['wrongWei']:,} of {r['valued']:,} ({r['wrongWeiPct']:.1f}%) | "
                       f"{fmt(r['maxWei'])} / {fmt(r['medianWei'])} | {r['revertInRange']:,} | {r['valueOutOfRange']:,} | "
                       f"{r.get('outsideDomain') or ''} |")
+            first = False
     md += ["",
            "Each library in its own direction: Solady floor, and toward zero for sMulWad, sDivWad and "
            "lambertW0Wad (its sdiv); PRBMath floor for UD60x18, exp and pow, toward zero for SD59x18's mul, "
            "div and logs (log2 of x < 1 is minus log2(1/x) truncated); Solmate floor, toward zero for wadMul and "
            "wadDiv; OpenZeppelin, Uniswap and snekmate in the direction their rounding argument names. Solmate's "
            "and OpenZeppelin's sqrt are integer roots, called on x 10^18. A library missing from a function has "
-           "no such function: none of them has a WAD log2 or log10 but PRBMath, an Up for exp, ln, pow or "
-           "Lambert W, or Lambert W but Solady; OpenZeppelin and Uniswap have no exp, ln or pow, Uniswap no root, "
-           "snekmate no pow and no square root.",
+           "no such function: none of them has a WAD log2 or log10 but PRBMath, or Lambert W but Solady; "
+           "OpenZeppelin and Uniswap have no exp, ln or pow, Uniswap no root, snekmate no pow and no square root.",
            "",
            "## Gas and size",
            "",
            "Each library's internal call alone (snekmate: the module call inside its Vyper contract, which "
-           "times it). *Typical*: the median over 200 everyday inputs that take no "
-           "shortcut (exp of -10..10, ln and the logs of 0.001..1,000, pow of 0.5..2 to -3..3, products and "
-           "quotients of amounts up to 10^9 tokens); *swept*: median / 99th percentile over the swept inputs, "
-           "BlockulatorWad's second stage included where it ran. *Bytes*: what one call adds to a contract "
-           "(not measured for snekmate, which a Solidity contract cannot inline).",
+           "times it; BL19 and BL127: with their conversions). *Typical*: the median over 200 everyday inputs "
+           "that take no shortcut (exp of -10..10, ln and the logs of 0.001..1,000, pow of 0.5..2 to -3..3, "
+           "products and quotients of amounts up to 10^9 tokens); *swept*: median / 99th percentile over the "
+           "swept inputs. *Bytes*: what one call adds to a contract (not measured for snekmate, which a "
+           "Solidity contract cannot inline).",
            "",
            "| function | library | typical | swept median / p99 | bytes |",
            "|---|---|---:|---:|---:|"]
     for f in FUNCS:
+        first = True
         for lib in LIBS:
             r = by.get((lib, f))
             if not r:
                 continue
-            name = f"**{LABEL[lib]}**" if lib == "blockulator" else LABEL[lib]
-            md.append(f"| {f if lib == 'blockulator' else ''} | {name} | {fmt(r.get('gasTypical'))} | "
+            name = f"**{LABEL[lib]}**" if lib in OURS else LABEL[lib]
+            md.append(f"| {f if first else ''} | {name} | {fmt(r.get('gasTypical'))} | "
                       f"{fmt(r.get('gasMedian'))} / {fmt(r.get('gasP99'))} | {fmt(r.get('bytes'))} |")
+            first = False
     return "\n".join(md) + "\n"
 
 

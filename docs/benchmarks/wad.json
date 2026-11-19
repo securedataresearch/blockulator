@@ -1,8 +1,8 @@
 {
- "_doc": "BlockulatorWad against the exact value, and every established library's\nWAD functions beside it (Solady, PRBMath SD59x18 and UD60x18, Solmate,\nOpenZeppelin Math, Uniswap FullMath, snekmate), on the same seeded inputs.\n\n    uv run scripts/sweep/wad.py            # make wad: inputs -> forge (test/wad/WadBench.t.sol) -> wad.{json,md}\n    uv run scripts/sweep/wad.py score      # re-score the last forge outputs only\n\nThe inputs (seed 20261023) cover each function's domain: log-uniform\nmagnitudes from one wei to the top of the range, both signs where the\nfunction takes them, the inputs whose exact value sits near a wei boundary\n(an output near an integer number of wei: x = ln(k) for exp, perfect squares\nand cubes for the roots, products one wei either side of a multiple of\n10^18), the exact cases (exp(0), ln(1), powers of two and ten for the logs,\nperfect powers for pow) and the ends of each domain. make sweep runs the same\ninputs through BlockulatorWad as its WAD rows (scripts/sweep/sweep.py), with\na forced second-stage pass.\n\nTruth is the exact real value: integer arithmetic for mul, div, sqrt and\ncbrt; mpmath at 300 digits for the rest, rounded in the stated direction. A\nvalue within 10^-250 of an integer is an exact case, and is accepted only\nwhere it is one (exp(0), ln(1), log2 at 10^18 2^k, log10 at 10^(18 + k), a\npow whose rational power is exactly that integer, W(0)); any other would stop\nthe run.\n\nEach library is scored in its own rounding direction (DIRS): BlockulatorWad\nin the direction each function states; Solady floor for the unsigned and\nexp/ln/pow results, toward zero for sMulWad, sDivWad and lambertW0Wad (its\nsdiv); PRBMath floor for UD60x18 and exp/pow, toward zero for SD59x18's mul,\ndiv and logs (log2 of x < 1 is minus log2(1/x) truncated). *Wrong* counts a\nresult that is not that integer, or a revert where the value fits, or a value\nwhere the exact one does not. A function defined on part of the domain only\n(PRBMath UD60x18's exp, logs and pow take x >= 0, its logs x >= 1) is scored\non that part: the other inputs count as outside its domain, not as wrong.\nThe other libraries' rounding: Solmate as Solady (floor; wadMul and wadDiv\ntruncate toward zero), OpenZeppelin and Uniswap in the direction their\nrounding argument names, snekmate floor; the roots Solmate and OpenZeppelin\nhave are integer roots, called on x 10^18 as a WAD user does.\n\nGas is each library's internal call alone (WadBench.t.sol reads gasleft() on\neither side of the call, net of the same window around an assignment; for\nsnekmate, a Vyper library, its own contract reads msg.gas around the module\ncall, net of its own window around an assignment), on\nthe swept inputs and on a typical set: 200 random inputs per function in its\neveryday range (exp of -10..10, ln of 0.001..1000, pow of 0.5..2 to -3..3,\nproducts and quotients of amounts up to 10^9 tokens), which take no shortcut.\nWrites docs/benchmarks/wad.{json,md}.",
+ "_doc": "Every established library's WAD functions (Solady, PRBMath SD59x18 and\nUD60x18, Solmate, OpenZeppelin Math, Uniswap FullMath, snekmate) against the\nexact value, with BL19 and BL127 beside them through their own WAD\nconversions, on the same seeded inputs.\n\n    uv run scripts/sweep/wad.py            # make wad: inputs -> forge (test/sweep/WadBench.t.sol) -> wad.{json,md}\n    uv run scripts/sweep/wad.py score      # re-score the last forge outputs only\n\nThe inputs (seed 20261023) cover each function's domain: log-uniform\nmagnitudes from one wei to the top of the range, both signs where the\nfunction takes them, the inputs whose exact value sits near a wei boundary\n(an output near an integer number of wei: x = ln(k) for exp, perfect squares\nand cubes for the roots, products one wei either side of a multiple of\n10^18), the exact cases (exp(0), ln(1), powers of two and ten for the logs,\nperfect powers for pow) and the ends of each domain.\n\nTruth is the exact real value: integer arithmetic for mul, div, sqrt and\ncbrt; mpmath at 300 digits for the rest, rounded in the stated direction. A\nvalue within 10^-250 of an integer is an exact case, and is accepted only\nwhere it is one (exp(0), ln(1), log2 at 10^18 2^k, log10 at 10^(18 + k), a\npow whose rational power is exactly that integer, W(0)); any other would stop\nthe run.\n\nBL19 and BL127 are called as a WAD user calls them: fromFixed18 on each\nargument, the op, then toFixed18Down or toFixed18Up in the direction the row\nstates (toward zero: Down for a result at or above zero, Up below). A uint256\nargument past int256's top does not fit their word and counts as a revert.\n\nEach library is scored in its own rounding direction: BL19 and BL127 in the\nrow's; Solady floor for the unsigned and\nexp/ln/pow results, toward zero for sMulWad, sDivWad and lambertW0Wad (its\nsdiv); PRBMath floor for UD60x18 and exp/pow, toward zero for SD59x18's mul,\ndiv and logs (log2 of x < 1 is minus log2(1/x) truncated). *Wrong* counts a\nresult that is not that integer, or a revert where the value fits, or a value\nwhere the exact one does not. A function defined on part of the domain only\n(PRBMath UD60x18's exp, logs and pow take x >= 0, its logs x >= 1) is scored\non that part: the other inputs count as outside its domain, not as wrong.\nThe other libraries' rounding: Solmate as Solady (floor; wadMul and wadDiv\ntruncate toward zero), OpenZeppelin and Uniswap in the direction their\nrounding argument names, snekmate floor; the roots Solmate and OpenZeppelin\nhave are integer roots, called on x 10^18 as a WAD user does.\n\nGas is each library's internal call alone, the conversions included for BL19\nand BL127 (WadBench.t.sol reads gasleft() on\neither side of the call, net of the same window around an assignment; for\nsnekmate, a Vyper library, its own contract reads msg.gas around the module\ncall, net of its own window around an assignment), on\nthe swept inputs and on a typical set: 200 random inputs per function in its\neveryday range (exp of -10..10, ln of 0.001..1000, pow of 0.5..2 to -3..3,\nproducts and quotients of amounts up to 10^9 tokens), which take no shortcut.\nWrites docs/benchmarks/wad.{json,md}.",
  "seed": 20261023,
  "versions": {
-  "blockulator": "6c2eeaf",
+  "blockulator": "c1105e1",
   "solady": "v0.1.26",
   "prb-math": "v4.2.0",
   "solmate": "main@89365b8",
@@ -11,7 +11,8 @@
   "snekmate": "v0.1.2 (vyper 0.4.3)"
  },
  "libraries": {
-  "blockulator": "BlockulatorWad",
+  "bl19": "BL19",
+  "bl127": "BL127",
   "solady": "Solady FixedPointMathLib",
   "prb": "PRBMath (UD60x18 / SD59x18)",
   "prbud": "PRBMath UD60x18 (exp, logs, pow)",
@@ -22,33 +23,76 @@
  },
  "rows": [
   {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "mulWad",
-   "call": "BlockulatorWad.mulWad",
+   "call": "BL19Lib.toFixed18Down(BL19Lib.mul(BL19Lib.fromFixed18(pos(a)), BL19Lib.fromFixed18(pos(b))))",
    "direction": "floor",
    "n": 4000,
    "outsideDomain": 0,
    "status": {
-    "ok": 3720,
+    "ok": 3707,
+    "bothrev": 280,
+    "gotrev": 13
+   },
+   "wrong": 133,
+   "wrongPct": 3.325,
+   "valued": 3707,
+   "wrongWei": 120,
+   "wrongWeiPct": 3.237,
+   "revertInRange": 13,
+   "valueOutOfRange": 0,
+   "maxWei": 157593,
+   "medianWei": 0,
+   "hist": {
+    "0": 3587,
+    "1": 26,
+    "2": 8,
+    "3": 3,
+    "4": 3,
+    "5": 2,
+    "6": 1,
+    "7": 2,
+    "8": 2,
+    "9": 1,
+    "10": 2,
+    "11": 1
+   },
+   "gasMedian": 2473,
+   "gasP99": 2473,
+   "gasMax": 2473,
+   "gasTypical": 2473,
+   "bytes": 998
+  },
+  {
+   "lib": "bl127",
+   "function": "mulWad",
+   "call": "BL127Lib.toFixed18Down(BL127Lib.mul(BL127Lib.fromFixed18(pos(a)), BL127Lib.fromFixed18(pos(b))))",
+   "direction": "floor",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 1905,
+    "gotrev": 1815,
     "bothrev": 280
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3720,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
+   "wrong": 1862,
+   "wrongPct": 46.55,
+   "valued": 1905,
+   "wrongWei": 47,
+   "wrongWeiPct": 2.467,
+   "revertInRange": 1815,
    "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0.0,
+   "maxWei": 1,
+   "medianWei": 0,
    "hist": {
-    "0": 3720
+    "0": 1858,
+    "1": 47
    },
-   "gasMedian": 107,
-   "gasP99": 274,
-   "gasMax": 274,
-   "gasTypical": 107,
-   "bytes": 169
+   "gasMedian": 827,
+   "gasP99": 827,
+   "gasMax": 827,
+   "gasTypical": 827,
+   "bytes": 361
   },
   {
    "lib": "solady",
@@ -104,8 +148,8 @@
     "0": 3720
    },
    "gasMedian": 218,
-   "gasP99": 333,
-   "gasMax": 333,
+   "gasP99": 304,
+   "gasMax": 304,
    "gasTypical": 218,
    "bytes": 226
   },
@@ -227,33 +271,76 @@
    "bytes": null
   },
   {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "mulWadUp",
-   "call": "BlockulatorWad.mulWadUp",
+   "call": "BL19Lib.toFixed18Up(BL19Lib.mul(BL19Lib.fromFixed18(pos(a)), BL19Lib.fromFixed18(pos(b))))",
    "direction": "ceiling",
    "n": 4000,
    "outsideDomain": 0,
    "status": {
-    "ok": 3720,
+    "ok": 3707,
+    "bothrev": 280,
+    "gotrev": 13
+   },
+   "wrong": 126,
+   "wrongPct": 3.15,
+   "valued": 3707,
+   "wrongWei": 113,
+   "wrongWeiPct": 3.048,
+   "revertInRange": 13,
+   "valueOutOfRange": 0,
+   "maxWei": 157593,
+   "medianWei": 0,
+   "hist": {
+    "0": 3594,
+    "1": 19,
+    "2": 8,
+    "3": 3,
+    "4": 3,
+    "5": 2,
+    "6": 1,
+    "7": 2,
+    "8": 2,
+    "9": 1,
+    "10": 2,
+    "11": 1
+   },
+   "gasMedian": 2488,
+   "gasP99": 2488,
+   "gasMax": 2488,
+   "gasTypical": 2488,
+   "bytes": 999
+  },
+  {
+   "lib": "bl127",
+   "function": "mulWadUp",
+   "call": "BL127Lib.toFixed18Up(BL127Lib.mul(BL127Lib.fromFixed18(pos(a)), BL127Lib.fromFixed18(pos(b))))",
+   "direction": "ceiling",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 1905,
+    "gotrev": 1815,
     "bothrev": 280
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3720,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
+   "wrong": 1859,
+   "wrongPct": 46.475,
+   "valued": 1905,
+   "wrongWei": 44,
+   "wrongWeiPct": 2.31,
+   "revertInRange": 1815,
    "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0.0,
+   "maxWei": 1,
+   "medianWei": 0,
    "hist": {
-    "0": 3720
+    "0": 1861,
+    "1": 44
    },
-   "gasMedian": 128,
-   "gasP99": 330,
-   "gasMax": 330,
-   "gasTypical": 128,
-   "bytes": 197
+   "gasMedian": 846,
+   "gasP99": 846,
+   "gasMax": 846,
+   "gasTypical": 846,
+   "bytes": 373
   },
   {
    "lib": "solady",
@@ -403,33 +490,86 @@
    "bytes": null
   },
   {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "divWad",
-   "call": "BlockulatorWad.divWad",
+   "call": "BL19Lib.toFixed18Down(BL19Lib.div(BL19Lib.fromFixed18(pos(a)), BL19Lib.fromFixed18(pos(b))))",
    "direction": "floor",
    "n": 4000,
    "outsideDomain": 0,
    "status": {
-    "ok": 3966,
+    "ok": 3937,
+    "bothrev": 34,
+    "gotrev": 29
+   },
+   "wrong": 69,
+   "wrongPct": 1.725,
+   "valued": 3937,
+   "wrongWei": 40,
+   "wrongWeiPct": 1.016,
+   "revertInRange": 29,
+   "valueOutOfRange": 0,
+   "maxWei": 348030,
+   "medianWei": 0,
+   "hist": {
+    "0": 3897,
+    "1": 20,
+    "3": 1,
+    "12": 1,
+    "17": 1,
+    "28": 1,
+    "37": 1,
+    "40": 1,
+    "52": 1,
+    "57": 1,
+    "60": 1,
+    "383": 1
+   },
+   "gasMedian": 2755,
+   "gasP99": 2755,
+   "gasMax": 2755,
+   "gasTypical": 2755,
+   "bytes": 1096
+  },
+  {
+   "lib": "bl127",
+   "function": "divWad",
+   "call": "BL127Lib.toFixed18Down(BL127Lib.div(BL127Lib.fromFixed18(pos(a)), BL127Lib.fromFixed18(pos(b))))",
+   "direction": "floor",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 1791,
+    "gotrev": 2175,
     "bothrev": 34
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3966,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
+   "wrong": 2532,
+   "wrongPct": 63.3,
+   "valued": 1791,
+   "wrongWei": 357,
+   "wrongWeiPct": 19.933,
+   "revertInRange": 2175,
    "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0.0,
+   "maxWei": 39468219290685713139171080021303117,
+   "medianWei": 0,
    "hist": {
-    "0": 3966
+    "0": 1434,
+    "1": 23,
+    "2": 6,
+    "3": 4,
+    "5": 4,
+    "6": 2,
+    "7": 3,
+    "10": 1,
+    "11": 1,
+    "12": 2,
+    "14": 2,
+    "19": 2
    },
-   "gasMedian": 103,
-   "gasP99": 492,
-   "gasMax": 492,
-   "gasTypical": 103,
-   "bytes": 257
+   "gasMedian": 985,
+   "gasP99": 1101,
+   "gasMax": 1392,
+   "gasTypical": 985,
+   "bytes": 706
   },
   {
    "lib": "solady",
@@ -608,33 +748,86 @@
    "bytes": null
   },
   {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "divWadUp",
-   "call": "BlockulatorWad.divWadUp",
+   "call": "BL19Lib.toFixed18Up(BL19Lib.div(BL19Lib.fromFixed18(pos(a)), BL19Lib.fromFixed18(pos(b))))",
    "direction": "ceiling",
    "n": 4000,
    "outsideDomain": 0,
    "status": {
-    "ok": 3966,
+    "ok": 3937,
+    "bothrev": 34,
+    "gotrev": 29
+   },
+   "wrong": 79,
+   "wrongPct": 1.975,
+   "valued": 3937,
+   "wrongWei": 50,
+   "wrongWeiPct": 1.27,
+   "revertInRange": 29,
+   "valueOutOfRange": 0,
+   "maxWei": 348030,
+   "medianWei": 0,
+   "hist": {
+    "0": 3887,
+    "1": 30,
+    "3": 1,
+    "12": 1,
+    "17": 1,
+    "28": 1,
+    "37": 1,
+    "40": 1,
+    "52": 1,
+    "57": 1,
+    "60": 1,
+    "383": 1
+   },
+   "gasMedian": 2770,
+   "gasP99": 2770,
+   "gasMax": 2770,
+   "gasTypical": 2770,
+   "bytes": 1097
+  },
+  {
+   "lib": "bl127",
+   "function": "divWadUp",
+   "call": "BL127Lib.toFixed18Up(BL127Lib.div(BL127Lib.fromFixed18(pos(a)), BL127Lib.fromFixed18(pos(b))))",
+   "direction": "ceiling",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 1791,
+    "gotrev": 2175,
     "bothrev": 34
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3966,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
+   "wrong": 2536,
+   "wrongPct": 63.4,
+   "valued": 1791,
+   "wrongWei": 361,
+   "wrongWeiPct": 20.156,
+   "revertInRange": 2175,
    "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0.0,
+   "maxWei": 39468219290685713139171080021303118,
+   "medianWei": 0,
    "hist": {
-    "0": 3966
+    "0": 1430,
+    "1": 27,
+    "2": 6,
+    "3": 4,
+    "5": 4,
+    "6": 2,
+    "7": 3,
+    "10": 1,
+    "11": 1,
+    "12": 2,
+    "14": 2,
+    "19": 2
    },
-   "gasMedian": 128,
-   "gasP99": 546,
-   "gasMax": 546,
-   "gasTypical": 128,
-   "bytes": 281
+   "gasMedian": 1004,
+   "gasP99": 1120,
+   "gasMax": 1411,
+   "gasTypical": 1004,
+   "bytes": 718
   },
   {
    "lib": "solady",
@@ -784,9 +977,9 @@
    "bytes": null
   },
   {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "sMulWad",
-   "call": "BlockulatorWad.sMulWad",
+   "call": "tz19(BL19Lib.mul(BL19Lib.fromFixed18(a), BL19Lib.fromFixed18(b)))",
    "direction": "toward zero",
    "n": 4000,
    "outsideDomain": 0,
@@ -794,23 +987,65 @@
     "ok": 3715,
     "bothrev": 285
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
+   "wrong": 95,
+   "wrongPct": 2.375,
    "valued": 3715,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
+   "wrongWei": 95,
+   "wrongWeiPct": 2.557,
    "revertInRange": 0,
    "valueOutOfRange": 0,
-   "maxWei": 0,
+   "maxWei": 242417,
    "medianWei": 0,
    "hist": {
-    "0": 3715
+    "0": 3620,
+    "1": 14,
+    "2": 8,
+    "3": 2,
+    "4": 3,
+    "5": 4,
+    "7": 3,
+    "8": 1,
+    "11": 1,
+    "12": 1,
+    "13": 1,
+    "14": 1
    },
-   "gasMedian": 142,
-   "gasP99": 491,
-   "gasMax": 491,
-   "gasTypical": 142,
-   "bytes": 257
+   "gasMedian": 2425,
+   "gasP99": 2450,
+   "gasMax": 2450,
+   "gasTypical": 2450,
+   "bytes": 983
+  },
+  {
+   "lib": "bl127",
+   "function": "sMulWad",
+   "call": "tz127(BL127Lib.mul(BL127Lib.fromFixed18(a), BL127Lib.fromFixed18(b)))",
+   "direction": "toward zero",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 1941,
+    "gotrev": 1774,
+    "bothrev": 285
+   },
+   "wrong": 1786,
+   "wrongPct": 44.65,
+   "valued": 1941,
+   "wrongWei": 12,
+   "wrongWeiPct": 0.618,
+   "revertInRange": 1774,
+   "valueOutOfRange": 0,
+   "maxWei": 1,
+   "medianWei": 0,
+   "hist": {
+    "0": 1929,
+    "1": 12
+   },
+   "gasMedian": 779,
+   "gasP99": 809,
+   "gasMax": 809,
+   "gasTypical": 809,
+   "bytes": 378
   },
   {
    "lib": "solady",
@@ -866,8 +1101,8 @@
     "0": 3715
    },
    "gasMedian": 481,
-   "gasP99": 596,
-   "gasMax": 596,
+   "gasP99": 567,
+   "gasMax": 567,
    "gasTypical": 481,
    "bytes": 404
   },
@@ -902,67 +1137,9 @@
    "bytes": 64
   },
   {
-   "lib": "blockulator",
-   "function": "sMulWadDown",
-   "call": "BlockulatorWad.sMulWadDown",
-   "direction": "floor",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3715,
-    "bothrev": 285
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3715,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0,
-   "hist": {
-    "0": 3715
-   },
-   "gasMedian": 170,
-   "gasP99": 542,
-   "gasMax": 542,
-   "gasTypical": 170,
-   "bytes": 274
-  },
-  {
-   "lib": "blockulator",
-   "function": "sMulWadUp",
-   "call": "BlockulatorWad.sMulWadUp",
-   "direction": "ceiling",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3715,
-    "bothrev": 285
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3715,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0,
-   "hist": {
-    "0": 3715
-   },
-   "gasMedian": 162,
-   "gasP99": 537,
-   "gasMax": 537,
-   "gasTypical": 162,
-   "bytes": 281
-  },
-  {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "sDivWad",
-   "call": "BlockulatorWad.sDivWad",
+   "call": "tz19(BL19Lib.div(BL19Lib.fromFixed18(a), BL19Lib.fromFixed18(b)))",
    "direction": "toward zero",
    "n": 4000,
    "outsideDomain": 0,
@@ -970,23 +1147,75 @@
     "ok": 3937,
     "bothrev": 63
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
+   "wrong": 36,
+   "wrongPct": 0.9,
    "valued": 3937,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
+   "wrongWei": 36,
+   "wrongWeiPct": 0.914,
    "revertInRange": 0,
    "valueOutOfRange": 0,
-   "maxWei": 0,
+   "maxWei": 33175,
    "medianWei": 0,
    "hist": {
-    "0": 3937
+    "0": 3901,
+    "1": 18,
+    "2": 1,
+    "4": 1,
+    "5": 1,
+    "6": 1,
+    "8": 1,
+    "19": 1,
+    "20": 1,
+    "29": 1,
+    "207": 1,
+    "230": 1
    },
-   "gasMedian": 133,
-   "gasP99": 1110,
-   "gasMax": 1110,
-   "gasTypical": 133,
-   "bytes": 564
+   "gasMedian": 2707,
+   "gasP99": 2732,
+   "gasMax": 2732,
+   "gasTypical": 2707,
+   "bytes": 1081
+  },
+  {
+   "lib": "bl127",
+   "function": "sDivWad",
+   "call": "tz127(BL127Lib.div(BL127Lib.fromFixed18(a), BL127Lib.fromFixed18(b)))",
+   "direction": "toward zero",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 1743,
+    "gotrev": 2194,
+    "bothrev": 63
+   },
+   "wrong": 2568,
+   "wrongPct": 64.2,
+   "valued": 1743,
+   "wrongWei": 374,
+   "wrongWeiPct": 21.457,
+   "revertInRange": 2194,
+   "valueOutOfRange": 0,
+   "maxWei": 56152811056632401391384770890460,
+   "medianWei": 0,
+   "hist": {
+    "0": 1369,
+    "1": 11,
+    "2": 5,
+    "3": 5,
+    "4": 1,
+    "5": 1,
+    "6": 2,
+    "8": 4,
+    "9": 1,
+    "10": 1,
+    "13": 1,
+    "14": 3
+   },
+   "gasMedian": 937,
+   "gasP99": 1053,
+   "gasMax": 1344,
+   "gasTypical": 937,
+   "bytes": 723
   },
   {
    "lib": "solady",
@@ -1078,90 +1307,64 @@
    "bytes": 50
   },
   {
-   "lib": "blockulator",
-   "function": "sDivWadDown",
-   "call": "BlockulatorWad.sDivWadDown",
-   "direction": "floor",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3937,
-    "bothrev": 63
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3937,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0,
-   "hist": {
-    "0": 3937
-   },
-   "gasMedian": 168,
-   "gasP99": 1144,
-   "gasMax": 1144,
-   "gasTypical": 168,
-   "bytes": 587
-  },
-  {
-   "lib": "blockulator",
-   "function": "sDivWadUp",
-   "call": "BlockulatorWad.sDivWadUp",
-   "direction": "ceiling",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3937,
-    "bothrev": 63
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3937,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0,
-   "hist": {
-    "0": 3937
-   },
-   "gasMedian": 170,
-   "gasP99": 1147,
-   "gasMax": 1147,
-   "gasTypical": 170,
-   "bytes": 580
-  },
-  {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "sqrtWad",
-   "call": "BlockulatorWad.sqrtWad",
+   "call": "BL19Lib.toFixed18Down(BL19Lib.sqrt(BL19Lib.fromFixed18(pos(a))))",
    "direction": "floor",
    "n": 4000,
    "outsideDomain": 0,
    "status": {
-    "ok": 4000
+    "ok": 3988,
+    "gotrev": 12
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 4000,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
+   "wrong": 723,
+   "wrongPct": 18.075,
+   "valued": 3988,
+   "wrongWei": 711,
+   "wrongWeiPct": 17.828,
+   "revertInRange": 12,
    "valueOutOfRange": 0,
-   "maxWei": 0,
+   "maxWei": 1,
    "medianWei": 0.0,
    "hist": {
-    "0": 4000
+    "0": 3277,
+    "1": 711
    },
-   "gasMedian": 388,
-   "gasP99": 1899,
-   "gasMax": 1915,
-   "gasTypical": 388,
-   "bytes": 601
+   "gasMedian": 2535,
+   "gasP99": 2551,
+   "gasMax": 2551,
+   "gasTypical": 2535,
+   "bytes": 1296
+  },
+  {
+   "lib": "bl127",
+   "function": "sqrtWad",
+   "call": "BL127Lib.toFixed18Down(BL127Lib.sqrt(BL127Lib.fromFixed18(pos(a))))",
+   "direction": "floor",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "gotrev": 2017,
+    "ok": 1983
+   },
+   "wrong": 2685,
+   "wrongPct": 67.125,
+   "valued": 1983,
+   "wrongWei": 668,
+   "wrongWeiPct": 33.686,
+   "revertInRange": 2017,
+   "valueOutOfRange": 0,
+   "maxWei": 1,
+   "medianWei": 0,
+   "hist": {
+    "0": 1315,
+    "1": 668
+   },
+   "gasMedian": 1183,
+   "gasP99": 1183,
+   "gasMax": 1183,
+   "gasTypical": 1183,
+   "bytes": 574
   },
   {
    "lib": "solady",
@@ -1214,10 +1417,10 @@
    "hist": {
     "0": 3061
    },
-   "gasMedian": 825,
-   "gasP99": 889,
-   "gasMax": 897,
-   "gasTypical": 800,
+   "gasMedian": 820,
+   "gasP99": 892,
+   "gasMax": 893,
+   "gasTypical": 803,
    "bytes": 509
   },
   {
@@ -1279,32 +1482,63 @@
    "bytes": 447
   },
   {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "sqrtWadUp",
-   "call": "BlockulatorWad.sqrtWadUp",
+   "call": "BL19Lib.toFixed18Up(BL19Lib.sqrt(BL19Lib.fromFixed18(pos(a))))",
    "direction": "ceiling",
    "n": 4000,
    "outsideDomain": 0,
    "status": {
-    "ok": 4000
+    "ok": 3988,
+    "gotrev": 12
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 4000,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
+   "wrong": 719,
+   "wrongPct": 17.975,
+   "valued": 3988,
+   "wrongWei": 707,
+   "wrongWeiPct": 17.728,
+   "revertInRange": 12,
    "valueOutOfRange": 0,
-   "maxWei": 0,
+   "maxWei": 1,
    "medianWei": 0.0,
    "hist": {
-    "0": 4000
+    "0": 3281,
+    "1": 707
    },
-   "gasMedian": 408,
-   "gasP99": 2051,
-   "gasMax": 2067,
-   "gasTypical": 408,
-   "bytes": 609
+   "gasMedian": 2550,
+   "gasP99": 2566,
+   "gasMax": 2566,
+   "gasTypical": 2550,
+   "bytes": 1297
+  },
+  {
+   "lib": "bl127",
+   "function": "sqrtWadUp",
+   "call": "BL127Lib.toFixed18Up(BL127Lib.sqrt(BL127Lib.fromFixed18(pos(a))))",
+   "direction": "ceiling",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "gotrev": 2017,
+    "ok": 1983
+   },
+   "wrong": 2017,
+   "wrongPct": 50.425,
+   "valued": 1983,
+   "wrongWei": 0,
+   "wrongWeiPct": 0.0,
+   "revertInRange": 2017,
+   "valueOutOfRange": 0,
+   "maxWei": 0,
+   "medianWei": 0,
+   "hist": {
+    "0": 1983
+   },
+   "gasMedian": 1202,
+   "gasP99": 1202,
+   "gasMax": 1202,
+   "gasTypical": 1202,
+   "bytes": 585
   },
   {
    "lib": "oz",
@@ -1336,32 +1570,64 @@
    "bytes": 605
   },
   {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "cbrtWad",
-   "call": "BlockulatorWad.cbrtWad",
+   "call": "BL19Lib.toFixed18Down(BL19Lib.cbrt(BL19Lib.fromFixed18(pos(a))))",
    "direction": "floor",
    "n": 4000,
    "outsideDomain": 0,
    "status": {
-    "ok": 4000
+    "ok": 3994,
+    "gotrev": 6
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 4000,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
+   "wrong": 684,
+   "wrongPct": 17.1,
+   "valued": 3994,
+   "wrongWei": 678,
+   "wrongWeiPct": 16.975,
+   "revertInRange": 6,
    "valueOutOfRange": 0,
-   "maxWei": 0,
+   "maxWei": 1,
    "medianWei": 0.0,
    "hist": {
-    "0": 4000
+    "0": 3316,
+    "1": 678
    },
-   "gasMedian": 775,
-   "gasP99": 1944,
-   "gasMax": 1944,
-   "gasTypical": 760,
-   "bytes": 845
+   "gasMedian": 4095,
+   "gasP99": 4108,
+   "gasMax": 4108,
+   "gasTypical": 4069,
+   "bytes": 1699
+  },
+  {
+   "lib": "bl127",
+   "function": "cbrtWad",
+   "call": "BL127Lib.toFixed18Down(BL127Lib.cbrt(BL127Lib.fromFixed18(pos(a))))",
+   "direction": "floor",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 2031,
+    "gotrev": 1969
+   },
+   "wrong": 2486,
+   "wrongPct": 62.15,
+   "valued": 2031,
+   "wrongWei": 517,
+   "wrongWeiPct": 25.455,
+   "revertInRange": 1969,
+   "valueOutOfRange": 0,
+   "maxWei": 1,
+   "medianWei": 0,
+   "hist": {
+    "0": 1514,
+    "1": 517
+   },
+   "gasMedian": 2312,
+   "gasP99": 2312,
+   "gasMax": 2312,
+   "gasTypical": 2312,
+   "bytes": 820
   },
   {
    "lib": "solady",
@@ -1431,37 +1697,9 @@
    "bytes": null
   },
   {
-   "lib": "blockulator",
-   "function": "cbrtWadUp",
-   "call": "BlockulatorWad.cbrtWadUp",
-   "direction": "ceiling",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 4000
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 4000,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0.0,
-   "hist": {
-    "0": 4000
-   },
-   "gasMedian": 792,
-   "gasP99": 2507,
-   "gasMax": 2507,
-   "gasTypical": 777,
-   "bytes": 846
-  },
-  {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "expWad",
-   "call": "BlockulatorWad.expWad",
+   "call": "BL19Lib.toFixed18Down(BL19Lib.exp(BL19Lib.fromFixed18(a)))",
    "direction": "floor",
    "n": 4000,
    "outsideDomain": 0,
@@ -1469,23 +1707,75 @@
     "ok": 3995,
     "bothrev": 5
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
+   "wrong": 190,
+   "wrongPct": 4.75,
    "valued": 3995,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
+   "wrongWei": 190,
+   "wrongWeiPct": 4.756,
    "revertInRange": 0,
    "valueOutOfRange": 0,
-   "maxWei": 0,
+   "maxWei": 27011328,
    "medianWei": 0,
    "hist": {
-    "0": 3995
+    "0": 3805,
+    "1": 13,
+    "2": 6,
+    "3": 4,
+    "4": 6,
+    "5": 6,
+    "6": 2,
+    "7": 2,
+    "8": 1,
+    "10": 2,
+    "13": 3,
+    "14": 1
    },
-   "gasMedian": 2347,
-   "gasP99": 2447,
-   "gasMax": 26153,
-   "gasTypical": 2357,
-   "bytes": 5784
+   "gasMedian": 4568,
+   "gasP99": 4644,
+   "gasMax": 4646,
+   "gasTypical": 4578,
+   "bytes": 6844
+  },
+  {
+   "lib": "bl127",
+   "function": "expWad",
+   "call": "BL127Lib.toFixed18Down(BL127Lib.exp(BL127Lib.fromFixed18(a)))",
+   "direction": "floor",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 3448,
+    "gotrev": 547,
+    "bothrev": 5
+   },
+   "wrong": 1029,
+   "wrongPct": 25.725,
+   "valued": 3448,
+   "wrongWei": 482,
+   "wrongWeiPct": 13.979,
+   "revertInRange": 547,
+   "valueOutOfRange": 0,
+   "maxWei": 434069018656382174,
+   "medianWei": 0.0,
+   "hist": {
+    "0": 2966,
+    "1": 10,
+    "2": 6,
+    "3": 6,
+    "4": 3,
+    "5": 3,
+    "6": 4,
+    "7": 2,
+    "8": 2,
+    "9": 1,
+    "11": 4,
+    "14": 1
+   },
+   "gasMedian": 3123,
+   "gasP99": 3163,
+   "gasMax": 3173,
+   "gasTypical": 3123,
+   "bytes": 5929
   },
   {
    "lib": "solady",
@@ -1563,10 +1853,10 @@
     "10": 3,
     "11": 1
    },
-   "gasMedian": 2663,
-   "gasP99": 2941,
-   "gasMax": 3039,
-   "gasTypical": 2731,
+   "gasMedian": 2675,
+   "gasP99": 2953,
+   "gasMax": 3051,
+   "gasTypical": 2743,
    "bytes": 2226
   },
   {
@@ -1604,10 +1894,10 @@
     "10": 3,
     "11": 1
    },
-   "gasMedian": 2635,
-   "gasP99": 2775,
-   "gasMax": 2831,
-   "gasTypical": 2635,
+   "gasMedian": 2647,
+   "gasP99": 2787,
+   "gasMax": 2843,
+   "gasTypical": 2647,
    "bytes": 2121
   },
   {
@@ -1693,38 +1983,9 @@
    "bytes": null
   },
   {
-   "lib": "blockulator",
-   "function": "expWadUp",
-   "call": "BlockulatorWad.expWadUp",
-   "direction": "ceiling",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3995,
-    "bothrev": 5
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3995,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0,
-   "hist": {
-    "0": 3995
-   },
-   "gasMedian": 2348,
-   "gasP99": 2448,
-   "gasMax": 26154,
-   "gasTypical": 2358,
-   "bytes": 5785
-  },
-  {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "lnWad",
-   "call": "BlockulatorWad.lnWad",
+   "call": "BL19Lib.toFixed18Down(BL19Lib.ln(BL19Lib.fromFixed18(a)))",
    "direction": "floor",
    "n": 4000,
    "outsideDomain": 0,
@@ -1732,23 +1993,55 @@
     "ok": 3998,
     "bothrev": 2
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
+   "wrong": 3,
+   "wrongPct": 0.075,
    "valued": 3998,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
+   "wrongWei": 3,
+   "wrongWeiPct": 0.075,
    "revertInRange": 0,
    "valueOutOfRange": 0,
-   "maxWei": 0,
+   "maxWei": 1,
    "medianWei": 0.0,
    "hist": {
-    "0": 3998
+    "0": 3995,
+    "1": 3
    },
-   "gasMedian": 2468,
-   "gasP99": 2492,
-   "gasMax": 28072,
-   "gasTypical": 2449,
-   "bytes": 4568
+   "gasMedian": 4410,
+   "gasP99": 5497,
+   "gasMax": 28836,
+   "gasTypical": 4379,
+   "bytes": 7064
+  },
+  {
+   "lib": "bl127",
+   "function": "lnWad",
+   "call": "BL127Lib.toFixed18Down(BL127Lib.ln(BL127Lib.fromFixed18(a)))",
+   "direction": "floor",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 3452,
+    "gotrev": 546,
+    "bothrev": 2
+   },
+   "wrong": 547,
+   "wrongPct": 13.675,
+   "valued": 3452,
+   "wrongWei": 1,
+   "wrongWeiPct": 0.029,
+   "revertInRange": 546,
+   "valueOutOfRange": 0,
+   "maxWei": 1,
+   "medianWei": 0.0,
+   "hist": {
+    "0": 3451,
+    "1": 1
+   },
+   "gasMedian": 2236,
+   "gasP99": 2276,
+   "gasMax": 2296,
+   "gasTypical": 2236,
+   "bytes": 8732
   },
   {
    "lib": "solady",
@@ -1814,10 +2107,10 @@
     "10": 298,
     "11": 131
    },
-   "gasMedian": 6884,
-   "gasP99": 7244,
-   "gasMax": 7424,
-   "gasTypical": 7004,
+   "gasMedian": 6865,
+   "gasP99": 7225,
+   "gasMax": 7405,
+   "gasTypical": 6985,
    "bytes": 601
   },
   {
@@ -1921,38 +2214,9 @@
    "bytes": null
   },
   {
-   "lib": "blockulator",
-   "function": "lnWadUp",
-   "call": "BlockulatorWad.lnWadUp",
-   "direction": "ceiling",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3998,
-    "bothrev": 2
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3998,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0.0,
-   "hist": {
-    "0": 3998
-   },
-   "gasMedian": 2469,
-   "gasP99": 2493,
-   "gasMax": 28073,
-   "gasTypical": 2450,
-   "bytes": 4569
-  },
-  {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "log2Wad",
-   "call": "BlockulatorWad.log2Wad",
+   "call": "BL19Lib.toFixed18Down(BL19Lib.log2(BL19Lib.fromFixed18(a)))",
    "direction": "floor",
    "n": 4000,
    "outsideDomain": 0,
@@ -1972,11 +2236,41 @@
    "hist": {
     "0": 3998
    },
-   "gasMedian": 2224,
-   "gasP99": 2333,
-   "gasMax": 2378,
-   "gasTypical": 2194,
-   "bytes": 4492
+   "gasMedian": 4181,
+   "gasP99": 5270,
+   "gasMax": 5291,
+   "gasTypical": 4153,
+   "bytes": 7279
+  },
+  {
+   "lib": "bl127",
+   "function": "log2Wad",
+   "call": "BL127Lib.toFixed18Down(BL127Lib.log2(BL127Lib.fromFixed18(a)))",
+   "direction": "floor",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 3342,
+    "gotrev": 656,
+    "bothrev": 2
+   },
+   "wrong": 656,
+   "wrongPct": 16.4,
+   "valued": 3342,
+   "wrongWei": 0,
+   "wrongWeiPct": 0.0,
+   "revertInRange": 656,
+   "valueOutOfRange": 0,
+   "maxWei": 0,
+   "medianWei": 0.0,
+   "hist": {
+    "0": 3342
+   },
+   "gasMedian": 2020,
+   "gasP99": 2060,
+   "gasMax": 2070,
+   "gasTypical": 2020,
+   "bytes": 8464
   },
   {
    "lib": "prb",
@@ -2012,10 +2306,10 @@
     "10": 297,
     "11": 444
    },
-   "gasMedian": 6540,
-   "gasP99": 6901,
-   "gasMax": 7080,
-   "gasTypical": 6660,
+   "gasMedian": 6521,
+   "gasP99": 6882,
+   "gasMax": 7061,
+   "gasTypical": 6641,
    "bytes": 415
   },
   {
@@ -2058,38 +2352,9 @@
    "bytes": 334
   },
   {
-   "lib": "blockulator",
-   "function": "log2WadUp",
-   "call": "BlockulatorWad.log2WadUp",
-   "direction": "ceiling",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3998,
-    "bothrev": 2
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3998,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0.0,
-   "hist": {
-    "0": 3998
-   },
-   "gasMedian": 2225,
-   "gasP99": 2334,
-   "gasMax": 2370,
-   "gasTypical": 2195,
-   "bytes": 4493
-  },
-  {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "log10Wad",
-   "call": "BlockulatorWad.log10Wad",
+   "call": "BL19Lib.toFixed18Down(BL19Lib.log10(BL19Lib.fromFixed18(a)))",
    "direction": "floor",
    "n": 4000,
    "outsideDomain": 0,
@@ -2097,23 +2362,55 @@
     "ok": 3998,
     "bothrev": 2
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
+   "wrong": 1,
+   "wrongPct": 0.025,
    "valued": 3998,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
+   "wrongWei": 1,
+   "wrongWeiPct": 0.025,
    "revertInRange": 0,
    "valueOutOfRange": 0,
-   "maxWei": 0,
+   "maxWei": 1,
    "medianWei": 0.0,
    "hist": {
-    "0": 3998
+    "0": 3997,
+    "1": 1
    },
-   "gasMedian": 2432,
-   "gasP99": 2606,
-   "gasMax": 2640,
-   "gasTypical": 2402,
-   "bytes": 4575
+   "gasMedian": 4407,
+   "gasP99": 5487,
+   "gasMax": 29280,
+   "gasTypical": 4379,
+   "bytes": 7274
+  },
+  {
+   "lib": "bl127",
+   "function": "log10Wad",
+   "call": "BL127Lib.toFixed18Down(BL127Lib.log10(BL127Lib.fromFixed18(a)))",
+   "direction": "floor",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 3374,
+    "gotrev": 624,
+    "bothrev": 2
+   },
+   "wrong": 704,
+   "wrongPct": 17.6,
+   "valued": 3374,
+   "wrongWei": 80,
+   "wrongWeiPct": 2.371,
+   "revertInRange": 624,
+   "valueOutOfRange": 0,
+   "maxWei": 1,
+   "medianWei": 0.0,
+   "hist": {
+    "0": 3294,
+    "1": 80
+   },
+   "gasMedian": 2236,
+   "gasP99": 2276,
+   "gasMax": 2296,
+   "gasTypical": 2245,
+   "bytes": 8732
   },
   {
    "lib": "prb",
@@ -2149,10 +2446,10 @@
     "10": 50,
     "11": 39
    },
-   "gasMedian": 8594,
-   "gasP99": 8984,
-   "gasMax": 9105,
-   "gasTypical": 8744,
+   "gasMedian": 8579,
+   "gasP99": 8969,
+   "gasMax": 9090,
+   "gasTypical": 8729,
    "bytes": 3612
   },
   {
@@ -2188,69 +2485,94 @@
     "10": 50,
     "11": 39
    },
-   "gasMedian": 8272,
-   "gasP99": 8632,
-   "gasMax": 8722,
-   "gasTypical": 8392,
+   "gasMedian": 8276,
+   "gasP99": 8636,
+   "gasMax": 8726,
+   "gasTypical": 8396,
    "bytes": 3603
   },
   {
-   "lib": "blockulator",
-   "function": "log10WadUp",
-   "call": "BlockulatorWad.log10WadUp",
-   "direction": "ceiling",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3998,
-    "bothrev": 2
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3998,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0.0,
-   "hist": {
-    "0": 3998
-   },
-   "gasMedian": 2433,
-   "gasP99": 2607,
-   "gasMax": 2641,
-   "gasTypical": 2403,
-   "bytes": 4576
-  },
-  {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "powWad",
-   "call": "BlockulatorWad.powWad",
+   "call": "BL19Lib.toFixed18Down(BL19Lib.pow(BL19Lib.fromFixed18(a), BL19Lib.fromFixed18(b)))",
    "direction": "floor",
    "n": 4000,
    "outsideDomain": 0,
    "status": {
     "ok": 3461,
-    "bothrev": 539
+    "bothrev": 537,
+    "refrev": 2
    },
-   "wrong": 0,
-   "wrongPct": 0.0,
+   "wrong": 462,
+   "wrongPct": 11.55,
    "valued": 3461,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
+   "wrongWei": 460,
+   "wrongWeiPct": 13.291,
    "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
+   "valueOutOfRange": 2,
+   "maxWei": 17877202329,
    "medianWei": 0,
    "hist": {
-    "0": 3461
+    "0": 3001,
+    "1": 139,
+    "2": 9,
+    "3": 2,
+    "4": 7,
+    "5": 4,
+    "6": 2,
+    "7": 5,
+    "8": 2,
+    "9": 2,
+    "10": 2,
+    "11": 7
    },
-   "gasMedian": 4784,
-   "gasP99": 53767,
-   "gasMax": 53863,
-   "gasTypical": 4796,
-   "bytes": 11642
+   "gasMedian": 7717,
+   "gasP99": 8909,
+   "gasMax": 16973,
+   "gasTypical": 8713,
+   "bytes": 15272
+  },
+  {
+   "lib": "bl127",
+   "function": "powWad",
+   "call": "BL127Lib.toFixed18Down(BL127Lib.pow(BL127Lib.fromFixed18(a), BL127Lib.fromFixed18(b)))",
+   "direction": "floor",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 1914,
+    "bothrev": 456,
+    "gotrev": 1547,
+    "refrev": 83
+   },
+   "wrong": 1789,
+   "wrongPct": 44.725,
+   "valued": 1914,
+   "wrongWei": 159,
+   "wrongWeiPct": 8.307,
+   "revertInRange": 1547,
+   "valueOutOfRange": 83,
+   "maxWei": 30031070141243239258651838564742,
+   "medianWei": 0.0,
+   "hist": {
+    "0": 1755,
+    "1": 83,
+    "5": 1,
+    "6": 1,
+    "7": 1,
+    "9": 1,
+    "12": 1,
+    "14": 2,
+    "16": 1,
+    "19": 1,
+    "75": 1,
+    "115": 1
+   },
+   "gasMedian": 3828,
+   "gasP99": 10967,
+   "gasMax": 10992,
+   "gasTypical": 3782,
+   "bytes": 15367
   },
   {
    "lib": "solady",
@@ -2329,10 +2651,10 @@
     "10": 27,
     "11": 22
    },
-   "gasMedian": 9726,
-   "gasP99": 10221,
-   "gasMax": 10493,
-   "gasTypical": 9913,
+   "gasMedian": 9717,
+   "gasP99": 10214,
+   "gasMax": 10486,
+   "gasTypical": 9906,
    "bytes": 3016
   },
   {
@@ -2371,10 +2693,10 @@
     "10": 11,
     "11": 13
    },
-   "gasMedian": 9237,
-   "gasP99": 9653,
-   "gasMax": 9815,
-   "gasTypical": 9323,
+   "gasMedian": 9249,
+   "gasP99": 9669,
+   "gasMax": 9831,
+   "gasTypical": 9339,
    "bytes": 2812
   },
   {
@@ -2419,38 +2741,9 @@
    "bytes": 1196
   },
   {
-   "lib": "blockulator",
-   "function": "powWadUp",
-   "call": "BlockulatorWad.powWadUp",
-   "direction": "ceiling",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3461,
-    "bothrev": 539
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3461,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0,
-   "hist": {
-    "0": 3461
-   },
-   "gasMedian": 4785,
-   "gasP99": 53768,
-   "gasMax": 53864,
-   "gasTypical": 4797,
-   "bytes": 11643
-  },
-  {
-   "lib": "blockulator",
+   "lib": "bl19",
    "function": "lambertW0Wad",
-   "call": "BlockulatorWad.lambertW0Wad",
+   "call": "tz19(BL19Lib.lambertW0(BL19Lib.fromFixed18(a)))",
    "direction": "toward zero",
    "n": 4000,
    "outsideDomain": 0,
@@ -2470,11 +2763,41 @@
    "hist": {
     "0": 3999
    },
-   "gasMedian": 12151,
-   "gasP99": 34382,
-   "gasMax": 43099,
-   "gasTypical": 12130,
-   "bytes": 12551
+   "gasMedian": 12135,
+   "gasP99": 33651,
+   "gasMax": 43114,
+   "gasTypical": 12114,
+   "bytes": 11275
+  },
+  {
+   "lib": "bl127",
+   "function": "lambertW0Wad",
+   "call": "tz127(BL127Lib.lambertW0(BL127Lib.fromFixed18(a)))",
+   "direction": "toward zero",
+   "n": 4000,
+   "outsideDomain": 0,
+   "status": {
+    "ok": 3472,
+    "bothrev": 1,
+    "gotrev": 527
+   },
+   "wrong": 527,
+   "wrongPct": 13.175,
+   "valued": 3472,
+   "wrongWei": 0,
+   "wrongWeiPct": 0.0,
+   "revertInRange": 527,
+   "valueOutOfRange": 0,
+   "maxWei": 0,
+   "medianWei": 0.0,
+   "hist": {
+    "0": 3472
+   },
+   "gasMedian": 8685,
+   "gasP99": 11624,
+   "gasMax": 11717,
+   "gasTypical": 8687,
+   "bytes": 12609
   },
   {
    "lib": "solady",
@@ -2515,64 +2838,6 @@
    "gasMax": 13877,
    "gasTypical": 2820,
    "bytes": 1482
-  },
-  {
-   "lib": "blockulator",
-   "function": "lambertW0WadDown",
-   "call": "BlockulatorWad.lambertW0WadDown",
-   "direction": "floor",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3999,
-    "bothrev": 1
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3999,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0,
-   "hist": {
-    "0": 3999
-   },
-   "gasMedian": 12150,
-   "gasP99": 34381,
-   "gasMax": 43098,
-   "gasTypical": 12129,
-   "bytes": 12550
-  },
-  {
-   "lib": "blockulator",
-   "function": "lambertW0WadUp",
-   "call": "BlockulatorWad.lambertW0WadUp",
-   "direction": "ceiling",
-   "n": 4000,
-   "outsideDomain": 0,
-   "status": {
-    "ok": 3999,
-    "bothrev": 1
-   },
-   "wrong": 0,
-   "wrongPct": 0.0,
-   "valued": 3999,
-   "wrongWei": 0,
-   "wrongWeiPct": 0.0,
-   "revertInRange": 0,
-   "valueOutOfRange": 0,
-   "maxWei": 0,
-   "medianWei": 0,
-   "hist": {
-    "0": 3999
-   },
-   "gasMedian": 12151,
-   "gasP99": 34382,
-   "gasMax": 43099,
-   "gasTypical": 12130,
-   "bytes": 12551
   }
  ]
 }
