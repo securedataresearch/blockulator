@@ -14,4 +14,9 @@ address (the contracts hold no state and have no owner, so nothing is paused or
 upgraded in place), and the reporter is credited in `CHANGELOG.md` unless
 they ask not to be.
 
+What stands behind the libraries today: formal proofs of the core ops, a sweep
+of every op against correctly rounded truth, and datasets anyone can
+regenerate (`README.md`, "How we know"). No third party has audited them, and
+they are deployed on Sepolia only.
+
 Machine-readable contact: https://blockulator.com/.well-known/security.txt

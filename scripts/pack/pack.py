@@ -128,7 +128,9 @@ def npm_files() -> tuple[list[str], dict]:
                        cwd=OUT, capture_output=True, text=True)
     if p.returncode != 0:
         sys.exit(f"npm pack --dry-run failed:\n{p.stderr}")
-    info = json.loads(p.stdout)[0]
+    info = json.loads(p.stdout)
+    # npm up to 11 prints a list of packages; npm 12 an object keyed by package name
+    info = info[0] if isinstance(info, list) else next(iter(info.values()))
     return sorted(f["path"] for f in info["files"]), info
 
 
