@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "test": "deno run --allow-read scripts/check-sdr-colors.mjs && deno run --allow-read scripts/check-orphans.mjs && deno run tests/test-digits.js && deno run --allow-read tests/test-module-imports.js"
+    "test": "deno run --allow-read scripts/check-sdr-colors.mjs && deno run --allow-read scripts/check-orphans.mjs && deno run tests/test-digits.js"
   },
   "lock": false
 }

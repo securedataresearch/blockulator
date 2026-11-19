@@ -9,7 +9,6 @@ blockulator/
 ├── contracts/src/bl127/        BL127.yul.src and its five generated files (make gen)
 ├── contracts/src/bl19/        BL19.yul.src and its fourteen generated files, four objects (make gen-bl19)
 ├── contracts/src/ladder/       LadderRunner, EdgeRunner, one adapter per library, vendor/ (Balancer; the rest transcribed)
-├── contracts/src/{identity,games,market,tools,content}/  Vyper: badges, and the archived apps
 ├── contracts/archive/huff/     the Huff implementation and its Sepolia bytecode (BL127's equivalence baseline)
 ├── contracts/deployments/      CREATE2 records: BL127, BL19, Ladder
 ├── scripts/bl127/              generator (both libraries), BL127 oracle, verification, gas report
@@ -24,7 +23,7 @@ blockulator/
 ├── config.toml, build.sh       the Zola site
 ├── content/, templates/        pages and templates; tables and charts are Tera components
 ├── static/css/site.css         the theme: colour tokens (light, dark), background, glass
-├── static/js/islands/          scenario tabs; the badges and archive islands
+├── static/js/islands/          charts, scenario tabs, cell notes
 └── static/data/                symlinks into docs/ and contracts/, served as /data
 ```
 

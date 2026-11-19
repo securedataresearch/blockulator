@@ -169,7 +169,6 @@ Sepolia, as do BL127 v8 (0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B,
 
 - Reads are free and need no key; do not send transactions for math.
 - Sepolia only today; there is no mainnet address yet.
-- The Vyper calculators listed in /.well-known/agent.json with
-  "status": "archived", and the games and futures market on /archive/,
-  are from the Huff era, do not call BL127 and are not maintained. Use the
-  BL127 objects above.
+- The Huff-era Vyper calculators, games and futures market are archived at
+  https://github.com/securedataresearch/blockulator-archive; they do not
+  call BL127 or BL19 and are not maintained.

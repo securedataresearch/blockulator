@@ -1,1 +1,0 @@
-[{"stateMutability": "view", "type": "function", "name": "calculate", "inputs": [{"name": "x", "type": "int168", "internalType": "decimal"}], "outputs": [{"name": "", "type": "int168", "internalType": "decimal"}]}, {"stateMutability": "view", "type": "function", "name": "get_constant", "inputs": [], "outputs": [{"name": "", "type": "int168", "internalType": "decimal"}]}]

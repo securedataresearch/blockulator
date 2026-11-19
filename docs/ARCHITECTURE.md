@@ -57,15 +57,5 @@ and `liveedges.py` re-run every cell through `LadderRunner.run` and
 `liveBlock`, `liveDate`); the page prints the stamp. Regenerating a dataset
 drops its stamp until the check is run again.
 
-Two pages are JS islands, the only places the browser touches Sepolia:
-
-- `/badges/` and `/archive/`: the previous single-page app's code, moved
-  unchanged to `static/js/legacy/` and `static/css/legacy/`, booted by
-  `static/js/islands/shell.js` (wallet, network switcher, toast) and mounted
-  inside `<div class="island">`. The legacy CSS is scoped to that element.
-  The archive mounts the games, calculators and futures market on demand
-  from the hash routes the apps already used.
-
 `build.sh` downloads a pinned Zola and writes `public/`; DigitalOcean App
-Platform runs it on every push to `master` (`.do/app.yaml`). The old hash
-routes are redirected by a script at the top of `base.html`.
+Platform runs it on every push to `master` (`.do/app.yaml`).

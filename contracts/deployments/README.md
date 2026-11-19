@@ -62,10 +62,9 @@ block or none of it. The bundle is rebuilt for each block at that block's base f
    and prints the gas and the ETH to fund. No keys needed.
 3. `FUNDER_KEY=… DEPLOYER_KEY=… make deploy-mainnet`, then `make verify-mainnet` and `make smoke-mainnet`.
 
-The badge, game, calculator and market contracts were deployed by hand in
-the Huff era; their addresses live in
-`static/js/legacy/infrastructure/config/contract-registry.js`, the game
-modules, and `/.well-known/agent.json`.
+The badge, game, calculator and market contracts of the Huff era were
+deployed by hand; their sources and addresses are in
+[blockulator-archive](https://github.com/securedataresearch/blockulator-archive).
 
 ## Chains: CLZ (Osaka) required
 
