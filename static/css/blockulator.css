@@ -62,13 +62,6 @@
 .verify.match { border-color: var(--emerald); color: var(--emerald); } .verify.mismatch { border-color: var(--red); color: var(--red); }
 .gasrow { font-size: 14px; }
 
-/* archive cards and islands */
-.archive { padding-block: 0 clamp(40px, 6vw, 72px); }
-.archive .addr { font-family: var(--mono); font-size: 12px; word-break: break-all; margin: 8px 0 0; }
-.archive .links { margin-top: 12px; display: flex; gap: 16px; }
-.island { margin: 0 0 clamp(48px, 7vw, 96px); box-shadow: var(--shadow); }
-.island-open { display: flex; justify-content: space-between; align-items: center; padding: .6rem 1rem; font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; }
-
 /* demo v2: methodology, toggle, band chart, summary */
 .method { background: var(--surface-hi); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 14px 20px; margin: 1.2em 0; }
 .method summary { cursor: pointer; font-weight: 600; }

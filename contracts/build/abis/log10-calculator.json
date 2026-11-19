@@ -1,2 +1,0 @@
-[{"type":"function","name":"calculate","stateMutability":"view","inputs":[{"name":"x","type":"int168","components":null,"internalType":"decimal"}],"outputs":[{"name":"","type":"int168","components":null,"internalType":"decimal"}]},{"type":"function","name":"get_constant","stateMutability":"view","inputs":[],"outputs":[{"name":"","type":"int168","components":null,"internalType":"decimal"}]}]
-

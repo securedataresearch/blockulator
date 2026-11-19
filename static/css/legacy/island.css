@@ -1,5 +1,0 @@
-/* The legacy apps run inside <div class="island"> on a Zola page. */
-.island { font-size: 1rem; min-width: 0; overflow-x: auto; border-radius: var(--radius, 18px); }
-.island-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 0.75rem 1rem; border-bottom: 1px solid var(--sdr-border); }
-.island-bar .header-left { display: flex; align-items: center; gap: 0.75rem; position: relative; }
-.island-bar .header-right { opacity: 1; }

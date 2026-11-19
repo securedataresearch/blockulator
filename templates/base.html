@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<script>(function(){var h=location.hash,p=location.pathname;if(p!=='/'&&p!=='/index.html')return;if(h.slice(0,2)!=='#/')return;var s=h.slice(2).split('/'),m={games:'/archive/',vyper:'/archive/',futures:'/archive/',badges:'/badges/',bl127:'/library/',benchmarks:'/results/',about:'/why/'},t=m[s[0]];if(!t)return;if(s[0]==='games'||s[0]==='vyper'||s[0]==='futures')t+='#/'+s.slice(0,2).join('/');location.replace(t);})();</script>
+<script>(function(){var h=location.hash,p=location.pathname;if(p!=='/'&&p!=='/index.html')return;if(h.slice(0,2)!=='#/')return;var m={bl127:'/library/',benchmarks:'/results/',about:'/why/'},t=m[h.slice(2).split('/')[0]];if(t)location.replace(t);})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 {%- set ui = config.extra.ui %}
@@ -76,8 +76,7 @@
     <div class="col"><span class="ui-label">More</span><ul>
       <li><a href="{{ config.extra.repo }}">GitHub</a></li>
       <li><a href="/llms.txt">llms.txt</a></li>
-      <li><a href="/archive/">Archive</a></li>
-      <li><a href="/badges/">Badges</a></li>
+      <li><a href="https://github.com/securedataresearch/blockulator-archive">Archive</a></li>
       <li><!--email_off--><a href="mailto:sam@securedataresearch.net?subject=Blockulator">Contact</a><!--/email_off--></li>
     </ul></div>
   </nav>

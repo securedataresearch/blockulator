@@ -11,12 +11,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.join(__dirname, '..');
 
 // The palette lives in sdr-ui (securedataresearch/sdr-ui, src/tokens/palette.json), loaded from ui.securedataresearch.net
-// at the version config.toml pins. In this repository colour literals live in exactly two files, the legacy token bridges
-// the archived apps use. Everything else spends sdr-ui's tokens.
-const SKIP = new Set([
-    path.join(REPO_ROOT, 'static', 'css', 'legacy', 'tokens.css'),
-    path.join(REPO_ROOT, 'static', 'js', 'legacy', 'theme', 'sdr-palette.js'),
-]);
+// at the version config.toml pins. This repository holds no colour literals: everything spends sdr-ui's tokens.
+const SKIP = new Set();
 
 const reHex = /#[0-9a-fA-F]{3,8}\b/;
 const reRgb = /\brgb\s*\(/;

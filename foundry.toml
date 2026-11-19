@@ -13,9 +13,7 @@ cache_path = "cache"
 # need solc 0.8.24's optimizer sequence pinned (stdjson.py STEPS_0824: 0.8.38's
 # own sequence builds the BL19 core over the 24,576-byte limit), which forge
 # cannot set for Yul alone.
-skip = ["contracts/src/**/*.vy", "contracts/src/**/*.yul", "contracts/src/tools/**", "contracts/src/games/**",
-        "contracts/src/market/**", "contracts/src/content/**",
-        "contracts/src/identity/**", "contracts/src/interfaces/**",
+skip = ["contracts/src/**/*.vy", "contracts/src/**/*.yul",
         # the deployed-accrual suite imports lib/aave-v3-origin and lib/morpho-blue,
         # which CI does not fetch (update = none); it builds under profile.accrual.
         # test/accrual/DeployedRates.t.sol imports only the ladder and builds here
@@ -64,9 +62,7 @@ lint_on_build = false
 [profile.accrual]
 out = "out-accrual"
 cache_path = "cache-accrual"
-skip = ["contracts/src/**/*.vy", "contracts/src/**/*.yul", "contracts/src/tools/**", "contracts/src/games/**",
-        "contracts/src/market/**", "contracts/src/content/**",
-        "contracts/src/identity/**", "contracts/src/interfaces/**"]
+skip = ["contracts/src/**/*.vy", "contracts/src/**/*.yul"]
 
 # make profile's build-setting bench: test/profile/ViaIr.t.sol alone, compiled
 # through the IR, in its own out/cache (it reads the objects from out/, which

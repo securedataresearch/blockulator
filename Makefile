@@ -393,7 +393,7 @@ home-data:
 site-check: site
 	@$(PY) python scripts/site/home.py --check
 	@test -f public/data/ladder.json && test -f public/data/ops.json
-	@test -f public/contracts/build/abis/badge-factory-v2.json && test -f public/contracts/src/identity/badge.vy
+	@test -f public/contracts/deployments/BL127.json
 	@(test -x ./zola && ./zola check --skip-external-links) || zola check --skip-external-links
 	@deno task test
 

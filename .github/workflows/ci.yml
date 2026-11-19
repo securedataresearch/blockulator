@@ -135,8 +135,7 @@ jobs:
         run: |
           test -f public/data/ladder.json
           test -f public/data/ops.json
-          test -f public/contracts/build/abis/badge-factory-v2.json
-          test -f public/contracts/src/identity/badge.vy
+          test -f public/contracts/deployments/BL127.json
 
       - name: Links and front matter
         run: ./zola check --skip-external-links   # build.sh left the pinned binary here
