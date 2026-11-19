@@ -1,0 +1,15 @@
+{#- Under a page: the page before it and the page after it in its group, in config.toml extra.nav's order. -#}
+{%- set g = page.extra.group | default(value="") %}
+{%- if g and config.extra.nav[g] is defined %}
+{%- set_global seen = false %}{% set_global last = false %}{% set_global before = false %}{% set_global after = false %}
+{%- for set in config.extra.nav[g] %}{% for item in set.items %}
+  {%- if item[0] == current_path %}{% set_global seen = true %}{% set_global before = last %}
+  {%- elif seen and not after %}{% set_global after = item %}{% endif %}
+  {%- set_global last = item %}
+{%- endfor %}{% endfor %}
+{%- if seen %}
+<nav class="pager" aria-label="Previous and next page">
+  {% if before %}<a class="ui-card prev" href="{{ before[0] }}"><span class="ui-label">Previous</span><strong>{{ before[1] }}</strong></a>{% endif %}
+  {% if after %}<a class="ui-card next" href="{{ after[0] }}"><span class="ui-label">Next</span><strong>{{ after[1] }}</strong></a>{% endif %}
+</nav>
+{%- endif %}{% endif %}
