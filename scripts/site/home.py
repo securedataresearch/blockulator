@@ -480,7 +480,8 @@ def migrate(libs: list[dict]) -> dict:
             rows.append({"label": f"{t[1]}.{name}" if t else name, "long": f"{reg[lib]['long']}: {x['call']}", "code": True, "family": reg[lib]["family"], "ours": False,
                          "cells": [op, wei(x), wei(b19), wei(b127),
                                    f"{x['gasTypical']:,}" if x.get("gasTypical") else None, f"{b19['gasTypical']:,}", f"{b127['gasTypical']:,}"]})
-        return {"cols": ["BL19, BL127 op", "off by a wei: theirs", "BL19", "BL127", "gas: theirs", "BL19", "BL127"],
+        name = reg[lib]["label"]
+        return {"cols": ["op in BL19 and BL127", f"off by a wei: {name}", "off by a wei: BL19", "off by a wei: BL127", f"gas: {name}", "gas: BL19", "gas: BL127"],
                 "groups": [{"name": reg[lib]["long"], "rows": rows}]} if rows else None
 
     def op_table(lib, g, theirs, ours, target):
@@ -488,7 +489,7 @@ def migrate(libs: list[dict]) -> dict:
         rows = [{"label": call, "long": f"{reg[lib]['long']}: {op}", "code": True, "family": reg[lib]["family"], "ours": False,
                  "cells": [f"{target}.{op}", f"{t:,}" if (t := med(g, op, theirs)) else None, f"{o:,}" if (o := med(g, op, ours)) else None]}
                 for op, call in calls.items()]
-        return {"cols": [target, "gas: theirs", "ours"], "groups": [{"name": reg[lib]["long"], "rows": rows}]}
+        return {"cols": [f"call in {target}", f"gas: {reg[lib]['label']}", f"gas: {target.removesuffix('Lib')}"], "groups": [{"name": reg[lib]["long"], "rows": rows}]}
 
     return {
         "solady": {"wad": wad_table("solady")},
