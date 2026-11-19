@@ -9,7 +9,6 @@ path works in every install:
 
     @blockulator/contracts/bl127/BL127Lib.sol    bl127/  <- contracts/src/bl127
     @blockulator/contracts/bl19/BL19Lib.sol    bl19/  <- contracts/src/bl19
-    @blockulator/contracts/wad/BlockulatorWad.sol wad/   <- contracts/src/wad
     @blockulator/contracts/deployments/BL127.json        <- contracts/deployments
 
 Then it runs `npm pack --dry-run` and `forge soldeer push --dry-run` on the
@@ -39,7 +38,6 @@ SOLDEER_NAME = "blockulator"
 LAYOUT = {
     "bl127": (ROOT / "contracts/src/bl127", ["*.sol", "*.yul", "abi*.json"]),
     "bl19": (ROOT / "contracts/src/bl19", ["*.sol", "*.yul", "abi*.json"]),
-    "wad": (ROOT / "contracts/src/wad", ["*.sol"]),
     "deployments": (ROOT / "contracts/deployments", ["*.json"]),
 }
 
@@ -53,14 +51,13 @@ REQUIRED = [
     "bl19/IBL19N.sol", "bl19/IBL19S.sol", "bl19/BL19.yul", "bl19/BL19E.yul",
     "bl19/BL19H.yul", "bl19/BL19N.yul", "bl19/BL19S.yul", "bl19/abi.json",
     "bl19/abiE.json", "bl19/abiH.json", "bl19/abiN.json", "bl19/abiS.json",
-    "wad/BlockulatorWad.sol",
     "deployments/BL127.json", "deployments/BL19.json", "deployments/RELEASE.json",
 ]
 
 # every published path must match one of these
 ALLOWED = re.compile(
     r"^(package\.json|README\.md|LICENSE"
-    r"|(bl127|bl19|wad)/[A-Za-z0-9_]+\.(sol|yul)"
+    r"|(bl127|bl19)/[A-Za-z0-9_]+\.(sol|yul)"
     r"|(bl127|bl19)/abi[A-Z]?\.json"
     r"|deployments/[A-Za-z0-9_.]+\.json)$"
 )

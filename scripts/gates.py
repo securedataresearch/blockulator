@@ -109,13 +109,8 @@ def sweep_check() -> tuple[bool, str]:
              and r.get("nearest", 0) < before[key(r)].get("nearest", 0)]
     n19 = sum(1 for r in new if r["lib"] == "bl19")
     n127 = sum(1 for r in new if r["lib"] == "bl127")
-    # BlockulatorWad: every row, both passes, at 0 wrong wei (and its rows present)
-    wad = [r for r in new if r["lib"] == "wad"]
-    wrong = [f"{r['op']}{'/' + r['stage'] if r.get('stage') else ''}={r['wrong']}" for r in wad if r.get("wrong")]
-    mis += wrong
-    ok = not mis and not worse and bool(wad)
-    msg = (f"BL19 {n19} rows, misrounded {len(mis) - len(wrong)}; BL127 {n127} rows, nearest fell on {len(worse)}; "
-           f"WAD {len(wad)} rows, {sum(r['n'] for r in wad):,} results, wrong {len(wrong)}")
+    ok = not mis and not worse
+    msg = f"BL19 {n19} rows, misrounded {len(mis)}; BL127 {n127} rows, nearest fell on {len(worse)}"
     if mis:
         msg += f" [{', '.join(mis[:8])}]"
     if worse:

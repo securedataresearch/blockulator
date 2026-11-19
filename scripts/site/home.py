@@ -124,18 +124,13 @@ def edges_section(reg: dict) -> dict:
 
 
 def wad_section(reg: dict) -> dict:
+    """Every library's WAD functions on the same everyday inputs (wad.json, .typical): the share of results off by a
+    wei, for the chart."""
     d = load("wad.json")
-    wrong_somewhere = {r["function"] for r in d["rows"] if r["lib"] != "blockulator" and r["wrongWei"]}
-    # every function another library offers: the ones they get wrong first, then the ones every library gets exact
-    offered = {r["function"] for r in d["rows"] if r["lib"] != "blockulator"}
-    ours_order = [r["function"] for r in d["rows"] if r["lib"] == "blockulator" and r["function"] in offered]
-    fns = list(dict.fromkeys([f for f in ours_order if f in wrong_somewhere] + ours_order))
-    rows = [{"lib": r["lib"], "fn": r["function"], "pct": round(r["wrongWeiPct"], 2), "wrong": r["wrongWei"], "n": r["valued"], "maxWei": r.get("maxWei")}
-            for lib in reg for r in d["rows"] if r["lib"] == lib and r["function"] in fns]
-    ours = [r for r in d["rows"] if r["lib"] == "blockulator"]
-    exact = sorted({r["function"] for r in d["rows"] if r["lib"] != "blockulator"} - wrong_somewhere)
-    return {"functions": fns, "exact": exact, "results": sum(r["n"] for r in ours), "wrong": sum(r["wrongWei"] for r in ours),
-            "functionsTotal": len(ours), "rows": rows}
+    fns = list(dict.fromkeys(r["function"] for r in d["rows"]))
+    rows = [{"lib": r["lib"], "fn": r["function"], "pct": round(t["wrongWeiPct"], 2), "wrong": t["wrongWei"], "n": t["valued"], "maxWei": t["maxWei"]}
+            for lib in reg for r in d["rows"] if r["lib"] == lib for t in [r["typical"]]]
+    return {"functions": fns, "rows": rows}
 
 
 # ---- the tables: the same rows, laid out for the template (it only loops; a cell is a string or null) ----
@@ -180,17 +175,6 @@ def tables(out: dict, libs: list[dict]) -> None:
     by = {(r["lib"], r["n"]): r["digits"] for r in a["rows"]}
     a["table"] = {"cols": [f"{n:,} {'day' if n == 1 else 'days'}" for n in a["cols"]],
                   "groups": grouped(libs, a["rows"], lambda l: [f"{by[l['id'], n]:.1f}" if (l["id"], n) in by else None for n in a["cols"]])}
-
-    w = out["wad"]
-    by = {(r["lib"], r["fn"]): r for r in w["rows"]}
-
-    def wcell(c, r):
-        x = by.get((c["id"], r["key"]))
-        if not x:
-            return {"v": None, "why": "not offered"}
-        v = f"0 of {x['n']:,}" if c["ours"] else "0" if not x["wrong"] else f"{round(x['pct'])}%"
-        return {"v": v, "why": f"{c['long']}: {x['wrong']:,} of {x['n']:,} results off by a wei or more"}
-    w["table"] = libcols(libs, {r["lib"] for r in w["rows"]}, [{"key": f, "label": f, "code": True} for f in w["functions"]], wcell)
 
     ld = out["ladder"]
     by = {(r["lib"], r["scenario"]): r for r in ld["rows"]}
@@ -380,8 +364,8 @@ def inner_tables(libs: list[dict]) -> dict:
 
 # ---- /results/wad/, /results/deployed/, /results/incidents/ ----
 def wad_tables(libs: list[dict]) -> dict:
-    """BlockulatorWad and every library's WAD functions on the same inputs (wad.json): how often each is wrong,
-    by how much at worst, and what it costs."""
+    """Every library's WAD functions on the same everyday inputs (wad.json, .typical), BL19 and BL127 through their
+    WAD conversions: how often each is a wei off, by how much at worst, and what it costs."""
     w = load("wad.json")
     by = {(r["lib"], r["function"]): r for r in w["rows"]}
     fns = list(dict.fromkeys(r["function"] for r in w["rows"]))
@@ -391,20 +375,21 @@ def wad_tables(libs: list[dict]) -> dict:
     def table(cell):
         return libcols(libs, have, rows, lambda c, r: (lambda x: cell(c, x) if x else {"v": None, "why": "not offered"})(by.get((c["id"], r["key"]))))
 
-    def wrong(c, x):
-        parts = [f"{x['wrong']:,} of {x['n'] - x['outsideDomain']:,} wrong"] + ([f"{x['revertInRange']:,} revert where the value fits"] if x["revertInRange"] else []) \
-            + ([f"{x['valueOutOfRange']:,} return a value where none fits"] if x["valueOutOfRange"] else []) + [f"rounded {x['direction']}"]
-        v = "0" if not x["wrong"] else f"{x['wrongPct']:.2g}%" if x["wrongPct"] < 1 else f"{round(x['wrongPct'])}%"
-        return {"v": v, "h": round(min(x["wrongPct"], 100) / 100, 3), "why": f"{c['long']} {x['function']}: " + "; ".join(parts)}
+    def everyday(c, x):
+        t = x["typical"]
+        v = "0" if not t["wrongWei"] else f"{t['wrongWeiPct']:.2g}%" if t["wrongWeiPct"] < 1 else f"{round(t['wrongWeiPct'])}%"
+        return {"v": v, "h": round(min(t["wrongWeiPct"], 100) / 100, 3),
+                "why": f"{c['long']} {x['function']}: {t['wrongWei']:,} of {t['valued']:,} everyday results off by a wei or more, {t['maxWei']:,} wei at worst"}
 
     def worst(c, x):
-        return {"v": "0" if not x["maxWei"] else f"{x['maxWei']:,}" if x["maxWei"] < 1e6 else f"{x['maxWei']:.2e}",
-                "why": f"{c['long']} {x['function']}: off by {x['maxWei']:,} wei at worst, median {x['medianWei']:g} over the values it returns"}
+        t = x["typical"]
+        return {"v": "0" if not t["maxWei"] else f"{t['maxWei']:,}" if t["maxWei"] < 1e6 else f"{t['maxWei']:.2e}",
+                "why": f"{c['long']} {x['function']}: off by {t['maxWei']:,} wei at worst over {t['valued']:,} everyday results"}
 
     def gas(c, x):
         return {"v": f"{x['gasTypical']:,}" if x.get("gasTypical") else None,
                 "why": f"{c['long']} {x['function']}: median {x['gasTypical']:,} gas on everyday inputs, p99 {x['gasP99']:,} over the sweep" if x.get("gasTypical") else None}
-    return {"wrong": table(wrong), "worst": table(worst), "gas": table(gas), "n": sum(r["n"] for r in w["rows"] if r["lib"] == "blockulator")}
+    return {"everyday": table(everyday), "worst": table(worst), "gas": table(gas)}
 
 
 def deployed_data() -> tuple[dict, dict]:
@@ -464,8 +449,8 @@ def incidents() -> list[dict]:
 
 # ---- /migrate/: each library's calls beside Blockulator's, from the same measurements ----
 def migrate(libs: list[dict]) -> dict:
-    """Per guide, tables in grouptable's shape. Solady and PRBMath: their WAD functions beside BlockulatorWad's
-    (wad.json: share off by a wei, worst error, gas). ABDK: 64.64 beside BL127 and Quad beside BL19, the same kind of
+    """Per guide, tables in grouptable's shape. Solady and PRBMath: their WAD functions beside the same maths in
+    BL19 and BL127 through their WAD conversions (wad.json: share off by a wei, worst error, gas). ABDK: 64.64 beside BL127 and Quad beside BL19, the same kind of
     format, op by op (gas.json: gas, the call measured)."""
     reg = {l["id"]: l for l in libs}
     w = load("wad.json")
@@ -477,22 +462,25 @@ def migrate(libs: list[dict]) -> dict:
         sm = (o.get("typical") or o)["summary"].get(form) if o else None
         return sm["median"] if sm else None
 
-    def pct(x):
-        return "0" if not x["wrong"] else f"{x['wrongPct']:.2g}%" if x["wrongPct"] < 1 else f"{round(x['wrongPct'])}%"
+    def wei(x):
+        """The share of a library's results on everyday inputs that are off by a wei or more."""
+        t = x["typical"]
+        return "0" if not t["wrongWei"] else f"{t['wrongWeiPct']:.2g}%" if t["wrongWeiPct"] < 1 else f"{round(t['wrongWeiPct'])}%"
 
     def wad_table(lib):
         rows = []
         for (l, fn), x in wad.items():
-            ours = wad.get(("blockulator", fn))
-            if l != lib or not ours:
+            if l != lib:
                 continue
+            b19, b127 = wad[("bl19", fn)], wad[("bl127", fn)]
+            op = b19["call"].split("(")[1].split(".")[1]   # BL19Lib.toFixed18Down(BL19Lib.exp(... -> exp
             # the library's own function, out of the harness's wrapping: UD60x18.unwrap(PU.mul(UD60x18.wrap(...))) -> mul
             name = next(m for m in re.findall(r"(?:\b\w+\.)?(\w+)\(", x["call"]) if m not in ("wrap", "unwrap", "int256", "uint256"))
             t = re.search(r"\b(UD60x18|SD59x18)\b", x["call"])
             rows.append({"label": f"{t[1]}.{name}" if t else name, "long": f"{reg[lib]['long']}: {x['call']}", "code": True, "family": reg[lib]["family"], "ours": False,
-                         "cells": [f"BlockulatorWad.{fn}", pct(x), pct(ours), f"{x['maxWei']:,}" if x["maxWei"] < 1e6 else f"{x['maxWei']:.2e}",
-                                   f"{x['gasTypical']:,}" if x.get("gasTypical") else None, f"{ours['gasTypical']:,}" if ours.get("gasTypical") else None]})
-        return {"cols": ["Blockulator", "off by a wei: theirs", "ours", "worst, wei", "gas: theirs", "ours"],
+                         "cells": [op, wei(x), wei(b19), wei(b127),
+                                   f"{x['gasTypical']:,}" if x.get("gasTypical") else None, f"{b19['gasTypical']:,}", f"{b127['gasTypical']:,}"]})
+        return {"cols": ["BL19, BL127 op", "off by a wei: theirs", "BL19", "BL127", "gas: theirs", "BL19", "BL127"],
                 "groups": [{"name": reg[lib]["long"], "rows": rows}]} if rows else None
 
     def op_table(lib, g, theirs, ours, target):
@@ -511,8 +499,8 @@ def migrate(libs: list[dict]) -> dict:
 
 # ---- /vs/: each established library against its Blockulator counterpart, every number from the datasets ----
 VS = [  # (section id, theirs, ours): ours are compared column by column
-    ("solady", "solady", ["blockulator", "bl127"]),
-    ("prbmath", "prb", ["blockulator", "bl127"]),
+    ("solady", "solady", ["bl19", "bl127"]),
+    ("prbmath", "prb", ["bl19", "bl127"]),
     ("abdk", "abdk", ["bl127"]),
     ("quad", "quad", ["bl19"]),
 ]
@@ -529,15 +517,16 @@ def vs(home: dict, libs: list[dict]) -> dict:
     sc = home["ladder"]["scenarios"][0]
 
     def g(lib, op):
-        # the WAD libraries' gas is the same function in the same harness as BlockulatorWad's (wad.json)
-        if lib in ("blockulator", "solady", "prb") and (lib, wadname.get(op, "")) in w:
+        # the WAD libraries' gas is their own WAD function's (wad.json); BL19's and BL127's is the op's (gas.json)
+        if lib in ("solady", "prb") and (lib, wadname.get(op, "")) in w:
             x = w.get((lib, wadname.get(op, "")))
             return x and x.get("gasTypical")
         return gas.get((lib, op))
 
     def wrong(lib, op):
         x = w.get((lib, wadname.get(op, "")))
-        return None if not x else "0" if not x["wrong"] else f"{x['wrongPct']:.2g}%" if x["wrongPct"] < 1 else f"{round(x['wrongPct'])}%"
+        t = x and x["typical"]
+        return None if not t else "0" if not t["wrongWei"] else f"{t['wrongWeiPct']:.2g}%" if t["wrongWeiPct"] < 1 else f"{round(t['wrongWeiPct'])}%"
 
     def proven(lib):
         name = {"bl127": "BL127", "bl19": "BL19"}.get(lib)
@@ -552,7 +541,7 @@ def vs(home: dict, libs: list[dict]) -> dict:
 
     metrics = [("digits of precision at 1", lambda l: str(reg[l]["digits"]))] \
         + [(f"gas, {op}", lambda l, op=op: (lambda v: f"{v:,}" if v else None)(g(l, op))) for op in ("mul", "exp", "ln", "pow", "sqrt")] \
-        + [(f"{wadname[op]} results off by a wei", lambda l, op=op: wrong(l, op)) for op in ("exp", "ln", "pow")] \
+        + [(f"{wadname[op]} results off by a wei, everyday inputs", lambda l, op=op: wrong(l, op)) for op in ("exp", "ln", "pow")] \
         + [(f"{sc['title'].lower()}: median digits after the last step", lambda l: (lambda x: f"{x['digits']:.1f}" if x and x["digits"] is not None else None)(lad.get((l, sc["id"]))))] \
         + [("edge probes: median digits", lambda l: edge(l, "median")), ("edge probes: reverted", lambda l: edge(l, "reverts")),
            ("edge probes: went to zero", lambda l: edge(l, "zero")), ("core ops formally proven", proven)]

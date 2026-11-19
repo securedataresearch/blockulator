@@ -844,7 +844,6 @@ def incidents() -> dict:
     oldest first (.incidents[] with date, protocol, rounding, loss,
     lossUsd, source) and the slide's .total phrase."""
     return _load("talk/scenes/data/incidents.json")
-NOT_IN_TALK = ("blockulator",)  # BlockulatorWad: in the registry, not in the talk
 DUPLICATES = ("bl127lib",)  # the benchmarks' inline copy of bl127, not a registry entry
 
 
@@ -855,9 +854,9 @@ def libs() -> dict[str, dict]:
 
 def talk_libs() -> dict[str, dict]:
     """The libraries every comparison in the talk accounts for: the registry
-    minus NOT_IN_TALK (17). A chart draws each one that has a value and
-    lists the rest with the reason the data gives; none is dropped silently."""
-    return {lid: lib for lid, lib in libs().items() if lid not in NOT_IN_TALK}
+    (17). A chart draws each one that has a value and lists the rest with
+    the reason the data gives; none is dropped silently."""
+    return libs()
 
 
 def edges(op: str) -> dict:

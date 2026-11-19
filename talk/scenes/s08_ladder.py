@@ -27,7 +27,7 @@ lines (claims V13, V14).
 Numbers from docs/benchmarks/ladder.json: .ladder (the N), .ladderLog10,
 .axisMax and, per scenario, .summary[lib][N].digits.median (a bare value
 in older files; both are read) and .ops[lib]; bl127lib is skipped as a
-duplicate of bl127 and BlockulatorWad is not in the talk. Libraries whose
+duplicate of bl127. Libraries whose
 lines coincide (the 18-decimal ones) share one label listing their names.
 Labels from static/data/libraries.json.
 """

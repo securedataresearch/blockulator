@@ -1,4 +1,4 @@
-.PHONY: rates-verify home-data gates proofs build-yul talk anim contact deck deck-pdf talk-fonts sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-thetanuts replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch replay-thetanuts-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-bl19 predict-bl19 deploy-bl19-sepolia verify-bl19-sepolia smoke-bl19-sepolia bench-bl19 precision-report-bl19 gen-bl19 vectors-bl19 size-bl19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check gen-wad wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
+.PHONY: rates-verify home-data gates proofs build-yul talk anim contact deck deck-pdf talk-fonts sweep profile replays replays-fetch replay-resupply replay-bunni replay-balancer replay-balancer-v1 replay-thetanuts replay-resupply-fetch replay-bunni-fetch replay-balancer-fetch replay-balancer-v1-fetch replay-thetanuts-fetch accrual-submodules accrual-deployed accrual-verify accrual-survey build-bl19 predict-bl19 deploy-bl19-sepolia verify-bl19-sepolia smoke-bl19-sepolia bench-bl19 precision-report-bl19 gen-bl19 vectors-bl19 size-bl19 gen-edges gen-edges-check edges edges-check pi-compare site site-check readme-assets readme-check help gen gen-check wad vectors vectors-check build test bench precision-report fetch-baseline size predict deploy-sepolia verify-sepolia smoke-sepolia gen-inputs gen-inputs-check ladder ladder-check predict-ladder deploy-ladder-sepolia verify-ladder-sepolia size-inline size-inline-check build-vyper
 
 PY := uv run
 
@@ -47,9 +47,8 @@ help:
 	@echo "  make rates-verify     - (network) LadderFraxlend / LadderEuler against the deployed rate models, on a mainnet fork"
 	@echo "  make sweep            - random-input accuracy of every BL127/BL19 op vs correctly rounded truth -> docs/benchmarks/sweep.{json,md}"
 	@echo "  make sweep OPS=a,b    - only those ops (both libraries, both passes); their rows replace the recorded ones"
-	@echo "  make sweep LIB=bl127  - only that library's rows (bl19, bl127 or wad; with OPS, those ops of it)"
-	@echo "  make wad              - BlockulatorWad beside Solady and PRBMath on the same inputs: wei error, gas, bytes -> docs/benchmarks/wad.{json,md}"
-	@echo "  make gen-wad          - generate contracts/src/wad/BlockulatorWad.sol and ops.json from BlockulatorWad.yul.src (on BL19.yul.src)"
+	@echo "  make sweep LIB=bl127  - only that library's rows (bl19 or bl127; with OPS, those ops of it)"
+	@echo "  make wad              - every WAD library on the same inputs, BL19 and BL127 beside them: wei error, gas, bytes -> docs/benchmarks/wad.{json,md}"
 	@echo "  make profile          - where the gas goes: per op gas, fallback rate and per-helper share on the sweep inputs, and the via_ir bench -> docs/benchmarks/profile.{json,md}"
 	@echo "  make replays          - five exploits replayed bit-exact from pinned chain data, then in BL127, BL19 and exact -> docs/benchmarks/replay-*.md"
 	@echo "  make replays-fetch    - (network, read-only) re-pin scripts/replays/*.json from the attack transactions"
@@ -88,16 +87,12 @@ gen:
 gen-check:
 	@$(PY) scripts/bl127/gen.py --check
 	@test ! -f contracts/src/bl19/BL19.yul.src || $(PY) scripts/bl127/gen.py --lib bl19 --check
-	@test ! -f contracts/src/wad/BlockulatorWad.yul.src || $(PY) scripts/bl127/gen.py --lib wad --check
 	@$(PY) scripts/bl127/gen.py --lib import-demo --check
 
 gen-bl19:
 	@$(PY) scripts/bl127/gen.py --lib bl19
 
-gen-wad:
-	@$(PY) scripts/bl127/gen.py --lib wad
-
-# BlockulatorWad beside Solady and PRBMath on the same inputs: wei error, gas, bytes
+# Every WAD library on the same inputs, BL19 and BL127 beside them: wei error, gas, bytes
 wad: build
 	@$(PY) scripts/sweep/wad.py
 
@@ -164,7 +159,6 @@ test: gen-check vectors-check
 	@forge test --match-path "test/replays/*" -q
 	@forge test --match-path "test/examples/*" -q
 	@forge test --match-path "test/objects/*"
-	@forge test --match-path "test/wad/*"
 	@$(MAKE) -s typed
 
 # The typed API (BL127Type.sol, BL19Type.sol) against the raw libraries: the

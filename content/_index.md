@@ -21,10 +21,6 @@ gas_title = "Twice the digits, and competitive on gas"
 gas_note = "BL127 carries twice the digits of every 18-decimal library and costs less than PRBMath's SD59x18 on add, mul, div, ln, pow and sqrt; exp is 2,835 gas against 2,816. BL19 carries twice binary128's digits and costs less than ABDKMathQuad on add, mul, div, exp, ln and pow. Solady is cheaper than both, at 18 digits."
 gas_source = "Each dot is a library: the digits its format holds at 1, against its gas as a multiple of BL127's over the ops both offer; hover for the range. Median of inline calls over random inputs that take no shortcut (<sup>t</sup>). Aave, Morpho and Maker are formulas inside protocols, so they have no gas. Every op: <a href=\"/results/ops/\">per op</a>; data: <a href=\"/data/gas.json\">gas.json</a>, <a href=\"/data/bl19/gas.json\">bl19/gas.json</a>."
 
-wad_title = "Correct to the last wei"
-wad_note = "BlockulatorWad keeps Solady's function names and returns the exact answer, rounded the way each function promises, on all {n} results we tested across {fns} functions and rounding directions. The libraries it replaces are a wei off on up to {worst}% of their results for some functions."
-wad_source = "Seeded inputs over each function's domain, including those whose exact value sits next to a wei boundary. Every library here is 18-decimal fixed point."
-
 ask_title = "Use BL127 and BL19."
 ask_text = "Both are a <code>forge install</code> away. Integration engineering is free."
 ask_primary_text = "Email us"

@@ -4,13 +4,13 @@ from its single Yul source (contracts/src/bl127/BL127.yul.src or
 contracts/src/bl19/BL19.yul.src).
 
 Usage:
-    uv run scripts/bl127/gen.py [--lib bl127|bl19|wad|import-demo]  # write outputs next to the source
+    uv run scripts/bl127/gen.py [--lib bl127|bl19|import-demo]  # write outputs next to the source
     uv run scripts/bl127/gen.py [--lib ...] --check           # regenerate and diff
     uv run scripts/bl127/gen.py --lib bl19 --wide-lib <path>  # the test-only library whose
                                                                # rounding tests always fail
     uv run scripts/bl127/gen.py --lib bl19 --mid-lib <path>   # ... whose fast paths' tests fail
                                                                # (the libraries with a forced /
-                                                               # mid_forced map: bl19, bl127, wad)
+                                                               # mid_forced map: bl19, bl127)
     uv run scripts/bl127/gen.py [--lib ...] --count-lib <path>  # test only: counts each
                                                                # rounding-test fallback
     uv run scripts/bl127/gen.py [--lib ...] --probe-lib <path>  # test only: gas probes on
@@ -136,25 +136,6 @@ LIBS = {
         "forced": {"rbad": "function rbad(D, err) -> b {\n    b := 1\n}",
                    "rbadm": "function rbadm(D, err) -> b {\n    b := 1\n}"},
         "mid_forced": {"rbad": "function rbad(D, err) -> b {\n    b := 1\n}"},
-    },
-    # BlockulatorWad: Solady's WAD names on BL19's kernels. Its source calls
-    # BL19.yul.src's functions (the base), and only its own exports are
-    # emitted, each with its closure: an inline library, no deployed object.
-    "wad": {
-        "src": ROOT / "contracts" / "src" / "wad" / "BlockulatorWad.yul.src",
-        "base": ROOT / "contracts" / "src" / "bl19" / "BL19.yul.src",
-        "library_only": True,
-        # an export without a leave is written into its block, not called
-        "inline_exports": True,
-        "object": "BlockulatorWad", "lib": "BlockulatorWad", "iface": "IBlockulatorWad",
-        "one": "uint256 internal constant WAD = 1e18;",
-        "consts": "/// @notice 10^18 as a signed word, for the int256 functions.\n    int256 internal constant SWAD = 1e18;",
-        "lib_notice": "WAD maths with Solady's names (FixedPointMathLib) and every result\n///         correct to the last wei: the exact real value rounded once in the\n///         stated direction. Computed on BL19's correctly rounded kernels;\n///         where BL19's error bound reaches a wei boundary, a second stage\n///         at 2^-510 on the exact input decides it. It uses the CLZ opcode:\n///         compile with evmVersion osaka (solc >= 0.8.31) and run only on a\n///         chain that has CLZ (EIP-7939).",
-        "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors.",
-        "objects": {},
-        # --wide-lib: the test-only library whose fast-path test always fails,
-        # so every result comes from the second stage
-        "forced": {"wadbad": "function wadbad(F, errF) -> b {\n    b := 1\n}"},
     },
     # TEST ONLY: the demonstration of `@import` (below, "Imports"): a source
     # that calls BL19.yul.src's wexpm1 and expm1 under the prefix w19_ and
@@ -444,12 +425,8 @@ def validate(src: Source, raw: str) -> None:
 # Imports: functions from another library's source
 # ---------------------------------------------------------------------------
 #
-# A source can call functions of another library's source in two ways.
-#
-#   * A base (LIB["base"], BlockulatorWad on BL19.yul.src): every function of
-#     the base joins the source under its own name, and its errors with them;
-#     a name both define is an error.
-#   * An import line in the source (BL127.yul.src takes BL19's wide kernels):
+# A source can call functions of another library's source through an import
+# line (BL127.yul.src takes BL19's wide kernels):
 #
 #         /// @import bl19 as w19: wexpm1, wexp, wlnw
 #
@@ -462,7 +439,7 @@ def validate(src: Source, raw: str) -> None:
 #     The importer declares (`@error`) every error the imported code reverts
 #     with, since its interfaces and ABI carry only its own.
 #
-# Either way an import costs nothing until it is called: an object carries
+# An import costs nothing until it is called: an object carries
 # only its exports' closures and the inline library each export's, so an
 # imported function enters the bytes only when an export calls it. The
 # source and its imports are validated as one, so every rule and every name
@@ -521,23 +498,13 @@ def import_prefixed(raw: str, own: Source) -> tuple[dict[str, Func], str, list[s
 
 def with_imports(src: Source, raw: str) -> Source:
     """The source with the functions it takes from other sources (above):
-    its exports and errors stay its own (a base's errors join them).
+    its exports and errors stay its own.
     Validated as one source."""
     IMPORTED.clear()
     funcs = dict(src.funcs)
     errors = dict(src.errors)
     full = raw
     problems: list[str] = []
-    if LIB.get("base"):
-        base_raw = LIB["base"].read_text()
-        base = parse(base_raw)
-        dup = sorted(set(src.funcs) & set(base.funcs))
-        if dup:
-            problems.append(f"{SRC.name} redefines {LIB['base'].name} functions: {', '.join(dup)}")
-        funcs = {**base.funcs, **src.funcs}
-        errors = {**base.errors, **src.errors}
-        full = base_raw + "\n" + raw
-        IMPORTED.append(LIB["base"].name)
     if _IMPORT_RE.search(raw):
         imp, text, problems_imp = import_prefixed(raw, src)
         problems += problems_imp
@@ -759,8 +726,6 @@ COUNTS = {
     # second stage follows), rbadm when pow's, powu's or compound's middle stage
     # cannot either (the second stage follows), counted in the next word
     "bl19": {"rbad": "ret", "rbadm": "ret2"},
-    # BlockulatorWad: wadbad fires when BL19's bound reaches a wei boundary
-    "wad": {"wadbad": "ret"},
     # BL127: rbad127 and rbadw fire when a fast value cannot round (the
     # second stage follows); the double-word log l2p and pow's middle stage
     # powmid run exactly when the one-word log, pow2t or compt could not
@@ -880,22 +845,6 @@ def emit_library(src: Source, lib_name: str | None = None, wide: bool | str = Fa
             texts.append(t)
         call = f"            {ret_names} := {e.yul_name}({call_args})"
         export = src.funcs[e.yul_name]
-        if LIB.get("inline_exports") and "leave" not in strip_comments(export.text):
-            # the export's body in the block itself: an inline-assembly
-            # function call costs about 70 gas, as much as a one-word mulWad,
-            # and a block that defines any function about 25 more. With no
-            # helpers the Solidity parameters take the Yul names; with them
-            # (whose parameters may reuse those names) they are bound.
-            texts = texts[:-1]
-            inner = _indent(textwrap.dedent(export.text[export.text.index("{") + 1:export.text.rindex("}")].strip("\n")), 12)
-            if texts:
-                binds = [f"let {p.name} := _{p.name}" for p in e.inputs] + [f"let {p.name} := 0" for p in e.outputs]
-                call = (_indent("\n".join(binds), 12) + "\n" + inner + "\n" + "            "
-                        + ", ".join(f"_{p.name}" for p in e.outputs) + " := " + ", ".join(p.name for p in e.outputs))
-            else:
-                ins = ", ".join(f"{p.type} {p.name}" for p in e.inputs)
-                outs = ", ".join(f"{p.type} {p.name}" for p in e.outputs)
-                call = inner
         body = "\n\n".join(_indent(t, 12) for t in texts)
         doc = "\n".join(f"    {d}" for d in e.doc)
         # the instrumented variants write above the free memory, so they do

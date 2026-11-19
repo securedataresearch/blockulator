@@ -175,8 +175,7 @@ members.
    must be declared here. An import costs nothing until an export calls it:
    objects and the library's blocks carry closures only, so the line in
    `BL127.yul.src` (BL19's wide kernels for the second stages, at 2^-497 to
-   2^-510) changes no object's bytes by itself. BlockulatorWad's base source
-   is the same mechanism without the prefix. `test/bl127/imports/` holds the
+   2^-510) changes no object's bytes by itself. `test/bl127/imports/` holds the
    demonstration: a test-only library importing BL19's `wexpm1` and its whole
    `expm1`, and BL127's `rbad127`, checked against `BL19Lib`, mpmath and the
    rounding `rbad127` describes (`test/bl127/Imports.t.sol`).

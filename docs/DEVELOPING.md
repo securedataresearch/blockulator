@@ -66,7 +66,7 @@ Before a merge, `make gates` runs every gate and prints one line each (`OPS=a,b`
 
 `make pack` stages `@blockulator/contracts` (npm) and `blockulator` (Soldeer)
 in `dist/contracts/` from one tree: `packages/contracts/` (package.json, the
-package README), the LICENSE, and `bl127/`, `bl19/`, `wad/` (the `.sol` and
+package README), the LICENSE, and `bl127/`, `bl19/` (the `.sol` and
 `.yul` sources and the ABIs from `contracts/src/`) plus `deployments/` (the
 JSON records). It runs `npm pack --dry-run` and `forge soldeer push --dry-run`
 and fails unless both list exactly the staged files, with no tests, cache or

@@ -9,7 +9,7 @@ import "/vendor/@observablehq/plot@0.6.16/plot.umd.min.js";
 const Plot = globalThis.Plot;
 
 const KINDS = [["float", "Floating point"], ["fixed", "Fixed point"]];
-const FAMILIES = [["bl19", "BL19"], ["bl127", "BL127 · BlockulatorWad"], ["quad", "binary128 (ABDKMathQuad)"], ["6464", "ABDK 64.64"], ["wad", "WAD libraries"], ["protocol", "Maker, Aave, Morpho, FraxLend, Euler"]];
+const FAMILIES = [["bl19", "BL19"], ["bl127", "BL127"], ["quad", "binary128 (ABDKMathQuad)"], ["6464", "ABDK 64.64"], ["wad", "WAD libraries"], ["protocol", "Maker, Aave, Morpho, FraxLend, Euler"]];
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
 let data, pages, lib;
@@ -156,7 +156,7 @@ const charts = {
   // one row per function, one dot per library at its share of results off by a wei; equal shares stack apart
   wad(el, t, width) {
     const w = data.wad;
-    // BlockulatorWad first, so the dodge gives it the middle of its row and the others stack around it
+    // BL19 and BL127 first, so the dodge gives them the middle of a row and the others stack around them
     const rows = [...w.rows].sort((a, b) => ours(b) - ours(a));
     const rw = rowAxis(t, width, w.functions, { step: 40, channel: "fy", left: true });
     el.append(Plot.plot(base(t, width, {

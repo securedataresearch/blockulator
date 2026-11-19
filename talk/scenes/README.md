@@ -199,7 +199,7 @@ Pango per process; every text helper calls it.
   encoded; s19 breaks the repository's URL at its slashes into three
   lines (one line is 6.8 units, the tile column 4.1), s20 draws it whole.
 - Loaders, all by path from the repo root: `libs()` (static/data/libraries.json
-  → `{id: record}`) and `talk_libs()` (the same less BlockulatorWad: the 17
+  → `{id: record}`) and `talk_libs()` (the same 17, which
   every comparison accounts for), `edges(op)` and `probe(op, *args)`
   (docs/benchmarks/edges.json), `ladder(scenario)` (docs/benchmarks/ladder.json
   → `{"N", "log10", "scenario"}`) with `ladder_median(cell)` (`.digits.median`,

@@ -17,8 +17,8 @@ predates `SignedWadMath`), snekmate (`lib/snekmate`, tag v0.1.2) and solstat
 (`lib/solstat`, [primitivefinance/solstat](https://github.com/primitivefinance/solstat) main @ `80c603f`, for the
 normal CDF and erfc; its `Gaussian.sol` is MIT but links solmate v7, `lib/solstat/lib/solmate` @ `ed67fed`, through
 the `lib/solstat/:solmate/` remapping). The files that link them carry the same licence: `../LadderSolmate.sol`,
-`../vyper/SnekmateMath.vy`, `test/bl127/GasLibs.sol` and `test/cdf/Cdf.t.sol`. None of them is imported by BL127,
-BL19 or BlockulatorWad: they are benchmarks only. snekmate is Vyper;
+`../vyper/SnekmateMath.vy`, `test/bl127/GasLibs.sol` and `test/cdf/Cdf.t.sol`. None of them is imported by BL127 or
+BL19: they are benchmarks only. snekmate is Vyper;
 `scripts/ladder/vyper.py` compiles the wrapper with Vyper 0.4.3, the version
 snekmate v0.1.2 pins.
 

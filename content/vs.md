@@ -13,7 +13,7 @@ Each established library does something better. This page says what, then puts t
 
 **What it does better:** gas. Its `expWad`, `lnWad` and `powWad` are the cheapest WAD transcendentals there are, its code is small, and it runs on every EVM chain.
 
-**The answer:** they are cheap because they stop short of the last wei. BlockulatorWad has Solady's names and is never off by a wei, at 5.5 times the gas on `expWad` and 4.3 times on `lnWad`. Its products and quotients cost 15 to 40 gas more than Solady's, and never revert where the result fits.
+**The answer:** they are cheap because they stop short of the last wei: on everyday inputs `expWad` is off by a wei on 28% of results, `lnWad` on 4% and `powWad` on 68%, and BL19 and BL127 on none. BL127 keeps 38 digits at 6.6 times the gas on `exp` and 3.5 times on `ln`. For a single product or quotient of token amounts Solady's `mulWad` and `divWad` are exact and cheaper; keep them.
 
 {{ <table name="vs.solady" first="" /> }}
 
@@ -21,7 +21,7 @@ Each established library does something better. This page says what, then puts t
 
 **What it does better:** types. SD59x18 and UD60x18 are user-defined value types with operators, so a raw integer cannot be passed where a fixed-point value is meant.
 
-**The answer:** BL19 and BL127 are typed the same way, and BlockulatorWad takes PRBMath's integers as they are. PRBMath is off by a wei more often than Solady, and BlockulatorWad costs less on every WAD function. PRBMath costs 2.9 times as much on `ln` and 2.1 times as much on `pow`.
+**The answer:** BL19 and BL127 are typed the same way. PRBMath is off by a wei more often than Solady, on 54% of everyday `exp` results and on every `ln`, `log2`, `log10` and `pow` result, and costs 3.6 times BL127's gas on `ln` and 3.0 times on `pow`; `exp` is 2,743 gas against BL127's 2,835.
 
 {{ <table name="vs.prbmath" first="" /> }}
 
@@ -43,6 +43,6 @@ Each established library does something better. This page says what, then puts t
 
 ## Where Blockulator cannot go
 
-- **Chains without CLZ.** BL19, BL127 and BlockulatorWad need the CLZ opcode (EIP-7939, the osaka EVM) and solc 0.8.31 or later, so they do not run on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list](https://github.com/securedataresearch/blockulator/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)).
+- **Chains without CLZ.** BL19 and BL127 need the CLZ opcode (EIP-7939, the osaka EVM) and solc 0.8.31 or later, so they do not run on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list](https://github.com/securedataresearch/blockulator/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)).
 - **The cheapest exp.** Where a wei of error per call is acceptable, Solady is cheaper.
 - **Six BL19 ops without a proof.** All 17 of BL127's core ops and 18 of BL19's 24 are proven for every input. BL19's `add`, `sub`, `sqrt` and the three `toFixed18` are fuzzed against their exact specs, not proven ([proofs](/proofs/)).

@@ -753,8 +753,8 @@ def expect_s06d_thetanuts(mod) -> dict:
 
 
 def expect_s08_ladder(mod) -> dict:
-    lib = {lid: rec for lid, rec in vocab.libs().items() if lid != "blockulator"}
-    assert len(lib) == 17, len(lib)  # the registry's 18 less BlockulatorWad: every one is drawn or listed
+    lib = vocab.libs()
+    assert len(lib) == 17, len(lib)  # the registry: every one is drawn or listed
     first = vocab.ladder(mod.SCENARIOS[0])
     N = first["N"]
     scenarios = []
@@ -811,7 +811,7 @@ def expect_s08_ladder(mod) -> dict:
 
 def expect_s09_cliff(mod) -> dict:
     op = vocab.edges(mod.OP)
-    lib = {lid: rec for lid, rec in vocab.libs().items() if lid != "blockulator"}
+    lib = vocab.libs()
     assert len(lib) == 17, len(lib)
     probes = [p for p in op["probes"] if len(p["args"]) == 1 and mod.ARG_LO <= float(p["args"][0]) <= mod.ARG_HI]
     lids, absent = [], {}

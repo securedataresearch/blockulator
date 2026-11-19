@@ -233,7 +233,6 @@ details.calls code { font-size: 12px; }
 
 /* correct to the last wei */
 .wb { max-width: 760px; }
-.wb .s-blockulator { --c: var(--c-bl127); }
 .wb .track { fill: var(--tint); }
 .wb .bar { fill: var(--c); }
 .wb .s-prb .bar { fill: color-mix(in oklab, var(--c-wad) 55%, var(--surface-solid)); stroke: var(--c-wad); stroke-width: 1; }

@@ -4,7 +4,6 @@
   {"id": "bl19", "label": "BL19", "short": "BL19", "long": "BL19, 256-bit float", "kind": "float", "family": "bl19", "digits": 71, "ours": true},
   {"id": "quad", "label": "ABDKMathQuad", "short": "Quad", "long": "ABDKMathQuad, IEEE binary128", "kind": "float", "family": "quad", "digits": 34},
   {"id": "bl127", "label": "BL127", "short": "BL127", "long": "BL127, 127.128 fixed point", "kind": "fixed", "family": "bl127", "digits": 38, "ours": true},
-  {"id": "blockulator", "label": "BlockulatorWad", "short": "BWad", "long": "BlockulatorWad, WAD computed in BL19", "kind": "fixed", "family": "bl127", "digits": 18, "ours": true},
   {"id": "abdk", "label": "ABDK 64.64", "short": "64.64", "long": "ABDKMath64x64, 64.64 fixed point", "kind": "fixed", "family": "6464", "digits": 19},
   {"id": "solady", "label": "Solady", "short": "Solady", "long": "Solady FixedPointMathLib, WAD", "kind": "fixed", "family": "wad", "digits": 18},
   {"id": "solmate", "label": "Solmate", "short": "Solmate", "long": "Solmate SignedWadMath and FixedPointMathLib, WAD", "kind": "fixed", "family": "wad", "digits": 18},
