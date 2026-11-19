@@ -392,6 +392,7 @@ home-data:
 
 site-check: site
 	@$(PY) python scripts/site/home.py --check
+	@python3 scripts/site/agentfiles.py --check
 	@test -f public/data/ladder.json && test -f public/data/ops.json
 	@test -f public/contracts/deployments/BL127.json
 	@(test -x ./zola && ./zola check --skip-external-links) || zola check --skip-external-links
