@@ -1,18 +1,18 @@
-{#- The page's banner (sdr-ui .ui-banner): title, one line under it, then the sub-nav of the page's group. The banner is
-    first on every page and the same element, with the same cloth, so nothing moves between pages. -#}
-{%- set groups = {
-  "results": [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/ops/", "Per op"], ["/results/wad/", "WAD"], ["/results/deployed/", "Deployed"], ["/results/incidents/", "Incidents"], ["/results/cdf/", "Normal CDF"], ["/vs/", "Versus"], ["/proofs/", "Proofs"]],
-  "library": [["/library/", "BL127"], ["/library/bl19/", "BL19"], ["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]],
-  "writeup": [["/writeup/", "Write-up"], ["/why/", "Why WAD loses digits"]]
-} -%}
+{#- The page's banner (sdr-ui .ui-banner): title, one line under it, then the tabs of the page's group (config.toml
+    extra.nav, a label over each set of pages). The banner is first on every page and the same element, with the same
+    cloth, so nothing moves between pages. -#}
 {%- set g = page.extra.group | default(value="") %}
 <header class="ui-banner ui-banner--head">
   <div class="ui-banner-inner">
   <h1>{{ page.title }}</h1>
   {%- if page.description %}<p class="ui-lead">{{ page.description }}</p>{% endif %}
-  {%- if g and groups[g] is defined %}
-  <nav class="ui-tabs" aria-label="{{ g }}">
-    {%- for item in groups[g] %}<a href="{{ item[0] }}"{% if current_path == item[0] %} aria-current="page"{% endif %}>{{ item[1] }}</a>{% endfor %}
+  {%- if g and config.extra.nav[g] is defined %}
+  <nav class="ui-tabs subnav" aria-label="{{ g }}">
+    {%- for set in config.extra.nav[g] %}
+    <div class="set">{% if set.label %}<span class="ui-label">{{ set.label }}</span>{% endif %}<div>
+      {%- for item in set.items %}<a href="{{ item[0] }}"{% if current_path == item[0] %} aria-current="page"{% endif %}>{{ item[1] }}</a>{% endfor -%}
+    </div></div>
+    {%- endfor %}
   </nav>
   {%- endif %}
   </div>
