@@ -237,10 +237,12 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `powu(x, n)` | x^floor(n) for any integer n, correctly rounded: binary exponentiation on a 256-bit mantissa, a 512-bit one where that is ambiguous, one rounding; `pow` from \|n\| = 2^16; exact when representable | `Overflow`, `DivisionByZero` for 0^negative |
 | `compound(r, n)` | (1 + r)^floor(n), correctly rounded: for \|n\| ≥ 16 n log2(1 + r) and 2^t in one word, then at 2^-299 with a test, `powu` last | `Overflow`, `DivisionByZero` |
 | `inv(x)` | 1/x, truncated toward zero (floor(2^256 / \|x\|), re-signed) | `DivisionByZero`, `Overflow` |
-| `abs`, `neg` | | `Overflow` at −2^255 |
-| `sign`, `min`, `max`, `clamp`, `avg`, `floor`, `frac` | exact, never revert | |
+| `abs`, `neg` | exact | `Overflow` at −2^255 |
+| `sign`, `min`, `max`, `clamp`, `floor`, `frac` | exact, never revert | |
+| `avg(a, b)` | floor((a + b) / 2), without intermediate overflow; never reverts | |
 | `ceil`, `round` | exact | `Overflow` at the top of the range |
-| `zeroFloorSub`, `dist`, `lerp` | checked compositions | `Overflow` |
+| `zeroFloorSub`, `dist` | max(0, a − b) and \|a − b\|, exact, the subtraction checked | `Overflow` |
+| `lerp(a, b, t)` | a + t · (b − a), the product floored as `mul`'s is; t is not clamped to [0, 1] | `Overflow` |
 | `gavg(a, b)` | √(a·b) to nearest, rounded once from the exact 512-bit product (never a tie); two negatives give the positive root | `OutOfRange` for opposite signs, `Overflow` only at a = b = −2^255 |
 | `hypot(a, b)` | √(a² + b²) to nearest, rounded once from the exact sum of squares (never a tie); no intermediate overflow | `Overflow` where the root passes the largest word |
 | `factorial(n)` | floor(n)! for 0 ≤ n < 34 | `OutOfRange` |
@@ -295,9 +297,10 @@ what the 2^-128 grid can see) or, for `pow`, `powu` and `cbrt`, by an exact
 computation where a tie is possible. `gavg` and `hypot` return the nearest
 word decided exactly: for raw words A and B the raw result is the root of
 the integer A·B or A² + B², taken in two words and rounded once, and an
-integer's root is never a tie. `add`, `sub`, `log2Up` and the integer ops
-are exact. `mul`, `mulDown`, `divDown`, `sqrt`, `toFixed18`,
-`toFixed18Down` floor; `mulUp`, `divUp`, `toFixed18Up` ceil; `div`, `inv`,
+integer's root is never a tie. `add`, `sub`, `log2Up`, `neg`, `abs`, `sign`, `min`,
+`max`, `clamp`, `floor`, `ceil`, `round`, `frac`, `dist`, `zeroFloorSub`
+and `factorial` are exact. `mul`, `mulDown`, `divDown`, `sqrt`, `avg`,
+`lerp`, `toFixed18`, `toFixed18Down` floor; `mulUp`, `divUp`, `toFixed18Up` ceil; `div`, `inv`,
 `fromFixed18` truncate.
 
 What is proven and what is tested: the arithmetic, the directed forms, the
