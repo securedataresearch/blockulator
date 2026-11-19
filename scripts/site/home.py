@@ -364,8 +364,8 @@ def inner_tables(libs: list[dict]) -> dict:
 
 # ---- /results/wad/, /results/deployed/, /results/incidents/ ----
 def wad_tables(libs: list[dict]) -> dict:
-    """Every library's WAD functions on the same inputs (wad.json), BL19 and BL127 through their WAD conversions:
-    how often each is wrong, by how much at worst, and what it costs."""
+    """Every library's WAD functions on the same everyday inputs (wad.json, .typical), BL19 and BL127 through their
+    WAD conversions: how often each is a wei off, by how much at worst, and what it costs."""
     w = load("wad.json")
     by = {(r["lib"], r["function"]): r for r in w["rows"]}
     fns = list(dict.fromkeys(r["function"] for r in w["rows"]))
@@ -381,26 +381,15 @@ def wad_tables(libs: list[dict]) -> dict:
         return {"v": v, "h": round(min(t["wrongWeiPct"], 100) / 100, 3),
                 "why": f"{c['long']} {x['function']}: {t['wrongWei']:,} of {t['valued']:,} everyday results off by a wei or more, {t['maxWei']:,} wei at worst"}
 
-    def wei(c, x):
-        v = "0" if not x["wrongWei"] else f"{x['wrongWeiPct']:.2g}%" if x["wrongWeiPct"] < 1 else f"{round(x['wrongWeiPct'])}%"
-        return {"v": v, "h": round(min(x["wrongWeiPct"], 100) / 100, 3),
-                "why": f"{c['long']} {x['function']}: {x['wrongWei']:,} of the {x['valued']:,} values it returns are off by a wei or more; rounded {x['direction']}"}
-
-    def reverts(c, x):
-        n = x["n"] - x["outsideDomain"]
-        bad = x["revertInRange"] + x["valueOutOfRange"]
-        pct = 100 * bad / n if n else 0
-        parts = [f"{x['revertInRange']:,} of {n:,} revert where the value fits"] + ([f"{x['valueOutOfRange']:,} return a value where none fits"] if x["valueOutOfRange"] else [])
-        return {"v": "0" if not bad else f"{pct:.2g}%" if pct < 1 else f"{round(pct)}%", "h": round(pct / 100, 3), "why": f"{c['long']} {x['function']}: " + "; ".join(parts)}
-
     def worst(c, x):
-        return {"v": "0" if not x["maxWei"] else f"{x['maxWei']:,}" if x["maxWei"] < 1e6 else f"{x['maxWei']:.2e}",
-                "why": f"{c['long']} {x['function']}: off by {x['maxWei']:,} wei at worst, median {x['medianWei']:g} over the values it returns"}
+        t = x["typical"]
+        return {"v": "0" if not t["maxWei"] else f"{t['maxWei']:,}" if t["maxWei"] < 1e6 else f"{t['maxWei']:.2e}",
+                "why": f"{c['long']} {x['function']}: off by {t['maxWei']:,} wei at worst over {t['valued']:,} everyday results"}
 
     def gas(c, x):
         return {"v": f"{x['gasTypical']:,}" if x.get("gasTypical") else None,
                 "why": f"{c['long']} {x['function']}: median {x['gasTypical']:,} gas on everyday inputs, p99 {x['gasP99']:,} over the sweep" if x.get("gasTypical") else None}
-    return {"everyday": table(everyday), "wei": table(wei), "reverts": table(reverts), "worst": table(worst), "gas": table(gas)}
+    return {"everyday": table(everyday), "worst": table(worst), "gas": table(gas)}
 
 
 def deployed_data() -> tuple[dict, dict]:
