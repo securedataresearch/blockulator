@@ -374,11 +374,17 @@ def wad_tables(libs: list[dict]) -> dict:
     def table(cell):
         return libcols(libs, have, rows, lambda c, r: (lambda x: cell(c, x) if x else {"v": None, "why": "not offered"})(by.get((c["id"], r["key"]))))
 
-    def wrong(c, x):
-        parts = [f"{x['wrong']:,} of {x['n'] - x['outsideDomain']:,} wrong"] + ([f"{x['revertInRange']:,} revert where the value fits"] if x["revertInRange"] else []) \
-            + ([f"{x['valueOutOfRange']:,} return a value where none fits"] if x["valueOutOfRange"] else []) + [f"rounded {x['direction']}"]
-        v = "0" if not x["wrong"] else f"{x['wrongPct']:.2g}%" if x["wrongPct"] < 1 else f"{round(x['wrongPct'])}%"
-        return {"v": v, "h": round(min(x["wrongPct"], 100) / 100, 3), "why": f"{c['long']} {x['function']}: " + "; ".join(parts)}
+    def wei(c, x):
+        v = "0" if not x["wrongWei"] else f"{x['wrongWeiPct']:.2g}%" if x["wrongWeiPct"] < 1 else f"{round(x['wrongWeiPct'])}%"
+        return {"v": v, "h": round(min(x["wrongWeiPct"], 100) / 100, 3),
+                "why": f"{c['long']} {x['function']}: {x['wrongWei']:,} of the {x['valued']:,} values it returns are off by a wei or more; rounded {x['direction']}"}
+
+    def reverts(c, x):
+        n = x["n"] - x["outsideDomain"]
+        bad = x["revertInRange"] + x["valueOutOfRange"]
+        pct = 100 * bad / n if n else 0
+        parts = [f"{x['revertInRange']:,} of {n:,} revert where the value fits"] + ([f"{x['valueOutOfRange']:,} return a value where none fits"] if x["valueOutOfRange"] else [])
+        return {"v": "0" if not bad else f"{pct:.2g}%" if pct < 1 else f"{round(pct)}%", "h": round(pct / 100, 3), "why": f"{c['long']} {x['function']}: " + "; ".join(parts)}
 
     def worst(c, x):
         return {"v": "0" if not x["maxWei"] else f"{x['maxWei']:,}" if x["maxWei"] < 1e6 else f"{x['maxWei']:.2e}",
@@ -387,7 +393,7 @@ def wad_tables(libs: list[dict]) -> dict:
     def gas(c, x):
         return {"v": f"{x['gasTypical']:,}" if x.get("gasTypical") else None,
                 "why": f"{c['long']} {x['function']}: median {x['gasTypical']:,} gas on everyday inputs, p99 {x['gasP99']:,} over the sweep" if x.get("gasTypical") else None}
-    return {"wrong": table(wrong), "worst": table(worst), "gas": table(gas)}
+    return {"wei": table(wei), "reverts": table(reverts), "worst": table(worst), "gas": table(gas)}
 
 
 def deployed_data() -> tuple[dict, dict]:
