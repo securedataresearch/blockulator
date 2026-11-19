@@ -99,7 +99,7 @@ Versions: Blockulator at c1105e1, Solady v0.1.26, PRBMath v4.2.0, Solmate main@8
 
 ## The whole domain
 
-4,000 inputs per function over everything a 256-bit word holds, weighted toward the hard cases: magnitudes from one wei to 10^59 tokens, and inputs built so the exact answer lands on or beside a whole wei (perfect squares and cubes, products that are a whole number of wei, x = ln(k)). BL19 holds 71 digits, so an answer past 10^71 wei cannot carry its last wei. A decimal that is not a binary fraction is rounded as it converts in, so an answer that should land exactly on a whole wei can land one below, and beside a large operand that rounding can grow past a wei.
+4,000 inputs per function over everything a 256-bit word holds, weighted toward the hard cases: magnitudes from one wei to 10^59 tokens, and inputs built so the exact answer lands on or beside a whole wei (perfect squares and cubes, products that are a whole number of wei, x = ln(k)). BL19 holds 71 digits, so an answer past 10^71 wei cannot carry its last wei. Why each of the other misses happens has not been analysed here; the table gives the counts and the largest miss.
 
 *Wrong wei*: results off by at least one wei, of the inputs where the library and the exact value both give one; *max / median*: wei off over those inputs. *Reverts in range*: reverts where the exact result fits the word (a narrower domain, as Solady's mulWad reverting once x y passes 2^256, or BL127 past 1.7 × 10^38); *value out of range*: a value where there is none (snekmate's wad_ln(0) = 0). A function defined on part of the domain only is scored on that part (*outside domain*).
 

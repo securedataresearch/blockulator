@@ -101,9 +101,9 @@ Every contract is verified on Sourcify and Blockscout. Each library is one Yul s
 
 ## How we know
 
-- **Proved for every input.** 17 of BL127's 19 core ops and 18 of BL19's 24 return exactly the word an independent specification returns, on all 2<sup>256</sup> or 2<sup>512</sup> inputs at once (Halmos; `make proofs`, [`docs/proofs.md`](docs/proofs.md)). The other eight are fuzzed against their exact specifications.
-- **Swept.** Every op of both libraries against correctly rounded truth: BL127 on 212,119 inputs and BL19 on 455,082, none misrounded (`make sweep`, [`sweep.md`](docs/benchmarks/sweep.md)).
-- **Reproducible.** Every number here and on the site comes from a committed dataset that a `make` target regenerates; `make gates` reruns the checks a merge needs.
+- **Proved for every input.** 35 core ops, 17 of BL127's 19 and 18 of BL19's 24, return exactly the word an independent specification returns, on every input: Halmos executes the compiled inline library symbolically, and the specification's integer primitives are proved as separate lemmas (BL127's `sqrt` rests on one, [`isqrt.py`](test/proofs/isqrt.py)). The other eight are fuzzed, not proved: BL127's `gavg` and `hypot`, BL19's `add`, `sub`, `sqrt`, `toFixed18`, `toFixed18Down` and `toFixed18Up`. `make proofs`; [`docs/proofs.md`](docs/proofs.md).
+- **Swept.** 116,386 seeded random inputs over 32 BL127 ops and 340,394 over 53 BL19 ops, against the correctly rounded result: none misrounded. The ops with a fast path are swept again with it forced to fail, so the later stages answer alone (27 more BL127 rows, 23 more BL19 rows): none misrounded. `make sweep`; [`sweep.md`](docs/benchmarks/sweep.md).
+- **Reproducible.** The tables and charts here and on the site are generated from the datasets in [`docs/benchmarks/`](docs/benchmarks/), each by a `make` target; `make gates` reruns the checks a merge needs. Numbers typed into a page's text are not checked by a script.
 - **Not done.** No third party has audited the libraries, and they are deployed on Sepolia only, not on Ethereum mainnet.
 
 ## Learn more

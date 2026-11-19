@@ -7,7 +7,7 @@ template = "home.html"
 eyebrow = "Blockulator 3.0 · Secure Data Research"
 headline = "The definitive source for precision."
 # {bl127}, {bl19} and the other {placeholders} below are filled from static/data/home.json (templates/macros.html fill).
-sub = "Two Solidity math libraries that keep {bl127} and {bl19} correct digits where WAD keeps 18, so interest, prices and payouts stay right to the last wei. Use them when large sums are at stake or the call is free."
+sub = "Two math libraries for the EVM, written in Yul, that keep {bl127} and {bl19} correct digits where WAD keeps 18, so interest, prices and payouts stay right to the last wei. Use them when large sums are at stake or the call is free."
 cta_primary_text = "See the results"
 cta_primary_href = "/results/"
 cta_secondary_text = "Use the library"

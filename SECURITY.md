@@ -14,8 +14,8 @@ address (the contracts hold no state and have no owner, so nothing is paused or
 upgraded in place), and the reporter is credited in `CHANGELOG.md` unless
 they ask not to be.
 
-What stands behind the libraries today: formal proofs of the core ops, a sweep
-of every op against correctly rounded truth, and datasets anyone can
+What stands behind the libraries today: formal proofs of 35 core ops, a sweep of
+random inputs against the correctly rounded result, and datasets anyone can
 regenerate (`README.md`, "How we know"). No third party has audited them, and
 they are deployed on Sepolia only.
 
