@@ -47,8 +47,8 @@ help:
 	@echo "  make rates-verify     - (network) LadderFraxlend / LadderEuler against the deployed rate models, on a mainnet fork"
 	@echo "  make sweep            - random-input accuracy of every BL127/BL19 op vs correctly rounded truth -> docs/benchmarks/sweep.{json,md}"
 	@echo "  make sweep OPS=a,b    - only those ops (both libraries, both passes); their rows replace the recorded ones"
-	@echo "  make sweep LIB=bl127  - only that library's rows (bl19, bl127 or wad; with OPS, those ops of it)"
-	@echo "  make wad              - BlockulatorWad beside Solady and PRBMath on the same inputs: wei error, gas, bytes -> docs/benchmarks/wad.{json,md}"
+	@echo "  make sweep LIB=bl127  - only that library's rows (bl19 or bl127; with OPS, those ops of it)"
+	@echo "  make wad              - every WAD library on the same inputs, BL19 and BL127 beside them: wei error, gas, bytes -> docs/benchmarks/wad.{json,md}"
 	@echo "  make profile          - where the gas goes: per op gas, fallback rate and per-helper share on the sweep inputs, and the via_ir bench -> docs/benchmarks/profile.{json,md}"
 	@echo "  make replays          - five exploits replayed bit-exact from pinned chain data, then in BL127, BL19 and exact -> docs/benchmarks/replay-*.md"
 	@echo "  make replays-fetch    - (network, read-only) re-pin scripts/replays/*.json from the attack transactions"
@@ -92,7 +92,7 @@ gen-check:
 gen-bl19:
 	@$(PY) scripts/bl127/gen.py --lib bl19
 
-# BlockulatorWad beside Solady and PRBMath on the same inputs: wei error, gas, bytes
+# Every WAD library on the same inputs, BL19 and BL127 beside them: wei error, gas, bytes
 wad: build
 	@$(PY) scripts/sweep/wad.py
 

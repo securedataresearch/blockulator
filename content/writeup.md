@@ -17,7 +17,7 @@ An 18-decimal number has about 60 bits of fraction, and every `mulWad` rounds. O
 ## How we know it is right
 
 - **Measured.** The [ladder](/results/ladder/) runs 14 real calculations, repeated up to 10,000 times, in every library against 300-digit arithmetic. On the [edges](/results/edges/), 139 calls at the ends of each domain, BL19 keeps at least 53 digits.
-- **To the last wei.** BlockulatorWad keeps Solady's function names and is exact on all 108,000 results we tested. The WAD libraries it replaces are a wei or more off on 24% to 98% of their `exp`, `ln` and `pow` results.
+- **To the last wei.** On the same inputs the WAD libraries are a wei or more off on 24% to 98% of their `exp`, `ln` and `pow` results ([WAD](/results/wad/)).
 - **Proven.** All 17 of BL127's core ops and 18 of BL19's 24 are proven for every input; BL19's other six are fuzzed against their exact specs ([proofs](/proofs/)).
 - **No owner.** No contract has storage, an owner, a proxy or an upgrade path, and each is verified on Sourcify and Blockscout.
 

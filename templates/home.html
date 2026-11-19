@@ -2,12 +2,11 @@
 {% block title %}{{ section.title }}{% endblock title %}
 {% block bodyclass %}home{% endblock bodyclass %}
 {% block content %}{% set x = section.extra %}
-{#- The banner, what Blockulator is, then three proofs, each a takeaway beside its chart with the
+{#- The banner, what Blockulator is, then two proofs, each a takeaway beside its chart with the
     table folded under it, all from the same rows of static/data/home.json (scripts/site/home.py) and drawn by
     static/js/islands/plots.js. Libraries come in static/data/libraries.json's order, floating point first, then
     fixed point. Every number in the copy is substituted here from the data. -#}
 {%- set h = load_data(path="static/data/home.json") -%}
-{%- set w = h.wad -%}
 
 <section class="ui-banner ui-banner--hero">
   <div class="ui-banner-inner">
@@ -55,17 +54,6 @@
   </div>
   <div class="unit-chart ui-card">{{ <plot chart="gas" src="home" label="Median gas per call for each library and op, floating point and fixed point apart; the numbers are in the table below." /> }}</div>
   <details class="numbers"><summary>Gas per call, {{ g.ops | length }} ops</summary>{{ <libtable t={g.table} first="op · gas per call" /> }}</details>
-</section>
-
-{#- ---- WAD to the last wei ---- -#}
-<section class="unit" id="wad">
-  <div class="unit-text">
-    <h2>{{ x.wad_title }}</h2>
-    <p class="note">{{ <fill s={x.wad_note} /> }}</p>
-    <p class="small">{{ x.wad_source | safe }} Every library that offers them is exact on {% for f in w.exact %}<code>{{ f }}</code>{% if not loop.last %}, {% endif %}{% endfor %}. Counts: <a href="{{ config.extra.repo }}/blob/master/docs/benchmarks/wad.md">wad.md</a>.</p>
-  </div>
-  <div class="unit-chart ui-card">{{ <plot chart="wad" src="home" label="Share of results off by at least one wei, per function and library; BlockulatorWad is at 0 on every function. The numbers are in the table below." /> }}</div>
-  <details class="numbers"><summary>Share wrong, per function</summary>{{ <libtable t={w.table} first="function · share wrong" /> }}</details>
 </section>
 
 {#- ---- the rest of the results, one card each ---- -#}

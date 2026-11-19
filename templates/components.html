@@ -355,8 +355,7 @@
 {#- The home copy's {placeholders} (content/_index.md), each counted from static/data/home.json: {{ <fill s={x.sub} /> }}. -#}
 {% component fill(s: string) -%}
 {%- set h = load_data(path="static/data/home.json") -%}
-{%- set_global worst = 0 -%}{%- for r in h.wad.rows %}{% if r.pct > worst %}{% set_global worst = r.pct %}{% endif %}{% endfor -%}
 {%- set_global d127 = 0 -%}{%- set_global d19 = 0 -%}
 {%- for l in h.libraries %}{% if l.id == "bl127" %}{% set_global d127 = l.digits %}{% elif l.id == "bl19" %}{% set_global d19 = l.digits %}{% endif %}{% endfor -%}
-{{ s | replace(from="{scenarios}", to=h.ladder.scenarios | length ~ "") | replace(from="{others}", to=((h.libraries | length) - 3) ~ "") | replace(from="{bl127}", to=d127 ~ "") | replace(from="{bl19}", to=d19 ~ "") | replace(from="{n}", to=h.wad.results | num_format) | replace(from="{fns}", to=h.wad.functionsTotal ~ "") | replace(from="{worst}", to=worst | round | int ~ "") | replace(from="{probes}", to=h.edges.probes ~ "") | replace(from="{ops}", to=h.edges.ops ~ "") | safe }}
+{{ s | replace(from="{scenarios}", to=h.ladder.scenarios | length ~ "") | replace(from="{others}", to=((h.libraries | length) - 2) ~ "") | replace(from="{bl127}", to=d127 ~ "") | replace(from="{bl19}", to=d19 ~ "") | replace(from="{probes}", to=h.edges.probes ~ "") | replace(from="{ops}", to=h.edges.ops ~ "") | safe }}
 {%- endcomponent %}

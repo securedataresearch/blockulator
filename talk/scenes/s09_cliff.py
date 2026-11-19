@@ -27,7 +27,7 @@ row; the legend lit; the closing line.
 Numbers from docs/benchmarks/edges.json: op "exp", the probes whose
 single argument lies in [−100, −40] (.args, .truth, .cells[lib].digits /
 .zero / .reverted / .reasonName / .unsupported); bl127lib is skipped as
-a duplicate of bl127 and BlockulatorWad is not in the talk. Labels from
+a duplicate of bl127. Labels from
 static/data/libraries.json.
 """
 

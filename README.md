@@ -1,7 +1,7 @@
 # Blockulator
 
 <!-- badges:begin -->
-[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-535%20forge%20tests-3f6d9c)](test) [![to the last wei](https://img.shields.io/badge/WAD-0%20wrong%20of%20108%2C000-00694e)](docs/benchmarks/wad.md) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
+[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-497%20forge%20tests-3f6d9c)](test) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
 <!-- badges:end -->
 
 **The definitive source for precision.** Two libraries, one `int256` each: BL127, 38 digits of fixed point, every op correctly rounded; BL19, 71 digits of float, every op correctly rounded or exact. Checked on chain, competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)
@@ -17,24 +17,6 @@ On typical inputs BL127's ln and pow cost 1,944 and 3,317 gas against PRBMath's 
 |---|---|---|---|
 | **BL19** | 256-bit binary float | 71 digits, everywhere | 10^±78,913 |
 | **BL127** | signed 127.128 fixed point | 38 digits at 1 | money-sized numbers |
-
-## Correct to the last wei
-
-<!-- wad:begin -->
-Share of results off by at least one wei, against the exact value rounded in each library's own direction, on the same seeded inputs. BlockulatorWad keeps Solady's names and is wrong on **0 of 108,000** results across 27 functions and rounding directions.
-
-| function | **BlockulatorWad** | Solady | PRBMath SD59x18 | PRBMath UD60x18 | Solmate | snekmate |
-|---|---:|---:|---:|---:|---:|---:|
-| `cbrtWad` | **0 of 4,000** | 0 | — | — | — | 23% |
-| `expWad` | **0 of 3,995** | 48% | 72% | 93% | 48% | 48% |
-| `lnWad` | **0 of 3,998** | 24% | 98% | 98% | 24% | 24% |
-| `log2Wad` | **0 of 3,998** | — | 93% | 90% | — | — |
-| `log10Wad` | **0 of 3,998** | — | 88% | 90% | — | — |
-| `powWad` | **0 of 3,461** | 66% | 71% | 85% | 66% | — |
-| `lambertW0Wad` | **0 of 3,999** | 28% | — | — | — | — |
-
-Where they offer them, Solady, PRBMath, Solmate, OpenZeppelin Math, Uniswap FullMath and snekmate are exact on `divWad`, `divWadUp`, `mulWad`, `mulWadUp`, `sDivWad`, `sMulWad`, `sqrtWad`, `sqrtWadUp`. Versions: BlockulatorWad 6c2eeaf, Solady v0.1.26, PRBMath SD59x18 v4.2.0, PRBMath UD60x18 v4.2.0, Solmate main@89365b8, OpenZeppelin Math v5.7.0 (vendored), Uniswap FullMath v4-core v4.0.0 (vendored), snekmate v0.1.2 (vyper 0.4.3); counts in [`wad.md`](docs/benchmarks/wad.md).
-<!-- wad:end -->
 
 ## Twice the digits, at the same gas
 
@@ -124,4 +106,4 @@ Every contract is verified on Sourcify and Blockscout. Each library is one Yul s
 - [Developing](docs/DEVELOPING.md): layout, build, `make gates`. The tables and chart above are `make readme-assets`.
 - [History](docs/bl127/HISTORY.md), and the [EthCC[9] talk](https://www.youtube.com/watch?v=a_tL99NY-yc) from the Huff era.
 
-MIT licensed: BL127, BL19 and BlockulatorWad never import AGPL code. Three benchmark-only files link the AGPL-3.0 Solmate and snekmate libraries and carry that licence: `LadderSolmate.sol`, `SnekmateMath.vy` and `test/bl127/GasLibs.sol` ([details](contracts/src/ladder/vendor/README.md)). [Security](SECURITY.md).
+MIT licensed: BL127 and BL19 never import AGPL code. Three benchmark-only files link the AGPL-3.0 Solmate and snekmate libraries and carry that licence: `LadderSolmate.sol`, `SnekmateMath.vy` and `test/bl127/GasLibs.sol` ([details](contracts/src/ladder/vendor/README.md)). [Security](SECURITY.md).

@@ -5,8 +5,8 @@
 
 Writes the home page's accrual chart (correct digits against days without an update, from
 docs/benchmarks/ladder.json) as an SVG for each GitHub theme, and rewrites the README between
-its <!-- name:begin --> / <!-- name:end --> markers: the badges, the "correct to the last wei"
-table (wad.json) and the gas-with-digits table (gas.json, gas19.json). Our libraries come
+its <!-- name:begin --> / <!-- name:end --> markers: the badges and the gas-with-digits
+table (gas.json, gas19.json). Our libraries come
 first in every table. Stdlib only.
 """
 import glob
@@ -167,57 +167,16 @@ def gas_block():
     return "\n".join(rows) + "\n\n" + text
 
 
-def wad_block():
-    d = load(B / "wad.json")
-    rows = d["rows"]
-    by = {(r["lib"], r["function"]): r for r in rows}
-    ours = [r for r in rows if r["lib"] == "blockulator"]
-    n, wrong = sum(r["n"] for r in ours), sum(r["wrong"] for r in ours)
-    # every function where some other library is off by a wei, and every library that is
-    fns = [r["function"] for r in ours if any(by.get((l, r["function"]), {}).get("wrongWei", 0) > 0 for l in d["libraries"] if l != "blockulator")]
-    fns = list(dict.fromkeys(fns))
-    libs = [l for l in d["libraries"] if l != "blockulator" and any(by.get((l, f), {}).get("wrongWei", 0) > 0 for f in fns)]
-    name = {"prb": "PRBMath SD59x18", "prbud": "PRBMath UD60x18"}
-    label = lambda l: name.get(l, d["libraries"][l].split(" (")[0].replace(" FixedPointMathLib", ""))
-
-    def cell(l, f):
-        r = by.get((l, f))
-        if not r:
-            return "—"
-        if l == "blockulator":
-            return f"**0 of {r['valued']:,}**" if r["wrongWei"] == 0 else f"{r['wrongWei']:,} of {r['valued']:,}"
-        return f"{r['wrongWeiPct']:.0f}%" if r["wrongWei"] else "0"
-
-    t = ["| function | **BlockulatorWad** | " + " | ".join(label(l) for l in libs) + " |", "|---|" + "---:|" * (len(libs) + 1)]
-    t += [f"| `{f}` | {cell('blockulator', f)} | " + " | ".join(cell(l, f) for l in libs) + " |" for f in fns]
-    others = [r for r in rows if r["lib"] != "blockulator"]
-    exact = sorted({r["function"] for r in others} - {r["function"] for r in others if r["wrongWei"]})
-    exact_libs = list(dict.fromkeys("PRBMath" if r["lib"] == "prb" else label(r["lib"]) for r in others if r["function"] in exact))
-    say = lambda xs: ", ".join(xs[:-1]) + (" and " if len(xs) > 1 else "") + xs[-1]
-    head = (f"Share of results off by at least one wei, against the exact value rounded in each library's own direction, on the same seeded inputs. "
-            f"BlockulatorWad keeps Solady's names and is wrong on **{wrong} of {n:,}** results across {len(ours)} functions and rounding directions.")
-    vkey = {"prb": "prb-math", "prbud": "prb-math", "oz": "openzeppelin"}
-    ver = lambda k: d["versions"].get(k) or d["versions"].get(vkey.get(k, ""), "")
-    tail = (f"Where they offer them, {say(exact_libs)} are exact on {', '.join(f'`{f}`' for f in exact)}. "
-            f"Versions: {', '.join(f'{label(k)} {ver(k)}' for k in d['libraries'])}; "
-            f"counts in [`wad.md`](docs/benchmarks/wad.md).")
-    return head + "\n\n" + "\n".join(t) + "\n\n" + tail
-
-
 def badges_block():
     p = load(B / "proofs.json")
     proven = sum(1 for o in p["ops"] if o["status"] == "proven")
     n = sum(len(re.findall(r"function\s+(?:test|invariant)\w*\s*\(", Path(f).read_text()))
             for f in glob.glob(str(ROOT / "test" / "**" / "*.sol"), recursive=True))
-    wad = load(B / "wad.json")
-    ours = [r for r in wad["rows"] if r["lib"] == "blockulator"]
-    wn, ww = sum(r["n"] for r in ours), sum(r["wrong"] for r in ours)
     q = lambda s: s.replace("-", "--").replace(" ", "%20").replace(",", "%2C")
     return " ".join([
         f"[![CI](https://github.com/{REPO}/actions/workflows/ci.yml/badge.svg)](https://github.com/{REPO}/actions/workflows/ci.yml)",
         f"[![proofs](https://img.shields.io/badge/proofs-{q(f'{proven} ops proven')}-00694e)](docs/proofs.md)",
         f"[![tests](https://img.shields.io/badge/tests-{q(f'{n} forge tests')}-3f6d9c)](test)",
-        f"[![to the last wei](https://img.shields.io/badge/WAD-{q(f'{ww} wrong of {wn:,}')}-00694e)](docs/benchmarks/wad.md)",
         "[![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)",
     ])
 
@@ -233,7 +192,7 @@ def main():
     check = "--check" in sys.argv
     out = {IMG / f"digits-{t}.svg": chart(t) for t in THEMES}
     text = README.read_text()
-    for name, body in (("badges", badges_block()), ("wad", wad_block()), ("gas", gas_block())):
+    for name, body in (("badges", badges_block()), ("gas", gas_block())):
         text = splice(text, name, body)
     out[README] = text
     stale = [p for p, s in out.items() if not p.exists() or p.read_text() != s]

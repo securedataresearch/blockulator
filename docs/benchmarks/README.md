@@ -41,14 +41,14 @@ pi, the replays and the accrual are not diffed in CI.
   that is deployed on Sepolia; probes in `scripts/ladder/edges.json`, the
   encoded arguments in `scripts/ladder/edge-inputs.json`.
 - [`wad.md`](wad.md) / [`wad.json`](wad.json): **WAD maths to the last wei.**
-  BlockulatorWad beside Solady's FixedPointMathLib and PRBMath (UD60x18 and
-  SD59x18) on the same 4,000 seeded inputs per function (each domain, the
+  Solady's FixedPointMathLib, PRBMath (UD60x18 and SD59x18), Solmate,
+  OpenZeppelin Math, Uniswap FullMath and snekmate, with BL19 and BL127
+  through their WAD conversions, on the same 4,000 seeded inputs per function (each domain, the
   inputs whose exact value sits near a wei boundary, the exact cases and the
   ends): how many results are off by a wei in each library's own rounding
   direction, the largest and median wei off, the reverts where the value
   fits, gas on typical and swept inputs, and the bytes one call adds.
-  Produced by `make wad` (`scripts/sweep/wad.py`); BlockulatorWad's gate rows
-  (both passes, 0 wrong wei) are in `sweep.md`.
+  Produced by `make wad` (`scripts/sweep/wad.py`).
 - [`size.md`](size.md) / [`size.json`](size.json): **inline size.** The
   runtime bytecode each BL127 and BL19 op adds when inlined through
   `BL127Lib` or `BL19Lib`, helpers included, under the default profile and

@@ -1,42 +1,31 @@
 +++
 title = "Migrating"
-description = "From Solady, PRBMath and ABDK: what each call becomes, and what changes in the result and the gas."
+description = "From Solady, PRBMath and ABDK to BL19 or BL127: what each call becomes, and what changes in the result and the gas."
 path = "library/migrating"
 
 [extra]
 group = "library"
 +++
 
-Every number on this page is measured. The share of results off by a wei or more, and the worst error, come from the [WAD results](/results/wad/); the gas comes from the [per-op benchmarks](/results/ops/). Hover a row for the exact call.
+Every number on this page is measured. The share of results off by a wei or more comes from the [WAD results](/results/wad/); the gas comes from the same run for Solady and PRBMath, and from the [per-op benchmarks](/results/ops/) for ABDK. Hover a row for the exact call.
+
+A WAD value moves in with `fromFixed18` and out with `toFixed18Down` or `toFixed18Up`. Do that around a whole calculation, not around each call: the tables below convert around every single call, which is the worst case for both the result and the gas. [Integrating](/library/integrating/) has the two rules.
 
 ## From Solady
 
-BlockulatorWad has the names, signatures, rounding directions and error selectors of Solady's `FixedPointMathLib`, so the move is one import:
-
-```solidity
-import {BlockulatorWad as FixedPointMathLib} from "@blockulator/contracts/wad/BlockulatorWad.sol";
-```
-
 {{ <table name="migrate.solady.wad" first="Solady FixedPointMathLib" /> }}
 
-Solady's multiply and divide functions return exact values. Their share wrong is all reverts where x · y (or x · 10<sup>18</sup> for a quotient) passes 2<sup>256</sup> though the result fits, so their worst error is 0. The worst error is absolute: near 10<sup>74</sup>, one part in 10<sup>18</sup> is many wei.
-
-BlockulatorWad returns the exact value rounded once, and its domains only widen: `mulWad` and `divWad` revert only when the result does not fit, `powWad(0, y)` is defined, and `expWad` reaches one wei further ([full list](https://github.com/securedataresearch/blockulator/blob/master/contracts/src/wad/README.md#where-it-differs-from-solady)).
-
-It needs the CLZ opcode: compile with `evm_version = "osaka"` and solc 0.8.31 or later. Keep Solady's integer helpers (`abs`, `min`, `avg` and the rest); they have no WAD meaning.
+Move `expWad`, `lnWad`, `powWad` and `lambertW0Wad`: Solady is off by a wei on 24% to 66% of their results, and BL19 and BL127 on far fewer. Keep `mulWad`, `divWad`, `sqrtWad` and `cbrtWad` for a single product, quotient or root of token amounts: Solady's are exact and cost a tenth of the gas, and a value converted in and out of BL19 or BL127 for one call can land a wei off. Both libraries need the CLZ opcode: compile with `evm_version = "osaka"` and solc 0.8.31 or later.
 
 ## From PRBMath
 
-PRBMath's values are user-defined types over the same 18-decimal integers, so a call moves by unwrapping. `exp`, `ln` and `pow` keep PRBMath's names. `mul`, `div` and `sqrt` become `mulWad` or `sMulWad`, `divWad` or `sDivWad`, and `sqrtWad`. `log2` and `log10` become `log2Wad` and `log10Wad`.
-
-```solidity
-// SD59x18 x, y;
-int256 r = BlockulatorWad.pow(x.unwrap(), y.unwrap());   // was x.pow(y)
-```
+PRBMath's values are user-defined types over the same 18-decimal integers, so a value moves by unwrapping: `BL19Lib.fromFixed18(x.unwrap())`. BL19 and BL127 have typed values with operators too ([BL19](/library/bl19/#typed-api), [BL127](/library/#typed-api)).
 
 {{ <table name="migrate.prbmath.wad" first="PRBMath SD59x18 and UD60x18" /> }}
 
 {{ <table name="migrate.prbmath.wadud" first="PRBMath UD60x18" /> }}
+
+PRBMath's `exp`, `ln`, `log2`, `log10` and `pow` are off by a wei on 71% to 98% of their results. Its `mul`, `div` and `sqrt` are exact; keep them for a single product, quotient or root.
 
 ## From ABDK
 

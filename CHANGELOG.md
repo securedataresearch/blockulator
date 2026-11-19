@@ -41,8 +41,7 @@ so each had room for its second stages. Every BL127 object takes salt v9.
 The full release gate on this tree (2026-10-28): BL127 59 sweep rows,
 212,119 inputs, misrounded 0 in the plain pass, with every rounding test
 forced (the last stage alone) and with the fast tests forced (the middle
-stage alone); BL19 76 rows, 455,082 inputs, misrounded 0; BlockulatorWad
-160,000 results wrong 0; bounds and bounds127 0 regions over their bound;
+stage alone); BL19 76 rows, 455,082 inputs, misrounded 0; bounds and bounds127 0 regions over their bound;
 299 tests; every object under 24,576 bytes (BL19E tightest, 955 free).
 Gas on the ladder's inputs, inline, v8 → v9: the tests cost the
 transcendentals a few percent (`exp` 2,726 → 2,845, `sinh` 3,880 → 4,029,
@@ -79,8 +78,7 @@ these addresses, so the runners took
 `FP127 ladder v14` (v13 calls BL127 v8): `LadderRunner`
 `0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589`, `EdgeRunner`
 `0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A`. The gate at the v8 freeze: BL19 76
-sweep rows misrounded 0, BL127 27 rows nearest everywhere, BlockulatorWad
-160,000 results wrong 0; 292 tests; BL127 tightest, 779 free.
+sweep rows misrounded 0, BL127 27 rows nearest everywhere; 292 tests; BL127 tightest, 779 free.
 
 BL127S: lambertW0 and lambertWm1 correctly rounded (v8 rounded their last
 value with no test):
@@ -156,11 +154,6 @@ checked in CI; `bounds.py` measures it):
 - `make sweep` runs a third BL19 pass, the middle stage alone (`gen.py
   --mid-lib`: the fast path's test forced, `rbadm` kept); `--wide-lib` forces
   both; the count pass records `rbadm` beside `rbad`.
-
-BlockulatorWad's powWad decides an integer power that is a whole number of
-wei exactly (`wadpowx`) before its second stage: half of the sweep's
-fallbacks, 54,000 → 6,900–7,700 gas. Results above about 2^175 wei still
-take the second stage.
 
 factorial is a table in both libraries (`scripts/bl19/generators/facttab.py`,
 checked in CI):
@@ -302,28 +295,6 @@ wide series and continued fraction behind it:
   median, 355,000 at most. BL127N 5,005 → 9,013 bytes.
 - `test/bl127/Imports.t.sol`'s rbad127 fuzz no longer underflows building
   v for g = 1 or 2.
-
-BlockulatorWad, a third library (`contracts/src/wad/`, inline, no deployed
-object): Solady's `FixedPointMathLib` WAD names, signatures and error
-selectors (mulWad, divWad, sMulWad, sDivWad, sqrtWad, cbrtWad, expWad, lnWad,
-powWad, lambertW0Wad, with log2Wad and log10Wad), explicit `…Up` and `…Down`
-for every one, and PRBMath's exp, ln and pow. Every result is the exact real
-value rounded once in the stated direction:
-
-- mul, div, sqrt and cbrt exactly on 512 bits, in one word where Solady's
-  path applies (mulWad 107 gas, Solady 86); the domains only widen (a result
-  that fits never reverts).
-- exp, ln, log2, log10 and pow on BL19's kernels fed the exact input,
-  lambertW0 on BL19's; a cut at the wei with a stated bound, and a second
-  stage at 2^-510 on the exact input where the bound reaches a wei boundary.
-  expWad 2,357 gas, lnWad 2,415, powWad 4,762 (PRBMath 2,719, 6,980, 9,877).
-- `make sweep`: 27 WAD rows, 0 wrong of 108,000, and 0 of 52,000 through the
-  second stage alone. `make wad` (`docs/benchmarks/wad.md`): on the same
-  inputs Solady's expWad is off by a wei or more on 48%, lnWad 24%, powWad
-  66%, lambertW0Wad 28%; PRBMath's exp, ln, log2, log10 and pow on 72 to 98%.
-- `gen.py --lib wad` builds it from `BlockulatorWad.yul.src` on
-  `BL19.yul.src` (a library on a base source, library only, exports without
-  a leave written into their blocks).
 
 ## Blockulator 2.2 (2026-10-22)
 
