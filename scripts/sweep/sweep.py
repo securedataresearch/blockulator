@@ -8,7 +8,7 @@ correctly rounded truth.
                                            # their rows replace the ones in sweep.json, the rest stay
                                            # (the second-stage gas can differ by a unit: the generated
                                            # runner is a smaller contract; the re-baseline runs everything)
-    uv run scripts/sweep/sweep.py --lib bl127 --ops exp,ln   # one library's rows only (bl19, bl127, wad)
+    uv run scripts/sweep/sweep.py --lib bl127 --ops exp,ln   # one library's rows only (bl19, bl127)
 
 Release four adds the directed ops, powu and lambertWm1, and a second pass: the
 same inputs (the first 4,000 of each) through a test-only copy of BL19Lib whose
@@ -68,8 +68,6 @@ _spec = importlib.util.spec_from_file_location("fpgen", ROOT / "scripts" / "bl12
 G = importlib.util.module_from_spec(_spec)
 sys.modules["fpgen"] = G
 _spec.loader.exec_module(G)
-sys.path.insert(0, str(ROOT / "scripts" / "sweep"))
-import wad as WD  # noqa: E402  BlockulatorWad's inputs, truth and rows
 # BL127's oracle (by path: BL19's is `oracle` above), the correctly rounded word
 _spec127 = importlib.util.spec_from_file_location("oracle127", ROOT / "scripts" / "bl127" / "oracle.py")
 O127 = importlib.util.module_from_spec(_spec127)
@@ -98,8 +96,8 @@ WIDE_N = 4000
 MID19 = ["pow", "powu", "compound"]
 PLAIN = {"toUintDown", "toUintUp", "toIntDown", "toIntUp", "toFixed18Down", "toFixed18Up"}
 SEL: set[str] | None = None   # --ops: the ops to run and re-score; None is all of them
-LIBSEL: set[str] | None = None   # --lib: the libraries to run and re-score; None is all three
-LIBS = ("bl19", "bl127", "wad")
+LIBSEL: set[str] | None = None   # --lib: the libraries to run and re-score; None is both
+LIBS = ("bl19", "bl127")
 
 
 def selected(op: str, lib: str | None = None) -> bool:
@@ -239,7 +237,6 @@ def gen():
     write("bl127_lambertWm1", [x for x in wm1 if x < 0])
     gen127()
     gen4()
-    WD.gen()
 
 
 def gen127():
@@ -638,7 +635,6 @@ def score():
                 res = pool.map(job127, [(op, a, b, o) for a, b, c, o, g in data], chunksize=16)
                 rows.append(dict(summarize127(op, res), stage=stage, **gasstats([g for *_, g in data])))
                 print(json.dumps(rows[-1]), flush=True)
-        rows += WD.sweep_rows(pool, lambda op: selected(op, "wad"), fallback)
     if SEL is not None or LIBSEL is not None:
         # a partial run: the selected ops' rows replace their old ones, every other row stays
         key = lambda r: (r["lib"], r["op"], r.get("stage"))  # noqa: E731
@@ -754,7 +750,6 @@ def score():
                    "| op | inputs | correctly rounded | misrounded | nearest | faithful | max ULP | median ULP | min bits (≥ 1) | below / above truth | gas median / p99 / max |",
                    "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|"]
             md += [row127(r, False) for r in rows if r.get("stage") == stage and r["lib"] == "bl127"]
-    md += WD.sweep_md(rows, pct)
     (OUT / "sweep.md").write_text("\n".join(md) + "\n")
     print("wrote docs/benchmarks/sweep.{json,md}")
 
@@ -909,9 +904,8 @@ contract Sweep%(Tag)s is Test {
 
 
 def sweep_dispatch() -> list[tuple[str, str]]:
-    """(name, expression) of every op in Sweep.t.sol's f, in order, then
-    SweepWad.t.sol's (BlockulatorWad's, in its own contract)."""
-    src = (ROOT / "test" / "sweep" / "Sweep.t.sol").read_text() + (ROOT / "test" / "sweep" / "SweepWad.t.sol").read_text()
+    """(name, expression) of every op in Sweep.t.sol's f, in order."""
+    src = (ROOT / "test" / "sweep" / "Sweep.t.sol").read_text()
     found = re.findall(r'if \(op == "(\w+)"\) \{ g0 = gasleft\(\); r = (.*?); g = gasleft\(\); \}', src)
     seen: set[str] = set()
     return [(n, e) for n, e in found if not (n in seen or seen.add(n))]   # noop once
@@ -932,8 +926,6 @@ def base_op(name: str) -> str:
 
 def nargs(name: str) -> int:
     op = base_op(name)
-    if name.startswith("wad_"):
-        return WD.FUNCS[op][1]
     return 3 if op in THREE else 2 if op in TWO else 1
 
 
@@ -951,8 +943,6 @@ def run_instrumented(kind: str, forced: bool = False):
     Tag = tag.capitalize()
     wd = ROOT / "test" / "sweep" / tag
     libs = ("bl19",) if forced else ("bl19", "bl127")
-    if kind == "count" and not forced:
-        libs += ("wad",)   # BlockulatorWad's fallback share; make profile's probes stay BL19's and BL127's
     libs = tuple(l for l in libs if LIBSEL is None or l in LIBSEL)
     if not libs:
         return
@@ -966,10 +956,7 @@ def run_instrumented(kind: str, forced: bool = False):
             continue
         if name != "noop" and not selected(base_op(name), name.split("_", 1)[0]):
             continue
-        if name.startswith("wad_") and "wad" not in libs:
-            continue
-        expr = (expr.replace("BL19Lib.", f"BL19Lib{Tag}.").replace("BL127Lib.", f"BL127Lib{Tag}.")
-                .replace("BlockulatorWad.", f"WADLib{Tag}."))
+        expr = expr.replace("BL19Lib.", f"BL19Lib{Tag}.").replace("BL127Lib.", f"BL127Lib{Tag}.")
         disp.append(f'        if (op == "{name}") {{ g0 = gasleft(); r = {expr}; g = gasleft(); }}')
         if name != "noop":
             runs.append(f'    function test_{name}() public {{ this.runOne("{name}", {nargs(name)}); }}')
@@ -1049,7 +1036,7 @@ def main():
                 sys.exit(f"--lib: one or more of {', '.join(LIBS)}")
         args = args[2:]
     if SEL is not None:
-        unknown = SEL - set(OPS19) - set(OPS127) - {"lambertW0", "lambertWm1"} - set(WD.FUNCS)
+        unknown = SEL - set(OPS19) - set(OPS127) - {"lambertW0", "lambertWm1"}
         if unknown:
             sys.exit(f"--ops: not swept: {', '.join(sorted(unknown))}")
     if args != ["score"]:
@@ -1059,8 +1046,6 @@ def main():
         run_wide("mid")
         run_wide("wide", "bl127")
         run_wide("mid", "bl127")
-        if LIBSEL is None or "wad" in LIBSEL:
-            WD.run_wide(SEL)
         run_instrumented("count")
     score()
 

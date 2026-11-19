@@ -26,7 +26,6 @@
   "files": [
     "bl127/",
     "bl19/",
-    "wad/",
     "deployments/"
   ],
   "publishConfig": {
