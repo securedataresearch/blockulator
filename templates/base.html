@@ -64,15 +64,22 @@
 </main>
 {% block wide %}{% endblock wide %}
 <footer class="ui-foot ui-wrap">
-  <nav aria-label="More">
-    <a href="/why/">Why WAD loses digits</a>
-    <a href="/proofs/">Proofs</a>
-    <a href="/archive/">Archive</a>
-    <a href="/badges/">Badges</a>
-    <a href="/llms.txt">llms.txt</a>
-    <a href="https://www.youtube.com/watch?v=a_tL99NY-yc">EthCC talk (video)</a>
-    <a href="{{ config.extra.repo }}">GitHub</a>
-    <!--email_off--><a href="mailto:sam@securedataresearch.net?subject=Blockulator">Contact</a><!--/email_off-->
+  {#- the whole site, a column per group (config.toml extra.nav), then everything outside the groups -#}
+  <nav class="sitemap" aria-label="Site map">
+    {%- set titles = [["results", "Results"], ["library", "Library"], ["writeup", "Write-up"]] %}
+    {%- for t in titles %}
+    <div class="col {{ t[0] }}"><span class="ui-label">{{ t[1] }}</span><ul>
+      {%- for set in config.extra.nav[t[0]] %}{% for item in set.items %}<li><a href="{{ item[0] }}">{{ item[1] }}</a></li>{% endfor %}{% endfor %}
+      {%- if t[0] == "writeup" %}<li><a href="https://www.youtube.com/watch?v=a_tL99NY-yc">EthCC talk (video)</a></li>{% endif %}
+    </ul></div>
+    {%- endfor %}
+    <div class="col"><span class="ui-label">More</span><ul>
+      <li><a href="{{ config.extra.repo }}">GitHub</a></li>
+      <li><a href="/llms.txt">llms.txt</a></li>
+      <li><a href="/archive/">Archive</a></li>
+      <li><a href="/badges/">Badges</a></li>
+      <li><!--email_off--><a href="mailto:sam@securedataresearch.net?subject=Blockulator">Contact</a><!--/email_off--></li>
+    </ul></div>
   </nav>
   <p>Blockulator, BL127 and BL19 are made by Secure Data Research LLC and released under the <a href="{{ config.extra.repo }}/blob/master/LICENSE">MIT licence</a>.</p>
 </footer>

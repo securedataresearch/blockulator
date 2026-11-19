@@ -7,8 +7,13 @@
 {% block content %}
 <article class="ui-prose ui-prose--data{% block width %}{% endblock width %}">
 {% include "pagehead.html" %}
+{#- a page of three sections or more lists them under its banner -#}
+{%- if page.toc | length >= 3 %}
+<nav class="onpage" aria-label="On this page"><span class="ui-label">On this page</span>{% for h in page.toc %}<a href="#{{ h.id }}">{{ h.title }}</a>{% endfor %}</nav>
+{%- endif %}
 {% block lead %}{% endblock lead %}
 {{ page.content | safe }}
 {% block body %}{% endblock body %}
+{% include "pager.html" %}
 </article>
 {% endblock content %}

@@ -28,7 +28,8 @@
 .copy:hover { border-color: var(--text-strong); }
 .optable td { font-size: 14px; }
 .optable th { white-space: nowrap; }
-.optable .sel, .small { font-size: 11.5px; color: var(--muted); }
+.optable .sel { font-size: 11.5px; color: var(--muted); }
+.small { font-size: 13.5px; line-height: 1.55; color: var(--muted); }
 .optable a { text-decoration: none; }
 .optable a:hover { text-decoration: underline; }
 .optable tr:target td { background: var(--tint); }
@@ -340,3 +341,36 @@ details.calls code { font-size: 12px; }
 .cdftable tbody th { font: 500 14px/1.35 var(--sans); text-transform: none; letter-spacing: normal; color: var(--text-strong); }
 .cdftable tbody th .meta { font-weight: 400; font-size: 12.5px; color: var(--muted); }
 @media (max-width: 640px) { .cdftable .wide { display: none; } .cdftable thead th { white-space: normal; line-height: 1.3; } .cdftable th, .cdftable td { padding-inline: 8px; } }
+
+/* ---- organisation pass: where you are, what is on the page, where to go next ---- */
+
+/* the group's tabs (pagehead.html): each set of pages under its own label. Phones keep sdr-ui's one scrolling row,
+   without the labels. */
+.subnav { gap: 14px 28px; }
+.subnav .set { display: grid; gap: 7px; align-content: end; }
+.subnav .set > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.subnav .ui-label { margin: 0; font-size: 11px; color: var(--on-dark-3); }
+@media (max-width: 640px) { .subnav { gap: 8px; } .subnav .set, .subnav .set > div { display: contents; } .subnav .ui-label { display: none; } }
+/* the sections of a long page, under its banner (page.html) */
+.onpage { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px; max-width: var(--measure); margin: 0 auto 1.8em; padding-bottom: 14px; border-bottom: 1px solid var(--line-2); font-size: 14.5px; }
+.onpage .ui-label { margin: 0 4px 0 0; font-size: 11.5px; }
+.ui-prose .onpage a { color: var(--muted); text-decoration: none; }
+.ui-prose .onpage a:hover { color: var(--text-strong); text-decoration: underline; }
+/* a heading reached by a link clears the sticky bar; its own link shows on hover or focus */
+.ui-prose :is(h2, h3, h4)[id], .ui-prose section[id], .ui-prose tr[id] { scroll-margin-top: 84px; }
+.ui-prose a.anchor { margin-left: .4em; color: var(--faint); font-weight: 400; text-decoration: none; opacity: 0; transition: opacity var(--t-fast) var(--ease-out); }
+.ui-prose :is(h2, h3, h4):hover a.anchor, .ui-prose a.anchor:focus-visible { opacity: 1; }
+@media (hover: none) { .ui-prose a.anchor { display: none; } }
+/* the page before and the page after (pager.html) */
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: var(--measure); margin: clamp(40px, 6vw, 72px) auto 0; }
+.ui-prose .pager a { display: grid; gap: 4px; padding: 16px 20px; text-decoration: none; }
+.pager .ui-label { margin: 0; font-size: 11.5px; }
+.pager .next { grid-column: 2; text-align: right; }
+.pager strong { font-size: 17px; }
+/* the footer is the site's map (base.html): a column per group */
+.ui-foot nav.sitemap { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 24px clamp(20px, 4vw, 56px); margin-bottom: 28px; }
+.sitemap .ui-label { display: block; margin: 0 0 8px; font-size: 11.5px; }
+.sitemap ul { list-style: none; margin: 0; padding: 0; }
+.sitemap li { margin: 0; padding: 3px 0; break-inside: avoid; }
+.sitemap .results ul { columns: 2; column-gap: clamp(20px, 4vw, 56px); }
+@media (max-width: 760px) { .ui-foot nav.sitemap { grid-template-columns: 1fr 1fr; } .sitemap .results { grid-column: 1 / -1; } }

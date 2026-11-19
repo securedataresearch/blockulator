@@ -8,10 +8,38 @@ generate_sitemap = true
 
 [markdown]
 external_links_target_blank = false
+# every Markdown heading carries a link to itself (templates/anchor-link.html), shown on hover
+insert_anchor_links = "right"
 
 [extra]
 # The repository.
 repo = "https://github.com/securedataresearch/blockulator"
+
+# The site's map, in one place: the tabs in each page's banner (templates/pagehead.html), the previous and next links
+# under a page (templates/pager.html) and the footer (templates/base.html). A group's pages are read in this order.
+[[extra.nav.results]]
+label = "Precision"
+items = [["/results/", "Overview"], ["/results/ladder/", "Ladder"], ["/results/edges/", "Edges"], ["/results/cdf/", "Normal CDF"]]
+[[extra.nav.results]]
+label = "Per function"
+items = [["/results/ops/", "Per op"], ["/results/wad/", "WAD"]]
+[[extra.nav.results]]
+label = "In production"
+items = [["/results/deployed/", "Deployed"], ["/results/incidents/", "Incidents"]]
+[[extra.nav.results]]
+label = "Deciding"
+items = [["/vs/", "Versus"], ["/proofs/", "Proofs"]]
+
+[[extra.nav.library]]
+label = "Formats"
+items = [["/library/", "BL127"], ["/library/bl19/", "BL19"]]
+[[extra.nav.library]]
+label = "Guides"
+items = [["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]]
+
+[[extra.nav.writeup]]
+label = ""
+items = [["/writeup/", "Write-up"], ["/why/", "Why WAD loses digits"]]
 
 [link_checker]
 # GitHub renders heading anchors with JavaScript, so a link checker never finds them.
