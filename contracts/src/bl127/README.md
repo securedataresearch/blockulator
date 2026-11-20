@@ -109,8 +109,8 @@ through the deterministic proxy at
 `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the version.
 v9 (salts `"FP127 v9"`, `"FP127E v9"`, …; 53 ops in the five objects, evm
 osaka builds that need CLZ) is live on Sepolia since 2026-10-29 (Blockulator
-3.0) at the addresses above: every op correctly rounded. v8 (salt `"BL127
-v8"`, one object, 23,797 bytes, `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`,
+3.0) at the addresses above: every op correctly rounded. v8 (salt
+`"FP127 v8"`, one object, 23,797 bytes, `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`,
 2026-10-28: the same words as v6, with `exp`, `div`, `factorial`, `compound`
 and the erfc tail cheaper) and v7 (salt `"FP127 v7"`,
 `0xb97E0b824d86470BfAA52fe44f09363755d52591`, 2026-10-27: `exp` and `div`
@@ -311,7 +311,7 @@ are fuzzed against a bit-by-bit root of the same integer. The
 transcendentals' guarantee rests on three checks, each a merge gate: every
 fast value's stated bound is measured against 120-digit truth
 (`scripts/bl127/generators/bounds127.py`; the largest ratio of measured
-error to stated bound is 0.92, the exponentials'); `make sweep` runs every
+error to stated bound is 0.99, the exponentials'); `make sweep` runs every
 op on seeded random inputs plain, with every rounding test forced (the last
 stage alone, `gen.py --wide-lib`) and with the fast tests forced (the middle
 stage alone, `--mid-lib`), each against the correctly rounded word: 0
@@ -371,7 +371,7 @@ log-form Newton step at 2^-510 (`w19_wrecip`, `w19_wmul`, `w19_wlnw`,
 transcendental for every word x but 0 (Lindemann–Weierstrass), so it is
 never a midpoint and the tie rule never applies; W(0) = 0, and |x| < 2^-65
 returns x (W(x) − x is under 2^-130). `bounds127.py` checks both bounds
-(largest ratio 0.20 and 0.58 of the stated one) and
+(largest ratio 0.19 and 0.62 of the stated one) and
 `precise_model.py lambertw` the stages before them. `scripts/bl127/generators/precise_model.py` models the
 kernels in integers and measures them.
 
@@ -416,8 +416,8 @@ division in two 64-bit digits (|a|·2^64 fits a word and every remainder is
 below |b| < 2^192, so shifted by 64 it fits too: three `div`s and a `mod`);
 a third digit when only |b| is under 2^64; Bloemen's mulDiv (`divu`)
 beyond. 2.2 ran the mulDiv for every |a| ≥ 1. The directed forms add one
-`mulmod` for exactness. Same words and the same reverts: `div` 649 → 412
-gas on the ladder (PRBMath 509), `divDown` and `divUp` 818 → 475.
+`mulmod` for exactness. Same words and the same reverts: `div` 649 → 413
+gas on the ladder (PRBMath 509), `divDown` 818 → 476 and `divUp` 821 → 479.
 
 **The double-word exp kernel (after 2.2).** `expk` works in X form, a value
 H·2^-256 + L·2^-384 with L a small word: about 300 bits are what the
@@ -438,8 +438,8 @@ test corrects n by one (on the 2^-128 grid x − m·ln 2 stays 2^-137 from 0
 for every 0 < |m| ≤ 300, so the test cannot be fooled). The rounding reads
 only the kernel's high word: with e = n + 129 the word is half of
 2^e + ⌊sh·2^(e−256)⌋ + 1, and the low word is under one unit of that sum.
-`exp` 5,360 → 2,716 gas (the typical median of `gas.json`, inline;
-PRBMath 2,816), `expk` alone 4,046 → about 2,200. `scripts/bl127/generators/expk.py` fits and certifies
+`exp` 5,360 → 2,716 gas when it landed (the typical median of `gas.json` then,
+over eight inputs, inline; PRBMath 2,816; over today's 100 inputs they read 2,834 and 2,844), `expk` alone 4,046 → about 2,200. `scripts/bl127/generators/expk.py` fits and certifies
 g, models the kernel in exact integers, checks that the source holds its
 Yul verbatim and measures it against its bound; `precise_model.py` takes
 it from there. The pinned optimizer had made three copies of the kernel
@@ -493,8 +493,8 @@ the tolerance 2^-175 e^(x²) on g, which is 2^-149 relative at x = 4 and
 of the interval (3.0: certified, below).
 `erf_model.py --tail` models the Horner in integers (largest error against
 erfc 2^18.25 units of 2^-192, the fraction's 2^18.17, both e^(−x²)'s);
-`--check` holds the source to its Yul (CI). 7,650 gas at every x of the
-tail; the products are written in line (calls to `mulg` cost 10,770).
+`--check` holds the source to its Yul (CI). The tail costs about 7,700 gas
+inline at every x (`gas.json`: 7,720 at x = 6, 7,721 at x = 9); the products are written in line (calls to `mulg` cost 10,770).
 
 **The hyperbolics, correctly rounded (3.0).** `sinh`, `cosh`, `tanh` and
 `atanh` (`BL127H`) round their fast value only when its stated bound cannot
@@ -531,7 +531,7 @@ middle stage alone): 0 misrounded in all three.
 
 - `exp`, `exp2`, `exp10`: V = 2^n (1 + s) from `expk` (2^-311.2) and the
   reduction (2^-376) is within 2^(n − 311.1), under 2^(n + 73) + 1 units of
-  2^-384 (largest ratio 0.92); the test (`rbadw`) takes 2^200 for every n ≤
+  2^-384 (largest ratio 0.99); the test (`rbadw`) takes 2^200 for every n ≤
   126. Past it `expw`: |x| c at 2^-510 modulo 4 from the three-word
   c 2^638 (c = 1, ln 2, ln 10), BL19's `wexpr` and `wexpm1`, rounded once
   by `rndw`: within 2^(n − 502.9), under 2^-248 ULP. No tie exists except
@@ -549,7 +549,7 @@ middle stage alone): 0 misrounded in all three.
 - `expm1`: on the 2^-128 grid the one is exact, so `expm1(x)` is `exp(x)`
   − 1 word for word; beyond 1/16 it is exactly that. Below, the series stays
   (cheaper) with a test: within 2 units of 2^-192 (each Horner step's floor
-  and truncation under 1 + 1/k, damped by |x|/k ≤ 1/32; measured 1.02),
+  and truncation under 1 + 1/k, damped by |x|/k ≤ 1/32; measured 1.01),
   and `expw` − 1 behind it.
 - `pow`: `pow2t` first, as before. The middle stage (`powmid`) takes `l2p`
   while |y| ≤ 2^14 or off the near-one band (|log2 x| ≥ 2^-7.48 bounds |y|
@@ -557,8 +557,8 @@ middle stage alone): 0 misrounded in all three.
   relative within 2^-8 of one with a larger y (`tnear`: d = x − 1 exact,
   BL19's `mratio` for ln(1 + d)/d within 2^-272.1 relative, so t within |t|
   2^-271.9); t split exactly, 2^f by `expk`, and the test
-  2^(n + 121) + 3 or 2^(n + 102) + 3 units of 2^-384 (largest ratios 0.29,
-  0.33). Past it `powslow`: an exact tie first (`powtie`: x = c 2^a with c
+  2^(n + 121) + 3 or 2^(n + 102) + 3 units of 2^-384 (largest ratios 0.32,
+  0.32). Past it `powslow`: an exact tie first (`powtie`: x = c 2^a with c
   odd gives an odd multiple of 2^-129 only for a y = −129 exactly, so y is
   3, 3/2, 43/2^j (j ≤ 5) or 129/2^j (j ≤ 7), c a perfect 2^j-th power b^(2^j)
   and the word (b^p + 1)/2; for c = 1 it is 2^-129 itself), else log2 x in
@@ -568,7 +568,7 @@ middle stage alone): 0 misrounded in all three.
 - `powu`: the 256-bit mantissa's test is `rbad127` (forceable); the 512-bit
   `powus` behind it is the last stage, within (3k + 2) 2^-510 relative
   (each product 3 2^-510 after renormalising, squarings doubling it;
-  `bounds127.py` largest ratio 0.62), under 2^-237 ULP while k < 2^16 and
+  `bounds127.py` largest ratio 0.52), under 2^-237 ULP while k < 2^16 and
   exact at a tie (a tie needs k ≤ 129 and c^k < 2^256, so every partial
   product fits). From k = 2^16 the doubling would reach 2^-384, so `powu`
   calls `pow` (no tie is possible there): the sweep's |n| from 2^16 cost
@@ -612,13 +612,13 @@ words (`w19_erfser2`), from 7 one minus the continued fraction
 (`w19_erfccf2`), 2^-444 or better, rounded once to the grid 2^-128
 (2^-127 for `normCdf`, which is ½ ± that). erf(y) is never a midpoint for
 x ≠ 0, so `erfc` = 1 ∓ that word and Φ = ½ ± it exactly. `bounds127.py`
-measures both errs (ratios 0.41 and 0.30). The fast path skips the second
+measures both errs (ratios 0.41 and 0.32). The fast path skips the second
 stage unless within 2^-18.4 ULP of a midpoint (series) or 2^-44 (tail);
 the vectors carry 13 random inputs found that close, decided by it (v8 had
 each right). Inline A/B on the sweep's inputs: `erf` median 3,630 → 3,689,
 `erfc` 3,510 → 3,592, `normCdf` 3,715 → 3,750 (the same old and new calls side by side; the sweep table, its runner recompiled around the new library, reads 3,623 → 3,775, 3,497 → 3,654 and 3,694 → 3,823); `make cdf` on [−6, 6]:
 `normCdf` 12,435 → 12,466, `erfc` 9,140 → 9,211; the second stage costs
-about 48,000 at the median and 355,000 at most (the two-word series just
+about 49,000 at the median and 359,000 at most (the two-word series just
 below y = 7). `BL127N` is 9,088 bytes (5,005 before; 9,013 before the merge with the other phases); inline, each op
 about 8.9 KB (5.5 before).
 
@@ -634,7 +634,7 @@ one ULP, nearest ops at most half; v4's test allowed 2 ULP from a floored
 reference. It writes [`docs/bl127/precision.json`](../../../docs/bl127/precision.json);
 `make precision-report` renders [`docs/bl127/precision.md`](../../../docs/bl127/precision.md).
 Every nearest op is the nearest word on every vector.
-`make sweep` measures 1,500 to 5,000 seeded random inputs per op
+`make sweep` measures 2,000 to 4,000 seeded random inputs per op
 ([`docs/benchmarks/sweep.md`](../../../docs/benchmarks/sweep.md)) against
 the correctly rounded word, three times (plain, every rounding test forced,
 the fast tests forced): 0 misrounded in each pass. v4 had `exp` at 4e32
@@ -659,7 +659,7 @@ Huff had 50 to 100 bits: a median of 41k gas for `lambertW0` and 32k for
 exponent), the near-one and hyperbolic ops 4,000 to 11,500, and the error
 function family is the honest expensive one: 1,100 to 39,000 gas depending
 on where x falls, the continued fraction near x = 4 being the dearest. In
-3.0 `compound` is about 3,400 at the median and the erfc tail 7,650 at
+3.0 `compound` is about 3,400 at the median and the erfc tail about 7,700 at
 every x; the series just below 4 (about 20,500) is now the family's dearest.
 
 v5 against v4, medians through the object: `exp` 7,076 (+1,544), `exp10`
