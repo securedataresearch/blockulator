@@ -183,12 +183,12 @@ binary tests, and a 512/256 division (`divh`) 393. So a multiplication saved
 is worth about 90 gas, a table level about 250 and a division about four
 products.
 
-| kernel | release two | now | gas then → now |
-|---|---|---|---:|
-| `exp2frac`, 2^f | a 16-entry table, a degree-26 Chebyshev fit on [0, 1/16) | two 16-entry levels (r < 2^−8), the degree-19 minimax polynomial (sup norm 2^−270.7), Horner at 2^−255, 7 of 19 steps in one word; within 4.7 units | 5,295 → 1,483 |
-| `log2m`, log2 of a mantissa | twelve multiplicative stages by 2^(1/2^k), a degree-17 fit; bounded at 37 units | two additive 16-entry levels by word-only reductions (one shift and one div by 16 + i or 256 + i, the table value added), y = w/(2 + w) by one `divh`, y·P(y²) with P the degree-12 minimax polynomial (2^−263.7); within 2.4 units | 5,810 → 1,653 |
-| `ln1pseries`, `ln1pwide`, ln(1 + d)/d below 2^−8 and 2^−4 | the 32- and 64-term Taylor series | (ln 2/2)(1 − y)·P(y²), y = d/(2 + d) by one `divh` (2/(2 + d) = 1 − y): the same P below 2^−8, a degree-21 one (2^−266.5) to 2^−4; within 2.7 units, relative however small d is | 7,586 → 1,406; 15,099 → 1,867 |
-| `expm1series`, (e^d − 1)/d below 2^−8 | the 24-term Taylor series | the degree-21 minimax polynomial on [−2^−8, 2^−8] (2^−271.5), signed Horner (one-word steps by `mul` and `sar`); within 1.6 units | 5,433 → 1,300 |
+| kernel | release two | now |
+|---|---|---|
+| `exp2frac`, 2^f | a 16-entry table, a degree-26 Chebyshev fit on [0, 1/16) | two 16-entry levels (r < 2^−8), the degree-19 minimax polynomial (sup norm 2^−270.7), Horner at 2^−255, 7 of 19 steps in one word; within 4.7 units |
+| `log2m`, log2 of a mantissa | twelve multiplicative stages by 2^(1/2^k), a degree-17 fit; bounded at 37 units | two additive 16-entry levels by word-only reductions (one shift and one div by 16 + i or 256 + i, the table value added), y = w/(2 + w) by one `divh`, y·P(y²) with P the degree-12 minimax polynomial (2^−263.7); within 2.4 units |
+| `ln1pseries`, `ln1pwide`, ln(1 + d)/d below 2^−8 and 2^−4 | the 32- and 64-term Taylor series | (ln 2/2)(1 − y)·P(y²), y = d/(2 + d) by one `divh` (2/(2 + d) = 1 − y): the same P below 2^−8, a degree-21 one (2^−266.5) to 2^−4; within 2.7 units, relative however small d is |
+| `expm1series`, (e^d − 1)/d below 2^−8 | the 24-term Taylor series | the degree-21 minimax polynomial on [−2^−8, 2^−8] (2^−271.5), signed Horner (one-word steps by `mul` and `sar`); within 1.6 units |
 
 Every fit is a minimax polynomial, none a Taylor truncation. A step of
 p_j = c_j + p_{j+1}·u whose error reaches the result times u^j runs in one
@@ -407,7 +407,7 @@ The bounds, and what they give:
 | erf, erfc, Φ, ½ ≤ y < 4.81 (g's piece 1) | 90 | 2 × g's 40.5 (Horner 3 units of 2^−252, w's 3.6 units of 2^−256, h·u's floors, normCdf's floored y 5) + 2 × g × 6.1 + 1 | 38.1 | 2^−444 rel. below 7 | 2^−207 ULP |
 | erfc, Φ, 4.81 ≤ y < 18 (g's piece 0) | 26 | 2 × g's 8.5 (Horner 3 units of 2^−256, the rest as piece 1) + 2 × g × 6.1 + 1 | 3.9 | 2^−444 rel. below 7, 2^−392 above | 2^−155 ULP |
 | erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 74 terms), w's floor 2^−254, Q's 2 units, v's 6.1, two floors: under 49; the remainder below the first omitted term | 7.7 | 2^−392 rel. | 2^−155 ULP |
-| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.055, 0.21 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
+| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.055, 0.21 of it | 2^−415; 2^−262 near −1/e | 2^−178 away from −1/e |
 | exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.66 | 2^−492 rel. | 2^−255 ULP |
 | log2, near one | 8 | d P within 3.7, times log2 e: 3.7 log2 e + 2 | 5.10 | 2^−497 rel. | 2^−260 ULP |
 | log2 | 4 | log2m 2.4, the shift into Lm 1 | 1.03 | 2^−489 rel. | 2^−252 ULP |
