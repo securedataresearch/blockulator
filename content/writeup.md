@@ -18,7 +18,7 @@ An 18-decimal number has about 60 bits of fraction, and every `mulWad` rounds. O
 
 - **Measured.** The [ladder](/results/ladder/) runs 14 real calculations, repeated up to 10,000 times, in every library against 300-digit arithmetic. On the [edges](/results/edges/), 139 calls at the ends of each domain, BL19 keeps at least 53 digits.
 - **To the last wei.** On 200 everyday inputs per function, BL19 and BL127, converted in and out of 18 decimals, return the exact integer on every one; Solady and PRBMath are a wei or more off on 4% to 100% of their `exp`, `ln` and `pow` results ([WAD](/results/wad/)).
-- **Proven.** All 17 of BL127's core ops and 18 of BL19's 24 are proven for every input; BL19's other six are fuzzed against their exact specs ([proofs](/proofs/)).
+- **Proven.** 17 of BL127's 19 core ops and 18 of BL19's 24 are proven for every input; BL127's other two and BL19's other six are fuzzed against their exact specs ([proofs](/proofs/)).
 - **No owner.** No contract has storage, an owner, a proxy or an upgrade path, and each is verified on Sourcify and Blockscout.
 
 ## What it costs
