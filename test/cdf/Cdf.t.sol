@@ -60,6 +60,14 @@ contract CdfRmm {
     function erfc(int256) external pure returns (int256, uint256) { revert(); }
 }
 
+/// The same getCDF with the tabulated coefficient a3 (CdfRmm.sol getCDFWithA3): not upstream code, shipped nowhere.
+contract CdfRmmA3 {
+    function normCdf(int256 x) external view returns (int256 r, uint256 g) {
+        g = gasleft(); r = RmmCDF.getCDFWithA3(int128(x)); g -= gasleft();
+    }
+    function erfc(int256) external pure returns (int256, uint256) { revert(); }
+}
+
 interface ICdf {
     function normCdf(int256 x) external view returns (int256, uint256);
     function erfc(int256 x) external view returns (int256, uint256);
@@ -99,5 +107,6 @@ contract Cdf is Test {
         sweep("solstat", ICdf(address(new CdfSolstat())), wad);
         sweep("lyra", ICdf(address(new CdfLyra())), ray, false);
         sweep("rmm", ICdf(address(new CdfRmm())), abdk, false);
+        sweep("rmm-a3", ICdf(address(new CdfRmmA3())), abdk, false);
     }
 }

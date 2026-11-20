@@ -19,3 +19,12 @@ Each library's own code at x = k/32 for k = -192 to 192 (385 points on [-6, 6], 
 | BL19 | BL19, 256-bit float | 4.53e-72 | 71 | 71 | 10,623 | 15,806 |
 | BL127 | BL127, 127.128 fixed point | 1.45e-39 | 22 | 39 | 9,211 | 20,550 |
 | solstat | WAD (10^18) | 7.97e-8 | 1 | 7 | 4,260 | 4,366 |
+
+## RMM-01 with the tabulated coefficient
+
+Not a shipped implementation: RMM-01's `getCDF` with the Abramowitz and Stegun coefficient a3 = 1.421413741 where the shipped code has sqrt(2), on the same points. Upstream's comment on `getCDF` states a maximum error of 3.15x10-3 (primitivefinance/rmm-core @ 8d3ef9b, CumulativeNormalDistribution.sol line 26).
+
+| code | max abs error | digits (min) | digits (median) |
+|---|---:|---:|---:|
+| as shipped | 0.0036 | 2 | 2 |
+| RMM-01 with a3 = 1.421413741 | 6.97e-8 | 2 | 7 |

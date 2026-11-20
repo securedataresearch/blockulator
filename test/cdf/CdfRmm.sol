@@ -20,6 +20,7 @@ library RmmCDF {
     int128 internal constant CDF4 = -0x17401c57014c38f14;
     int128 internal constant CDF5 = 0x10fb844255a12d72e;
 
+    // Upstream's doc comment on getCDF, line 26 of the file at that commit: "@dev Maximum error: 3.15x10-3".
     function getCDF(int128 x) internal pure returns (int128) {
         int128 z = x.div(CDF3);
         int128 t = ONE_INT.div(ONE_INT.add(CDF0.mul(z.abs())));
@@ -36,5 +37,22 @@ library RmmCDF {
         int128 step2 = CDF1.add(t.mul(CDF2.add(step1)));
         int128 result = ONE_INT.sub(t.mul(step2.mul((z.mul(z).neg()).exp())));
         return result;
+    }
+
+    // NOT upstream code, and shipped nowhere: getCDF with the coefficient a3 Abramowitz and Stegun give,
+    // 1.421413741 (0x16be1c55bae156b66 in 64.64), where upstream uses sqrt(2). Everything else is the code above.
+    // It is here to measure what the one constant costs (make cdf, cdf.json .corrected).
+    int128 internal constant A3 = 0x16be1c55bae156b66;
+
+    function getCDFWithA3(int128 x) internal pure returns (int128) {
+        int128 z = x.div(CDF3);
+        int128 t = ONE_INT.div(ONE_INT.add(CDF0.mul(z.abs())));
+        int128 step1 = t.mul(A3.add(t.mul(CDF4.add(t.mul(CDF5)))));
+        int128 step2 = CDF1.add(t.mul(CDF2.add(step1)));
+        int128 erf = ONE_INT.sub(t.mul(step2.mul((z.mul(z).neg()).exp())));
+        if (z < 0) {
+            erf = erf.neg();
+        }
+        return (HALF_INT).mul(ONE_INT.add(erf));
     }
 }
