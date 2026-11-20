@@ -36,7 +36,7 @@ The file is [`test/examples/CheckExample.sol`]({{ config.extra.repo }}/blob/mast
 | 3 | 20085536923187667741 | 20085536923187667740 | 1 wei |
 | 10 | 22026465794806716516980 | 22026465794806716516957 | 23 wei |
 
-Over the 200 inputs x = 0.05, 0.10, … 10.00, Solady's result differs from the correctly rounded one on 108, and the largest gap is 222 wei. A gap of 23 wei at e<sup>10</sup> is one part in 10<sup>21</sup>, so whether it matters depends on what you do with the result next: a single payout does not notice it, and an index multiplied ten thousand times can.
+Over the 200 inputs x = 0.05, 0.10, … 10.00, Solady's result differs from the correctly rounded one on 108, and the largest gap is 222 wei. A gap of 23 wei at e<sup>10</sup> is one part in 10<sup>21</sup>. Whether that matters depends on what your contract does with the result next, and the check tells you the size of the error you are deciding about.
 
 ## Checking your own function
 
