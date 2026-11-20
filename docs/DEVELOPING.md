@@ -6,8 +6,8 @@ The repository layout, the build and the make targets. The project overview is i
 
 ```
 blockulator/
-├── contracts/src/bl127/        BL127.yul.src and its five generated files (make gen)
-├── contracts/src/bl19/        BL19.yul.src and its fourteen generated files, four objects (make gen-bl19)
+├── contracts/src/bl127/        BL127.yul.src and its seventeen generated files, five objects (make gen)
+├── contracts/src/bl19/        BL19.yul.src and its seventeen generated files, five objects (make gen-bl19)
 ├── contracts/src/ladder/       LadderRunner, EdgeRunner, one adapter per library, vendor/ (Balancer; the rest transcribed)
 ├── contracts/archive/huff/     the Huff implementation and its Sepolia bytecode (BL127's equivalence baseline)
 ├── contracts/deployments/      CREATE2 records: BL127, BL19, Ladder
@@ -22,9 +22,9 @@ blockulator/
 ├── docs/talks/                 the talk
 ├── config.toml, build.sh       the Zola site
 ├── content/, templates/        pages and templates; tables and charts are Tera components
-├── static/css/site.css         the theme: colour tokens (light, dark), background, glass
+├── static/css/blockulator.css  what this site styles itself; the theme is sdr-ui's, pinned in config.toml
 ├── static/js/islands/          charts, scenario tabs, cell notes
-└── static/data/                symlinks into docs/ and contracts/, served as /data
+└── static/data/                symlinks into docs/ and contracts/, and three regular files, served as /data
 ```
 
 ## Build and test
@@ -38,7 +38,7 @@ git submodule update --init --recursive   # solady, prb-math, abdk, forge-std
 uv sync                                   # mpmath, keccak
 
 make gen gen-bl19       # regenerate each library's generated files from its .yul.src
-make build               # forge build; BL19.yul is compiled by solc standard-json (make build-bl19)
+make build               # forge build; every Yul object is compiled by solc standard-json (make build-yul)
 make test                # gen-check, vectors-check, every suite under test/bl127, test/bl19, test/ladder, test/replays, test/examples
 make bench bench-bl19   # gas ladders -> docs/benchmarks/gas.{json,md}, gas19.{json,md}
 make ladder              # terminal-precision ladder -> docs/benchmarks/ladder.{json,md}
@@ -47,11 +47,13 @@ make pi-compare          # docs/benchmarks/pi.md
 make precision-report precision-report-bl19
 make size size-bl19     # runtime bytes against the 24,576 limit (BL127; BL19, BL19E, BL19H, BL19N, BL19S)
 make sweep               # random inputs through every op, both stages -> docs/benchmarks/sweep.{json,md}
-make site site-check     # zola build -> public/; zola check, the symlink test, deno task test
+make site site-check     # zola build -> public/; the site-data and agent-file checks, zola check, the symlink test, deno task test
 ```
 
 `make *-check` targets fail when a committed dataset no longer matches the
-code; CI runs them all. Deploying follows the records: `make predict`,
+code. CI runs `gen-check`, `vectors-check`, `gen-inputs-check`, `ladder-check`,
+`edges-check` and `size-inline-check`; `cdf-check`, `gen-edges-check`,
+`readme-check` and the site-data check inside `site-check` are run by hand. Deploying follows the records: `make predict`,
 `deploy-sepolia`, `verify-sepolia`, `smoke-sepolia` for BL127, the `-bl19`,
 `-bl19e`, `-bl19h`, `-bl19n` and `-bl19s` variants for BL19's five objects (one
 pattern rule each over the objects table in `scripts/bl127/gen.py`), and `predict-ladder` / `deploy-ladder-sepolia` /
