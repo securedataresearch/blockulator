@@ -33,4 +33,4 @@ Both libraries need the CLZ opcode (EIP-7939), so they run only on chains that h
 
 ## Using them
 
-[Integrating](/library/integrating/) has the rules for using either library inside a contract. [Migrating](/library/migrating/) covers moving from Solady, PRBMath, ABDK or ABDKMathQuad, and checking a library you intend to keep.
+[Check your math](/library/checking/) shows how to keep the library you have and measure it against BL19. [Integrating](/library/integrating/) has the rules for using either library inside a contract. [Migrating](/library/migrating/) covers moving from Solady, PRBMath, ABDK or ABDKMathQuad, and checking a library you intend to keep.

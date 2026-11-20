@@ -35,7 +35,7 @@ label = "Formats"
 items = [["/library/", "Overview"], ["/library/bl19/", "BL19"], ["/library/bl127/", "BL127"]]
 [[extra.nav.library]]
 label = "Guides"
-items = [["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]]
+items = [["/library/checking/", "Checking"], ["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]]
 
 [[extra.nav.writeup]]
 label = ""
