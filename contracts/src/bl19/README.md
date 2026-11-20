@@ -195,11 +195,11 @@ p_j = c_j + p_{j+1}·u whose error reaches the result times u^j runs in one
 word, ((p >> a)·(u >> b)) >> (256 − a − b), when that error times u^j is
 under 2^−9 units; the generator picks a and b and adds the excess (under
 2^−6 units in all) to the bound. The candidates that did not pay or did not
-fit were a third exp table level (1.5 KiB more, when BL19S, which
+fit were a third exp table level (BL19S, which
 carried the kernels, had 313 bytes left), a minimax rational corrector for
 exp, (A + zB)/(A − zB) by one `divh` (the division costs
-more than the products it saves), two 32-entry log levels (1 KiB
-more than two 16-entry ones), and log2 straight from the reduced
+more than the products it saves), two 32-entry log levels (larger
+than two 16-entry ones), and log2 straight from the reduced
 w without the division.
 
 ## Rounding
