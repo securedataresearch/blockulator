@@ -316,9 +316,14 @@ contract GasLadder19 is BL19Harness {
     // ---- drivers --------------------------------------------------------
 
     function _row1(string memory op, uint256 i, int256 x, bool uintArg, string memory set) internal view {
+        _row1x(op, i, x, uintArg, set, true);
+    }
+
+    /// ext false leaves out the object, whose figure includes the external call (see TYPICAL_INLINE)
+    function _row1x(string memory op, uint256 i, int256 x, bool uintArg, string memory set, bool ext) internal view {
         string memory label = vm.toString(x);
         bytes memory call = abi.encodeWithSignature(string.concat(op, uintArg ? "(uint256)" : "(int256)"), x);
-        _emit(op, i, label, "yul", _ext(_objFor(op), call), set);
+        if (ext) _emit(op, i, label, "yul", _ext(_objFor(op), call), set);
         _emit(op, i, label, "lib", _timed(abi.encodeCall(this.cLib1, (op, x)), abi.encodeCall(this.cLib1, ("id", x))), set);
         _emit(op, i, label, "bl127lib", _bl127Gas1(op, x), set);
         _emit(op, i, label, "quad", _quadGas1(op, x), set);
@@ -355,8 +360,13 @@ contract GasLadder19 is BL19Harness {
     }
 
     function _row2(string memory op, uint256 i, int256 a, int256 b, string memory set) internal view {
+        _row2x(op, i, a, b, set, true);
+    }
+
+    /// ext false leaves out the object, whose figure includes the external call (see TYPICAL_INLINE)
+    function _row2x(string memory op, uint256 i, int256 a, int256 b, string memory set, bool ext) internal view {
         string memory label = string.concat(vm.toString(a), ",", vm.toString(b));
-        _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256)"), a, b)), set);
+        if (ext) _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256)"), a, b)), set);
         _emit(op, i, label, "lib", _timed(abi.encodeCall(this.cLib2, (op, a, b)), abi.encodeCall(this.cLib2, ("id", a, b))), set);
         _emit(op, i, label, "bl127lib", _bl127Gas2(op, a, b), set);
         _emit(op, i, label, "quad", _quadGas2(op, a, b), set);
@@ -460,8 +470,13 @@ contract GasLadder19 is BL19Harness {
     }
 
     function _row3(string memory op, uint256 i, int256 a, int256 b, int256 c, string memory set) internal view {
+        _row3x(op, i, a, b, c, set, true);
+    }
+
+    /// ext false leaves out the object, whose figure includes the external call (see TYPICAL_INLINE)
+    function _row3x(string memory op, uint256 i, int256 a, int256 b, int256 c, string memory set, bool ext) internal view {
         string memory label = string.concat(vm.toString(a), ",", vm.toString(b), ",", vm.toString(c));
-        _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256,int256)"), a, b, c)), set);
+        if (ext) _emit(op, i, label, "yul", _ext(_objFor(op), abi.encodeWithSignature(string.concat(op, "(int256,int256,int256)"), a, b, c)), set);
         _emit(op, i, label, "lib", _timed(abi.encodeCall(this.cLib3, (op, a, b, c)), abi.encodeCall(this.cLib3, ("id", a, b, c))), set);
         _emit(op, i, label, "bl127lib", _bl127Gas3(op, a, b, c), set);
         _emit(op, i, label, "quad", NA, set);
@@ -486,6 +501,12 @@ contract GasLadder19 is BL19Harness {
     // by sgn (1 positive, -1 negative, 0 either).
 
     uint256 constant TYPICAL = 8;
+    // The inline forms (BL19Lib, BL127Lib, ABDKMathQuad) are timed inside their entry point, so a row's figure does
+    // not depend on the rows before it, and they are measured on TYPICAL_INLINE inputs: the first TYPICAL with the
+    // object as well (test_ladder_typical), the rest alone (test_ladder_typical_inline_*). The object's figure
+    // includes the external call and moves with what the test has already run, so it keeps TYPICAL inputs. Not
+    // above 100: a second argument is drawn at index i + 100 and a third at i + 200.
+    uint256 constant TYPICAL_INLINE = 100;
 
     function _rnd(string memory op, uint256 i) internal pure returns (uint256) {
         return uint256(keccak256(abi.encode("typical", op, i)));
@@ -499,8 +520,9 @@ contract GasLadder19 is BL19Harness {
         x = _mk(neg, e, f);
     }
 
-    function _typ1(string memory op, int256 elo, int256 ehi, int256 sgn) internal view {
-        for (uint256 i; i < TYPICAL; i++) _row1(op, i, _typ(op, i, elo, ehi, sgn), false, "typical");
+    /// Rows lo..hi-1 of a one-argument op: every form, or the inline forms alone.
+    function _typ1(string memory op, int256 elo, int256 ehi, int256 sgn, uint256 lo, uint256 hi, bool all) internal view {
+        for (uint256 i = lo; i < hi; i++) _row1x(op, i, _typ(op, i, elo, ehi, sgn), false, "typical", all);
     }
 
     /// A small rate r below 2^-k and a plain integer n of up to k bits, so
@@ -512,39 +534,58 @@ contract GasLadder19 is BL19Harness {
         r = _typ(op, i, -40, -int256(k) - 1, 1);
     }
 
-    function test_ladder_typical() public view {
-        _warm();
-        _typ1("sqrt", -300, 300, 1);
-        _typ1("exp", -6, 5, 0);
-        _typ1("ln", -60, 60, 1);
-        _typ1("log1p", -30, 4, 1);
-        _typ1("expm1", -30, 5, 0);
-        _typ1("erf", -6, 2, 0);
-        _typ1("erfc", -4, 3, 0);
-        _typ1("normCdf", -4, 3, 0);
-        _typ1("lambertW0", -10, 40, 1);
-        _typ1("lambertWm1", -60, -3, -1);
-        // #79
-        _typ1("exp2", -6, 6, 0);
-        _typ1("exp10", -6, 5, 0);
-        _typ1("log2", -60, 60, 1);
-        _typ1("log10", -60, 60, 1);
-        _typ1("cbrt", -300, 300, 0);
-        _typ1("sinh", -6, 5, 0);
-        _typ1("cosh", -6, 5, 0);
-        _typ1("tanh", -6, 4, 0);
-        _typ1("atanh", -12, -1, 0);
-        for (uint256 i; i < TYPICAL; i++) {
-            _row2("pow", i, _typ("pow", i, -4, 4, 1), _typ("pow", i + 100, -4, 3, 0), "typical");
-            (int256 r, int256 n) = _typRate("powu", i);
-            _row2("powu", i, BL19Lib.add(ONE, r), n, "typical");
-            (r, n) = _typRate("compound", i);
-            _row2("compound", i, r, n, "typical");
-            _row2("hypot", i, _typ("hypot", i, -60, 60, 0), _typ("hypot", i + 100, -60, 60, 0), "typical");
-            _row2("gavg", i, _typ("gavg", i, -60, 60, 1), _typ("gavg", i + 100, -60, 60, 1), "typical");
-            _row3("lerp", i, _typ("lerp", i, -8, 8, 0), _typ("lerp", i + 100, -8, 8, 0), _typ("lerp", i + 200, -4, -1, 1), "typical");
+    /// The typical ops in five parts, in the order test_ladder_typical has always run them.
+    uint256 constant PARTS = 5;
+
+    function _typicalPart(uint256 part, uint256 lo, uint256 hi, bool all) internal view {
+        if (part == 0) {
+            _typ1("sqrt", -300, 300, 1, lo, hi, all);
+            _typ1("exp", -6, 5, 0, lo, hi, all);
+            _typ1("ln", -60, 60, 1, lo, hi, all);
+            _typ1("log1p", -30, 4, 1, lo, hi, all);
+            _typ1("expm1", -30, 5, 0, lo, hi, all);
+        } else if (part == 1) {
+            _typ1("erf", -6, 2, 0, lo, hi, all);
+            _typ1("erfc", -4, 3, 0, lo, hi, all);
+            _typ1("normCdf", -4, 3, 0, lo, hi, all);
+            _typ1("lambertW0", -10, 40, 1, lo, hi, all);
+            _typ1("lambertWm1", -60, -3, -1, lo, hi, all);
+        } else if (part == 2) {
+            // #79
+            _typ1("exp2", -6, 6, 0, lo, hi, all);
+            _typ1("exp10", -6, 5, 0, lo, hi, all);
+            _typ1("log2", -60, 60, 1, lo, hi, all);
+            _typ1("log10", -60, 60, 1, lo, hi, all);
+            _typ1("cbrt", -300, 300, 0, lo, hi, all);
+        } else if (part == 3) {
+            _typ1("sinh", -6, 5, 0, lo, hi, all);
+            _typ1("cosh", -6, 5, 0, lo, hi, all);
+            _typ1("tanh", -6, 4, 0, lo, hi, all);
+            _typ1("atanh", -12, -1, 0, lo, hi, all);
+        } else {
+            for (uint256 i = lo; i < hi; i++) {
+                _row2x("pow", i, _typ("pow", i, -4, 4, 1), _typ("pow", i + 100, -4, 3, 0), "typical", all);
+                (int256 r, int256 n) = _typRate("powu", i);
+                _row2x("powu", i, BL19Lib.add(ONE, r), n, "typical", all);
+                (r, n) = _typRate("compound", i);
+                _row2x("compound", i, r, n, "typical", all);
+                _row2x("hypot", i, _typ("hypot", i, -60, 60, 0), _typ("hypot", i + 100, -60, 60, 0), "typical", all);
+                _row2x("gavg", i, _typ("gavg", i, -60, 60, 1), _typ("gavg", i + 100, -60, 60, 1), "typical", all);
+                _row3x("lerp", i, _typ("lerp", i, -8, 8, 0), _typ("lerp", i + 100, -8, 8, 0), _typ("lerp", i + 200, -4, -1, 1), "typical", all);
+            }
         }
     }
+
+    function test_ladder_typical() public view {
+        _warm();
+        for (uint256 p; p < PARTS; p++) _typicalPart(p, 0, TYPICAL, true);
+    }
+
+    function test_ladder_typical_inline_0() public view { _typicalPart(0, TYPICAL, TYPICAL_INLINE, false); }
+    function test_ladder_typical_inline_1() public view { _typicalPart(1, TYPICAL, TYPICAL_INLINE, false); }
+    function test_ladder_typical_inline_2() public view { _typicalPart(2, TYPICAL, TYPICAL_INLINE, false); }
+    function test_ladder_typical_inline_3() public view { _typicalPart(3, TYPICAL, TYPICAL_INLINE, false); }
+    function test_ladder_typical_inline_4() public view { _typicalPart(4, TYPICAL, TYPICAL_INLINE, false); }
 
     function test_ladder_conversions() public view {
         _warm();

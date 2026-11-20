@@ -1,12 +1,12 @@
 # Blockulator
 
 <!-- badges:begin -->
-[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-497%20forge%20tests-3f6d9c)](test) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
+[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-506%20forge%20tests-3f6d9c)](test) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
 <!-- badges:end -->
 
 **The definitive source for precision.** Two libraries, one `int256` each: BL127, 38 digits of fixed point, every op correctly rounded; BL19, 71 digits of float, every op correctly rounded or exact. Checked on chain, competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)
 
-On typical inputs BL127's ln and pow cost 1,944 and 3,317 gas against PRBMath's 7,083 and 10,065, with 38 digits against 18; exp is 2,835 against 2,816. BL19's ln and pow cost 3,106 and 5,964 against ABDKMathQuad's 16,356 and 23,479, with 71 digits against 34; ABDKMathQuad's sqrt is cheaper, 760 against 1,205. Across the 326 live Aave and Morpho markets at the survey block, the deployed accrual keeps a median 7.2 correct digits of the pending interest; BL127 keeps 30 and BL19 67.
+On typical inputs BL127's ln and pow cost 1,944 and 3,316 gas against PRBMath's 7,022 and 10,020, with 38 digits against 18; exp costs about the same, 2,834 against 2,844. BL19's ln and pow cost 3,100 and 5,940 against ABDKMathQuad's 16,388 and 23,406, with 71 digits against 34; ABDKMathQuad's sqrt is cheaper, 760 against 1,203. Across the 326 live Aave and Morpho markets at the survey block, the deployed accrual keeps a median 7.2 correct digits of the pending interest; BL127 keeps 30 and BL19 67.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/digits-dark.svg">
@@ -24,20 +24,20 @@ On typical inputs BL127's ln and pow cost 1,944 and 3,317 gas against PRBMath's 
 | | digits | add | mul | div | exp<sup>t</sup> | ln<sup>t</sup> | pow<sup>t</sup> | sqrt<sup>t</sup> |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | *floating point* | | | | | | | | |
-| **BL19** | **71** | **662** | **530** | **800** | **3,278** | **3,106** | **5,964** | **1,205** |
-| ABDKMathQuad | 34 | 734 | 709 | 818 | 5,668 | 16,356 | 23,479 | 760 |
+| **BL19** | **71** | **650** | **530** | **804** | **3,300** | **3,100** | **5,940** | **1,203** |
+| ABDKMathQuad | 34 | 734 | 709 | 818 | 5,806 | 16,388 | 23,406 | 760 |
 | *fixed point* | | | | | | | | |
-| **BL127** | **38** | **128** | **267** | **413** | **2,835** | **1,944** | **3,317** | **469** |
-| ABDKMath64x64 | 19 | 162 | 171 | 221 | 3,380 | 7,080 |  | 828 |
-| PRBMath SD59x18 | 18 | 189 | 485 | 509 | 2,816 | 7,083 | 10,065 | 978 |
-| PRBMath UD60x18 | 18 | 150 | 237 | 261 | 2,720 | 6,474 | 9,544 | 824 |
+| **BL127** | **38** | **128** | **267** | **413** | **2,834** | **1,944** | **3,316** | **815** |
+| ABDKMath64x64 | 19 | 162 | 171 | 221 | 3,373 | 7,091 |  | 822 |
+| PRBMath SD59x18 | 18 | 189 | 485 | 509 | 2,844 | 7,022 | 10,020 | 986 |
+| PRBMath UD60x18 | 18 | 150 | 237 | 261 | 2,671 | 6,459 | 9,326 | 832 |
 | Solady | 18 | 3 | 126 | 93 | 430 | 556 | 1,279 | 393 |
 | Solmate | 18 |  | 131 | 97 | 430 | 632 | 1,355 | 456 |
-| Balancer LogExpMath | 18 |  |  |  | 1,040 | 1,091 | 2,223 | 2,351 |
-| snekmate | 18 |  |  |  | 604 | 1,226 |  |  |
-| OpenZeppelin Math | 18 |  |  |  |  |  |  | 766 |
+| Balancer LogExpMath | 18 |  |  |  | 1,062 | 1,135 | 2,237 | 2,381 |
+| snekmate | 18 |  |  |  | 604 | 1,253 |  |  |
+| OpenZeppelin Math | 18 |  |  |  |  |  |  | 769 |
 
-Median gas per inline call, over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder; digits are precision at 1. BL19 is cheaper than ABDKMathQuad on `add`, `mul`, `div`, `exp`, `ln` and `pow`, not `sqrt`, and over these 7 ops carries 2.1× its digits at 32% of its mean gas. BL127 carries twice the digits of every fixed-point library here; it is cheaper than OpenZeppelin Math on every op they share, and than ABDKMath64x64 on `add`, `exp`, `ln` and `sqrt`, and than PRBMath SD59x18 on `add`, `mul`, `div`, `ln`, `pow` and `sqrt`, and than PRBMath UD60x18 on `add`, `ln`, `pow` and `sqrt`. Solady, Solmate, Balancer LogExpMath and snekmate are cheaper on most ops, at 18 digits; Solady's `add` is the unchecked `rawAdd`.
+Median gas per inline call, over 100 random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder, good to about 1 or 2 percent; digits are precision at 1. BL19 is cheaper than ABDKMathQuad on `add`, `mul`, `exp`, `ln` and `pow`, about the same on `div`, and dearer on `sqrt`, and over these 7 ops carries 2.1× its digits at 32% of its mean gas. BL127 carries twice the digits of every fixed-point library here. It is cheaper than ABDKMath64x64 on `add`, `exp` and `ln`, about the same on `sqrt`, and dearer on `mul` and `div`. It is cheaper than PRBMath SD59x18 on `add`, `mul`, `div`, `ln`, `pow` and `sqrt`, about the same on `exp`. It is cheaper than PRBMath UD60x18 on `add`, `ln`, `pow` and `sqrt`, and dearer on `mul`, `div` and `exp`. Solady, Solmate, Balancer LogExpMath, snekmate and OpenZeppelin Math are cheaper on most ops, at 18 digits; Solady's `add` is the unchecked `rawAdd`.
 <!-- gas:end -->
 
 Every op and library: [`gas.md`](docs/benchmarks/gas.md), [`gas19.md`](docs/benchmarks/gas19.md). Compile with `via_ir = true`; it takes another 10–33% off the inline libraries.

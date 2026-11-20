@@ -32,7 +32,7 @@ Subtraction is worse. An amortising loan computes `b = b·(1+r) − payment` eve
 
 ## What it costs
 
-Inline library, median gas per call: random inputs that take no shortcut for `exp`, `ln`, `pow`, `sqrt` and `normCdf`, a fixed set across magnitudes for `mul` and `div`. A blank is an op the library does not offer; the [per-op tables](/results/ops/) have every op.
+Inline library, median gas per call: 100 random inputs that take no shortcut for `exp`, `ln`, `pow`, `sqrt` and `normCdf`, a fixed set across magnitudes for `mul` and `div`. A blank is an op the library does not offer; the [per-op tables](/results/ops/) have every op.
 
 | op | BL127 | BL19 | Quad | Solady | PRBMath | ABDK | Balancer |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -44,7 +44,7 @@ Inline library, median gas per call: random inputs that take no shortcut for `ex
 | pow | {{ <gas op="pow" /> }} | {{ <gas op="pow" lib="bl19" /> }} | {{ <gas op="pow" lib="bl19" form="quad" /> }} | {{ <gas op="pow" form="solady" /> }} | {{ <gas op="pow" form="prb" /> }} | {{ <gas op="pow" form="abdk" /> }} | {{ <gas op="pow" form="balancer" /> }} |
 | normCdf | {{ <gas op="normCdf" /> }} | {{ <gas op="normCdf" lib="bl19" /> }} | | | | | |
 
-BL127 costs less than PRBMath on every op both offer here but `exp` (2,835 gas against 2,816), and more than Solady on every op Solady offers, because it computes twice the bits. The floats, BL19 and Quad, pay for their moving point on every `add` and `mul`. BL19 costs less than Quad on every op here but `sqrt`.
+BL127 costs less than PRBMath on every op both offer here, except that `exp` costs about the same (2,834 gas against 2,844), and it costs more than Solady on every op Solady offers, because it computes twice the bits. The floats, BL19 and Quad, pay for their moving point on every `add` and `mul`. BL19 costs less than Quad on every op here except `div`, where the two cost about the same, and `sqrt`, where Quad costs less.
 
 ## What it does not fix
 

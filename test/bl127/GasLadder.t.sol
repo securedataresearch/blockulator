@@ -553,6 +553,12 @@ contract GasLadder is BL127Harness {
     // negative, 0 either).
 
     uint256 constant TYPICAL = 8;
+    // The inline forms (BL127Lib and the competitors) are timed inside their entry point, so a row's figure does
+    // not depend on the rows before it, and they are measured on TYPICAL_INLINE inputs: the first TYPICAL with
+    // every form (test_ladder_typical), the rest alone (test_ladder_typical_inline_*). The forms that include the
+    // external call (Huff, the objects, the Caller) keep TYPICAL inputs: their figure moves with what the test
+    // has already run. Not above 100: pow's second argument is drawn at index i + 100.
+    uint256 constant TYPICAL_INLINE = 100;
 
     function _rnd(string memory op, uint256 i) internal pure returns (uint256) {
         return uint256(keccak256(abi.encode("typical", op, i)));
@@ -566,8 +572,26 @@ contract GasLadder is BL127Harness {
         if (sgn < 0 || (sgn == 0 && (h >> 64) & 1 == 1)) x = -x;
     }
 
-    function _typ1(string memory op, int256 elo, int256 ehi, int256 sgn, bool competitors) internal view {
-        for (uint256 i; i < TYPICAL; i++) _row1(op, i, _typ(op, i, elo, ehi, sgn), competitors, "typical");
+    /// Rows lo..hi-1 of a one-argument op: every form, or the inline forms alone.
+    function _typ1(string memory op, int256 elo, int256 ehi, int256 sgn, bool competitors, uint256 lo, uint256 hi, bool all) internal view {
+        for (uint256 i = lo; i < hi; i++) {
+            int256 x = _typ(op, i, elo, ehi, sgn);
+            if (all) _row1(op, i, x, competitors, "typical");
+            else _inline1(op, i, x, competitors);
+        }
+    }
+
+    function _inline1(string memory op, uint256 i, int256 x, bool competitors) internal view {
+        string memory label = vm.toString(x);
+        _emit(op, i, label, "lib", _libGas1(op, x), "typical");
+        if (competitors) _comp1(op, i, label, x, "typical");
+    }
+
+    function _typ2(string memory op, uint256 i, int256 a, int256 b, bool competitors, bool all) internal view {
+        if (all) { _row2(op, i, a, b, competitors, "typical"); return; }
+        string memory label = string.concat(vm.toString(a), ",", vm.toString(b));
+        _emit(op, i, label, "lib", _libGas2(op, a, b), "typical");
+        if (competitors) _comp2(op, i, label, a, b, "typical");
     }
 
     /// A small rate r and an integer n with r n < 1, so (1 + r)^n stays near
@@ -579,35 +603,52 @@ contract GasLadder is BL127Harness {
         r = _typ(op, i, -40, -int256(k) - 1, 1);
     }
 
-    function test_ladder_typical() public view {
-        _warm();
-        _typ1("exp", -4, 5, 0, true);
-        _typ1("exp2", -4, 5, 0, true);
-        _typ1("exp10", -4, 4, 0, false);
-        _typ1("expm1", -8, 5, 0, false);
-        _typ1("ln", -60, 60, 1, true);
-        _typ1("log2", -60, 60, 1, true);
-        _typ1("log10", -60, 60, 1, true);
-        _typ1("log1p", -20, 4, 1, false);
-        _typ1("sqrt", -60, 100, 1, true);
-        _typ1("cbrt", -60, 100, 0, true);
-        _typ1("sinh", -8, 5, 0, false);
-        _typ1("cosh", -8, 5, 0, false);
-        _typ1("tanh", -8, 5, 0, false);
-        _typ1("atanh", -12, -2, 0, false);
-        _typ1("erf", -4, 2, 0, false);
-        _typ1("erfc", -4, 2, 0, false);
-        _typ1("normCdf", -4, 3, 0, false);
-        _typ1("lambertW0", -10, 40, 1, true);
-        _typ1("lambertWm1", -30, -3, -1, true);
-        for (uint256 i; i < TYPICAL; i++) {
-            _row2("pow", i, _typ("pow", i, -4, 4, 1), _typ("pow", i + 100, -4, 3, 0), true, "typical");
-            (int256 r, int256 n) = _typRate("powu", i);
-            _row2("powu", i, ONE + r, n << 128, true, "typical");
-            (r, n) = _typRate("compound", i);
-            _row2("compound", i, r, n << 128, false, "typical");
+    /// The typical ops in four parts, in the order test_ladder_typical has always run them.
+    uint256 constant PARTS = 4;
+
+    function _typicalPart(uint256 part, uint256 lo, uint256 hi, bool all) internal view {
+        if (part == 0) {
+            _typ1("exp", -4, 5, 0, true, lo, hi, all);
+            _typ1("exp2", -4, 5, 0, true, lo, hi, all);
+            _typ1("exp10", -4, 4, 0, false, lo, hi, all);
+            _typ1("expm1", -8, 5, 0, false, lo, hi, all);
+            _typ1("ln", -60, 60, 1, true, lo, hi, all);
+            _typ1("log2", -60, 60, 1, true, lo, hi, all);
+            _typ1("log10", -60, 60, 1, true, lo, hi, all);
+        } else if (part == 1) {
+            _typ1("log1p", -20, 4, 1, false, lo, hi, all);
+            _typ1("sqrt", -60, 100, 1, true, lo, hi, all);
+            _typ1("cbrt", -60, 100, 0, true, lo, hi, all);
+            _typ1("sinh", -8, 5, 0, false, lo, hi, all);
+            _typ1("cosh", -8, 5, 0, false, lo, hi, all);
+            _typ1("tanh", -8, 5, 0, false, lo, hi, all);
+            _typ1("atanh", -12, -2, 0, false, lo, hi, all);
+        } else if (part == 2) {
+            _typ1("erf", -4, 2, 0, false, lo, hi, all);
+            _typ1("erfc", -4, 2, 0, false, lo, hi, all);
+            _typ1("normCdf", -4, 3, 0, false, lo, hi, all);
+            _typ1("lambertW0", -10, 40, 1, true, lo, hi, all);
+            _typ1("lambertWm1", -30, -3, -1, true, lo, hi, all);
+        } else {
+            for (uint256 i = lo; i < hi; i++) {
+                _typ2("pow", i, _typ("pow", i, -4, 4, 1), _typ("pow", i + 100, -4, 3, 0), true, all);
+                (int256 r, int256 n) = _typRate("powu", i);
+                _typ2("powu", i, ONE + r, n << 128, true, all);
+                (r, n) = _typRate("compound", i);
+                _typ2("compound", i, r, n << 128, false, all);
+            }
         }
     }
+
+    function test_ladder_typical() public view {
+        _warm();
+        for (uint256 p; p < PARTS; p++) _typicalPart(p, 0, TYPICAL, true);
+    }
+
+    function test_ladder_typical_inline_0() public view { _typicalPart(0, TYPICAL, TYPICAL_INLINE, false); }
+    function test_ladder_typical_inline_1() public view { _typicalPart(1, TYPICAL, TYPICAL_INLINE, false); }
+    function test_ladder_typical_inline_2() public view { _typicalPart(2, TYPICAL, TYPICAL_INLINE, false); }
+    function test_ladder_typical_inline_3() public view { _typicalPart(3, TYPICAL, TYPICAL_INLINE, false); }
 
     function test_ladder_arith() public view {
         _warm();

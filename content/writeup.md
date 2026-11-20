@@ -23,7 +23,7 @@ An 18-decimal number has about 60 bits of fraction, and every `mulWad` rounds. O
 
 ## What it costs
 
-BL127 costs less than PRBMath's SD59x18 on `add`, `mul`, `div`, `ln`, `pow` and `sqrt`; on `exp` it is 2,835 gas against 2,816. BL19 costs less than ABDKMathQuad on all of those but `sqrt`. Solady is cheaper than both, at 18 digits ([per op](/results/ops/)).
+BL127 costs less than PRBMath's SD59x18 on `add`, `mul`, `div`, `ln`, `pow` and `sqrt`; on `exp` the two cost about the same, 2,834 gas against 2,844. BL19 costs less than ABDKMathQuad on `add`, `mul`, `exp`, `ln` and `pow`, about the same on `div`, and more on `sqrt`. Solady is cheaper than both, at 18 digits ([per op](/results/ops/)).
 
 ## When to use it
 

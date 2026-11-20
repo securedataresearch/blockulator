@@ -55,7 +55,10 @@ def gas_section(reg: dict) -> dict:
         return s["median"] if s else None
 
     def value(lib, op):
-        return median(g19, op, "lib") if lib == "bl19" else median(g127, op, "lib" if lib == "bl127" else lib)
+        # the two floats from BL19's benchmark, where they run on the same inputs; every other library from BL127's
+        if lib in ("bl19", "quad"):
+            return median(g19, op, "lib" if lib == "bl19" else "quad")
+        return median(g127, op, "lib" if lib == "bl127" else lib)
 
     offered = {op: [lib for lib in reg if value(lib, op) is not None] for op in g127["ops"]}
     ops = CORE_OPS + sorted((op for op, libs in offered.items() if sum(not reg[l].get("ours") for l in libs) >= 3 and op not in CORE_OPS), key=lambda o: (-len(offered[o]), o))

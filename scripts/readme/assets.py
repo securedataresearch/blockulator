@@ -143,26 +143,33 @@ def gas_block():
             rows.append(f"| {b(NAMES[lib])} | {b(str(DIGITS[lib]))} | " + " | ".join(cells) + " |")
 
     shared = lambda a, b: [op for op in OPS if m[a][op] and m[b][op]]
-    won = lambda a, b: [op for op in shared(a, b) if m[a][op] < m[b][op]]
+    # cheaper means at least 2% less: the inline figures are good to about 1 or 2 percent
+    won = lambda a, b: [op for op in shared(a, b) if m[a][op] * 100 < m[b][op] * 98]
+    lost = lambda a, b: [op for op in shared(a, b) if m[b][op] * 100 < m[a][op] * 98]
+    tied = lambda a, b: [op for op in shared(a, b) if op not in won(a, b) and op not in lost(a, b)]
     say = lambda xs: ", ".join(xs[:-1]) + (" and " if len(xs) > 1 else "") + (xs[-1] if xs else "")
     code = lambda ops: say([f"`{x}`" for x in ops])
 
     def wins(a, b):
-        w, s = won(a, b), shared(a, b)
-        return "every op here" if w == s else code(w) + ", not " + " or ".join(f"`{x}`" for x in s if x not in w)
+        w, s, t, l = won(a, b), shared(a, b), tied(a, b), lost(a, b)
+        if w == s:
+            return "every op here"
+        return code(w) + (f", about the same on {code(t)}" if t else "") + (f", and dearer on {code(l)}" if l else "")
 
     others = [l for l in FIXED[1:] if l in m]
     always = [NAMES[l] for l in others if won("bl127", l) == shared("bl127", l)]
-    mostly = [f"{NAMES[l]} on {code(won('bl127', l))}" for l in others
-              if won("bl127", l) != shared("bl127", l) and 2 * len(won("bl127", l)) > len(shared("bl127", l))]
-    cheaper = [NAMES[l] for l in others if 2 * len(won("bl127", l)) <= len(shared("bl127", l))]
+    # BL127 cheaper on more ops than the other library is, but not on all; and the reverse
+    mostly = [f"{NAMES[l]} on {wins('bl127', l)}" for l in others
+              if won("bl127", l) != shared("bl127", l) and len(won("bl127", l)) > len(lost("bl127", l))]
+    cheaper = [NAMES[l] for l in others if len(won("bl127", l)) <= len(lost("bl127", l))]
     common = shared("bl19", "quad")
     mean = {l: sum(m[l][op] for op in common) / len(common) for l in ("bl19", "quad")}
-    text = (f"Median gas per inline call, over random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder; digits are precision at 1. "
+    text = (f"Median gas per inline call, over 100 random inputs that take no shortcut (<sup>t</sup>) or the op's input ladder, good to about 1 or 2 percent; digits are precision at 1. "
             f"BL19 is cheaper than ABDKMathQuad on {wins('bl19', 'quad')}, and over these {len(common)} ops carries "
             f"{DIGITS['bl19'] / DIGITS['quad']:.1f}× its digits at {round(100 * mean['bl19'] / mean['quad'])}% of its mean gas. "
-            f"BL127 carries twice the digits of every fixed-point library here; it is cheaper than {say(always)} on every op they share"
-            + (f", and than {', and than '.join(mostly)}" if mostly else "") + ". "
+            f"BL127 carries twice the digits of every fixed-point library here. "
+            + (f"It is cheaper than {say(always)} on every op they share. " if always else "")
+            + "".join(f"It is cheaper than {x}. " for x in mostly)
             + (f"{say(cheaper)} {'are' if len(cheaper) > 1 else 'is'} cheaper on most ops, at 18 digits; Solady's `add` is the unchecked `rawAdd`." if cheaper else ""))
     return "\n".join(rows) + "\n\n" + text
 
