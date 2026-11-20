@@ -145,7 +145,7 @@ BL127:
 | raw token units (wei, satoshi) | `BL127Lib.floor(x) >> 128` | `BL127Lib.ceil(x) >> 128` |
 | a product or quotient on the way there | `mulDown(a, b)`, `divDown(a, b)` | `mulUp(a, b)`, `divUp(a, b)` |
 
-All take and return `int256`. `ceil` reverts with `Overflow` when the integer is 2<sup>127</sup>, and `toFixed18` is `toFixed18Down`. The directed ops are in the inline library and the deployed v5 and v6 contracts; the v4 contract has only `floor` and `ceil`.
+All take and return `int256`. `ceil` reverts with `Overflow` when the integer is 2<sup>127</sup>, and `toFixed18` is `toFixed18Down`. The directed ops are in the inline library and in the deployed BL127 contract (v10). The superseded v5 to v9 contracts have them too; the v4 contract has only `floor` and `ceil`.
 
 BL19:
 
