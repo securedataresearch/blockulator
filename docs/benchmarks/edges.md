@@ -2,7 +2,7 @@
 
 Generated 2026-10-28 by `make edges`. Versions: bl127 6c2eeaf, huff sepolia:0xfae694D0c2c44181791F838c54Ed64C3151FfE30@11857616, solady v0.1.26, prb-math v4.2.0, abdk v3.2, balancer balancer-v3-monorepo@2b9ce4b1b8ad (LogExpMath.sol, vendored), aave aave-v3-origin@8305565ae342 (MathUtils, transcribed), morpho morpho-blue@8e26ca6a8dbc (MathLib, transcribed), fraxlend fraxlend@2bed49d4dcc6 (VariableInterestRate V2, transcribed), euler evk-periphery@af436991e135 (IRMAdaptiveCurve, ExpLib, transcribed), maker dss pot.sol rpow via solady v0.1.26, solmate solmate@89365b8 (no tag: v6 predates SignedWadMath), openzeppelin openzeppelin-contracts v5.7.0 (Math, SignedMath, vendored), uniswap v4-core v4.0.0 (FullMath, vendored), snekmate v0.1.2 (math module, vyper 0.4.3), forge forge Version: 1.7.1.
 
-Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 200 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. BL127Lib coincides with BL127 and is omitted. The method is in the Methodology section at the end.
+Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 300 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. BL127Lib coincides with BL127 and is omitted. The method is in the Methodology section at the end.
 
 ## ln(x)
 
@@ -250,7 +250,7 @@ N(d) of Black-Scholes: zero on an 18-decimal grid from d = -8.3, two ULPs of BL1
 
 ## Methodology
 
-**truth.** Every probe is one op evaluated once. The truth is mpmath at 200 decimal digits from the exact arguments; truthFormat is the same op from the arguments as the representation holds them (floored on a grid, nearest for binary128), so digitsFormat measures the op alone and digits what a caller sees.
+**truth.** Every probe is one op evaluated once. The truth is mpmath at 300 decimal digits from the exact arguments; truthFormat is the same op from the arguments as the representation holds them (floored on a grid, nearest for binary128), so digitsFormat measures the op alone and digits what a caller sees.
 
 **digits.** digits = floor(-log10 |v - t| / |t|), capped at 100 (reported as exact); errUlps is the signed error in units of the representation's last place (none for the floats).
 

@@ -8,7 +8,7 @@ group = "writeup"
 
 ## Two formats in one 256-bit value
 
-**BL127** is signed fixed point with 128 bits after the point: 38 digits at 1, a range of ±1.7 × 10<sup>38</sup>, and 53 ops. **BL19** is a 256-bit float: about 71 digits at any size from 10<sup>−78,913</sup> to 10<sup>78,913</sup>, and 65 ops. Every op is exact or rounds once, and each ships as a deployed contract and an inline library.
+**BL127** is signed fixed point with 128 bits after the point: 38 digits at 1, a range of ±1.7 × 10<sup>38</sup>, and 53 ops. **BL19** is a 256-bit float: about 71 digits at any size from about 10<sup>−78,913</sup> to 10<sup>78,913</sup>, and 65 ops. Every op is exact or rounds once, and each ships as a deployed contract and an inline library.
 
 ## Why WAD loses digits
 

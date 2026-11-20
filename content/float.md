@@ -15,7 +15,7 @@ BL19 is a float, so its digits move with the value: about 71 at any size, where 
 
 ## The format
 
-A value is one `int256`: the sign in bit 255, a 19-bit exponent (bias 262,143) and a 236-bit fraction with an implicit leading one. That is 237 significant bits, about 71 digits, from 10<sup>−78,913</sup> to 10<sup>78,913</sup>.
+A value is one `int256`: the sign in bit 255, a 19-bit exponent (bias 262,143) and a 236-bit fraction with an implicit leading one. That is 237 significant bits, about 71 digits, from about 10<sup>−78,913</sup> to about 10<sup>78,913</sup>.
 
 {{ <wordstrip format="bl19" /> }}
 
