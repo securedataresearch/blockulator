@@ -4,6 +4,21 @@ A release is the public name for a set of deployed contracts. Each contract
 keeps its own version in its CREATE2 salt, because the salt names the address;
 `contracts/deployments/RELEASE.json` maps the release to every address.
 
+## In the source, not yet deployed (2026-11-19)
+
+**BL127 `ln` and `log10`: the middle-stage test's err is 2^135.** The two calls passed
+`0x800000000000000000000000000000000`, which is 2^131, where the derivation in the comment above them gives
+2^135: one hexadecimal digit short. `bounds127.py` measured the stage's error at up to 1.8 × 10^40 units against
+its own 2^135 and so did not see it; it now reads the constant from the source and fails on any other. The
+deployed `BL127E` v9 keeps 2^131 until the next deployment: for about one input in 2^120 its test can accept a
+value whose error reaches a midpoint. No such input is known; the sweep is 0 misrounded before and after, and
+its data is byte for byte the same. `BL127E` stays 18,808 bytes; the other nine objects' bytecode is unchanged.
+
+Seven comments in the two sources were corrected from computation, with no change to any object's bytecode:
+W₋₁ at the branch point (2^-62.9), the distance of x − m ln 2 from 0 (2^-138), `nearmid`'s rate (one in
+2^16), `exp10`'s domain (about 78,913.5), the asymptotic series' 74 terms, the 4,001 points of `lwsp`'s
+certificate, and `msb`'s 32 call sites.
+
 ## Blockulator 3.0 (2026-10-29)
 
 ### Renamed
@@ -300,7 +315,7 @@ wide series and continued fraction behind it:
 
 The second gas pass: every result the same word (BL19 correctly rounded,
 BL127's transcendentals nearest), about half the gas, BL19 drawn into four
-objects by idea, and the first CLZ build. Deployed 2026-10-22, Sepolia
+objects by idea, and the first CLZ build. Deployed 2026-10-23 UTC, Sepolia
 blocks 11,974,968 to 11,974,985.
 
 | component | version | Sepolia |
@@ -434,7 +449,7 @@ signature.
 
 ### Ladder v10
 
-Salt `FP127 ladder v10`, deployed 2026-10-22: the eleven adapters, with
+Salt `FP127 ladder v10`, deployed 2026-10-23 UTC: the eleven adapters, with
 `LadderBL127` calling BL127 v6, `LadderBL127Lib` inlining it and
 `LadderBL19` inlining BL19 v5, and both runners. The datasets and the
 live runners compute the same code.
@@ -443,7 +458,7 @@ live runners compute the same code.
 
 Both rulers round once: every BL127 transcendental to the nearest word,
 every BL19 op correctly rounded or exact, and the directed ops for the
-token edge. Deployed 2026-10-21, Sepolia blocks 11,966,114 to 11,966,639.
+token edge. Deployed 2026-10-22 UTC, Sepolia blocks 11,966,114 to 11,966,639.
 
 | component | version | Sepolia |
 |---|---|---|
@@ -465,7 +480,7 @@ v4, BL19 releases one to three, ladder v1 to v8) stay deployed.
 
 ### BL127 v5
 
-Salt `FP127 v5`, 55 ops, 19,863 bytes of runtime, deployed 2026-10-21 at
+Salt `FP127 v5`, 55 ops, 19,863 bytes of runtime, deployed 2026-10-22 UTC at
 `0x619176d72D7a12390F8970802943D344c0fd3fE2`.
 
 - Every transcendental returns the nearest word. `exp`, `exp2`, `exp10`,
@@ -513,7 +528,7 @@ Salt `FP127 v5`, 55 ops, 19,863 bytes of runtime, deployed 2026-10-21 at
 
 ### BL19 release four
 
-Correctly rounded, and the edge. Four objects, deployed 2026-10-21 at the
+Correctly rounded, and the edge. Four objects, deployed 2026-10-22 UTC at the
 addresses in the table above.
 
 - Every BL19 op is correctly rounded or exact: 0 misrounded of 364,658
@@ -560,7 +575,7 @@ addresses in the table above.
 
 ### Ladder v9
 
-Salt `FP127 ladder v9`, deployed 2026-10-21: the eleven adapters, with
+Salt `FP127 ladder v9`, deployed 2026-10-22 UTC: the eleven adapters, with
 `LadderBL127` calling BL127 v5, `LadderBL127Lib` inlining it and
 `LadderBL19` inlining release four, and both runners. The datasets and the
 live runners now compute the same code again.

@@ -57,7 +57,7 @@ block 12,015,374, 0 mismatches.
 | `LadderRunner` | `0xCbD62BdD4Fdd66EA814198B3B7804Cfab80e170C` | [`0x0f908503…`](https://sepolia.etherscan.io/tx/0x0f9085032570dac5bade2975bfd0bd9ffb99137e6aea105094389eceb32233b9) | 12,015,321 | 4,728,740 |
 | `EdgeRunner` | `0x05A77934179b701EE2a093bAd83497765ED20d91` | [`0x46d51ee6…`](https://sepolia.etherscan.io/tx/0x46d51ee67424d7752b4f2cf64cadc5a8bd4f34b48e53363a14fcb4000c399ff1) | 12,015,322 | 4,541,570 |
 
-Version 12 (2026-10-27, salt `"FP127 ladder v12"`; superseded by v13 on 2026-10-28, still live) put only our
+Version 12 (2026-10-28 UTC, salt `"FP127 ladder v12"`; superseded by v13 on 2026-10-28, still live) put only our
 deployed objects' forms on chain: `LadderBL127`, which staticcalls BL127 v7 at
 `0xb97E0b824d86470BfAA52fe44f09363755d52591`, and `LadderBL19Deployed`, which staticcalls BL19 v5's four objects (add, sub and fromUint inline, as `LadderBase` keeps
 them pure), with the two runners. Every other form's slot in the runners is the zero address. The other libraries'
@@ -119,7 +119,7 @@ rounded or exact) is deployed with CREATE2
 through the proxy `0x4e59b44847b379578588920cA78FbF26c0B4956C` with salt
 `"FP127 ladder v9"`
 (`0x4650313237206c61646465722076390000000000000000000000000000000000`).
-Deployed 2026-10-21 by `make deploy-ladder-sepolia` (a public RPC answered
+Deployed 2026-10-22 UTC by `make deploy-ladder-sepolia` (a public RPC answered
 one run from a node a block behind its receipt, so the adapters span two
 runs; the re-run skipped the three already deployed). All thirteen are
 verified on Sourcify: `exact_match` for `LadderBL127`, `LadderBL127Lib`,
@@ -286,7 +286,7 @@ every one correctly rounded or exact; Blockulator 2.2) is deployed with
 CREATE2 through the proxy `0x4e59b44847b379578588920cA78FbF26c0B4956C` with
 salt `"FP127 ladder v10"`
 (`0x4650313237206c61646465722076313000000000000000000000000000000000`).
-Deployed 2026-10-22 by `make deploy-ladder-sepolia`, blocks 11,974,973 to
+Deployed 2026-10-23 UTC by `make deploy-ladder-sepolia`, blocks 11,974,973 to
 11,974,985; the inline libraries are evmVersion osaka (CLZ) builds. All
 thirteen are verified on Sourcify, `exact_match`. `scripts/ladder/livecap.py`
 and `liveedges.py` re-ran every ladder and edge cell through these runners

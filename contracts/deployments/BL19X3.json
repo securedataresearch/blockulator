@@ -2,7 +2,7 @@
  "contract": "BL19X3",
  "release": "Blockulator 2.1",
  "current": false,
- "status": "Blockulator 2.1 (BL19 release four, 2026-10-21); still live and verified, and not part of Blockulator 2.2, where its ops moved to BL19 (min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gavg, hypot) and BL19S (factorial); gcd was removed and pi became the constant BL19Lib.PI. See RELEASE.md.",
+ "status": "Blockulator 2.1 (BL19 release four, 2026-10-22 UTC); still live and verified, and not part of Blockulator 2.2, where its ops moved to BL19 (min, max, clamp, avg, dist, zeroFloorSub, inv, lerp, frac, round, gavg, hypot) and BL19S (factorial); gcd was removed and pi became the constant BL19Lib.PI. See RELEASE.md.",
  "chainId": 11155111,
  "network": "sepolia",
  "address": "0x59D51481cb2EA924EC17FE263cd05b90CEF22383",

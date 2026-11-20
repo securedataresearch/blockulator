@@ -34,7 +34,7 @@ make size             # the five objects' runtime sizes against the 24,576-byte 
 ## Chains: CLZ (Osaka) required
 
 Every leading-bit count goes through one helper, `msb(x) = 255 - clz(x)`,
-on the CLZ opcode (EIP-7939, Fusaka/Osaka, 5 gas), guarded so msb(0) = 0.
+on the CLZ opcode (EIP-7939, Fusaka/Osaka), guarded so msb(0) = 0.
 Both forms (the object and `BL127Lib.sol`) need it: compile the library
 with solc >= 0.8.31 and `evm_version = "osaka"` (this repo pins 0.8.38),
 and use either only on a chain that has CLZ. `isqrtw`'s seed comes from the
@@ -45,23 +45,24 @@ ran a binary search for msb: about 140 to 1,900 gas less per op through the
 object, and 200 to 1,400 less inline where an op counts leading bits
 ([`docs/benchmarks/gas.md`](../../../docs/benchmarks/gas.md)).
 
-Supported chains are those with CLZ, as of 2026-10-22 (each probed live;
-dates and names are the networks' announced activations):
+Supported chains are those with CLZ, as of 2026-10-22 (each was probed live;
+the probe's output is not kept in the repository, and the names are the
+networks' own for the upgrade that brought CLZ):
 
-| chain | CLZ since | upgrade |
-|---|---|---|
-| Ethereum mainnet | 2025-12-03 | Fusaka |
-| Sepolia | 2025-10-14 | Fusaka |
-| Hoodi | (probe) | Fusaka |
-| Arbitrum One | 2026-01-08 | ArbOS 51 |
-| OP Mainnet | 2026-07-08 | Upgrade 19 "Karst" |
-| Unichain | 2026-07-08 | Upgrade 19 "Karst" |
-| Base | 2026-05-28 | "Azul" |
-| Polygon PoS | 2026-03-04 | Lisovo |
-| BNB Chain | 2026-04-28 | Osaka / Mendel |
-| Gnosis | 2026-04-14 | Fusaka |
-| Scroll | (probe) | Galileo |
-| Linea | (probe) | |
+| chain | upgrade |
+|---|---|
+| Ethereum mainnet | Fusaka |
+| Sepolia | Fusaka |
+| Hoodi | Fusaka |
+| Arbitrum One | ArbOS 51 |
+| OP Mainnet | Upgrade 19 "Karst" |
+| Unichain | Upgrade 19 "Karst" |
+| Base | "Azul" |
+| Polygon PoS | Lisovo |
+| BNB Chain | Osaka / Mendel |
+| Gnosis | Fusaka |
+| Scroll | Galileo |
+| Linea |  |
 
 **Unsupported** (no CLZ, probed 2026-10-22): zkSync Era, Avalanche C-Chain,
 Polygon zkEVM.
@@ -123,6 +124,12 @@ only) were superseded before mainnet and stay live. v6 (salt `"FP127 v6"`, Block
 Every contract that `staticcall`s them runs identical bytecode.
 `BL127Caller.sol` is the minimal Solidity wrapper for that path; it bubbles
 revert data unchanged.
+
+One constant in the deployed `BL127E` v9 differs from the source: `ln`'s and `log10`'s middle-stage test passes an err of 2^131 where the
+derivation gives 2^135 (one hexadecimal digit short; `scripts/bl127/generators/bounds127.py` measures errors up to 1.8 × 10^40 units there, and
+2^131 is 2.7 × 10^39). For those two ops the deployed test can therefore accept a value whose error reaches a rounding midpoint, for about one
+input in 2^120; no such input is known, and the sweep's 0 misrounded is unchanged. The source now passes 2^135, `bounds127.py` reads the
+constant from the source and fails on any other, and the next deployment carries it.
 
 **Inline library.** `BL127Lib.sol` puts each body, plus the transitive
 closure of helpers it calls, inside a `("memory-safe")` assembly block. No
@@ -207,7 +214,7 @@ uint256 paid = b.toWadDown();                // 4077422742688567853, floored
 raw call, result and revert data byte for byte, and compares the gas of one
 small contract per op in each form. Through the IR (`via_ir = true`) every
 op costs exactly the same. Under the legacy pipeline the wrapper is one more
-internal call: 37 to 78 gas, nothing on the comparisons, and 112 to 114 on
+internal call: it costs nothing on the comparisons, and the most on
 `floor`, `frac` and `sign`, which the legacy optimizer inlines whole into a
 raw caller but not through the wrapper.
 
@@ -258,7 +265,7 @@ each op; `fromFixed18` and `toFixed18` are the bridge. All parameters are
 | `normCdf(x)` | Φ(x) = erfc(−x/√2)/2, the N(d) of Black-Scholes, correctly rounded as `erf` (y = \|x\|/√2 exact in the second stage); Φ(−13) is two ULPs, Φ(−14) is zero, Φ(14) is one | never |
 
 **Constants.** `BL127Lib.ONE` is 2^128 and `BL127Lib.PI` is π · 2^128 to
-the nearest integer, `0x3243f6a8885a308d313198a2e03707345` (38 digits). Pi
+the nearest integer, `0x3243f6a8885a308d313198a2e03707345` (π to 38 decimal places). Pi
 was an op, Ramanujan's series in the format, through Blockulator 2.1; as a
 constant it is exact to the grid and costs nothing, and an object caller can
 copy the literal. e, ln 2 and ln 10 are not constants: `exp(ONE)`, `ln(2 ONE)`
@@ -282,7 +289,7 @@ half + err), with no branch, so solc inlines a call with constant `g` and
 `err` (about 40 gas; the branching form cost 190). `rbadw(v, err)` is
 `rbad127(v, 256, err)` in four operations, for the exponentials, whose
 bodies are too large for solc to inline into: there a call with the general
-`g` cost 2 to 3% of the op. `scripts/bl127/generators/bounds127.py` measures each fast value's
+`g` cost a few percent of the op. `scripts/bl127/generators/bounds127.py` measures each fast value's
 stated bound against 120-digit truth (CI runs it).
 
 **Rounding (3.0).** Every op is correctly rounded: its result is the exact
@@ -321,7 +328,7 @@ contract on the committed vectors, which carry the inputs found within a
 bound of a midpoint. The last stage rounds without a test, so the one case
 no check covers is a transcendental whose true value lies within that
 stage's error of a midpoint (2^-290 for Lambert W, 2^-444 for the error
-function, 2^-487 or better elsewhere, relative where the op's bound is); no
+function, 2^-377 for `atanh`, 2^-487 or better elsewhere, relative where the op's bound is); no
 such input is known, and where a midpoint can be hit exactly (`pow`, `powu`,
 `cbrt`, `exp2(−129)`) it is decided exactly.
 
@@ -349,12 +356,12 @@ as one 768-bit product; `exp` and the hyperbolics reduce x = n·ln 2 + r
 directly, `expr`), and e^r − 1 is evaluated by `expk` to 2^-311 relative,
 never above the truth (below). The result is rounded once from the kernel's
 high word. `l2p` refines the one-word log2 by one Newton step through
-`expk` (2^-313 absolute); `pow` uses it. `cbrt` is
+`expk` (within 2^-299 absolute; 2^-313 measured); `pow` uses it. `cbrt` is
 Newton on y³ = |x|·2^256 with precision doubling (a seed from the bits, four
 word steps, one residual step, exact cubes) and an exact midpoint test.
 `ln`, `log2` and `log10` round the one-word kernel when its 2^-145 error
 bound cannot change the answer and fall back to `l2p` within 2^-145 of a
-midpoint (about one input in 2^17); from 3.0 `l2p`'s value is tested too
+midpoint (about one input in 2^16); from 3.0 `l2p`'s value is tested too
 (`rbadm127`) and a two-word Newton step (`l2w`, `logw`) decides what it
 cannot. Lambert W near −1/e (1 + e·x < 1/8)
 seeds q = 1 + W by a degree-16 fit in √(2(1 + e·x)) and takes one
@@ -436,7 +443,7 @@ fit's bound, so s never exceeds e^r − 1 and cannot reach 1: within
 its cross terms in one word; `exp` and `expx` (expm1, sinh, cosh, tanh,
 Lambert W's last step) skip the 768-bit exponent product: n comes from
 log2 e at 2^-119 in one word, r = x − n·ln 2 from ln 2 at 2^-384, and one
-test corrects n by one (on the 2^-128 grid x − m·ln 2 stays 2^-137 from 0
+test corrects n by one (on the 2^-128 grid x − m·ln 2 stays 2^-138 from 0
 for every 0 < |m| ≤ 300, so the test cannot be fooled). The rounding reads
 only the kernel's high word: with e = n + 129 the word is half of
 2^e + ⌊sh·2^(e−256)⌋ + 1, and the low word is under one unit of that sum.
@@ -469,8 +476,8 @@ erfc(−x/√2)/2. The term counts, the regime split and the fraction depth
 replaces the fraction (below).
 
 **`compound` and the erfc tail (3.0).** `compound` went through `powu`'s
-binary exponentiation, about 9,200 gas for a per-second rate over a year
-(25 squarings and their multiplies). For |n| ≥ 16 it now takes the
+binary exponentiation, about 9,400 gas for a per-second rate over a year
+(24 squarings and their multiplies). For |n| ≥ 16 it now takes the
 logarithm first: t = n log2(1 + r) is formed exactly from the one-word
 `log2m` (within 2^-160.5, so t within |n| 2^-160), and `pow2t` rounds 2^t
 when its bound, given |n| 2^113 + 1 as the scale of t's error, cannot
@@ -483,15 +490,15 @@ takes |n| < 16, ties and what is left. `precise_model.py fastcompound`
 checks both bounds on 10,008 random inputs (8,818 decided in one word,
 1,186 of the other 1,190 at 2^-299, every one the nearest word; largest
 error over bound 0.16 and 0.33). Sweep median 9,245 → 3,360 gas. The
-inline `BL127Lib.compound` now carries the log and exp kernels: 11.0 KB
-where it was 1.3 KB ([`size.md`](../../../docs/benchmarks/size.md)).
+inline `BL127Lib.compound` now carries the log and exp kernels: 16.9 KB
+(11.0 KB when this landed) where it was 1.3 KB ([`size.md`](../../../docs/benchmarks/size.md)).
 
 The erfc tail, 4 < x ≤ 9.5, ran the continued fraction, about 20,000 gas
 near x = 4. It is now e^(−x²) g(x) with g(x) = e^(x²) erfc(x) the degree-43
 minimax polynomial in t = (2x − 13.5)/5.5 (`erfct`): what is rounded is
 erfc on the 2^-128 grid, so the fit is held to an absolute 2^-175 on erfc,
 the tolerance 2^-175 e^(x²) on g, which is 2^-149 relative at x = 4 and
-2^-45 at 9.5; within 0.244 of it after the coefficients' rounding on all
+2^-41 at 9.5; within 0.244 of it after the coefficients' rounding on all
 of the interval (3.0: certified, below).
 `erf_model.py --tail` models the Horner in integers (largest error against
 erfc 2^18.25 units of 2^-192, the fraction's 2^18.17, both e^(−x²)'s);
@@ -511,7 +518,7 @@ most 1/2, plus the quotient's floor: err 2), (1 − w)/(1 + w) from 1/4
 (slope at most 2: err 3); past it (1 − w)/(1 + w) with w = e^−2|x| in two
 words (BL19's `tanhw2`). `atanh`: the one-word log (2^-145) with err 2^47
 units; past it `l2p` of the exact words 1 + |x| and 1 − |x|, times ln 2/2
-at 2^-256 (err 2^-248, the constant's floor under a log of at most 129,
+at 2^-256 (err 2^-247, over the constant's floor under a log of at most 129,
 `rbadm127`); past that ln(1 + |x|) and ln(1 − |x|) by `w19_wlnw`, the
 difference at 2^-384 plus j ln 2. `bounds127.py` measures every err
 (largest ratio 0.75, tanh below 2^-5). Sweep medians, inline: `sinh` 3,868
@@ -577,12 +584,12 @@ middle stage alone): 0 misrounded in all three.
   11,780 / 146,949 gas (median, p99) on `powus`, now 3,572 / 10,762.
 - `compound`: unchanged; `powu` is its backstop, so it inherits the above.
 
-Gas on the sweep's inputs, inline, median (master → 3.0): `exp` 2,697 →
-2,828 (+4.9%), `exp2` 2,640 → 2,684 (+1.7%), `exp10` 2,970 → 3,069
-(+3.3%), `expm1` 2,061 → 2,076, the logs unchanged (their fast path is
+Gas on the sweep's inputs, inline, median (master → 3.0): `exp` 2,709 →
+2,828 (+4.4%), `exp2` 2,628 → 2,684 (+2.1%), `exp10` 2,958 → 3,069
+(+3.8%), `expm1` 2,061 → 2,076, the logs unchanged (their fast path is
 untouched), `pow` 3,314 → 3,376 (+1.9%; p99 8,399 → 8,833, the middle
 stage's test) on the inputs both versions share, `powu` 3,493 → 3,520,
-`compound` 3,301 → 3,360. The last stages cost about 25,000 (the
+`compound` 3,360 → 3,360. The last stages cost about 25,000 (the
 exponentials), 29,000 (the logs) and 55,000 to 90,000 (`pow`); the middle
 stage of the logs about 5,500. `pow`'s sweep now holds 961 bases within 2^-8
 of one (t spread over the whole range) and 39 exact ties, where v8
@@ -651,8 +658,8 @@ make that the contract on every input.
 and writes [`docs/benchmarks/gas.json`](../../../docs/benchmarks/gas.json)
 and [`docs/benchmarks/gas.md`](../../../docs/benchmarks/gas.md), with the
 Huff baseline, the Yul object, `BL127Caller`, `BL127Lib`, and ABDK, Solady
-and PRBMath side by side. Through a `staticcall` the Yul object costs 700
-to 800 gas more than the Huff on `add` and `mul` and less on `ln`, `log2`,
+and PRBMath side by side. Through a `staticcall` the Yul object costs 92
+and 47 gas more than the Huff on `add` and `mul` and less on `ln`, `log2`,
 `pow` and `cbrt`; the inline library removes the call overhead.
 Lambert W is the one op that got dearer, buying the nearest word where the
 Huff had 50 to 100 bits: a median of 41k gas for `lambertW0` and 32k for
@@ -679,9 +686,9 @@ tests cost the transcendentals a few percent (`exp` 2,726 → 2,845, `exp2`
 `lambertWm1` 8,052 → 8,247, `pow` 3,028 → 3,050, `powu` 2,809 → 2,872),
 `expm1` is cheaper (3,106 → 2,968), the logs and the arithmetic are
 unchanged, and `gavg` and `hypot` fall (1,079 → 1,003, 1,366 → 1,164).
-Through the objects the smaller dispatchers take 20 to 70 gas off most ops
-(`add` 708 → 682, `mul` 928 → 862, `log2` 965 → 900); `exp` is 3,000 →
-3,058 and `hypot` 1,840 → 1,690.
+Through the objects the smaller dispatchers take 20 to 70 gas off 24 of the 53 ops
+(`add` 707 → 682, `mul` 928 → 862, `log2` 965 → 900); `exp` is 3,000 →
+3,058 and `hypot` 1,839 → 1,689.
 
 ## What changed from the Huff
 
@@ -712,8 +719,8 @@ Measured, each FSC step in this arithmetic roughly doubles the correct bits
 under 40 bits near 0, read past the table above 64 and ran out of gas below
 0. The Yul seeds to five to eight bits (Winitzki's approximation for x > 0,
 the origin series for −¼ < x < 0, the branch-point series down to −1/e),
-runs four FSC steps and one IB step, and measures 118 to 130 bits across the
-domain. W(1..5) are still exact table values. The 64-entry table is gone,
+ran four FSC steps and one IB step in the first port; today's `lambertW0` is correctly rounded (`precision.json`: 130 bits at least,
+the nearest word on every vector). W(1..5) are still exact table values. The 64-entry table is gone,
 which is where most of the bytecode saving came from.
 
 **`lambertWm1`.** New. The Huff had a `lambertwm1.huff` that never shipped
@@ -730,7 +737,7 @@ Seeds are the branch-point series below −¼ and the three-term asymptotic
 L − ln(−L) + ln(−L)/L above it; five steps take 8 to 40 seed bits to 120 to
 128 outside 2^-20 of −1/e, and v5's double-word step takes that to the
 nearest word. v4 returned exactly −1 at the format's branch point
-−floor(2^128/e); W₋₁ there is −1 − 2^-63.3, which v5 returns.
+−floor(2^128/e); W₋₁ there is −1 − 2^-62.9, which v5 returns.
 
 **Shortcuts.** v4 kept the exact shortcuts from `shortcut_constants.huff`
 for `pow`, `cbrt` and `lambertW0`. v5 keeps W(1..5) (nearest, W(4) one ULP
