@@ -15,11 +15,14 @@ is 1 if any gate failed.
 The names gate fails on the libraries' old names (OLD below: the one before
 BL19 and, since the 2026-10-29 rename, the two before BL127 and BL19)
 anywhere outside lib/, in a file or a path,
-except the salt literals of contracts already deployed, whose bytes fix their
-addresses (a quoted or backticked `FP… vN`, or any such literal on a line that
-says salt), the on-chain verified names (a line that says onChainName or
-on-chain name), the CHANGELOG's own entry about the rename, and the site's
-redirects from old URLs (Zola `aliases`).
+except the salt literals of the contracts deployed before 2026-11-20, whose
+bytes fix their addresses (a quoted or backticked `FP… vN`, or any such
+literal on a line that says salt), their on-chain verified names (a line that
+says onChainName or on-chain name), the two functions the superseded BL19 v6
+object answers under their earlier names (ON_CHAIN_FN), the CHANGELOG's own
+entry about the rename, and the site's redirects from old URLs (Zola
+`aliases`). The deployments of 2026-11-20 (BL127 v10, BL19 v7, ladder v15)
+carry the BL names in their salts and verified names.
 
 The sweep gate compares the fresh sweep.json with the committed one (git HEAD):
 BL19 must have 0 misrounded in both passes, and no BL127 row may have fewer
@@ -72,6 +75,8 @@ OLD_RE = re.compile("(?i)" + "|".join(OLD))
 SALT_LITERAL = re.compile("(?:" + "|".join(o.upper() for o in OLD) + r")[A-Z0-9]*(?: ladder)? v\d+")
 SALT_QUOTED = re.compile(r'(["`])' + SALT_LITERAL.pattern + r"\1")
 ON_CHAIN = re.compile(r"(?i)onChainNames?|on-chain (?:verified )?names?")
+# the two selectors of the deployed BL19 v6 object that the rename changed (contracts/deployments/BL19.md)
+ON_CHAIN_FN = re.compile(r"\b(?:to|from)" + OLD[1].upper() + r"\b")
 
 
 def names_check() -> tuple[bool, str, str]:
@@ -82,7 +87,7 @@ def names_check() -> tuple[bool, str, str]:
     for l in grep.splitlines():
         if re.search(r"^content/[^:]+:\d+:aliases = ", l) or l.startswith("CHANGELOG.md:") and "### Renamed" in l:
             continue
-        rest = SALT_QUOTED.sub("", l)
+        rest = ON_CHAIN_FN.sub("", SALT_QUOTED.sub("", l))
         if re.search(r"(?i)salt", rest):
             rest = SALT_LITERAL.sub("", rest)
         if ON_CHAIN.search(rest):

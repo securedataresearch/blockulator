@@ -98,20 +98,22 @@ rounding tests. The split kept v8's words, op for op (`test/objects/ObjectsEqLib
 with `FP_REF_DIR` set to v8's artifact under every name); since then every
 object gained its second stages (see Rounding), and the sizes are `BL127`
 3,728, `BL127E` 18,808, `BL127H` 13,093, `BL127N` 9,088 and `BL127S` 11,817
-bytes. Salts `"FP127 v9"`, `"FP127E v9"`, `"FP127H v9"`, `"FP127N v9"`,
-`"FP127S v9"`; live on Sepolia since 2026-10-29 (Blockulator 3.0) at
-`0x0DF738d125677550a80A46BaF254386C66f96E0d`, `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808`,
-`0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B`, `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` and
-`0xB9C2583a7Ad2251444DC7752658B6C1107C25036`.
+bytes. Salts `"BL127 v10"`, `"BL127E v10"`, `"BL127H v10"`, `"BL127N v10"`,
+`"BL127S v10"`; live on Sepolia since 2026-11-20 UTC (Blockulator 3.0) at
+`0x9D7f2c78EB802b83368E816E332A2aFa0997B3f2`, `0xfE4627Ba196d0c9c2D068C8599837688A8BE8bD1`,
+`0xC3B57948d3839b6B3358AC25E17fD7A055023704`, `0x42f0FDe3EF14d10218126e37A672BE33012f8902` and
+`0x315bF86feeCd5aCF3F9105f94A33ceBFa2e1Cc7E`.
 
 Each object wraps its bodies in a dispatcher that finds the 4-byte selector
 by binary search (a flat switch under ten exports: `BL127H`, `BL127N`,
 `BL127S`). Each is deployed with CREATE2
 through the deterministic proxy at
 `0x4e59b44847b379578588920cA78FbF26c0B4956C`; the salt names the version.
-v9 (salts `"FP127 v9"`, `"FP127E v9"`, …; 53 ops in the five objects, evm
-osaka builds that need CLZ) is live on Sepolia since 2026-10-29 (Blockulator
-3.0) at the addresses above: every op correctly rounded. v8 (salt
+v10 (salts `"BL127 v10"`, `"BL127E v10"`, …; 53 ops in the five objects, evm
+osaka builds that need CLZ) is live on Sepolia since 2026-11-20 UTC (Blockulator
+3.0) at the addresses above: every op correctly rounded. It is the first version deployed under the name BL127.
+v9 (salts `"FP127 v9"`, `"FP127E v9"`, …, five objects, `BL127` at `0x0DF738d125677550a80A46BaF254386C66f96E0d`,
+2026-10-29 UTC: the same words, with the constant described below), v8 (salt
 `"FP127 v8"`, one object, 23,797 bytes, `0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`,
 2026-10-28: the same words as v6, with `exp`, `div`, `factorial`, `compound`
 and the erfc tail cheaper) and v7 (salt `"FP127 v7"`,
@@ -125,11 +127,11 @@ Every contract that `staticcall`s them runs identical bytecode.
 `BL127Caller.sol` is the minimal Solidity wrapper for that path; it bubbles
 revert data unchanged.
 
-One constant in the deployed `BL127E` v9 differs from the source: `ln`'s and `log10`'s middle-stage test passes an err of 2^131 where the
+One constant in the superseded `BL127E` v9 differs from the source: `ln`'s and `log10`'s middle-stage test passes an err of 2^131 where the
 derivation gives 2^135 (one hexadecimal digit short; `scripts/bl127/generators/bounds127.py` measures errors up to 1.8 × 10^40 units there, and
-2^131 is 2.7 × 10^39). For those two ops the deployed test can therefore accept a value whose error reaches a rounding midpoint, for about one
-input in 2^120; no such input is known, and the sweep's 0 misrounded is unchanged. The source now passes 2^135, `bounds127.py` reads the
-constant from the source and fails on any other, and the next deployment carries it.
+2^131 is 2.7 × 10^39). For those two ops the v9 test can therefore accept a value whose error reaches a rounding midpoint, for about one
+input in 2^120; no such input is known, and the sweep's 0 misrounded is unchanged. The source passes 2^135, `bounds127.py` reads the
+constant from the source and fails on any other, and the deployed `BL127E` v10 carries it.
 
 **Inline library.** `BL127Lib.sol` puts each body, plus the transitive
 closure of helpers it calls, inside a `("memory-safe")` assembly block. No

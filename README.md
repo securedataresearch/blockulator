@@ -69,7 +69,7 @@ uint256 paid = BL19Lib.toUintDown(grown);          // to the user: floor
 int256  ltv  = BL127Lib.divUp(debt, collateral);    // a limit check: never below the truth
 ```
 
-Or call the deployed contracts, where every op is a free `eth_call`: `IBL127E(0xc16F…0808).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
+Or call the deployed contracts, where every op is a free `eth_call`: `IBL127E(0xfE46…8bD1).ln(x)`. Agents can start from [`/llms.txt`](https://blockulator.com/llms.txt).
 
 **Requires the CLZ opcode** (EIP-7939, the Osaka EVM). Supported: Ethereum, Arbitrum One, OP Mainnet, Base, Unichain, Polygon PoS, BNB Chain and Gnosis; Scroll and Linea by a live probe of the opcode ([the list](contracts/deployments/README.md#chains-clz-osaka-required)). Not supported: zkSync Era, Avalanche C-Chain, Polygon zkEVM. Check any chain with `make probe-clz RPC=<url>`.
 
@@ -86,16 +86,16 @@ The [integration guide](https://blockulator.com/library/#integrating) has the wo
 
 | contract | address |
 |---|---|
-| BL127 (the number) | `0x0DF738d125677550a80A46BaF254386C66f96E0d` |
-| BL127E (exp, log, pow) | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` |
-| BL127H (hyperbolic) | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` |
-| BL127N (erf, normCdf) | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` |
-| BL127S (Lambert W) | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` |
-| BL19 (the number) | `0x94d9d43D6202827429a8058959eeCf6d232b8729` |
-| BL19E (exp, log, pow) | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` |
-| BL19H (hyperbolic) | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` |
-| BL19N (erf, normCdf) | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` |
-| BL19S (Lambert W) | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` |
+| BL127 (the number) | `0x9D7f2c78EB802b83368E816E332A2aFa0997B3f2` |
+| BL127E (exp, log, pow) | `0xfE4627Ba196d0c9c2D068C8599837688A8BE8bD1` |
+| BL127H (hyperbolic) | `0xC3B57948d3839b6B3358AC25E17fD7A055023704` |
+| BL127N (erf, normCdf) | `0x42f0FDe3EF14d10218126e37A672BE33012f8902` |
+| BL127S (Lambert W) | `0x315bF86feeCd5aCF3F9105f94A33ceBFa2e1Cc7E` |
+| BL19 (the number) | `0xbbb79a1B3c41553ee6C904D40a13f17EEFDC8230` |
+| BL19E (exp, log, pow) | `0x498DCcD03606E2f7B156Ec1bAE3800E8012cfD64` |
+| BL19H (hyperbolic) | `0x2431fAeDd11E52EB8c104b051F2dac5DEA67dE5b` |
+| BL19N (erf, normCdf) | `0x0540A33443bc4b2Db8D96CBbcb8117A993227E41` |
+| BL19S (Lambert W) | `0x5a1266F89FC5b741e57077CbfEE59a6E48e32BCF` |
 
 Every contract is verified on Sourcify and Blockscout. Each library is one Yul source that generates both the deployed object and the inline library, fuzzed to agree bit for bit. More detail: [records](contracts/deployments/RELEASE.md), [BL127](contracts/src/bl127/README.md), [BL19](contracts/src/bl19/README.md), [precision](docs/bl19/precision.md), [the ladder](docs/benchmarks/ladder.md), [the edges](docs/benchmarks/edges.md), [proofs](docs/proofs.md), [changelog](CHANGELOG.md).
 

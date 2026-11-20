@@ -16,7 +16,8 @@ llms.txt is prose, so it is checked, not written: each object's address must app
 address (`salt "..."`) must be that object's.
 
 --check also reads every tracked .md and .txt file: a string in the old naming (FP and a number, then a version) must be a
-salt some record holds, and no salt may be quoted under a BL name. It also holds the pitch sentence (PITCH) to the
+salt some record holds, and a string quoted as a salt under a BL name must be one too (the deployments of 2026-11-20 are
+the first whose salts carry the BL names). It also holds the pitch sentence (PITCH) to the
 same words in the ten files that open with it. Stdlib only.
 """
 from __future__ import annotations
@@ -94,13 +95,14 @@ def recorded_salts() -> set[str]:
 
 
 def salt_problems() -> list[str]:
-    """The names from before the BL rename survive only as salts, so every such string in the public text must
-    be a recorded salt; and a salt must never be quoted under a BL name. The ladder's earlier salts
-    ("<old name> ladder v1" to the current one) have no record of their own and are accepted by their form."""
+    """The names from before the BL rename survive only as the salts of superseded deployments, so every such
+    string in the public text must be a recorded salt; and a string quoted as a salt under a BL name must be a
+    recorded salt too. The ladder's earlier salts ("<old name> ladder v1" to v14, the last under the old name)
+    have no record of their own and are accepted by their form."""
     import subprocess
     have = recorded_salts()
     LADDER = "F" + r"P127 ladder v(\d+)"   # spelled in two parts: the naming gate reads this file too
-    ladder = max(int(m.group(1)) for x in have if (m := re.fullmatch(LADDER, x)))
+    ladder = 14   # the last ladder deployed under the old name; v15 on carry the BL name and are recorded
     files = subprocess.check_output(["git", "ls-files", "*.md", "*.txt", "static/.well-known/agent.json"],
                                     cwd=ROOT, text=True).split()
     skip = ("research_notes/", "talk/", "docs/talks/", "CLAUDE.md")
@@ -115,7 +117,8 @@ def salt_problems() -> list[str]:
             if x not in have and not (lad and 1 <= int(lad.group(1)) <= ladder):
                 bad.append(f'{f} prints "{x}", which is no recorded salt')
         for m in re.finditer(r"salts? `?\"(BL[0-9A-Z]+ v\d+)\"", text):
-            bad.append(f'{f} gives "{m.group(1)}" as a salt; salts carry the name they were deployed under')
+            if m.group(1) not in have:
+                bad.append(f'{f} gives "{m.group(1)}" as a salt, which is no recorded salt')
     return bad
 
 

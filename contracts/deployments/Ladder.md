@@ -10,8 +10,39 @@ called this same code, so the two cannot disagree; `scripts/ladder/livecap.py`
 re-runs every cell of every input through the live runner and records the
 largest N the public RPC completes.
 
-Version 14 (Blockulator 3.0, 2026-10-29, salt `"FP127 ladder v14"`,
-`0x4650313237206c61646465722076313400000000000000000000000000000000`) puts
+Version 15 (Blockulator 3.0, 2026-11-20 UTC, salt `"BL127 ladder v15"`,
+`0x424c313237206c61646465722076313500000000000000000000000000000000`) puts
+only our deployed objects' forms on chain: `LadderBL127`, which staticcalls
+BL127 v10's five objects (BL127 `0x9D7f2c78EB802b83368E816E332A2aFa0997B3f2`,
+BL127E `0xfE4627Ba196d0c9c2D068C8599837688A8BE8bD1`, BL127H
+`0xC3B57948d3839b6B3358AC25E17fD7A055023704`, BL127N
+`0x42f0FDe3EF14d10218126e37A672BE33012f8902`, BL127S
+`0x315bF86feeCd5aCF3F9105f94A33ceBFa2e1Cc7E`; the op's object by
+`contracts/src/bl127/ops.json`), and `LadderBL19Deployed`, which staticcalls
+BL19 v7's five objects (add, sub and fromUint inline, as `LadderBase` keeps
+them pure), with the two runners. The runners take eighteen adapter slots in
+form-id order (form 0 `bl127`, form 10 `bl19`); every other slot is the zero
+address. The other libraries' adapters run the same Solidity locally (`make
+ladder`, `make edges`), and ladder v11's runners, still live, run 2.2's
+eleven forms (BL127 v6 and BL19 v5 among them). Deployed 2026-11-20 (UTC) by
+`make deploy-ladder-sepolia`, blocks 12,177,812 to 12,177,815, with source
+commit `f643016`. All four are verified on Sourcify, `exact_match`, under
+the names in this table; it is the first ladder deployed under the BL names.
+`scripts/ladder/livecap.py` and `liveedges.py` re-ran every cell through
+these runners on 2026-11-20: 1,918 ladder cells at block 12,177,870 and 276
+edge cells at block 12,177,896, 0 mismatches (the datasets' live stamps).
+Machine-readable copy: `Ladder.json`.
+
+| contract | address | tx | block | gas |
+|---|---|---|---:|---:|
+| `LadderBL127` | `0x9F073DA43eC3fE6e97c8e2F35f3a9Ba2dF36B4a0` | [`0x9cae5796…`](https://sepolia.etherscan.io/tx/0x9cae57964be420212c4185b17219de7298d93719f3524110db3ccab5d100a53b) | 12,177,812 | 8,004,033 |
+| `LadderBL19Deployed` | `0x5Ede6677A2108348Df5D44A4f79E4946c5DC0633` | [`0xedd44a97…`](https://sepolia.etherscan.io/tx/0xedd44a971edf56f64c14e1db006e6fcfff651975bc8da0dfd296028fd33aa2bf) | 12,177,813 | 8,704,693 |
+| `LadderRunner` | `0xac1f69b4FBAA275429DCb21619f4f39257d7Ba93` | [`0x6e2cb892…`](https://sepolia.etherscan.io/tx/0x6e2cb892ea77aaab378a678ee82acb0e57c4746da6c5bff56be59528e4890ce3) | 12,177,814 | 4,728,740 |
+| `EdgeRunner` | `0x4009927DEE803eABFD76057aFF06752611856A60` | [`0xe7089ed3…`](https://sepolia.etherscan.io/tx/0xe7089ed3783ec4856693c39590df9c4e62bf5ad2c05c01b6bcaca2cbda7e9a6b) | 12,177,815 | 4,541,558 |
+
+Version 14 (2026-10-29, salt `"FP127 ladder v14"`,
+`0x4650313237206c61646465722076313400000000000000000000000000000000`;
+superseded by v15 on 2026-11-20, still live) put
 only our deployed objects' forms on chain: `LadderBL127`, which staticcalls
 BL127 v9's five objects (BL127 `0x0DF738d125677550a80A46BaF254386C66f96E0d`,
 BL127E `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808`, BL127H
@@ -29,8 +60,8 @@ eleven forms (BL127 v6 and BL19 v5 among them). Deployed 2026-10-29 (UTC) by
 commit `80d0656`. All four are verified on Sourcify, `exact_match`.
 `scripts/ladder/livecap.py` and `liveedges.py` re-ran every cell through
 these runners on 2026-10-29: 1,913 ladder cells at block 12,017,732 and 276
-edge cells at block 12,017,760, 0 mismatches (the datasets' live stamps).
-Machine-readable copy: `Ladder.json`.
+edge cells at block 12,017,760, 0 mismatches. Their verified names on Sourcify are
+the on-chain names LadderFP127 and LadderFP19Deployed.
 
 | contract | address | tx | block | gas |
 |---|---|---|---:|---:|
@@ -316,7 +347,7 @@ stamps). Machine-readable copy: `Ladder.json`.
 An edge (one op once) through `EdgeRunner`:
 
 ```
-cast call 0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A "run(uint8,uint8,int256[])(bool,int256,bytes4,uint256)" \
+cast call 0x4009927DEE803eABFD76057aFF06752611856A60 "run(uint8,uint8,int256[])(bool,int256,bytes4,uint256)" \
   <op> <form> "[<arg0>,...]" --rpc-url https://ethereum-sepolia-rpc.publicnode.com
 ```
 
@@ -327,7 +358,7 @@ probe's array for the form's scale in `scripts/ladder/edge-inputs.json`,
 an integer exponent unscaled. A ladder cell through `LadderRunner`:
 
 ```
-cast call 0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589 \
+cast call 0xac1f69b4FBAA275429DCb21619f4f39257d7Ba93 \
   "run(uint8,uint8,uint32,int256[])(bool,int256,bytes4,uint256,uint256)" \
   <scenario> <form> <n> "[<p0>,<p1>,...]" \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com
@@ -340,7 +371,7 @@ Scenario ids are the `index` field in `scripts/ladder/scenarios.json`
 the last four from v5);
 forms are 0 bl127, 1 bl127lib, 2 abdk, 3 solady, 4 prb, and from v5
 5 quad, 6 balancer, 7 aave, 8 morpho, 9 maker, and from v6 10 bl19. On
-the v12 to v14 runners only forms 0 and 10 have an adapter; the others
+the v12 to v15 runners only forms 0 and 10 have an adapter; the others
 run on v11's runner, `0x08b06D93620e7B33cD2d600118a75B45EF779Cec`. `p` is
 the input's `bl127`, `abdk`, `wad`, `quad`, `ray` or `bl19` array from
 `scripts/ladder/inputs.json` (forms 0 and 1 take `bl127`, 2 `abdk`, 3, 4, 6
@@ -358,7 +389,7 @@ scenario function.
 Example, the headline cell (compound, reference input, BL127, N = 365):
 
 ```
-cast call 0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589 \
+cast call 0xac1f69b4FBAA275429DCb21619f4f39257d7Ba93 \
   "run(uint8,uint8,uint32,int256[])(bool,int256,bytes4,uint256,uint256)" 0 0 365 \
   "[3402823669209384634633746074317682114560000,93228045731763962592705371899114578]" \
   --rpc-url https://ethereum-sepolia-rpc.publicnode.com

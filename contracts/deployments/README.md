@@ -2,48 +2,46 @@
 
 Everything in this directory is served at blockulator.com/contracts/deployments/.
 
-## Names: BL127 and BL19 (the on-chain names are still FP127 and FP19)
+## Names: BL127 and BL19
 
-The libraries were renamed on 2026-10-29 (on-chain name FP127 → BL127, FP19 → BL19). The
-records, the sources and the artifacts use the new names; two things keep the
-old spelling, since they are bytes already on chain:
+The libraries were renamed on 2026-10-29 (on-chain name FP127 → BL127, FP19 → BL19). The deployments of 2026-11-20 UTC (BL127 v10,
+BL19 v7, ladder v15) are the first under the new names: their CREATE2 salts are the ASCII strings `BL127 v10`,
+`BL127E v10`, …, `BL19 v7`, …, `BL127 ladder v15`, and their verified contract names on Sourcify and Blockscout are
+the names used everywhere else in this repository. Every current record's `onChainName` equals its `contract`.
 
-- The CREATE2 salts stay the deployed ASCII strings (`FP127 v9`, `FP127E v9`,
-  …, `FP19 v6`, …, `FP127 ladder v14`): each record's `salt` and `saltAscii`
-  and the objects table in `scripts/bl127/gen.py`, because the salt's bytes
-  fix the address (`RELEASE.json`'s component versions are labels, `BL127 v9`). A new salt means a new
-  address, and that comes with the next deploy.
-- The verified contract names on Sourcify and Blockscout stay the on-chain
-  names: FP127, FP127E, FP127H, FP127N, FP127S (on-chain names of BL127's five),
-  FP19, FP19E, FP19H, FP19N, FP19S (on-chain names of BL19's five) and the
-  ladder's LadderFP127, LadderFP19Deployed (on-chain names) until the next
-  deploy; each current record carries that name in `onChainName` beside its
-  `contract`.
+Everything deployed before that keeps the old spelling, since it is bytes already on chain:
+
+- The CREATE2 salts of the superseded versions are the deployed ASCII strings (`FP127 v1` to `FP127 v9`, `FP127E v9`,
+  …, `FP19 v6`, …, `FP256 v1` to `FP256 v5`, …, `FP127 ladder v1` to `FP127 ladder v14`): a salt's bytes fix the
+  address, so each `previous` entry keeps its `salt` and `saltAscii` as sent.
+- The verified contract names of those versions stay the on-chain names: FP127, FP127E, FP127H, FP127N, FP127S (on-chain
+  names of BL127 v9's five), FP19, FP19E, FP19H, FP19N, FP19S (on-chain names of BL19 v6's five) and ladder v14's
+  LadderFP127, LadderFP19Deployed (on-chain names).
 
 - `BL127.md`, `BL127.json`, `BL127E.json`, `BL127H.json`, `BL127N.json`,
-  `BL127S.json`: BL127 v9, five objects from one source, one idea each
-  (salts "FP127 v9", "FP127E v9", "FP127H v9", "FP127N v9", "FP127S v9":
+  `BL127S.json`: BL127 v10, five objects from one source, one idea each
+  (salts "BL127 v10", "BL127E v10", "BL127H v10", "BL127N v10", "BL127S v10":
   the number, the elementary, hyperbolic and normal-distribution functions,
   and Lambert W), CREATE2 through the deterministic proxy, with the
-  verification recipe and the smoke test; v1 to v8 (one object each) are
-  recorded below them. Deploy a new version with `make deploy-sepolia`,
+  verification recipe and the smoke test; v9 (five objects) and v1 to v8 (one
+  object each) are recorded below them. Deploy a new version with `make deploy-sepolia`,
   `make verify-sepolia`, `make smoke-sepolia` (BL127's) and the `-bl127e`,
   `-bl127h`, `-bl127n`, `-bl127s` targets.
 - `BL19.md`, `BL19.json`, `BL19E.json`, `BL19H.json`, `BL19N.json`,
-  `BL19S.json`: BL19 v6, five objects from one source, one idea each (salts
-  "FP19 v6", "FP19E v6", "FP19H v6", "FP19N v6", "FP19S v6": the number,
+  `BL19S.json`: BL19 v7, five objects from one source, one idea each (salts
+  "BL19 v7", "BL19E v7", "BL19H v7", "BL19N v7", "BL19S v7": the number,
   the elementary, hyperbolic and normal-distribution functions, and
   Lambert W), with the `-bl19`, `-bl19e`, `-bl19h`, `-bl19n` and `-bl19s`
   targets. One record covers the five objects, as `Ladder.md` covers its
-  contracts. v5 (Blockulator 2.2, salts "FP256 v5", …) and releases one to
+  contracts. v6 (salts "FP19 v6", …), v5 (Blockulator 2.2, salts "FP256 v5", …) and releases one to
   four are recorded below them; release four (Blockulator 2.1) was BL19,
   BL19X, BL19X2 and BL19X3 (salts "… v4"), whose `BL19X.json`,
   `BL19X2.json` and `BL19X3.json` stay here marked `"release": "Blockulator
   2.1"`, `"current": false`: those addresses are still live, and not part
   of 3.0.
-- `Ladder.md`, `Ladder.json`: ladder v14 (salt "FP127 ladder v14"):
+- `Ladder.md`, `Ladder.json`: ladder v15 (salt "BL127 ladder v15"):
   `LadderBL127` and `LadderBL19Deployed`, which call the deployed objects,
-  with `LadderRunner` and `EdgeRunner` (v1 to v13 recorded below).
+  with `LadderRunner` and `EdgeRunner` (v1 to v14 recorded below).
   `make deploy-ladder-sepolia`, `make verify-ladder-sepolia`.
 - `RELEASE.md`, `RELEASE.json`: every address in Blockulator 3.0, and those
   of 2.2, 2.1 and 2.0, which stay live.

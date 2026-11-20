@@ -35,15 +35,15 @@ Inline library, median gas per call on the same inputs ([full table](#gas-agains
 
 {{ <deployment lib="bl19" /> }}
 
-BL19 v6 (Blockulator 3.0) is five contracts from one source. The record above is the BL19 contract's; [`BL19.md`](/contracts/deployments/BL19.md) has all five.
+BL19 v7 (Blockulator 3.0) is five contracts from one source. The record above is the BL19 contract's; [`BL19.md`](/contracts/deployments/BL19.md) has all five.
 
 | contract | what it holds | address | ops |
 |---|---|---|---|
-| BL19 | the number | `0x94d9d43D6202827429a8058959eeCf6d232b8729` | `add` `sub` `mul` `div` `inv` `sqrt` `cbrt` `hypot` `gavg`; `neg` `abs` `sign`; `cmp` `lt` `eq` `min` `max` `clamp`; `floor` `ceil` `round` `frac`; `avg` `dist` `zeroFloorSub` `lerp`; `factorial`; `mulDown` `mulUp` `divDown` `divUp`; every conversion |
-| BL19E | the elementary functions, on one exp/log kernel | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` | `exp` `exp2` `exp10` `expm1` `ln` `log2` `log10` `log2Up` `log1p` `pow` `powu` `compound` |
-| BL19H | the hyperbolic functions | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` | `sinh` `cosh` `tanh` `atanh` |
-| BL19N | the normal distribution | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` | `erf` `erfc` `normCdf` |
-| BL19S | Lambert W | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` | `lambertW0` `lambertWm1` |
+| BL19 | the number | `0xbbb79a1B3c41553ee6C904D40a13f17EEFDC8230` | `add` `sub` `mul` `div` `inv` `sqrt` `cbrt` `hypot` `gavg`; `neg` `abs` `sign`; `cmp` `lt` `eq` `min` `max` `clamp`; `floor` `ceil` `round` `frac`; `avg` `dist` `zeroFloorSub` `lerp`; `factorial`; `mulDown` `mulUp` `divDown` `divUp`; every conversion |
+| BL19E | the elementary functions, on one exp/log kernel | `0x498DCcD03606E2f7B156Ec1bAE3800E8012cfD64` | `exp` `exp2` `exp10` `expm1` `ln` `log2` `log10` `log2Up` `log1p` `pow` `powu` `compound` |
+| BL19H | the hyperbolic functions | `0x2431fAeDd11E52EB8c104b051F2dac5DEA67dE5b` | `sinh` `cosh` `tanh` `atanh` |
+| BL19N | the normal distribution | `0x0540A33443bc4b2Db8D96CBbcb8117A993227E41` | `erf` `erfc` `normCdf` |
+| BL19S | Lambert W | `0x5a1266F89FC5b741e57077CbfEE59a6E48e32BCF` | `lambertW0` `lambertWm1` |
 
 BL19H has its own copy of the exp/log kernel because BL19E with the hyperbolics was over the 24,576-byte limit, and BL19N holds the erf family's fitted polynomial. `factorial` is a table in the core, for n ≤ 170. `pi` is the constant `BL19Lib.PI`, and `gcd` was removed in v5. The inline library holds all 65 ops.
 
