@@ -719,7 +719,7 @@ object "BL127E" {
                 let sh, sl := expk(rh, rx)
                 // as exp2; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
                 // 1.95). r within 2^-377 of x - n ln 2 and expk within 2^-311.2: within
-                // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-137 or more above
+                // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-138 or more above
                 // 0, so the value is above 2^-129)
                 let e := add(n, 129)
                 r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))

@@ -21,7 +21,7 @@ product and never a difference:
                continued fraction on [6, 18) (35k to 56k).
   y >= 18      the asymptotic series erfc(y) = e^(-y^2)/(y sqrt pi) sum (-1)^m (1/2)_m / y^(2m)
                (DLMF 7.12.1), its terms at 2^-262 until one floors to zero, the
-               remainder below the first omitted term: 76 terms at 18, 18 at 430.
+               remainder below the first omitted term: 74 terms at 18, 18 at 430.
 
 e^(-y^2) comes from the exact 474-bit square of the significand times log2 e in
 two words, so the deep tail keeps its bits: erfc(y) for y up to about 427 and

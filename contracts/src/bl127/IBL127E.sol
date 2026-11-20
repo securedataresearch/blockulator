@@ -42,7 +42,7 @@ interface IBL127E {
     /// @dev Reverts with OutOfRange for x <= 0 (the Huff returned 0). Exact for
     ///      powers of two. v5: log2g at 2^-192 (error under 2^-145) is rounded
     ///      when that cannot change the rounding; within 2^-145 of a midpoint
-    ///      (about one input in 2^17) the double-word l2p decides.
+    ///      (about one input in 2^16) the double-word l2p decides.
     function log2(int256 x) external pure returns (int256 r);
     /// @notice ln(x) = log2(x) * ln(2) for x > 0, rounded to nearest. Reverts
     ///         with OutOfRange otherwise.

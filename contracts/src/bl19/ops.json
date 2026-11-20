@@ -735,7 +735,7 @@
         "x"
       ],
       "notice": "10^x = 2^(x log2 10): the 512-bit product with log2 10 split as exp's, the 2^f kernel and one rounding when the bound clears the rounding boundary, else x log2 10 in three words and 2^f by wexpm1: correctly rounded, so 10^n is exact for n = 0 to 102. Exactly one below 2^-240.",
-      "domain": "x below about 78,913.4",
+      "domain": "x below about 78,913.5",
       "reverts": "Overflow() when 10^x does not fit; OutOfRange() for a word that is not a number"
     },
     {

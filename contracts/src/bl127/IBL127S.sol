@@ -40,7 +40,7 @@ interface IBL127S {
     ///      table-free logarithm, then fourth-order log-form steps at 2^-126
     ///      until one starts within 2^-22 (two), and the double-word
     ///      step lwfin. The smallest input, -floor(2^128 / e), is 2^-128 inside
-    ///      -1/e and its W is -1 - 2^-63.3, not -1, which v4 returned. The
+    ///      -1/e and its W is -1 - 2^-62.9, not -1, which v4 returned. The
     ///      archived Huff lambertwm1 was never functional and is not the
     ///      reference for this routine.
     function lambertWm1(int256 x) external pure returns (int256 r);
