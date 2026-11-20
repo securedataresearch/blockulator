@@ -48,7 +48,7 @@ BL127 costs less than PRBMath on every op both offer here, except that `exp` cos
 
 ## What it does not fix
 
-BL127's range has two ends. It tops out near 1.7 × 10<sup>38</sup>: `exp(89)` reverts, and Uniswap's top tick, 1.0001<sup>887272</sup>, is one bit past it. Its smallest step is 2<sup>−128</sup>, so an argument of 10<sup>−30</sup> keeps 8 digits, and so do its root and reciprocal ([edges: exp](/results/edges/#exp), [pow](/results/edges/#pow), [sqrt](/results/edges/#sqrt), [div](/results/edges/#div)).
+BL127's range has two ends. It tops out near 1.7 × 10<sup>38</sup>: `exp(89)` reverts, and Uniswap's top tick, 1.0001<sup>887272</sup> ([`TickMath.MAX_TICK`](https://github.com/Uniswap/v4-core/blob/v4.0.0/src/libraries/TickMath.sol#L23)), is one bit past it. Its smallest step is 2<sup>−128</sup>, so an argument of 10<sup>−30</sup> keeps 8 digits, and so do its root and reciprocal ([edges: exp](/results/edges/#exp), [pow](/results/edges/#pow), [sqrt](/results/edges/#sqrt), [div](/results/edges/#div)).
 
 Fixed point gets the most precision inside a band; a float gets the widest band. [BL19](/library/bl19/) keeps at least 53 digits on every edge call, where ABDKMathQuad keeps as few as 4. BL127 is for the maths in the middle: the price, the ratio, the growth factor 1 + r. Above 3 × 10<sup>−5</sup> it holds more digits than binary128's 34.
 
