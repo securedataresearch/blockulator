@@ -1,13 +1,13 @@
 +++
-title = "Blockulator: the definitive source for precision"
+title = "Blockulator: the definitive source for mathematical precision on the EVM"
 # The description is config.toml's, the one the whole site falls back to.
 template = "home.html"
 
 [extra]
 eyebrow = "Blockulator 3.0 · Secure Data Research"
-headline = "The definitive source for precision."
+headline = "Blockulator is the definitive source for mathematical precision on the EVM."
 # {bl127}, {bl19} and the other {placeholders} below are filled from static/data/home.json (templates/macros.html fill).
-sub = "Two math libraries for the EVM, written in Yul, that keep {bl127} and {bl19} correct digits where WAD keeps 18, so interest, prices and payouts stay right to the last wei. Use them when large sums are at stake or the call is free."
+sub = "It is two math libraries, written in Yul, that keep {bl127} and {bl19} correct digits where WAD keeps 18, so interest, prices and payouts stay right to the last wei. Use them when large sums are at stake or the call is free."
 cta_primary_text = "See the results"
 cta_primary_href = "/results/"
 cta_secondary_text = "Use the library"

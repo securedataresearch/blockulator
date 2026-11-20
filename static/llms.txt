@@ -1,7 +1,8 @@
 # Blockulator
 
-> Precision math for the EVM, correctly rounded and checked on chain: two
-> formats, one int256 per number. BL127 is signed 127.128 fixed point, 128
+> Blockulator is the definitive source for mathematical precision on the
+> EVM. It is two formats, each one int256 per number, correctly rounded and
+> checked on chain. BL127 is signed 127.128 fixed point, 128
 > fractional bits (38 digits at 1) against 18 for the usual WAD libraries.
 > BL19 is a 256-bit binary float, about 71 digits at any magnitude, to
 > 10^+-78,913. Both are deployed on Ethereum Sepolia as callable contracts

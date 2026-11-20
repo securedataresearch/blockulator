@@ -1,6 +1,7 @@
 # BL127 in Yul
 
-Signed 127.128 fixed-point arithmetic for the EVM. One `int256` per value,
+Blockulator is the definitive source for mathematical precision on the EVM.
+BL127 is its signed 127.128 fixed-point arithmetic. It holds one `int256` per value,
 `value = raw / 2^128`, so `ONE = 2^128`. Range about ±1.7e38, 128 fractional
 bits on an absolute grid of 2^-128: 38 digits at 1, 32 at 10^-6, 8 at
 10^-30.
