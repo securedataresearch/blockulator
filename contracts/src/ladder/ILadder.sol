@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// @notice BL127's Yul objects (3.0, salts "FP127 v9", "FP127E v9", "FP127H v9", "FP127N v9", "FP127S v9"): the
+// @notice BL127's Yul objects (3.0, salts "BL127 v10", "BL127E v10", "BL127H v10", "BL127N v10", "BL127S v10"): the
 //         number, the elementary, hyperbolic, normal and special functions, at their CREATE2 addresses, live on
-//         Sepolia since 2026-10-29 (contracts/deployments/BL127.md). Tests etch the artifacts' runtimes
+//         Sepolia (contracts/deployments/BL127.md). Tests etch the artifacts' runtimes
 //         here, so the same adapter code runs in the harness and on chain; the adapters that call them are deployed
 //         after them.
-address constant BL127_ADDRESS = 0x0DF738d125677550a80A46BaF254386C66f96E0d;
-address constant BL127E_ADDRESS = 0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808;
-address constant BL127H_ADDRESS = 0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B;
-address constant BL127N_ADDRESS = 0xAA7Cd9635aE8630379636F533f23DBf2C193d296;
-address constant BL127S_ADDRESS = 0xB9C2583a7Ad2251444DC7752658B6C1107C25036;
-// @notice BL19's Yul objects (contracts/deployments/BL19.md; 3.0, salts "FP19 v6", "FP19E v6", "FP19H v6",
-//         "FP19S v6"): the number, the elementary, hyperbolic and special functions. LadderBL19 is inline (BL19Lib) and calls none of them; LadderBL19Deployed, the form
+address constant BL127_ADDRESS = 0x9D7f2c78EB802b83368E816E332A2aFa0997B3f2;
+address constant BL127E_ADDRESS = 0xfE4627Ba196d0c9c2D068C8599837688A8BE8bD1;
+address constant BL127H_ADDRESS = 0xC3B57948d3839b6B3358AC25E17fD7A055023704;
+address constant BL127N_ADDRESS = 0x42f0FDe3EF14d10218126e37A672BE33012f8902;
+address constant BL127S_ADDRESS = 0x315bF86feeCd5aCF3F9105f94A33ceBFa2e1Cc7E;
+// @notice BL19's Yul objects (contracts/deployments/BL19.md; 3.0, salts "BL19 v7", "BL19E v7", "BL19H v7",
+//         "BL19N v7", "BL19S v7"): the number, the elementary and hyperbolic functions, the normal distribution and
+//         Lambert W. LadderBL19 is inline (BL19Lib) and calls none of them; LadderBL19Deployed, the form
 //         the on-chain runners use, calls these, and tests etch the artifacts' runtimes here.
-address constant BL19_ADDRESS = 0x94d9d43D6202827429a8058959eeCf6d232b8729;
-address constant BL19E_ADDRESS = 0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092;
-address constant BL19H_ADDRESS = 0xF059611C1c42543DE6EE82353Eb082Fd8999081f;
-address constant BL19S_ADDRESS = 0xf74ba90535224870830e6e89D2b328d4cc09DE48;
-// @notice BL19N (erf, erfc, normCdf; 3.0, salt "FP19N v6"): its predicted CREATE2 address, deployed with 3.0.
-address constant BL19N_ADDRESS = 0xCe9F09D646B37a9100F05ED1FFD14E9f43180214;
+address constant BL19_ADDRESS = 0xbbb79a1B3c41553ee6C904D40a13f17EEFDC8230;
+address constant BL19E_ADDRESS = 0x498DCcD03606E2f7B156Ec1bAE3800E8012cfD64;
+address constant BL19H_ADDRESS = 0x2431fAeDd11E52EB8c104b051F2dac5DEA67dE5b;
+address constant BL19N_ADDRESS = 0x0540A33443bc4b2Db8D96CBbcb8117A993227E41;
+address constant BL19S_ADDRESS = 0x5a1266F89FC5b741e57077CbfEE59a6E48e32BCF;
 
 /// @notice Scenario ids. Mirrors "index" in scripts/ladder/scenarios.json.
 library Scenario {

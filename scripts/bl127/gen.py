@@ -71,19 +71,19 @@ LIBS = {
         # the exp/log kernels; BL127H the hyperbolic functions; BL127N the
         # normal distribution; BL127S Lambert W. v8 was one object with 779
         # bytes free, no room for a second stage behind each rounding test.
-        # The salts are the deployed ASCII strings (the on-chain name is FP127 until the
-        # 2026-10-29 rename): their bytes fix the CREATE2 addresses, so they change
-        # only with the next deploy. The on-chain names stay FP… until then.
+        # The salts are the deployed ASCII strings: their bytes fix the CREATE2
+        # addresses, so they change only with a deployment. v10 is the first
+        # deployment under the name BL127.
         "objects": {
-            "BL127": {"iface": "IBL127", "abi": "abi.json", "salt": "FP127 v9",
+            "BL127": {"iface": "IBL127", "abi": "abi.json", "salt": "BL127 v10",
                       "iface_notice": "Interface of the deployed BL127 object, the number: arithmetic and\n///         its directed forms, conversions, roots, comparison and rounding.\n///         Values are signed 127.128 fixed-point: one int256 whose value is\n///         raw / 2^128."},
-            "BL127E": {"iface": "IBL127E", "abi": "abiE.json", "salt": "FP127E v9",
+            "BL127E": {"iface": "IBL127E", "abi": "abiE.json", "salt": "BL127E v10",
                        "iface_notice": "Interface of the deployed BL127E object, BL127's elementary\n///         functions on its exp/log kernels: exp, exp2, exp10, expm1, ln,\n///         log2, log10, log2Up, log1p, pow, powu and compound, on the same\n///         signed 127.128 fixed-point words as IBL127 (value = raw / 2^128)."},
-            "BL127H": {"iface": "IBL127H", "abi": "abiH.json", "salt": "FP127H v9",
+            "BL127H": {"iface": "IBL127H", "abi": "abiH.json", "salt": "BL127H v10",
                        "iface_notice": "Interface of the deployed BL127H object, BL127's hyperbolic\n///         functions: sinh, cosh, tanh and atanh, on the same signed 127.128\n///         fixed-point words as IBL127. They carry their own copy of the exp\n///         and log kernels."},
-            "BL127N": {"iface": "IBL127N", "abi": "abiN.json", "salt": "FP127N v9",
+            "BL127N": {"iface": "IBL127N", "abi": "abiN.json", "salt": "BL127N v10",
                        "iface_notice": "Interface of the deployed BL127N object, BL127's normal\n///         distribution: erf, erfc and normCdf, on the same signed 127.128\n///         fixed-point words as IBL127."},
-            "BL127S": {"iface": "IBL127S", "abi": "abiS.json", "salt": "FP127S v9",
+            "BL127S": {"iface": "IBL127S", "abi": "abiS.json", "salt": "BL127S v10",
                        "iface_notice": "Interface of the deployed BL127S object, BL127's special\n///         functions: lambertW0 and lambertWm1, the two real branches of\n///         Lambert W, on the same signed 127.128 fixed-point words as IBL127."},
         },
         # --wide-lib: every rounding test forced to fail, so every result comes
@@ -118,15 +118,15 @@ LIBS = {
         # that kernel (with them BL19E measured 27,308 bytes, over the
         # 24,576 limit); BL19N the normal distribution (erf, erfc, normCdf),
         # moved out of BL19S for its tables in 3.0; BL19S Lambert W.
-        "objects": {  # salts: the deployed ASCII strings, as for BL127 above (on-chain name FP19)
-            "BL19": {"iface": "IBL19", "abi": "abi.json", "salt": "FP19 v6"},
-            "BL19E": {"iface": "IBL19E", "abi": "abiE.json", "salt": "FP19E v6",
+        "objects": {  # salts: the deployed ASCII strings, as for BL127 above (v7 is the first under the name BL19)
+            "BL19": {"iface": "IBL19", "abi": "abi.json", "salt": "BL19 v7"},
+            "BL19E": {"iface": "IBL19E", "abi": "abiE.json", "salt": "BL19E v7",
                        "iface_notice": "Interface of the deployed BL19E object, BL19's elementary\n///         functions on its one exp/log kernel: exp, exp2, exp10, expm1, ln,\n///         log2, log10, log2Up, log1p, pow, powu and compound, on the same\n///         256-bit binary floating point words as IBL19 (sign bit 255, a\n///         19-bit biased exponent, bias 262143, a 236-bit fraction; zero is\n///         the all-zero word)."},
-            "BL19H": {"iface": "IBL19H", "abi": "abiH.json", "salt": "FP19H v6",
+            "BL19H": {"iface": "IBL19H", "abi": "abiH.json", "salt": "BL19H v7",
                        "iface_notice": "Interface of the deployed BL19H object, BL19's hyperbolic\n///         functions: sinh, cosh, tanh and atanh, on the same 256-bit binary\n///         floating point words as IBL19. They run on the exp/log kernel of\n///         BL19E, carried here as their own copy: beside BL19E's ops they\n///         would not fit one object."},
-            "BL19N": {"iface": "IBL19N", "abi": "abiN.json", "salt": "FP19N v6",
+            "BL19N": {"iface": "IBL19N", "abi": "abiN.json", "salt": "BL19N v7",
                        "iface_notice": "Interface of the deployed BL19N object, BL19's normal distribution:\n///         erf, erfc and normCdf, on the same 256-bit binary floating point\n///         words as IBL19."},
-            "BL19S": {"iface": "IBL19S", "abi": "abiS.json", "salt": "FP19S v6",
+            "BL19S": {"iface": "IBL19S", "abi": "abiS.json", "salt": "BL19S v7",
                        "iface_notice": "Interface of the deployed BL19S object, BL19's special functions:\n///         lambertW0 and lambertWm1, the two real branches of Lambert W, on\n///         the same 256-bit binary floating point words as IBL19."},
         },
         "lib_dev": "Blocks are memory-safe: the only memory touched is scratch space\n///      (0x00..0x3f) for revert selectors and lerp's comparisons, and lerp's\n///      four-word accumulator just past the free memory pointer, which it does\n///      not move.",

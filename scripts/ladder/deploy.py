@@ -5,7 +5,7 @@
     DEPLOYER_KEY=0x... uv run scripts/ladder/deploy.py deploy [rpc]
     uv run scripts/ladder/deploy.py record [rpc]        # write contracts/deployments/Ladder.json
 
-Four contracts, salt "FP127 ladder v14": the adapters of our two deployed forms (LadderBL127 and
+Four contracts, salt "BL127 ladder v15": the adapters of our two deployed forms (LadderBL127 and
 LadderBL19Deployed) and LadderRunner and EdgeRunner, whose constructor is the eighteen form slots as one array in
 form-id order, the zero address for every library that is not on chain (see ONCHAIN), so their init code depends
 on them. Each transaction is sent with the node's
@@ -33,7 +33,7 @@ _spec = importlib.util.spec_from_file_location("bl127_deploy", ROOT / "scripts" 
 objects = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(objects)
 PROXY = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
-SALT_ASCII = "FP127 ladder v14"
+SALT_ASCII = "BL127 ladder v15"
 SALT = "0x" + SALT_ASCII.encode().ljust(32, b"\0").hex()
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 ADAPTERS = ["LadderBL127", "LadderBL127Lib", "LadderABDK", "LadderSolady", "LadderPRB",
