@@ -146,7 +146,7 @@
    "status": "still live and verified",
    "blocks": [
     11974968,
-    11974985
+    11977390
    ],
    "components": {
     "BL127": {
@@ -187,13 +187,13 @@
     "LadderRunner": {
      "version": "BL127 ladder v11",
      "address": "0x08b06D93620e7B33cD2d600118a75B45EF779Cec",
-     "block": 11974984,
+     "block": 11977389,
      "record": "contracts/deployments/Ladder.md"
     },
     "EdgeRunner": {
      "version": "BL127 ladder v11",
      "address": "0xf453Dc3C9D5d2E2bF8183941B01F6017eb833B83",
-     "block": 11974985,
+     "block": 11977390,
      "record": "contracts/deployments/Ladder.md"
     }
    },

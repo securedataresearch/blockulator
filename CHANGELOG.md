@@ -39,9 +39,9 @@ BL127E, BL127N), and the one BL127 object became five by idea, as BL19's are,
 so each had room for its second stages. Every BL127 object takes salt v9.
 
 The full release gate on this tree (2026-10-28): BL127 59 sweep rows,
-212,119 inputs, misrounded 0 in the plain pass, with every rounding test
+217,000 inputs (212,119 returned results), misrounded 0 in the plain pass, with every rounding test
 forced (the last stage alone) and with the fast tests forced (the middle
-stage alone); BL19 76 rows, 455,082 inputs, misrounded 0; bounds and bounds127 0 regions over their bound;
+stage alone); BL19 76 rows, 455,082 results, misrounded 0; bounds and bounds127 0 regions over their bound;
 299 tests; every object under 24,576 bytes (BL19E tightest, 955 free).
 Gas on the ladder's inputs, inline, v8 → v9: the tests cost the
 transcendentals a few percent (`exp` 2,726 → 2,845, `sinh` 3,880 → 4,029,
@@ -112,8 +112,8 @@ next deploy):
 - The BL127 object is 20,603 bytes as deployed on 2026-10-27 (2.2: 21,858): one copy of the kernel
   where the optimizer had made three.
 
-BL19's erf, erfc and normCdf move to a fifth object, BL19N (salt "BL19N
-v6", 17,962 bytes; BL19S keeps Lambert W at 11,338), and their fast path is
+BL19's erf, erfc and normCdf move to a fifth object, BL19N (salt
+"FP19N v6", 17,962 bytes; BL19S keeps Lambert W at 11,338), and their fast path is
 a fit (`scripts/bl19/generators/erf19.py`, coefficients in `erfcxu.json`,
 checked in CI):
 
@@ -388,11 +388,11 @@ BL19 deploys as four objects by idea, replacing BL19, BL19X, BL19X2 and
 BL19X3: **BL19**, the number (arithmetic, roots, comparison, rounding,
 conversions: 43 ops, salt `FP256 v5`); **BL19E**, the elementary functions
 on one exp/log kernel (exp, exp2, exp10, expm1, ln, log2, log10, log2Up,
-log1p, pow, powu, compound; `FP19E v5`); **BL19H**, the hyperbolic
-functions (sinh, cosh, tanh, atanh; `FP19H v5`), their own object because
+log1p, pow, powu, compound; `FP256E v5`); **BL19H**, the hyperbolic
+functions (sinh, cosh, tanh, atanh; `FP256H v5`), their own object because
 BL19E with them measured 27,308 bytes, over the 24,576 limit, so BL19H
 carries its own copy of the kernel; **BL19S**, the special functions (erf,
-erfc, normCdf, lambertW0, lambertWm1, factorial; `FP19S v5`). In both
+erfc, normCdf, lambertW0, lambertWm1, factorial; `FP256S v5`). In both
 libraries `pi` is now a constant and `gcd` is removed. Without the kernels
 the BL19 core is 10,333 bytes, and the room goes to the basic ops' fast
 path, bit-identical: through the object `mulDown`/`mulUp` 201 to 267 gas

@@ -13,7 +13,10 @@ agent.json: every object under primaryContract.objects and floatContract.objects
 every op of the library. Everything else in the file stays as written.
 
 llms.txt is prose, so it is checked, not written: each object's address must appear, and the salt quoted after an
-address (`salt "..."`) must be that object's. Stdlib only.
+address (`salt "..."`) must be that object's.
+
+--check also reads every tracked .md and .txt file: a string in the old naming (FP and a number, then a version) must be a
+salt some record holds, and no salt may be quoted under a BL name. Stdlib only.
 """
 from __future__ import annotations
 
@@ -70,12 +73,59 @@ def llms_problems() -> list[str]:
     return bad
 
 
+def recorded_salts() -> set[str]:
+    """Every saltAscii in contracts/deployments/*.json, current and previous."""
+    out: set[str] = set()
+
+    def walk(d):
+        if isinstance(d, dict):
+            if isinstance(d.get("saltAscii"), str):
+                out.add(d["saltAscii"])
+            for v in d.values():
+                walk(v)
+        elif isinstance(d, list):
+            for v in d:
+                walk(v)
+
+    for f in sorted((ROOT / "contracts" / "deployments").glob("*.json")):
+        walk(json.loads(f.read_text()))
+    return out
+
+
+def salt_problems() -> list[str]:
+    """The names from before the BL rename survive only as salts, so every such string in the public text must
+    be a recorded salt; and a salt must never be quoted under a BL name. The ladder's earlier salts
+    ("<old name> ladder v1" to the current one) have no record of their own and are accepted by their form."""
+    import subprocess
+    have = recorded_salts()
+    LADDER = "F" + r"P127 ladder v(\d+)"   # spelled in two parts: the naming gate reads this file too
+    ladder = max(int(m.group(1)) for x in have if (m := re.fullmatch(LADDER, x)))
+    files = subprocess.check_output(["git", "ls-files", "*.md", "*.txt", "static/.well-known/agent.json"],
+                                    cwd=ROOT, text=True).split()
+    skip = ("research_notes/", "talk/", "docs/talks/", "CLAUDE.md")
+    bad = []
+    for f in files:
+        if f.startswith(skip):
+            continue
+        text = re.sub(r"\s+", " ", (ROOT / f).read_text())
+        for m in re.finditer(r"\bFP[0-9A-Z]+ (?:ladder )?v\d+\b", text):
+            x = m.group(0)
+            lad = re.fullmatch(LADDER, x)
+            if x not in have and not (lad and 1 <= int(lad.group(1)) <= ladder):
+                bad.append(f'{f} prints "{x}", which is no recorded salt')
+        for m in re.finditer(r"salts? `?\"(BL[0-9A-Z]+ v\d+)\"", text):
+            bad.append(f'{f} gives "{m.group(1)}" as a salt; salts carry the name they were deployed under')
+    return bad
+
+
 def main() -> int:
     want = agent()
     if "--check" not in sys.argv:
         AGENT.write_text(want)
         print(f"wrote {AGENT.relative_to(ROOT)}")
     bad = llms_problems()
+    if "--check" in sys.argv:
+        bad += salt_problems()
     if "--check" in sys.argv and AGENT.read_text() != want:
         bad.append("static/.well-known/agent.json is stale (run python3 scripts/site/agentfiles.py)")
     for b in bad:

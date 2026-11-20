@@ -401,12 +401,12 @@ The bounds, and what they give:
 | pow, compound near one | 16 + 12(k + 1) | t within 8(k + 1) + 2 units | 0.46 of it | 2^−486 rel. | 2^−249 ULP |
 | pow, compound | 8 + yq·(8 + 2\|u\|)·355/2^16 | 6.1 + 1.3863·\|y\|·(log2m 2.4 + Lm's shift 2^sh ≤ 2\|u\| + compound's dropped one 1.45, the 8 with room as 2^sh meets 2\|u\| at powers of two); yq ≥ 2^8\|y\| (2^8(\|n\| + 1)) | 0.78 of it | 2^−470 rel. | 2^−233 ULP |
 | powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it | as pow | 2^−233 ULP |
-| pow, powu, compound, middle stage | 10 | 8.7: the 2^f kernel 4.7, f's floor 1.39, and 1.39 × t's error, under 1.9 units (log2 within 2^−272.1 relative near one, \|t\| < 2^19; 2^−279.5 absolute off it, \|y\| < 2^26.5) | 3.3 | as pow | 2^−233 ULP |
-| erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 10.6 | 2^−499 rel. | 2^−262 ULP |
-| erf, erfc, Φ, ½ ≤ y < 4.81 (g's piece 1) | 90 | 2 × g's 40.5 (Horner 3 units of 2^−252, w's 3.6 units of 2^−256, h·u's floors, normCdf's floored y 5) + 2 × g × 6.1 + 1 | 34.1 | 2^−444 rel. below 7 | 2^−207 ULP |
-| erfc, Φ, 4.81 ≤ y < 18 (g's piece 0) | 26 | 2 × g's 8.5 (Horner 3 units of 2^−256, the rest as piece 1) + 2 × g × 6.1 + 1 | 3.5 | 2^−444 rel. below 7, 2^−392 above | 2^−155 ULP |
-| erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 76 terms), w's floor 2^−254, Q's 2 units, v's 6.1, two floors: under 49; the remainder below the first omitted term | 6.2 | 2^−392 rel. | 2^−155 ULP |
-| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.13, 0.18 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
+| pow, powu, compound, middle stage | 10 | 8.7: the 2^f kernel 4.7, f's floor 1.39, and 1.39 × t's error, under 1.9 units (log2 within 2^−272.1 relative near one, \|t\| < 2^19; 2^−279.5 absolute off it, \|y\| < 2^26.5) | 3.83 | as pow | 2^−233 ULP |
+| erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 9.48 | 2^−499 rel. | 2^−262 ULP |
+| erf, erfc, Φ, ½ ≤ y < 4.81 (g's piece 1) | 90 | 2 × g's 40.5 (Horner 3 units of 2^−252, w's 3.6 units of 2^−256, h·u's floors, normCdf's floored y 5) + 2 × g × 6.1 + 1 | 38.1 | 2^−444 rel. below 7 | 2^−207 ULP |
+| erfc, Φ, 4.81 ≤ y < 18 (g's piece 0) | 26 | 2 × g's 8.5 (Horner 3 units of 2^−256, the rest as piece 1) + 2 × g × 6.1 + 1 | 3.9 | 2^−444 rel. below 7, 2^−392 above | 2^−155 ULP |
+| erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 76 terms), w's floor 2^−254, Q's 2 units, v's 6.1, two floors: under 49; the remainder below the first omitted term | 7.7 | 2^−392 rel. | 2^−155 ULP |
+| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.055, 0.21 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
 | exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.66 | 2^−492 rel. | 2^−255 ULP |
 | log2, near one | 8 | d P within 3.7, times log2 e: 3.7 log2 e + 2 | 5.10 | 2^−497 rel. | 2^−260 ULP |
 | log2 | 4 | log2m 2.4, the shift into Lm 1 | 1.03 | 2^−489 rel. | 2^−252 ULP |
@@ -526,8 +526,8 @@ pow(c², 3/2), powu(−c, 3) and compound(c − 1, 3) for c = 2^79 + 1, whose
 cube has exactly 238 bits, and 3^150.
 
 `make sweep` ([`docs/benchmarks/sweep.md`](../../../docs/benchmarks/sweep.md))
-runs 455,082 seeded random inputs through the ops, each compared with
-the correctly rounded word: 0 misrounded (`factorial` at every n of its
+compares 455,082 results over its three passes, 340,394 of them in the
+plain pass, with the correctly rounded word: 0 misrounded (`factorial` at every n of its
 domain). The first 4,000 inputs of each
 correctly rounded op go again through a test-only copy of the library whose
 rounding test always fails, so every result comes from the second stage: 0
@@ -549,16 +549,16 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 | op | fast path | second stage | largest seen |
 |---|---:|---:|---:|
 | exp, expm1 | 2,400–3,300 | 25,100–25,300 | 40,800 |
-| ln, log1p | 2,600–3,600 | 26,000–28,400 | 112,100 |
-| pow, powu (middle stage) | 5,000–5,900 | 14,600–14,900 (second stage 63,200–63,300) | 96,000 |
+| ln, log1p | 2,600–3,700 | 26,000–28,500 | 112,100 |
+| pow, powu (middle stage) | 5,000–6,000 | 14,600–14,900 (second stage 63,200–63,300) | 95,800 |
 | compound (middle stage) | 6,200 | 13,300 (second stage 63,700) | 149,200 |
-| erf, erfc, normCdf | 10,600–11,300 | 89,000–96,300 | 361,500 (the two-word series just below y = 7) |
-| lambertW0, lambertWm1 | 10,600–13,200 | 40,900–43,100 | 63,600 |
+| erf, erfc, normCdf | 10,600–11,300 | 89,000–96,300 | 362,200 (the two-word series just below y = 7) |
+| lambertW0, lambertWm1 | 10,700–13,200 | 40,900–43,100 | 63,600 |
 | the directed ops | 400–1,000 | | 1,000 |
 | exp2, exp10 | 3,100–3,200 | 25,800 | 26,000 |
-| log2, log10 | 3,700 | 26,300–26,400 | 28,400 |
+| log2, log10 | 3,800 | 26,400–26,500 | 28,500 |
 | sinh, cosh | 3,600 | 9,200–27,300 | 38,700 |
-| tanh, atanh | 3,600–5,100 | 8,000–17,100 | 75,400 |
+| tanh, atanh | 3,600–5,200 | 8,000–17,100 | 75,400 |
 | cbrt, gavg, hypot | 2,100–3,500 | | 3,900 |
 | lerp | 5,900 | | 6,900 |
 | factorial | 714 | | 762 (a table) |
@@ -573,13 +573,13 @@ log2 bound). pow, powu and compound
 leave their fast value as often as before (1.2%, 9.8% and 13.5% of the
 sweep's inputs), but to the middle stage at about 9,000 more gas; the second
 stage now runs for 0.005%, 0.017% and 0.067% (compound's, mostly exact ties).
-Their p99 went from 54,500, 59,000 and 106,000 to 15,100, 19,100 and 15,900.
+Their p99 went from 54,500, 59,000 and 106,000 to 15,100, 19,100 and 16,000.
 In 3.0 erf, erfc and normCdf's
 fast path is g's two fitted pieces in place of the anchors and the continued
 fraction (whose rigorous bound was thirteen times the largest error
 measured): on [−6, 6] normCdf 29,937 → 11,330 gas (median, `cdf.md`), erfc
-29,357 → 10,623, and the second stage runs for 4 to 10 in 6,000 random
-inputs (erfc 0.27% → 0.08%, normCdf 0.33% → 0.17%).
+29,357 → 10,623, and the second stage runs for 4 of erf's 4,000 random inputs and for 5
+and 10 of erfc's and normCdf's 6,000 (erfc 0.27% → 0.08%, normCdf 0.33% → 0.17%).
 
 ## What changed from BL127's conventions
 

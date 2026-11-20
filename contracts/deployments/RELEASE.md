@@ -28,7 +28,7 @@ ops: the arithmetic and its directed forms, the conversions, `sqrt`,
 rounding ops), BL127E the elementary functions (12), BL127H the hyperbolic
 functions (4), BL127N the normal distribution (3) and BL127S Lambert W (2);
 every one of its 53 ops is correctly rounded on every input (the release
-gate's sweep: 212,119 inputs, 0 misrounded, plain and with every rounding
+gate's sweep: 217,000 inputs, 212,119 returned results, 0 misrounded, plain and with every rounding
 test forced), where v8's transcendentals were rounded with no test.
 `contracts/src/bl127/ops.json` names each op's object. BL19 v6: BL19 the
 number (44 ops, now with `factorial`, a table for n ≤ 170), BL19E the
@@ -59,8 +59,10 @@ EdgeRunner at block 12,017,760, 0 mismatches
 
 ## Blockulator 2.2
 
-2026-10-22, blocks 11,974,968 to 11,974,985, the first CLZ (osaka) builds.
-All seven stay live and verified:
+2026-10-22, the first CLZ (osaka) builds. The five library objects are in
+blocks 11,974,968 to 11,974,972. The ladder's v11 runners are in blocks
+11,977,389 and 11,977,390; they replaced v10's runners of blocks 11,974,984
+and 11,974,985 eight hours later. All seven stay live and verified:
 
 | component | version | runtime | address |
 |---|---|---:|---|
