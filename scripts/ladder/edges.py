@@ -5,7 +5,7 @@
     make edges-check   # fail if the committed dataset differs
 
 Reads EDGE|probe|form|ok|raw|reason|gas lines from test/ladder/Edges.t.sol,
-computes the exact truth of every probe (mpmath, 200 digits) and the truth
+computes the exact truth of every probe (mpmath, 300 digits) and the truth
 from the arguments as each representation holds them, and records per cell
 the value, correct digits against both, the signed error in ULPs, and the
 three ways a library can have no answer: a revert (with its reason), a
@@ -37,7 +37,7 @@ OUT_MD = ROOT / "docs" / "benchmarks" / "edges.md"
 UNSUPPORTED = "0x7bb9ae15"
 
 METHODOLOGY = {
-    "truth": "Every probe is one op evaluated once. The truth is mpmath at 200 decimal digits from the exact arguments; truthFormat is the same op from the arguments as the representation holds them (floored on a grid, nearest for binary128), so digitsFormat measures the op alone and digits what a caller sees.",
+    "truth": "Every probe is one op evaluated once. The truth is mpmath at 300 decimal digits from the exact arguments; truthFormat is the same op from the arguments as the representation holds them (floored on a grid, nearest for binary128), so digitsFormat measures the op alone and digits what a caller sees.",
     "digits": "digits = floor(-log10 |v - t| / |t|), capped at 100 (reported as exact); errUlps is the signed error in units of the representation's last place (none for the floats).",
     "zero": "A cell is marked zero when the library returned 0 and the truth is not 0: the result fell below the representation's floor. On an 18-decimal grid that is anything below 1e-18; on BL127's, below 2^-128.",
     "reverted": "A revert is recorded with its selector and name. Unsupported means the library has no way to compute the op (the accrual libraries have no general ops; only BL127 and BL19 have the secondary Lambert branch; the libraries without erf, erfc or normCdf run the same series and continued fraction through their own ops instead, so those cells are not Unsupported).",
@@ -145,7 +145,7 @@ def build(cells: dict) -> dict:
         ops_out.append({"id": op["id"], "index": op["index"], "label": op["label"], "args": op["args"], "why": op["why"], "probes": probes_out})
     return {
         "generated": date.today().isoformat(),
-        "description": "Edges: one-shot evaluations at the ends of each library's domain, every probe through every library in its native representation, against mpmath at 200 digits. See methodology.",
+        "description": "Edges: one-shot evaluations at the ends of each library's domain, every probe through every library in its native representation, against mpmath at 300 digits. See methodology.",
         "versions": versions(),
         "forms": [{"id": f, "scale": SCALES[SCALE_OF_FORM[f]][0]} for f in forms],
         "digitsCap": DIGITS_CAP,
@@ -172,7 +172,7 @@ def render_md(doc: dict) -> str:
     forms = [f["id"] for f in doc["forms"] if f["id"] != "bl127lib"]
     L = ["# Edges: where each library's domain ends", "",
          f"Generated {doc['generated']} by `make edges`. Versions: " + ", ".join(f"{k} {v}" for k, v in doc["versions"].items()) + ".", "",
-         "Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 200 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. BL127Lib coincides with BL127 and is omitted. The method is in the Methodology section at the end.", ""]
+         "Each probe is one op evaluated once at the end of a domain, through every library in its own representation, against mpmath at 300 digits. Cells give correct digits against the exact truth (`digits`; `digitsFormat`, the signed error and the raw words are in edges.json), or how the library had no answer: **ZERO** when it returned 0 where the truth is not (the result fell below the format's floor), **REVERT** with the reason, **RANGE** when the argument does not fit the representation, **n/a** when the library has no way to compute the op. BL127Lib coincides with BL127 and is omitted. The method is in the Methodology section at the end.", ""]
     for op in doc["ops"]:
         L += [f"## {op['label']}", "", op["why"], "",
               "| probe | truth | " + " | ".join(forms) + " |", "|---|---|" + "---:|" * len(forms)]

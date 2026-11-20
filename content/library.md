@@ -46,7 +46,7 @@ contract CompoundExample {
 }
 ```
 
-This example is compiled and tested in `test/examples/` against the [ladder's](/results/ladder/#compound) compound scenario. Compile with `via_ir = true` in `foundry.toml`: through the IR the inline ops come within a few percent of the deployed contract's gas, and on the legacy pipeline the heavy ops cost 6–17% more ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
+This example is compiled and tested in `test/examples/` against the [ladder's](/results/ladder/#compound) compound scenario. Compile with `via_ir = true` in `foundry.toml`: through the IR the inline ops come within a few percent of the deployed contract's gas, and on the legacy pipeline the heavy ops cost 6–16% more ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
 
 ## Typed API
 
@@ -71,7 +71,7 @@ Errors are `Overflow()`, `DivisionByZero()` and `OutOfRange()`. Nothing wraps.
 
 ## The deployed contracts
 
-Calling the deployed contract costs one `staticcall`, about 600 gas more than inlining on simple ops like `add` and `mul`. On `exp`, `exp2`, `exp10`, `sinh` and `cosh` it costs about 85 to 230 gas more than inlining, and on the two Lambert W branches about 270 to 340 gas less ([`gas.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas.md)). It is also the way to use BL127 from an `eth_call`, where gas is free.
+Calling the deployed contract costs one `staticcall`, about 550 to 600 gas more than inlining on simple ops like `add` and `mul`. On `exp`, `exp2`, `exp10`, `sinh` and `cosh` it costs about 85 to 230 gas more than inlining, and on the two Lambert W branches about 270 to 340 gas less ([`gas.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/gas.md)). It is also the way to use BL127 from an `eth_call`, where gas is free.
 
 {{ <deployment /> }}
 

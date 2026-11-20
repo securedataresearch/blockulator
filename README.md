@@ -6,7 +6,7 @@
 
 **The definitive source for precision.** Two libraries, one `int256` each: BL127, 38 digits of fixed point, every op correctly rounded; BL19, 71 digits of float, every op correctly rounded or exact. Checked on chain, competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)
 
-On typical inputs BL127's ln and pow cost 1,944 and 3,316 gas against PRBMath's 7,022 and 10,020, with 38 digits against 18; exp costs about the same, 2,834 against 2,844. BL19's ln and pow cost 3,100 and 5,940 against ABDKMathQuad's 16,388 and 23,406, with 71 digits against 34; ABDKMathQuad's sqrt is cheaper, 760 against 1,203. Across the 326 live Aave and Morpho markets at the survey block, the deployed accrual keeps a median 7.2 correct digits of the pending interest; BL127 keeps 30 and BL19 67.
+On typical inputs BL127's ln and pow cost 1,944 and 3,316 gas against PRBMath's 7,022 and 10,020, with 38 digits against 18; exp costs about the same, 2,834 against 2,844. BL19's ln and pow cost 3,100 and 5,940 against ABDKMathQuad's 16,388 and 23,406, with 71 digits against 34; ABDKMathQuad's sqrt is cheaper, 760 against 1,203. Across the 326 live accruals at the survey block (252 Morpho markets and 74 Aave reserve sides), the deployed accrual keeps a median 7.2 correct digits of the pending interest; BL127 keeps 30 and BL19 67.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/img/digits-dark.svg">

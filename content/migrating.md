@@ -25,7 +25,7 @@ PRBMath's values are user-defined types over the same 18-decimal integers, so a 
 
 {{ <table name="migrate.prbmath.wadud" first="PRBMath UD60x18" /> }}
 
-On 200 everyday inputs each, PRBMath's `exp` is off by a wei on 107 results and its `ln`, `log2`, `log10` and `pow` on all 200; BL19 and BL127 on none. Its `mul`, `div` and `sqrt` are exact; keep them for a single product, quotient or root.
+On 200 everyday inputs each, PRBMath's SD59x18 `exp` is off by a wei on 107 results and its `ln`, `log2`, `log10` and `pow` on all 200; BL19 and BL127 on none. Its `mul`, `div` and `sqrt` are exact; keep them for a single product, quotient or root.
 
 ## From ABDK
 
