@@ -417,8 +417,9 @@ division in two 64-bit digits (|a|·2^64 fits a word and every remainder is
 below |b| < 2^192, so shifted by 64 it fits too: three `div`s and a `mod`);
 a third digit when only |b| is under 2^64; Bloemen's mulDiv (`divu`)
 beyond. 2.2 ran the mulDiv for every |a| ≥ 1. The directed forms add one
-`mulmod` for exactness. Same words and the same reverts: `div` 649 → 413
-gas on the ladder (PRBMath 509), `divDown` 818 → 476 and `divUp` 821 → 479.
+`mulmod` for exactness. Same words and the same reverts: `div` 649 → 412
+gas on the ladder when it landed (PRBMath 509), `divDown` 818 → 475 and `divUp` 821 → 478;
+today's `gas.json` reads 413, 476 and 479.
 
 **The double-word exp kernel (after 2.2).** `expk` works in X form, a value
 H·2^-256 + L·2^-384 with L a small word: about 300 bits are what the
