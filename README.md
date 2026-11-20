@@ -1,7 +1,7 @@
 # Blockulator
 
 <!-- badges:begin -->
-[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-506%20forge%20tests-3f6d9c)](test) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
+[![CI](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml/badge.svg)](https://github.com/securedataresearch/blockulator/actions/workflows/ci.yml) [![proofs](https://img.shields.io/badge/proofs-35%20ops%20proven-00694e)](docs/proofs.md) [![tests](https://img.shields.io/badge/tests-508%20forge%20tests-3f6d9c)](test) [![licence](https://img.shields.io/badge/licence-MIT-525252)](LICENSE)
 <!-- badges:end -->
 
 **Blockulator is the definitive source for mathematical precision on the EVM.** It is two libraries, and each holds a number in one `int256`: BL127 keeps 38 digits of fixed point with every op correctly rounded, and BL19 keeps 71 digits of float with every op correctly rounded or exact. Both are checked on chain and competitive on gas. When the amounts are large or the call is free, they are the only choice. [blockulator.com](https://blockulator.com)

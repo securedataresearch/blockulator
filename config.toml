@@ -28,14 +28,14 @@ label = "In production"
 items = [["/results/deployed/", "Deployed"], ["/results/incidents/", "Incidents"]]
 [[extra.nav.results]]
 label = "Deciding"
-items = [["/vs/", "Versus"], ["/proofs/", "Proofs"]]
+items = [["/proofs/", "Proofs"]]
 
 [[extra.nav.library]]
 label = "Formats"
-items = [["/library/", "BL127"], ["/library/bl19/", "BL19"]]
+items = [["/library/", "Overview"], ["/library/bl19/", "BL19"], ["/library/bl127/", "BL127"]]
 [[extra.nav.library]]
 label = "Guides"
-items = [["/library/integrating/", "Integrating"], ["/library/migrating/", "Migrating"]]
+items = [["/library/checking/", "Checking"], ["/library/integrating/", "Integrating"], ["/library/moving/", "Moving"]]
 
 [[extra.nav.writeup]]
 label = ""
