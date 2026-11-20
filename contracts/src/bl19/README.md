@@ -183,24 +183,24 @@ binary tests, and a 512/256 division (`divh`) 393. So a multiplication saved
 is worth about 90 gas, a table level about 250 and a division about four
 products.
 
-| kernel | release two | now | gas then → now |
-|---|---|---|---:|
-| `exp2frac`, 2^f | a 16-entry table, a degree-26 Chebyshev fit on [0, 1/16) | two 16-entry levels (r < 2^−8), the degree-19 minimax polynomial (sup norm 2^−270.7), Horner at 2^−255, 7 of 19 steps in one word; within 4.7 units | 5,295 → 1,483 |
-| `log2m`, log2 of a mantissa | twelve multiplicative stages by 2^(1/2^k), a degree-17 fit; bounded at 37 units | two additive 16-entry levels by word-only reductions (one shift and one div by 16 + i or 256 + i, the table value added), y = w/(2 + w) by one `divh`, y·P(y²) with P the degree-12 minimax polynomial (2^−263.7); within 2.4 units | 5,810 → 1,653 |
-| `ln1pseries`, `ln1pwide`, ln(1 + d)/d below 2^−8 and 2^−4 | the 32- and 64-term Taylor series | (ln 2/2)(1 − y)·P(y²), y = d/(2 + d) by one `divh` (2/(2 + d) = 1 − y): the same P below 2^−8, a degree-21 one (2^−266.5) to 2^−4; within 2.7 units, relative however small d is | 7,586 → 1,406; 15,099 → 1,867 |
-| `expm1series`, (e^d − 1)/d below 2^−8 | the 24-term Taylor series | the degree-21 minimax polynomial on [−2^−8, 2^−8] (2^−271.5), signed Horner (one-word steps by `mul` and `sar`); within 1.6 units | 5,433 → 1,300 |
+| kernel | release two | now |
+|---|---|---|
+| `exp2frac`, 2^f | a 16-entry table, a degree-26 Chebyshev fit on [0, 1/16) | two 16-entry levels (r < 2^−8), the degree-19 minimax polynomial (sup norm 2^−270.7), Horner at 2^−255, 7 of 19 steps in one word; within 4.7 units |
+| `log2m`, log2 of a mantissa | twelve multiplicative stages by 2^(1/2^k), a degree-17 fit; bounded at 37 units | two additive 16-entry levels by word-only reductions (one shift and one div by 16 + i or 256 + i, the table value added), y = w/(2 + w) by one `divh`, y·P(y²) with P the degree-12 minimax polynomial (2^−263.7); within 2.4 units |
+| `ln1pseries`, `ln1pwide`, ln(1 + d)/d below 2^−8 and 2^−4 | the 32- and 64-term Taylor series | (ln 2/2)(1 − y)·P(y²), y = d/(2 + d) by one `divh` (2/(2 + d) = 1 − y): the same P below 2^−8, a degree-21 one (2^−266.5) to 2^−4; within 2.7 units, relative however small d is |
+| `expm1series`, (e^d − 1)/d below 2^−8 | the 24-term Taylor series | the degree-21 minimax polynomial on [−2^−8, 2^−8] (2^−271.5), signed Horner (one-word steps by `mul` and `sar`); within 1.6 units |
 
 Every fit is a minimax polynomial, none a Taylor truncation. A step of
 p_j = c_j + p_{j+1}·u whose error reaches the result times u^j runs in one
 word, ((p >> a)·(u >> b)) >> (256 − a − b), when that error times u^j is
 under 2^−9 units; the generator picks a and b and adds the excess (under
 2^−6 units in all) to the bound. The candidates that did not pay or did not
-fit: a third exp table level (1,465 gas, 1.5 KiB more, and BL19S, which
+fit were a third exp table level (BL19S, which
 carried the kernels, had 313 bytes left), a minimax rational corrector for
-exp, (A + zB)/(A − zB) by one `divh` (1,718 to 1,755: the division costs
-more than the products it saves), two 32-entry log levels (1,679 for 1 KiB
-more than two 16-entry ones at 1,702), and log2 straight from the reduced
-w without the division (1,934).
+exp, (A + zB)/(A − zB) by one `divh` (the division costs
+more than the products it saves), two 32-entry log levels (larger
+than two 16-entry ones), and log2 straight from the reduced
+w without the division.
 
 ## Rounding
 
@@ -390,42 +390,39 @@ and W(x) are transcendental at every dyadic x other than 0 and 1
 (Lindemann–Weierstrass). For erf, erfc and Φ none does; a tie would need a
 dyadic value of exactly 238 bits.
 
-The bounds, and what they give:
+The bounds, and what was measured against each:
 
-| op, region | err (units of D's last bit) | from | measured, 4,000 inputs | second stage within | misrounds only within |
-|---|---:|---|---:|---:|---:|
-| exp | 8 | kernel 4.7 + f's floor 1.4 | 3.24 | 2^−503 rel. | 2^−266 ULP of a tie |
-| expm1 | 8 | as exp; `expm1series` 2 × 1.6 + 1 | 3.67 | 2^−495 rel. | 2^−258 ULP |
-| ln, log1p near one | 8 | `ln1pk` 2 × 2.7 + 1 | 4.27 | 2^−505 rel. | 2^−268 ULP |
-| ln | 5 | (log2m 2.4 + 1) ln 2 + 2 | 1.75 | 2^−489 rel. | 2^−252 ULP |
-| log1p | 7 | as ln, + 1 + x's normalisation + the dropped one | 1.81 | 2^−489 rel. | 2^−252 ULP |
-| pow, compound near one | 16 + 12(k + 1) | t within 8(k + 1) + 2 units | 0.46 of it | 2^−486 rel. | 2^−249 ULP |
-| pow, compound | 8 + yq·(8 + 2\|u\|)·355/2^16 | 6.1 + 1.3863·\|y\|·(log2m 2.4 + Lm's shift 2^sh ≤ 2\|u\| + compound's dropped one 1.45, the 8 with room as 2^sh meets 2\|u\| at powers of two); yq ≥ 2^8\|y\| (2^8(\|n\| + 1)) | 0.78 of it | 2^−470 rel. | 2^−233 ULP |
-| powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it | as pow | 2^−233 ULP |
-| pow, powu, compound, middle stage | 10 | 8.7: the 2^f kernel 4.7, f's floor 1.39, and 1.39 × t's error, under 1.91 units (log2 within 2^−272.1 relative near one, \|t\| < 2^19; 2^−279.5 absolute off it, \|y\| < 2^26.5) | 3.83 | as pow | 2^−233 ULP |
-| erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 9.48 | 2^−499 rel. | 2^−262 ULP |
-| erf, erfc, Φ, ½ ≤ y < 4.81 (g's piece 1) | 90 | 2 × g's 40.5 (Horner 3 units of 2^−252, w's 3.6 units of 2^−256, h·u's floors, normCdf's floored y 5) + 2 × g × 6.1 + 1 | 38.1 | 2^−444 rel. below 7 | 2^−207 ULP |
-| erfc, Φ, 4.81 ≤ y < 18 (g's piece 0) | 26 | 2 × g's 8.5 (Horner 3 units of 2^−256, the rest as piece 1) + 2 × g × 6.1 + 1 | 3.9 | 2^−444 rel. below 7, 2^−392 above | 2^−155 ULP |
-| erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 74 terms), w's floor 2^−254, Q's 2 units, v's 6.1, two floors: under 49; the remainder below the first omitted term | 7.7 | 2^−392 rel. | 2^−155 ULP |
-| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.055, 0.21 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
-| exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.66 | 2^−492 rel. | 2^−255 ULP |
-| log2, near one | 8 | d P within 3.7, times log2 e: 3.7 log2 e + 2 | 5.10 | 2^−497 rel. | 2^−260 ULP |
-| log2 | 4 | log2m 2.4, the shift into Lm 1 | 1.03 | 2^−489 rel. | 2^−252 ULP |
-| log10, near one | 8 | ln's 6.4, times log10 e: 6.4 log10 e + 2 | 1.60 | 2^−497 rel. | 2^−260 ULP |
-| log10 | 4 | (2.4 + 1) log10 2 + 2 | 1.66 | 2^−489 rel. | 2^−252 ULP |
-| sinh, \|x\| < 2^−8; to ½ | 18; 14 | expm1's series T within 2.5, \|x\|T within 2.1, the quotient T/(1 + \|x\|T) and the sum: 2 × 8.1 + 1; the kernel's U = e^\|x\| − 1 within 6.1, U/(1 + U) within 7.1 | 6.47; 4.79 | 2^−500 rel. | 2^−263 ULP |
-| tanh, \|x\| < 2^−9; to ½ | 14; 8 | T = (e^2\|x\| − 1)/(2\|x\|) within 3, the quotient T/(1 + \|x\|T) within 6.1: 2 × 6.1 + 1; U = e^2\|x\| − 1 within 12.2, U/(U + 2) has slope under ½: 6.1 + 1 | 4.58; 1.77 | 2^−500 rel. | 2^−263 ULP |
-| sinh, cosh | 16 | v within 6.1, 2^508/v within 7.1, the shift 1 | 4.60 | 2^−500 rel. | 2^−263 ULP |
-| tanh | 8 | 2/(V + 1) within 6.1 × 0.54 + 2 | 1.00 | 2^−500 rel. | 2^−263 ULP |
-| atanh, \|x\| < 2^−6 | 18 | R = 1/(1 − \|x\|) within 2.1, y = 2\|x\|R within 4.2, `ln1pk`'s P within 3 + 2.1, RP within 8.3: 2 × 8.3 + 1 | 4.27 | 2^−500 rel. | 2^−263 ULP |
-| atanh | 5 | two log2m within 2.4, halved by the shift: 3.4 ln 2 + 2 | 2.47 | 2^−491 rel. | 2^−254 ULP |
+| op, region | err (units of D's last bit) | from | measured, 4,000 inputs |
+|---|---:|---|---:|
+| exp | 8 | kernel 4.7 + f's floor 1.4 | 3.24 |
+| expm1 | 8 | as exp; `expm1series` 2 × 1.6 + 1 | 3.67 |
+| ln, log1p near one | 8 | `ln1pk` 2 × 2.7 + 1 | 4.27 |
+| ln | 5 | (log2m 2.4 + 1) ln 2 + 2 | 1.75 |
+| log1p | 7 | as ln, + 1 + x's normalisation + the dropped one | 1.81 |
+| pow, compound near one | 16 + 12(k + 1) | t within 8(k + 1) + 2 units | 0.46 of it |
+| pow, compound | 8 + yq·(8 + 2\|u\|)·355/2^16 | 6.1 + 1.3863·\|y\|·(log2m 2.4 + Lm's shift 2^sh ≤ 2\|u\| + compound's dropped one 1.45, the 8 with room as 2^sh meets 2\|u\| at powers of two); yq ≥ 2^8\|y\| (2^8(\|n\| + 1)) | 0.78 of it |
+| powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it |
+| pow, powu, compound, middle stage | 10 | 8.7: the 2^f kernel 4.7, f's floor 1.39, and 1.39 × t's error, under 1.91 units (log2 within 2^−272.1 relative near one, \|t\| < 2^19; 2^−279.5 absolute off it, \|y\| < 2^26.5) | 3.83 |
+| erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 9.48 |
+| erf, erfc, Φ, ½ ≤ y < 4.81 (g's piece 1) | 90 | 2 × g's 40.5 (Horner 3 units of 2^−252, w's 3.6 units of 2^−256, h·u's floors, normCdf's floored y 5) + 2 × g × 6.1 + 1 | 38.1 |
+| erfc, Φ, 4.81 ≤ y < 18 (g's piece 0) | 26 | 2 × g's 8.5 (Horner 3 units of 2^−256, the rest as piece 1) + 2 × g × 6.1 + 1 | 3.9 |
+| erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 74 terms), w's floor 2^−254, Q's 2 units, v's 6.1, two floors: under 49; the remainder below the first omitted term | 7.7 |
+| lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.055, 0.21 of it |
+| exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.66 |
+| log2, near one | 8 | d P within 3.7, times log2 e: 3.7 log2 e + 2 | 5.10 |
+| log2 | 4 | log2m 2.4, the shift into Lm 1 | 1.03 |
+| log10, near one | 8 | ln's 6.4, times log10 e: 6.4 log10 e + 2 | 1.60 |
+| log10 | 4 | (2.4 + 1) log10 2 + 2 | 1.66 |
+| sinh, \|x\| < 2^−8; to ½ | 18; 14 | expm1's series T within 2.5, \|x\|T within 2.1, the quotient T/(1 + \|x\|T) and the sum: 2 × 8.1 + 1; the kernel's U = e^\|x\| − 1 within 6.1, U/(1 + U) within 7.1 | 6.47; 4.79 |
+| tanh, \|x\| < 2^−9; to ½ | 14; 8 | T = (e^2\|x\| − 1)/(2\|x\|) within 3, the quotient T/(1 + \|x\|T) within 6.1: 2 × 6.1 + 1; U = e^2\|x\| − 1 within 12.2, U/(U + 2) has slope under ½: 6.1 + 1 | 4.58; 1.77 |
+| sinh, cosh | 16 | v within 6.1, 2^508/v within 7.1, the shift 1 | 4.60 |
+| tanh | 8 | 2/(V + 1) within 6.1 × 0.54 + 2 | 1.00 |
+| atanh, \|x\| < 2^−6 | 18 | R = 1/(1 − \|x\|) within 2.1, y = 2\|x\|R within 4.2, `ln1pk`'s P within 3 + 2.1, RP within 8.3: 2 × 8.3 + 1 | 4.27 |
+| atanh | 5 | two log2m within 2.4, halved by the shift: 3.4 ln 2 + 2 | 2.47 |
 
 `scripts/bl19/generators/bounds.py` recomputes each D as the Yul does (the
 kernel254.py and erf19.py models) against 120-digit truth: no measured
-error reaches 0.79 of its bound (pow's, where the shift's floor 2^sh meets 2|u|). An input misrounds only if its exact value lies
-within the last column's distance of a tie: for a value without structure,
-a chance of about twice that distance per input, 2^−154 at worst (erfc and Φ,
-where the second stage is held to 2^−392). None is known.
+error reaches 0.79 of its bound (pow's, where the shift's floor 2^sh meets 2|u|).
 
 ## Typed API
 
