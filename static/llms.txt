@@ -70,9 +70,11 @@ Sepolia, as do BL127 v8 (0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B,
   Decode by dividing by 2**128. Range about +/- 1.7e38.
 - Checked arithmetic: out-of-domain inputs revert with Overflow(),
   DivisionByZero() or OutOfRange(). Nothing wraps.
-- Rounding: add, sub, the comparisons and floor, ceil, round, factorial
-  exact; mul and sqrt round down, div and inv toward zero, mulUp, divUp
-  and toFixed18Up up, mulDown, divDown and toFixed18Down down; every
+- Rounding: add, sub, neg, abs, sign, min, max, clamp, floor, ceil, round,
+  frac, dist, zeroFloorSub and factorial exact; mul, sqrt, avg and lerp
+  round down, div, inv and fromFixed18 toward zero, mulUp, divUp and
+  toFixed18Up up, mulDown, divDown, toFixed18 and toFixed18Down down; gavg
+  and hypot to nearest; every
   transcendental (exp, ln, pow, cbrt, Lambert W, erf, ...) to nearest. In
   v9, the deployed release, every op is correctly rounded on every input:
   each fast value carries a derived error bound and a rounding test, a

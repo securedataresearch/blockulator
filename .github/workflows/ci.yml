@@ -137,6 +137,9 @@ jobs:
           test -f public/data/ops.json
           test -f public/contracts/deployments/BL127.json
 
+      - name: Agent files (agent.json, llms.txt) match the deployment records
+        run: python3 scripts/site/agentfiles.py --check
+
       - name: Links and front matter
         run: ./zola check --skip-external-links   # build.sh left the pinned binary here
 
