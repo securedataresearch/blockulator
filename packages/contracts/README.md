@@ -20,7 +20,7 @@ import {BL127Lib} from "@blockulator/contracts/bl127/BL127Lib.sol";
 import {BL19Lib} from "@blockulator/contracts/bl19/BL19Lib.sol";
 ```
 
-The libraries use the CLZ opcode (EIP-7939): compile with solc ≥ 0.8.31 and `evmVersion: "osaka"`, and deploy only to a chain with CLZ ([the list](https://github.com/securedataresearch/blockulator/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)). Compile with `viaIR` as well: it takes another 10–33% off BL127Lib's and BL19Lib's gas ([profile](https://github.com/securedataresearch/blockulator/blob/master/docs/benchmarks/profile.md)).
+The libraries use the CLZ opcode (EIP-7939): compile with solc ≥ 0.8.31 and `evmVersion: "osaka"`, and deploy only to a chain with CLZ ([the list](https://github.com/securedataresearch/blockulator/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)). Compile with `viaIR` as well: it takes another 8–31% off BL127Lib's and BL19Lib's gas ([profile](https://github.com/securedataresearch/blockulator/blob/master/docs/benchmarks/profile.md)).
 
 ## What is in it
 

@@ -11,7 +11,7 @@ moved = ["rule-1-bunni-v2", "rule-2-resupply", "rule-2-balancer-v2", "rule-2-bal
 moved_to = "/library/integrating/"
 +++
 
-BL19 is a float, so its digits move with the value: about 71 at any size, where BL127 keeps 38 at 1 and 8 at 10<sup>−30</sup>. Every op is correctly rounded: none of 340,394 random inputs was misrounded ([sweep]({{ config.extra.repo }}/blob/master/docs/benchmarks/sweep.md)).
+BL19 is a float, so its digits move with the value: about 71 at any size, where BL127 keeps 38 at 1 and 8 at 10<sup>−30</sup>. Every op is correctly rounded. A sweep of 53 of the 65 ops on seeded random inputs found none of 340,394 results misrounded ([sweep]({{ config.extra.repo }}/blob/master/docs/benchmarks/sweep.md)).
 
 ## The format
 
@@ -67,7 +67,7 @@ forge soldeer install blockulator~<version>
 echo "@blockulator/contracts/=dependencies/blockulator-<version>/" >> remappings.txt
 ```
 
-Compile `BL19Lib.sol` with `via_ir = true` in `foundry.toml`. Through the IR, `add` drops from 677 to 545 gas and `exp` from 3,277 to 2,848 ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
+Compile `BL19Lib.sol` with `via_ir = true` in `foundry.toml`. Through the IR, `add` drops from 673 to 545 gas and `exp` from 3,275 to 2,848 ([`profile.md`]({{ config.extra.repo }}/blob/master/docs/benchmarks/profile.md)).
 
 ```solidity
 import {BL19Lib} from "@blockulator/contracts/bl19/BL19Lib.sol";

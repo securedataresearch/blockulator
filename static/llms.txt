@@ -79,7 +79,7 @@ Sepolia, as do BL127 v8 (0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B,
   v9, the deployed release, every op is correctly rounded on every input:
   each fast value carries a derived error bound and a rounding test, a
   wider stage decides what the test cannot, and the release sweep (212,119
-  inputs over 59 rows) is 0 misrounded plain and with every test forced.
+  results over 59 rows) is 0 misrounded plain and with every test forced.
   exp(ln(x)) returns the same word for 10,000 steps. /data/precision.json
 - BL127 v9's five objects, live on Sepolia since 2026-10-29 (CREATE2
   through the same proxy, the same address on every chain; Sourcify and

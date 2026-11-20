@@ -37,7 +37,7 @@ Each established library does something better. This page says what, then puts t
 
 **What it does better:** interoperability. Its values are IEEE 754 binary128, the same bits as quadruple precision off chain. Its `sqrt` costs less than BL19's.
 
-**The answer:** BL19 has 237 bits of significand against 113, and costs less on `add`, `mul`, `div`, `exp`, `ln` and `pow`. Against BL127, binary128 keeps 34.0 digits at any size, and BL127 keeps 38.5 + log<sub>10</sub>|x|, which is more from |x| ≈ 3 × 10<sup>−5</sup> up.
+**The answer:** BL19 has 237 bits of significand against 113, and costs less on `add`, `mul`, `exp`, `ln` and `pow`, and about the same on `div`. Against BL127, binary128 keeps 34.0 digits at any size, and BL127 keeps 38.5 + log<sub>10</sub>|x|, which is more from |x| ≈ 3 × 10<sup>−5</sup> up.
 
 {{ <table name="vs.quad" first="" /> }}
 
@@ -45,4 +45,4 @@ Each established library does something better. This page says what, then puts t
 
 - **Chains without CLZ.** BL19 and BL127 need the CLZ opcode (EIP-7939, the osaka EVM) and solc 0.8.31 or later, so they do not run on zkSync Era, Avalanche C-Chain or Polygon zkEVM ([the list](https://github.com/securedataresearch/blockulator/blob/master/contracts/deployments/README.md#chains-clz-osaka-required)).
 - **The cheapest exp.** Where a wei of error per call is acceptable, Solady is cheaper.
-- **Six BL19 ops without a proof.** All 17 of BL127's core ops and 18 of BL19's 24 are proven for every input. BL19's `add`, `sub`, `sqrt` and the three `toFixed18` are fuzzed against their exact specs, not proven ([proofs](/proofs/)).
+- **Eight core ops without a proof.** 17 of BL127's 19 core ops and 18 of BL19's 24 are proven for every input. BL127's `gavg` and `hypot`, and BL19's `add`, `sub`, `sqrt` and the three `toFixed18`, are fuzzed against their exact specs, not proven ([proofs](/proofs/)).
