@@ -447,15 +447,28 @@ LN2_256R = 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c
 LOG10_2_256R = 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e6
 
 
+def logs_mid_err() -> int:
+    """The err the Yul passes to ln's and log10's middle-stage test, read from the source: the bound is
+    measured against the constant the code uses, not against the figure its comment states."""
+    import re
+    src = (Path(__file__).resolve().parents[3] / "contracts/src/bl127/BL127.yul.src").read_text()
+    found = re.findall(r"rbadm127\(w, 256, (0x[0-9a-f]+)\)", src)
+    assert len(found) == 2 and found[0] == found[1], "ln and log10 each call rbadm127(w, 256, err) once, with one err"
+    err = int(found[0], 16)
+    assert err == 1 << 135, f"ln and log10's middle-stage err is 2^{err.bit_length() - 1}, and the derivation needs 2^135"
+    return err
+
+
 def logs_mid(M: Meter, rng, n):
+    err = mpf(logs_mid_err())
     for i in range(n):
         X = rand_pos(rng, 1, 254) if i % 3 else ONE + rng.getrandbits(rng.randint(1, 120)) * rng.choice((1, -1))
         if X <= 0 or X & (X - 1) == 0:
             continue
         L = P.l2p(X)
         x = mpf(X) / ONE
-        M.add("ln, l2p", mpf(2) ** 135, x384(L, LN2_256R), log(x) * mpf(2) ** 384)
-        M.add("log10, l2p", mpf(2) ** 135, x384(L, LOG10_2_256R), log(x, 10) * mpf(2) ** 384)
+        M.add("ln, l2p", err, x384(L, LN2_256R), log(x) * mpf(2) ** 384)
+        M.add("log10, l2p", err, x384(L, LOG10_2_256R), log(x, 10) * mpf(2) ** 384)
 
 
 L2E = (mid254.L2E_H << 256) | mid254.L2E_L

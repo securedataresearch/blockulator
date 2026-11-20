@@ -40,34 +40,34 @@ every add and a renormalisation on every result. The
 ## Chains: CLZ (Osaka) required
 
 Every leading-bit count goes through one helper, `msb(x) = 255 - clz(x)`,
-on the CLZ opcode (EIP-7939, Fusaka/Osaka, 5 gas), and `ctz` takes CLZ of
+on the CLZ opcode (EIP-7939, Fusaka/Osaka), and `ctz` takes CLZ of
 the lowest set bit; both are guarded so f(0) = 0. msb keeps its early
-`leave`, so the optimizer leaves it a function (inlined at its 35 sites it
-costs about 450 bytes). The objects and
+`leave`, so the optimizer leaves it a function at its 32 call sites. The objects and
 `BL19Lib.sol` all need it: compile the library with solc >= 0.8.31 and
 `evm_version = "osaka"` (this repo pins 0.8.38), and use them only on a
 chain that has CLZ. Results are the same words and reverts as release
 four, which ran Solady's branchless log2 for msb (168 gas; about 14 now):
-154 gas less per leading-bit count, so 150 to 1,300 less per op through
+154 gas less per leading-bit count, so about 130 to 1,300 less per op through
 the object ([`docs/benchmarks/gas19.md`](../../../docs/benchmarks/gas19.md)).
 
-Supported chains are those with CLZ, as of 2026-10-22 (each probed live;
-dates and names are the networks' announced activations):
+Supported chains are those with CLZ, as of 2026-10-22 (each was probed live;
+the probe's output is not kept in the repository, and the names are the
+networks' own for the upgrade that brought CLZ):
 
-| chain | CLZ since | upgrade |
-|---|---|---|
-| Ethereum mainnet | 2025-12-03 | Fusaka |
-| Sepolia | 2025-10-14 | Fusaka |
-| Hoodi | (probe) | Fusaka |
-| Arbitrum One | 2026-01-08 | ArbOS 51 |
-| OP Mainnet | 2026-07-08 | Upgrade 19 "Karst" |
-| Unichain | 2026-07-08 | Upgrade 19 "Karst" |
-| Base | 2026-05-28 | "Azul" |
-| Polygon PoS | 2026-03-04 | Lisovo |
-| BNB Chain | 2026-04-28 | Osaka / Mendel |
-| Gnosis | 2026-04-14 | Fusaka |
-| Scroll | (probe) | Galileo |
-| Linea | (probe) | |
+| chain | upgrade |
+|---|---|
+| Ethereum mainnet | Fusaka |
+| Sepolia | Fusaka |
+| Hoodi | Fusaka |
+| Arbitrum One | ArbOS 51 |
+| OP Mainnet | Upgrade 19 "Karst" |
+| Unichain | Upgrade 19 "Karst" |
+| Base | "Azul" |
+| Polygon PoS | Lisovo |
+| BNB Chain | Osaka / Mendel |
+| Gnosis | Fusaka |
+| Scroll | Galileo |
+| Linea |  |
 
 **Unsupported** (no CLZ, probed 2026-10-22): zkSync Era, Avalanche C-Chain,
 Polygon zkEVM.
@@ -160,7 +160,7 @@ Deployed 2026-10-28 on Sepolia (BL19 v6, Blockulator 3.0): BL19
 `0xF059611C1c42543DE6EE82353Eb082Fd8999081f`, BL19N
 `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214`, BL19S
 `0xf74ba90535224870830e6e89D2b328d4cc09DE48`. v5 (Blockulator 2.2,
-2026-10-22) stays live at BL19 `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52`,
+2026-10-23 UTC) stays live at BL19 `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52`,
 BL19E `0x017F68A57dD53a6dF2043c24B712b287F9549AE2`, BL19H
 `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` and BL19S
 `0x73E8809F163d4358773cc5F25c134997B4b842F4`.
@@ -196,7 +196,7 @@ word, ((p >> a)·(u >> b)) >> (256 − a − b), when that error times u^j is
 under 2^−9 units; the generator picks a and b and adds the excess (under
 2^−6 units in all) to the bound. The candidates that did not pay or did not
 fit: a third exp table level (1,465 gas, 1.5 KiB more, and BL19S, which
-carries the kernels, has 313 bytes left), a minimax rational corrector for
+carried the kernels, had 313 bytes left), a minimax rational corrector for
 exp, (A + zB)/(A − zB) by one `divh` (1,718 to 1,755: the division costs
 more than the products it saves), two 32-entry log levels (1,679 for 1 KiB
 more than two 16-entry ones at 1,702), and log2 straight from the reduced
@@ -274,7 +274,7 @@ The second stage:
 
 Its three series (`wexpm1`, `wln1ps`, `em1w`) stay series on purpose. Each is
 convergent, not fitted: the number of terms is computed from the argument so
-the truncation sits below a stated bound (2^−503 to 2^−517), the way a
+the truncation sits below a stated bound (2^−512 to 2^−517), the way a
 series run to convergence works at any precision. They run only when `rbad`
 says the fast value cannot round with certainty, so no typical call pays for
 them; rebuilding them on the fast path's tables would change 20 ops'
@@ -314,7 +314,7 @@ bytecode to speed up the rare path (decided 2026-10-23, #155).
   exact in two words: the seed p·S(p), p = √(2(1 + e·x)) by the integer
   square root and S = (1 + W)/p (one analytic function on both branches,
   W−1 at −p) by a degree-16 Chebyshev fit on [−½, ½] (`lwsp`, relative
-  error 2^−44.9 on 20,001 points, the constant term exactly 1, certified by
+  error 2^−44.9 on 4,001 points, the constant term exactly 1, certified by
   `bounds.py`); then one sixth-order reversion step (`lwq510`) with e^q − 1
   from the core's wide exp kernel (`wexpm1` for W0, `wexpr(1, −1, |q|)` for
   W−1, within 2^−503 absolute, which is the relative precision the residual
@@ -353,7 +353,7 @@ bytecode to speed up the rare path (decided 2026-10-23, #155).
   paths below 1/2 compose sinh and tanh from expm1's one-word machinery,
   and atanh below 2^−6 from log1p's; only the second stages keep a
   series of their own.)
-- `atanh`: below 2^−4, x sum x^2k/(2k + 1) in two words; above, (uu1 −
+- `atanh`: below 2^−6, x sum x^2k/(2k + 1) in two words; above, (uu1 −
   uu2) ln 2 plus wln of the exact mantissas of 1 + |x| and 1 − |x|, three
   words, halved in the one rounding.
 
@@ -402,11 +402,11 @@ The bounds, and what they give:
 | pow, compound near one | 16 + 12(k + 1) | t within 8(k + 1) + 2 units | 0.46 of it | 2^−486 rel. | 2^−249 ULP |
 | pow, compound | 8 + yq·(8 + 2\|u\|)·355/2^16 | 6.1 + 1.3863·\|y\|·(log2m 2.4 + Lm's shift 2^sh ≤ 2\|u\| + compound's dropped one 1.45, the 8 with room as 2^sh meets 2\|u\| at powers of two); yq ≥ 2^8\|y\| (2^8(\|n\| + 1)) | 0.78 of it | 2^−470 rel. | 2^−233 ULP |
 | powu (when inexact) | 2n + 8 | (n + 1)·2^−255 of the significand, 2 for 1/x | 0.67 of it | as pow | 2^−233 ULP |
-| pow, powu, compound, middle stage | 10 | 8.7: the 2^f kernel 4.7, f's floor 1.39, and 1.39 × t's error, under 1.9 units (log2 within 2^−272.1 relative near one, \|t\| < 2^19; 2^−279.5 absolute off it, \|y\| < 2^26.5) | 3.83 | as pow | 2^−233 ULP |
+| pow, powu, compound, middle stage | 10 | 8.7: the 2^f kernel 4.7, f's floor 1.39, and 1.39 × t's error, under 1.91 units (log2 within 2^−272.1 relative near one, \|t\| < 2^19; 2^−279.5 absolute off it, \|y\| < 2^26.5) | 3.83 | as pow | 2^−233 ULP |
 | erf, erfc, Φ, y < ½ | 128 | 2 × F's 52 + 1 | 9.48 | 2^−499 rel. | 2^−262 ULP |
 | erf, erfc, Φ, ½ ≤ y < 4.81 (g's piece 1) | 90 | 2 × g's 40.5 (Horner 3 units of 2^−252, w's 3.6 units of 2^−256, h·u's floors, normCdf's floored y 5) + 2 × g × 6.1 + 1 | 38.1 | 2^−444 rel. below 7 | 2^−207 ULP |
 | erfc, Φ, 4.81 ≤ y < 18 (g's piece 0) | 26 | 2 × g's 8.5 (Horner 3 units of 2^−256, the rest as piece 1) + 2 × g × 6.1 + 1 | 3.9 | 2^−444 rel. below 7, 2^−392 above | 2^−155 ULP |
-| erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 76 terms), w's floor 2^−254, Q's 2 units, v's 6.1, two floors: under 49; the remainder below the first omitted term | 7.7 | 2^−392 rel. | 2^−155 ULP |
+| erfc, Φ, y ≥ 18 | 64 | the asymptotic series' terms' floors at 2^−262 (1.5 a term, 74 terms), w's floor 2^−254, Q's 2 units, v's 6.1, two floors: under 49; the remainder below the first omitted term | 7.7 | 2^−392 rel. | 2^−155 ULP |
 | lambertW0, lambertWm1 | 2·du + du/16 + 12, du = 1 + ⌈32·2^254/\|h\|⌉; 5 in q near −1/e | f within 31.4 units of its scale, the reversion's truncation under 2^−8; in q: the wide kernel's 2^−503/(q·e^q) under a unit, τ's relative 2^−252, two floored products, the shift | 0.055, 0.21 of it | 2^−415; 2^−262 near −1/e | 2^−178; 2^−236 near −1/e |
 | exp2, exp10 | 8 | as exp (log2 10's tail under 2^−490 of a unit) | 3.66 | 2^−492 rel. | 2^−255 ULP |
 | log2, near one | 8 | d P within 3.7, times log2 e: 3.7 log2 e + 2 | 5.10 | 2^−497 rel. | 2^−260 ULP |
@@ -424,8 +424,8 @@ The bounds, and what they give:
 kernel254.py and erf19.py models) against 120-digit truth: no measured
 error reaches 0.79 of its bound (pow's, where the shift's floor 2^sh meets 2|u|). An input misrounds only if its exact value lies
 within the last column's distance of a tie: for a value without structure,
-a chance of about twice that distance per input, 2^−116 at worst (next to
-Lambert W's branch point). None is known.
+a chance of about twice that distance per input, 2^−154 at worst (erfc and Φ,
+where the second stage is held to 2^−392). None is known.
 
 ## Typed API
 
@@ -458,7 +458,7 @@ BL127 n = b.toBL127();                       // the nearest 127.128 word
 raw call, result and revert data byte for byte, and compares the gas of one
 small contract per op in each form. Through the IR (`via_ir = true`) every
 op costs exactly the same. Under the legacy pipeline the wrapper is one more
-internal call, 36 to 56 gas.
+internal call.
 
 ## Ops
 
@@ -466,7 +466,7 @@ internal call, 36 to 56 gas.
 |---|---|---|---|
 | `add`, `sub` | BL19 | 18 guard bits, a sticky bit on the difference, one rounding; exact whenever representable | `Overflow`, `OutOfRange` |
 | `mul` | BL19 | the 474-bit product of the significands, one rounding | `Overflow`, `OutOfRange` |
-| `div` | BL19 | floor(ma·2^255 / mb) by two exact 2^128 stages, one rounding | `DivisionByZero`, `Overflow`, `OutOfRange` |
+| `div` | BL19 | floor(ma·2^255 / mb) by one exact 512-by-256 division, one rounding | `DivisionByZero`, `Overflow`, `OutOfRange` |
 | `mulDown`, `mulUp` | BL19 | the product rounded toward −∞ / +∞; away from zero below the format: the smallest number | `Overflow`, `OutOfRange` |
 | `divDown`, `divUp` | BL19 | the quotient rounded toward −∞ / +∞ | `DivisionByZero`, `Overflow`, `OutOfRange` |
 | `sqrt` | BL19 | the integer root of the significand at 2^136 (the word root of the top 256 bits, one residual Newton step in a word, corrected by squaring), one rounding; never overflows | `OutOfRange` for x < 0 |
@@ -478,7 +478,7 @@ internal call, 36 to 56 gas.
 | `powu(x, n)` | BL19E | x^n for a plain integer n: below 2^16 binary exponentiation on a 256-bit significand, exact when it fits, tested when not; pow when the test fails and from 2^16; correctly rounded for \|n\| < 2^237 (n is a number above) | `Overflow`, `DivisionByZero` for 0^negative |
 | `compound(rate, n)` | BL19E | (1 + rate)^n without a rounded 1 + rate: log2(1 + rate) as log1p takes it, its product with n, 2^t; ties exact | `OutOfRange` below −1, `DivisionByZero` for −1 with n < 0, `Overflow` |
 | `erf` | BL19N | below ½, x (2/√π) e^(−x²) Σ (2x²)^k/(2k+1)!!; above, 1 − erfc; ±1 from \|x\| ≥ 13 | never |
-| `erfc` | BL19N | e^(−x²)·g(x), g = h(w)·u on [½, 18): u = 8/(8 + x) by one division, w = (u − u(18))/D′, h = g/u the degree-66 minimax polynomial of one of two pieces, w < ½ and w ≥ ½ (`erf19.py`, `erfcxu.json`; 2.2: 45 Taylor anchors to 6 and a continued fraction to 18); the asymptotic series e^(−x²)/(x√π) Σ (−1)^m (½)_m/x^(2m) (DLMF 7.12.1, the remainder below the first omitted term, 76 terms at 18 and 18 at 430) from x = 18, where it is cheaper than the fraction; e^(−x²) from the exact square: 71 digits to the underflow near x = 427 | never |
+| `erfc` | BL19N | e^(−x²)·g(x), g = h(w)·u on [½, 18): u = 8/(8 + x) by one division, w = (u − u(18))/D′, h = g/u the degree-66 minimax polynomial of one of two pieces, w < ½ and w ≥ ½ (`erf19.py`, `erfcxu.json`; 2.2: 45 Taylor anchors to 6 and a continued fraction to 18); the asymptotic series e^(−x²)/(x√π) Σ (−1)^m (½)_m/x^(2m) (DLMF 7.12.1, the remainder below the first omitted term, 74 terms at 18 and 18 at 430) from x = 18, where it is cheaper than the fraction; e^(−x²) from the exact square: 71 digits to the underflow near x = 427 | never |
 | `normCdf` | BL19N | Φ(x) = erfc(−x/√2)/2, the left tail to about x = −603; exactly one from x ≥ 13√2 | never |
 | `lambertW0` | BL19S | W e^W = x, W ≥ −1: near −1/e a fit seed in q = 1 + W and one sixth-order step on the wide exp kernel with a bound; elsewhere a crude-log seed, fourth-order log-form steps at 2^−126 and one at word precision with a bound; the rounding test, the wide step on a miss | `OutOfRange` below −1/e |
 | `lambertWm1` | BL19S | W ≤ −1 on [−1/e, 0): the same stages and test, the wide step on a miss | `OutOfRange` outside [−1/e, 0) |
@@ -495,7 +495,7 @@ internal call, 36 to 56 gas.
 | `fromFixed18(x)` | BL19 | the integer as a number (exact below 2^237), divided by 10^18 with one rounding | never |
 | `toFixed18(x)` | BL19 | the nearest 18-decimal word from the exact product M·10^18 | `Overflow` |
 | `exp2` | BL19E | 2^x: the integer part to the exponent, the fraction (exact from 2^−18) through the 2^f kernel, the test; exact for integral x; one below 2^−238 | `Overflow` from 262,145 |
-| `exp10` | BL19E | 2^(x log2 10) through exp's split and kernel, the test; 10^0 to 10^102 exact | `Overflow` above about 78,913.4 |
+| `exp10` | BL19E | 2^(x log2 10) through exp's split and kernel, the test; 10^0 to 10^102 exact | `Overflow` above about 78,913.5 |
 | `log2` | BL19E | (E − bias) + log2m of the mantissa, the test; d·ln1pk(d)·log2 e within 2^−8 of one; exact at powers of two | `OutOfRange` for x ≤ 0 |
 | `log10` | BL19E | log2 x times log10 2, the test; ln's near-one value times log10 e; exact at 10^0 to 10^102 | `OutOfRange` for x ≤ 0 |
 | `log2Up` | BL19E | ⌈log2 x⌉ as a number, exact | `OutOfRange` for x ≤ 0 |
@@ -564,8 +564,8 @@ stage runs rarely and costs more. The sweep's inline-library medians:
 | lerp | 5,900 | | 6,900 |
 | factorial | 714 | | 762 (a table) |
 
-Blockulator 2.2's kernels (above) took the exp/log fast paths from 6,900–
-17,700 to 2,400–6,300 and, through e^(−y²), log2m and the wide stage's
+Blockulator 2.2's kernels (above) took the exp/log fast paths from 5,100–
+16,100 to 2,400–6,300 and, through e^(−y²), log2m and the wide stage's
 inputs, erf's and Lambert W's by a quarter; the second stage, which keeps
 release four's two-word series, by about 4,000. The second stage runs for
 about 2·err/2^w of inputs, w = 17..19 the bits under D's significand: 5 in

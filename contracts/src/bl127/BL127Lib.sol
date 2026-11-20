@@ -1556,7 +1556,7 @@ library BL127Lib {
                 let sh, sl := expk(rh, rx)
                 // as exp2; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
                 // 1.95). r within 2^-377 of x - n ln 2 and expk within 2^-311.2: within
-                // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-137 or more above
+                // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-138 or more above
                 // 0, so the value is above 2^-129)
                 let e := add(n, 129)
                 r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))
@@ -2133,7 +2133,7 @@ library BL127Lib {
     /// @dev Reverts with OutOfRange for x <= 0 (the Huff returned 0). Exact for
     ///      powers of two. v5: log2g at 2^-192 (error under 2^-145) is rounded
     ///      when that cannot change the rounding; within 2^-145 of a midpoint
-    ///      (about one input in 2^17) the double-word l2p decides.
+    ///      (about one input in 2^16) the double-word l2p decides.
     function log2(int256 _x) internal pure returns (int256 _r) {
         assembly ("memory-safe") {
             function absw(x) -> r {
@@ -3753,7 +3753,7 @@ library BL127Lib {
                     r, w := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
                     // l2p's 2^-299 times ln 2, ln 2's rounding at 2^-256 times |log2 x|
                     // <= 2^7 and two floors: under 2^135 units of w
-                    if rbadm127(w, 256, 0x800000000000000000000000000000000) {
+                    if rbadm127(w, 256, 0x8000000000000000000000000000000000) {
                         let fh, fl := l2w(x, ms, lh, ll)
                         r := logw(sub(ms, 128), fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
                     }
@@ -4578,7 +4578,7 @@ library BL127Lib {
                     let w := 0
                     r, w := x384mul(lh, ll, 0x4d104d427de7fbcc47c4acd605be48bc13569862a1e8f9a4c52f37935be631e6)
                     // as ln
-                    if rbadm127(w, 256, 0x800000000000000000000000000000000) {
+                    if rbadm127(w, 256, 0x8000000000000000000000000000000000) {
                         let fh, fl := l2w(x, ms, lh, ll)
                         r := logw(sub(ms, 128), fh, fl, 0x134413509f79fef311f12b35816f922f04d5a618a87a3e69314bcde4d6f98c79, 0x650d45b03233f57a13cb978e668e37a25228e692b6317243cb16a4fea4aa5a59)
                     }
@@ -11034,7 +11034,7 @@ library BL127Lib {
     ///      table-free logarithm, then fourth-order log-form steps at 2^-126
     ///      until one starts within 2^-22 (two), and the double-word
     ///      step lwfin. The smallest input, -floor(2^128 / e), is 2^-128 inside
-    ///      -1/e and its W is -1 - 2^-63.3, not -1, which v4 returned. The
+    ///      -1/e and its W is -1 - 2^-62.9, not -1, which v4 returned. The
     ///      archived Huff lambertwm1 was never functional and is not the
     ///      reference for this routine.
     function lambertWm1(int256 _x) internal pure returns (int256 _r) {
@@ -13002,7 +13002,7 @@ library BL127Lib {
                     r, w := x384mul(lh, ll, 0xb17217f7d1cf79abc9e3b39803f2f6af40f343267298b62d8a0d175b8baafa2c)
                     // l2p's 2^-299 times ln 2, ln 2's rounding at 2^-256 times |log2 x|
                     // <= 2^7 and two floors: under 2^135 units of w
-                    if rbadm127(w, 256, 0x800000000000000000000000000000000) {
+                    if rbadm127(w, 256, 0x8000000000000000000000000000000000) {
                         let fh, fl := l2w(x, ms, lh, ll)
                         r := logw(sub(ms, 128), fh, fl, 0x2c5c85fdf473de6af278ece600fcbdabd03cd0c99ca62d8b628345d6e2eabe8a, 0xf9ee1d881b7aeb26156554bed2be86c43b4bab8d704e085109d5ceca445a6e09)
                     }
@@ -13578,7 +13578,7 @@ library BL127Lib {
                 let sh, sl := expk(rh, rx)
                 // as exp2; x <= 88 keeps 2^n (1 + s) under 2^127 (n <= 126, 1 + s <
                 // 1.95). r within 2^-377 of x - n ln 2 and expk within 2^-311.2: within
-                // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-137 or more above
+                // 2^(n - 311.1), tested as exp2 (at n = -129 r is 2^-138 or more above
                 // 0, so the value is above 2^-129)
                 let e := add(n, 129)
                 r := shr(1, add(add(shl(e, 1), shr(sub(256, e), sh)), 1))

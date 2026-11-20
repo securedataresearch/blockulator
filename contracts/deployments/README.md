@@ -76,23 +76,24 @@ over 24,576 bytes), and the explorers receive that same standard-JSON input.
 Blockulator 2.2 is the first CLZ build. Releases up to 2.1, recorded above,
 were shanghai builds without CLZ and stay deployed on Sepolia.
 
-Supported chains are those with CLZ, as of 2026-10-22 (each probed live;
-dates and names are the networks' announced activations):
+Supported chains are those with CLZ, as of 2026-10-22 (each was probed live;
+the probe's output is not kept in the repository, and the names are the
+networks' own for the upgrade that brought CLZ):
 
-| chain | CLZ since | upgrade |
-|---|---|---|
-| Ethereum mainnet | 2025-12-03 | Fusaka |
-| Sepolia | 2025-10-14 | Fusaka |
-| Hoodi | (probe) | Fusaka |
-| Arbitrum One | 2026-01-08 | ArbOS 51 |
-| OP Mainnet | 2026-07-08 | Upgrade 19 "Karst" |
-| Unichain | 2026-07-08 | Upgrade 19 "Karst" |
-| Base | 2026-05-28 | "Azul" |
-| Polygon PoS | 2026-03-04 | Lisovo |
-| BNB Chain | 2026-04-28 | Osaka / Mendel |
-| Gnosis | 2026-04-14 | Fusaka |
-| Scroll | (probe) | Galileo |
-| Linea | (probe) | |
+| chain | upgrade |
+|---|---|
+| Ethereum mainnet | Fusaka |
+| Sepolia | Fusaka |
+| Hoodi | Fusaka |
+| Arbitrum One | ArbOS 51 |
+| OP Mainnet | Upgrade 19 "Karst" |
+| Unichain | Upgrade 19 "Karst" |
+| Base | "Azul" |
+| Polygon PoS | Lisovo |
+| BNB Chain | Osaka / Mendel |
+| Gnosis | Fusaka |
+| Scroll | Galileo |
+| Linea |  |
 
 **Unsupported** (no CLZ, probed 2026-10-22): zkSync Era, Avalanche C-Chain,
 Polygon zkEVM.

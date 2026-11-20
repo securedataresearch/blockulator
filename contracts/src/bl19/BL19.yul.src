@@ -120,7 +120,7 @@ function absw(x) -> r {
 /// the CLZ opcode (EIP-7939, Osaka): 255 - clz(x), guarded because
 /// 255 - clz(0) wraps. Every leading-bit count in this file goes through this
 /// one helper. The guard leaves rather than branching around the body: a
-/// function with a leave is not inlined, and inlining it at its 35 sites
+/// function with a leave is not inlined, and inlining it at its 32 sites
 /// costs about 450 bytes the core does not have. Release four ran Solady's
 /// branchless log2 here (168 gas; about 14 now).
 function msb(x) -> r {
@@ -2453,7 +2453,7 @@ function erfcxu(Y, uy) -> g, er {
 /// and above -w.
 /// Then times 1/(y sqrt pi) = Q 2^(-256 - uy), Q = floor(2^510 / (Y sqrt pi)),
 /// and v. er bounds D in units of its last bit: the terms' floors at 2^-262
-/// (at most 1.5 per term over 76 terms of 2^-262 of the sum: 2^-255.2),
+/// (at most 1.5 per term over 74 terms of 2^-262 of the sum: 2^-255.2),
 /// w's floor through the first term (2^-254), Q's two units of 2^-254 (its
 /// floor and Y sqrt pi's), the product's floor, v's 6.1 units of 2^-254, D's
 /// floor: under 49 of 2^-256.
@@ -2968,7 +2968,7 @@ function lwb3(qa, tau) -> R {
 /// S(p) = (1 + W)/p for p = +-sqrt(2 (1 + e x)) (+ on W0, - on W-1: one
 /// analytic function, W-1 at -p), the seed's factor, by a degree-16
 /// Chebyshev fit on [-1/2, 1/2] (mpmath, bounds.py's lwspfit: relative
-/// error under 2^-44.8 on 20,001 points; the constant term is exactly 1,
+/// error under 2^-44.8 on 4,001 points; the constant term is exactly 1,
 /// so the error stays relative down to the smallest p), Horner at 2^-254
 /// on p at 2^-254: within 17 units besides, which 2^-44 dwarfs.
 function lwsp(p) -> S {
@@ -6040,7 +6040,7 @@ function bl19_exp2(x) -> r {
 
 /// @object BL19E
 /// @export exp10(int256 x) returns (int256 r)
-/// @domain x below about 78,913.4
+/// @domain x below about 78,913.5
 /// @reverts Overflow() when 10^x does not fit; OutOfRange() for a word that is not a number
 /// @notice 10^x = 2^(x log2 10): the 512-bit product with log2 10 split as
 ///         exp's, the 2^f kernel and one rounding when the bound clears the

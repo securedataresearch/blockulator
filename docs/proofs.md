@@ -227,5 +227,5 @@ uv run python test/proofs/run.py --only bl19_add   # one op (any regex on the ch
 ```
 
 Halmos downloads bitwuzla on first use (`HALMOS_ALLOW_DOWNLOAD=1`, which
-`make proofs` sets). The full run takes about an hour on 16 cores; JOBS and
+`make proofs` sets). The full run's solver time is recorded in `proofs.json`; JOBS and
 SOLVER_THREADS set the parallelism.

@@ -59,7 +59,7 @@ EdgeRunner at block 12,017,760, 0 mismatches
 
 ## Blockulator 2.2
 
-2026-10-22, the first CLZ (osaka) builds. The five library objects are in
+2026-10-23 UTC, the first CLZ (osaka) builds. The five library objects are in
 blocks 11,974,968 to 11,974,972. The ladder's v11 runners are in blocks
 11,977,389 and 11,977,390; they replaced v10's runners of blocks 11,974,984
 and 11,974,985 eight hours later. All seven stay live and verified:
@@ -88,7 +88,7 @@ live on 2026-10-23: 9,411 ladder cells through that LadderRunner at block
 
 ## Blockulator 2.1
 
-2026-10-21, blocks 11,966,114 to 11,966,639, shanghai builds (no CLZ). All
+2026-10-22 UTC, blocks 11,966,114 to 11,966,639, shanghai builds (no CLZ). All
 seven stay live and verified:
 
 | component | version | address |
