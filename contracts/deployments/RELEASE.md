@@ -1,28 +1,27 @@
 # Blockulator 3.0
 
-The public name for this release (Sepolia, chainId 11155111; BL19 v6 on
-2026-10-28, blocks 12,015,306 to 12,015,314, and BL127 v9 with ladder v14 on
-2026-10-29 UTC, blocks 12,017,693 to 12,017,707). Each contract keeps its own
-version in its CREATE2 salt, since the salt names the address.
-Machine-readable copy: `RELEASE.json`; notes: `CHANGELOG.md`. It is not on
-Ethereum mainnet yet.
+The public name for this release (Sepolia, chainId 11155111; BL127 v10,
+BL19 v7 and ladder v15, all deployed on 2026-11-20 UTC, blocks 12,177,776 to
+12,177,815). Each contract keeps its own version in its CREATE2 salt, since
+the salt names the address. Machine-readable copy: `RELEASE.json`; notes:
+`CHANGELOG.md`. It is not on Ethereum mainnet yet.
 
 | component | version | runtime | address | record |
 |---|---|---:|---|---|
-| BL127 | BL127 v9 | 3,728 | `0x0DF738d125677550a80A46BaF254386C66f96E0d` | [BL127.md](BL127.md) |
-| BL127E | BL127E v9 | 18,808 | `0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808` | [BL127.md](BL127.md) |
-| BL127H | BL127H v9 | 13,093 | `0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B` | [BL127.md](BL127.md) |
-| BL127N | BL127N v9 | 9,088 | `0xAA7Cd9635aE8630379636F533f23DBf2C193d296` | [BL127.md](BL127.md) |
-| BL127S | BL127S v9 | 11,817 | `0xB9C2583a7Ad2251444DC7752658B6C1107C25036` | [BL127.md](BL127.md) |
-| BL19 | BL19 v6 | 17,221 | `0x94d9d43D6202827429a8058959eeCf6d232b8729` | [BL19.md](BL19.md) |
-| BL19E | BL19E v6 | 23,621 | `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092` | [BL19.md](BL19.md) |
-| BL19H | BL19H v6 | 13,020 | `0xF059611C1c42543DE6EE82353Eb082Fd8999081f` | [BL19.md](BL19.md) |
-| BL19N | BL19N v6 | 17,962 | `0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` | [BL19.md](BL19.md) |
-| BL19S | BL19S v6 | 11,338 | `0xf74ba90535224870830e6e89D2b328d4cc09DE48` | [BL19.md](BL19.md) |
-| LadderRunner | BL127 ladder v14 | | `0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589` | [Ladder.md](Ladder.md) |
-| EdgeRunner | BL127 ladder v14 | | `0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A` | [Ladder.md](Ladder.md) |
+| BL127 | BL127 v10 | 3,728 | `0x9D7f2c78EB802b83368E816E332A2aFa0997B3f2` | [BL127.md](BL127.md) |
+| BL127E | BL127E v10 | 18,808 | `0xfE4627Ba196d0c9c2D068C8599837688A8BE8bD1` | [BL127.md](BL127.md) |
+| BL127H | BL127H v10 | 13,093 | `0xC3B57948d3839b6B3358AC25E17fD7A055023704` | [BL127.md](BL127.md) |
+| BL127N | BL127N v10 | 9,088 | `0x42f0FDe3EF14d10218126e37A672BE33012f8902` | [BL127.md](BL127.md) |
+| BL127S | BL127S v10 | 11,817 | `0x315bF86feeCd5aCF3F9105f94A33ceBFa2e1Cc7E` | [BL127.md](BL127.md) |
+| BL19 | BL19 v7 | 17,221 | `0xbbb79a1B3c41553ee6C904D40a13f17EEFDC8230` | [BL19.md](BL19.md) |
+| BL19E | BL19E v7 | 23,621 | `0x498DCcD03606E2f7B156Ec1bAE3800E8012cfD64` | [BL19.md](BL19.md) |
+| BL19H | BL19H v7 | 13,020 | `0x2431fAeDd11E52EB8c104b051F2dac5DEA67dE5b` | [BL19.md](BL19.md) |
+| BL19N | BL19N v7 | 17,962 | `0x0540A33443bc4b2Db8D96CBbcb8117A993227E41` | [BL19.md](BL19.md) |
+| BL19S | BL19S v7 | 11,338 | `0x5a1266F89FC5b741e57077CbfEE59a6E48e32BCF` | [BL19.md](BL19.md) |
+| LadderRunner | BL127 ladder v15 | | `0xac1f69b4FBAA275429DCb21619f4f39257d7Ba93` | [Ladder.md](Ladder.md) |
+| EdgeRunner | BL127 ladder v15 | | `0x4009927DEE803eABFD76057aFF06752611856A60` | [Ladder.md](Ladder.md) |
 
-Both libraries are five objects by idea. BL127 v9: BL127 the number (32
+Both libraries are five objects by idea. BL127 v10: BL127 the number (32
 ops: the arithmetic and its directed forms, the conversions, `sqrt`,
 `cbrt`, `gavg`, `hypot`, `inv`, `factorial`, the comparisons and the
 rounding ops), BL127E the elementary functions (12), BL127H the hyperbolic
@@ -30,17 +29,31 @@ functions (4), BL127N the normal distribution (3) and BL127S Lambert W (2);
 every one of its 53 ops is correctly rounded on every input (the release
 gate's sweep: 217,000 inputs, 212,119 returned results, 0 misrounded, plain and with every rounding
 test forced), where v8's transcendentals were rounded with no test.
-`contracts/src/bl127/ops.json` names each op's object. BL19 v6: BL19 the
-number (44 ops, now with `factorial`, a table for n ≤ 170), BL19E the
+`contracts/src/bl127/ops.json` names each op's object. BL19 v7: BL19 the
+number (44 ops, with `factorial`, a table for n ≤ 170), BL19E the
 elementary functions (12), BL19H the hyperbolic functions (4), BL19N the
 normal distribution (3: erf, erfc, normCdf, new in 3.0) and BL19S Lambert W
-(2); `contracts/src/bl19/ops.json` names each op's object. Every object
-changed, so every object has a new salt; the BL19 salts drop the library's
-old name. BL127 v8 (`0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`, block
-12,015,304, one object), sent on 2026-10-28 as 3.0's BL127 with ladder v13,
-and v7 (`0xb97E0b824d86470BfAA52fe44f09363755d52591`, block 12,008,542),
-sent on 2026-10-27 with ladder v12, are superseded by v9 before mainnet; all
-stay live and verified and are recorded in `BL127.md` and `Ladder.md`.
+(2); `contracts/src/bl19/ops.json` names each op's object.
+
+BL127 v10 and BL19 v7 are the first deployments under the names BL127 and
+BL19: the salts and the verified contract names carry them. Two objects
+differ from the ones they supersede. BL127E passes 2^135 in the
+middle-stage test of `ln` and `log10`, as the derivation gives, where v9's
+passes 2^131. BL19 answers `toBL127` and `fromBL127`, where v6's answers
+`toFP127` and `fromFP127`. The other eight objects have the runtime
+bytecode of their predecessors, at new addresses under the new salts.
+
+Superseded before mainnet, all still live and verified: BL127 v9 (five
+objects, salts `"FP127 v9"` to `"FP127S v9"`, BL127 at
+`0x0DF738d125677550a80A46BaF254386C66f96E0d`, blocks 12,017,693 to
+12,017,701, 2026-10-29 UTC) and BL19 v6 (five objects, salts `"FP19 v6"` to
+`"FP19S v6"`, BL19 at `0x94d9d43D6202827429a8058959eeCf6d232b8729`, blocks
+12,015,306 to 12,015,314, 2026-10-28), with ladder v14; BL127 v8
+(`0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B`, block 12,015,304, one
+object), sent on 2026-10-28 with ladder v13; and BL127 v7
+(`0xb97E0b824d86470BfAA52fe44f09363755d52591`, block 12,008,542), sent on
+2026-10-27 with ladder v12. They are recorded in `BL127.md`, `BL19.md` and
+`Ladder.md`.
 
 **CLZ required.** Every object of this release is an evmVersion osaka build
 and counts leading bits with CLZ (EIP-7939). It runs on Ethereum, Sepolia
@@ -51,10 +64,10 @@ The ten objects are verified on Sourcify (`match` on creation and runtime
 bytecode) and Blockscout, and pass their smoke test against the live
 contracts (`make smoke-sepolia`: every committed vector against the live
 BL127 and BL19 objects, each equal to the inline library). The four ladder
-v14 contracts (`LadderBL127`, `LadderBL19Deployed` and the two runners) are
-`exact_match` on Sourcify. Checked live on 2026-10-29: 1,913 ladder cells
-through LadderRunner at block 12,017,732 and 276 edge cells through
-EdgeRunner at block 12,017,760, 0 mismatches
+v15 contracts (`LadderBL127`, `LadderBL19Deployed` and the two runners) are
+`exact_match` on Sourcify. Checked live on 2026-11-20: 1,918 ladder cells
+through LadderRunner at block 12,177,870 and 276 edge cells through
+EdgeRunner at block 12,177,896, 0 mismatches
 (`scripts/ladder/livecap.py`, `scripts/ladder/liveedges.py`).
 
 ## Blockulator 2.2

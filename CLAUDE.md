@@ -39,8 +39,9 @@ rows where another library does better.
 
 ## Names
 
-BL127 and BL19 everywhere. The only place the old names appear is a deployed object's salt or on-chain
-verified name ("FP127 v9", "FP19 v6"), quoted, until the next deployment.
+BL127 and BL19 everywhere. The current deployment (BL127 v10, BL19 v7 and ladder v15, 2026-11-20 UTC) carries these
+names in its salts and on-chain verified names. The old names appear only where a superseded deployment is recorded:
+its salt or on-chain verified name ("FP127 v9", "FP19 v6"), quoted.
 
 ## Before judging the state of the repository
 

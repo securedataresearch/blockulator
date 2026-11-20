@@ -1,115 +1,197 @@
 {
  "release": "Blockulator 3.0",
- "date": "2026-10-29",
+ "date": "2026-11-20",
  "chainId": 11155111,
  "network": "sepolia",
- "note": "The public name for this release. Component versions label the records; each record's saltAscii holds the CREATE2 salt, the deployed bytes (taken under the on-chain names FP127 and FP19 before the 2026-10-29 rename to BL127 and BL19). BL19 v6 was deployed on 2026-10-28 (blocks 12,015,306 to 12,015,314), BL127 v9 and ladder v14 on 2026-10-29 UTC (12,017,693 to 12,017,707).",
+ "note": "The public name for this release. Component versions are the CREATE2 salts (each record's saltAscii). BL127 v10, BL19 v7 and ladder v15 were deployed on 2026-11-20 UTC (blocks 12,177,776 to 12,177,815), the first under the names BL127 and BL19. They supersede BL19 v6 (2026-10-28, blocks 12,015,306 to 12,015,314) and BL127 v9 with ladder v14 (2026-10-29 UTC, blocks 12,017,693 to 12,017,707), which were deployed under the on-chain names FP127 and FP19 and are listed under superseded.",
  "requires": "CLZ (EIP-7939, Osaka/Fusaka): every object is an evmVersion osaka build; see contracts/deployments/README.md for the supported and unsupported chains",
  "blocks": [
-  12015306,
-  12017707
+  12177776,
+  12177815
  ],
  "components": {
   "BL127": {
-   "version": "BL127 v9",
-   "address": "0x0DF738d125677550a80A46BaF254386C66f96E0d",
-   "block": 12017693,
+   "version": "BL127 v10",
+   "address": "0x9D7f2c78EB802b83368E816E332A2aFa0997B3f2",
+   "block": 12177776,
    "runtimeBytes": 3728,
    "record": "contracts/deployments/BL127.md"
   },
   "BL127E": {
-   "version": "BL127E v9",
-   "address": "0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808",
-   "block": 12017695,
+   "version": "BL127E v10",
+   "address": "0xfE4627Ba196d0c9c2D068C8599837688A8BE8bD1",
+   "block": 12177778,
    "runtimeBytes": 18808,
    "record": "contracts/deployments/BL127.md"
   },
   "BL127H": {
-   "version": "BL127H v9",
-   "address": "0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B",
-   "block": 12017697,
+   "version": "BL127H v10",
+   "address": "0xC3B57948d3839b6B3358AC25E17fD7A055023704",
+   "block": 12177780,
    "runtimeBytes": 13093,
    "record": "contracts/deployments/BL127.md"
   },
   "BL127N": {
-   "version": "BL127N v9",
-   "address": "0xAA7Cd9635aE8630379636F533f23DBf2C193d296",
-   "block": 12017699,
+   "version": "BL127N v10",
+   "address": "0x42f0FDe3EF14d10218126e37A672BE33012f8902",
+   "block": 12177782,
    "runtimeBytes": 9088,
    "record": "contracts/deployments/BL127.md"
   },
   "BL127S": {
-   "version": "BL127S v9",
-   "address": "0xB9C2583a7Ad2251444DC7752658B6C1107C25036",
-   "block": 12017701,
+   "version": "BL127S v10",
+   "address": "0x315bF86feeCd5aCF3F9105f94A33ceBFa2e1Cc7E",
+   "block": 12177784,
    "runtimeBytes": 11817,
    "record": "contracts/deployments/BL127.md"
   },
   "BL19": {
-   "version": "BL19 v6",
-   "address": "0x94d9d43D6202827429a8058959eeCf6d232b8729",
-   "block": 12015306,
+   "version": "BL19 v7",
+   "address": "0xbbb79a1B3c41553ee6C904D40a13f17EEFDC8230",
+   "block": 12177786,
    "runtimeBytes": 17221,
    "record": "contracts/deployments/BL19.md"
   },
   "BL19E": {
-   "version": "BL19E v6",
-   "address": "0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092",
-   "block": 12015308,
+   "version": "BL19E v7",
+   "address": "0x498DCcD03606E2f7B156Ec1bAE3800E8012cfD64",
+   "block": 12177788,
    "runtimeBytes": 23621,
    "record": "contracts/deployments/BL19.md"
   },
   "BL19H": {
-   "version": "BL19H v6",
-   "address": "0xF059611C1c42543DE6EE82353Eb082Fd8999081f",
-   "block": 12015310,
+   "version": "BL19H v7",
+   "address": "0x2431fAeDd11E52EB8c104b051F2dac5DEA67dE5b",
+   "block": 12177790,
    "runtimeBytes": 13020,
    "record": "contracts/deployments/BL19.md"
   },
   "BL19N": {
-   "version": "BL19N v6",
-   "address": "0xCe9F09D646B37a9100F05ED1FFD14E9f43180214",
-   "block": 12015312,
+   "version": "BL19N v7",
+   "address": "0x0540A33443bc4b2Db8D96CBbcb8117A993227E41",
+   "block": 12177793,
    "runtimeBytes": 17962,
    "record": "contracts/deployments/BL19.md"
   },
   "BL19S": {
-   "version": "BL19S v6",
-   "address": "0xf74ba90535224870830e6e89D2b328d4cc09DE48",
-   "block": 12015314,
+   "version": "BL19S v7",
+   "address": "0x5a1266F89FC5b741e57077CbfEE59a6E48e32BCF",
+   "block": 12177795,
    "runtimeBytes": 11338,
    "record": "contracts/deployments/BL19.md"
   },
   "LadderRunner": {
-   "version": "BL127 ladder v14",
-   "address": "0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589",
-   "block": 12017706,
+   "version": "BL127 ladder v15",
+   "address": "0xac1f69b4FBAA275429DCb21619f4f39257d7Ba93",
+   "block": 12177814,
    "record": "contracts/deployments/Ladder.md"
   },
   "EdgeRunner": {
-   "version": "BL127 ladder v14",
-   "address": "0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A",
-   "block": 12017707,
+   "version": "BL127 ladder v15",
+   "address": "0x4009927DEE803eABFD76057aFF06752611856A60",
+   "block": 12177815,
    "record": "contracts/deployments/Ladder.md"
   }
  },
  "live": {
   "ladder": {
-   "liveRunner": "0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589",
-   "liveChecked": 1913,
+   "liveRunner": "0xac1f69b4FBAA275429DCb21619f4f39257d7Ba93",
+   "liveChecked": 1918,
    "liveMismatches": 0,
-   "liveBlock": 12017732,
-   "liveDate": "2026-10-29"
+   "liveBlock": 12177870,
+   "liveDate": "2026-11-20"
   },
   "edges": {
-   "liveRunner": "0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A",
+   "liveRunner": "0x4009927DEE803eABFD76057aFF06752611856A60",
    "liveChecked": 276,
    "liveMismatches": 0,
-   "liveBlock": 12017760,
-   "liveDate": "2026-10-29"
+   "liveBlock": 12177896,
+   "liveDate": "2026-11-20"
   }
  },
  "superseded": [
+  {
+   "version": "BL127 v9",
+   "date": "2026-10-29",
+   "status": "still live and verified; deployed under the salts \"FP127 v9\" to \"FP127S v9\" as Blockulator 3.0's BL127; superseded before mainnet by BL127 v10, whose BL127E passes 2^135 in the middle-stage test of ln and log10 where v9's passes 2^131; the other four objects have the same runtime bytecode in v10",
+   "components": {
+    "BL127": {
+     "address": "0x0DF738d125677550a80A46BaF254386C66f96E0d",
+     "block": 12017693,
+     "runtimeBytes": 3728
+    },
+    "BL127E": {
+     "address": "0xc16F4C45B78D90A4D4C030cABF4f2A34c1Fb0808",
+     "block": 12017695,
+     "runtimeBytes": 18808
+    },
+    "BL127H": {
+     "address": "0xf2F99947aD1cC370bD5388a2997A5E4963a0B27B",
+     "block": 12017697,
+     "runtimeBytes": 13093
+    },
+    "BL127N": {
+     "address": "0xAA7Cd9635aE8630379636F533f23DBf2C193d296",
+     "block": 12017699,
+     "runtimeBytes": 9088
+    },
+    "BL127S": {
+     "address": "0xB9C2583a7Ad2251444DC7752658B6C1107C25036",
+     "block": 12017701,
+     "runtimeBytes": 11817
+    }
+   },
+   "record": "contracts/deployments/BL127.md"
+  },
+  {
+   "version": "BL19 v6",
+   "date": "2026-10-28",
+   "status": "still live and verified; deployed under the salts \"FP19 v6\" to \"FP19S v6\" as Blockulator 3.0's BL19; superseded before mainnet by BL19 v7, whose BL19 answers toBL127 and fromBL127 where v6's answers toFP127 and fromFP127; the other four objects have the same runtime bytecode in v7",
+   "components": {
+    "BL19": {
+     "address": "0x94d9d43D6202827429a8058959eeCf6d232b8729",
+     "block": 12015306,
+     "runtimeBytes": 17221
+    },
+    "BL19E": {
+     "address": "0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092",
+     "block": 12015308,
+     "runtimeBytes": 23621
+    },
+    "BL19H": {
+     "address": "0xF059611C1c42543DE6EE82353Eb082Fd8999081f",
+     "block": 12015310,
+     "runtimeBytes": 13020
+    },
+    "BL19N": {
+     "address": "0xCe9F09D646B37a9100F05ED1FFD14E9f43180214",
+     "block": 12015312,
+     "runtimeBytes": 17962
+    },
+    "BL19S": {
+     "address": "0xf74ba90535224870830e6e89D2b328d4cc09DE48",
+     "block": 12015314,
+     "runtimeBytes": 11338
+    }
+   },
+   "record": "contracts/deployments/BL19.md"
+  },
+  {
+   "version": "BL127 ladder v14",
+   "date": "2026-10-29",
+   "status": "still live; deployed under the salt \"FP127 ladder v14\"; its LadderBL127 calls BL127 v9 and its LadderBL19Deployed BL19 v6; superseded by ladder v15",
+   "components": {
+    "LadderRunner": {
+     "address": "0x7683126a7525FE2544F4E9aC1ad50A9DB5Ec3589",
+     "block": 12017706
+    },
+    "EdgeRunner": {
+     "address": "0xad11E2a69844A5801aa61ee98dD3E9226bfa4D6A",
+     "block": 12017707
+    }
+   },
+   "record": "contracts/deployments/Ladder.md"
+  },
   {
    "version": "BL127 v8",
    "address": "0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B",

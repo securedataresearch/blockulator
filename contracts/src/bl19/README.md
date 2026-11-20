@@ -6,8 +6,8 @@ rounded or exact, and the constant `PI`, from one source. Blockulator 3.0
 deploys them as five objects by idea: BL19, the number; BL19E, the
 elementary functions; BL19H, the hyperbolic functions; BL19N, the normal
 distribution (erf, erfc, normCdf); BL19S, Lambert W
-([below](#five-objects)). They are live on Sepolia since 2026-10-28 as
-BL19 v6, at the addresses in
+([below](#five-objects)). They are live on Sepolia since 2026-11-20 UTC as
+BL19 v7, at the addresses in
 [`contracts/deployments/BL19.md`](../../deployments/BL19.md). They are
 evm osaka builds and need a chain with CLZ. v5 (Blockulator 2.2, four
 objects: BL19, BL19E, BL19H and BL19S, with erf, erfc, normCdf and
@@ -110,14 +110,14 @@ salt) is the one list the Makefile, `stdjson.py` and `deploy.py` read.
 
 | object | the idea | ops | runtime | salt |
 |---|---|---|---:|---|
-| BL19 | the number | add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg; neg, abs, sign; cmp, lt, eq, min, max, clamp; floor, ceil, round, frac; avg, dist, zeroFloorSub, lerp; factorial; mulDown, mulUp, divDown, divUp; fromUint, fromUintDown, fromUintUp, toUintDown, toUintUp, toIntDown, toIntUp, fromFixed18, toFixed18, toFixed18Down, toFixed18Up, fromBL127, toBL127: 44 | 17,221 | `FP19 v6` |
-| BL19E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 23,621 | `FP19E v6` |
-| BL19H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 13,020 | `FP19H v6` |
-| BL19N | the normal distribution, on its own fit | erf, erfc, normCdf: 3 | 17,962 | `FP19N v6` (new in 3.0) |
-| BL19S | Lambert W | lambertW0, lambertWm1: 2 | 11,338 | `FP19S v6` |
+| BL19 | the number | add, sub, mul, div, inv, sqrt, cbrt, hypot, gavg; neg, abs, sign; cmp, lt, eq, min, max, clamp; floor, ceil, round, frac; avg, dist, zeroFloorSub, lerp; factorial; mulDown, mulUp, divDown, divUp; fromUint, fromUintDown, fromUintUp, toUintDown, toUintUp, toIntDown, toIntUp, fromFixed18, toFixed18, toFixed18Down, toFixed18Up, fromBL127, toBL127: 44 | 17,221 | `BL19 v7` |
+| BL19E | the elementary functions, on one exp/log kernel | exp, exp2, exp10, expm1, ln, log2, log10, log2Up, log1p, pow, powu, compound: 12 | 23,621 | `BL19E v7` |
+| BL19H | the hyperbolic functions | sinh, cosh, tanh, atanh: 4 | 13,020 | `BL19H v7` |
+| BL19N | the normal distribution, on its own fit | erf, erfc, normCdf: 3 | 17,962 | `BL19N v7` (new in 3.0) |
+| BL19S | Lambert W | lambertW0, lambertWm1: 2 | 11,338 | `BL19S v7` |
 
-v5's salts were `FP256 v5`, `FP256E v5`, `FP256H v5` and `FP256S v5`; 3.0's
-drop the old name.
+v7 is the first version deployed under the name BL19. v6's salts were `FP19 v6`, `FP19E v6`, `FP19H v6`, `FP19N v6`
+and `FP19S v6`, and v5's `FP256 v5`, `FP256E v5`, `FP256H v5` and `FP256S v5`.
 
 **Why the hyperbolics have their own object.** They are elementary functions
 on the same kernel and belong with BL19E by idea, but BL19E with them
@@ -154,12 +154,19 @@ BL19, so a caller who needs it runs Euclid on `toUintDown` of each.
 `make build-bl19` compiles the five, `make size-bl19` prints their sizes,
 and `predict-bl19e`, `-bl19h`, `-bl19n`, `-bl19s` with their
 `deploy-...-sepolia` and `verify-...-sepolia` mirror BL19's targets.
-Deployed 2026-10-28 on Sepolia (BL19 v6, Blockulator 3.0): BL19
-`0x94d9d43D6202827429a8058959eeCf6d232b8729`, BL19E
-`0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092`, BL19H
+Deployed 2026-11-20 UTC on Sepolia (BL19 v7, Blockulator 3.0): BL19
+`0xbbb79a1B3c41553ee6C904D40a13f17EEFDC8230`, BL19E
+`0x498DCcD03606E2f7B156Ec1bAE3800E8012cfD64`, BL19H
+`0x2431fAeDd11E52EB8c104b051F2dac5DEA67dE5b`, BL19N
+`0x0540A33443bc4b2Db8D96CBbcb8117A993227E41`, BL19S
+`0x5a1266F89FC5b741e57077CbfEE59a6E48e32BCF`. v6 (2026-10-28, superseded
+before mainnet) stays live at BL19 `0x94d9d43D6202827429a8058959eeCf6d232b8729`,
+BL19E `0x8e5eE786bDD7c35a2867Fd329441d0BD0fB61092`, BL19H
 `0xF059611C1c42543DE6EE82353Eb082Fd8999081f`, BL19N
-`0xCe9F09D646B37a9100F05ED1FFD14E9f43180214`, BL19S
-`0xf74ba90535224870830e6e89D2b328d4cc09DE48`. v5 (Blockulator 2.2,
+`0xCe9F09D646B37a9100F05ED1FFD14E9f43180214` and BL19S
+`0xf74ba90535224870830e6e89D2b328d4cc09DE48`; its BL19 answers `toFP127` and
+`fromFP127` where v7's answers `toBL127` and `fromBL127`, and its other four
+objects have v7's runtime bytecode. v5 (Blockulator 2.2,
 2026-10-23 UTC) stays live at BL19 `0xAa1f71B7B08d568379b28E1488c6B737a1C6eb52`,
 BL19E `0x017F68A57dD53a6dF2043c24B712b287F9549AE2`, BL19H
 `0xEfefa2B63A173d56F9db79C5dd8A607F4aA859A5` and BL19S

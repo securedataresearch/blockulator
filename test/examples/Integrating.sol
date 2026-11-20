@@ -16,8 +16,8 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 //
 // The directed ops (BL127 mulUp, mulDown, divUp, divDown, toFixed18Up, toFixed18Down;
 // BL19 mulUp, mulDown, divUp, divDown, toUintUp, toUintDown, toIntUp, toIntDown,
-// toFixed18Up, toFixed18Down, floor, ceil) are in BL127 v9 and BL19 v6, deployed
-// (Blockulator 3.0; also BL127 v5 to v8, BL19 release four and v5, Blockulator 2.1 and 2.2) and inline; the older BL127 v4 and BL19 release three objects do not
+// toFixed18Up, toFixed18Down, floor, ceil) are in BL127 v10 and BL19 v7, deployed
+// (Blockulator 3.0; also BL127 v5 to v9, BL19 release four, v5 and v6, Blockulator 2.1 and 2.2) and inline; the older BL127 v4 and BL19 release three objects do not
 // have them, except BL127's floor and ceil.
 
 /// BL127 has no fromUint: an integer below 2^127 is `int256(x) << 128`.

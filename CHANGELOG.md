@@ -4,17 +4,49 @@ A release is the public name for a set of deployed contracts. Each contract
 keeps its own version in its CREATE2 salt, because the salt names the address;
 `contracts/deployments/RELEASE.json` maps the release to every address.
 
-## In the source, not yet deployed (2026-11-19)
+## Blockulator 3.0 deployed under the BL names (2026-11-20)
 
-**BL127 `ln` and `log10`: the middle-stage test's err is 2^135.** The two calls passed
+BL127 v10, BL19 v7 and ladder v15 are live on Sepolia since 2026-11-20 UTC (the ten objects in blocks 12,177,776
+to 12,177,795, the ladder's four contracts in 12,177,812 to 12,177,815). They are the first deployments whose
+CREATE2 salts and verified contract names read BL127 and BL19. The release keeps the name Blockulator 3.0: the ops
+and their results are the ones 3.0 published, with the two differences below. BL127 v9, BL19 v6 and ladder v14 are
+superseded before mainnet and stay live and verified. Not on mainnet yet:
+
+| object | salt | runtime bytes | address | block |
+|---|---|---:|---|---:|
+| BL127 | `BL127 v10` | 3,728 | `0x9D7f2c78EB802b83368E816E332A2aFa0997B3f2` | 12,177,776 |
+| BL127E | `BL127E v10` | 18,808 | `0xfE4627Ba196d0c9c2D068C8599837688A8BE8bD1` | 12,177,778 |
+| BL127H | `BL127H v10` | 13,093 | `0xC3B57948d3839b6B3358AC25E17fD7A055023704` | 12,177,780 |
+| BL127N | `BL127N v10` | 9,088 | `0x42f0FDe3EF14d10218126e37A672BE33012f8902` | 12,177,782 |
+| BL127S | `BL127S v10` | 11,817 | `0x315bF86feeCd5aCF3F9105f94A33ceBFa2e1Cc7E` | 12,177,784 |
+| BL19 | `BL19 v7` | 17,221 | `0xbbb79a1B3c41553ee6C904D40a13f17EEFDC8230` | 12,177,786 |
+| BL19E | `BL19E v7` | 23,621 | `0x498DCcD03606E2f7B156Ec1bAE3800E8012cfD64` | 12,177,788 |
+| BL19H | `BL19H v7` | 13,020 | `0x2431fAeDd11E52EB8c104b051F2dac5DEA67dE5b` | 12,177,790 |
+| BL19N | `BL19N v7` | 17,962 | `0x0540A33443bc4b2Db8D96CBbcb8117A993227E41` | 12,177,793 |
+| BL19S | `BL19S v7` | 11,338 | `0x5a1266F89FC5b741e57077CbfEE59a6E48e32BCF` | 12,177,795 |
+
+The runners took `BL127 ladder v15`: `LadderRunner` `0xac1f69b4FBAA275429DCb21619f4f39257d7Ba93`, `EdgeRunner`
+`0x4009927DEE803eABFD76057aFF06752611856A60`. The ten objects are verified on Sourcify and Blockscout and the four
+ladder contracts on Sourcify, `make smoke-sepolia` passes, and the live check through the v15 runners is 1,918
+ladder cells and 276 edge cells, 0 mismatches. Eight objects have the runtime bytecode of the ones they supersede;
+two differ:
+
+**BL127E: `ln`'s and `log10`'s middle-stage test passes an err of 2^135.** The two calls passed
 `0x800000000000000000000000000000000`, which is 2^131, where the derivation in the comment above them gives
 2^135: one hexadecimal digit short. `bounds127.py` measured the stage's error at up to 1.8 × 10^40 units against
 its own 2^135 and so did not see it; it now reads the constant from the source and fails on any other. The
-deployed `BL127E` v9 keeps 2^131 until the next deployment: for about one input in 2^120 its test can accept a
+`BL127E` of v9 keeps 2^131 at its address: for about one input in 2^120 its test can accept a
 value whose error reaches a midpoint. No such input is known; the sweep is 0 misrounded before and after, and
-its data is byte for byte the same. `BL127E` stays 18,808 bytes; the other nine objects' bytecode is unchanged.
+its data is byte for byte the same. `BL127E` stays 18,808 bytes.
 
-Seven comments in the two sources were corrected from computation, with no change to any object's bytecode:
+**BL19: the deployed object answers `toBL127` and `fromBL127`.** The rename of 2026-10-29 changed the names of
+BL19's two conversions to and from the fixed-point format, and with them their selectors (`toBL127(int256)`
+`0x9c8b7775`, `fromBL127(int256)` `0x61854220`), after BL19 v6 was deployed. The v6 object answers the earlier
+names (selectors `0x7c90b7f9` and `0x736c53c3`) and reverts on the new ones, so between the rename and this
+deployment `abi.json` named two functions the deployed BL19 did not have. BL19 v7 is built from the renamed
+source; its other 42 ops keep their selectors, and it stays 17,221 bytes.
+
+Seven comments in the two sources were corrected from computation (2026-11-19), with no change to any object's bytecode:
 W₋₁ at the branch point (2^-62.9), the distance of x − m ln 2 from 0 (2^-138), `nearmid`'s rate (one in
 2^16), `exp10`'s domain (about 78,913.5), the asymptotic series' 74 terms, the 4,001 points of `lwsp`'s
 certificate, and `msb`'s 32 call sites.
@@ -23,7 +55,7 @@ certificate, and `msb`'s 32 call sites.
 
 ### Renamed
 
-**BL127 and BL19 are the names** (the on-chain names FP127 and FP19 until the next deploy), everywhere: the Yul objects
+**BL127 and BL19 are the names** (the on-chain names FP127 and FP19 until the deployment of 2026-11-20), everywhere: the Yul objects
 (BL127, BL127E, BL127H, BL127N, BL127S; BL19, BL19E, BL19H, BL19N, BL19S),
 the inline libraries (`BL127Lib`, `BL19Lib`), the Solidity interfaces
 (`IBL127E`, …), the npm import paths (`@blockulator/contracts/bl127/BL127Lib.sol`),
@@ -36,7 +68,7 @@ the old spelling on purpose: the CREATE2 salts of every deployed contract
 the salt's bytes fix the address, so each record's `saltAscii` and the objects
 table in `scripts/bl127/gen.py` still read `FP…` (`RELEASE.json`'s component
 versions are labels and read `BL127 v9`, `BL19 v6`); and the verified names on Sourcify and Blockscout, which stay the
-on-chain names FP127 / FP127E / … / FP19S until the next deploy
+on-chain names FP127 / FP127E / … / FP19S until the deployment of 2026-11-20
 (`contracts/deployments/README.md` records both names). The bytecode is unchanged by the rename.
 
 **BL127 is correctly rounded in every op.** Each transcendental's fast value
@@ -70,7 +102,8 @@ since 2026-10-28 (blocks 12,015,306 to 12,015,314), BL127's since
 2026-10-29 UTC (blocks 12,017,693 to 12,017,701), with ladder v14's runners
 (12,017,704 to 12,017,707); Sourcify and Blockscout verified, `make
 smoke-sepolia` passes, and the live check through the v14 runners is 1,913
-ladder cells and 276 edge cells, 0 mismatches. Not on mainnet yet:
+ladder cells and 276 edge cells, 0 mismatches. These ten objects were superseded on 2026-11-20 by the ones in the
+entry above:
 
 | object | salt | runtime bytes | address | block |
 |---|---|---:|---|---:|

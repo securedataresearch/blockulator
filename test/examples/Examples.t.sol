@@ -26,7 +26,7 @@ contract ExamplesTest is Test {
         bytes memory initCode = vm.parseJsonBytes(vm.readFile("out/BL127.yul/BL127.json"), ".bytecode.object");
         address deployed;
         assembly ("memory-safe") { deployed := create(0, add(initCode, 0x20), mload(initCode)) }
-        vm.etch(0x0DF738d125677550a80A46BaF254386C66f96E0d, deployed.code);
+        vm.etch(0x9D7f2c78EB802b83368E816E332A2aFa0997B3f2, deployed.code);
         StaticcallExample ex = new StaticcallExample();
         int256 got = ex.accrue(10_000e18, int256(0.1e18) / 365, 365);
         assertApproxEqAbs(got, TRUTH_WAD, uint256(TOL));
