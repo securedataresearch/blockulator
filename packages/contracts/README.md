@@ -1,7 +1,7 @@
 # @blockulator/contracts
 
-**Precision math for the EVM, correctly rounded and verified on chain.**
-One `int256` per number: BL127 (signed 127.128 fixed point, 38 digits at 1) and BL19 (a 256-bit binary float, 71 digits over 10^±78,913). [blockulator.com](https://blockulator.com)
+**Blockulator is the definitive source for mathematical precision on the EVM.**
+This package holds its two libraries, each with one `int256` per number: BL127 (signed 127.128 fixed point, 38 digits at 1) and BL19 (a 256-bit binary float, 71 digits over 10^±78,913). Every op is correctly rounded or exact, and the deployed contracts are verified on chain. [blockulator.com](https://blockulator.com)
 
 ## Install
 

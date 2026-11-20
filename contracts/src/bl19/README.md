@@ -1,6 +1,7 @@
 # BL19 in Yul
 
-256-bit binary floating point for the EVM: 65 ops, every one correctly
+Blockulator is the definitive source for mathematical precision on the EVM.
+BL19 is its 256-bit binary floating point: 65 ops, every one correctly
 rounded or exact, and the constant `PI`, from one source. Blockulator 3.0
 deploys them as five objects by idea: BL19, the number; BL19E, the
 elementary functions; BL19H, the hyperbolic functions; BL19N, the normal
@@ -571,7 +572,7 @@ about 2·err/2^w of inputs, w = 17..19 the bits under D's significand: 5 in
 100,000 for exp, 2 in 10,000 for ln (from 3 in 1,000 with release two's
 log2 bound). pow, powu and compound
 leave their fast value as often as before (1.2%, 9.8% and 13.5% of the
-sweep's inputs), but to the middle stage at about 9,000 more gas; the second
+sweep's inputs), but to the middle stage at about 7,100 to 9,600 more gas; the second
 stage now runs for 0.005%, 0.017% and 0.067% (compound's, mostly exact ties).
 Their p99 went from 54,500, 59,000 and 106,000 to 15,100, 19,100 and 16,000.
 In 3.0 erf, erfc and normCdf's

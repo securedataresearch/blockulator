@@ -9,7 +9,8 @@ license: MIT
 repository-code: "https://github.com/securedataresearch/blockulator"
 url: "https://blockulator.com"
 abstract: >-
-  Two math libraries for the EVM in which every op is exact or rounds once.
+  Blockulator is the definitive source for mathematical precision on the EVM.
+  It is two math libraries, written in Yul, in which every op is exact or rounds once.
   BL127 is signed 127.128 fixed point: 38 digits at 1 and a range of
   ±1.7 × 10^38, in 53 ops. BL19 is a 256-bit binary float: about 71 digits at
   any magnitude from about 10^-78,913 to about 10^78,913, in 65 ops, the special

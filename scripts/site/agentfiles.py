@@ -16,7 +16,8 @@ llms.txt is prose, so it is checked, not written: each object's address must app
 address (`salt "..."`) must be that object's.
 
 --check also reads every tracked .md and .txt file: a string in the old naming (FP and a number, then a version) must be a
-salt some record holds, and no salt may be quoted under a BL name. Stdlib only.
+salt some record holds, and no salt may be quoted under a BL name. It also holds the pitch sentence (PITCH) to the
+same words in the ten files that open with it. Stdlib only.
 """
 from __future__ import annotations
 
@@ -118,6 +119,22 @@ def salt_problems() -> list[str]:
     return bad
 
 
+PITCH = "Blockulator is the definitive source for mathematical precision on the EVM."
+PITCH_FILES = ["README.md", "packages/contracts/README.md", "packages/contracts/package.json", "config.toml",
+               "content/_index.md", "CITATION.cff", "static/llms.txt", "static/.well-known/agent.json",
+               "contracts/src/bl127/README.md", "contracts/src/bl19/README.md"]
+
+
+def pitch_problems() -> list[str]:
+    """The one sentence that says what Blockulator is must read the same, word for word, in every place."""
+    bad = []
+    for f in PITCH_FILES:
+        text = re.sub(r"\s+", " ", re.sub(r"(?m)^> ?", "", (ROOT / f).read_text()))
+        if PITCH not in text:
+            bad.append(f"{f} does not carry the pitch sentence word for word: {PITCH}")
+    return bad
+
+
 def main() -> int:
     want = agent()
     if "--check" not in sys.argv:
@@ -125,7 +142,7 @@ def main() -> int:
         print(f"wrote {AGENT.relative_to(ROOT)}")
     bad = llms_problems()
     if "--check" in sys.argv:
-        bad += salt_problems()
+        bad += salt_problems() + pitch_problems()
     if "--check" in sys.argv and AGENT.read_text() != want:
         bad.append("static/.well-known/agent.json is stale (run python3 scripts/site/agentfiles.py)")
     for b in bad:

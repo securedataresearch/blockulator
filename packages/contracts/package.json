@@ -1,7 +1,7 @@
 {
   "name": "@blockulator/contracts",
   "version": "0.0.0-dev",
-  "description": "BL127 and BL19: correctly rounded precision math for the EVM, as inline Solidity libraries, interfaces, Yul objects, ABIs and deployment records.",
+  "description": "Blockulator is the definitive source for mathematical precision on the EVM. BL127 and BL19 ship here as inline Solidity libraries, interfaces, Yul objects, ABIs and deployment records.",
   "license": "MIT",
   "author": "Secure Data Research, LLC (https://securedataresearch.net)",
   "homepage": "https://blockulator.com",
