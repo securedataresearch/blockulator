@@ -57,7 +57,7 @@ Sepolia, as do BL127 v8 (0x466eCEde5Dc25189AD9ED999d0B4D41Cb022510B,
   0xE655bB8b1Cf848cAf3FD69F381289d144f5Bc697,
   0x59D51481cb2EA924EC17FE263cd05b90CEF22383) and BL19 v3 (Blockulator 2.0, 28
   ops, salt "FP256 v3", 0x67eFfb11bF93c79a2B12cc7872cBaC12b3eB61be) stay live.
-- BL127 (/library/), v9, 53 operations in five objects by idea (the
+- BL127 (/library/bl127/), v9, 53 operations in five objects by idea (the
   addresses below): add, sub, mul, div, fromFixed18, toFixed18, exp, exp2,
   exp10, ln, log2, log10, log2Up, sqrt, cbrt, pow, powu, compound, gavg,
   hypot, inv, abs, neg, sign, min, max, clamp, avg, zeroFloorSub, dist, lerp,
