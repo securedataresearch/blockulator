@@ -223,6 +223,6 @@ function index() external view returns (int256) {
 }
 ```
 
-In BL19 alone the gain is gas, not digits: a multiplied index stays within 13.8 parts in 2<sup>236</sup> after 1,000 accruals. You save {{ <gas op="exp" lib="bl19" /> }} + {{ <gas op="mul" lib="bl19" /> }} gas per accrual and pay an `exp` per read.
+In BL19 alone the gain is gas, not digits: a multiplied index stays within 14 parts in 2<sup>236</sup> after 1,000 accruals. You save {{ <gas op="exp" lib="bl19" /> }} + {{ <gas op="mul" lib="bl19" /> }} gas per accrual and pay an `exp` per read.
 
 The snippets on this page are compiled and run on the replays' own integers in [`test/examples/Integrating.t.sol`]({{ config.extra.repo }}/blob/master/test/examples/Integrating.t.sol).

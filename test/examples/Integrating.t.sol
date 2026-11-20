@@ -218,7 +218,10 @@ contract IntegratingTest is Test {
             assertGt(_abs(m10), 1_000_000);
             (int256 l1000, int256 m1000) = _accrue(1000, seed);
             assertLe(_abs(l1000), 500_001);
-            assertGt(_abs(m1000), 500_000_000);
+            // the page's "511 to 546 units low": each seed's product ends between 510.5 and 546.5 units below
+            assertLt(m1000, 0);
+            assertGe(_abs(m1000), 510_500_000);
+            assertLe(_abs(m1000), 546_500_000);
         }
     }
 
@@ -242,6 +245,9 @@ contract IntegratingTest is Test {
                 " compound err=", vm.toString(mulErr), " (1e-6 x 2^-128)"));
             assertGt(_abs(logErr), 100_000_000_000); // over 100,000 units of 2^-128
             assertLt(_abs(mulErr), 100_000_000); // under 100
+            // the page's "about 3,000 times further off": the ratio of the two errors is between 2,800 and 3,300
+            assertGe(_abs(logErr), 2_800 * _abs(mulErr));
+            assertLe(_abs(logErr), 3_300 * _abs(mulErr));
         }
     }
 
@@ -260,7 +266,7 @@ contract IntegratingTest is Test {
             int256 parts = BL19Lib.toFixed18(BL19Lib.mul(rel, BL19Lib.pow(BL19Lib.fromUint(2), BL19Lib.fromUint(236)))) / 1e12;
             console.log(string.concat("bl19 N=1000 seed=", vm.toString(seed), " multiplied vs log read=", vm.toString(parts), " (1e-6 x 2^-236)"));
             assertGt(_abs(parts), 0);
-            assertLt(_abs(parts), 100_000_000); // under 100 parts in 2^236
+            assertLt(_abs(parts), 14_000_000); // the page's "within 14 parts in 2^236"
         }
     }
 
