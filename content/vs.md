@@ -21,7 +21,7 @@ Each established library does something better. This page says what, then puts t
 
 **What it does better:** types. SD59x18 and UD60x18 are user-defined value types with operators, so a raw integer cannot be passed where a fixed-point value is meant.
 
-**The answer:** BL19 and BL127 are typed the same way. PRBMath is off by a wei more often than Solady, on 107 of 200 everyday `exp` results and on all 200 `ln`, `log2`, `log10` and `pow` results, and costs 3.6 times BL127's gas on `ln` and 3.0 times on `pow`; `exp` is 2,816 gas against BL127's 2,835.
+**The answer:** BL19 and BL127 are typed the same way. PRBMath is off by a wei more often than Solady, on 107 of 200 everyday `exp` results and on all 200 `ln`, `log2`, `log10` and `pow` results, and costs 3.6 times BL127's gas on `ln` and 3.0 times on `pow`; `exp` costs about the same, 2,844 gas against BL127's 2,834.
 
 {{ <table name="vs.prbmath" first="" /> }}
 
@@ -29,7 +29,7 @@ Each established library does something better. This page says what, then puts t
 
 **What it does better:** maturity and reach. ABDKMath64x64 is old, small and runs everywhere, and its `mul` and `div` cost less than BL127's.
 
-**The answer:** BL127 is the same idea with 64 more fractional bits: 38 digits at 1 against 19, at lower gas on `add`, `exp`, `ln` and `sqrt`. On the edge calls it reverts less often and returns zero far less often. Its own limit is its range, ±1.7 × 10<sup>38</sup>.
+**The answer:** BL127 is the same idea with 64 more fractional bits: 38 digits at 1 against 19, at lower gas on `add`, `exp` and `ln`, and about the same on `sqrt` (815 gas against 822). On the edge calls it reverts less often and returns zero far less often. Its own limit is its range, ±1.7 × 10<sup>38</sup>.
 
 {{ <table name="vs.abdk" first="" /> }}
 

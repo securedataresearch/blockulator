@@ -302,7 +302,11 @@ def main() -> int:
             "",
             "The ladder sits mostly on integers, powers of two and one, where several ops take a shortcut. These rows are "
             "the same forms on random inputs drawn per op from `keccak256(\"typical\", op, i)`: non-integer, not a power "
-            "of two, across the op's usual range (`test_ladder_typical`). Min / median / max over the inputs.",
+            "of two, across the op's usual range. The inline columns are measured on 100 inputs, and the columns that "
+            "include the external call on the first eight (`test_ladder_typical`, `test_ladder_typical_inline_*`): a "
+            "call's figure moves with what the test has already run, an inline one does not. An inline figure does "
+            "depend on how the calling contract compiles, so read these to about 1 or 2 percent, not to the gas. "
+            "Min / median / max over the inputs.",
             "",
             *table(typical),
         ]
